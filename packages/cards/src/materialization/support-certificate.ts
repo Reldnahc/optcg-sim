@@ -23,6 +23,7 @@ const directFamilyPrefixes: ReadonlySet<SupportEvidenceFamily> = new Set([
   "filter",
   "cardinality",
   "zone",
+  "visibility",
   "destination",
   "player",
   "chooser",

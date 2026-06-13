@@ -8,6 +8,7 @@ import type {
 import {
   applySetLifeFaceUpSequenceSegment,
   createLifeReorderDecisionForSequenceSegment,
+  createTopLifePlacementDecisionForSequenceSegment,
 } from "../life-state.js";
 import { pauseSequenceForPendingDecision } from "./pause.js";
 import type {
@@ -41,6 +42,29 @@ export const applyLifeStateNoDecisionSegment = (params: {
 }): LifeStateSegmentResult => {
   if (params.segment.effect.type === "reorderLife") {
     const decision = createLifeReorderDecisionForSequenceSegment({
+      effect: params.segment.effect,
+      entry: params.entry,
+      index: params.index,
+      state: params.state,
+    });
+    if (!decision.ok) {
+      return { handled: true, result: { ok: false } };
+    }
+    return {
+      handled: true,
+      result: pauseSequenceForPendingDecision({
+        decisionEvents: decision.events,
+        effectPath: [...params.effectPath],
+        entry: params.entry,
+        events: params.events,
+        index: params.index,
+        ledgers: params.ledgers,
+        state: decision.state,
+      }),
+    };
+  }
+  if (params.segment.effect.type === "placeTopLifeCard") {
+    const decision = createTopLifePlacementDecisionForSequenceSegment({
       effect: params.segment.effect,
       entry: params.entry,
       index: params.index,

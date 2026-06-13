@@ -28,6 +28,7 @@ import {
   isSupportedDrawUpToSegment,
   isSupportedDamageSegment,
   isSupportedMoveCardsSegment,
+  isSupportedPlaceTopLifeCardSegment,
   isSupportedPlaceTopDeckCardsSegment,
   isSupportedReorderLifeSegment,
   isSupportedReturnDonSegment,
@@ -38,6 +39,7 @@ import {
   type DrawEffect,
   type DrawUpToEffect,
   type MoveCardsEffect,
+  type PlaceTopLifeCardEffect,
   type PlaceTopDeckCardsEffect,
   type ReorderLifeEffect,
   type ReturnDonEffect,
@@ -114,6 +116,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveCardsEffect
     | ReturnDonEffect
     | ReorderLifeEffect
+    | PlaceTopLifeCardEffect
     | SetLifeFaceUpEffect
     | TrashFromHandEffect
     | TrashFromHandUntilCountEffect
@@ -427,6 +430,10 @@ const isSupportedSequenceBlockWithState = (
         return true;
       }
       if (isSupportedReorderLifeSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (isSupportedPlaceTopLifeCardSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

@@ -27,7 +27,8 @@ export const resumeSequenceFrameAfterTopDeckPlacement = (
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "placeTopDeckCards" &&
-      pausedSegment.effect.type !== "reorderLife")
+      pausedSegment.effect.type !== "reorderLife" &&
+      pausedSegment.effect.type !== "placeTopLifeCard")
   ) {
     return {
       error: sequenceRuntimeError(

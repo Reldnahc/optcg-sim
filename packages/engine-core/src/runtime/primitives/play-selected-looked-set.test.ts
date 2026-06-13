@@ -567,3 +567,56 @@ test("looked-set moveSelected can add selected deck card to bottom of Life face-
   );
   assert.equal(cardMoveEvents.at(-1)?.visibility.type, "private");
 });
+
+test("top Life placement primitive privately moves one chosen top Life card to top or bottom", () => {
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "placeTopLifeCard",
+          players: ["self", "opponent"],
+          viewer: "self",
+          position: "topOrBottom",
+        },
+      },
+    ],
+  });
+  const p1Initial = must(state.players[p1], "p1 initial");
+  const p2Initial = must(state.players[p2], "p2 initial");
+  const p1TopLife = must(p1Initial.life[0], "p1 top Life").card.instanceId;
+  const p2TopLife = must(p2Initial.life[0], "p2 top Life").card.instanceId;
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "top Life decision");
+  assert.equal(decision.type, "orderCards");
+  assert.equal(decision.visibility.type, "private");
+  assert.equal(decision.visibility.playerId, p1);
+  assert.deepEqual(
+    decision.cards.map((card) => card.instanceId),
+    [p1TopLife, p2TopLife],
+  );
+
+  const placed = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "topBottomPlacement",
+      topIds: [],
+      bottomIds: [String(p2TopLife)],
+    },
+  });
+
+  assert.equal(placed.errors, undefined);
+  assert.equal(placed.state.pendingDecision, undefined);
+  assert.deepEqual(placed.state.effectQueue, []);
+  const p1After = must(placed.state.players[p1], "p1 after");
+  const p2After = must(placed.state.players[p2], "p2 after");
+  assert.equal(
+    must(p1After.life[0], "p1 top after").card.instanceId,
+    p1TopLife,
+  );
+  assert.equal(p2After.life.at(-1)?.card.instanceId, p2TopLife);
+});

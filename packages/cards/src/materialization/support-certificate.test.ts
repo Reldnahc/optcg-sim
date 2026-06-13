@@ -61,6 +61,22 @@ test("parser certificate groups primitive evidence by support family", () => {
   );
 });
 
+test("parser certificate groups visibility evidence by visibility family", () => {
+  const certificate = createParserSupportCertificate([
+    parsedRuntimeLine(["visibility:private"]),
+  ]);
+
+  assert.equal(certificate.complete, true);
+  assert.deepEqual(
+    certificate.records.map((record) => [
+      record.authority,
+      record.family,
+      record.id,
+    ]),
+    [["parser", "visibility", "private"]],
+  );
+});
+
 test("parser certificate fails closed when a runtime line has no primitive evidence", () => {
   const certificate = createParserSupportCertificate([parsedRuntimeLine([])]);
 

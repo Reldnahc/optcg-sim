@@ -252,6 +252,61 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses top Life inspection and top-or-bottom placement as a reusable Life placement primitive", () => {
+    const result = parseCardEffectLine(
+      "[Main] Look at up to 1 card from the top of your or your opponent's Life cards and place it at the top or bottom of the Life cards. Then, K.O. up to 1 of your opponent's Characters with a cost of 5 or less.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "placeTopLifeCard",
+                players: ["self", "opponent"],
+                viewer: "self",
+                position: "topOrBottom",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "opponent",
+                        zone: "characterArea",
+                        filter: { categories: ["character"], cost: { max: 5 } },
+                      },
+                    },
+                  },
+                  { effect: { type: "ko" } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:lookAt",
+        "zone:life",
+        "player:self",
+        "player:opponent",
+        "position:top",
+        "position:bottom",
+        "instruction:ko",
+      ]),
+    );
+  });
+
   it("parses optional turn-Life-face-up as its own reusable cost primitive", () => {
     const result = parseCardEffectLine(
       "[On Play] You may turn 1 card from the top of your Life cards face-up: Draw 1 card.",

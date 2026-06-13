@@ -64,6 +64,7 @@ import {
   getSequenceSelectCardsChoiceLegalActions,
   applyPlaceSetRemainderSequenceAwareResponse,
   applySelectedHandDeckPlacementSequenceAwareResponse,
+  applyTopLifePlacementSequenceAwareResponse,
   applyTopDeckPlacementSequenceAwareResponse,
 } from "./effect-runtime-sequence/decision-actions.js";
 import {
@@ -626,6 +627,16 @@ const applyRespondToDecision = (
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       lifeReorderResult,
+    );
+  }
+  const topLifePlacementResult = applyTopLifePlacementSequenceAwareResponse(
+    state,
+    action,
+  );
+  if (topLifePlacementResult !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      topLifePlacementResult,
     );
   }
   const selectedHandDeckPlacementResult =

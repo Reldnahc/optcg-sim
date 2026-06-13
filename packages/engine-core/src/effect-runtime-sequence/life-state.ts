@@ -22,8 +22,11 @@ import { getOpponentId } from "../actions/state.js";
 import type { SegmentLedgers } from "./runner.js";
 
 type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
+type PlaceTopLifeCardEffect = Extract<Effect, { type: "placeTopLifeCard" }>;
 type SetLifeFaceUpEffect = Extract<Effect, { type: "setLifeFaceUp" }>;
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+const topLifePlacementDecisionPrefix =
+  "decision:orderCards:top-life-placement:";
 
 const reindexLife = (
   life: readonly LifeCard[],
@@ -104,6 +107,76 @@ export const createLifeReorderDecisionForSequenceSegment = (params: {
       type: "orderedIds",
       ids: targetPlayer.life.map((lifeCard) => lifeCard.card.instanceId),
     },
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    params.state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    visibility,
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = decision.causedBy;
+  }
+  return {
+    events,
+    ok: true,
+    state: {
+      ...params.state,
+      seq: toStateSeq(params.state.seq + 1),
+      pendingDecision: decision,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
+export const createTopLifePlacementDecisionForSequenceSegment = (params: {
+  effect: PlaceTopLifeCardEffect;
+  entry: EffectQueueEntry;
+  index: number;
+  state: GameState;
+}): { events: EngineEvent[]; ok: true; state: GameState } | { ok: false } => {
+  const viewerPlayerId = resolveEffectPlayer(
+    params.state,
+    params.entry,
+    params.effect.viewer,
+  );
+  if (viewerPlayerId === null) {
+    return { ok: false };
+  }
+  const cards = params.effect.players.flatMap((playerRef) => {
+    const playerId = resolveEffectPlayer(params.state, params.entry, playerRef);
+    const player =
+      playerId === null ? undefined : params.state.players[playerId];
+    const topLife = player?.life[0];
+    return playerId === null || topLife === undefined
+      ? []
+      : [lifeCardRef(topLife, playerId)];
+  });
+  const visibility = { type: "private", playerId: viewerPlayerId } as const;
+  const decision: OrderCardsDecision = {
+    id: toDecisionId(
+      `${topLifePlacementDecisionPrefix}${String(params.entry.id)}:${String(params.index)}`,
+    ),
+    type: "orderCards",
+    playerId: viewerPlayerId,
+    prompt: "Place up to 1 top Life card at the top or bottom.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: params.entry.id,
+      effectId: params.entry.effectBlockId,
+    },
+    visibility,
+    cards,
+    destination: "life",
+    placement: { type: "topOrBottom" },
+    defaultResponse: { type: "topBottomPlacement", topIds: [], bottomIds: [] },
   };
   const events: EngineEvent[] = [];
   appendEvent(
@@ -260,6 +333,111 @@ export const applyLifeReorderDecisionResponse = (
       ...stateWithoutPendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
+    events,
+  );
+};
+
+export const applyTopLifePlacementDecisionResponse = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+): EngineResult | null => {
+  const decision = state.pendingDecision;
+  if (
+    decision === undefined ||
+    decision.type !== "orderCards" ||
+    !String(decision.id).startsWith(topLifePlacementDecisionPrefix) ||
+    action.decisionId !== decision.id
+  ) {
+    return null;
+  }
+  const fail = (reason: string): EngineResult =>
+    toEngineResult(state, [], [{ type: "invalidDecisionResponse", reason }]);
+  if (action.response.type !== "topBottomPlacement") {
+    return fail("Response type must be topBottomPlacement.");
+  }
+  const selectedIds = [
+    ...action.response.topIds.map(String),
+    ...action.response.bottomIds.map(String),
+  ];
+  if (
+    selectedIds.length > 1 ||
+    new Set(selectedIds).size !== selectedIds.length
+  ) {
+    return fail("Choose at most 1 top Life card.");
+  }
+  const expectedIds = new Set(
+    decision.cards.map((card) => String(card.instanceId)),
+  );
+  if (selectedIds.some((id) => !expectedIds.has(id))) {
+    return fail("Selected Life card must be one of the top Life candidates.");
+  }
+
+  const selectedId = selectedIds[0];
+  const selectedPlacement =
+    selectedId === undefined
+      ? undefined
+      : action.response.topIds.map(String).includes(selectedId)
+        ? "top"
+        : "bottom";
+  let nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    actionSeq: state.actionSeq + 1,
+  };
+  delete nextState.pendingDecision;
+
+  if (selectedId !== undefined && selectedPlacement !== undefined) {
+    const selected = decision.cards.find(
+      (card) => String(card.instanceId) === selectedId,
+    );
+    const targetPlayerId = selected?.playerId;
+    const targetPlayer =
+      targetPlayerId === undefined ? undefined : state.players[targetPlayerId];
+    if (targetPlayerId === undefined || targetPlayer === undefined) {
+      return fail("Selected Life card owner is missing.");
+    }
+    const topLife = targetPlayer.life[0];
+    if (
+      topLife === undefined ||
+      String(topLife.card.instanceId) !== selectedId
+    ) {
+      return fail("Selected card is no longer the top Life card.");
+    }
+    const remainingLife = targetPlayer.life.slice(1);
+    const nextLife = reindexLife(
+      selectedPlacement === "top"
+        ? [topLife, ...remainingLife]
+        : [...remainingLife, topLife],
+      targetPlayerId,
+    );
+    nextState = {
+      ...nextState,
+      players: {
+        ...nextState.players,
+        [targetPlayerId]: { ...targetPlayer, life: nextLife },
+      },
+    };
+  }
+
+  const events: EngineEvent[] = [];
+  appendEvent(
+    nextState,
+    events,
+    "decisionResolved",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+      responseType: "topBottomPlacement",
+    },
+    decision.visibility,
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = { type: "decision", decisionId: decision.id };
+  }
+  return toEngineResult(
+    { ...nextState, eventJournal: [...nextState.eventJournal, ...events] },
     events,
   );
 };

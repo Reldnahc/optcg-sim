@@ -155,3 +155,30 @@ test("sequence support rejects original-order top-or-bottom looked-set remainder
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), false);
 });
+
+test("sequence support accepts top Life card top-or-bottom placement primitive", () => {
+  const effectBlock = {
+    id: "remainder-support-test-effect",
+    category: "auto",
+    trigger: { type: "main" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "placeTopLifeCard",
+            players: ["self", "opponent"],
+            viewer: "self",
+            position: "topOrBottom",
+          },
+        },
+      ],
+    },
+  } as unknown as EffectDefinition["effects"][number];
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});

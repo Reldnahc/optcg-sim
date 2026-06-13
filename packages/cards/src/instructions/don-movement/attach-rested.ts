@@ -61,9 +61,11 @@ type DonAttachTarget = {
   readonly filter: CardFilter;
   readonly player: "self" | "opponent" | "anyPlayer";
   readonly requestZone:
+    | { readonly zone: "leaderArea" }
     | { readonly zone: "characterArea" }
     | { readonly zones: ["leaderArea", "characterArea"] };
   readonly savedTargetZone:
+    | { readonly zone: "leaderArea" }
     | { readonly zone: "characterArea" }
     | { readonly zones: ["leaderArea", "characterArea"] };
   readonly targetOwner?: "selectedDonOwner";
@@ -773,9 +775,11 @@ const parseRestedDonAttachmentTarget = (
       readonly evidence: readonly PrimitiveEvidence[];
       readonly filter: CardFilter;
       readonly requestZone:
+        | { readonly zone: "leaderArea" }
         | { readonly zone: "characterArea" }
         | { readonly zones: ["leaderArea", "characterArea"] };
       readonly savedTargetZone:
+        | { readonly zone: "leaderArea" }
         | { readonly zone: "characterArea" }
         | { readonly zones: ["leaderArea", "characterArea"] };
     }

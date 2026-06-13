@@ -14,6 +14,10 @@ export type DamageEffect = Extract<Effect, { type: "damage" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
+export type PlaceTopLifeCardEffect = Extract<
+  Effect,
+  { type: "placeTopLifeCard" }
+>;
 export type SetLifeFaceUpEffect = Extract<Effect, { type: "setLifeFaceUp" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 export type TrashFromHandUntilCountEffect = Extract<
@@ -81,6 +85,14 @@ export const isSupportedReorderLifeSegment = (
   effect.type === "reorderLife" &&
   (effect.player === "self" || effect.player === "opponent") &&
   effect.viewer === "self";
+
+export const isSupportedPlaceTopLifeCardSegment = (
+  effect: SequenceSegmentEffect,
+): effect is PlaceTopLifeCardEffect =>
+  effect.type === "placeTopLifeCard" &&
+  effect.viewer === "self" &&
+  effect.players.length > 0 &&
+  effect.players.every((player) => player === "self" || player === "opponent");
 
 export const isSupportedSetLifeFaceUpSegment = (
   effect: SequenceSegmentEffect,
