@@ -42,6 +42,54 @@ type SegmentLedgers = {
   >["segmentResults"];
 };
 
+const findCurrentCardByRef = (
+  state: GameState,
+  card: CardRef,
+): CardInstance | undefined => {
+  const player = state.players[card.playerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  switch (card.zone?.zone) {
+    case "hand":
+      return player.hand.find(
+        (candidate) => candidate.instanceId === card.instanceId,
+      );
+    case "deck":
+      return player.deck.find(
+        (candidate) => candidate.instanceId === card.instanceId,
+      );
+    case "trash":
+      return player.trash.find(
+        (candidate) => candidate.instanceId === card.instanceId,
+      );
+    case "life":
+      return player.life
+        .map((lifeCard) => lifeCard.card)
+        .find((candidate) => candidate.instanceId === card.instanceId);
+    case "leaderArea":
+      return player.leader.instanceId === card.instanceId
+        ? player.leader
+        : undefined;
+    case "characterArea":
+      return player.characters.find(
+        (candidate) => candidate.instanceId === card.instanceId,
+      );
+    case "stageArea":
+      return player.stage?.instanceId === card.instanceId
+        ? player.stage
+        : undefined;
+    case "costArea":
+      return player.costArea.find(
+        (candidate) => candidate.instanceId === card.instanceId,
+      );
+    case "donDeck":
+    case "noZone":
+    case undefined:
+      return undefined;
+  }
+};
+
 const selectedHandDeckPlacementDecisionPrefix =
   "decision:orderCards:selected-hand-to-deck:";
 
@@ -217,19 +265,13 @@ export const createSelectFromSetDecision = (params: {
   const visibility =
     revealVisibility ?? ({ type: "public" } satisfies EventVisibility);
   const candidates = set.cards.filter((card) => {
-    const player = params.state.players[card.playerId];
-    const deckCard =
-      card.zone?.zone === "deck"
-        ? player?.deck.find(
-            (candidate) => candidate.instanceId === card.instanceId,
-          )
-        : undefined;
+    const currentCard = findCurrentCardByRef(params.state, card);
     return (
-      deckCard !== undefined &&
+      currentCard !== undefined &&
       cardMatchesHandSelectionFilter(
         params.state,
         card.playerId,
-        deckCard,
+        currentCard,
         params.effect.filter,
         params.ledgers.savedReferences,
       )

@@ -212,6 +212,13 @@ const hasSavedSelectionSet = (
   selectionSet: unknown,
 ): boolean => state.savedSelectionSets.has(String(selectionSet));
 
+const hasSavedSelectedCardSet = (
+  state: SequenceSupportState,
+  selectionSet: unknown,
+): boolean =>
+  hasSavedSelectionSet(state, selectionSet) ||
+  state.savedSelectedCards.has(String(selectionSet));
+
 const hasSavedNumber = (
   state: SequenceSupportState,
   selection: unknown,
@@ -482,7 +489,7 @@ const isSupportedSequenceBlockWithState = (
           hasSavedNumber(supportState, selection),
         )
       ) {
-        if (!hasSavedSelectionSet(supportState, segment.effect.set)) {
+        if (!hasSavedSelectedCardSet(supportState, segment.effect.set)) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;

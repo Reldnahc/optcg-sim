@@ -5,6 +5,7 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   SelectionId,
+  SelectionSetId,
 } from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./support.js";
@@ -127,6 +128,61 @@ test("sequence support accepts single selected hand card movement to Life top", 
             from: "hand",
             to: "life",
             position: "top",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts choosing from a saved revealed hand selection", () => {
+  const revealed = "handSelection:revealed-hand-cards" as SelectionId;
+  const revealedSet = "handSelection:revealed-hand-cards" as SelectionSetId;
+  const chosen = "handSelection:chosen-revealed-hand-card" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: revealed,
+          effect: {
+            type: "selectCards",
+            player: "self",
+            zone: "hand",
+            chooser: "self",
+            visibility: "bothPlayers",
+            min: 0,
+            max: 2,
+            saveAs: revealed,
+            filter: { categories: ["character"] },
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "selectFromSet",
+            set: revealedSet,
+            chooser: "self",
+            min: 1,
+            max: 1,
+            saveAs: chosen,
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "playSelected",
+            selection: chosen,
+            ignoreCost: true,
           },
         },
       ],
