@@ -14,7 +14,10 @@ import {
   setDecisionOption,
   toggleDecisionSelectedCard,
 } from "../index.js";
-import { createPoneglyphAccountClient } from "../account-client.js";
+import {
+  createPoneglyphAccountClient,
+  poneglyphCardStockImageUrl,
+} from "../account-client.js";
 import type {
   AccountLoadout,
   AccountSimHandoffBatchResult,
@@ -57,7 +60,7 @@ export interface UseMatchClientOptions {
   readonly quickPayActivateMainCosts?: boolean | undefined;
 }
 
-const attachDeckPreviewValidation = (
+export const attachDeckPreviewValidation = (
   loadouts: readonly AccountLoadout[],
   validated: readonly ValidatedLobbyLoadout[],
 ): readonly AccountLoadout[] => {
@@ -77,8 +80,22 @@ const attachDeckPreviewValidation = (
         },
       };
     }
+    const leaderCardId =
+      validation.leaderCardId === undefined
+        ? loadout.leaderCardId
+        : validation.leaderCardId;
+    const leaderVariantIndex =
+      validation.leaderVariantIndex === undefined
+        ? loadout.leaderVariantIndex
+        : validation.leaderVariantIndex;
     return {
       ...loadout,
+      leaderCardId,
+      leaderVariantIndex,
+      leaderImageUrl:
+        leaderCardId === null
+          ? null
+          : poneglyphCardStockImageUrl(leaderCardId, leaderVariantIndex),
       validation: {
         status: validation.status,
         errors: validation.errors,

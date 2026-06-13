@@ -66,6 +66,8 @@ export interface ValidatedCustomLobbyLoadout {
   readonly loadoutId: string | null;
   readonly status: "playable" | "unplayable" | "unverified";
   readonly errors: readonly string[];
+  readonly leaderCardId?: string | null;
+  readonly leaderVariantIndex?: number | null;
 }
 
 export interface ValidatedCustomLobbyLoadoutsResponse {
@@ -161,6 +163,16 @@ export interface CreateCustomLobbyRegistryOptions extends CreatePremadeDevMatchS
 }
 
 const devLobbyCreatedAt = "2026-05-04T00:00:00.000Z";
+
+const deckSubmissionLeaderPreview = (
+  submission: ReadyDeckSubmission,
+): {
+  readonly leaderCardId: string;
+  readonly leaderVariantIndex: number | null;
+} => ({
+  leaderCardId: submission.decoded.leader.cardId,
+  leaderVariantIndex: submission.decoded.leader.variantIndex ?? null,
+});
 
 const twoPlayerOrder = (
   playerOrder: readonly PlayerId[] | undefined,
@@ -343,17 +355,20 @@ export const createCustomLobbyRegistry = async (
           );
     for (const [resultIndex, pending] of pendingSubmissions.entries()) {
       const validation = validationResults[resultIndex];
+      const leaderPreview = deckSubmissionLeaderPreview(pending.submission);
       loadouts[pending.index] =
         validation?.valid === true
           ? {
               loadoutId: pending.loadoutId,
               status: "playable" as const,
               errors: [],
+              ...leaderPreview,
             }
           : {
               loadoutId: pending.loadoutId,
               status: "unplayable" as const,
               errors: ["Resolved loadout is invalid."],
+              ...leaderPreview,
             };
     }
   };

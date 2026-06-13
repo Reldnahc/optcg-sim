@@ -7,8 +7,10 @@ import type { PlayerId } from "@optcg/types";
 
 import type { LobbyClientState } from "../controller.js";
 import type { AccountLoadout } from "../account-client.js";
+import type { ValidatedLobbyLoadout } from "../transport.js";
 import { DeckLoadoutPicker } from "./DeckLoadoutPicker.js";
 import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
+import { attachDeckPreviewValidation } from "./useMatchClient.js";
 
 const lobbyState = ({
   selfDeckStatus = "missing",
@@ -249,6 +251,42 @@ describe("lobby deck panel", () => {
       html,
       /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
     );
+  });
+
+  test("adds validated leader preview metadata to fast loadout rows", () => {
+    const fastLoadouts: readonly AccountLoadout[] = [
+      {
+        id: "loadout-1",
+        name: "Fast Enel",
+        folderId: null,
+        folderName: null,
+        favorite: false,
+        leaderCardId: null,
+        leaderVariantIndex: null,
+        leaderImageUrl: null,
+        updatedAt: "2026-06-02T00:00:00.000Z",
+      },
+    ];
+    const validated: readonly ValidatedLobbyLoadout[] = [
+      {
+        loadoutId: "loadout-1",
+        status: "playable",
+        errors: [],
+        leaderCardId: "OP05-098",
+        leaderVariantIndex: 2,
+      },
+    ];
+
+    assert.deepEqual(attachDeckPreviewValidation(fastLoadouts, validated), [
+      {
+        ...fastLoadouts[0],
+        leaderCardId: "OP05-098",
+        leaderVariantIndex: 2,
+        leaderImageUrl:
+          "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
+        validation: { status: "playable", errors: [] },
+      },
+    ]);
   });
 
   test("renders loading deck status in the deck action row", () => {
