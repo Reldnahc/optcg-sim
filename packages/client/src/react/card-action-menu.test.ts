@@ -1072,8 +1072,8 @@ describe("card action menu", () => {
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 4);
     assert.equal((markup.match(/hidden-life-opponent-/gu) ?? []).length, 5);
     [
-      /--life-card-y-offset:0%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
-      /--life-card-y-offset:30%;z-index:4;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-3/u,
+      /--life-card-y-offset:30%;z-index:4;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
+      /--life-card-y-offset:0%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-3/u,
       /--life-card-y-offset:40%;z-index:5;top:var\(--life-card-y-offset\)[\s\S]*hidden-life-opponent-0/u,
       /--life-card-y-offset:0%;z-index:1;top:var\(--life-card-y-offset\)[\s\S]*hidden-life-opponent-4/u,
     ].forEach((pattern) => {
@@ -1099,9 +1099,9 @@ describe("card action menu", () => {
 
     assert.equal((markup.match(/hidden-life-self-/gu) ?? []).length, 10);
     [
-      /--life-card-y-offset:0%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
-      /--life-card-y-offset:50%;z-index:6;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-5/u,
-      /--life-card-y-offset:90%;z-index:10;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-9/u,
+      /--life-card-y-offset:90%;z-index:10;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-0/u,
+      /--life-card-y-offset:40%;z-index:5;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-5/u,
+      /--life-card-y-offset:0%;z-index:1;bottom:var\(--life-card-y-offset\)[\s\S]*hidden-life-self-9/u,
     ].forEach((pattern) => {
       assert.match(markup, pattern);
     });
