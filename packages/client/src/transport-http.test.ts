@@ -92,6 +92,31 @@ describe("dev HTTP match transport", () => {
     );
   });
 
+  test("sends disabled timer lobby settings when creating a lobby", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        lobbyId: "lobby-1",
+        settings: { formatId: "Standard", timerDisabled: true },
+        seats: {},
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    await transport.createLobby({
+      settings: { formatId: "Standard", timerDisabled: true },
+    });
+
+    assert.equal(
+      recorder.requests[0]?.init?.body,
+      JSON.stringify({
+        settings: { formatId: "Standard", timerDisabled: true },
+      }),
+    );
+  });
+
   test("joins primitive lobbies by reusable short join code", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

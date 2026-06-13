@@ -36,9 +36,15 @@ const anythingGoesFormatId = "sandbox-open";
 const lobbyFormatIdForSelection = (formatName: string): string =>
   formatName === anythingGoesFormat.name ? anythingGoesFormatId : formatName;
 
-const privateLobbyHref = (formatName: string): string => {
+const privateLobbyHref = (
+  formatName: string,
+  timerDisabled: boolean,
+): string => {
   const url = new URL(appRoutePath("match"), "http://localhost");
   url.searchParams.set("lobbyFormat", lobbyFormatIdForSelection(formatName));
+  if (timerDisabled) {
+    url.searchParams.set("timerDisabled", "1");
+  }
   return `${url.pathname}${url.search}`;
 };
 
@@ -52,10 +58,12 @@ export interface DashboardPageViewProps {
   readonly loadoutsStatus: ResourceStatus;
   readonly loadoutsError?: string | undefined;
   readonly selectedLoadoutId: string;
+  readonly privateLobbyTimerDisabled: boolean;
   readonly onSelectMode: (mode: PlayMode) => void;
   readonly onSelectFormat: (formatName: string) => void;
   readonly onSelectLoadout: (loadoutId: string) => void;
   readonly onRefreshLoadouts: () => void;
+  readonly onSetPrivateLobbyTimerDisabled: (disabled: boolean) => void;
 }
 
 const isQueueMode = (mode: PlayMode): boolean => mode !== "privateLobby";
@@ -88,10 +96,12 @@ export const DashboardPageView = ({
   loadoutsStatus,
   loadoutsError,
   selectedLoadoutId,
+  privateLobbyTimerDisabled,
   onSelectMode,
   onSelectFormat,
   onSelectLoadout,
   onRefreshLoadouts,
+  onSetPrivateLobbyTimerDisabled,
 }: DashboardPageViewProps): React.JSX.Element => {
   const queueMode = isQueueMode(mode);
   const visibleFormats = visibleFormatsForMode(mode, formats);
@@ -162,6 +172,19 @@ export const DashboardPageView = ({
           </div>
         </div>
 
+        {mode === "privateLobby" ? (
+          <label className="play-selector-checkbox">
+            <input
+              type="checkbox"
+              checked={privateLobbyTimerDisabled}
+              onChange={(event) => {
+                onSetPrivateLobbyTimerDisabled(event.currentTarget.checked);
+              }}
+            />
+            <span>Disable timer</span>
+          </label>
+        ) : null}
+
         {deckSelectVisible ? (
           <div className="queue-loadout-section">
             <div className="queue-loadout-header">
@@ -203,7 +226,10 @@ export const DashboardPageView = ({
           {mode === "privateLobby" ? (
             <a
               className="shell-card-action"
-              href={privateLobbyHref(selectedFormatName)}
+              href={privateLobbyHref(
+                selectedFormatName,
+                privateLobbyTimerDisabled,
+              )}
             >
               Make Lobby
             </a>
@@ -238,6 +264,8 @@ export const DashboardPage = (): React.JSX.Element => {
   const [loadoutsStatus, setLoadoutsStatus] = useState<ResourceStatus>("idle");
   const [loadoutsError, setLoadoutsError] = useState<string>();
   const [selectedLoadoutId, setSelectedLoadoutId] = useState("");
+  const [privateLobbyTimerDisabled, setPrivateLobbyTimerDisabled] =
+    useState(false);
   const apiClient = useMemo(
     () =>
       createPoneglyphApiClient({
@@ -330,10 +358,12 @@ export const DashboardPage = (): React.JSX.Element => {
       loadoutsStatus={loadoutsStatus}
       loadoutsError={loadoutsError}
       selectedLoadoutId={selectedLoadoutId}
+      privateLobbyTimerDisabled={privateLobbyTimerDisabled}
       onSelectMode={setMode}
       onSelectFormat={setSelectedFormatName}
       onSelectLoadout={setSelectedLoadoutId}
       onRefreshLoadouts={refreshLoadouts}
+      onSetPrivateLobbyTimerDisabled={setPrivateLobbyTimerDisabled}
     />
   );
 };

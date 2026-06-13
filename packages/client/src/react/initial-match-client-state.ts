@@ -6,6 +6,7 @@ import {
   lobbyFormatIdFromUrl,
   lobbyJoinCodeFromPath,
   lobbyIdFromPath,
+  lobbyTimerDisabledFromUrl,
   matchIdFromUrl,
 } from "./useMatchClient-support.js";
 
@@ -35,9 +36,15 @@ export const loadInitialMatchClientState = async (
     });
   }
   const lobbyFormatId = lobbyFormatIdFromUrl();
+  const timerDisabled = lobbyTimerDisabledFromUrl();
   return await controller.startCustomLobby(
-    lobbyFormatId === undefined
+    lobbyFormatId === undefined && !timerDisabled
       ? undefined
-      : { settings: { formatId: lobbyFormatId } },
+      : {
+          settings: {
+            formatId: lobbyFormatId ?? "sandbox-open",
+            ...(timerDisabled ? { timerDisabled: true } : {}),
+          },
+        },
   );
 };

@@ -163,6 +163,7 @@ export interface CustomLobby {
 
 export interface CustomLobbySettings {
   formatId: string;
+  timerDisabled?: boolean;
 }
 
 export interface CreateCustomLobbyInput {

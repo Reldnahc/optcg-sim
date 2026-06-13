@@ -189,6 +189,13 @@ const defaultLobbySettings = (): CustomLobbySettings => ({
   formatId: defaultDevDeckFormatId,
 });
 
+const createLobbySettings = (
+  settings: Partial<CustomLobbySettings> | undefined,
+): CustomLobbySettings => ({
+  formatId: settings?.formatId ?? defaultDevDeckFormatId,
+  ...(settings?.timerDisabled === true ? { timerDisabled: true } : {}),
+});
+
 const lobbySettings = (lobby: CustomLobbyState): CustomLobbySettings =>
   lobby.settings ?? defaultLobbySettings();
 
@@ -416,6 +423,7 @@ export const createCustomLobbyRegistry = async (
           ? {}
           : { firstPlayerChoice: lobby.firstPlayerChoice }),
         seats: matchSeatsWithMatchId(lobby.seats, matchId),
+        timersEnabled: lobbySettings(lobby).timerDisabled !== true,
       },
     );
     lobby.matchId = created.matchId;
@@ -459,10 +467,7 @@ export const createCustomLobbyRegistry = async (
       const lobby: CustomLobbyState = {
         lobbyId,
         joinCode,
-        settings:
-          settings?.formatId === undefined
-            ? defaultLobbySettings()
-            : { formatId: settings.formatId },
+        settings: createLobbySettings(settings),
         seats: createDefaultLobbySeats(),
       };
       return lobbyResponse(await lobbyStore.createLobby(lobby));
@@ -761,7 +766,7 @@ export const createCustomLobbyRegistry = async (
       const lobby: CustomLobbyState = {
         lobbyId: `rematch-${lobbyStore.createLobbyId()}`,
         ...(joinCode === undefined ? {} : { joinCode }),
-        settings: defaultLobbySettings(),
+        settings: createLobbySettings(sourceLobby?.settings),
         seats: Object.fromEntries(
           Object.entries(seed.seats).map(([key, seat]) => [
             key,

@@ -68,10 +68,12 @@ describe("client app shell pages", () => {
           loadouts,
           loadoutsStatus: "ready",
           selectedLoadoutId: "loadout-1",
+          privateLobbyTimerDisabled: false,
           onSelectMode: noop,
           onSelectFormat: noop,
           onSelectLoadout: noop,
           onRefreshLoadouts: noop,
+          onSetPrivateLobbyTimerDisabled: noop,
         }),
       }),
     );
