@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { selectedPowerContinuationExpressionParser } from "./selected-power-continuation.js";
+import {
+  conditionalAdditionalSelectedPowerContinuationExpressionParser,
+  selectedPowerContinuationExpressionParser,
+} from "./selected-power-continuation.js";
+import { parseTrashCountCondition } from "../conditions/index.js";
 
 describe("selected power continuation expression parser", () => {
   it("saves a selected power target and applies an additional modifier to that card", () => {
@@ -53,6 +57,64 @@ describe("selected power continuation expression parser", () => {
         "composition:selectThenApply",
         "target:selectedCharacter",
         "duration:thisBattle",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
+  it("saves a selected power target and conditionally grants that card a keyword", () => {
+    const result =
+      conditionalAdditionalSelectedPowerContinuationExpressionParser({
+        conditions: [parseTrashCountCondition],
+      })({
+        text: "up to 1 of your {Dressrosa} type Characters gains +2000 power during this turn. Then, if you have 10 or more cards in your trash, that card gains [Banish] during this turn.",
+      });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:power-continuation-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Dressrosa"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              value: 2000,
+            },
+          },
+          {
+            effect: {
+              type: "conditional",
+              if: { type: "trashCount", player: "self", op: "gte", value: 10 },
+              then: {
+                type: "giveKeyword",
+                keyword: "banish",
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:modifyPower",
+        "instruction:giveKeyword",
+        "keyword:anySupported",
+        "expression:conditional",
+        "condition:trashCount",
         "duration:thisTurn",
       ]),
     );

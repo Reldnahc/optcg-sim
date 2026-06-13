@@ -11,6 +11,7 @@ import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
 } from "../durations/index.js";
+import { parseKeywordGrantForTarget } from "../instructions/continuous-field-effects/keyword-grants/shared.js";
 import { parseModifyPowerInstruction } from "../instructions/index.js";
 import type {
   ConditionParser,
@@ -51,6 +52,14 @@ function parseSelectedPowerContinuation(
     readonly additionalConditionParsers?: readonly ConditionParser[];
   } = {},
 ): ExpressionParseResult | undefined {
+  const keywordContinuation = parseSelectedPowerKeywordContinuation(
+    input,
+    options,
+  );
+  if (keywordContinuation !== undefined) {
+    return keywordContinuation;
+  }
+
   const split =
     /^(?<first>.+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains an additional \+(?<amount>[1-9]\d*) power (?<duration>.+)$/iu.exec(
       input.text,
@@ -156,6 +165,109 @@ function parseSelectedPowerContinuation(
       "modifier:positivePower",
       ...additionalConditionEvidence,
       ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseSelectedPowerKeywordContinuation(
+  input: ParseInput,
+  options: {
+    readonly additionalConditionParsers?: readonly ConditionParser[];
+  },
+): ExpressionParseResult | undefined {
+  const split =
+    /^(?<first>.+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains (?<keyword>\[[^\]]+\].+)$/iu.exec(
+      input.text,
+    );
+  const firstText = split?.groups?.["first"];
+  const conditionText = split?.groups?.["condition"];
+  const keywordText = split?.groups?.["keyword"];
+  if (firstText === undefined || keywordText === undefined) {
+    return undefined;
+  }
+
+  const first = parseModifyPowerInstruction({ text: `${firstText}.` });
+  if (
+    first === undefined ||
+    first.rest.length > 0 ||
+    first.effect.type !== "modifyPower" ||
+    !isSelectableTarget(first.effect.target)
+  ) {
+    return undefined;
+  }
+
+  const additionalCondition =
+    conditionText === undefined
+      ? undefined
+      : parseConditionExpression(
+          conditionText,
+          options.additionalConditionParsers ?? [],
+        );
+  if (conditionText !== undefined && additionalCondition === undefined) {
+    return undefined;
+  }
+
+  const savedTarget = savedFieldObjectTarget(first.effect.target);
+  const selectionEffect = selectTargetsEffect(first.effect.target);
+  if (savedTarget === undefined || selectionEffect === undefined) {
+    return undefined;
+  }
+
+  const keyword = parseKeywordGrantForTarget({
+    target: savedTarget,
+    targetEvidence: ["target:selectedCharacter"],
+    text: keywordText,
+    context: { condition: undefined },
+  });
+  if (keyword === undefined || keyword.rest.length > 0) {
+    return undefined;
+  }
+
+  const firstPower: ModifyPowerEffect = {
+    ...first.effect,
+    target: savedTarget,
+  };
+  const keywordEffect: Effect =
+    additionalCondition === undefined
+      ? keyword.effect
+      : {
+          type: "conditional",
+          if: additionalCondition.condition,
+          then: keyword.effect,
+        };
+  const additionalConditionEvidence: readonly PrimitiveEvidence[] =
+    additionalCondition === undefined
+      ? []
+      : ["expression:conditional", ...additionalCondition.evidence];
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:power-continuation-target",
+          connector: "always",
+          saveResultAs: powerContinuationSelection,
+          effect: selectionEffect,
+        },
+        {
+          id: "power:first-selected-target",
+          connector: "then",
+          effect: firstPower,
+        },
+        {
+          id: "keyword:selected-power-target",
+          connector: "then",
+          effect: keywordEffect,
+        },
+      ],
+    },
+    evidence: [
+      "composition:selectThenApply",
+      ...first.evidence,
+      ...keyword.evidence,
+      ...additionalConditionEvidence,
     ],
     rest: "",
   };
