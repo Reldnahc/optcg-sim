@@ -85,11 +85,8 @@ describe("card preview window", () => {
     assert.match(markup, /card-preview-stage/u);
     assert.match(markup, /card-preview-image-scroll/u);
     assert.match(markup, /card-preview-card-image/u);
-    assert.match(markup, /--card-preview-zoom:1/u);
-    assert.match(
-      markup,
-      /--card-preview-image-bottom-reserve:0px/u,
-    );
+    assert.match(markup, /--card-preview-zoom:1\.5/u);
+    assert.match(markup, /--card-preview-image-bottom-reserve:0px/u);
     assert.doesNotMatch(markup, /card-preview-rules-panel/u);
     assert.doesNotMatch(markup, /card-preview-rules-resize-handle/u);
     assert.match(markup, /--card-preview-rules-height:42%/u);
@@ -183,6 +180,8 @@ describe("card preview window", () => {
       source,
       /zoomBy\(event\.deltaY < 0 \? previewZoomStep : -previewZoomStep\);/u,
     );
+    assert.match(source, /const previewRenderedScale = 1\.5;/u);
+    assert.match(source, /zoom \* previewRenderedScale/u);
   });
 
   test("preview text panel can be dragged to the top of the preview stage", async () => {
