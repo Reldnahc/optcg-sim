@@ -157,4 +157,36 @@ describe("field activation instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses named Leader activation before or after the Leader noun", () => {
+    for (const text of [
+      "Set your Leader [Yamato] as active.",
+      "Set your [Yamato] Leader as active.",
+    ]) {
+      expect(parseSetFieldActiveInstruction({ text })).toMatchObject({
+        effect: {
+          type: "activate",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "leaderArea",
+            filter: {
+              categories: ["leader"],
+              names: ["Yamato"],
+            },
+          },
+        },
+        evidence: [
+          "instruction:activate",
+          "target:yourLeader",
+          "player:self",
+          "zone:leaderArea",
+          "filter:category:leader",
+          "filter:name",
+          "state:active",
+        ],
+        rest: "",
+      });
+    }
+  });
 });

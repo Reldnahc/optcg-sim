@@ -303,13 +303,15 @@ function parseSetAllFilteredCharactersActive(
 
 function parseSetYourLeaderActive(text: string): ReturnType<InstructionParser> {
   const match =
-    /^set your (?:\{(?<type>[^}]+)\} type )?Leader(?: \[(?<name>[^\]]+)\])? as active\.?$/i.exec(
+    /^set your (?:(?:\[(?<prefixName>[^\]]+)\] )|(?:\{(?<type>[^}]+)\} type ))?Leader(?: \[(?<suffixName>[^\]]+)\])? as active\.?$/i.exec(
       text,
     );
   if (match === null) {
     return undefined;
   }
-  const name = match.groups?.["name"];
+  const prefixName = match.groups?.["prefixName"];
+  const suffixName = match.groups?.["suffixName"];
+  const name = prefixName ?? suffixName;
   const type = match.groups?.["type"];
 
   if (name !== undefined || type !== undefined) {
