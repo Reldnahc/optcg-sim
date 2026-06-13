@@ -1,4 +1,9 @@
-export type AppRouteId = "dashboard" | "lobbies" | "match" | "notFound";
+export type AppRouteId =
+  | "dashboard"
+  | "lobbies"
+  | "match"
+  | "replay"
+  | "notFound";
 
 export interface AppRouteDefinition {
   id: Exclude<AppRouteId, "lobbies" | "notFound">;
@@ -42,6 +47,13 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
       search: parsed.search,
     };
   }
+  if (/^\/replays\/[^/]+$/u.test(parsed.pathname)) {
+    return {
+      id: "replay",
+      path: parsed.pathname,
+      search: parsed.search,
+    };
+  }
   return {
     id: route?.id ?? "notFound",
     path: parsed.pathname,
@@ -50,7 +62,7 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
 };
 
 export const appRoutePath = (
-  id: Exclude<AppRouteId, "lobbies" | "notFound">,
+  id: Exclude<AppRouteId, "lobbies" | "replay" | "notFound">,
 ): string => {
   const route = appRoutes.find((candidate) => candidate.id === id);
   if (route === undefined) {
@@ -59,4 +71,5 @@ export const appRoutePath = (
   return route.path;
 };
 
-export const isShellRoute = (id: AppRouteId): boolean => id !== "match";
+export const isShellRoute = (id: AppRouteId): boolean =>
+  id !== "match" && id !== "replay";

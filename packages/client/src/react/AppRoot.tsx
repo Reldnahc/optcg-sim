@@ -4,6 +4,7 @@ import { appRouteFromPath } from "./app-route.js";
 import { DashboardPage } from "./DashboardPage.js";
 import { MatchApp } from "./MatchApp.js";
 import { NotFoundPage } from "./NotFoundPage.js";
+import { ReplayViewerPage } from "./ReplayViewerPage.js";
 import { simAuthSessionToken, useSimAuth } from "./use-sim-auth.js";
 
 export interface AppRootProps {
@@ -27,6 +28,13 @@ export const AppRootContent = ({
           (accountSessionToken === undefined ? undefined : (
             <MatchApp accountSessionToken={accountSessionToken} />
           ))}
+      </div>
+    );
+  }
+  if (route.id === "replay") {
+    return (
+      <div data-app-route="replay">
+        <ReplayViewerPage path={route.path} />
       </div>
     );
   }

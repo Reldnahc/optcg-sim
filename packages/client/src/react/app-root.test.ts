@@ -87,6 +87,16 @@ describe("client app root", () => {
     assert.doesNotMatch(html, /Page not found/u);
   });
 
+  test("delegates replay routes to the replay surface", () => {
+    const html = renderToStaticMarkup(
+      createElement(AppRootContent, { path: "/replays/match-1" }),
+    );
+
+    assert.match(html, /data-app-route="replay"/u);
+    assert.match(html, /Replay Viewer/u);
+    assert.doesNotMatch(html, /Make Lobby/u);
+  });
+
   test("gates the routed app while account session is unresolved", () => {
     const html = renderToStaticMarkup(createElement(AppRoot, { path: "/" }));
 
