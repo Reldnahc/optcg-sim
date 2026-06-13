@@ -49,6 +49,7 @@ export type Cost =
   | {
       type: "returnDon";
       count: number;
+      maxCount?: number | "available";
       chooser?: PlayerRef;
       sourceState?: "active";
       optional?: boolean;
@@ -196,6 +197,7 @@ export type OptionalCost =
   | {
       type: "returnDon";
       count: number;
+      maxCount?: number | "available";
       chooser?: PlayerRef;
       sourceState?: "active";
       optional: true;

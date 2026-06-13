@@ -346,6 +346,51 @@ it("parses explicit active DON return as a reusable optional cost before draw", 
   });
 });
 
+it("parses variable field DON return as a reusable optional cost before draw", () => {
+  expect(
+    parseCardEffectLine(
+      "[When Attacking] You may return 1 or more DON!! cards from your field to your DON!! deck: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "returnDon",
+                count: 1,
+                maxCount: "available",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:whenAttacking",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:returnDon",
+      "count:atLeastOne",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("composes active DON return with multi-card hand play using existing body primitives", () => {
   expect(
     parseCardEffectLine(

@@ -53,8 +53,7 @@ export const applyDonPayment = (params: {
 
   const selected = response.selectedDonInstanceIds;
   const selectedCount = selected?.length;
-  const maxCount =
-    selectedOption.type === "restDon" ? selectedOption.maxCount : undefined;
+  const maxCount = selectedOption.maxCount;
   if (
     selected === undefined ||
     selectedCount === undefined ||

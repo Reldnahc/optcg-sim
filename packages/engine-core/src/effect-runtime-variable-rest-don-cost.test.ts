@@ -64,6 +64,35 @@ const variableRestDonThenPowerSequence = (): Extract<
     ],
   }) as unknown as Extract<Effect, { type: "sequence" }>;
 
+const variableReturnDonThenDrawSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> =>
+  ({
+    type: "sequence",
+    effects: [
+      {
+        id: "variable-return-don-cost",
+        connector: "always",
+        saveResultAs: "paidCost:returnDon",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "returnDon",
+            count: 1,
+            maxCount: "available",
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "draw-after-return",
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  }) as unknown as Extract<Effect, { type: "sequence" }>;
+
 const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
@@ -95,7 +124,7 @@ const setupSequenceDefinition = (
   return definition;
 };
 
-const sequenceQueueState = (): GameState => {
+const sequenceQueueState = (effect: Effect): GameState => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   const p1State = must(state.players[p1], "p1");
@@ -110,7 +139,7 @@ const sequenceQueueState = (): GameState => {
     ...card,
     zone: { zone: "hand", playerId: p1, slot: "hand", index },
   }));
-  setupSequenceDefinition(state, source, variableRestDonThenPowerSequence());
+  setupSequenceDefinition(state, source, effect);
   state.effectQueue = [
     {
       ...queueDrawForP1(),
@@ -154,7 +183,7 @@ const placeActiveDon = (state: GameState, playerId = p1): CardInstance => {
 };
 
 test("variable rest-DON cost records selected paid DON for dynamic power values", () => {
-  const state = sequenceQueueState();
+  const state = sequenceQueueState(variableRestDonThenPowerSequence());
   const firstDon = placeActiveDon(state);
   const secondDon = placeActiveDon(state);
   const thirdDon = placeActiveDon(state);
@@ -211,5 +240,61 @@ test("variable rest-DON cost records selected paid DON for dynamic power values"
       },
     ],
   );
+  assert.equal(paid.stateHash, hashCanonicalStateValue(paid.state));
+});
+
+test("variable return-DON cost accepts one or more selected DON payments", () => {
+  const state = sequenceQueueState(variableReturnDonThenDrawSequence());
+  const firstDon = placeActiveDon(state);
+  const secondDon = placeActiveDon(state);
+  const thirdDon = placeActiveDon(state);
+
+  const paused = processEffectRuntime(state);
+  const paymentDecision = must(paused.state.pendingDecision, "pay cost");
+  assert.equal(paymentDecision.type, "payCost");
+  assert.deepEqual(paymentDecision.paymentOptions, [
+    { id: "returnDon", type: "returnDon", count: 1, maxCount: "available" },
+  ]);
+
+  const rejectedZero = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: paymentDecision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: [],
+    },
+  });
+  assert.equal(
+    must(rejectedZero.errors, "zero selected errors")[0]?.type,
+    "invalidDecisionResponse",
+  );
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: paymentDecision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: [firstDon.instanceId, secondDon.instanceId],
+    },
+  });
+  const afterP1 = must(paid.state.players[p1], "after p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(
+    afterP1.costArea.some((card) => card.instanceId === firstDon.instanceId),
+    false,
+  );
+  assert.equal(
+    afterP1.costArea.some((card) => card.instanceId === secondDon.instanceId),
+    false,
+  );
+  assert.equal(
+    afterP1.costArea.some((card) => card.instanceId === thirdDon.instanceId),
+    true,
+  );
+  assert.equal(afterP1.donDeck.at(-2)?.instanceId, firstDon.instanceId);
+  assert.equal(afterP1.donDeck.at(-1)?.instanceId, secondDon.instanceId);
   assert.equal(paid.stateHash, hashCanonicalStateValue(paid.state));
 });

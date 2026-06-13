@@ -10,7 +10,11 @@ describe("return DON cost parser", () => {
   it("defines return DON as a cost primitive parent", () => {
     expect(returnDonCostPrimitive).toEqual({
       primitiveId: "cost:returnDon",
-      matches: [{ id: "don-minus-n" }, { id: "return-active-don" }],
+      matches: [
+        { id: "don-minus-n" },
+        { id: "return-active-don" },
+        { id: "return-one-or-more-field-don" },
+      ],
     });
   });
 
@@ -35,6 +39,23 @@ describe("return DON cost parser", () => {
         optional: true,
       },
       evidence: ["cost:returnDon", "count:positiveInteger", "state:active"],
+      rest: "",
+    });
+  });
+
+  it("parses at-least-one field DON return as a variable reusable cost primitive", () => {
+    expect(
+      parseReturnDonSequenceCost({
+        text: "return 1 or more DON!! cards from your field to your DON!! deck",
+      }),
+    ).toEqual({
+      cost: {
+        type: "returnDon",
+        count: 1,
+        maxCount: "available",
+        optional: true,
+      },
+      evidence: ["cost:returnDon", "count:atLeastOne"],
       rest: "",
     });
   });

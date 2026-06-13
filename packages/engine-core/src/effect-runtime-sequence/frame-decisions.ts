@@ -780,6 +780,7 @@ export const getSequenceOptionalPayCostOptions = (
         id: "returnDon",
         type: "returnDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         ...(cost.sourceState === undefined
           ? {}
           : { sourceState: cost.sourceState }),

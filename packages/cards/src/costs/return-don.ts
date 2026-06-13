@@ -16,7 +16,11 @@ export interface CostParseResult {
 
 export const returnDonCostPrimitive = {
   primitiveId: "cost:returnDon",
-  matches: [{ id: "don-minus-n" }, { id: "return-active-don" }],
+  matches: [
+    { id: "don-minus-n" },
+    { id: "return-active-don" },
+    { id: "return-one-or-more-field-don" },
+  ],
 } as const;
 
 export function parseReturnDonCost(
@@ -62,6 +66,11 @@ export function parseReturnDonCost(
 export function parseReturnDonSequenceCost(
   input: ParseInput,
 ): SequenceCostParseResult | undefined {
+  const variableFieldDon = parseVariableFieldDonReturnCost(input);
+  if (variableFieldDon !== undefined) {
+    return variableFieldDon;
+  }
+
   const match =
     /^DON!!\s*[-\u2212](?<count>[1-9]\d*)$/iu.exec(input.text) ??
     /^return (?<count>[1-9]\d*) of your active DON!! cards? to your DON!! deck$/iu.exec(
@@ -85,6 +94,29 @@ export function parseReturnDonSequenceCost(
       "count:positiveInteger",
       ...(sourceState === undefined ? [] : (["state:active"] as const)),
     ],
+    rest: "",
+  };
+}
+
+function parseVariableFieldDonReturnCost(
+  input: ParseInput,
+): SequenceCostParseResult | undefined {
+  if (
+    !/^return 1 or more DON!! cards from your field to your DON!! deck$/iu.test(
+      input.text,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "returnDon",
+      count: 1,
+      maxCount: "available",
+      optional: true,
+    },
+    evidence: ["cost:returnDon", "count:atLeastOne"],
     rest: "",
   };
 }

@@ -120,6 +120,7 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       return {
         type: "returnDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         ...(cost.sourceState === undefined
           ? {}
@@ -244,6 +245,7 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       return {
         type: "returnDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         ...(cost.sourceState === undefined
           ? {}
