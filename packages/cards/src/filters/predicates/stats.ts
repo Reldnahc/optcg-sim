@@ -117,7 +117,7 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const rangeMatch =
-    /^a (?<base>base )?cost of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
+    /^a (?<base>base )?cost(?: of)? (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
       text,
     );
   const minText = rangeMatch?.groups?.["min"];
@@ -144,7 +144,7 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const exactMatch =
-    /^a (?<base>base )?cost of (?<exact>0|[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
+    /^a (?<base>base )?cost(?: of)? (?<exact>0|[1-9]\d*)\b(?!\s+or\s+(?:more|less)\b)\s*(?<exactRest>.*)$/i.exec(
       text,
     );
   const exactValueText = exactMatch?.groups?.["exact"];
@@ -166,7 +166,7 @@ export const parseCostPredicate: PredicateParser = (text, current) => {
   }
 
   const match =
-    /^a (?<base>base )?cost of (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
+    /^a (?<base>base )?cost(?: of)? (?<value>0|[1-9]\d*) (?<direction>or more|or less)\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const valueText = match?.groups?.["value"];

@@ -529,3 +529,20 @@ describe("card filter predicate parser", () => {
     });
   });
 });
+
+it("parses shorthand cost thresholds without 'of'", () => {
+  expect(
+    parseCardFilterPredicates({
+      text: "Characters with a cost 5 or less",
+    }),
+  ).toEqual({
+    filter: { categories: ["character"], cost: { max: 5 } },
+    evidence: [
+      "filter:category:character",
+      "filter:cost",
+      "condition:comparator:lte",
+      "condition:threshold:positiveInteger",
+    ],
+    rest: "",
+  });
+});
