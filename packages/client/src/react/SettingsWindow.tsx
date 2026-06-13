@@ -1,10 +1,7 @@
 import { useRef } from "react";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import type {
-  MatchBackgroundImageFit,
-  MatchBackgroundMode,
-} from "./match-visual-settings.js";
+import type { MatchBackgroundImageFit } from "./match-visual-settings.js";
 import { useMatchVisualSettings } from "./match-visual-settings-context.js";
 
 export interface SettingsWindowProps {
@@ -35,11 +32,6 @@ const colorSwatches = [
   "#2d1b1b",
   "#10251b",
 ] as const;
-
-const backgroundModeOptions = [
-  ["color", "Color"],
-  ["image", "Image"],
-] as const satisfies readonly (readonly [MatchBackgroundMode, string])[];
 
 const backgroundImageFitOptions = [
   ["crop", "Crop"],
@@ -156,7 +148,6 @@ export const SettingsContent = (): React.JSX.Element => {
     backgroundImageCropZoom,
     backgroundImagePositionX,
     backgroundImagePositionY,
-    backgroundMode,
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
@@ -174,7 +165,6 @@ export const SettingsContent = (): React.JSX.Element => {
     setBackgroundImageCropZoom,
     setBackgroundImagePositionX,
     setBackgroundImagePositionY,
-    setBackgroundMode,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
@@ -188,6 +178,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setZoneGuideVisibility,
   } = useMatchVisualSettings();
   const cropDragPointerIdRef = useRef<number | undefined>(undefined);
+  const hasBackgroundImage = backgroundImageUrl.length > 0;
 
   const selectBackgroundFile = (file: File | undefined): void => {
     if (file === undefined) {
@@ -268,17 +259,13 @@ export const SettingsContent = (): React.JSX.Element => {
       <SettingsSection title="Personalization">
         <section className="settings-surface-group" aria-label="Background">
           <h4>Background</h4>
-          <SegmentedControl
-            label="Background type"
-            value={backgroundMode}
-            options={backgroundModeOptions}
-            onChange={setBackgroundMode}
-          />
-          <ColorSelector
-            label="Background color"
-            value={backgroundColor}
-            onChange={setBackgroundColor}
-          />
+          {hasBackgroundImage ? null : (
+            <ColorSelector
+              label="Background color"
+              value={backgroundColor}
+              onChange={setBackgroundColor}
+            />
+          )}
           <label className="settings-field">
             <span>Background image</span>
             <input
@@ -286,7 +273,6 @@ export const SettingsContent = (): React.JSX.Element => {
               accept="image/*,.gif"
               onChange={(event) => {
                 selectBackgroundFile(event.target.files?.[0]);
-                setBackgroundMode("image");
                 event.currentTarget.value = "";
               }}
             />
@@ -297,64 +283,70 @@ export const SettingsContent = (): React.JSX.Element => {
             disabled={backgroundImageUrl.length === 0}
             onClick={() => {
               setBackgroundImageUrl("");
-              setBackgroundMode("color");
             }}
           >
             Clear background
           </button>
-          <SegmentedControl
-            label="Image fit"
-            value={backgroundImageFit}
-            options={backgroundImageFitOptions}
-            onChange={setBackgroundImageFit}
-          />
-          {backgroundImageFit === "crop" ? (
-            <div className="settings-crop-helper">
-              <label className="settings-field">
-                <span>Crop zoom</span>
-                <input
-                  type="range"
-                  min="100"
-                  max="250"
-                  step="1"
-                  value={backgroundImageCropZoom}
-                  onChange={(event) => {
-                    setBackgroundImageCropZoom(
-                      event.currentTarget.valueAsNumber,
-                    );
-                  }}
-                />
-              </label>
-              <div
-                className="settings-crop-preview"
-                style={cropPreviewStyle}
-                role="img"
-                aria-label="Crop image focus"
-                onPointerDown={(event) => {
-                  cropDragPointerIdRef.current = event.pointerId;
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  updateCropFocusFromPointer(event);
-                }}
-                onPointerMove={(event) => {
-                  if (cropDragPointerIdRef.current !== event.pointerId) {
-                    return;
-                  }
-                  updateCropFocusFromPointer(event);
-                }}
-                onPointerUp={(event) => {
-                  if (cropDragPointerIdRef.current === event.pointerId) {
-                    cropDragPointerIdRef.current = undefined;
-                  }
-                }}
-                onPointerCancel={(event) => {
-                  if (cropDragPointerIdRef.current === event.pointerId) {
-                    cropDragPointerIdRef.current = undefined;
-                  }
-                }}
-              >
-                <div className="settings-crop-frame" style={cropFrameStyle} />
-              </div>
-            </div>
+          {hasBackgroundImage ? (
+            <>
+              <SegmentedControl
+                label="Image fit"
+                value={backgroundImageFit}
+                options={backgroundImageFitOptions}
+                onChange={setBackgroundImageFit}
+              />
+              {backgroundImageFit === "crop" ? (
+                <div className="settings-crop-helper">
+                  <label className="settings-field">
+                    <span>Crop zoom</span>
+                    <input
+                      type="range"
+                      min="100"
+                      max="250"
+                      step="1"
+                      value={backgroundImageCropZoom}
+                      onChange={(event) => {
+                        setBackgroundImageCropZoom(
+                          event.currentTarget.valueAsNumber,
+                        );
+                      }}
+                    />
+                  </label>
+                  <div
+                    className="settings-crop-preview"
+                    style={cropPreviewStyle}
+                    role="img"
+                    aria-label="Crop image focus"
+                    onPointerDown={(event) => {
+                      cropDragPointerIdRef.current = event.pointerId;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      updateCropFocusFromPointer(event);
+                    }}
+                    onPointerMove={(event) => {
+                      if (cropDragPointerIdRef.current !== event.pointerId) {
+                        return;
+                      }
+                      updateCropFocusFromPointer(event);
+                    }}
+                    onPointerUp={(event) => {
+                      if (cropDragPointerIdRef.current === event.pointerId) {
+                        cropDragPointerIdRef.current = undefined;
+                      }
+                    }}
+                    onPointerCancel={(event) => {
+                      if (cropDragPointerIdRef.current === event.pointerId) {
+                        cropDragPointerIdRef.current = undefined;
+                      }
+                    }}
+                  >
+                    <div
+                      className="settings-crop-frame"
+                      style={cropFrameStyle}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </>
           ) : null}
         </section>
         <section className="settings-surface-group" aria-label="Windows">
