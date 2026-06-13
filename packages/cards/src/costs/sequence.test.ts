@@ -82,6 +82,35 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses singular trash-to-deck-bottom move-card cost", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "place 1 card from your trash at the bottom of your deck",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "moveCards",
+        count: 1,
+        chooser: "self",
+        from: { player: "self", zone: "trash" },
+        to: { player: "self", zone: "deck", position: "bottom" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      evidence: [
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:trash",
+        "destination:deck",
+        "position:bottom",
+        "order:anyOrder",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses field card move costs to deck bottom as reusable moveCards costs", () => {
     expect(
       parseOptionalCostSequence({

@@ -195,7 +195,7 @@ function parseTrashToBottomDeckCostRoute(text: string):
     }
   | undefined {
   if (
-    /^cards from your trash at the bottom of your deck in any order$/i.test(
+    /^cards? from your trash at the bottom of your deck(?: in any order)?$/i.test(
       text,
     )
   ) {
