@@ -102,43 +102,23 @@ const normalizeLibraryDeck = (
   };
 };
 
-const normalizeLoadout = (value: Loadout): AccountLoadout => {
-  const leaderCardId = loadoutLeaderCardId(value);
-  const leaderVariantIndex = loadoutLeaderVariantIndex(value);
-  return {
-    id: value.id,
-    name: value.name,
-    folderId: null,
-    folderName: null,
-    favorite: false,
-    leaderCardId,
-    leaderVariantIndex,
-    leaderImageUrl:
-      leaderCardId === null
-        ? null
-        : poneglyphCardStockImageUrl(leaderCardId, leaderVariantIndex),
-    updatedAt: value.updated_at,
-  };
-};
-
-type LoadoutWithPreviewMetadata = Loadout & {
-  readonly leader_card_number?: unknown;
-  readonly leader_variant_index?: unknown;
-};
-
-const loadoutLeaderCardId = (
-  value: LoadoutWithPreviewMetadata,
-): string | null =>
-  typeof value.leader_card_number === "string"
-    ? value.leader_card_number
-    : null;
-
-const loadoutLeaderVariantIndex = (
-  value: LoadoutWithPreviewMetadata,
-): number | null =>
-  typeof value.leader_variant_index === "number"
-    ? value.leader_variant_index
-    : null;
+const normalizeLoadout = (value: Loadout): AccountLoadout => ({
+  id: value.id,
+  name: value.name,
+  folderId: null,
+  folderName: null,
+  favorite: false,
+  leaderCardId: value.leader_card_number,
+  leaderVariantIndex: value.leader_variant_index,
+  leaderImageUrl:
+    value.leader_card_number === null
+      ? null
+      : poneglyphCardStockImageUrl(
+          value.leader_card_number,
+          value.leader_variant_index,
+        ),
+  updatedAt: value.updated_at,
+});
 
 const poneglyphCardStockImageUrl = (
   cardId: string,

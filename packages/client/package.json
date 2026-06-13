@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@optcg/types": "workspace:*",
-    "optcg-auth-client": "0.1.7",
+    "optcg-auth-client": "0.1.9",
     "optcg-card-rules": "0.1.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"

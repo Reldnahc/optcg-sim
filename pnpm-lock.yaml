@@ -96,8 +96,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-auth-client:
-        specifier: 0.1.7
-        version: 0.1.7
+        specifier: 0.1.9
+        version: 0.1.9
       optcg-card-rules:
         specifier: 0.1.0
         version: 0.1.0(react@19.2.6)
@@ -1749,10 +1749,10 @@ packages:
       }
     engines: { node: ">=18" }
 
-  optcg-auth-client@0.1.7:
+  optcg-auth-client@0.1.9:
     resolution:
       {
-        integrity: sha512-pKzDD9rOyUxLpf4iyuerXVN1Cp5+XraOHY4d5t9ufT0BTgT9uedAH9hBq7rYjnNUFNsVOWcI7CEMbhrzdwG44w==,
+        integrity: sha512-lN9CJdvDtC4UJJDwnkiWkuXx5jIdRNA+cnWTiEf/v53k7iTZz1ZZmr7YrkAXd28uWvO2weHXi2eEnjmVNX+6Mw==,
       }
     engines: { node: ">=20" }
 
@@ -3347,7 +3347,7 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  optcg-auth-client@0.1.7: {}
+  optcg-auth-client@0.1.9: {}
 
   optcg-card-cache@0.1.4:
     dependencies:
