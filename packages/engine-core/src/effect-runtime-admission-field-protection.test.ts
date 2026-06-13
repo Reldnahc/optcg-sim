@@ -47,3 +47,37 @@ test("runtime admission accepts all-target field-removal protection by self effe
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts permanent setBasePower snapshots from your Leader", () => {
+  const block: EffectBlock = {
+    id: "effect:self-base-power-from-leader" as EffectBlock["id"],
+    category: "permanent",
+    trigger: { type: "permanent" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    condition: { type: "opponentTurn" },
+    effect: {
+      type: "setBasePower",
+      target: { type: "self" },
+      value: {
+        type: "snapshotCardStat",
+        target: { type: "myLeader" },
+        stat: "currentPower",
+      },
+      duration: {
+        type: "whileConditionTrue",
+        condition: {
+          type: "and",
+          conditions: [
+            { type: "opponentTurn" },
+            { type: "handCount", player: "self", op: "lte", value: 7 },
+          ],
+        },
+      },
+    },
+  };
+
+  const report = evaluateEffectBlockRuntimeSupport(block);
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});

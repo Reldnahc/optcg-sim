@@ -27,6 +27,11 @@ type BasePowerTargetSubject = {
   readonly evidence: readonly PrimitiveEvidence[];
 };
 
+type BasePowerSnapshotSource = {
+  readonly target: Target;
+  readonly evidence: readonly PrimitiveEvidence[];
+};
+
 const setBasePowerEffect = (
   target: Target,
   value: Extract<Effect, { type: "setBasePower" }>["value"],
@@ -91,6 +96,27 @@ const parseBasePowerSubject = (
         evidence: [...cardinality.evidence, ...parsedTarget.evidence],
       };
     }
+  }
+
+  return undefined;
+};
+
+const parseBasePowerSnapshotSource = (
+  text: string,
+): BasePowerSnapshotSource | undefined => {
+  const normalizedText = text.trim();
+  if (/^your Leader(?:'s (?:base )?power)?$/i.test(normalizedText)) {
+    return {
+      target: { type: "myLeader" },
+      evidence: ["target:yourLeader"],
+    };
+  }
+
+  if (/^your opponent's Leader(?:'s (?:base )?power)?$/i.test(normalizedText)) {
+    return {
+      target: { type: "opponentLeader" },
+      evidence: ["target:opponentLeader"],
+    };
   }
 
   return undefined;
@@ -202,12 +228,18 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
   context,
 ) => {
   const match =
-    /^(?<targets>.+?) becomes? the same as your opponent's Leader(?:'s power)?(?<durationText>.*)$/i.exec(
+    /^(?<targets>.+?) becomes? the same as (?<source>.+?)(?<durationText>(?:\s+during\b.*|\s+until\b.*|\.)?)$/i.exec(
       input.text,
     );
   const targetsText = match?.groups?.["targets"];
+  const sourceText = match?.groups?.["source"];
   const durationText = match?.groups?.["durationText"]?.trim() ?? "";
-  if (targetsText === undefined) {
+  if (targetsText === undefined || sourceText === undefined) {
+    return undefined;
+  }
+
+  const source = parseBasePowerSnapshotSource(sourceText);
+  if (source === undefined) {
     return undefined;
   }
 
@@ -238,7 +270,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
 
   const value = {
     type: "snapshotCardStat" as const,
-    target: { type: "opponentLeader" as const },
+    target: source.target,
     stat: "currentPower" as const,
   };
   const parsedSubjects = subjects as BasePowerTargetSubject[];
@@ -265,7 +297,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:snapshotCurrentPower",
-      "target:opponentLeader",
+      ...source.evidence,
       ...durationEvidence,
     ],
     rest: "",

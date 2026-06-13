@@ -296,6 +296,58 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses conditional base power copied from your Leader as a reusable snapshot value", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] If you have 7 or less cards in your hand, this Character's base power becomes the same as your Leader's base power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: { type: "opponentTurn" },
+        effect: {
+          type: "setBasePower",
+          target: { type: "self" },
+          value: {
+            type: "snapshotCardStat",
+            target: { type: "myLeader" },
+            stat: "currentPower",
+          },
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "and",
+              conditions: [
+                { type: "opponentTurn" },
+                {
+                  type: "handCount",
+                  player: "self",
+                  op: "lte",
+                  value: 7,
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:opponentTurn",
+        "condition:opponentTurn",
+        "condition:handCount",
+        "expression:conditionalContinuous",
+        "composition:conditionAnd",
+        "instruction:setBasePower",
+        "target:thisCharacter",
+        "target:yourLeader",
+        "value:basePower:snapshotCurrentPower",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses Opponent's Turn rest protection and keyword grant as reusable continuous primitives", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] This Character cannot be rested by your opponent's Leader and Character effects and gains [Blocker].",

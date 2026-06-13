@@ -18,8 +18,6 @@ import {
   isSupportedQueuedEffectConditionShape,
 } from "../../effect-runtime-conditions.js";
 import {
-  isSupportedBasePowerDuration,
-  isSupportedBasePowerSetFilter,
   isSupportedContinuousQueueEffect,
   isSupportedCostModifierEffect,
   isSupportedDerivedKeyword,
@@ -39,6 +37,10 @@ import {
   toDonPhasePlacementModifier,
   toSupportedDonPhasePlacementModifier,
 } from "./don-phase-placement-modifier.js";
+import {
+  isSupportedPermanentBasePowerEffect,
+  toPermanentBasePowerModifier,
+} from "./permanent-base-power.js";
 import {
   isSupportedPermanentInvalidateEffects,
   toInvalidateEffectsModifier,
@@ -443,16 +445,6 @@ const isSupportedPowerEffectValue = (
   );
 };
 
-const isSupportedPermanentBasePowerTarget = (
-  target: Extract<Effect, { type: "setBasePower" }>["target"],
-): boolean =>
-  target.type === "self" ||
-  target.type === "myLeader" ||
-  (target.type === "all" &&
-    target.zone === "characterArea" &&
-    target.player === "self" &&
-    isSupportedBasePowerSetFilter(target.filter));
-
 const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
   if (effect.type === "modifyPower") {
     return (
@@ -464,13 +456,7 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
     );
   }
   if (effect.type === "setBasePower") {
-    return (
-      typeof effect.value === "number" &&
-      Number.isSafeInteger(effect.value) &&
-      effect.value > 0 &&
-      isSupportedBasePowerDuration(effect.duration) &&
-      isSupportedPermanentBasePowerTarget(effect.target)
-    );
+    return isSupportedPermanentBasePowerEffect(effect);
   }
   if (effect.type === "modifyCost") {
     return isSupportedCostModifierEffect(effect);
@@ -657,30 +643,12 @@ const effectToDerivedModifier = (
     };
   }
   if (effect.type === "setBasePower") {
-    if (!isSupportedPermanentBasePowerTarget(effect.target)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported base-power target"),
-      );
-    }
-    if (!isSupportedBasePowerDuration(effect.duration)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported base-power duration"),
-      );
-    }
-    if (
-      typeof effect.value !== "number" ||
-      !Number.isSafeInteger(effect.value) ||
-      effect.value <= 0
-    ) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported base-power value"),
-      );
-    }
-    return {
-      layer: "basePowerSet",
-      target: effect.target,
-      operation: { type: "setBasePower", value: effect.value },
-    };
+    return toPermanentBasePowerModifier(
+      state,
+      source,
+      effect,
+      unsupportedDerivedMessage,
+    );
   }
   if (effect.type === "modifyCost") {
     if (!isSupportedCostModifierEffect(effect)) {

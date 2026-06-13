@@ -272,12 +272,12 @@ export const resolvePowerValue = (
 
 const cardRefForSnapshotTarget = (
   state: GameState,
-  entry: EffectQueueEntry,
+  controllerId: PlayerId,
   target: SnapshotNumberValue["target"],
   context: ContinuousResolutionContext | undefined,
 ): CardRef | null => {
   if (target.type === "opponentLeader") {
-    const opponentId = opponentOf(state, entry.controllerId);
+    const opponentId = opponentOf(state, controllerId);
     if (opponentId === null) {
       return null;
     }
@@ -293,14 +293,14 @@ const cardRefForSnapshotTarget = (
     };
   }
   if (target.type === "myLeader") {
-    const player = state.players[entry.controllerId];
+    const player = state.players[controllerId];
     if (player === undefined) {
       return null;
     }
     return {
       instanceId: player.leader.instanceId,
       cardId: player.leader.cardId,
-      playerId: entry.controllerId,
+      playerId: controllerId,
       zone: player.leader.zone,
     };
   }
@@ -318,9 +318,9 @@ const cardRefForSnapshotTarget = (
     }
     const expectedPlayer =
       target.player === "self"
-        ? entry.controllerId
+        ? controllerId
         : target.player === "opponent"
-          ? opponentOf(state, entry.controllerId)
+          ? opponentOf(state, controllerId)
           : target.player;
     if (expectedPlayer === null || object.playerId !== expectedPlayer) {
       return null;
@@ -427,10 +427,29 @@ export const resolveBasePowerValue = (
   value: Extract<Effect, { type: "setBasePower" }>["value"],
   context?: ContinuousResolutionContext,
 ): number | null => {
+  return resolveBasePowerValueForController(
+    state,
+    entry.controllerId,
+    value,
+    context,
+  );
+};
+
+export const resolveBasePowerValueForController = (
+  state: GameState,
+  controllerId: PlayerId,
+  value: Extract<Effect, { type: "setBasePower" }>["value"],
+  context?: ContinuousResolutionContext,
+): number | null => {
   if (typeof value === "number") {
     return value;
   }
-  const target = cardRefForSnapshotTarget(state, entry, value.target, context);
+  const target = cardRefForSnapshotTarget(
+    state,
+    controllerId,
+    value.target,
+    context,
+  );
   return target === null
     ? null
     : currentPowerForSnapshotTarget(state, target, value.stat);

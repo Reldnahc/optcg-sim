@@ -272,12 +272,13 @@ export const isSupportedCostModifierEffect = (
       effect.filter === undefined &&
       isSupportedTarget(effect.target)));
 
-const isSupportedBasePowerValue = (
+export const isSupportedBasePowerValue = (
   value: Extract<Effect, { type: "setBasePower" }>["value"],
 ): boolean =>
   (typeof value === "number" && Number.isSafeInteger(value) && value > 0) ||
   (typeof value === "object" &&
-    (value.target.type === "opponentLeader" ||
+    (value.target.type === "myLeader" ||
+      value.target.type === "opponentLeader" ||
       (value.target.type === "savedFieldObject" &&
         value.target.binding.family === "selectedTargets" &&
         value.target.zone === "characterArea" &&

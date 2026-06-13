@@ -343,6 +343,48 @@ const permanentOpponentTurnBasePowerDefinition = (
   },
 });
 
+const permanentLeaderSnapshotBasePowerDefinition = (
+  cardId: CardId,
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:leader-snapshot-base-power" as never,
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: { type: "opponentTurn" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "setBasePower",
+        target: { type: "self" },
+        value: {
+          type: "snapshotCardStat",
+          target: { type: "myLeader" },
+          stat: "currentPower",
+        },
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "and",
+            conditions: [
+              { type: "opponentTurn" },
+              { type: "handCount", player: "self", op: "lte", value: 7 },
+            ],
+          },
+        },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 test("reviewed permanent implemented-dsl keyword applies at threshold through computeView", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
@@ -522,6 +564,45 @@ test("reviewed permanent implemented-dsl base power applies to named cards and s
     opponentTurnView.cards[unrelated.instanceId]?.currentPower,
     3000,
   );
+});
+
+test("reviewed permanent implemented-dsl base power can snapshot your Leader current power", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("self-source"), 0);
+  p1State.characters = [source];
+  p1State.hand = p1State.hand.slice(0, 7);
+  state.cardManifest.cards[toCardId("leader-red")] = {
+    ...must(state.cardManifest.cards[toCardId("leader-red")], "p1 leader"),
+    power: 6000,
+  };
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedCard({
+      cardId: source.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:leader-snapshot-base-power",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    "def:perm:leader-snapshot-base-power":
+      permanentLeaderSnapshotBasePowerDefinition(source.cardId),
+  };
+
+  state.turn.turnPlayerId = p2;
+  const view = computeView(state);
+
+  assert.equal(view.cards[source.instanceId]?.basePower, 6000);
+  assert.equal(view.cards[source.instanceId]?.currentPower, 6000);
 });
 
 test("computeView derives permanent records without authorizing unrelated non-permanent blocks", () => {
