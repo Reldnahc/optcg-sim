@@ -26,6 +26,12 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
     return distribution;
   }
 
+  const allTargetDistribution =
+    parseAllTargetDistributedRestedDonInstruction(input);
+  if (allTargetDistribution !== undefined) {
+    return allTargetDistribution;
+  }
+
   const targetDistribution = parseTargetDistributedRestedDonInstruction(input);
   if (targetDistribution !== undefined) {
     return targetDistribution;
@@ -535,6 +541,127 @@ const parseTargetDistributedRestedDonInstruction: InstructionParser = (
       "instruction:selectCards",
       "instruction:attachDon",
       ...targetQuantity.evidence,
+      ...donQuantity.evidence,
+      "player:self",
+      "chooser:self:upTo",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:rested",
+      ...target.evidence,
+      "composition:forEachSavedTarget",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
+
+const parseAllTargetDistributedRestedDonInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^give your Leader and all of your Characters (?<donQuantity>up to [1-9]\d*) rested DON!! cards? each\.?$/iu.exec(
+      input.text,
+    );
+  const donQuantityText = match?.groups?.["donQuantity"];
+  if (donQuantityText === undefined) {
+    return undefined;
+  }
+  const donQuantity = parseUpToCardinality({ text: donQuantityText });
+  if (donQuantity === undefined || donQuantity.rest.length > 0) {
+    return undefined;
+  }
+  const target = {
+    evidence: [
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:leader",
+      "filter:category:character",
+    ] as const,
+    filter: { categories: ["leader", "character"] } satisfies CardFilter,
+    requestZone: {
+      zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+    },
+    savedTargetZone: {
+      zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
+    },
+  };
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:distributed-don-attach-targets",
+          connector: "always",
+          saveResultAs: distributedDonAttachTarget,
+          effect: {
+            type: "selectAllTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              ...target.requestZone,
+              filter: target.filter,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "for-each:distributed-don-attach-target",
+          connector: "then",
+          effect: {
+            type: "forEachSavedTarget",
+            selection: distributedDonAttachTarget,
+            saveCurrentAs: distributedDonAttachCurrentTarget,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:rested-don",
+                  connector: "always",
+                  saveResultAs: donAttachSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "costArea",
+                    player: "self",
+                    chooser: "self",
+                    min: donQuantity.cardinality.min,
+                    max: donQuantity.cardinality.max,
+                    filter: { categories: ["don"], state: "rested" },
+                    saveAs: donAttachSelection,
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  id: "attach:selected-don-to-current-target",
+                  connector: "then",
+                  effect: {
+                    type: "attachSelectedDon",
+                    selection: donAttachSelection,
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "forEachSavedTarget",
+                        saveResultAs: distributedDonAttachCurrentTarget,
+                      },
+                      ...target.savedTargetZone,
+                      player: "self",
+                      filter: target.filter,
+                      visibility: "publicOnly",
+                      onFailure: "failClosed",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectAllTargets",
+      "instruction:selectCards",
+      "instruction:attachDon",
       ...donQuantity.evidence,
       "player:self",
       "chooser:self:upTo",

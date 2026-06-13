@@ -879,6 +879,101 @@ it("parses on-play top-deck top-or-bottom placement before rested-DON attachment
   );
 });
 
+it("parses reveal-from-hand cost into rested-DON distribution to Leader and all Characters", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] You may reveal 3 {Amazon Lily} or {Kuja Pirates} type cards from your hand: Draw 1 card.",
+    ),
+  ).toBeDefined();
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] Give your Leader and all of your Characters up to 1 rested DON!! card each.",
+    ),
+  ).toBeDefined();
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may reveal 3 {Amazon Lily} or {Kuja Pirates} type cards from your hand: Give your Leader and all of your Characters up to 1 rested DON!! card each.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "revealFromHand",
+                count: 3,
+                chooser: "self",
+                filter: {
+                  typesAny: ["Amazon Lily", "Kuja Pirates"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:distributed-don-attach-targets",
+                  connector: "always",
+                  saveResultAs: "targetSelection:distributed-attach-don",
+                  effect: {
+                    type: "selectAllTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "self",
+                      zones: ["leaderArea", "characterArea"],
+                      filter: { categories: ["leader", "character"] },
+                      visibility: "public",
+                    },
+                  },
+                },
+                {
+                  id: "for-each:distributed-don-attach-target",
+                  connector: "then",
+                  effect: {
+                    type: "forEachSavedTarget",
+                    selection: "targetSelection:distributed-attach-don",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:revealFromHand",
+      "filter:type",
+      "filter:any",
+      "instruction:selectAllTargets",
+      "instruction:selectCards",
+      "instruction:attachDon",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:leader",
+      "filter:category:character",
+      "composition:forEachSavedTarget",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses on-play fixed top-deck placement", () => {
   const result = parseCardEffectLine(
     "[On Play] Look at 3 cards from the top of your deck and place them at the top of your deck in any order.",

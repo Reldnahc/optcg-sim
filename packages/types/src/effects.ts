@@ -661,10 +661,9 @@ export interface SelectTargetsEffect {
 
 export interface SelectAllTargetsEffect {
   type: "selectAllTargets";
-  request: Omit<
-    SelectedTargetsRequest,
-    "min" | "max" | "allowFewerIfUnavailable"
-  >;
+  request:
+    | Omit<SelectedTargetsRequest, "min" | "max" | "allowFewerIfUnavailable">
+    | Omit<MultiZoneTargetRequest, "min" | "max" | "allowFewerIfUnavailable">;
 }
 
 export interface SelectTargetsProducerSegment extends SequencedEffect {
