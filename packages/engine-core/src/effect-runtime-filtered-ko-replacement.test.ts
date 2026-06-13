@@ -25,6 +25,7 @@ import {
 import {
   buildKoReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
+  buildSelectedTargetMoveZoneReplacementProcess,
   detectSupportedSelectedTargetKoReplacementCandidate,
 } from "./runtime/primitives/execute.js";
 
@@ -261,4 +262,107 @@ test("does not apply opponent-effect K.O.-only rest-self replacement to battle K
     detectSupportedSelectedTargetKoReplacementCandidate(state, selfProcess),
     { ok: true },
   );
+});
+
+test("detects any-of K.O. or opponent-effect removal replacement through composed trigger branches", () => {
+  const { state, entry, target, replacementSource } =
+    setupFilteredKoReplacementState();
+  const p2State = must(state.players[p2], "p2");
+  const costCard: CardInstance = {
+    ...target,
+    cardId: toCardId("whitebeard-cost"),
+    instanceId: toInstanceId("whitebeard-cost-instance"),
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  p2State.hand = [costCard];
+  state.cardManifest.cards[costCard.cardId] = {
+    ...resolvedCard({ cardId: costCard.cardId, category: "character" }),
+    types: ["Whitebeard Pirates"],
+  };
+
+  const koWhen = {
+    type: "wouldBeKOd",
+    sourceControllerRelation: "any",
+    target: { type: "self" },
+  } as const;
+  const fieldRemovalWhen = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    target: { type: "self" },
+  } as const;
+  const when: Extract<Effect, { type: "replacement" }>["when"] = {
+    type: "anyOf",
+    replacements: [koWhen, fieldRemovalWhen],
+  };
+  const support = must(
+    state.cardManifest.cards[replacementSource.cardId]?.support,
+    "replacement support",
+  );
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: toEffectId("replacement:any-of-trash-from-hand"),
+    category: "replacement",
+    trigger: { type: "replacement", replacement: when },
+    oncePerTurn: true,
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: {
+      type: "replacement",
+      when,
+      instead: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+        filter: { typesIncludeAny: ["Whitebeard Pirates"] },
+      },
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [must(support.effectDefinitionId, "definition id")]: {
+      cardId: replacementSource.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: support.sourceTextHash,
+        rulesVersion: support.rulesVersion,
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-05-11T00:00:00.000Z",
+      },
+    },
+  };
+
+  const koProcess = buildSelectedTargetKoReplacementProcess(
+    entry,
+    cardRef(replacementSource, p2),
+    0,
+  );
+  const removalProcess = buildSelectedTargetMoveZoneReplacementProcess({
+    classification: "moveFromFieldToHand",
+    entry,
+    target: cardRef(replacementSource, p2),
+    targetIndex: 0,
+  });
+
+  for (const process of [koProcess, removalProcess]) {
+    const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+      state,
+      process,
+    );
+    assert.deepEqual(detected, {
+      ok: true,
+      candidate: {
+        id: `${String(replacementSource.instanceId)}:${String(effectBlock.id)}`,
+        effectBlockId: effectBlock.id,
+        controllerId: p2,
+        oncePerTurn: true,
+        source: cardRef(replacementSource, p2),
+        replacementEffect: effectBlock.effect,
+      },
+    });
+  }
 });

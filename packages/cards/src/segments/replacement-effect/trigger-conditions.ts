@@ -2,6 +2,70 @@ import { parseYourFieldReplacementTarget } from "../../targets/replacement-targe
 import { parseInsteadEffect } from "./instead-effects/index.js";
 import type { ReplacementTriggerParseResult } from "./shared.js";
 
+export function parseCombinedKoOrFieldRemovalReplacement(
+  text: string,
+): ReplacementTriggerParseResult | undefined {
+  const match =
+    /^If (?<target>.+?) would be K\.O\.'d or would be removed from the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
+      text.trim(),
+    );
+  const targetText = match?.groups?.["target"];
+  const effectOnlyText = match?.groups?.["effectOnly"];
+  const bodyText = match?.groups?.["body"];
+  if (
+    targetText === undefined ||
+    effectOnlyText === undefined ||
+    bodyText === undefined
+  ) {
+    return undefined;
+  }
+
+  const target = parseYourFieldReplacementTarget({
+    text: normalizeFieldRemovalTargetText(targetText),
+  });
+  if (
+    target === undefined ||
+    target.rest.length > 0 ||
+    (target.target.type !== "all" && target.target.type !== "self")
+  ) {
+    return undefined;
+  }
+  const instead = parseInsteadEffect(bodyText);
+  if (instead === undefined) {
+    return undefined;
+  }
+
+  const koWhen = {
+    type: "wouldBeKOd" as const,
+    sourceControllerRelation: "any" as const,
+    target: target.target,
+  };
+  const fieldRemovalWhen = {
+    type: "wouldMoveZone" as const,
+    from: target.target.type === "self" ? "characterArea" : target.target.zone,
+    sourceKind: "cardEffect" as const,
+    sourceControllerRelation: "opponentControlled" as const,
+    target: target.target,
+  };
+  return {
+    when: {
+      type: "anyOf",
+      replacements: [koWhen, fieldRemovalWhen],
+    },
+    instead: instead.effect,
+    evidence: [
+      "composition:triggerAnyOf",
+      "replacement:wouldBeKOd",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      ...target.evidence,
+      ...instead.evidence,
+    ],
+  };
+}
+
 export function parseOpponentKoReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {

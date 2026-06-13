@@ -13,6 +13,7 @@ import { failure } from "./errors.js";
 import { replacementSourcesForController } from "./source-lookup.js";
 import {
   isReplacementTriggerEffect,
+  isSupportedAnyOfReplacementEffect,
   isSupportedOpponentEffectFieldRemovalReplacementEffect,
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect,
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect,
@@ -134,7 +135,8 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
             effect,
           ) ||
           isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
-          isSupportedOpponentEffectFieldRemovalReplacementEffect(effect)
+          isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
+          isSupportedAnyOfReplacementEffect(effect)
         ) {
           coveredTargets = opponentFieldRemovalReplacementCoveredTargets(
             state,

@@ -470,6 +470,10 @@ export type Duration =
 
 export type ReplacementTrigger =
   | {
+      type: "anyOf";
+      replacements: [ReplacementTrigger, ...ReplacementTrigger[]];
+    }
+  | {
       type: "wouldBeKOd";
       sourceKind?: "battle" | "cardEffect";
       sourceControllerRelation?: "any";

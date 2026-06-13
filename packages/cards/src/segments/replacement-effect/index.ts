@@ -1,5 +1,6 @@
 import type { ExpressionParseResult, ParseInput } from "../../types.js";
 import {
+  parseCombinedKoOrFieldRemovalReplacement,
   parseOpponentFieldRemovalReplacement,
   parseOpponentKoReplacement,
 } from "./trigger-conditions.js";
@@ -15,6 +16,7 @@ export function replacementInsteadExpressionParser(
   }
 
   const parsed =
+    parseCombinedKoOrFieldRemovalReplacement(input.text) ??
     parseOpponentKoReplacement(input.text) ??
     parseOpponentFieldRemovalReplacement(input.text);
   if (parsed === undefined) {

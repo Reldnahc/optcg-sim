@@ -38,6 +38,25 @@ import type {
   ValidatedReplacementTarget,
 } from "./types.js";
 
+const replacementTriggerForProcess = (
+  process: ReplacementProcess,
+  effect: SupportedReplacementEffectBlock,
+): SupportedReplacementEffectBlock["trigger"]["replacement"] | undefined => {
+  const trigger = effect.trigger.replacement;
+  if (trigger.type !== "anyOf") {
+    return trigger;
+  }
+  return trigger.replacements.find((replacement) => {
+    if (process.type === "ko") {
+      return replacement.type === "wouldBeKOd";
+    }
+    if (process.type === "moveZone") {
+      return replacement.type === "wouldMoveZone";
+    }
+    return false;
+  });
+};
+
 export const opponentFieldRemovalReplacementCoveredTargets = (
   state: GameState,
   process: ReplacementProcess,
@@ -45,7 +64,10 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
   targetLookups: readonly ValidatedReplacementTarget[],
   effect: SupportedReplacementEffectBlock,
 ): readonly CardRef[] => {
-  const target = effect.trigger.replacement;
+  const target = replacementTriggerForProcess(process, effect);
+  if (target === undefined) {
+    return [];
+  }
   const sourceControllerRelation =
     target.type === "wouldBeKOd" || target.type === "wouldMoveZone"
       ? target.sourceControllerRelation

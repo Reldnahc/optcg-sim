@@ -108,6 +108,51 @@ const isSupportedReplacementEnvelope = (
   effect.failurePolicy === undefined &&
   effect.effect.type === "replacement";
 
+const withReplacementTrigger = (
+  effect: SupportedReplacementEffectBlock,
+  replacement: ReplacementTrigger,
+): SupportedReplacementEffectBlock => ({
+  ...effect,
+  trigger: { type: "replacement", replacement },
+  effect: { ...effect.effect, when: replacement },
+});
+
+const replacementTriggersEqual = (
+  left: ReplacementTrigger,
+  right: ReplacementTrigger,
+): boolean => {
+  if (left.type !== right.type) return false;
+  if (left.type === "anyOf" && right.type === "anyOf") {
+    return (
+      left.replacements.length === right.replacements.length &&
+      left.replacements.every((replacement, index) => {
+        const rightReplacement = right.replacements[index];
+        return (
+          rightReplacement !== undefined &&
+          replacementTriggersEqual(replacement, rightReplacement)
+        );
+      })
+    );
+  }
+  if (left.type === "wouldBeKOd" && right.type === "wouldBeKOd") {
+    return (
+      left.sourceKind === right.sourceKind &&
+      left.sourceControllerRelation === right.sourceControllerRelation &&
+      JSON.stringify(left.target) === JSON.stringify(right.target)
+    );
+  }
+  if (left.type === "wouldMoveZone" && right.type === "wouldMoveZone") {
+    return (
+      left.from === right.from &&
+      left.to === right.to &&
+      left.sourceKind === right.sourceKind &&
+      left.sourceControllerRelation === right.sourceControllerRelation &&
+      JSON.stringify(left.target) === JSON.stringify(right.target)
+    );
+  }
+  return false;
+};
+
 export const isSupportedSelfKoDrawReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -289,7 +334,7 @@ export const isSupportedSelfKoTrashFromHandReplacementEffect = (
   isSelfTarget(effect.effect.when.target) &&
   isSupportedTrashFromHandInsteadEffect(effect.effect.instead);
 
-export const isSupportedReplacementEffect = (
+const isSupportedAtomicReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
   isSupportedSelfKoDrawReplacementEffect(effect) ||
@@ -302,6 +347,39 @@ export const isSupportedReplacementEffect = (
   isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
   isSupportedOpponentKoTrashFromHandReplacementEffect(effect) ||
   isSupportedSelfKoTrashFromHandReplacementEffect(effect);
+
+export const isSupportedAnyOfReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock => {
+  if (!isSupportedReplacementEnvelope(effect)) {
+    return false;
+  }
+  const trigger = effect.trigger.replacement;
+  const when = effect.effect.when;
+  if (trigger.type !== "anyOf" || when.type !== "anyOf") {
+    return false;
+  }
+  if (trigger.replacements.length !== when.replacements.length) {
+    return false;
+  }
+
+  return trigger.replacements.every((replacement, index) => {
+    const whenReplacement = when.replacements[index];
+    return (
+      whenReplacement !== undefined &&
+      replacementTriggersEqual(replacement, whenReplacement) &&
+      isSupportedAtomicReplacementEffect(
+        withReplacementTrigger(effect, replacement),
+      )
+    );
+  });
+};
+
+export const isSupportedReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedAtomicReplacementEffect(effect) ||
+  isSupportedAnyOfReplacementEffect(effect);
 
 export const isReplacementTriggerEffect = (
   effect: EffectDefinition["effects"][number],
