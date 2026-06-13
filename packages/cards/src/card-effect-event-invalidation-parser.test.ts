@@ -116,6 +116,91 @@ it("parses Trigger effect negation over the same reusable Leader or Character ta
   });
 });
 
+it("parses Trigger effect negation for up to one opponent Leader and up to one Character independently", () => {
+  const result = parseCardEffectLine(
+    "[Trigger] Negate the effect of up to 1 of each of your opponent's Leader and Character cards during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "trigger" },
+      sourcePresencePolicy: "noSourceRequired",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      zone: "leaderArea",
+                      filter: { categories: ["leader"] },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "invalidateEffects",
+                    target: {
+                      type: "savedFieldObject",
+                      zone: "leaderArea",
+                      player: "opponent",
+                    },
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      zone: "characterArea",
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "invalidateEffects",
+                    target: {
+                      type: "savedFieldObject",
+                      zone: "characterArea",
+                      player: "opponent",
+                    },
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:lifeTrigger",
+      "instruction:invalidateEffects",
+      "target:opponentLeader",
+      "target:opponentCharacters",
+      "duration:thisTurn",
+      "composition:selectThenApply",
+      "composition:sequence",
+    ]),
+  );
+});
+
 it("parses When Attacking negation over opponent Leader and all Characters as reusable invalidate effects", () => {
   const result = parseCardEffectLine(
     "[When Attacking] Negate the effects of your opponent's Leader and all of their Characters during this turn.",

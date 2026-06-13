@@ -64,6 +64,12 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
     return opponentLeaderAndAllCharacters;
   }
 
+  const opponentLeaderAndCharacterEach =
+    parseOpponentLeaderAndCharacterEachInvalidateEffects(actionRest);
+  if (opponentLeaderAndCharacterEach !== undefined) {
+    return opponentLeaderAndCharacterEach;
+  }
+
   const cardinality = parseUpToCardinality({ text: actionRest });
   if (cardinality === undefined) {
     return undefined;
@@ -245,6 +251,77 @@ function opponentLeaderAllTarget(): Extract<Target, { type: "all" }> {
   };
 }
 
+function parseOpponentLeaderAndCharacterEachInvalidateEffects(
+  text: string,
+): InstructionParseResult | undefined {
+  const match =
+    /^up to 1 of each of your opponent's Leader and Character cards\s+(?<duration>.*)$/iu.exec(
+      text,
+    );
+  const durationText = match?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: selectThenApplyInvalidateEffects(
+            0,
+            1,
+            { categories: ["leader"] },
+            duration.duration,
+            {
+              zones: ["leaderArea"],
+              selectionId: "selected:invalidate-effects-leader-target",
+            },
+          ),
+        },
+        {
+          connector: "then",
+          effect: selectThenApplyInvalidateEffects(
+            0,
+            1,
+            { categories: ["character"] },
+            duration.duration,
+            {
+              zones: ["characterArea"],
+              selectionId: "selected:invalidate-effects-character-target",
+            },
+          ),
+        },
+      ],
+    },
+    evidence: [
+      "instruction:invalidateEffects",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "target:opponentLeader",
+      "player:opponent",
+      "zone:leaderArea",
+      "filter:category:leader",
+      "target:opponentCharacters",
+      "zone:characterArea",
+      "filter:category:character",
+      ...duration.evidence,
+      "composition:selectThenApply",
+      "composition:sequence",
+    ],
+    rest: "",
+  };
+}
+
 function parseOpponentLeaderTarget(text: string):
   | {
       readonly evidence: readonly PrimitiveEvidence[];
@@ -281,14 +358,19 @@ function selectThenApplyInvalidateEffects(
     readonly zones: readonly [SavedFieldObjectZone, ...SavedFieldObjectZone[]];
     readonly followupEffects?: readonly Effect[];
     readonly followupPowerModifier?: number;
+    readonly selectionId?: string;
   },
 ): Effect {
-  const savedTarget = selectedInvalidateEffectsTarget(options.zones);
+  const selectionId = options.selectionId ?? invalidateEffectsTargetSelectionId;
+  const savedTarget = selectedInvalidateEffectsTarget(
+    options.zones,
+    selectionId,
+  );
   const effects: Extract<Effect, { type: "sequence" }>["effects"] = [
     {
-      id: "select:invalidate-effects-target",
+      id: `select:invalidate-effects-target:${selectionId}`,
       connector: "always",
-      saveResultAs: invalidateEffectsTargetSelectionId,
+      saveResultAs: selectionId,
       effect: {
         type: "selectTargets",
         request:
@@ -354,12 +436,13 @@ function selectThenApplyInvalidateEffects(
 
 function selectedInvalidateEffectsTarget(
   zones: readonly [SavedFieldObjectZone, ...SavedFieldObjectZone[]],
+  selectionId = invalidateEffectsTargetSelectionId,
 ): Target {
   return {
     type: "savedFieldObject",
     binding: {
       family: "selectedTargets",
-      saveResultAs: invalidateEffectsTargetSelectionId,
+      saveResultAs: selectionId,
     },
     ...(zones.length === 1 ? { zone: zones[0] } : { zones }),
     player: "opponent",
