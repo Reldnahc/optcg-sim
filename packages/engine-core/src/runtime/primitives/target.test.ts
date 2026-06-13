@@ -282,6 +282,7 @@ test("targeted KO primitive builds deterministic replacement process for each se
         processFamily: "fieldRemoval",
         classification: "moveFromFieldToTrash",
         sourceKind: "cardEffect",
+        sourceCardId: entry.source.cardId,
         sourceControllerId: entry.controllerId,
       },
     });
@@ -461,6 +462,7 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
           processFamily: "fieldRemoval",
           classification: "moveFromFieldToTrash",
           sourceKind: "cardEffect",
+          sourceCardId: entry.source.cardId,
           sourceControllerId: entry.controllerId,
         },
       },

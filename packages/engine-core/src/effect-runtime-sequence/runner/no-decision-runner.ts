@@ -882,8 +882,10 @@ export const continueNoDecisionSegments = (
       }
       nextState = conditional.state;
       nextLedgers = conditional.ledgers;
-      events.length = 0;
-      events.push(...conditional.events);
+      if (conditional.events !== events) {
+        events.length = 0;
+        events.push(...conditional.events);
+      }
       continue;
     }
     return pauseForTrashFromHandSegment({

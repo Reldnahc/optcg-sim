@@ -263,25 +263,16 @@ test("cards parser emits On K.O. trash-from-hand accepted by engine On K.O. supp
   assert.equal(isSupportedOnKOCompatibleQueuedEffect(effectBlock), true);
 });
 
-test("cards parser keeps recognized unsupported entry points out of engine support", () => {
+test("cards parser emits On Block draw accepted by generic auto support", () => {
   const cases = [["[On Block] Draw 1 card.", "entry:onBlock"]];
 
   for (const [text, entryEvidence] of cases) {
     const effectBlock = parseSupportedEffectBlock(text, [
       entryEvidence,
-      "entrySupport:unsupported",
       "instruction:draw",
     ]);
 
-    assert.equal(isSupportedQueuedDrawEffectBlock(effectBlock), false);
-    assert.equal(
-      isSupportedQueuedAutoSequenceForEntryPoint(
-        effectBlock,
-        "onPlay",
-        "mustRemainInSameZone",
-      ),
-      false,
-    );
+    assertRuntimeSupported(effectBlock);
   }
 });
 

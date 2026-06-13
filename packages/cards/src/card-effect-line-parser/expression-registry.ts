@@ -150,7 +150,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
   const conditionalSearch = conditionalExpressionSegmentParser({
     conditions: conditionParsers,
     connectors: [parseThenConnector, parseAndConnector],
-    instructions: instructionParsers,
+    instructions: [],
     expressions: [searchRevealExpressionParser],
   })(input);
   if (conditionalSearch !== undefined) {

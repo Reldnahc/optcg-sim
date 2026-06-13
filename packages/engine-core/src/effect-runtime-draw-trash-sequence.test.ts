@@ -289,6 +289,7 @@ test("failed conditional sequence segment queues condition spotlight presentatio
       spanIds: ["span:condition", "span:sequence:0:body"],
     },
   });
+  must(state.players[p1], "p1").trash = [];
   const sourceText =
     "[On Play] If you have 7 or more cards in your trash, draw 1 card.";
   state.cardManifest.cards[source.cardId] = {

@@ -9,7 +9,7 @@ import {
 import { parseProtectionSource } from "../../protection/source.js";
 import {
   parseAllFieldTarget,
-  parseThisCharacterTarget,
+  parseProtectionTarget,
 } from "../../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
@@ -34,12 +34,7 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
-  const target =
-    parseAllProtectionTarget(input.text) ??
-    parseThisCharacterTarget({
-      text: input.text,
-      allowImplicit: true,
-    });
+  const target = parseProtectionTarget(input);
   if (target === undefined) {
     return undefined;
   }
@@ -143,24 +138,6 @@ function parseProtectionProcesses(
 
   return undefined;
 }
-
-const parseAllProtectionTarget = (
-  text: string,
-): ReturnType<typeof parseAllFieldTarget> => {
-  const match = /^(?<target>All of .+?)\s+(?<process>cannot be .+)$/iu.exec(
-    text,
-  );
-  const targetText = match?.groups?.["target"];
-  const processText = match?.groups?.["process"];
-  if (targetText === undefined || processText === undefined) {
-    return undefined;
-  }
-  const target = parseAllFieldTarget({ text: targetText });
-  if (target === undefined || target.rest.length > 0) {
-    return undefined;
-  }
-  return { ...target, rest: processText };
-};
 
 export const parseOpponentEffectFieldRemovalProtectionInstruction =
   parseProtectionInstruction;

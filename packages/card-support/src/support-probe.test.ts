@@ -276,20 +276,20 @@ describe("text-only support probe parser backend", () => {
     );
   });
 
-  it("reports parser success separately from unsupported engine runtime entry points", async () => {
+  it("reports parser success separately from unsupported engine runtime bodies", async () => {
     const report = await createSupportProbeReport({
-      text: "[On Block] Draw 1 card.",
+      text: "[Your Turn] Draw 1 card.",
     });
 
     expect(report.exitCode).toBe(1);
     expect(report.lines).toContain("Parse: passed");
     expect(report.lines).toContain("Engine runtime: failed");
     expect(report.lines).toContain(
-      "Engine runtime reason: unsupported trigger/category/source-presence envelope",
+      "Engine runtime reason: unsupported permanent effect body",
     );
     expect(report.lines).toContain("Missing runtime capability evidence:");
     expect(report.lines).toContain(
-      "- runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
+      "- runtime body:draw missing unsupported permanent effect body",
     );
   });
 
@@ -334,7 +334,7 @@ describe("text-only support probe parser backend", () => {
             Promise.resolve({
               data: {
                 card_number: "OP01-002",
-                effect: "[On Block] Draw 1 card.",
+                effect: "[Your Turn] Draw 1 card.",
                 trigger: null,
               },
             }),
@@ -345,14 +345,12 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Line 1 primitive parser: passed");
     expect(report.lines).toContain("Line 1 primitive runtime: failed");
     expect(report.lines).toContain("Line 1 runtime support records:");
-    expect(report.lines).toContain(
-      "Line 1 - runtime entryPoint:onBlock failed",
-    );
+    expect(report.lines).toContain("Line 1 - runtime body:draw failed");
     expect(report.lines).toContain(
       "Line 1 missing runtime capability evidence:",
     );
     expect(report.lines).toContain(
-      "Line 1 - runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
+      "Line 1 - runtime body:draw missing unsupported permanent effect body",
     );
   });
 
@@ -585,7 +583,7 @@ describe("text-only support probe parser backend", () => {
                 },
                 "OP01-002": {
                   card_number: "OP01-002",
-                  effect: "[On Block] Draw 1 card.",
+                  effect: "[Your Turn] Draw 1 card.",
                   trigger: null,
                 },
               },
@@ -601,7 +599,7 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).not.toContain("OP01-001 line 1 parse: passed");
     expect(report.lines).toContain("Card ID: OP01-002 x1");
     expect(report.lines).toContain(
-      "OP01-002 line 1 text: [On Block] Draw 1 card.",
+      "OP01-002 line 1 text: [Your Turn] Draw 1 card.",
     );
     expect(report.lines).toContain("OP01-002 line 1 parse: passed");
     expect(report.lines).toContain("OP01-002 line 1 engine runtime: failed");
@@ -609,13 +607,13 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("OP01-002 line 1 primitive runtime: failed");
     expect(report.lines).toContain("OP01-002 line 1 runtime support records:");
     expect(report.lines).toContain(
-      "OP01-002 line 1 - runtime entryPoint:onBlock failed",
+      "OP01-002 line 1 - runtime body:draw failed",
     );
     expect(report.lines).toContain(
       "OP01-002 line 1 missing runtime capability evidence:",
     );
     expect(report.lines).toContain(
-      "OP01-002 line 1 - runtime entryPoint:onBlock missing unsupported trigger/category/source-presence envelope",
+      "OP01-002 line 1 - runtime body:draw missing unsupported permanent effect body",
     );
   });
 
@@ -643,7 +641,7 @@ describe("text-only support probe parser backend", () => {
               data: {
                 "OP01-001": {
                   card_number: "OP01-001",
-                  effect: "[On Play] Draw 1 card.\n[On Block] Draw 1 card.",
+                  effect: "[On Play] Draw 1 card.\n[Your Turn] Draw 1 card.",
                   trigger: null,
                 },
                 "OP01-002": {
@@ -660,7 +658,7 @@ describe("text-only support probe parser backend", () => {
 
     expect(report).toEqual({
       exitCode: 1,
-      lines: ["[On Block] Draw 1 card.", "[Main] unsupported body."],
+      lines: ["[Your Turn] Draw 1 card.", "[Main] unsupported body."],
       errors: [],
     });
   });
