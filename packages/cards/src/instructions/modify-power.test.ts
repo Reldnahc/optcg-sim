@@ -302,6 +302,92 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses positive power for selected self Leader targets with power predicates", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Up to 1 of your Leader with 4000 power or less gains +1000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: {
+              categories: ["leader"],
+              currentPower: { max: 4000 },
+            },
+          },
+        },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeader",
+        "player:self",
+        "filter:category:leader",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses positive power for selected named self Leader targets", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Up to 1 of your [Nico Robin] Leader gains +3000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: {
+              categories: ["leader"],
+              names: ["Nico Robin"],
+            },
+          },
+        },
+        value: 3000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeader",
+        "player:self",
+        "filter:category:leader",
+        "filter:name",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses positive power for self Character-or-named-card targets", () => {
     expect(
       parseModifyPowerInstruction({

@@ -12,6 +12,7 @@ import {
   parseYourLeaderOrCharacterCardsTarget,
   parseYourNamedCardsTarget,
   parseYourLeaderTarget,
+  parseYourSelectedLeaderTarget,
   yourCharactersTargetPrimitive,
   yourNamedCardsTargetPrimitive,
   yourLeaderTargetPrimitive,
@@ -277,6 +278,68 @@ describe("field target parsers", () => {
       },
       evidence: ["target:yourLeader", "filter:type", "filter:category:leader"],
       rest: "gains +1000 power until the end of your opponent's next turn.",
+    });
+  });
+
+  it("parses selected own Leader target with reusable predicates", () => {
+    expect(
+      parseYourSelectedLeaderTarget({
+        text: "of your Leader with 4000 power or less gains +1000 power during this turn.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["leader"], currentPower: { max: 4000 } },
+        },
+      },
+      evidence: [
+        "target:yourLeader",
+        "player:self",
+        "filter:category:leader",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "gains +1000 power during this turn.",
+    });
+  });
+
+  it("parses selected named Leader target", () => {
+    expect(
+      parseYourSelectedLeaderTarget({
+        text: "of your [Nico Robin] Leader gains +3000 power during this turn.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["leader"], names: ["Nico Robin"] },
+        },
+      },
+      evidence: [
+        "target:yourLeader",
+        "player:self",
+        "filter:category:leader",
+        "filter:name",
+      ],
+      rest: "gains +3000 power during this turn.",
     });
   });
 

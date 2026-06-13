@@ -2,7 +2,7 @@ import type { Cardinality, CardFilter, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
-import type { ParseInput } from "../../types.js";
+import type { ParseInput, PrimitiveEvidence } from "../../types.js";
 import {
   leaderOrCharacterFilterWithPredicates,
   normalizeTargetRest,
@@ -54,6 +54,119 @@ export function parseYourLeaderTarget(
     target: { type: "myLeader" },
     evidence: ["target:yourLeader"],
     rest: match.groups?.["rest"]?.trim() ?? "",
+  };
+}
+
+export function parseYourSelectedLeaderTarget(
+  input: ParseInput,
+): FieldTargetParseResult | undefined {
+  const match =
+    /^of your\s+(?<targetText>.+?)\s+(?<rest>gains?\b[\s\S]*)$/iu.exec(
+      input.text,
+    );
+  const targetText = match?.groups?.["targetText"]?.trim();
+  if (targetText === undefined || targetText.length === 0) {
+    return undefined;
+  }
+
+  const parsed = parseSelectedLeaderFilter(targetText);
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "self",
+        zones: ["leaderArea"],
+        min: 0,
+        max: 1,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+        filter: parsed.filter,
+      },
+    },
+    evidence: [
+      "target:yourLeader",
+      "player:self",
+      "filter:category:leader",
+      ...parsed.evidence,
+    ],
+    rest: normalizeTargetRest(match?.groups?.["rest"] ?? ""),
+  };
+}
+
+function parseSelectedLeaderFilter(
+  text: string,
+):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const namedMatch =
+    /^\[(?<name>[^\]]+)\]\s+Leader\b\s*(?<predicates>.*)$/iu.exec(text);
+  const name = namedMatch?.groups?.["name"]?.trim();
+  if (name !== undefined && name.length > 0) {
+    return withSelectedLeaderPredicates(
+      { categories: ["leader"], names: [name] },
+      ["filter:name"],
+      namedMatch?.groups?.["predicates"] ?? "",
+    );
+  }
+
+  const typedMatch =
+    /^\{(?<type>[^}]+)\}\s+type\s+Leader\b\s*(?<predicates>.*)$/iu.exec(text);
+  const type = typedMatch?.groups?.["type"]?.trim();
+  if (type !== undefined && type.length > 0) {
+    return withSelectedLeaderPredicates(
+      { categories: ["leader"], typesAny: [type] },
+      ["filter:type"],
+      typedMatch?.groups?.["predicates"] ?? "",
+    );
+  }
+
+  const leaderMatch = /^Leader\b\s*(?<predicates>.*)$/iu.exec(text);
+  if (leaderMatch === null) {
+    return undefined;
+  }
+
+  return withSelectedLeaderPredicates(
+    { categories: ["leader"] },
+    [],
+    leaderMatch.groups?.["predicates"] ?? "",
+  );
+}
+
+function withSelectedLeaderPredicates(
+  baseFilter: CardFilter,
+  baseEvidence: readonly PrimitiveEvidence[],
+  predicateText: string,
+):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const trimmed = predicateText.trim();
+  if (trimmed.length === 0) {
+    return { filter: baseFilter, evidence: baseEvidence };
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text: trimmed },
+    { powerSemantics: "current" },
+  );
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...baseFilter, ...predicates.filter },
+    evidence: [...baseEvidence, ...predicates.evidence],
   };
 }
 

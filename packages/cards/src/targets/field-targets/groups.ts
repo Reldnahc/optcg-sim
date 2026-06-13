@@ -13,6 +13,7 @@ import {
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
+  parseYourSelectedLeaderTarget,
 } from "./self.js";
 import type { FieldTargetParseResult } from "./types.js";
 
@@ -46,6 +47,7 @@ export const yourFieldEffectTargetParsers = (
 export const selectedPowerGainTargetParsers =
   (): readonly FieldTargetParser[] =>
     [
+      parseYourSelectedLeaderTarget,
       parseYourLeaderOrCharacterCardsTarget,
       parseYourCharactersOrNamedCardsTarget,
       parseYourCharactersTarget,
