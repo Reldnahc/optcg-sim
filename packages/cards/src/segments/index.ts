@@ -41,6 +41,7 @@ export {
   trailingConditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
 } from "./composed-expression.js";
+export { conditionalAlternateSelectionExpressionParser } from "./conditional-alternate-selection.js";
 export {
   syntheticConditionalSegmentParser,
   syntheticInstructionSegmentParser,

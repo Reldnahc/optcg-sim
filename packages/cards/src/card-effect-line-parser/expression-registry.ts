@@ -34,6 +34,7 @@ import {
   activatedReactionExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser,
   conditionalAdditionalSelectedPowerContinuationExpressionParser,
+  conditionalAlternateSelectionExpressionParser,
   conditionalBlockExpressionParser,
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
@@ -188,6 +189,10 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
 };
 
 const costedExpressions = [
+  conditionalAlternateSelectionExpressionParser({
+    conditions: conditionParsers,
+    instructions: instructionParsers,
+  }),
   chooseOneExpressionParser({
     conditions: conditionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -359,6 +364,10 @@ export const defaultRegistry = {
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedAttackRetargetExpressionParser,
+    conditionalAlternateSelectionExpressionParser({
+      conditions: conditionParsers,
+      instructions: instructionParsers,
+    }),
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
