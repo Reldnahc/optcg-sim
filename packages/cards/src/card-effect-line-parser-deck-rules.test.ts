@@ -53,3 +53,32 @@ it("parses any-copy deck rules text as legality metadata without a runtime block
     },
   });
 });
+
+it("parses maximum deck card cost rules text as legality metadata without a runtime block", () => {
+  const result = parseCardEffectLineDetailed(
+    "Under the rules of this game, you cannot include cards with a cost of 5 or more in your deck.",
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    value: {
+      kind: "metadata",
+      metadata: {
+        type: "deckRestriction",
+        restriction: {
+          type: "cardCostLessThan",
+          cost: 5,
+        },
+      },
+      evidence: [
+        "deckRestriction:ignored",
+        "deckRestriction:cardCostLessThan",
+        "filter:any",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "zone:deck",
+      ],
+    },
+  });
+});

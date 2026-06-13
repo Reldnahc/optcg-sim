@@ -232,6 +232,7 @@ export type PrimitiveEvidence =
   | "destination:costArea"
   | "deckRestriction:ignored"
   | "deckRestriction:eventCostGte"
+  | "deckRestriction:cardCostLessThan"
   | "deckRestriction:donDeckSize"
   | "deckRestriction:anyCopiesOfThisCard"
   | "ruleModifier:deckOutLossTiming"
@@ -473,6 +474,10 @@ export interface ParsedMetadataLine {
             }
           | {
               readonly type: "anyCopiesOfThisCard";
+            }
+          | {
+              readonly type: "cardCostLessThan";
+              readonly cost: number;
             };
       }
     | {
