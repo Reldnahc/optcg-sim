@@ -339,6 +339,13 @@ export const defaultRegistry = {
       instructions: instructionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        revealTopConditionalExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         searchRevealExpressionParser,
         playedObjectKeywordGrantExpressionParser({
           instructions: instructionParsers,

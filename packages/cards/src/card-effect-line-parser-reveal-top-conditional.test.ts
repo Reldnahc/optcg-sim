@@ -141,3 +141,66 @@ it("parses revealed-card type-includes condition with composed draw and trash bo
     ]),
   );
 });
+
+it("parses reveal-top play with produced-character keyword continuation", () => {
+  const result = parseCardEffectLine(
+    `[Main] If your Leader's type includes "Whitebeard Pirates", reveal 1 card from the top of your deck. If that card is a Character card with a type including "Whitebeard Pirates" and a cost of 9 or less, you may play that card. If you do, that Character gains [Rush] during this turn.`,
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          typesIncludeAny: ["Whitebeard Pirates"],
+        },
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          { effect: { type: "revealTop" } },
+          {
+            effect: {
+              type: "selectFromSet",
+              filter: {
+                categories: ["character"],
+                typesIncludeAny: ["Whitebeard Pirates"],
+                cost: { max: 9 },
+              },
+            },
+          },
+          { connector: "ifPreviousSucceeded", effect: { type: "sequence" } },
+        ],
+      },
+    },
+  });
+  if (result === undefined || !("block" in result)) {
+    throw new Error("Expected parsed effect line.");
+  }
+  const effect = result.block.effect;
+  if (effect.type !== "sequence") {
+    throw new Error("Expected reveal sequence.");
+  }
+  const continuation = effect.effects[2]?.effect;
+  if (continuation?.type !== "sequence") {
+    throw new Error("Expected play and keyword continuation sequence.");
+  }
+  expect(continuation.effects.map((segment) => segment.effect.type)).toEqual([
+    "playSelected",
+    "giveKeyword",
+  ]);
+  expect(result.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:playSelected",
+      "instruction:giveKeyword",
+      "filter:cost",
+      "filter:type",
+    ]),
+  );
+});
