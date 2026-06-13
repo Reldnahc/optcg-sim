@@ -148,6 +148,13 @@ const playerResult = (
   return winner === playerId ? "win" : "loss";
 };
 
+const uuidOrNull = (value: string | null | undefined): string | null =>
+  value !== undefined &&
+  value !== null &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(value)
+    ? value
+    : null;
+
 const creationSourceForSetup = (setup: DevMatchSetup): MatchCreationSource =>
   setup.lobbyId !== undefined
     ? {
@@ -172,7 +179,7 @@ const buildPlayerRecord = (
   const leader = submission?.decoded.leader;
   return {
     seatId: seat.playerId,
-    userId: seat.subject?.userId ?? handoff?.claims.sub ?? null,
+    userId: uuidOrNull(seat.subject?.userId ?? handoff?.claims.sub),
     savedDeckId: handoff?.resolvedLoadout.loadoutId ?? null,
     handoffTokenId: null,
     displayName: seat.subject?.displayName ?? null,
@@ -240,7 +247,7 @@ export const buildLocalCompletedMatchRecord = (
     ),
     firstPlayerSeatId: input.setup.firstPlayerId,
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
-    winnerUserId: winnerSeat?.subject?.userId ?? null,
+    winnerUserId: uuidOrNull(winnerSeat?.subject?.userId),
     winnerSeatId,
     resultReason: "completed",
     winType: "game",

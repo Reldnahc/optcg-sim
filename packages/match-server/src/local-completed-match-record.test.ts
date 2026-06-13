@@ -177,4 +177,57 @@ describe("local completed match record mapping", () => {
       },
     });
   });
+
+  test("does not persist synthetic bot ids as account UUIDs", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "33333333-3333-3333-3333-333333333333" as MatchId,
+      lobbyId: "lobby-bot",
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    match.state.status = { type: "completed", winner: setup.playerOrder[1] };
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          subject: {
+            type: "user",
+            userId: "00000000-0000-0000-0000-000000000001",
+            sessionId: "00000000-0000-0000-0000-0000000000aa",
+            displayName: "Account Player",
+          },
+          deckSubmission: readySubmission("account-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          subject: {
+            type: "user",
+            userId: "bot",
+            sessionId: "bot",
+            displayName: "Bot",
+          },
+          deckSubmission: readySubmission("bot-hash", "OP13-079"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goSecond",
+        resolvedFirstPlayerId: setup.playerOrder[1],
+      },
+      records: [],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+
+    expect(record?.winnerUserId).toBeNull();
+    expect(record?.players[1]).toMatchObject({
+      seatId: setup.playerOrder[1],
+      userId: null,
+      displayName: "Bot",
+      isWinner: true,
+    });
+  });
 });

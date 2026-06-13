@@ -136,13 +136,14 @@ const chooseFirstPlayer = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
   matchId: string,
   chooserPlayerId: string,
+  choice: "goFirst" | "goSecond" = "goFirst",
 ): Promise<CreatedMatchBody> => {
   const response = await fetch(
     `${server.url()}/api/matches/${matchId}/first-player-choice`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ playerId: chooserPlayerId, choice: "goFirst" }),
+      body: JSON.stringify({ playerId: chooserPlayerId, choice }),
     },
   );
   assert.equal(response.status, 200);
@@ -186,6 +187,43 @@ describe("dev HTTP bot lobbies", () => {
       }
 
       const resolved = await chooseFirstPlayer(server, matchId, chooser);
+
+      assert.equal(resolved.snapshot?.playerLabels?.["p2"]?.displayName, "Bot");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("bot opponent lobby can start with the bot going first", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createBotLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      const sessionToken = "user:user-p1:session-1";
+      await joinLobby(server, lobbyId, sessionToken);
+      const ready = await submitDeck(server, lobbyId, sessionToken);
+      const matchId = ready.matchId;
+      if (matchId === undefined) {
+        throw new Error("Ready bot lobby response did not include a match id.");
+      }
+
+      const claim = await claimSeat(server, matchId, sessionToken);
+      const chooser = claim.firstPlayerChoice?.chooserPlayerId;
+      if (chooser === undefined) {
+        throw new Error("Claim response did not include first-player setup.");
+      }
+
+      const resolved = await chooseFirstPlayer(
+        server,
+        matchId,
+        chooser,
+        "goSecond",
+      );
 
       assert.equal(resolved.snapshot?.playerLabels?.["p2"]?.displayName, "Bot");
     } finally {
