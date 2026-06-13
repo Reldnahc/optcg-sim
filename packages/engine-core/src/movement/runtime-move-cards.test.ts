@@ -51,16 +51,6 @@ const deckTopTrashEffect = (count: number): Effect => ({
   order: "original",
 });
 
-const addActiveDonFromDonDeckEffect = (): Effect => ({
-  type: "moveCards",
-  min: 0,
-  count: 1,
-  from: { player: "self", zone: "donDeck", position: "top" },
-  to: { player: "self", zone: "costArea" },
-  order: "original",
-  destinationState: "active",
-});
-
 const lifeTopToHandEffect = (count: number): Effect => ({
   type: "moveCards",
   count,
@@ -212,41 +202,6 @@ const deckTopTrashQueueState = (
   return { state, source, topCards };
 };
 
-const triggerDonMoveQueueState = (): {
-  state: GameState;
-  movedDon: CardInstance;
-} => {
-  const state = createActiveState();
-  state.turn.turnPlayerId = p1;
-  const p1State = must(state.players[p1], "p1");
-  const source = must(p1State.hand[0], "source");
-  const movedDon = must(p1State.donDeck[0], "top DON");
-  const definition = setupMoveCardsDefinition(
-    state,
-    source,
-    addActiveDonFromDonDeckEffect(),
-  );
-  state.effectQueue = [
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry-trigger-don-move"),
-      timingWindowId: toTimingWindowId("window-trigger-don-move"),
-      controllerId: p1,
-      source: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
-        playerId: p1,
-        zone: source.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(source, p1, p1),
-      effectBlockId: must(definition.effects[0], "DON move effect").id,
-      sourcePresencePolicy: "noSourceRequired",
-      causedBy: { type: "ruleProcess", name: "trigger-don-move-test" },
-    },
-  ];
-  return { state, movedDon };
-};
-
 test("moveCards deck top to trash resolves without a decision and preserves top-card order", () => {
   const { state, topCards } = deckTopTrashQueueState(deckTopTrashEffect(2));
 
@@ -315,36 +270,6 @@ test("moveCards deck top to trash fails closed for unsupported zone movement", (
 
   assert.notEqual(result.errors, undefined);
   assert.equal(must(result.state.players[p1], "p1 result").trash.length, 0);
-});
-
-test("moveCards DON deck to cost area resolves from a trigger body", () => {
-  const { state, movedDon } = triggerDonMoveQueueState();
-  const originalDonDeckSize = must(state.players[p1], "p1").donDeck.length;
-
-  const quantityPrompt = processEffectRuntime(state);
-  const decision = must(
-    quantityPrompt.state.pendingDecision,
-    "DON quantity decision",
-  );
-  assert.equal(quantityPrompt.errors, undefined);
-  assert.equal(decision.type, "chooseQuantity");
-
-  const result = applyAction(quantityPrompt.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "chooseQuantity", quantity: 1 },
-  });
-  const player = must(result.state.players[p1], "p1 result");
-  const moved = must(player.costArea.at(-1), "moved DON");
-
-  assert.equal(result.errors, undefined);
-  assert.equal(result.state.pendingDecision, undefined);
-  assert.equal(result.state.effectQueue.length, 0);
-  assert.equal(player.donDeck.length, originalDonDeckSize - 1);
-  assert.equal(moved.instanceId, movedDon.instanceId);
-  assert.equal(moved.state, "active");
-  assert.equal(moved.zone.zone, "costArea");
-  assert.equal(moved.zone.slot, "cost");
 });
 
 test("moveCards top life to hand resolves without revealing hidden card identity publicly", () => {

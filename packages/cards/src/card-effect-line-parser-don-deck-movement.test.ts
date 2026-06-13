@@ -66,6 +66,86 @@ it("parses plural active DON movement from DON deck under another entry point", 
   );
 });
 
+it("parses opponent optional active DON movement from their DON deck", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Your opponent may add 1 DON!! card from their DON!! deck and set it as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "moveCards",
+        min: 0,
+        count: 1,
+        chooser: "opponent",
+        from: { player: "opponent", zone: "donDeck", position: "top" },
+        to: { player: "opponent", zone: "costArea" },
+        order: "original",
+        destinationState: "active",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:moveCards",
+      "player:opponent",
+      "chooser:opponent",
+      "zone:donDeck",
+      "destination:costArea",
+      "state:active",
+      "filter:category:don",
+    ]),
+  );
+});
+
+it("parses opponent optional active DON movement after a reusable body", () => {
+  const result = parseCardEffectLine(
+    "[On Play] K.O. up to 1 of your opponent's Characters with a cost of 3 or less. Then, your opponent may add 1 DON!! card from their DON!! deck and set it as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          { connector: "always", effect: { type: "sequence" } },
+          {
+            connector: "then",
+            effect: {
+              type: "moveCards",
+              min: 0,
+              count: 1,
+              chooser: "opponent",
+              from: { player: "opponent", zone: "donDeck", position: "top" },
+              to: { player: "opponent", zone: "costArea" },
+              order: "original",
+              destinationState: "active",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:ko",
+      "instruction:moveCards",
+      "player:opponent",
+      "chooser:opponent",
+      "zone:donDeck",
+      "destination:costArea",
+      "state:active",
+      "expression:sequence",
+    ]),
+  );
+});
+
 it("parses leader type alternatives before DON activation under End of Your Turn", () => {
   const result = parseCardEffectLine(
     "[End of Your Turn] If your Leader has the {FILM} or {Straw Hat Crew} type, set up to 2 of your DON!! cards as active.",

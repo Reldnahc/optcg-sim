@@ -59,10 +59,13 @@ export const isSupportedDonDeckToCostAreaEffect = (
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
   (effect.min ?? effect.count) <= effect.count &&
-  effect.from.player === "self" &&
+  (effect.from.player === "self" || effect.from.player === "opponent") &&
+  (effect.chooser === undefined ||
+    effect.chooser === "self" ||
+    effect.chooser === "opponent") &&
   effect.from.zone === "donDeck" &&
   effect.from.position === "top" &&
-  effect.to.player === "self" &&
+  effect.to.player === effect.from.player &&
   effect.to.zone === "costArea" &&
   effect.to.position === undefined &&
   (effect.destinationState === "active" ||

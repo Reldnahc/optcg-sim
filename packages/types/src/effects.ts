@@ -852,6 +852,7 @@ export type Effect =
       type: "moveCards";
       count: number;
       min?: number;
+      chooser?: PlayerRef;
       from: {
         player: PlayerRef;
         zone: Zone;

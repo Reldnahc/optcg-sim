@@ -9,6 +9,7 @@ import type {
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
+import { resolvePlayerId } from "../runtime/primitives/execute.js";
 
 export const createChooseOptionalActivationDecision = (
   state: GameState,
@@ -63,6 +64,13 @@ export const createChooseQuantityDecision = (
   effect: Effect,
   bounds: { min: number; max: number },
 ): EngineResult => {
+  const playerId =
+    effect.type === "moveCards" && effect.chooser !== undefined
+      ? resolvePlayerId(state, entry, effect.chooser)
+      : entry.controllerId;
+  if (playerId === undefined) {
+    return toEngineResult(state, []);
+  }
   const decisionId =
     `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
   const causedBy = {
@@ -73,10 +81,10 @@ export const createChooseQuantityDecision = (
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: decisionId,
     type: "chooseQuantity",
-    playerId: entry.controllerId,
+    playerId,
     prompt: chooseQuantityPromptForEffect(effect),
     causedBy,
-    visibility: { type: "private", playerId: entry.controllerId },
+    visibility: { type: "private", playerId },
     mode: "upTo",
     min: bounds.min,
     max: bounds.max,
