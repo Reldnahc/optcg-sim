@@ -15,8 +15,8 @@ export interface ArrowLine {
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
 const leaderPowerLabelDefenderWeight = 0.72;
-const battlePowerEntryOffset = 120;
-const battlePowerEntryDurationMs = 460;
+const battlePowerEntryOffset = 220;
+const battlePowerEntryDurationMs = 340;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
 type BattlePowerTone =
@@ -233,6 +233,13 @@ export const BattleArrowOverlay = ({
                   dur={`${String(battlePowerEntryDurationMs)}ms`}
                   fill="freeze"
                 />
+                <animate
+                  attributeName="opacity"
+                  from="0"
+                  to="1"
+                  dur={`${String(battlePowerEntryDurationMs)}ms`}
+                  fill="freeze"
+                />
                 {renderOpponentPower}
               </text>
               <text
@@ -258,6 +265,13 @@ export const BattleArrowOverlay = ({
               type="translate"
               from={`${String(battlePowerEntryOffset)} 0`}
               to="0 0"
+              dur={`${String(battlePowerEntryDurationMs)}ms`}
+              fill="freeze"
+            />
+            <animate
+              attributeName="opacity"
+              from="0"
+              to="1"
               dur={`${String(battlePowerEntryDurationMs)}ms`}
               fill="freeze"
             />
