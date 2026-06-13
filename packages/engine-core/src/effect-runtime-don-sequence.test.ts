@@ -139,6 +139,90 @@ const parserNestedAttachDonSequence = (): Extract<
   };
 };
 
+const restedDonToLeaderThenOpponentLifeToHandSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "donSelection:attach",
+            effect: {
+              type: "selectCards",
+              zone: "costArea",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: { categories: ["don"], state: "rested" },
+              saveAs: "donSelection:attach" as SelectionId,
+              visibility: "bothPlayers",
+            },
+          },
+          {
+            connector: "ifYouDo",
+            saveResultAs: "targetSelection:attach-don",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                filter: { categories: ["leader"] },
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "attachSelectedDon",
+              selection: "donSelection:attach" as SelectionId,
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "targetSelection:attach-don",
+                },
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+                filter: { categories: ["leader"] },
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "conditional",
+        if: { type: "lifeCount", player: "opponent", op: "gte", value: 3 },
+        then: {
+          type: "moveCards",
+          min: 0,
+          count: 1,
+          from: { player: "opponent", zone: "life", position: "top" },
+          to: { player: "owner", zone: "hand" },
+          order: "original",
+        },
+      },
+    },
+  ],
+});
+
 const leaderOrCharacterAttachDonSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -447,6 +531,120 @@ const setupDefinition = (
       zone: target.zone,
     },
   };
+};
+
+const setupOnPlaySequenceDefinition = (
+  state: GameState,
+  effect: Effect,
+): EffectDefinition => {
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  const source = p1State.leader;
+  const effectDefinitionId = "def-on-play-don-life";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "don-life-rules",
+      sourceTextHash: "don-life-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        id: toEffectId("effect-on-play-don-life"),
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect,
+      },
+    ],
+  };
+  const restedDon = must(p1State.donDeck[0], "rested DON source");
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...restedDon,
+      state: "rested",
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+    },
+  ];
+  while (p2State.life.length < 3) {
+    const nextLifeCard = must(p2State.deck[0], "opponent deck for Life");
+    p2State.deck = p2State.deck.slice(1).map((card, index) => ({
+      ...card,
+      zone: { zone: "deck", playerId: p2, slot: "deck", index },
+    }));
+    p2State.life = [
+      ...p2State.life,
+      {
+        faceUp: false,
+        card: {
+          ...nextLifeCard,
+          zone: {
+            zone: "life",
+            playerId: p2,
+            slot: "life",
+            index: p2State.life.length,
+          },
+        },
+      },
+    ];
+  }
+  state.cardManifest.cards[source.cardId] = supportCard;
+  for (const don of [...p1State.costArea, ...p1State.donDeck]) {
+    state.cardManifest.cards[don.cardId] = resolvedCard({
+      cardId: don.cardId,
+      category: "don",
+    });
+  }
+  for (const lifeCard of p2State.life) {
+    state.cardManifest.cards[lifeCard.card.cardId] = resolvedCard({
+      cardId: lifeCard.card.cardId,
+      category: "character",
+    });
+  }
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry:on-play:don-life"),
+      timingWindowId: toTimingWindowId("timing-window:on-play:don-life"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: source.zone,
+        category: "leader",
+        colors: ["red"],
+        keywords: [],
+      },
+      effectBlockId: must(definition.effects[0], "effect").id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "effectRuntime:onPlay" },
+    },
+  ];
+  return definition;
 };
 
 const chooseQuantity = (state: GameState, quantity: number) => {
@@ -764,6 +962,68 @@ test("parser-emitted nested DON sequence resumes after the first quantity decisi
       (card) => card.state === "active",
     ).length,
     1,
+  );
+});
+
+test("on play nested DON attachment resumes into conditional opponent Life move", () => {
+  const state = createActiveState();
+  setupOnPlaySequenceDefinition(
+    state,
+    restedDonToLeaderThenOpponentLifeToHandSequence(),
+  );
+  const beforeP2 = must(state.players[p2], "before p2");
+  const opponentLifeTop = must(beforeP2.life[0], "opponent life top").card;
+  const opponentHandBefore = beforeP2.hand.length;
+
+  const selectDonResult = processEffectRuntime(state);
+  const selectDon = must(selectDonResult.state.pendingDecision, "select DON");
+  assert.equal(selectDonResult.errors, undefined);
+  assert.equal(selectDon.type, "selectCards");
+  assert.equal(selectDon.candidates.length, 1);
+
+  const selectedDon = applyAction(selectDonResult.state, {
+    type: "respondToDecision",
+    decisionId: selectDon.id,
+    response: {
+      type: "cards",
+      cards: [must(selectDon.candidates[0], "DON candidate").card],
+    },
+  });
+  const selectLeader = must(selectedDon.state.pendingDecision, "select leader");
+  assert.equal(selectedDon.errors, undefined);
+  assert.equal(selectLeader.type, "selectTargets");
+
+  const selectedLeader = applyAction(selectedDon.state, {
+    type: "respondToDecision",
+    decisionId: selectLeader.id,
+    response: {
+      type: "targets",
+      targets: [must(selectLeader.candidates[0], "leader candidate").card],
+    },
+  });
+  assert.equal(selectedLeader.errors, undefined);
+  const chooseLifeQuantity = must(
+    selectedLeader.state.pendingDecision,
+    "choose opponent Life quantity",
+  );
+  assert.equal(chooseLifeQuantity.type, "chooseQuantity");
+  assert.equal(chooseLifeQuantity.min, 0);
+  assert.equal(chooseLifeQuantity.max, 1);
+
+  const movedLife = applyAction(selectedLeader.state, {
+    type: "respondToDecision",
+    decisionId: chooseLifeQuantity.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+  const afterP2 = must(movedLife.state.players[p2], "after p2");
+
+  assert.equal(movedLife.errors, undefined);
+  assert.equal(movedLife.state.pendingDecision, undefined);
+  assert.equal(afterP2.life.length, beforeP2.life.length - 1);
+  assert.equal(afterP2.hand.length, opponentHandBefore + 1);
+  assert.equal(
+    must(afterP2.hand.at(-1), "moved Life card").instanceId,
+    opponentLifeTop.instanceId,
   );
 });
 
