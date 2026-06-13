@@ -127,17 +127,31 @@ export function parseProtectionSource(
 
   const battleMatch = /^in battle\b\s*(?<rest>.*)$/i.exec(input.text);
   if (battleMatch !== null) {
-    const categories = parseBattleSourceCategories(
-      trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? ""),
-    );
+    const rest = trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? "");
+    const categories = parseBattleSourceCategories(rest);
     if (categories === undefined) {
+      const filter = parseBattleSourceFilter(rest);
+      if (filter !== undefined) {
+        return {
+          source: {
+            kind: "battle",
+            controllerRelation: "eitherController",
+            cardFilter: filter.filter,
+            ...(filter.filter.categories === undefined
+              ? {}
+              : { cardCategories: filter.filter.categories }),
+          },
+          evidence: ["protectionSource:battle", ...filter.evidence],
+          rest: "",
+        };
+      }
       return {
         source: {
           kind: "battle",
           controllerRelation: "eitherController",
         },
         evidence: ["protectionSource:battle"],
-        rest: trimTrailingPeriod(battleMatch.groups?.["rest"]?.trim() ?? ""),
+        rest,
       };
     }
     return {
@@ -152,6 +166,24 @@ export function parseProtectionSource(
   }
 
   return undefined;
+}
+
+function parseBattleSourceFilter(text: string):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match = /^by (?<filter>.+)$/iu.exec(text);
+  const filterText = match?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+  const filter = parseCardFilterPredicates({ text: filterText });
+  if (filter === undefined || filter.rest.length > 0) {
+    return undefined;
+  }
+  return { filter: filter.filter, evidence: filter.evidence };
 }
 
 function parseOpponentCardFilterEffectsSource(

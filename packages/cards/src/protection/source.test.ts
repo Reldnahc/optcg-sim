@@ -113,16 +113,17 @@ describe("protection source parser", () => {
     });
   });
 
-  it("parses battle cause while leaving source filters for later layers", () => {
+  it("parses battle cause with reusable source card filters", () => {
     expect(
       parseProtectionSource({ text: "in battle by <Slash> attribute cards." }),
     ).toEqual({
       source: {
         kind: "battle",
         controllerRelation: "eitherController",
+        cardFilter: { attributesAny: ["slash"] },
       },
-      evidence: ["protectionSource:battle"],
-      rest: "by <Slash> attribute cards",
+      evidence: ["protectionSource:battle", "filter:attribute", "filter:any"],
+      rest: "",
     });
   });
 });
