@@ -15,7 +15,10 @@ import {
   toggleDecisionSelectedCard,
 } from "../index.js";
 import { createPoneglyphAccountClient } from "../account-client.js";
-import type { AccountLoadout } from "../account-client.js";
+import type {
+  AccountLoadout,
+  AccountSimHandoffBatchResult,
+} from "../account-client.js";
 import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
 import type { ValidatedLobbyLoadout } from "../transport.js";
 import type {
@@ -91,6 +94,50 @@ const uncheckedLocalLoadouts = (
     ...loadout,
     validation: { status: "unchecked", errors: [] },
   }));
+
+const validatedLoadoutsFromHandoffs = async ({
+  accountClient,
+  controller,
+  loadouts,
+  lobbyId,
+}: {
+  readonly accountClient: ReturnType<typeof createPoneglyphAccountClient>;
+  readonly controller: ReturnType<typeof createController>;
+  readonly loadouts: readonly AccountLoadout[];
+  readonly lobbyId: string;
+}): Promise<readonly ValidatedLobbyLoadout[]> => {
+  if (loadouts.length === 0) {
+    return [];
+  }
+  const handoffs = await accountClient.createSimHandoffs({
+    loadoutIds: loadouts.map((loadout) => loadout.id),
+    lobbyId,
+  });
+  const rejected = handoffs
+    .filter((handoff) => handoff.status === "rejected")
+    .map((handoff) => rejectedHandoffValidation(handoff));
+  const created = handoffs.filter((handoff) => handoff.status === "created");
+  if (created.length === 0) {
+    return rejected;
+  }
+  const validated = (
+    await controller.validateLobbyLoadouts({
+      handoffTokens: created.map((handoff) => handoff.token),
+    })
+  ).data.loadouts;
+  return [...validated, ...rejected];
+};
+
+const rejectedHandoffValidation = (
+  handoff: Extract<
+    AccountSimHandoffBatchResult,
+    { readonly status: "rejected" }
+  >,
+): ValidatedLobbyLoadout => ({
+  loadoutId: handoff.loadoutId,
+  status: "unverified",
+  errors: [handoff.error],
+});
 
 export const useMatchClient = ({
   accountSessionToken,
@@ -233,7 +280,7 @@ export const useMatchClient = ({
     setAccountLoadoutsStatus("loading");
     setAccountLoadoutsError(undefined);
     void accountClient
-      .listLoadouts()
+      .listLoadouts({ includeDeckHashes: localRawDeckSubmissionsAllowed })
       .then(async (loadouts) => {
         if (accountLoadoutsRequestId.current !== requestId) {
           return;
@@ -247,18 +294,12 @@ export const useMatchClient = ({
         }
         setAccountLoadouts(uncheckedLocalLoadouts(loadouts));
         setAccountLoadoutsStatus("ready");
-        const validated =
-          loadouts.length === 0
-            ? []
-            : (
-                await controller.validateLobbyDecks({
-                  decks: loadouts.map((loadout) => ({
-                    loadoutId: loadout.id,
-                    deckHash: loadout.deckHash,
-                    donDeckCount: 10,
-                  })),
-                })
-              ).data.loadouts;
+        const validated = await validatedLoadoutsFromHandoffs({
+          accountClient,
+          controller,
+          loadouts,
+          lobbyId: clientState.lobbyId,
+        });
         if (accountLoadoutsRequestId.current !== requestId) {
           return;
         }
