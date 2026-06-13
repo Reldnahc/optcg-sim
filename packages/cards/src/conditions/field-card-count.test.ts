@@ -61,6 +61,36 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses opponent compared field counts through reusable filters", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "your opponent has 2 or more Characters with a base power of 5000 or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          power: { min: 5000 },
+        },
+        op: "gte",
+        value: 2,
+      },
+      evidence: [
+        "condition:opponentFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses no matching Characters as a reusable zero field-count condition", () => {
     expect(
       parseFieldCardCountCondition({

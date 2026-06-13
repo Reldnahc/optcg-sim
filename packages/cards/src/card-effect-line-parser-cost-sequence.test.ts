@@ -391,6 +391,47 @@ it("parses variable field DON return as a reusable optional cost before draw", (
   });
 });
 
+it("parses opponent compared field-count conditions with power predicates", () => {
+  expect(
+    parseCardEffectLine(
+      "[On Play] If your opponent has 2 or more Characters with a base power of 5000 or more, draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          power: { min: 5000 },
+        },
+        op: "gte",
+        value: 2,
+      },
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    evidence: [
+      "entry:onPlay",
+      "sourcePresence:mustRemain",
+      "expression:conditional",
+      "condition:opponentFieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "player:opponent",
+      "filter:category:character",
+      "filter:power",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("composes active DON return with multi-card hand play using existing body primitives", () => {
   expect(
     parseCardEffectLine(

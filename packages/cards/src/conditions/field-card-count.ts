@@ -44,6 +44,37 @@ const fieldCountEvidence = (
   ...filterEvidence,
 ];
 
+const parseComparedFieldPresence = (
+  text: string,
+  player: "self" | "opponent",
+): ConditionParseResult | undefined => {
+  const comparison = parseLeadingCountComparison({ text });
+  if (comparison === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseFieldPredicates(comparison.rest);
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  return {
+    condition: {
+      type: "fieldCount",
+      player,
+      filter: predicates.filter,
+      op: comparison.op,
+      value: comparison.value,
+    },
+    evidence: fieldCountEvidence(
+      player,
+      comparison.evidence,
+      predicates.evidence,
+    ),
+    rest: "",
+  };
+};
+
 export const parseFieldCardCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
@@ -143,6 +174,20 @@ export const parseFieldCardCountCondition: ConditionParser = (
     };
   }
 
+  const comparedOpponentPresence =
+    /^your opponent has\s+(?<comparison>.+)$/i.exec(input.text);
+  const opponentComparisonText =
+    comparedOpponentPresence?.groups?.["comparison"];
+  if (opponentComparisonText !== undefined) {
+    const parsed = parseComparedFieldPresence(
+      opponentComparisonText,
+      "opponent",
+    );
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
   const selfPresence = /^you have an?\s+(?<predicate>.+)$/i.exec(input.text);
   const selfPresencePredicate = selfPresence?.groups?.["predicate"];
   if (selfPresencePredicate !== undefined) {
@@ -225,26 +270,9 @@ export const parseFieldCardCountCondition: ConditionParser = (
   );
   const comparisonText = comparedSelfPresence?.groups?.["comparison"];
   if (comparisonText !== undefined) {
-    const comparison = parseLeadingCountComparison({ text: comparisonText });
-    if (comparison !== undefined) {
-      const predicates = parseFieldPredicates(comparison.rest);
-      if (predicates !== undefined && predicates.rest.trim().length === 0) {
-        return {
-          condition: {
-            type: "fieldCount",
-            player: "self",
-            filter: predicates.filter,
-            op: comparison.op,
-            value: comparison.value,
-          },
-          evidence: fieldCountEvidence(
-            "self",
-            comparison.evidence,
-            predicates.evidence,
-          ),
-          rest: "",
-        };
-      }
+    const parsed = parseComparedFieldPresence(comparisonText, "self");
+    if (parsed !== undefined) {
+      return parsed;
     }
   }
 
