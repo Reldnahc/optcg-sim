@@ -16,7 +16,7 @@ export interface ArrowLine {
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
 const leaderPowerLabelDefenderWeight = 0.72;
 const battlePowerEntryOffset = 220;
-const battlePowerEntryDurationMs = 340;
+const battlePowerEntryDurationMs = 220;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
 type BattlePowerTone =
