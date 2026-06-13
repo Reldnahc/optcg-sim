@@ -12,6 +12,7 @@ import {
   parseRecognizedUnsupportedEntryPoint,
   parseReplacementEntryPoint,
   parseRulesStartOfGameEntryPoint,
+  parseStartOfTurnEntryPoint,
   parseSupportedEntryPoint,
   parseTurnWindowedEntryPoint,
 } from "../entry-points/index.js";
@@ -267,6 +268,7 @@ export const defaultRegistry = {
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
     parseTurnWindowedEntryPoint,
+    parseStartOfTurnEntryPoint,
     parseSupportedEntryPoint,
     parseRecognizedUnsupportedEntryPoint,
     parseReplacementEntryPoint,

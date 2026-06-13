@@ -136,6 +136,7 @@ export interface EffectQueueEntry {
 export type EffectQueueOrigin =
   | { type: "activateMain" }
   | { type: "activatedReaction" }
+  | { type: "startOfYourTurn" }
   | { type: "lifeTrigger" };
 
 export interface DelayedEffectRecord {

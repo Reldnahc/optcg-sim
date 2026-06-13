@@ -25,6 +25,7 @@ export type PrimitiveEvidence =
   | "entry:eventMain"
   | "entry:eventCounter"
   | "entry:startOfGame"
+  | "entry:startOfYourTurn"
   | "entry:implicitPermanent"
   | "entry:implicitReaction"
   | "entry:activatedReaction"

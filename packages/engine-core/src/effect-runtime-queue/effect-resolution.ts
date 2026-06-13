@@ -15,6 +15,8 @@ import {
   isScopedActivateMainQueueEntry,
   isSupportedActivateMainRuntimeEffectBlock,
 } from "../runtime/optional-activation/activate-main.js";
+import { isSupportedStartOfTurnRuntimeEffectBlock } from "../runtime/optional-activation/start-of-turn.js";
+import { isScopedStartOfTurnQueueEntry } from "../runtime/optional-activation/start-of-turn-support.js";
 import { isSupportedQueuedDrawEffectBlock } from "../runtime/primitives/execute.js";
 import { isSupportedDrawUpToBody } from "../effect-runtime-reusable-body-support.js";
 import type { QueuedEffectDefinitionResolverDependencies } from "./results-types.js";
@@ -52,7 +54,7 @@ export interface QueuedEffectResolvers {
   readonly withoutConditionFields: (
     effect: EffectDefinition["effects"][number],
   ) => EffectDefinition["effects"][number];
-  readonly canResolveQueuedDrawFromActivateMainEntry: (
+  readonly canResolveQueuedDrawFromTimedActivationEntry: (
     effect: EffectDefinition["effects"][number],
     entry: EffectQueueEntry,
   ) => effect is QueuedDrawEffectBlock;
@@ -93,12 +95,14 @@ export const createQueuedEffectResolvers = (
     return match;
   };
 
-  const canResolveQueuedDrawFromActivateMainEntry = (
+  const canResolveQueuedDrawFromTimedActivationEntry = (
     effect: EffectDefinition["effects"][number],
     entry: EffectQueueEntry,
   ): effect is QueuedDrawEffectBlock =>
-    isScopedActivateMainQueueEntry(entry) &&
-    isSupportedActivateMainRuntimeEffectBlock(effect) &&
+    ((isScopedActivateMainQueueEntry(entry) &&
+      isSupportedActivateMainRuntimeEffectBlock(effect)) ||
+      (isScopedStartOfTurnQueueEntry(entry) &&
+        isSupportedStartOfTurnRuntimeEffectBlock(effect))) &&
     effect.effect.type === "draw";
 
   const isSupportedAutoQueuedDrawUpToEffectBlock = (
@@ -114,15 +118,17 @@ export const createQueuedEffectResolvers = (
     effect.failurePolicy === undefined &&
     isSupportedDrawUpToBody(effect.effect);
 
-  const isSupportedActivateMainQueuedDrawUpToEffectBlock = (
+  const isSupportedTimedActivationQueuedDrawUpToEffectBlock = (
     effect: EffectDefinition["effects"][number],
     entry: EffectQueueEntry,
   ): effect is EffectDefinition["effects"][number] & {
     sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
     effect: Extract<Effect, { type: "drawUpTo" }>;
   } =>
-    isScopedActivateMainQueueEntry(entry) &&
-    isSupportedActivateMainRuntimeEffectBlock(effect) &&
+    ((isScopedActivateMainQueueEntry(entry) &&
+      isSupportedActivateMainRuntimeEffectBlock(effect)) ||
+      (isScopedStartOfTurnQueueEntry(entry) &&
+        isSupportedStartOfTurnRuntimeEffectBlock(effect))) &&
     effect.optional !== true &&
     isSupportedDrawUpToBody(effect.effect);
 
@@ -142,7 +148,7 @@ export const createQueuedEffectResolvers = (
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (
       !isSupportedQueuedDrawEffectBlock(supportShape) &&
-      !canResolveQueuedDrawFromActivateMainEntry(supportShape, entry)
+      !canResolveQueuedDrawFromTimedActivationEntry(supportShape, entry)
     ) {
       return undefined;
     }
@@ -164,7 +170,7 @@ export const createQueuedEffectResolvers = (
     delete (supportShape as { conditionTiming?: unknown }).conditionTiming;
     if (
       !isSupportedAutoQueuedDrawUpToEffectBlock(supportShape) &&
-      !isSupportedActivateMainQueuedDrawUpToEffectBlock(supportShape, entry)
+      !isSupportedTimedActivationQueuedDrawUpToEffectBlock(supportShape, entry)
     ) {
       return undefined;
     }
@@ -250,7 +256,7 @@ export const createQueuedEffectResolvers = (
     resolveQueuedContinuousEffect,
     resolveQueuedPlaySourceEffect,
     withoutConditionFields,
-    canResolveQueuedDrawFromActivateMainEntry,
+    canResolveQueuedDrawFromTimedActivationEntry,
     isSupportedQueuedOptionalEffectBlock,
   };
 };

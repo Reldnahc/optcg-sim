@@ -8,6 +8,7 @@ import type {
 
 import { isSupportedActivateMainRuntimeEffectBlock } from "./runtime/optional-activation/activate-main.js";
 import { isSupportedActivatedReactionEffect } from "./runtime/optional-activation/event-reaction.js";
+import { isSupportedStartOfTurnRuntimeEffectBlock } from "./runtime/optional-activation/start-of-turn.js";
 import {
   autoRuntimeEntryAdaptersForBlock,
   isSupportedAutoRuntimeEffectBlock,
@@ -53,6 +54,15 @@ export const evaluateEffectBlockRuntimeSupport = (
       isSupportedSequenceBlock(activateMainProbeQueueEntry, block)
       ? supportedBlockReport(block)
       : unsupportedBodyReport(block, "unsupported activate-main effect body");
+  }
+
+  if (
+    block.category === "activate" &&
+    block.trigger.type === "startOfYourTurn"
+  ) {
+    return isSupportedStartOfTurnRuntimeEffectBlock(block)
+      ? supportedBlockReport(block)
+      : unsupportedBodyReport(block, "unsupported start-of-turn effect body");
   }
 
   if (block.category === "activate") {

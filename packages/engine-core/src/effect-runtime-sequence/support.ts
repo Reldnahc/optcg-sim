@@ -22,6 +22,7 @@ import {
 import type { AutoRuntimeTriggerType } from "../effect-runtime-entry-adapters.js";
 import { isScopedActivatedReactionQueueEntry } from "../runtime/optional-activation/event-reaction-support.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
+import { isScopedStartOfTurnQueueEntry } from "../runtime/optional-activation/start-of-turn-support.js";
 import {
   isSupportedDrawSegment,
   isSupportedDrawUpToSegment,
@@ -357,6 +358,9 @@ const isSupportedSequenceBlockWithState = (
     (flattenedBlock?.category === "activate" &&
       flattenedBlock.trigger.type === "activateMain" &&
       isScopedActivateMainQueueEntry(entry)) ||
+    (flattenedBlock?.category === "activate" &&
+      flattenedBlock.trigger.type === "startOfYourTurn" &&
+      isScopedStartOfTurnQueueEntry(entry)) ||
     (flattenedBlock?.category === "activate" &&
       isScopedActivatedReactionQueueEntry(entry));
 

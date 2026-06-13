@@ -4,5 +4,6 @@ export { parseImplicitReactionEntryPoint } from "./implicit-reaction.js";
 export { parseRecognizedUnsupportedEntryPoint } from "./recognized-unsupported.js";
 export { parseReplacementEntryPoint } from "./replacement.js";
 export { parseRulesStartOfGameEntryPoint } from "./rules-start-of-game.js";
+export { parseStartOfTurnEntryPoint } from "./start-of-turn.js";
 export { parseSupportedEntryPoint } from "./supported.js";
 export { parseTurnWindowedEntryPoint } from "./turn-windowed.js";

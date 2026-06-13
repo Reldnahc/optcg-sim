@@ -97,6 +97,10 @@ import {
   applyActivatedReactionAction,
   getActivatedReactionLegalActions,
 } from "./runtime/optional-activation/event-reaction.js";
+import {
+  applyStartOfTurnAction,
+  getStartOfTurnLegalActions,
+} from "./runtime/optional-activation/start-of-turn.js";
 import { finalizeSetupFromContinuation } from "./setup/initial-state.js";
 import {
   applyStartOfGameSetupDecisionResponse,
@@ -196,6 +200,7 @@ export const getLegalActions = (
   }
 
   actions.push(...getTurnLegalActions(state, playerId));
+  actions.push(...getStartOfTurnLegalActions(state, playerId));
   actions.push(...getActivatedReactionLegalActions(state, playerId));
   actions.push(...getAttachDonLegalActions(state, playerId));
   actions.push(...getPlayCardLegalActions(state, playerId));
@@ -760,6 +765,7 @@ export const applyAction = (
   if (action.type === "declareAttack") return applyDeclareAttack(state, action);
   if (action.type === "activateEffect")
     return (
+      applyStartOfTurnAction(state, action) ??
       applyActivatedReactionAction(state, action) ??
       applyActivateMainAction(state, action)
     );
