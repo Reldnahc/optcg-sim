@@ -17,6 +17,7 @@ export interface CustomLobbySeatState {
 
 export interface CustomLobbySettings {
   readonly formatId: string;
+  readonly timerDisabled?: boolean;
 }
 
 export interface CustomLobbyState {
@@ -91,6 +92,9 @@ const parseLobby = (value: string): CustomLobbyState => {
       ? {
           settings: {
             formatId: parsed["settings"]["formatId"],
+            ...(parsed["settings"]["timerDisabled"] === true
+              ? { timerDisabled: true }
+              : {}),
           },
         }
       : {}),

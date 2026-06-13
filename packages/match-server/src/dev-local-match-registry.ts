@@ -72,6 +72,7 @@ interface ActiveLocalDevMatchSession {
   seats: Record<string, LocalDevMatchSeat>;
   setup: LocalDevMatchSetup;
   firstPlayerChoice: FirstPlayerChoiceState;
+  timersEnabled: boolean;
 }
 
 interface PendingFirstPlayerLocalDevMatchSession {
@@ -79,6 +80,7 @@ interface PendingFirstPlayerLocalDevMatchSession {
   setup: LocalDevMatchSetup;
   seats: Record<string, LocalDevMatchSeat>;
   firstPlayerChoice: FirstPlayerChoiceState;
+  timersEnabled: boolean;
 }
 
 type LocalDevMatchSession =
@@ -91,6 +93,7 @@ export interface LocalDevMatchRegistry {
     options?: {
       firstPlayerChoice?: FirstPlayerChoiceState;
       seats?: Record<string, LocalDevMatchSeat>;
+      timersEnabled?: boolean;
     },
   ) => Promise<CreatedDevMatchResponse>;
   createRematchSeed: (
@@ -219,9 +222,14 @@ const createActiveLocalDevMatchSession = (
   sessionService: MatchSessionService,
   matchTimerPolicy: MatchTimerPolicy,
   firstPlayerChoice?: FirstPlayerChoiceState,
+  timersEnabled = true,
 ): ActiveLocalDevMatchSession => {
   const match = createLocalDevMatch(setup);
-  initializeLocalDevMatchTimers(match, matchTimerPolicy);
+  if (timersEnabled) {
+    initializeLocalDevMatchTimers(match, matchTimerPolicy);
+  } else {
+    match.state = { ...match.state, timers: { players: {} } };
+  }
   const resolvedChoice =
     firstPlayerChoice ??
     ({
@@ -241,6 +249,7 @@ const createActiveLocalDevMatchSession = (
     setup,
     seats: createLocalSeats(setup),
     firstPlayerChoice: resolvedChoice,
+    timersEnabled,
   };
 };
 
@@ -248,11 +257,13 @@ const createPendingLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
   firstPlayerChoice?: FirstPlayerChoiceState,
   seats?: Record<string, LocalDevMatchSeat>,
+  timersEnabled = true,
 ): PendingFirstPlayerLocalDevMatchSession => ({
   status: "choosingFirstPlayer",
   setup,
   seats: seats ?? createLocalSeats(setup),
   firstPlayerChoice: pendingFirstPlayerChoice(setup, firstPlayerChoice),
+  timersEnabled,
 });
 
 const createdSeatResponse = (
@@ -462,6 +473,7 @@ export const createLocalDevMatchRegistry = async (
         actualSetup,
         options?.firstPlayerChoice,
         options?.seats,
+        options?.timersEnabled,
       );
       sessions.set(actualSetup.matchId, session);
       return buildCreatedResponse(actualSetup, session);
@@ -543,6 +555,7 @@ export const createLocalDevMatchRegistry = async (
           sessionService,
           matchTimerPolicy,
           resolvedChoice,
+          session.timersEnabled,
         ),
         seats: session.seats,
       };
@@ -686,6 +699,7 @@ export const createLocalDevMatchRegistry = async (
       for (const [matchId, session] of sessions) {
         if (
           session.status !== "active" ||
+          !session.timersEnabled ||
           (allowedMatchIds !== undefined && !allowedMatchIds.has(matchId))
         ) {
           continue;

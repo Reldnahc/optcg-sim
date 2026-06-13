@@ -11,7 +11,7 @@ import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
 interface CreatedCustomLobbyBody {
   lobbyId?: string;
-  settings?: { formatId?: string };
+  settings?: { formatId?: string; timerDisabled?: boolean };
   matchId?: string;
   seat?: { playerId?: string; sessionToken?: string };
   sessionToken?: string;
@@ -127,7 +127,7 @@ const createHandoffMatchHttpServer = async (
 
 const createCustomLobby = async (
   server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
-  settings?: { formatId: string },
+  settings?: { formatId: string; timerDisabled?: boolean },
 ): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
     method: "POST",
@@ -334,6 +334,36 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(response.status, 200);
       const loaded = (await response.json()) as CreatedCustomLobbyBody;
       assert.equal(loaded.settings?.formatId, "Standard");
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("creates custom lobbies with disabled timer settings", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const lobby = await createCustomLobby(server, {
+        formatId: "Standard",
+        timerDisabled: true,
+      });
+
+      const createdSettings = lobby.settings;
+      assert.ok(createdSettings !== undefined);
+      assert.equal(createdSettings.formatId, "Standard");
+      assert.equal(createdSettings.timerDisabled, true);
+      if (lobby.lobbyId === undefined) {
+        throw new Error("Expected created lobby id.");
+      }
+      const response = await fetch(
+        `${server.url()}/api/lobbies/${lobby.lobbyId}`,
+      );
+      assert.equal(response.status, 200);
+      const loaded = (await response.json()) as CreatedCustomLobbyBody;
+      const loadedSettings = loaded.settings;
+      assert.ok(loadedSettings !== undefined);
+      assert.equal(loadedSettings.formatId, "Standard");
+      assert.equal(loadedSettings.timerDisabled, true);
     } finally {
       await server.close();
     }

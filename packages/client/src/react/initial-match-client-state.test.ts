@@ -184,6 +184,22 @@ test("initial match route passes selected lobby format to lobby creation", async
   assert.equal("lobbyId" in state, true);
 });
 
+test("initial match route passes disabled timer setting to lobby creation", async () => {
+  testWindow.history.replaceState(
+    {},
+    "",
+    "/match?lobbyFormat=Standard&timerDisabled=1",
+  );
+  const controller = fakeController();
+
+  const state = await loadInitialMatchClientState(controller);
+
+  assert.deepEqual(controller.startedLobbies, [
+    { settings: { formatId: "Standard", timerDisabled: true } },
+  ]);
+  assert.equal("lobbyId" in state, true);
+});
+
 test("initial room alias route joins the lobby by short code", async () => {
   testWindow.history.replaceState({}, "", "/r/ab12");
   const controller = fakeController();

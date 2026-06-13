@@ -23,7 +23,12 @@ const parseCreateLobbySettings = (
   if (typeof formatId !== "string" || formatId.trim().length === 0) {
     return "invalid";
   }
-  return { formatId: formatId.trim() };
+  return {
+    formatId: formatId.trim(),
+    ...(requestBody.settings["timerDisabled"] === true
+      ? { timerDisabled: true }
+      : {}),
+  };
 };
 
 export const handleCreateLobbyRequest = async ({
