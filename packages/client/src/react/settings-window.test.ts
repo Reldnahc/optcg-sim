@@ -61,6 +61,31 @@ describe("settings window", () => {
     assert.match(markup, /type="checkbox"/u);
   });
 
+  test("settings groups controls by setting type", () => {
+    const markup = renderToStaticMarkup(
+      createElement(SettingsWindow, {
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.match(
+      markup,
+      /<section class="settings-section" aria-label="Customization"><h3>Customization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>/u,
+    );
+    assert.match(
+      markup,
+      /<section class="settings-section" aria-label="Sound"><h3>Sound<\/h3>.*Sound volume.*<\/section>/u,
+    );
+    assert.match(
+      markup,
+      /<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduced motion.*<\/section>/u,
+    );
+    assert.match(
+      markup,
+      /<section class="settings-section" aria-label="Gameplay"><h3>Gameplay<\/h3>.*Quick pay Activate: Main costs.*Confirm attach DON.*Confirm end turn.*<\/section>/u,
+    );
+  });
+
   test("match app wires the settings icon to the settings window", async () => {
     const [controlRail, matchApp, matchInfoWindows, toolbarControls] =
       await Promise.all([
