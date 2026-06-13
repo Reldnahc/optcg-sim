@@ -305,6 +305,7 @@ describe("collection modal", () => {
 
     assert.match(markup, /modal-frame/u);
     assert.match(markup, /collection-modal/u);
+    assert.match(markup, /modal-frame-collection-decision/u);
     assert.match(markup, /collection-modal-card-grid is-single-card/u);
     assert.doesNotMatch(markup, /floating-window/u);
   });
@@ -549,6 +550,14 @@ describe("collection modal", () => {
   test("collection modal grid scales with the floating window without clipping outlines", async () => {
     const styles = await readFile(collectionStylesPath, "utf8");
 
+    assert.match(
+      styles,
+      /\.modal-frame-collection-decision\s*\{[^}]*--collection-card-width:\s*calc\(var\(--card-height\) \* 5 \/ 7\);[^}]*--collection-card-grid-gap:\s*8px;[^}]*--collection-card-grid-padding:\s*5px;/u,
+    );
+    assert.match(
+      styles,
+      /\.modal-frame-collection-decision\s*\{[^}]*width:\s*min\(\s*calc\(\s*\(var\(--collection-card-width\) \* 5\) \+\s*\(var\(--collection-card-grid-gap\) \* 4\) \+\s*\(var\(--collection-card-grid-padding\) \* 2\) \+\s*\(var\(--modal-padding\) \* 2\)\s*\),\s*calc\(100vw - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
+    );
     assert.match(
       styles,
       /\.collection-modal-card-grid\s*\{[^}]*display:\s*grid;/u,
