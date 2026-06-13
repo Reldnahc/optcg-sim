@@ -29,6 +29,11 @@ import {
   matchEventTrigger,
   type EventReactionTriggerType,
 } from "../event-hooks/matcher.js";
+import {
+  isAutoEventReactionRuntimeEventType,
+  isAutoEventReactionTimingWindowId,
+  isSupportedAutoEventReactionTriggerType,
+} from "./event-reaction-events.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   EventReactionTriggerQueueingFailureReason,
@@ -46,17 +51,7 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
       };
       return typeof payload.triggerEventId === "string" &&
         typeof payload.timingWindowId === "string" &&
-        (payload.timingWindowId.endsWith(":damageDealt") ||
-          payload.timingWindowId.endsWith(":fieldRemoved") ||
-          payload.timingWindowId.endsWith(":cardPlayed") ||
-          payload.timingWindowId.endsWith(":cardRested") ||
-          payload.timingWindowId.endsWith(":donReturned") ||
-          payload.timingWindowId.endsWith(":donAttached") ||
-          payload.timingWindowId.endsWith(":attackDeclared") ||
-          payload.timingWindowId.endsWith(":effectQueued") ||
-          payload.timingWindowId.endsWith(":effectResolved") ||
-          payload.timingWindowId.endsWith(":triggerActivated") ||
-          payload.timingWindowId.endsWith(":lifeRemoved"))
+        isAutoEventReactionTimingWindowId(payload.timingWindowId)
         ? [payload.triggerEventId]
         : [];
     }),
@@ -64,21 +59,6 @@ const queuedEventReactionTriggerEventIds = (state: GameState): Set<string> =>
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const supportedAutoEventReactionTriggerTypes: ReadonlySet<EventReactionTriggerType> =
-  new Set([
-    "damageDealt",
-    "fieldRemoved",
-    "cardPlayed",
-    "cardRested",
-    "donReturned",
-    "donAttached",
-    "attackDeclared",
-    "effectQueued",
-    "effectResolved",
-    "triggerActivated",
-    "lifeRemoved",
-  ]);
 
 const autoEventReactionAdapter = (triggerType: EventReactionTriggerType) => ({
   category: "auto" as const,
@@ -143,16 +123,7 @@ export const createEventReactionTriggerQueueing = (
       (event) =>
         (isRecentRuntimeEvent(state, event) || isRuntimeEffectEvent(event)) &&
         !alreadyQueued.has(String(event.id)) &&
-        (event.type === "damageDealt" ||
-          event.type === "cardMoved" ||
-          event.type === "cardPlayed" ||
-          event.type === "cardRested" ||
-          event.type === "donReturned" ||
-          event.type === "donAttached" ||
-          event.type === "attackDeclared" ||
-          event.type === "effectQueued" ||
-          event.type === "effectResolved" ||
-          event.type === "triggerActivated"),
+        isAutoEventReactionRuntimeEventType(event.type),
     );
     if (reactionEvents.length === 0) {
       return undefined;
@@ -192,7 +163,7 @@ export const createEventReactionTriggerQueueing = (
           const match = matchEventTrigger(state, source, effect.trigger, event);
           const triggerTypesForEvent = match.triggerTypes.filter(
             (triggerType) =>
-              supportedAutoEventReactionTriggerTypes.has(triggerType) &&
+              isSupportedAutoEventReactionTriggerType(triggerType) &&
               isAutoRuntimeTriggerCandidate(
                 effect,
                 autoEventReactionAdapter(triggerType),
