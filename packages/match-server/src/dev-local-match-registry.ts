@@ -40,6 +40,7 @@ import type {
   ClientActionEnvelope,
   FirstPlayerChoiceState,
   FirstPlayerChoiceValue,
+  SessionActionRequest,
   SessionActionResult,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
@@ -464,11 +465,13 @@ export const createLocalDevMatchRegistry = async (
     readonly createDefaultMatch?: boolean;
     readonly completedMatchRepository?: CompletedMatchRepository;
     readonly matchTimerPolicy?: MatchTimerPolicy;
+    readonly onBotActionAccepted?: (matchId: MatchId) => void;
   } = {},
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
   const completedPersistedMatchIds = new Set<MatchId>();
+  const activeBotRuns = new Set<MatchId>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
   const botActionDelayMs = options.botActionDelayMs ?? 1_000;
@@ -550,46 +553,88 @@ export const createLocalDevMatchRegistry = async (
     completedPersistedMatchIds.add(session.match.state.matchId);
   };
 
+  const botRequestFromChoice = (
+    botPlayerId: PlayerId,
+    snapshot: ReturnType<typeof getLocalDevSnapshot>,
+  ): SessionActionRequest | undefined => {
+    const choice = chooseBotAction(snapshot, botPlayerId);
+    if (choice === undefined) {
+      return undefined;
+    }
+    return choice.type === "submitAction"
+      ? {
+          type: "submitAction",
+          playerId: botPlayerId,
+          actionIndex: choice.actionIndex,
+          expectedStateSeq: snapshot.stateSeq,
+        }
+      : {
+          type: "respondToDecision",
+          playerId: botPlayerId,
+          decisionId: choice.decisionId,
+          response: choice.response,
+        };
+  };
+
   const runBotActions = async (
     session: ActiveLocalDevMatchSession,
   ): Promise<void> => {
     if (session.botPlayerIds.size === 0) {
       return;
     }
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      let acceptedAction = false;
-      for (const botPlayerId of session.botPlayerIds) {
-        const snapshot = getLocalDevSnapshot(session.match);
-        const choice = chooseBotAction(snapshot, botPlayerId);
-        if (choice === undefined) {
-          continue;
-        }
-        const request = {
-          type: "submitAction" as const,
-          playerId: botPlayerId,
-          actionIndex: choice.actionIndex,
-          expectedStateSeq: snapshot.stateSeq,
-        };
-        const result = sessionService.applyEnvelope({
-          protocolVersion: "dev",
-          matchId: session.match.state.matchId,
-          playerId: botPlayerId,
-          clientActionId: `bot:${randomUUID()}`,
-          expectedStateSeq: snapshot.stateSeq,
-          requestHash: requestHash(request),
-          request,
-        });
-        if (!result.accepted) {
-          continue;
-        }
-        acceptedAction = true;
-        await persistCompletedMatchIfNeeded(session);
-        await waitForBotActionDelay();
-      }
-      if (!acceptedAction) {
-        return;
-      }
+    const matchId = session.match.state.matchId;
+    if (activeBotRuns.has(matchId)) {
+      return;
     }
+    activeBotRuns.add(matchId);
+    try {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        let acceptedAction = false;
+        for (const botPlayerId of session.botPlayerIds) {
+          if (
+            botRequestFromChoice(
+              botPlayerId,
+              getLocalDevSnapshot(session.match),
+            ) === undefined
+          ) {
+            continue;
+          }
+          await waitForBotActionDelay();
+          const snapshot = getLocalDevSnapshot(session.match);
+          const request = botRequestFromChoice(botPlayerId, snapshot);
+          if (request === undefined) {
+            continue;
+          }
+          const result = sessionService.applyEnvelope({
+            protocolVersion: "dev",
+            matchId,
+            playerId: botPlayerId,
+            clientActionId: `bot:${randomUUID()}`,
+            expectedStateSeq: snapshot.stateSeq,
+            ...(request.type !== "respondToDecision"
+              ? {}
+              : { expectedDecisionId: request.decisionId }),
+            requestHash: requestHash(request),
+            request,
+          });
+          if (!result.accepted) {
+            continue;
+          }
+          acceptedAction = true;
+          await persistCompletedMatchIfNeeded(session);
+          options.onBotActionAccepted?.(matchId);
+        }
+        if (!acceptedAction) {
+          return;
+        }
+      }
+    } finally {
+      activeBotRuns.delete(matchId);
+    }
+  };
+
+  const scheduleBotActions = (session: ActiveLocalDevMatchSession): void => {
+    void runBotActions(session);
   };
 
   return {
@@ -629,7 +674,7 @@ export const createLocalDevMatchRegistry = async (
       sessions.set(actualSetup.matchId, session);
       if (session.status === "active") {
         syncActiveSessionPlayerLabels(session);
-        await runBotActions(session);
+        scheduleBotActions(session);
       }
       return buildCreatedResponse(actualSetup, session);
     },
@@ -866,7 +911,7 @@ export const createLocalDevMatchRegistry = async (
       const result = sessionService.applyEnvelope(envelope);
       if (result.accepted) {
         await persistCompletedMatchIfNeeded(session);
-        await runBotActions(session);
+        scheduleBotActions(session);
       }
       return result;
     },

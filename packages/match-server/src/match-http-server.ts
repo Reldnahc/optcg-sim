@@ -762,6 +762,8 @@ export const createMatchHttpServer = async (
   options: CreateMatchHttpServerOptions = {},
 ): Promise<MatchHttpServer> => {
   const createDefaultSetup = createDefaultMatchSetupFactory(options);
+  const socketConnections = new Set<DevSocketConnection>();
+  const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   const registry = await createLocalDevMatchRegistry(
     createDefaultSetup,
     options.setup,
@@ -777,6 +779,9 @@ export const createMatchHttpServer = async (
           : { completedMatchRepository };
       })(),
       matchTimerPolicy: resolveMatchTimerPolicy(options),
+      onBotActionAccepted(matchId) {
+        broadcastMatchState(matchId, registry, socketConnections);
+      },
     },
   );
   const lobbyRegistry = await createCustomLobbyRegistry(registry, options);
@@ -800,8 +805,6 @@ export const createMatchHttpServer = async (
         : { authBaseUrl: options.authBaseUrl }),
     });
   const replayRepository = resolveReplayRepository(options);
-  const socketConnections = new Set<DevSocketConnection>();
-  const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   let lastMatchTimerTickMs = Date.now();
   const matchTimerInterval = setInterval(() => {
     const now = Date.now();

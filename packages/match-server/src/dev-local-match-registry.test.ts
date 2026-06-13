@@ -290,12 +290,19 @@ test("bot players do not concede while waiting on human setup decisions", async 
   assert.equal(match?.state.pendingDecision?.playerId, humanPlayerId);
 });
 
-test("bot players wait between accepted actions", async () => {
+test("bot players schedule delayed actions without blocking match creation", async () => {
   vi.useFakeTimers();
+  const botUpdates: MatchId[] = [];
   const registry = await createLocalDevMatchRegistry(
     () => Promise.resolve(structuredClone(premadeSetup)),
     undefined,
-    { botActionDelayMs: 1_000, createDefaultMatch: false },
+    {
+      botActionDelayMs: 1_000,
+      createDefaultMatch: false,
+      onBotActionAccepted(matchId) {
+        botUpdates.push(matchId);
+      },
+    },
   );
   const matchId = "bot-action-delay" as MatchId;
   const botPlayerId = premadeSetup.playerOrder[0];
@@ -322,11 +329,15 @@ test("bot players wait between accepted actions", async () => {
   });
   await waitForBotMicrotasks();
 
-  assert.equal(resolved, false);
+  assert.equal(resolved, true);
+  assert.deepEqual(botUpdates, []);
 
   await vi.advanceTimersByTimeAsync(999);
-  assert.equal(resolved, false);
+  assert.deepEqual(botUpdates, []);
 
   await vi.advanceTimersByTimeAsync(1);
   await createdPromise;
+  await waitForBotMicrotasks();
+
+  assert.deepEqual(botUpdates, [matchId]);
 });
