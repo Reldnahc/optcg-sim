@@ -556,7 +556,7 @@ describe("collection modal", () => {
     );
     assert.match(
       styles,
-      /\.modal-frame-collection-decision\s*\{[^}]*width:\s*min\(\s*calc\(\s*\(var\(--collection-card-width\) \* 5\) \+\s*\(var\(--collection-card-grid-gap\) \* 4\) \+\s*\(var\(--collection-card-grid-padding\) \* 2\) \+\s*\(var\(--modal-padding\) \* 2\)\s*\),\s*calc\(100vw - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
+      /\.modal-frame-collection-decision\s*\{[^}]*width:\s*min\(\s*calc\(\s*\(var\(--collection-card-width\) \* 5\) \+\s*\(var\(--collection-card-grid-gap\) \* 4\) \+\s*\(var\(--collection-card-grid-padding\) \* 2\) \+\s*\(var\(--modal-padding\) \* 2\) \+\s*\(var\(--card-outline-thin\) \* 2\)\s*\),\s*calc\(100vw - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
     );
     assert.match(
       styles,

@@ -4,7 +4,8 @@
   --modal-gap: clamp(8px, calc(var(--card-height) / 14), 16px);
   --modal-compact-width: clamp(420px, calc(var(--card-width) * 4), 680px);
   --modal-card-decision-inline-extra: calc(
-    (var(--modal-padding) * 2) + (var(--modal-gap) * 4)
+    (var(--modal-padding) * 2) + (var(--modal-gap) * 4) +
+      (var(--card-outline-thin) * 2)
   );
   --modal-card-decision-min-block: calc(
     (var(--card-height) * 2) + (var(--modal-padding) * 2) +

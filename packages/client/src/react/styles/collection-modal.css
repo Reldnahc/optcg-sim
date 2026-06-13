@@ -11,7 +11,8 @@
     calc(
       (var(--collection-card-width) * 5) +
         (var(--collection-card-grid-gap) * 4) +
-        (var(--collection-card-grid-padding) * 2) + (var(--modal-padding) * 2)
+        (var(--collection-card-grid-padding) * 2) + (var(--modal-padding) * 2) +
+        (var(--card-outline-thin) * 2)
     ),
     calc(100vw - (var(--modal-viewport-gutter) * 2))
   );
