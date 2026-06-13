@@ -10,7 +10,7 @@ function parseAddDonFromDonDeckInstruction(
       ? "set (?:it|them) as active"
       : "rest (?:it|them)";
   const match = new RegExp(
-    `^add (?<quantity>up to [1-9]\\d*) (?:(?<additional>additional) )?DON!! cards?(?: from your DON!! deck)? and ${destinationPattern}\\.?$`,
+    `^add (?<quantity>up to [1-9]\\d*) (?:(?<additional>additional) )?DON!! cards?(?: from your DON!! deck)? and ${destinationPattern}(?<delayed> at the end of this turn)?\\.?$`,
     "i",
   ).exec(input.text);
   const quantityText = match?.groups?.["quantity"];
@@ -21,6 +21,7 @@ function parseAddDonFromDonDeckInstruction(
     .toLowerCase()
     .includes(" from your don!! deck");
   const isAdditional = match?.groups?.["additional"] !== undefined;
+  const delayed = match?.groups?.["delayed"] !== undefined;
   if (!explicitlyFromDonDeck && !isAdditional) {
     return undefined;
   }
@@ -30,15 +31,29 @@ function parseAddDonFromDonDeckInstruction(
   }
 
   return {
-    effect: {
-      type: "moveCards",
-      min: quantity.cardinality.min,
-      count: quantity.cardinality.max,
-      from: { player: "self", zone: "donDeck", position: "top" },
-      to: { player: "self", zone: "costArea" },
-      order: "original",
-      destinationState,
-    },
+    effect: delayed
+      ? {
+          type: "delayed",
+          timing: { type: "endOfTurn", turn: "current" },
+          effect: {
+            type: "moveCards",
+            min: quantity.cardinality.min,
+            count: quantity.cardinality.max,
+            from: { player: "self", zone: "donDeck", position: "top" },
+            to: { player: "self", zone: "costArea" },
+            order: "original",
+            destinationState,
+          },
+        }
+      : {
+          type: "moveCards",
+          min: quantity.cardinality.min,
+          count: quantity.cardinality.max,
+          from: { player: "self", zone: "donDeck", position: "top" },
+          to: { player: "self", zone: "costArea" },
+          order: "original",
+          destinationState,
+        },
     evidence: [
       "instruction:moveCards",
       ...quantity.evidence,
@@ -49,6 +64,9 @@ function parseAddDonFromDonDeckInstruction(
       destinationState === "active" ? "state:active" : "state:rested",
       "filter:category:don",
       "order:original",
+      ...(delayed
+        ? (["duration:endOfTurn", "composition:delayed"] as const)
+        : []),
     ],
     rest: "",
   };
