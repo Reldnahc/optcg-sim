@@ -142,7 +142,8 @@ export const isSupportedAttachSelectedDonSegment = (
   (effect.target.player === "self" ||
     effect.target.player === "opponent" ||
     effect.target.player === "anyPlayer") &&
-  ((effect.target.zone === "characterArea" &&
+  (((effect.target.zone === "leaderArea" ||
+    effect.target.zone === "characterArea") &&
     effect.target.zones === undefined) ||
     (effect.target.zone === undefined &&
       effect.target.zones?.every(

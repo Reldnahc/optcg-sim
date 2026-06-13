@@ -469,6 +469,21 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses typed Leader predicates without requiring a Character target", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Supernovas} type Leader",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["leader"],
+        typesAny: ["Supernovas"],
+      },
+      evidence: ["filter:type", "filter:category:leader"],
+      rest: "",
+    });
+  });
+
   it("parses self exclusion separately from attribute, category, and cost predicates", () => {
     expect(
       parseCardFilterPredicates({

@@ -179,7 +179,7 @@ export const parseTypeOrAttributePredicate: PredicateParser = (
 
 export const parseTypeCharacterPredicate: PredicateParser = (text, current) => {
   const match =
-    /^(?<type>\{[^}]+\}) type (?<category>Character|Stage)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
+    /^(?<type>\{[^}]+\}) type (?<category>Leader|Character|Stage)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
       text,
     );
   const typeText = match?.groups?.["type"];
@@ -193,19 +193,17 @@ export const parseTypeCharacterPredicate: PredicateParser = (text, current) => {
     return undefined;
   }
 
-  const category = categoryText.toLowerCase() as "character" | "stage";
+  const category = categoryText.toLowerCase() as
+    | "leader"
+    | "character"
+    | "stage";
   return {
     filter: {
       ...current,
       categories: [category],
       typesAny: [typeName],
     },
-    evidence: [
-      "filter:type",
-      category === "character"
-        ? "filter:category:character"
-        : "filter:category:stage",
-    ],
+    evidence: ["filter:type", categoryEvidence(categoryText)],
     rest: match?.groups?.["rest"] ?? "",
   };
 };

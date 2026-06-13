@@ -852,7 +852,7 @@ const parseRestedDonAttachmentTarget = (
   const supportsCharacters =
     nameOnlyCardsTarget || categories.includes("character");
   const supportsLeaders = nameOnlyCardsTarget || categories.includes("leader");
-  if (!supportsCharacters) {
+  if (!supportsCharacters && !supportsLeaders) {
     return undefined;
   }
   const filter = nameOnlyCardsTarget
@@ -861,16 +861,22 @@ const parseRestedDonAttachmentTarget = (
         categories: ["leader", "character"],
       } satisfies CardFilter)
     : parsed.filter;
-  const requestZone = supportsLeaders
-    ? {
-        zones: ["leaderArea", "characterArea"] as [
-          "leaderArea",
-          "characterArea",
-        ],
-      }
-    : { zone: "characterArea" as const };
+  const requestZone =
+    supportsLeaders && supportsCharacters
+      ? {
+          zones: ["leaderArea", "characterArea"] as [
+            "leaderArea",
+            "characterArea",
+          ],
+        }
+      : supportsLeaders
+        ? { zone: "leaderArea" as const }
+        : { zone: "characterArea" as const };
   const leaderEvidence: PrimitiveEvidence[] = supportsLeaders
     ? ["zone:leaderArea"]
+    : [];
+  const characterEvidence: PrimitiveEvidence[] = supportsCharacters
+    ? ["zone:characterArea"]
     : [];
   const inferredCategoryEvidence: PrimitiveEvidence[] = nameOnlyCardsTarget
     ? ["filter:category:leader", "filter:category:character"]
@@ -879,7 +885,7 @@ const parseRestedDonAttachmentTarget = (
   return {
     evidence: [
       ...leaderEvidence,
-      "zone:characterArea",
+      ...characterEvidence,
       ...inferredCategoryEvidence,
       ...parsed.evidence,
     ],

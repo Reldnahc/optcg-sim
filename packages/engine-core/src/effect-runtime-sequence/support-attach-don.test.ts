@@ -218,3 +218,75 @@ test("sequence support accepts attach-DON costs targeting a named field card", (
     true,
   );
 });
+
+test("sequence support accepts selected DON attachment to a Leader-only target", () => {
+  const donSelection = "selected-don-for-leader-attach" as SelectionId;
+  const targetSelection = "selected-leader-for-don-attach";
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-attach-don-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: donSelection,
+          effect: {
+            type: "selectCards",
+            zone: "costArea",
+            player: "self",
+            chooser: "self",
+            min: 0,
+            max: 1,
+            saveAs: donSelection,
+            visibility: "bothPlayers",
+            filter: { categories: ["don"], state: "rested" },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          saveResultAs: targetSelection,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zone: "leaderArea",
+              filter: { categories: ["leader"], typesAny: ["Supernovas"] },
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "attachSelectedDon",
+            selection: donSelection,
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: targetSelection,
+              },
+              zone: "leaderArea",
+              player: "self",
+              filter: { categories: ["leader"], typesAny: ["Supernovas"] },
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});

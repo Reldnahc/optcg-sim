@@ -34,6 +34,9 @@ export function parseAngleAttribute(text: string): Attribute | undefined {
 
 export function categoryEvidence(category: string): PrimitiveEvidence {
   const normalized = category.toLowerCase();
+  if (normalized === "leader") {
+    return "filter:category:leader";
+  }
   if (normalized === "character") {
     return "filter:category:character";
   }
