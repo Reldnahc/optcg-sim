@@ -163,6 +163,45 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses opponent Event activation reactions with reusable all-character power grants", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] When your opponent activates an Event, all of your Characters gain +2000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "opponentActivated",
+          activations: ["event"],
+        },
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "characterArea",
+            filter: { categories: ["character"] },
+          },
+          value: 2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:opponentActivated",
+        "activation:event",
+        "instruction:modifyPower",
+        "cardinality:all",
+        "zone:characterArea",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses player-scoped Life-removal reactions independently from DON markers", () => {
     const result = parseCardEffectLine(
       "[DON!! x1] [Your Turn] [Once Per Turn] When a card is removed from your opponent's Life cards, draw 2 cards and trash 1 card from your hand.",

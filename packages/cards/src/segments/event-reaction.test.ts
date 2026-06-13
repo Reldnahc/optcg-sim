@@ -409,6 +409,14 @@ describe("event reaction predicate routing", () => {
       ],
     },
     {
+      text: "your opponent activates an Event",
+      trigger: {
+        type: "opponentActivated",
+        activations: ["event"],
+      },
+      evidence: ["trigger:opponentActivated", "activation:event"],
+    },
+    {
       text: "your opponent activates an Event or [Blocker]",
       trigger: {
         type: "opponentActivated",

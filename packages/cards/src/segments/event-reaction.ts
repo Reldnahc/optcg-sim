@@ -579,7 +579,7 @@ const parseActivationPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const opponentActivation =
-    /^your opponent activates (?<activation>an Event or \[Blocker\]|\[Blocker\]|an Event or \[Trigger\])$/iu.exec(
+    /^your opponent activates (?<activation>an Event(?: or \[(?:Blocker|Trigger)\])?|\[Blocker\])$/iu.exec(
       normalized,
     );
   const activationText = opponentActivation?.groups?.["activation"];
@@ -615,6 +615,12 @@ const parseOpponentActivationKinds = (
     }
   | undefined => {
   const normalized = text.toLowerCase();
+  if (normalized === "an event") {
+    return {
+      activations: ["event"],
+      evidence: ["activation:event"],
+    };
+  }
   if (normalized === "an event or [blocker]") {
     return {
       activations: ["event", "blocker"],
