@@ -575,7 +575,6 @@ export const MatchApp = ({
                 return state;
               });
             },
-            onPreviewCard: previewHoveredCard,
             onClose: (revealId) => {
               updateRevealWindowState((state) => {
                 state.dismissed.add(revealId);

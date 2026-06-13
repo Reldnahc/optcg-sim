@@ -1,5 +1,5 @@
 import type { ClientCardModel } from "../view-model.js";
-import { CardTile } from "./CardTile.js";
+import { CardPreviewContent } from "./CardPreviewWindow.js";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
 
@@ -20,27 +20,16 @@ export interface RevealWindowHostProps {
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
   onDragEnd?: ((rect: WindowRect) => WindowRect | undefined) | undefined;
-  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
 export interface RevealWindowContentProps {
   model: RevealWindowModel;
-  onPreviewCard?: ((card: ClientCardModel) => void) | undefined;
 }
 
 export const RevealWindowContent = ({
   model,
-  onPreviewCard,
 }: RevealWindowContentProps): React.JSX.Element => (
-  <div className="reveal-window-card-spot">
-    {model.cards.map((card) => (
-      <CardTile
-        key={String(card.instanceId)}
-        card={card}
-        onHover={onPreviewCard}
-      />
-    ))}
-  </div>
+  <CardPreviewContent card={model.cards[0]} />
 );
 
 export const RevealWindowHost = ({
@@ -55,7 +44,6 @@ export const RevealWindowHost = ({
   onRectChange,
   onDragMove,
   onDragEnd,
-  onPreviewCard,
 }: RevealWindowHostProps): React.JSX.Element | null => {
   if (model === undefined) {
     return null;
@@ -64,10 +52,10 @@ export const RevealWindowHost = ({
   return (
     <FloatingWindow
       title={model.title}
-      className="floating-window-reveal reveal-window"
+      className="card-preview-window floating-window-reveal reveal-window"
       initialRect={initialRect}
-      minWidth={300}
-      minHeight={420}
+      minWidth={190}
+      minHeight={150}
       docked={docked}
       minimized={minimized}
       zIndex={zIndex}
@@ -78,7 +66,7 @@ export const RevealWindowHost = ({
       onDragMove={onDragMove}
       onDragEnd={onDragEnd}
     >
-      <RevealWindowContent model={model} onPreviewCard={onPreviewCard} />
+      <RevealWindowContent model={model} />
     </FloatingWindow>
   );
 };

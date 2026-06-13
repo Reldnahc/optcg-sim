@@ -31,7 +31,7 @@ const card = (imageUrl: string): ClientCardModel => ({
 });
 
 describe("reveal window", () => {
-  test("renders revealed cards through a dedicated large-card spot", () => {
+  test("renders revealed cards through a pinned preview window", () => {
     const markup = renderToStaticMarkup(
       createElement(RevealWindowHost, {
         model: {
@@ -44,43 +44,43 @@ describe("reveal window", () => {
       }),
     );
 
-    assert.match(markup, /floating-window-reveal reveal-window/u);
+    assert.match(
+      markup,
+      /card-preview-window floating-window-reveal reveal-window/u,
+    );
     assert.match(markup, /floating-window-minimize/u);
-    assert.match(markup, /reveal-window-card-spot/u);
+    assert.match(markup, /card-preview-content/u);
+    assert.match(markup, /card-preview-control-bar/u);
     assert.match(markup, /src="https:\/\/cdn\.example\.test\/revealed\.webp"/u);
     assert.doesNotMatch(markup, /collection-modal-card-grid/u);
+    assert.doesNotMatch(markup, /reveal-window-card-spot/u);
   });
 
-  test("reveal windows spawn at their minimum allowed size", () => {
-    const markup = renderToStaticMarkup(
-      createElement(RevealWindowHost, {
-        model: {
-          title: "Opponent revealed",
-          cards: [card("https://cdn.example.test/revealed.webp")],
-        },
-        onClose: () => undefined,
-      }),
+  test("reveal windows use the preview minimum window size", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "RevealWindowHost.tsx"),
+      "utf8",
     );
 
-    assert.match(markup, /width:300px/);
-    assert.match(markup, /height:420px/);
+    assert.match(source, /minWidth=\{190\}/u);
+    assert.match(source, /minHeight=\{150\}/u);
   });
 
-  test("large reveal card sizing is isolated from collection grid sizing", async () => {
-    const [styles, mainSource, revealLayerSource] = await Promise.all([
-      readFile(revealStylesPath, "utf8"),
-      readFile(mainPath, "utf8"),
-      readFile(revealLayerPath, "utf8"),
-    ]);
+  test("reveal windows reuse preview styling without hover preview wiring", async () => {
+    const [styles, mainSource, revealLayerSource, revealWindowSource] =
+      await Promise.all([
+        readFile(revealStylesPath, "utf8"),
+        readFile(mainPath, "utf8"),
+        readFile(revealLayerPath, "utf8"),
+        readFile(join(sourceDirectory, "RevealWindowHost.tsx"), "utf8"),
+      ]);
 
-    assert.match(styles, /\.reveal-window-card-spot/u);
-    assert.match(
-      styles,
-      /--reveal-card-height:\s*min\(\s*58vh,\s*calc\(var\(--card-height\) \+ var\(--card-height\) \+ \(var\(--card-height\) \/ 2\)\)\s*\);/u,
-    );
-    assert.match(styles, /\.reveal-window-card-spot\s+\.card-tile-shell/u);
+    assert.doesNotMatch(styles, /\.reveal-window-card-spot/u);
     assert.match(mainSource, /styles\/reveal-window\.css/u);
     assert.match(revealLayerSource, /RevealWindowHost/u);
+    assert.match(revealWindowSource, /CardPreviewContent/u);
+    assert.match(revealWindowSource, /card=\{model\.cards\[0\]\}/u);
+    assert.doesNotMatch(revealWindowSource, /onHover=\{onPreviewCard\}/u);
   });
 
   test("match app renders one reveal window for each active reveal", async () => {
