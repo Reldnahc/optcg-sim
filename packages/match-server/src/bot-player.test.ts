@@ -173,6 +173,86 @@ describe("bot player", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("saves OP16-012 when the Shanks cheat line is not live yet", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play Benn.Beckman",
+            placement: { instanceId: "op16-benn" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "playCard",
+            label: "Play Shanks",
+            placement: { instanceId: "st23-shanks" as InstanceId },
+          },
+          {
+            index: 2,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "op16-benn" as InstanceId,
+              cardId: "OP16-012" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+            {
+              instanceId: "st23-shanks" as InstanceId,
+              cardId: "ST23-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCostArea: Array.from({ length: 9 }, (_, index) => ({
+            instanceId: `don-${String(index)}` as InstanceId,
+            cardId: "DON!!" as CardId,
+            zone: { playerId: botId, zone: "costArea" },
+          })),
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("can still play OP16-012 before ending when no better action exists", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play Benn.Beckman",
+            placement: { instanceId: "op16-benn" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "op16-benn" as InstanceId,
+              cardId: "OP16-012" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
   test("chooses OP06-007 from the OP16-012 cheat when removal is live", () => {
     const st23 = {
       instanceId: "st23-shanks" as InstanceId,
