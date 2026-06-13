@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  battlePowerLabelBox,
   battlePowerLabelPoint,
-  battlePowerLabelScale,
+  battlePowerTone,
   nextStableArrowLine,
 } from "./BattleArrowOverlay.js";
 
@@ -43,32 +42,14 @@ describe("battlePowerLabelPoint", () => {
   });
 });
 
-describe("battlePowerLabelScale", () => {
-  it("shrinks the power label on narrow playmats", () => {
-    expect(battlePowerLabelScale(640)).toBe(0.78);
-  });
-
-  it("uses neutral scale around the base playmat width", () => {
-    expect(battlePowerLabelScale(1280)).toBe(1);
-  });
-
-  it("caps the power label growth on wide playmats", () => {
-    expect(battlePowerLabelScale(2200)).toBe(1.18);
-  });
-});
-
-describe("battlePowerLabelBox", () => {
-  it("falls back to the scaled minimum box before text is measured", () => {
-    const box = battlePowerLabelBox(undefined, 1.18);
-
-    expect(box.width).toBeCloseTo(66.08);
-    expect(box.height).toBeCloseTo(44.84);
-  });
-
-  it("sizes the background from measured rendered text bounds", () => {
-    const box = battlePowerLabelBox({ width: 236, height: 35 }, 1.18);
-
-    expect(box.width).toBeCloseTo(273.76);
-    expect(box.height).toBeCloseTo(51.52);
+describe("battlePowerTone", () => {
+  it("maps weak power through dark red overpower bands", () => {
+    expect(battlePowerTone(4000)).toBe("weak");
+    expect(battlePowerTone(5000)).toBe("power-5000");
+    expect(battlePowerTone(6500)).toBe("power-6000");
+    expect(battlePowerTone(7000)).toBe("power-7000");
+    expect(battlePowerTone(8000)).toBe("power-8000");
+    expect(battlePowerTone(9000)).toBe("power-9000");
+    expect(battlePowerTone(10000)).toBe("over-10000");
   });
 });

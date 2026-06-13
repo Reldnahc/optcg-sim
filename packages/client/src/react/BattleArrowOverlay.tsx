@@ -14,21 +14,17 @@ export interface ArrowLine {
 }
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
-const labelInlinePadding = 32;
-const labelBlockPadding = 14;
-const labelMinimumWidth = 56;
-const labelHeight = 38;
 const leaderPowerLabelDefenderWeight = 0.72;
-const basePowerLabelBoardWidth = 1280;
-const minimumPowerLabelScale = 0.78;
-const maximumPowerLabelScale = 1.18;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
-
-interface BattlePowerLabelBox {
-  readonly width: number;
-  readonly height: number;
-}
+type BattlePowerTone =
+  | "weak"
+  | "power-5000"
+  | "power-6000"
+  | "power-7000"
+  | "power-8000"
+  | "power-9000"
+  | "over-10000";
 
 const battlePowerLabel = (
   attackPower: number | undefined,
@@ -40,6 +36,28 @@ const battlePowerLabel = (
   return defendPower === undefined
     ? String(attackPower)
     : `${String(attackPower)} vs ${String(defendPower)}`;
+};
+
+export const battlePowerTone = (power: number): BattlePowerTone => {
+  if (power >= 10000) {
+    return "over-10000";
+  }
+  if (power >= 9000) {
+    return "power-9000";
+  }
+  if (power >= 8000) {
+    return "power-8000";
+  }
+  if (power >= 7000) {
+    return "power-7000";
+  }
+  if (power >= 6000) {
+    return "power-6000";
+  }
+  if (power >= 5000) {
+    return "power-5000";
+  }
+  return "weak";
 };
 
 export const nextStableArrowLine = (
@@ -65,38 +83,6 @@ export const battlePowerLabelPoint = (
   };
 };
 
-export const battlePowerLabelScale = (boardWidth: number): number => {
-  if (!Number.isFinite(boardWidth) || boardWidth <= 0) {
-    return 1;
-  }
-  return Math.min(
-    maximumPowerLabelScale,
-    Math.max(minimumPowerLabelScale, boardWidth / basePowerLabelBoardWidth),
-  );
-};
-
-export const battlePowerLabelBox = (
-  textBounds: BattlePowerLabelBox | undefined,
-  scale: number,
-): BattlePowerLabelBox => {
-  if (textBounds === undefined) {
-    return {
-      width: labelMinimumWidth * scale,
-      height: labelHeight * scale,
-    };
-  }
-  return {
-    width: Math.max(
-      labelMinimumWidth * scale,
-      textBounds.width + labelInlinePadding * scale,
-    ),
-    height: Math.max(
-      labelHeight * scale,
-      textBounds.height + labelBlockPadding * scale,
-    ),
-  };
-};
-
 const cardElementForInstance = (
   board: HTMLElement,
   instanceId: string,
@@ -118,10 +104,7 @@ export const BattleArrowOverlay = ({
   battleArrow,
 }: BattleArrowOverlayProps): React.JSX.Element | null => {
   const overlayRef = useRef<SVGSVGElement | null>(null);
-  const powerTextRef = useRef<SVGTextElement | null>(null);
   const [line, setLine] = useState<ArrowLine>(emptyLine);
-  const [boardWidth, setBoardWidth] = useState(0);
-  const [textBounds, setTextBounds] = useState<BattlePowerLabelBox>();
   const [powerLabelTarget, setPowerLabelTarget] =
     useState<BattlePowerLabelTarget>("fieldCard");
 
@@ -150,7 +133,6 @@ export const BattleArrowOverlay = ({
       );
       if (attacker === undefined || target === undefined) {
         setLine((currentLine) => nextStableArrowLine(currentLine, emptyLine));
-        setBoardWidth(0);
         setPowerLabelTarget("fieldCard");
         return;
       }
@@ -163,7 +145,6 @@ export const BattleArrowOverlay = ({
         x2: targetRect.left + targetRect.width / 2 - boardRect.left,
         y2: targetRect.top + targetRect.height / 2 - boardRect.top,
       };
-      setBoardWidth(boardRect.width);
       setLine((currentLine) => nextStableArrowLine(currentLine, nextLine));
     };
 
@@ -189,29 +170,16 @@ export const BattleArrowOverlay = ({
     battleArrow?.attackPower,
     battleArrow?.defendPower,
   );
+  const selfPower = battleArrow?.selfPower ?? battleArrow?.attackPower;
+  const opponentPower = battleArrow?.opponentPower ?? battleArrow?.defendPower;
   const hasMeasuredLine = line.x1 !== line.x2 || line.y1 !== line.y2;
   const powerLabelPoint = battlePowerLabelPoint(line, powerLabelTarget);
-  const powerLabelScale = battlePowerLabelScale(boardWidth);
-  const labelBox = battlePowerLabelBox(textBounds, powerLabelScale);
-
-  useLayoutEffect(() => {
-    const text = powerTextRef.current;
-    if (attackPowerLabel === undefined || text === null || !hasMeasuredLine) {
-      setTextBounds(undefined);
-      return;
-    }
-    const bounds = text.getBBox();
-    setTextBounds((currentBounds) =>
-      currentBounds?.width === bounds.width &&
-      currentBounds.height === bounds.height
-        ? currentBounds
-        : { width: bounds.width, height: bounds.height },
-    );
-  }, [attackPowerLabel, hasMeasuredLine, powerLabelScale]);
 
   if (battleArrow === undefined) {
     return null;
   }
+  const renderSelfPower = selfPower;
+  const renderOpponentPower = opponentPower;
 
   return (
     <svg
@@ -241,24 +209,33 @@ export const BattleArrowOverlay = ({
         y2={line.y2}
         markerEnd="url(#battle-arrow-head)"
       />
-      {attackPowerLabel !== undefined && hasMeasuredLine ? (
+      {renderSelfPower !== undefined && hasMeasuredLine ? (
         <g
           className="battle-arrow-power"
           transform={`translate(${String(powerLabelPoint.x)} ${String(powerLabelPoint.y)})`}
         >
-          <rect
-            x={-labelBox.width / 2}
-            y={-labelBox.height / 2}
-            width={labelBox.width}
-            height={labelBox.height}
-            rx={labelBox.height / 2}
-          />
-          <text
-            ref={powerTextRef}
-            dominantBaseline="central"
-            textAnchor="middle"
-          >
-            {attackPowerLabel}
+          <text dominantBaseline="central" textAnchor="middle">
+            {renderOpponentPower === undefined ? null : (
+              <>
+                <tspan
+                  className={`battle-arrow-power-value is-opponent is-${battlePowerTone(renderOpponentPower)}`}
+                  x="0"
+                  dy="-0.72em"
+                >
+                  {renderOpponentPower}
+                </tspan>
+                <tspan className="battle-arrow-power-vs" x="0" dy="0.78em">
+                  vs
+                </tspan>
+              </>
+            )}
+            <tspan
+              className={`battle-arrow-power-value is-self is-${battlePowerTone(renderSelfPower)}`}
+              x="0"
+              dy={renderOpponentPower === undefined ? "0" : "0.86em"}
+            >
+              {renderSelfPower}
+            </tspan>
           </text>
         </g>
       ) : null}

@@ -105,6 +105,8 @@ export interface BoardViewModel {
     attackerInstanceId: string;
     attackPower?: number;
     defendPower?: number;
+    opponentPower?: number;
+    selfPower?: number;
     targetInstanceId: string;
   };
 }
@@ -396,6 +398,7 @@ const currentPowerForInstance = (
 
 const battleArrowForView = (
   view: MatchSnapshot["players"][PlayerId]["view"],
+  playerId: PlayerId,
 ): BoardViewModel["battleArrow"] | undefined => {
   if (view.battle === undefined) {
     return undefined;
@@ -409,10 +412,16 @@ const battleArrowForView = (
     view,
     view.battle.currentTarget.instanceId,
   );
+  const selfPower =
+    view.battle.attacker.playerId === playerId ? attackPower : defendPower;
+  const opponentPower =
+    view.battle.attacker.playerId === playerId ? defendPower : attackPower;
   return {
     attackerInstanceId: String(view.battle.attacker.instanceId),
     ...(attackPower === undefined ? {} : { attackPower }),
     ...(defendPower === undefined ? {} : { defendPower }),
+    ...(opponentPower === undefined ? {} : { opponentPower }),
+    ...(selfPower === undefined ? {} : { selfPower }),
     targetInstanceId: String(view.battle.currentTarget.instanceId),
   };
 };
@@ -541,7 +550,7 @@ export const createBoardViewModel = ({
   const selfTimer = playerTimer(player.view, playerId);
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   const turnPlayerId = player.view.turn.turnPlayerId;
-  const battleArrow = battleArrowForView(player.view);
+  const battleArrow = battleArrowForView(player.view, playerId);
   const statusBanner = statusBannerForView(player.view, playerId);
   return {
     playerId,
