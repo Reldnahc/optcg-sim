@@ -197,8 +197,6 @@ interface ValidatedLobbyLoadoutsBody {
       loadoutId: string | null;
       status: "playable" | "unplayable" | "unverified";
       errors: string[];
-      leaderCardId?: string | null;
-      leaderVariantIndex?: number | null;
     }>;
   };
   errors?: string[];
@@ -449,15 +447,11 @@ describe("dev HTTP lobby deck submissions", () => {
           loadoutId: "loadout-playable",
           status: "playable",
           errors: [],
-          leaderCardId: "OP13-079",
-          leaderVariantIndex: null,
         },
         {
           loadoutId: "loadout-invalid",
           status: "unplayable",
           errors: ["Resolved loadout is invalid."],
-          leaderCardId: "OP13-079",
-          leaderVariantIndex: null,
         },
         {
           loadoutId: null,
@@ -537,15 +531,11 @@ describe("dev HTTP lobby deck submissions", () => {
           loadoutId: "loadout-playable",
           status: "playable",
           errors: [],
-          leaderCardId: "OP13-079",
-          leaderVariantIndex: null,
         },
         {
           loadoutId: "loadout-invalid",
           status: "unplayable",
           errors: ["Resolved loadout is invalid."],
-          leaderCardId: "OP13-079",
-          leaderVariantIndex: null,
         },
       ]);
     } finally {

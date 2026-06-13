@@ -114,7 +114,7 @@ const normalizeLoadout = (value: Loadout): AccountLoadout => ({
   updatedAt: value.updated_at,
 });
 
-export const poneglyphCardStockImageUrl = (
+const poneglyphCardStockImageUrl = (
   cardId: string,
   variantIndex: number | null,
 ): string =>
