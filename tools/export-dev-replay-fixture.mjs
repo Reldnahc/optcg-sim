@@ -104,6 +104,65 @@ const replayExportProgram = String.raw`
 const pg = require("/app/node_modules/.pnpm/optcg-db@0.4.40/node_modules/pg");
 
 const detailSql = ${JSON.stringify(detailSql)};
+const compactManifestForViewer = (manifest) => {
+  const cards = manifest?.cards;
+  if (cards === undefined || typeof cards !== "object" || cards === null) {
+    return manifest;
+  }
+  return {
+    cards: Object.fromEntries(
+      Object.entries(cards).map(([cardId, card]) => {
+        const firstVariant = Array.isArray(card?.variants)
+          ? card.variants.find(
+              (variant) => typeof variant === "object" && variant !== null,
+            )
+          : undefined;
+        return [
+          cardId,
+          {
+            cardId: card?.cardId,
+            name: card?.name,
+            category: card?.category,
+            cost: card?.cost,
+            power: card?.power,
+            counter: card?.counter,
+            attributes: card?.attributes,
+            types: card?.types,
+            effectText: card?.effectText,
+            triggerText: card?.triggerText,
+            variants:
+              firstVariant === undefined
+                ? []
+                : [
+                    {
+                      stockImageFull: firstVariant.stockImageFull,
+                      scanImageDisplay: firstVariant.scanImageDisplay,
+                    },
+                  ],
+          },
+        ];
+      }),
+    ),
+  };
+};
+const compactReplayForViewer = (replay) => ({
+  ...replay,
+  replay: {
+    replayFormatVersion: replay.replay?.replayFormatVersion,
+    engineVersion: replay.replay?.engineVersion,
+    rulesVersion: replay.replay?.rulesVersion,
+    cardDataVersion: replay.replay?.cardDataVersion,
+    effectDefinitionsVersion: replay.replay?.effectDefinitionsVersion,
+    customHandlerVersion: replay.replay?.customHandlerVersion,
+    banlistVersion: replay.replay?.banlistVersion,
+    protocolVersion: replay.replay?.protocolVersion,
+    manifestHash: replay.replay?.manifestHash,
+    manifestSnapshot: compactManifestForViewer(replay.replay?.manifestSnapshot),
+    finalStateHash: replay.replay?.finalStateHash,
+    deterministicEntries: replay.replay?.deterministicEntries,
+    checkpoints: replay.replay?.checkpoints,
+  },
+});
 
 (async () => {
   const client = new pg.Client({
@@ -121,7 +180,7 @@ const detailSql = ${JSON.stringify(detailSql)};
     if (replay === undefined) {
       throw new Error("No dev replay rows found.");
     }
-    const payload = JSON.stringify({ replay }, null, 2);
+    const payload = JSON.stringify({ replay: compactReplayForViewer(replay) });
     const encoded = Buffer.from(payload, "utf8").toString("base64");
     const chunkSize = 120000;
     const chunkCount = Math.ceil(encoded.length / chunkSize);
