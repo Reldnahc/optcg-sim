@@ -29,6 +29,33 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
+  const thisStageToOwnerDeckBottom =
+    parseThisStageToOwnerDeckBottomCostRoute(afterAction);
+  if (thisStageToOwnerDeckBottom !== undefined) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: 1,
+      chooser: "self",
+      from: { player: "self", zone: "stageArea" },
+      to: { player: "self", zone: "deck", position: "bottom" },
+      order: "chooserChoice",
+      filter: { categories: ["stage"] },
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      "target:thisCard",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:stageArea",
+      "destination:deck",
+      "position:bottom",
+    ];
+
+    return { cost, evidence, rest: "" };
+  }
+
   const cardinality = parseExactCardinality({ text: afterAction });
   if (cardinality === undefined) {
     return undefined;
@@ -244,6 +271,14 @@ function parseFieldToOwnerDeckBottomCostRoute(text: string):
     return undefined;
   }
   return { filter: predicates.filter, evidence: predicates.evidence };
+}
+
+function parseThisStageToOwnerDeckBottomCostRoute(
+  text: string,
+): true | undefined {
+  return /^this Stage at the bottom of the owner's deck$/iu.test(text)
+    ? true
+    : undefined;
 }
 
 const parseLifeToHandCost = (
