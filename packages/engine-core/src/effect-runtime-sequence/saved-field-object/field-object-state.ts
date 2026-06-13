@@ -260,6 +260,7 @@ export const restProtectionAttemptFromEntry = (
 ): RestProtectionAttempt => ({
   sourceKind: "cardEffect",
   sourceControllerId: entry.controllerId,
+  sourceCardId: entry.source.cardId,
   sourceCardCategory: entry.sourceSnapshot.category,
 });
 

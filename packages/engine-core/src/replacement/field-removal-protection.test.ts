@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   Condition,
   EffectQueueEntry,
+  Protection,
   ReplacementProcess,
 } from "@optcg/types";
 
@@ -419,6 +420,71 @@ test("controller-owned effect field removal is not blocked by opponent-effect pr
     false,
   );
   assert.equal(nextP2.trash[0]?.instanceId, target.instanceId);
+});
+
+test("K.O. protection source card filter prevents matching opponent Character effects", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  protectTargetFromOpponentEffectRemoval(state, target, {
+    process: "ko",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    sourceCardFilter: {
+      categories: ["character"],
+      power: { max: 5000 },
+    },
+  } satisfies Protection);
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    true,
+  );
+});
+
+test("K.O. protection source card filter ignores nonmatching opponent Character effects", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  state.cardManifest.cards[entry.source.cardId] = {
+    ...must(state.cardManifest.cards[entry.source.cardId], "effect source"),
+    power: 6000,
+  };
+  protectTargetFromOpponentEffectRemoval(state, target, {
+    process: "ko",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    sourceCardFilter: {
+      categories: ["character"],
+      power: { max: 5000 },
+    },
+  } satisfies Protection);
+
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [targetRef],
+  );
+  const nextP2 = must(result.state.players[p2], "next p2");
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["cardKOd", "cardMoved", "donReturned"],
+  );
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
 });
 
 test("controller-cost field removal classification is not blocked by opponent-effect protection", () => {

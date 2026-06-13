@@ -1,5 +1,6 @@
-import type { CardCategory } from "@optcg/types";
+import type { CardCategory, CardFilter } from "@optcg/types";
 
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 export interface ProtectionSource {
@@ -9,6 +10,7 @@ export interface ProtectionSource {
     | "opponentControlled"
     | "selfControlled";
   readonly cardCategories?: readonly CardCategory[];
+  readonly cardFilter?: CardFilter;
 }
 
 export interface ProtectionSourceParseResult {
@@ -31,6 +33,15 @@ export const opponentCardCategoryEffectsProtectionSourcePrimitive = {
   matches: [
     {
       id: "by-your-opponents-card-category-effects",
+    },
+  ],
+} as const;
+
+export const opponentCardFilterEffectsProtectionSourcePrimitive = {
+  primitiveId: "protectionSource:opponentCardFilterEffects",
+  matches: [
+    {
+      id: "by-effects-of-your-opponents-filtered-cards",
     },
   ],
 } as const;
@@ -65,6 +76,11 @@ export const battleProtectionSourcePrimitive = {
 export function parseProtectionSource(
   input: ParseInput,
 ): ProtectionSourceParseResult | undefined {
+  const filteredSource = parseOpponentCardFilterEffectsSource(input.text);
+  if (filteredSource !== undefined) {
+    return filteredSource;
+  }
+
   const categorySource = parseOpponentCardCategoryEffectsSource(input.text);
   if (categorySource !== undefined) {
     return categorySource;
@@ -136,6 +152,36 @@ export function parseProtectionSource(
   }
 
   return undefined;
+}
+
+function parseOpponentCardFilterEffectsSource(
+  text: string,
+): ProtectionSourceParseResult | undefined {
+  const match = /^by effects of your opponent's (?<filter>.+?)\.?$/i.exec(text);
+  const filterText = match?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    source: {
+      kind: "cardEffect",
+      controllerRelation: "opponentControlled",
+      cardFilter: parsedFilter.filter,
+      ...(parsedFilter.filter.categories === undefined
+        ? {}
+        : { cardCategories: parsedFilter.filter.categories }),
+    },
+    evidence: [
+      "protectionSource:opponentCardFilterEffects",
+      "player:opponent",
+      ...parsedFilter.evidence,
+    ],
+    rest: "",
+  };
 }
 
 function parseBattleSourceCategories(text: string):

@@ -162,6 +162,7 @@ export const parsePreventOpponentCharactersRestInstruction: InstructionParser =
         duration: duration.duration,
         process: "rest",
         sourceCardCategories: undefined,
+        sourceCardFilter: undefined,
         sourceKind: "cardEffect",
         sourceControllerRelation: "opponentControlled",
         target: parsedTarget.target,

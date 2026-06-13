@@ -30,6 +30,7 @@ export const buildKoReplacementProcess = (params: {
       classification: "moveFromFieldToTrash",
       sourceKind: params.sourceKind,
       sourceControllerId: params.sourceControllerId,
+      sourceCardId: params.source.cardId,
     },
     ...(params.battleContinuation === undefined
       ? {}
@@ -88,6 +89,7 @@ export const buildSelectedTargetsFieldRemovalKoReplacementProcess = (
       classification: "moveFromFieldToTrash",
       sourceKind: "cardEffect",
       sourceControllerId: entry.controllerId,
+      sourceCardId: entry.source.cardId,
     },
   };
   return {
@@ -130,6 +132,7 @@ export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
       classification: params.classification,
       sourceKind: "cardEffect",
       sourceControllerId: params.entry.controllerId,
+      sourceCardId: params.entry.source.cardId,
     },
     ...(params.destination === undefined
       ? {}
@@ -183,6 +186,7 @@ export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
         classification: params.classification,
         sourceKind: "cardEffect",
         sourceControllerId: params.entry.controllerId,
+        sourceCardId: params.entry.source.cardId,
       },
       ...(params.destination === undefined
         ? {}

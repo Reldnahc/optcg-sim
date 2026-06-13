@@ -20,6 +20,7 @@ import type {
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent, EventVisibility } from "./events.js";
 import type {
+  CardFilter,
   Duration,
   SequenceSavedResultReference,
   SequenceSegmentResult,
@@ -270,6 +271,7 @@ export interface SimpleProtection {
   sourceKind?: ProtectionFieldRemovalSourceKind;
   sourceControllerRelation?: ProtectionFieldRemovalSourceControllerRelation;
   sourceCardCategories?: CardCategory[];
+  sourceCardFilter?: CardFilter;
   source?: CardRef;
   duration?: Duration;
 }
@@ -277,6 +279,7 @@ export interface SimpleProtection {
 export interface FieldRemovalProtection {
   process: "fieldRemoval";
   fieldRemoval: ProtectionFieldRemovalMetadata;
+  sourceCardFilter?: CardFilter;
   source?: CardRef;
   duration?: Duration;
 }

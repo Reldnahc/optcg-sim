@@ -1,4 +1,8 @@
-import type { ContinuousEffectRecord, Protection } from "@optcg/types";
+import type {
+  CardFilter,
+  ContinuousEffectRecord,
+  Protection,
+} from "@optcg/types";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -26,6 +30,17 @@ const supportedSourceControllerRelations = new Set([
 
 const supportedTargetScopes = new Set(["thisCard", "anyFieldCard"]);
 
+const isSupportedSourceCardFilter = (
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) return true;
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return (
+    keys.length > 0 &&
+    keys.every((key) => key === "categories" || key === "power")
+  );
+};
+
 export const isSupportedFieldRemovalProtection = (
   protection: Protection,
 ): protection is Extract<Protection, { process: "fieldRemoval" }> => {
@@ -49,7 +64,8 @@ export const isSupportedFieldRemovalProtection = (
     exclusions["ruleProcessTrash"] === "excluded" &&
     exclusions["controllerCost"] === "excluded" &&
     exclusions["controllerOwnedEffect"] === "excluded" &&
-    exclusions["ambiguousCustomRemoval"] === "failClosed"
+    exclusions["ambiguousCustomRemoval"] === "failClosed" &&
+    isSupportedSourceCardFilter(protection.sourceCardFilter)
   );
 };
 
@@ -68,7 +84,8 @@ export const isSupportedRestProtection = (
         categories.length > 0 &&
         categories.every((category) =>
           supportedRestSourceCategories.has(category),
-        )))
+        ))) &&
+    isSupportedSourceCardFilter(protection.sourceCardFilter)
   );
 };
 

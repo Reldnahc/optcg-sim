@@ -1,5 +1,6 @@
 import type {
   CardCategory,
+  CardFilter,
   Effect,
   EffectDslFieldRemovalProtection,
   EffectDslRestProtection,
@@ -11,6 +12,7 @@ export function buildProtectionEffect(options: {
   readonly context: ContinuousInstructionContext;
   readonly process: "fieldRemoval" | "ko" | "rest";
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
+  readonly sourceCardFilter: CardFilter | undefined;
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation:
     | "eitherController"
@@ -29,6 +31,7 @@ export function buildProtectionEffect(options: {
     duration,
     process: options.process,
     sourceCardCategories: options.sourceCardCategories,
+    sourceCardFilter: options.sourceCardFilter,
     sourceKind: options.sourceKind,
     sourceControllerRelation: options.sourceControllerRelation,
     target: { type: "self" },
@@ -39,6 +42,7 @@ export function buildProtectionEffectWithTarget(options: {
   readonly duration: Extract<Effect, { type: "protectFromKO" }>["duration"];
   readonly process: "fieldRemoval" | "ko" | "rest";
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
+  readonly sourceCardFilter: CardFilter | undefined;
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation:
     | "eitherController"
@@ -56,6 +60,9 @@ export function buildProtectionEffectWithTarget(options: {
       ...(options.sourceCardCategories === undefined
         ? {}
         : { sourceCardCategories: [...options.sourceCardCategories] }),
+      ...(options.sourceCardFilter === undefined
+        ? {}
+        : { sourceCardFilter: options.sourceCardFilter }),
     };
   }
   if (options.process === "rest") {
@@ -64,6 +71,7 @@ export function buildProtectionEffectWithTarget(options: {
       target: options.target,
       protection: restProtection({
         sourceCardCategories: options.sourceCardCategories,
+        sourceCardFilter: options.sourceCardFilter,
         sourceKind: options.sourceKind,
         sourceControllerRelation: options.sourceControllerRelation,
       }),
@@ -76,6 +84,7 @@ export function buildProtectionEffectWithTarget(options: {
     protection: fieldRemovalProtection({
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
+      sourceCardFilter: options.sourceCardFilter,
       target: options.target,
     }),
     duration: options.duration,
@@ -84,6 +93,7 @@ export function buildProtectionEffectWithTarget(options: {
 
 function restProtection(options: {
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
+  readonly sourceCardFilter: CardFilter | undefined;
   readonly sourceKind: "battle" | "cardEffect";
   readonly sourceControllerRelation:
     | "eitherController"
@@ -97,6 +107,9 @@ function restProtection(options: {
     ...(options.sourceCardCategories === undefined
       ? {}
       : { sourceCardCategories: [...options.sourceCardCategories] }),
+    ...(options.sourceCardFilter === undefined
+      ? {}
+      : { sourceCardFilter: options.sourceCardFilter }),
   };
 }
 
@@ -106,10 +119,14 @@ function fieldRemovalProtection(options: {
     | "eitherController"
     | "opponentControlled"
     | "selfControlled";
+  readonly sourceCardFilter: CardFilter | undefined;
   readonly target: Extract<Effect, { type: "protectFromKO" }>["target"];
 }): EffectDslFieldRemovalProtection {
   return {
     process: "fieldRemoval",
+    ...(options.sourceCardFilter === undefined
+      ? {}
+      : { sourceCardFilter: options.sourceCardFilter }),
     fieldRemoval: {
       processFamily: "fieldRemoval",
       classification: "moveFromFieldToOtherZone",

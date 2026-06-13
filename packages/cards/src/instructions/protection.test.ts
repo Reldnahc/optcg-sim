@@ -25,6 +25,7 @@ describe("continuous protection instruction parser", () => {
         "protectionProcess:ko",
         "protectionProcess:rest",
         "protectionSource:opponentCardCategoryEffects",
+        "protectionSource:opponentCardFilterEffects",
         "protectionSource:opponentEffects",
         "protectionSource:effects",
         "protectionSource:battle",
@@ -117,6 +118,49 @@ describe("continuous protection instruction parser", () => {
       ],
       rest: "",
     });
+  });
+
+  it("parses K.O. protection with a reusable source card filter", () => {
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d by effects of your opponent's Characters with 5000 base power or less.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: { type: "self" },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "opponentControlled",
+        sourceCardFilter: {
+          categories: ["character"],
+          power: { max: 5000 },
+        },
+        duration: { type: "whileSourceOnField" },
+      },
+      rest: "",
+    });
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d by effects of your opponent's Characters with 5000 base power or less.",
+        },
+        { condition: undefined },
+      )?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "target:thisCharacter",
+        "protectionProcess:ko",
+        "protectionSource:opponentCardFilterEffects",
+        "player:opponent",
+        "filter:category:character",
+        "filter:power",
+        "duration:whileSourceOnField",
+      ]),
+    );
   });
 
   it("parses all-target field-removal protection by self effects", () => {

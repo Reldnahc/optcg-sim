@@ -1,6 +1,8 @@
 import type {
+  CardFilter,
   CardInstance,
   CardCategory,
+  CardId,
   ContinuousEffectRecord,
   EffectQueueEntry,
   GameState,
@@ -10,6 +12,7 @@ import type {
   ReplacementProcess,
 } from "@optcg/types";
 
+import { cardMatchesSearchFilter } from "../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
@@ -40,11 +43,13 @@ type FieldRemovalAttempt = {
   classification: ProtectionFieldRemovalClassification;
   sourceKind: "cardEffect" | "cost";
   sourceControllerId: PlayerId;
+  sourceCardId?: CardId;
 };
 
 export type RestProtectionAttempt = {
   sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
   sourceControllerId: PlayerId;
+  sourceCardId?: CardId;
   sourceCardCategory?: CardCategory;
 };
 
@@ -157,7 +162,9 @@ const isSupportedKoProtection = (protection: Protection): boolean =>
   (protection.sourceControllerRelation === undefined ||
     protection.sourceControllerRelation === "opponentControlled" ||
     protection.sourceControllerRelation === "selfControlled" ||
-    protection.sourceControllerRelation === "eitherController");
+    protection.sourceControllerRelation === "eitherController") &&
+  (protection.sourceCardFilter === undefined ||
+    isSupportedSourceCardFilter(protection.sourceCardFilter));
 
 export const isSupportedProtectionModifier = (
   effect: ContinuousEffectRecord,
@@ -285,11 +292,15 @@ const attemptFromProcess = (
       classification: attempt["classification"],
       sourceKind: attempt["sourceKind"],
       sourceControllerId: attempt["sourceControllerId"] as PlayerId,
+      ...(typeof attempt["sourceCardId"] === "string"
+        ? { sourceCardId: attempt["sourceCardId"] as CardId }
+        : {}),
     },
   };
 };
 
 const protectionCoversAttempt = (
+  state: GameState,
   protection: Protection,
   attempt: FieldRemovalAttempt,
 ): boolean => {
@@ -298,12 +309,14 @@ const protectionCoversAttempt = (
   }
   const classification = protection.fieldRemoval.classification;
   return (
-    classification === "moveFromFieldToOtherZone" ||
-    classification === attempt.classification
+    (classification === "moveFromFieldToOtherZone" ||
+      classification === attempt.classification) &&
+    sourceCardFilterMatchesProtection(state, protection, attempt)
   );
 };
 
 const koProtectionCoversAttempt = (
+  state: GameState,
   protection: Protection,
   attempt: FieldRemovalAttempt,
 ): boolean => {
@@ -317,9 +330,38 @@ const koProtectionCoversAttempt = (
     return false;
   }
   if (protection.sourceControllerRelation === "opponentControlled") {
-    return attempt.sourceControllerId !== "";
+    return (
+      attempt.sourceControllerId !== "" &&
+      sourceCardFilterMatchesProtection(state, protection, attempt)
+    );
   }
-  return true;
+  return sourceCardFilterMatchesProtection(state, protection, attempt);
+};
+
+const sourceCardFilterMatchesProtection = (
+  state: GameState,
+  protection: Protection,
+  attempt: FieldRemovalAttempt | RestProtectionAttempt,
+): boolean => {
+  const filter = protection.sourceCardFilter;
+  if (filter === undefined) {
+    return true;
+  }
+  if (!isSupportedSourceCardFilter(filter)) {
+    return false;
+  }
+  if (attempt.sourceCardId === undefined) {
+    return false;
+  }
+  return cardMatchesSearchFilter(
+    state.cardManifest.cards[attempt.sourceCardId],
+    filter,
+  );
+};
+
+const isSupportedSourceCardFilter = (filter: CardFilter): boolean => {
+  const keys = Object.keys(filter) as (keyof CardFilter)[];
+  return keys.every((key) => key === "categories" || key === "power");
 };
 
 const protectionRequiresOpponentController = (
@@ -361,6 +403,7 @@ const sourceControllerMatchesProtection = (
 };
 
 const restProtectionCoversAttempt = (
+  state: GameState,
   protection: Protection,
   attempt: RestProtectionAttempt,
   target: CardInstance,
@@ -378,6 +421,9 @@ const restProtectionCoversAttempt = (
       target.controller,
     )
   ) {
+    return false;
+  }
+  if (!sourceCardFilterMatchesProtection(state, protection, attempt)) {
     return false;
   }
   if (protection.sourceCardCategories === undefined) {
@@ -404,7 +450,7 @@ export const applyRestProtection = (
   return {
     ok: true,
     prevented: protections.protections.some((protection) =>
-      restProtectionCoversAttempt(protection, attempt, target),
+      restProtectionCoversAttempt(state, protection, attempt, target),
     ),
   };
 };
@@ -436,9 +482,9 @@ export const applyFieldRemovalProtection = (
       }
       return (
         (attempt.attempt.sourceKind === "cardEffect" &&
-          protectionCoversAttempt(protection, attempt.attempt)) ||
+          protectionCoversAttempt(state, protection, attempt.attempt)) ||
         (process.type === "ko" &&
-          koProtectionCoversAttempt(protection, attempt.attempt))
+          koProtectionCoversAttempt(state, protection, attempt.attempt))
       );
     }),
   };

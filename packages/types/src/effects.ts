@@ -736,6 +736,7 @@ export interface EffectDslRestProtection {
     | "eitherController"
     | "unknownController";
   sourceCardCategories?: CardCategory[];
+  sourceCardFilter?: CardFilter;
 }
 
 export type EffectDslProtection =
@@ -984,6 +985,7 @@ export type Effect =
         | "opponentControlled"
         | "selfControlled";
       sourceCardCategories?: CardCategory[];
+      sourceCardFilter?: CardFilter;
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }

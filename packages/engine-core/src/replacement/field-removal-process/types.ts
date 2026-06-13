@@ -1,4 +1,5 @@
 import type {
+  CardId,
   ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
@@ -23,6 +24,7 @@ export interface SelectedTargetKoReplacementPayload {
       | "moveFromFieldToTrash";
     sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
+    sourceCardId?: CardId;
   };
   fieldRemovalDestination?: {
     zone: "life";
