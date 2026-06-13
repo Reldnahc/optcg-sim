@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { PlayerId } from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDefaultLobbySeats,
@@ -75,6 +75,27 @@ describe("redis lobby store", () => {
 
     expect(joinCode).toMatch(/^[0-9a-z]{4}$/u);
     expect(await store.getLobbyIdByJoinCode(joinCode.toUpperCase())).toBe(
+      "lobby-test",
+    );
+  });
+
+  test("repoints lobby join code aliases in Redis", async () => {
+    const redis = new FakeRedis();
+    const store = createRedisLobbyStore({ redis });
+    const joinCode = await store.createLobbyJoinCode("lobby-old");
+
+    await store.setLobbyJoinCode("lobby-new", joinCode);
+
+    expect(await store.getLobbyIdByJoinCode(joinCode)).toBe("lobby-new");
+  });
+
+  test("stores lobby match aliases in Redis", async () => {
+    const redis = new FakeRedis();
+    const store = createRedisLobbyStore({ redis });
+
+    await store.setLobbyMatchId("lobby-test", "match-test" as MatchId);
+
+    expect(await store.getLobbyIdByMatchId("match-test" as MatchId)).toBe(
       "lobby-test",
     );
   });

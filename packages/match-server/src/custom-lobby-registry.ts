@@ -419,6 +419,7 @@ export const createCustomLobbyRegistry = async (
       },
     );
     lobby.matchId = created.matchId;
+    await lobbyStore.setLobbyMatchId(lobby.lobbyId, created.matchId);
   };
   const pendingRematchVotes = new Map<MatchId, Set<PlayerId>>();
   const joinLobbyById = async (
@@ -751,8 +752,15 @@ export const createCustomLobbyRegistry = async (
       }
       pendingRematchVotes.delete(sourceMatchId);
       const playerOrder = twoPlayerOrder(seed.playerOrder);
+      const sourceLobbyId = await lobbyStore.getLobbyIdByMatchId(sourceMatchId);
+      const sourceLobby =
+        sourceLobbyId === undefined
+          ? undefined
+          : await lobbyStore.getLobby(sourceLobbyId);
+      const joinCode = sourceLobby?.joinCode;
       const lobby: CustomLobbyState = {
         lobbyId: `rematch-${lobbyStore.createLobbyId()}`,
+        ...(joinCode === undefined ? {} : { joinCode }),
         settings: defaultLobbySettings(),
         seats: Object.fromEntries(
           Object.entries(seed.seats).map(([key, seat]) => [
@@ -770,6 +778,9 @@ export const createCustomLobbyRegistry = async (
         rematchOfMatchId: sourceMatchId,
       };
       await lobbyStore.createLobby(lobby);
+      if (joinCode !== undefined) {
+        await lobbyStore.setLobbyJoinCode(lobby.lobbyId, joinCode);
+      }
       return {
         ...lobbyResponse(lobby),
         seat: { playerId },
