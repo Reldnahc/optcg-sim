@@ -213,6 +213,36 @@ describe("card repository", () => {
     );
   });
 
+  test("generated choose-one effect definitions include the choice header presentation ref", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard(
+        "OP01-001",
+        [
+          "[On Play] Choose one:",
+          "\u2022 Draw 2 cards.",
+          "\u2022 Rest up to 1 of your opponent's Characters.",
+        ].join("\n"),
+      ),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    await repository.resolveCards([cardId]);
+    const cached = (await cache.getJson(
+      createCardCacheKey({ cardId, versions }),
+    )) as CachedResolvedCard | undefined;
+    const definition = required(cached?.definition, "cached definition");
+    const effect = required(definition.effects[0], "generated effect");
+    const presentation = required(effect.presentation, "effect presentation");
+
+    assert.equal(presentation.spanIds.includes("span:choice"), true);
+  });
+
   test("multi-line generated effects use line-scoped presentation span ids", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;
