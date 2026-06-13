@@ -16,6 +16,7 @@ import {
   type CompletedMatchRepository,
   type CompletedMatchReplayRepository,
 } from "./postgres-completed-match.js";
+import { createLocalReplayFixtureRepository } from "./local-replay-fixture-repository.js";
 import type { SimHandoffVerifier } from "./sim-handoff.js";
 
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
@@ -62,6 +63,13 @@ export const resolveReplayRepository = (
   options: CreateMatchHttpServerOptions,
 ): CompletedMatchReplayRepository | undefined =>
   options.replayRepository ??
+  (() => {
+    const fixturePath =
+      process.env["PONEGLYPH_SIM_REPLAY_FIXTURE_PATH"]?.trim();
+    return fixturePath === undefined || fixturePath.length === 0
+      ? undefined
+      : createLocalReplayFixtureRepository(fixturePath);
+  })() ??
   (process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
     ? createPostgresCompletedMatchReplayRepository()
     : undefined);
