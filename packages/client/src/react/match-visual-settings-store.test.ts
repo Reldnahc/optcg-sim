@@ -18,6 +18,7 @@ describe("match visual settings store", () => {
       "confirmAttachDon",
       "confirmEndTurn",
       "quickPayActivateMainCosts",
+      "reducedMotion",
       "soundVolume",
       "zoneBackgroundVisibility",
       "zoneGuideVisibility",
@@ -30,7 +31,12 @@ describe("match visual settings store", () => {
       assert.match(definition.storageKey, /^optcg:client:/u);
       groupIds.add(definition.groupId);
     }
-    assert.deepEqual([...groupIds].sort(), ["appearance", "gameplay", "sound"]);
+    assert.deepEqual([...groupIds].sort(), [
+      "appearance",
+      "gameplay",
+      "sound",
+      "video",
+    ]);
   });
 
   test("loads default settings through the registry", () => {
@@ -51,6 +57,7 @@ describe("match visual settings store", () => {
     saveMatchVisualSetting(storage, "confirmAttachDon", false);
     saveMatchVisualSetting(storage, "confirmEndTurn", true);
     saveMatchVisualSetting(storage, "quickPayActivateMainCosts", true);
+    saveMatchVisualSetting(storage, "reducedMotion", true);
     saveMatchVisualSetting(storage, "soundVolume", 42);
     saveMatchVisualSetting(storage, "zoneBackgroundVisibility", 37);
     saveMatchVisualSetting(storage, "zoneGuideVisibility", 82);
@@ -60,6 +67,7 @@ describe("match visual settings store", () => {
       confirmAttachDon: false,
       confirmEndTurn: true,
       quickPayActivateMainCosts: true,
+      reducedMotion: true,
       soundVolume: 42,
       zoneBackgroundVisibility: 37,
       zoneGuideVisibility: 82,

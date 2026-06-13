@@ -27,6 +27,7 @@ export const SettingsContent = (): React.JSX.Element => {
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    reducedMotion,
     soundVolume,
     zoneBackgroundVisibility,
     zoneGuideVisibility,
@@ -34,6 +35,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setReducedMotion,
     setSoundVolume,
     setZoneBackgroundVisibility,
     setZoneGuideVisibility,
@@ -113,6 +115,16 @@ export const SettingsContent = (): React.JSX.Element => {
             setZoneBackgroundVisibility(event.currentTarget.valueAsNumber);
           }}
         />
+      </label>
+      <label className="settings-checkbox-field">
+        <input
+          type="checkbox"
+          checked={reducedMotion}
+          onChange={(event) => {
+            setReducedMotion(event.currentTarget.checked);
+          }}
+        />
+        <span>Reduced motion</span>
       </label>
       <label className="settings-checkbox-field">
         <input

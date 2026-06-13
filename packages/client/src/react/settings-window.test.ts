@@ -41,6 +41,7 @@ describe("settings window", () => {
     assert.match(markup, /Zone guide visibility/u);
     assert.match(markup, /Zone background visibility/u);
     assert.match(markup, /Sound volume/u);
+    assert.match(markup, /Reduced motion/u);
     assert.match(markup, /type="range"/u);
     assert.match(markup, /min="0"/u);
     assert.match(markup, /max="100"/u);
@@ -171,10 +172,12 @@ describe("settings window", () => {
     assert.match(settingsStore, /optcg:client:confirm-end-turn/u);
     assert.match(settingsStore, /optcg:client:quick-pay-activate-main-costs/u);
     assert.match(settingsStore, /optcg:client:confirm-attach-don/u);
+    assert.match(settingsStore, /optcg:client:reduced-motion/u);
     assert.match(settingsStore, /optcg:client:sound-volume/u);
     assert.match(settingsStore, /groupId:\s*"appearance"/u);
     assert.match(settingsStore, /groupId:\s*"gameplay"/u);
     assert.match(settingsStore, /groupId:\s*"sound"/u);
+    assert.match(settingsStore, /groupId:\s*"video"/u);
     assert.match(settingsStore, /loadMatchVisualSettings/u);
     assert.match(settingsStore, /saveMatchVisualSetting/u);
     assert.match(persistedSettingsHook, /createBrowserPersistentStorage/u);
@@ -186,6 +189,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /setZoneGuideVisibility/u);
     assert.match(settingsWindow, /setZoneBackgroundVisibility/u);
     assert.match(settingsWindow, /setSoundVolume/u);
+    assert.match(settingsWindow, /setReducedMotion/u);
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
@@ -213,6 +217,19 @@ describe("settings window", () => {
     assert.match(matchClient, /confirmAttachDon\s*=\s*true/u);
     assert.match(cardSelection, /selectedDonAttachmentClickIntent/u);
     assert.match(cardSelection, /attachSelectedDonToTarget/u);
+  });
+
+  test("reduced motion setting disables match app animations", async () => {
+    const [matchApp, appShellStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+    ]);
+
+    assert.match(matchApp, /visualSettings\.reducedMotion/u);
+    assert.match(matchApp, /is-reduced-motion/u);
+    assert.match(appShellStyles, /\.match-app\.is-reduced-motion\s+\*/u);
+    assert.match(appShellStyles, /animation:\s*none\s*!important;/u);
+    assert.match(appShellStyles, /transition:\s*none\s*!important;/u);
   });
 
   test("tool strip buttons focus resurfaced info tabs", async () => {
