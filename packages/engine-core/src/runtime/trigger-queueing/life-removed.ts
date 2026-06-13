@@ -7,7 +7,6 @@ import type {
   EngineResult,
   GameState,
   PlayerId,
-  PlayerRef,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -16,7 +15,6 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
@@ -32,6 +30,7 @@ import {
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import { matchEventTrigger } from "../event-hooks/matcher.js";
 
 const lifeRemovedAutoAdapter = {
   category: "auto" as const,
@@ -114,27 +113,6 @@ const didLifeRemovalHappenAfterSourceEntered = (
   return fieldEntrySeq === undefined || event.seq > fieldEntrySeq;
 };
 
-const playerRefMatches = (
-  state: GameState,
-  source: CardInstance,
-  ref: PlayerRef,
-  movedPlayerId: PlayerId,
-): boolean => {
-  switch (ref) {
-    case "self":
-    case "controller":
-      return movedPlayerId === source.controller;
-    case "owner":
-      return movedPlayerId === source.owner;
-    case "opponent":
-      return movedPlayerId === getOpponentId(state, source.controller);
-    case "turnPlayer":
-      return movedPlayerId === state.turn.turnPlayerId;
-    case "nonTurnPlayer":
-      return movedPlayerId === getOpponentId(state, state.turn.turnPlayerId);
-  }
-};
-
 export const createLifeRemovedTriggerQueueing = (
   dependencies: Pick<
     EffectRuntimeTriggerQueueingDependencies,
@@ -205,10 +183,12 @@ export const createLifeRemovedTriggerQueueing = (
         const lifeRemovedEffects = lookup.definition.effects.filter(
           (effect) =>
             isAutoRuntimeTriggerCandidate(effect, lifeRemovedAutoAdapter) &&
-            effect.trigger.type === "lifeRemoved" &&
-            effect.trigger.players.some((ref) =>
-              playerRefMatches(state, source, ref, movedPlayerId),
-            ),
+            matchEventTrigger(
+              state,
+              source,
+              effect.trigger,
+              event,
+            ).triggerTypes.includes("lifeRemoved"),
         );
         if (lifeRemovedEffects.length === 0) {
           continue;
