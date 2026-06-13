@@ -41,6 +41,7 @@ describe("settings window", () => {
     assert.match(markup, /Image/u);
     assert.match(markup, /Image fit/u);
     assert.match(markup, /Crop/u);
+    assert.match(markup, /Crop zoom/u);
     assert.match(markup, /Stretch/u);
     assert.match(markup, /Fit/u);
     assert.match(markup, /Tile/u);
@@ -216,6 +217,7 @@ describe("settings window", () => {
     assert.match(settingsStore, /optcg:client:background-image-url/u);
     assert.match(settingsStore, /optcg:client:background-color/u);
     assert.match(settingsStore, /optcg:client:background-image-fit/u);
+    assert.match(settingsStore, /optcg:client:background-image-crop-zoom/u);
     assert.match(settingsStore, /optcg:client:background-image-position-x/u);
     assert.match(settingsStore, /optcg:client:background-image-position-y/u);
     assert.match(settingsStore, /optcg:client:background-mode/u);
@@ -244,6 +246,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /type="file"/u);
     assert.match(settingsWindow, /setBackgroundColor/u);
     assert.match(settingsWindow, /setBackgroundImageFit/u);
+    assert.match(settingsWindow, /setBackgroundImageCropZoom/u);
     assert.match(settingsWindow, /setBackgroundImagePositionX/u);
     assert.match(settingsWindow, /setBackgroundImagePositionY/u);
     assert.match(settingsWindow, /setBackgroundMode/u);
@@ -275,6 +278,7 @@ describe("settings window", () => {
 
     assert.match(matchApp, /backgroundMode/u);
     assert.match(matchApp, /backgroundImageFit/u);
+    assert.match(matchApp, /backgroundImageCropZoom/u);
     assert.match(matchApp, /backgroundImagePositionX/u);
     assert.match(matchApp, /backgroundImagePositionY/u);
     assert.match(matchApp, /--match-background-color/u);

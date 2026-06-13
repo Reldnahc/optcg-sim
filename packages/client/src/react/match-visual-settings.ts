@@ -6,6 +6,7 @@ export interface MatchVisualSettingsValues {
   readonly backgroundColor: string;
   readonly backgroundImageUrl: string;
   readonly backgroundImageFit: MatchBackgroundImageFit;
+  readonly backgroundImageCropZoom: number;
   readonly backgroundImagePositionX: number;
   readonly backgroundImagePositionY: number;
   readonly backgroundMode: MatchBackgroundMode;
@@ -34,6 +35,7 @@ export interface MatchVisualSettings extends MatchVisualSettingsValues {
   readonly setBackgroundColor: (value: string) => void;
   readonly setBackgroundImageUrl: (url: string) => void;
   readonly setBackgroundImageFit: (value: MatchBackgroundImageFit) => void;
+  readonly setBackgroundImageCropZoom: (value: number) => void;
   readonly setBackgroundImagePositionX: (value: number) => void;
   readonly setBackgroundImagePositionY: (value: number) => void;
   readonly setBackgroundMode: (value: MatchBackgroundMode) => void;
@@ -54,6 +56,7 @@ export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
   backgroundColor: "#101010",
   backgroundImageUrl: "",
   backgroundImageFit: "crop",
+  backgroundImageCropZoom: 100,
   backgroundImagePositionX: 50,
   backgroundImagePositionY: 50,
   backgroundMode: "image",
@@ -75,6 +78,7 @@ export const noopMatchVisualSettings: MatchVisualSettings = {
   setBackgroundColor: () => undefined,
   setBackgroundImageUrl: () => undefined,
   setBackgroundImageFit: () => undefined,
+  setBackgroundImageCropZoom: () => undefined,
   setBackgroundImagePositionX: () => undefined,
   setBackgroundImagePositionY: () => undefined,
   setBackgroundMode: () => undefined,

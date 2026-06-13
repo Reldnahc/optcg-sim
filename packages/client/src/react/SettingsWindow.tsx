@@ -141,11 +141,19 @@ const SettingsSection = ({
 const clampPercent = (value: number): number =>
   Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 50;
 
+const cropFrameSize = (zoom: number): number => {
+  const normalizedZoom = Number.isFinite(zoom)
+    ? Math.min(250, Math.max(100, zoom))
+    : 100;
+  return Math.round(54 * (100 / normalizedZoom));
+};
+
 export const SettingsContent = (): React.JSX.Element => {
   const {
     backgroundColor,
     backgroundImageUrl,
     backgroundImageFit,
+    backgroundImageCropZoom,
     backgroundImagePositionX,
     backgroundImagePositionY,
     backgroundMode,
@@ -163,6 +171,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setBackgroundColor,
     setBackgroundImageUrl,
     setBackgroundImageFit,
+    setBackgroundImageCropZoom,
     setBackgroundImagePositionX,
     setBackgroundImagePositionY,
     setBackgroundMode,
@@ -215,8 +224,12 @@ export const SettingsContent = (): React.JSX.Element => {
   const cropFrameStyle = {
     "--settings-crop-x": `${String(backgroundImagePositionX)}%`,
     "--settings-crop-y": `${String(backgroundImagePositionY)}%`,
+    "--settings-crop-size": `${String(cropFrameSize(backgroundImageCropZoom))}%`,
   } as React.CSSProperties &
-    Record<"--settings-crop-x" | "--settings-crop-y", string>;
+    Record<
+      "--settings-crop-x" | "--settings-crop-y" | "--settings-crop-size",
+      string
+    >;
 
   return (
     <div className="settings-window-content">
@@ -265,6 +278,21 @@ export const SettingsContent = (): React.JSX.Element => {
           />
           {backgroundImageFit === "crop" ? (
             <div className="settings-crop-helper">
+              <label className="settings-field">
+                <span>Crop zoom</span>
+                <input
+                  type="range"
+                  min="100"
+                  max="250"
+                  step="1"
+                  value={backgroundImageCropZoom}
+                  onChange={(event) => {
+                    setBackgroundImageCropZoom(
+                      event.currentTarget.valueAsNumber,
+                    );
+                  }}
+                />
+              </label>
               <div
                 className="settings-crop-preview"
                 style={cropPreviewStyle}

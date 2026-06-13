@@ -17,6 +17,7 @@ describe("match visual settings store", () => {
       "backgroundColor",
       "backgroundImageUrl",
       "backgroundImageFit",
+      "backgroundImageCropZoom",
       "backgroundImagePositionX",
       "backgroundImagePositionY",
       "backgroundMode",
@@ -65,6 +66,7 @@ describe("match visual settings store", () => {
     );
     saveMatchVisualSetting(storage, "backgroundColor", "  #334455  ");
     saveMatchVisualSetting(storage, "backgroundImageFit", "tile");
+    saveMatchVisualSetting(storage, "backgroundImageCropZoom", 175);
     saveMatchVisualSetting(storage, "backgroundImagePositionX", 26);
     saveMatchVisualSetting(storage, "backgroundImagePositionY", 74);
     saveMatchVisualSetting(storage, "backgroundMode", "image");
@@ -83,6 +85,7 @@ describe("match visual settings store", () => {
     assert.deepEqual(loadMatchVisualSettings(storage), {
       backgroundColor: "#334455",
       backgroundImageFit: "tile",
+      backgroundImageCropZoom: 175,
       backgroundImagePositionX: 26,
       backgroundImagePositionY: 74,
       backgroundImageUrl: "data:image/png;base64,abc",
@@ -112,6 +115,10 @@ describe("match visual settings store", () => {
     storage.setItem(
       matchVisualSettingDefinitions.backgroundImageFit.storageKey,
       "zoom",
+    );
+    storage.setItem(
+      matchVisualSettingDefinitions.backgroundImageCropZoom.storageKey,
+      "500",
     );
     storage.setItem(
       matchVisualSettingDefinitions.backgroundImagePositionX.storageKey,
@@ -153,6 +160,7 @@ describe("match visual settings store", () => {
 
     assert.deepEqual(loadMatchVisualSettings(storage), {
       ...defaultMatchVisualSettingsValues,
+      backgroundImageCropZoom: 250,
       backgroundImagePositionX: 0,
       backgroundImagePositionY: 100,
       playmatOpacity: 50,
