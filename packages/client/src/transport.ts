@@ -184,8 +184,6 @@ export interface ValidatedLobbyLoadout {
   loadoutId: string | null;
   status: "playable" | "unplayable" | "unverified";
   errors: string[];
-  leaderCardId?: string | null;
-  leaderVariantIndex?: number | null;
 }
 
 export interface ValidatedLobbyLoadouts {
