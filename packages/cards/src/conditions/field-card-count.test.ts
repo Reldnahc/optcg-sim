@@ -93,6 +93,32 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses named absence as a reusable zero field-count condition", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you don't have [Rock]",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          names: ["Rock"],
+        },
+        op: "eq",
+        value: 0,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "player:self",
+        "filter:name",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses exact matching Characters with different card names as field-count filter data", () => {
     expect(
       parseFieldCardCountCondition({

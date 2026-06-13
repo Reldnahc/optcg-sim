@@ -207,6 +207,33 @@ export const parseFieldCardCountCondition: ConditionParser = (
     };
   }
 
+  const selfAbsence = /^you (?:don't|do not) have\s+(?<predicate>.+)$/i.exec(
+    input.text,
+  );
+  const selfAbsencePredicate = selfAbsence?.groups?.["predicate"];
+  if (selfAbsencePredicate !== undefined) {
+    const predicates = parseFieldPredicates(selfAbsencePredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "eq",
+        value: 0,
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:eq", "condition:threshold:nonNegativeInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
   const noSelfPresence =
     /^you have no\s+(?<predicate>Characters?(?: card)?s?\b.*)$/i.exec(
       input.text,
