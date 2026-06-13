@@ -63,4 +63,32 @@ describe("only matching field cards condition parser", () => {
       ]),
     );
   });
+
+  it("parses you-only-have wording with predicates after Characters", () => {
+    const result = parseOnlyMatchingFieldCardsCondition({
+      text: 'you only have Characters with a type including "GERMA"',
+    });
+
+    expect(result).toMatchObject({
+      condition: {
+        type: "onlyMatchingFieldCards",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesIncludeAny: ["GERMA"],
+        },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:onlyMatchingFieldCards",
+        "player:self",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:type",
+      ]),
+    );
+  });
 });

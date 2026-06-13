@@ -2,18 +2,18 @@ import {
   parseDurationFromSet,
   selfNextTurnStartOnlyDurationParsers,
 } from "../../durations/index.js";
-import { parseProtectionProcess } from "../../protection/process.js";
+import {
+  type ProtectionProcess,
+  parseProtectionProcess,
+} from "../../protection/process.js";
 import { parseProtectionSource } from "../../protection/source.js";
 import {
   parseAllFieldTarget,
   parseThisCharacterTarget,
 } from "../../targets/index.js";
-import type { InstructionParser } from "../../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
-import {
-  buildProtectionEffect,
-  buildProtectionEffectWithTarget,
-} from "./builders.js";
+import { buildProtectionEffectWithTarget } from "./builders.js";
 
 export const protectionInstructionPrimitive = {
   primitiveId: "instruction:giveProtection",
@@ -44,12 +44,12 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const process = parseProtectionProcess({ text: target.rest });
-  if (process === undefined) {
+  const parsedProcesses = parseProtectionProcesses(target.rest);
+  if (parsedProcesses === undefined) {
     return undefined;
   }
 
-  const source = parseProtectionSource({ text: process.rest });
+  const source = parseProtectionSource({ text: parsedProcesses.rest });
   if (source === undefined || source.rest.length > 0) {
     return undefined;
   }
@@ -62,32 +62,38 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
           condition: context.condition,
         };
 
+  const effects = parsedProcesses.processes.map((process) =>
+    buildProtectionEffectWithTarget({
+      duration,
+      process: process.type,
+      sourceCardCategories: source.source.cardCategories,
+      sourceCardFilter: source.source.cardFilter,
+      sourceKind: source.source.kind,
+      sourceControllerRelation: source.source.controllerRelation,
+      target: target.target,
+    }),
+  );
+  const firstEffect = effects[0];
+  if (firstEffect === undefined) {
+    return undefined;
+  }
   const effect =
-    target.target.type === "self"
-      ? buildProtectionEffect({
-          context,
-          process: process.process.type,
-          sourceCardCategories: source.source.cardCategories,
-          sourceCardFilter: source.source.cardFilter,
-          sourceKind: source.source.kind,
-          sourceControllerRelation: source.source.controllerRelation,
-        })
-      : buildProtectionEffectWithTarget({
-          duration,
-          process: process.process.type,
-          sourceCardCategories: source.source.cardCategories,
-          sourceCardFilter: source.source.cardFilter,
-          sourceKind: source.source.kind,
-          sourceControllerRelation: source.source.controllerRelation,
-          target: target.target,
-        });
+    effects.length === 1
+      ? firstEffect
+      : ({
+          type: "sequence",
+          effects: effects.map((parsedEffect, index) => ({
+            connector: index === 0 ? ("always" as const) : ("then" as const),
+            effect: parsedEffect,
+          })),
+        } as const);
 
   return {
     effect,
     evidence: [
       "instruction:giveProtection",
       ...target.evidence,
-      ...process.evidence,
+      ...parsedProcesses.evidence,
       ...source.evidence,
       context.condition === undefined
         ? "duration:whileSourceOnField"
@@ -96,6 +102,47 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
     rest: "",
   };
 };
+
+interface ProtectionProcessesParseResult {
+  readonly processes: readonly ProtectionProcess[];
+  readonly evidence: readonly PrimitiveEvidence[];
+  readonly rest: string;
+}
+
+function parseProtectionProcesses(
+  text: string,
+): ProtectionProcessesParseResult | undefined {
+  const koThenRestMatch =
+    /^cannot be K\.O\.'d or rested\b\s*(?<rest>.*)$/i.exec(text);
+  if (koThenRestMatch !== null) {
+    return {
+      processes: [{ type: "ko" }, { type: "rest" }],
+      evidence: ["protectionProcess:ko", "protectionProcess:rest"],
+      rest: koThenRestMatch.groups?.["rest"]?.trim() ?? "",
+    };
+  }
+
+  const restThenKoMatch =
+    /^cannot be rested or K\.O\.'d\b\s*(?<rest>.*)$/i.exec(text);
+  if (restThenKoMatch !== null) {
+    return {
+      processes: [{ type: "rest" }, { type: "ko" }],
+      evidence: ["protectionProcess:rest", "protectionProcess:ko"],
+      rest: restThenKoMatch.groups?.["rest"]?.trim() ?? "",
+    };
+  }
+
+  const singleProcess = parseProtectionProcess({ text });
+  if (singleProcess !== undefined) {
+    return {
+      processes: [singleProcess.process],
+      evidence: singleProcess.evidence,
+      rest: singleProcess.rest,
+    };
+  }
+
+  return undefined;
+}
 
 const parseAllProtectionTarget = (
   text: string,

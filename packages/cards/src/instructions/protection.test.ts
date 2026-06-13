@@ -163,6 +163,64 @@ describe("continuous protection instruction parser", () => {
     );
   });
 
+  it("composes shared source protection across K.O. and rest processes", () => {
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d or rested by your opponent's effects.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "protectFromKO",
+              target: { type: "self" },
+              sourceKind: "cardEffect",
+              sourceControllerRelation: "opponentControlled",
+              duration: { type: "whileSourceOnField" },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "giveProtection",
+              target: { type: "self" },
+              protection: {
+                process: "rest",
+                sourceKind: "cardEffect",
+                sourceControllerRelation: "opponentControlled",
+              },
+              duration: { type: "whileSourceOnField" },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d or rested by your opponent's effects.",
+        },
+        { condition: undefined },
+      )?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "target:thisCharacter",
+        "protectionProcess:ko",
+        "protectionProcess:rest",
+        "protectionSource:opponentEffects",
+        "duration:whileSourceOnField",
+      ]),
+    );
+  });
+
   it("parses all-target field-removal protection by self effects", () => {
     expect(
       parseProtectionInstruction(

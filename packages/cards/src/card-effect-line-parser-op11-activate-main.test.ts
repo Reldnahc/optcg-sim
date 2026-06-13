@@ -342,4 +342,75 @@ describe("OP11 Activate Main parser primitives", () => {
       ]),
     );
   });
+
+  it("parses shared conditional K.O. and rest protection from opponent effects", () => {
+    const result = parseCardEffectLine(
+      "If you only have Characters with a type including \"GERMA\", this Character cannot be K.O.'d or rested by your opponent's effects.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "protectFromKO",
+                target: { type: "self" },
+                sourceKind: "cardEffect",
+                sourceControllerRelation: "opponentControlled",
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "onlyMatchingFieldCards",
+                    player: "self",
+                    filter: {
+                      categories: ["character"],
+                      typesIncludeAny: ["GERMA"],
+                    },
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "giveProtection",
+                target: { type: "self" },
+                protection: {
+                  process: "rest",
+                  sourceKind: "cardEffect",
+                  sourceControllerRelation: "opponentControlled",
+                },
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "onlyMatchingFieldCards",
+                    player: "self",
+                    filter: {
+                      categories: ["character"],
+                      typesIncludeAny: ["GERMA"],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:onlyMatchingFieldCards",
+        "filter:type",
+        "instruction:giveProtection",
+        "protectionProcess:ko",
+        "protectionProcess:rest",
+        "protectionSource:opponentEffects",
+      ]),
+    );
+  });
 });

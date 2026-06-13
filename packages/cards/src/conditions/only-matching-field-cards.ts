@@ -12,7 +12,9 @@ export const parseOnlyMatchingFieldCardsCondition: ConditionParser = (
   const match =
     /^the only Characters on your field are\s+(?<predicate>.+)$/i.exec(
       input.text,
-    ) ?? /^you only have\s+(?<predicate>.+Characters?)$/i.exec(input.text);
+    ) ??
+    /^you only have\s+(?<predicate>Characters?\b.+)$/i.exec(input.text) ??
+    /^you only have\s+(?<predicate>.+Characters?)$/i.exec(input.text);
   const predicateText = match?.groups?.["predicate"];
   if (predicateText === undefined) {
     return undefined;
