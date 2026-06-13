@@ -14,11 +14,14 @@ export interface ArrowLine {
 }
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
-const labelCharacterWidth = 13;
-const labelInlinePadding = 24;
+const labelCharacterWidth = 16;
+const labelInlinePadding = 32;
 const labelMinimumWidth = 56;
-const labelHeight = 30;
+const labelHeight = 38;
 const leaderPowerLabelDefenderWeight = 0.72;
+const basePowerLabelBoardWidth = 1280;
+const minimumPowerLabelScale = 0.78;
+const maximumPowerLabelScale = 1.18;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
 
@@ -57,6 +60,16 @@ export const battlePowerLabelPoint = (
   };
 };
 
+export const battlePowerLabelScale = (boardWidth: number): number => {
+  if (!Number.isFinite(boardWidth) || boardWidth <= 0) {
+    return 1;
+  }
+  return Math.min(
+    maximumPowerLabelScale,
+    Math.max(minimumPowerLabelScale, boardWidth / basePowerLabelBoardWidth),
+  );
+};
+
 const cardElementForInstance = (
   board: HTMLElement,
   instanceId: string,
@@ -79,6 +92,7 @@ export const BattleArrowOverlay = ({
 }: BattleArrowOverlayProps): React.JSX.Element | null => {
   const overlayRef = useRef<SVGSVGElement | null>(null);
   const [line, setLine] = useState<ArrowLine>(emptyLine);
+  const [boardWidth, setBoardWidth] = useState(0);
   const [powerLabelTarget, setPowerLabelTarget] =
     useState<BattlePowerLabelTarget>("fieldCard");
 
@@ -107,6 +121,7 @@ export const BattleArrowOverlay = ({
       );
       if (attacker === undefined || target === undefined) {
         setLine((currentLine) => nextStableArrowLine(currentLine, emptyLine));
+        setBoardWidth(0);
         setPowerLabelTarget("fieldCard");
         return;
       }
@@ -119,6 +134,7 @@ export const BattleArrowOverlay = ({
         x2: targetRect.left + targetRect.width / 2 - boardRect.left,
         y2: targetRect.top + targetRect.height / 2 - boardRect.top,
       };
+      setBoardWidth(boardRect.width);
       setLine((currentLine) => nextStableArrowLine(currentLine, nextLine));
     };
 
@@ -149,14 +165,17 @@ export const BattleArrowOverlay = ({
     battleArrow.defendPower,
   );
   const hasMeasuredLine = line.x1 !== line.x2 || line.y1 !== line.y2;
+  const powerLabelPoint = battlePowerLabelPoint(line, powerLabelTarget);
+  const powerLabelScale = battlePowerLabelScale(boardWidth);
   const labelWidth =
     attackPowerLabel === undefined
       ? labelMinimumWidth
       : Math.max(
-          labelMinimumWidth,
-          attackPowerLabel.length * labelCharacterWidth + labelInlinePadding,
+          labelMinimumWidth * powerLabelScale,
+          (attackPowerLabel.length * labelCharacterWidth + labelInlinePadding) *
+            powerLabelScale,
         );
-  const powerLabelPoint = battlePowerLabelPoint(line, powerLabelTarget);
+  const scaledLabelHeight = labelHeight * powerLabelScale;
 
   return (
     <svg
@@ -170,13 +189,13 @@ export const BattleArrowOverlay = ({
       <defs>
         <marker
           id="battle-arrow-head"
-          markerHeight="8"
-          markerWidth="8"
+          markerHeight="10"
+          markerWidth="10"
           orient="auto"
-          refX="7"
-          refY="4"
+          refX="9"
+          refY="5"
         >
-          <path d="M0,0 L8,4 L0,8 Z" />
+          <path d="M0,0 L10,5 L0,10 Z" />
         </marker>
       </defs>
       <line
@@ -193,10 +212,10 @@ export const BattleArrowOverlay = ({
         >
           <rect
             x={-labelWidth / 2}
-            y={-labelHeight / 2}
+            y={-scaledLabelHeight / 2}
             width={labelWidth}
-            height={labelHeight}
-            rx={labelHeight / 2}
+            height={scaledLabelHeight}
+            rx={scaledLabelHeight / 2}
           />
           <text dominantBaseline="central" textAnchor="middle">
             {attackPowerLabel}
