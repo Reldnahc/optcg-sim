@@ -445,6 +445,19 @@ const isSupportedPowerEffectValue = (
   if (value.type === "savedNumber") {
     return false;
   }
+  if (value.type === "countMatchingZoneCardsAcrossPlayers") {
+    return (
+      value.filter === undefined &&
+      value.players.length > 0 &&
+      value.players.every(
+        (player) => player === "self" || player === "opponent",
+      ) &&
+      Number.isSafeInteger(value.per) &&
+      value.per > 0 &&
+      Number.isSafeInteger(value.multiplier) &&
+      value.multiplier !== 0
+    );
+  }
   return (
     value.player === "self" &&
     Number.isSafeInteger(value.per) &&

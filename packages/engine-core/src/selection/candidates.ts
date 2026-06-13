@@ -168,17 +168,34 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
 const isSupportedDynamicFilterValue = (value: unknown): boolean => {
-  if (!isRecord(value) || value["type"] !== "countMatchingZoneCards") {
+  if (!isRecord(value)) {
     return false;
   }
-  return (
-    value["zone"] === "life" &&
-    value["filter"] === undefined &&
-    (value["player"] === "self" || value["player"] === "opponent") &&
-    Number.isSafeInteger(value["per"]) &&
-    Number(value["per"]) > 0 &&
-    Number.isSafeInteger(value["multiplier"])
-  );
+  if (value["type"] === "countMatchingZoneCards") {
+    return (
+      value["zone"] === "life" &&
+      value["filter"] === undefined &&
+      (value["player"] === "self" || value["player"] === "opponent") &&
+      Number.isSafeInteger(value["per"]) &&
+      Number(value["per"]) > 0 &&
+      Number.isSafeInteger(value["multiplier"])
+    );
+  }
+  if (value["type"] === "countMatchingZoneCardsAcrossPlayers") {
+    return (
+      value["zone"] === "life" &&
+      value["filter"] === undefined &&
+      Array.isArray(value["players"]) &&
+      value["players"].length > 0 &&
+      value["players"].every(
+        (player) => player === "self" || player === "opponent",
+      ) &&
+      Number.isSafeInteger(value["per"]) &&
+      Number(value["per"]) > 0 &&
+      Number.isSafeInteger(value["multiplier"])
+    );
+  }
+  return false;
 };
 
 const isSupportedStatComparison = (
@@ -290,22 +307,44 @@ const resolveDynamicFilterValue = (
   value: DynamicNumberValue,
   context: ResolvePublicTargetCandidatesContext,
 ): number | undefined => {
-  if (
-    value.type !== "countMatchingZoneCards" ||
-    value.zone !== "life" ||
-    value.filter !== undefined ||
-    !Number.isSafeInteger(value.per) ||
-    value.per <= 0 ||
-    !Number.isSafeInteger(value.multiplier)
-  ) {
-    return undefined;
+  if (value.type === "countMatchingZoneCards") {
+    if (
+      value.zone !== "life" ||
+      value.filter !== undefined ||
+      !Number.isSafeInteger(value.per) ||
+      value.per <= 0 ||
+      !Number.isSafeInteger(value.multiplier)
+    ) {
+      return undefined;
+    }
+    const playerId = resolvePlayerRef(state, value.player, context);
+    const player = playerId === null ? undefined : state.players[playerId];
+    if (player === undefined) {
+      return undefined;
+    }
+    return Math.floor(player.life.length / value.per) * value.multiplier;
   }
-  const playerId = resolvePlayerRef(state, value.player, context);
-  const player = playerId === null ? undefined : state.players[playerId];
-  if (player === undefined) {
-    return undefined;
+  if (value.type === "countMatchingZoneCardsAcrossPlayers") {
+    if (
+      value.filter !== undefined ||
+      !Number.isSafeInteger(value.per) ||
+      value.per <= 0 ||
+      !Number.isSafeInteger(value.multiplier)
+    ) {
+      return undefined;
+    }
+    let count = 0;
+    for (const playerRef of value.players) {
+      const playerId = resolvePlayerRef(state, playerRef, context);
+      const player = playerId === null ? undefined : state.players[playerId];
+      if (player === undefined) {
+        return undefined;
+      }
+      count += player.life.length;
+    }
+    return Math.floor(count / value.per) * value.multiplier;
   }
-  return Math.floor(player.life.length / value.per) * value.multiplier;
+  return undefined;
 };
 
 const statComparisonsNeedComputedView = (

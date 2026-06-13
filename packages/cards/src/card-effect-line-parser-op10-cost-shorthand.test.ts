@@ -67,3 +67,57 @@ it("parses shorthand cost thresholds in KO targets before active DON movement", 
     ]),
   );
 });
+
+it("parses dynamic total-Life cost filters independently from attacking rest bodies", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [When Attacking] Rest up to 1 of your opponent's Characters with a cost equal to or less than the total of your and your opponent's Life cards.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  statComparisons: [
+                    {
+                      stat: "cost",
+                      op: "lte",
+                      value: {
+                        type: "countMatchingZoneCardsAcrossPlayers",
+                        players: ["self", "opponent"],
+                        zone: "life",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "rest",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "marker:attachedDon",
+      "instruction:rest",
+      "filter:cost",
+      "valueSource:lifeCountTotal",
+    ]),
+  );
+});

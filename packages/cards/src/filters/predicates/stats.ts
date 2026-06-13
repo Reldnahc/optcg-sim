@@ -221,6 +221,38 @@ export const parseDynamicLifeCountCostPredicate: PredicateParser = (
   text,
   current,
 ) => {
+  const totalMatch =
+    /^a cost equal to or less than the total of your and your opponent's Life cards\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  if (totalMatch !== null) {
+    return {
+      filter: {
+        ...current,
+        statComparisons: [
+          ...(current.statComparisons ?? []),
+          {
+            stat: "cost",
+            op: "lte",
+            value: {
+              type: "countMatchingZoneCardsAcrossPlayers",
+              players: ["self", "opponent"],
+              zone: "life",
+              per: 1,
+              multiplier: 1,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "filter:cost",
+        "condition:comparator:lte",
+        "valueSource:lifeCountTotal",
+      ],
+      rest: totalMatch.groups?.["rest"] ?? "",
+    };
+  }
+
   const match =
     /^a cost equal to or less than the number of (?<player>your|your opponent's) Life cards\b\s*(?<rest>.*)$/iu.exec(
       text,

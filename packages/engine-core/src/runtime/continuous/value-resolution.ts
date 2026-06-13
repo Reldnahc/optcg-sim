@@ -154,6 +154,40 @@ const countMatchingZoneCards = (
   return Math.floor(matchingCount / value.per) * value.multiplier;
 };
 
+const countMatchingZoneCardsAcrossPlayers = (
+  state: GameState,
+  controllerId: PlayerId,
+  value: Extract<
+    DynamicNumberValue,
+    { type: "countMatchingZoneCardsAcrossPlayers" }
+  >,
+): number | null => {
+  if (
+    value.filter !== undefined ||
+    value.players.length === 0 ||
+    !Number.isSafeInteger(value.per) ||
+    value.per <= 0 ||
+    !Number.isSafeInteger(value.multiplier)
+  ) {
+    return null;
+  }
+
+  let count = 0;
+  for (const playerRef of value.players) {
+    if (playerRef !== "self" && playerRef !== "opponent") {
+      return null;
+    }
+    const playerId = resolvePlayerRef(state, controllerId, playerRef);
+    const player = playerId === null ? undefined : state.players[playerId];
+    if (player === undefined) {
+      return null;
+    }
+    count += player.life.length;
+  }
+
+  return Math.floor(count / value.per) * value.multiplier;
+};
+
 const cardRefForDynamicTarget = (
   state: GameState,
   target: Extract<DynamicNumberValue, { type: "countAttachedDon" }>["target"],
@@ -250,6 +284,12 @@ export const resolveDynamicNumberValue = (
     return controllerId === undefined
       ? null
       : countMatchingZoneCards(state, controllerId, value);
+  }
+  if (value.type === "countMatchingZoneCardsAcrossPlayers") {
+    const controllerId = context?.controllerId;
+    return controllerId === undefined
+      ? null
+      : countMatchingZoneCardsAcrossPlayers(state, controllerId, value);
   }
   if (value.type === "countAttachedDon") {
     return countAttachedDon(state, value, context);

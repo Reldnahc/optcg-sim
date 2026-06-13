@@ -489,6 +489,53 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(result)).toEqual([refs[0]]);
   });
 
+  test("matches public target candidates with dynamic total Life-count stat comparisons", () => {
+    const state = createActiveState();
+    const equalTotalCost = toCardId("life-total-cost-equal");
+    const aboveTotalCost = toCardId("life-total-cost-above");
+    addManifestCard(state, {
+      cardId: equalTotalCost,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: aboveTotalCost,
+      category: "character",
+      cost: 6,
+      power: 5000,
+    });
+    const refs = placeCharacters(state, p2, [equalTotalCost, aboveTotalCost]);
+    setLifeCount(state, p1, 2);
+    setLifeCount(state, p2, 3);
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        player: "opponent",
+        filter: {
+          categories: ["character"],
+          statComparisons: [
+            {
+              stat: "cost",
+              op: "lte",
+              value: {
+                type: "countMatchingZoneCardsAcrossPlayers",
+                players: ["self", "opponent"],
+                zone: "life",
+                per: 1,
+                multiplier: 1,
+              },
+            },
+          ],
+        },
+      }),
+      { sourceControllerId: p1 },
+    );
+
+    expect(targetCards(result)).toEqual([refs[0]]);
+  });
+
   test("uses broad permanent power modifiers when resolving current-power target filters", () => {
     const state = createActiveState();
     const reduced = toCardId("permanent-reduced-character");

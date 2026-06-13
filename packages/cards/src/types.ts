@@ -221,6 +221,7 @@ export type PrimitiveEvidence =
   | "valueSource:donFieldCount:self"
   | "valueSource:lifeCount:self"
   | "valueSource:lifeCount:opponent"
+  | "valueSource:lifeCountTotal"
   | "valueOffset:fieldCountDifference"
   | "value:basePower:positiveInteger"
   | "value:basePower:snapshotCurrentPower"

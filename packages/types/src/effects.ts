@@ -221,6 +221,14 @@ export type DynamicNumberValue =
       multiplier: number;
     }
   | {
+      type: "countMatchingZoneCardsAcrossPlayers";
+      players: PlayerRef[];
+      zone: "life";
+      filter?: CardFilter;
+      per: number;
+      multiplier: number;
+    }
+  | {
       type: "countAttachedDon";
       target: Target;
       per: number;
