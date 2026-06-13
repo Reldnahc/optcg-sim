@@ -91,6 +91,31 @@ export const parsePowerPredicate: PredicateParser = (
 };
 
 export const parseCostPredicate: PredicateParser = (text, current) => {
+  const costPrefixMatch =
+    /^(?<exact>0|[1-9]\d*) (?<base>base )?cost\b\s*(?<prefixRest>.*)$/i.exec(
+      text,
+    );
+  const costPrefixValueText = costPrefixMatch?.groups?.["exact"];
+  if (costPrefixValueText !== undefined) {
+    const key =
+      costPrefixMatch?.groups?.["base"] === undefined ? "cost" : "baseCost";
+    return {
+      filter: {
+        ...current,
+        [key]: {
+          op: "eq",
+          value: Number.parseInt(costPrefixValueText, 10),
+        },
+      },
+      evidence: [
+        "filter:cost",
+        "condition:comparator:eq",
+        thresholdEvidence(costPrefixValueText),
+      ],
+      rest: costPrefixMatch?.groups?.["prefixRest"] ?? "",
+    };
+  }
+
   const rangeMatch =
     /^a (?<base>base )?cost of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
       text,

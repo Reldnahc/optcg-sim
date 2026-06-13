@@ -47,6 +47,26 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses cost-prefix category wording as the same reusable cost predicate", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "0 cost Characters",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        cost: { op: "eq", value: 0 },
+      },
+      evidence: [
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses base cost as a reusable printed/base cost predicate", () => {
     expect(
       parseCardFilterPredicates({
