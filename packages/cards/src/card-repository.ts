@@ -38,10 +38,18 @@ export type {
 
 export interface CardDataCache {
   getJson(key: string): Promise<unknown>;
+  getJsonMany?(keys: readonly string[]): Promise<readonly unknown[]>;
   setJson(
     key: string,
     value: unknown,
     options?: { readonly ttlSeconds: number },
+  ): Promise<void>;
+  setJsonMany?(
+    entries: readonly {
+      readonly key: string;
+      readonly value: unknown;
+      readonly options?: { readonly ttlSeconds: number };
+    }[],
   ): Promise<void>;
 }
 
@@ -134,10 +142,16 @@ export const createCardRepository = (
     const byId = new Map<CardId, BuiltCard>();
     const missingIds: CardId[] = [];
 
-    for (const cardId of uniqueIds) {
-      const cached = await input.cache.getJson(
-        createCardCacheKey({ cardId, versions: input.versions }),
-      );
+    const cacheKeys = uniqueIds.map((cardId) =>
+      createCardCacheKey({ cardId, versions: input.versions }),
+    );
+    const cachedValues =
+      input.cache.getJsonMany === undefined
+        ? await Promise.all(cacheKeys.map((key) => input.cache.getJson(key)))
+        : await input.cache.getJsonMany(cacheKeys);
+
+    for (const [index, cardId] of uniqueIds.entries()) {
+      const cached = cachedValues[index];
       if (isCurrentCachedResolvedCard(cached, input.versions, cardId)) {
         byId.set(cardId, {
           card: cached.card,
@@ -157,6 +171,7 @@ export const createCardRepository = (
           `Poneglyph card batch fetch failed: missing ${batch.missing.join(", ")}`,
         );
       }
+      const cacheEntries: BuiltCardCacheEntry[] = [];
       for (const cardId of chunk) {
         const detail = batch.data[cardId];
         if (detail === undefined) {
@@ -175,19 +190,9 @@ export const createCardRepository = (
           input.runtimeSupportEvaluator,
         );
         byId.set(cardId, built);
-        await input.cache.setJson(
-          createCardCacheKey({ cardId, versions: input.versions }),
-          {
-            cacheSchemaVersion,
-            versions: input.versions,
-            card: built.card,
-            ...(built.definition === undefined
-              ? {}
-              : { definition: built.definition }),
-          },
-          { ttlSeconds: input.cacheTtlSeconds ?? defaultCacheTtlSeconds },
-        );
+        cacheEntries.push(createBuiltCardCacheEntry(input, cardId, built));
       }
+      await setBuiltCardCacheEntries(input, cacheEntries);
     }
 
     return cardIds.map((cardId) => {
@@ -244,6 +249,42 @@ export const createCardRepository = (
       };
     },
   };
+};
+
+interface BuiltCardCacheEntry {
+  readonly key: string;
+  readonly value: CachedResolvedCard;
+  readonly options: { readonly ttlSeconds: number };
+}
+
+const createBuiltCardCacheEntry = (
+  input: CreateCardRepositoryInput,
+  cardId: CardId,
+  built: BuiltCard,
+): BuiltCardCacheEntry => ({
+  key: createCardCacheKey({ cardId, versions: input.versions }),
+  value: {
+    cacheSchemaVersion,
+    versions: input.versions,
+    card: built.card,
+    ...(built.definition === undefined ? {} : { definition: built.definition }),
+  },
+  options: { ttlSeconds: input.cacheTtlSeconds ?? defaultCacheTtlSeconds },
+});
+
+const setBuiltCardCacheEntries = async (
+  input: CreateCardRepositoryInput,
+  entries: readonly BuiltCardCacheEntry[],
+): Promise<void> => {
+  if (input.cache.setJsonMany !== undefined) {
+    await input.cache.setJsonMany(entries);
+    return;
+  }
+  await Promise.all(
+    entries.map((entry) =>
+      input.cache.setJson(entry.key, entry.value, entry.options),
+    ),
+  );
 };
 
 export const createPoneglyphHttpClient = (input?: {

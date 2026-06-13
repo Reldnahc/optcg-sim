@@ -109,7 +109,7 @@ describe("modal frame", () => {
     );
   });
 
-  test("decision confirm action anchors low without stretching tall", async () => {
+  test("modal submit actions are green and anchor decision confirms low", async () => {
     const styles = await readFile(modalStylesPath, "utf8");
 
     assert.match(
@@ -126,11 +126,11 @@ describe("modal frame", () => {
     );
     assert.match(
       styles,
-      /\.modal-frame-decision\s*>\s*\.primary-action\s*\{[^}]*background:\s*#2fbf71;[^}]*color:\s*#07160d;/u,
+      /\.modal-submit-button\s*\{[^}]*background:\s*#2fbf71;[^}]*color:\s*#07160d;/u,
     );
     assert.match(
       styles,
-      /\.modal-frame-decision\s*>\s*\.primary-action:disabled\s*\{[^}]*background:\s*var\(--match-surface-control\);/u,
+      /\.modal-submit-button:disabled\s*\{[^}]*background:\s*var\(--match-surface-control\);/u,
     );
   });
 

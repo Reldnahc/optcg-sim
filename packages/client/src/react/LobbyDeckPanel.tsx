@@ -31,7 +31,7 @@ export const LobbyDeckPanel = ({
     loadouts[0]?.id ?? "",
   );
   const [hideIllegalLoadouts, setHideIllegalLoadouts] = useState(false);
-  const { selfDeckStatus, opponentDeckStatus } = lobbyDeckStatuses(lobbyState);
+  const { selfDeckStatus } = lobbyDeckStatuses(lobbyState);
   const visibleLoadouts = hideIllegalLoadouts
     ? loadouts.filter((loadout) =>
         loadout.validation?.status !== "playable" ? false : true,
@@ -47,6 +47,7 @@ export const LobbyDeckPanel = ({
   const selectedLoadoutPlayable =
     !requirePlayableValidation ||
     selectedLoadout?.validation?.status === "playable";
+  const submitLabel = pickerLocked ? "Waiting for opponent" : "Submit";
   const canSubmit =
     selectedLoadoutExists &&
     selectedLoadoutPlayable &&
@@ -132,23 +133,13 @@ export const LobbyDeckPanel = ({
             </button>
           </div>
           <button
-            className="deck-loadout-submit-button"
+            className="deck-loadout-submit-button modal-submit-button"
             type="submit"
             disabled={!canSubmit}
           >
-            Submit
+            {submitLabel}
           </button>
         </form>
-        <dl className="deck-status-list">
-          <div>
-            <dt>Your deck</dt>
-            <dd>{selfDeckStatus ?? "missing"}</dd>
-          </div>
-          <div>
-            <dt>Opponent deck</dt>
-            <dd>{opponentDeckStatus ?? "missing"}</dd>
-          </div>
-        </dl>
       </div>
     </ModalFrame>
   );
