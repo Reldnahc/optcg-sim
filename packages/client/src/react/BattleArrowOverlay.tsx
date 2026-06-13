@@ -14,8 +14,8 @@ export interface ArrowLine {
 }
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
-const labelCharacterWidth = 16;
 const labelInlinePadding = 32;
+const labelBlockPadding = 14;
 const labelMinimumWidth = 56;
 const labelHeight = 38;
 const leaderPowerLabelDefenderWeight = 0.72;
@@ -24,6 +24,11 @@ const minimumPowerLabelScale = 0.78;
 const maximumPowerLabelScale = 1.18;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
+
+interface BattlePowerLabelBox {
+  readonly width: number;
+  readonly height: number;
+}
 
 const battlePowerLabel = (
   attackPower: number | undefined,
@@ -70,6 +75,28 @@ export const battlePowerLabelScale = (boardWidth: number): number => {
   );
 };
 
+export const battlePowerLabelBox = (
+  textBounds: BattlePowerLabelBox | undefined,
+  scale: number,
+): BattlePowerLabelBox => {
+  if (textBounds === undefined) {
+    return {
+      width: labelMinimumWidth * scale,
+      height: labelHeight * scale,
+    };
+  }
+  return {
+    width: Math.max(
+      labelMinimumWidth * scale,
+      textBounds.width + labelInlinePadding * scale,
+    ),
+    height: Math.max(
+      labelHeight * scale,
+      textBounds.height + labelBlockPadding * scale,
+    ),
+  };
+};
+
 const cardElementForInstance = (
   board: HTMLElement,
   instanceId: string,
@@ -91,8 +118,10 @@ export const BattleArrowOverlay = ({
   battleArrow,
 }: BattleArrowOverlayProps): React.JSX.Element | null => {
   const overlayRef = useRef<SVGSVGElement | null>(null);
+  const powerTextRef = useRef<SVGTextElement | null>(null);
   const [line, setLine] = useState<ArrowLine>(emptyLine);
   const [boardWidth, setBoardWidth] = useState(0);
+  const [textBounds, setTextBounds] = useState<BattlePowerLabelBox>();
   const [powerLabelTarget, setPowerLabelTarget] =
     useState<BattlePowerLabelTarget>("fieldCard");
 
@@ -156,26 +185,33 @@ export const BattleArrowOverlay = ({
     };
   }, [battleArrow?.attackerInstanceId, battleArrow?.targetInstanceId]);
 
-  if (battleArrow === undefined) {
-    return null;
-  }
-
   const attackPowerLabel = battlePowerLabel(
-    battleArrow.attackPower,
-    battleArrow.defendPower,
+    battleArrow?.attackPower,
+    battleArrow?.defendPower,
   );
   const hasMeasuredLine = line.x1 !== line.x2 || line.y1 !== line.y2;
   const powerLabelPoint = battlePowerLabelPoint(line, powerLabelTarget);
   const powerLabelScale = battlePowerLabelScale(boardWidth);
-  const labelWidth =
-    attackPowerLabel === undefined
-      ? labelMinimumWidth
-      : Math.max(
-          labelMinimumWidth * powerLabelScale,
-          (attackPowerLabel.length * labelCharacterWidth + labelInlinePadding) *
-            powerLabelScale,
-        );
-  const scaledLabelHeight = labelHeight * powerLabelScale;
+  const labelBox = battlePowerLabelBox(textBounds, powerLabelScale);
+
+  useLayoutEffect(() => {
+    const text = powerTextRef.current;
+    if (attackPowerLabel === undefined || text === null || !hasMeasuredLine) {
+      setTextBounds(undefined);
+      return;
+    }
+    const bounds = text.getBBox();
+    setTextBounds((currentBounds) =>
+      currentBounds?.width === bounds.width &&
+      currentBounds.height === bounds.height
+        ? currentBounds
+        : { width: bounds.width, height: bounds.height },
+    );
+  }, [attackPowerLabel, hasMeasuredLine, powerLabelScale]);
+
+  if (battleArrow === undefined) {
+    return null;
+  }
 
   return (
     <svg
@@ -211,13 +247,17 @@ export const BattleArrowOverlay = ({
           transform={`translate(${String(powerLabelPoint.x)} ${String(powerLabelPoint.y)})`}
         >
           <rect
-            x={-labelWidth / 2}
-            y={-scaledLabelHeight / 2}
-            width={labelWidth}
-            height={scaledLabelHeight}
-            rx={scaledLabelHeight / 2}
+            x={-labelBox.width / 2}
+            y={-labelBox.height / 2}
+            width={labelBox.width}
+            height={labelBox.height}
+            rx={labelBox.height / 2}
           />
-          <text dominantBaseline="central" textAnchor="middle">
+          <text
+            ref={powerTextRef}
+            dominantBaseline="central"
+            textAnchor="middle"
+          >
             {attackPowerLabel}
           </text>
         </g>
