@@ -102,23 +102,77 @@ const normalizeLibraryDeck = (
   };
 };
 
-const normalizeLoadout = (value: Loadout): AccountLoadout => ({
-  id: value.id,
-  name: value.name,
-  folderId: null,
-  folderName: null,
-  favorite: false,
-  leaderCardId: value.leader_card_number,
-  leaderVariantIndex: value.leader_variant_index,
-  leaderImageUrl:
-    value.leader_card_number === null
-      ? null
-      : poneglyphCardStockImageUrl(
-          value.leader_card_number,
-          value.leader_variant_index,
-        ),
-  updatedAt: value.updated_at,
-});
+const objectRecord = (
+  value: unknown,
+  label: string,
+): Readonly<Record<string, unknown>> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(`${label} must be an object.`);
+  }
+  return value as Readonly<Record<string, unknown>>;
+};
+
+const requiredStringField = (
+  value: Readonly<Record<string, unknown>>,
+  field: string,
+): string => {
+  const fieldValue = value[field];
+  if (typeof fieldValue !== "string") {
+    throw new TypeError(`${field} must be a string.`);
+  }
+  return fieldValue;
+};
+
+const nullableStringField = (
+  value: Readonly<Record<string, unknown>>,
+  field: string,
+): string | null => {
+  const fieldValue = value[field];
+  if (fieldValue === null) {
+    return null;
+  }
+  if (typeof fieldValue !== "string") {
+    throw new TypeError(`${field} must be a string or null.`);
+  }
+  return fieldValue;
+};
+
+const nullableNumberField = (
+  value: Readonly<Record<string, unknown>>,
+  field: string,
+): number | null => {
+  const fieldValue = value[field];
+  if (fieldValue === null) {
+    return null;
+  }
+  if (typeof fieldValue !== "number") {
+    throw new TypeError(`${field} must be a number or null.`);
+  }
+  return fieldValue;
+};
+
+const normalizeLoadout = (value: Loadout): AccountLoadout => {
+  const record = objectRecord(value, "Loadout");
+  const leaderCardId = nullableStringField(record, "leader_card_number");
+  const leaderVariantIndex = nullableNumberField(
+    record,
+    "leader_variant_index",
+  );
+  return {
+    id: requiredStringField(record, "id"),
+    name: requiredStringField(record, "name"),
+    folderId: null,
+    folderName: null,
+    favorite: false,
+    leaderCardId,
+    leaderVariantIndex,
+    leaderImageUrl:
+      leaderCardId === null
+        ? null
+        : poneglyphCardStockImageUrl(leaderCardId, leaderVariantIndex),
+    updatedAt: requiredStringField(record, "updated_at"),
+  };
+};
 
 const poneglyphCardStockImageUrl = (
   cardId: string,
