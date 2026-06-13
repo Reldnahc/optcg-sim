@@ -59,6 +59,57 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
 });
 
 describe("local completed match record mapping", () => {
+  test("stores a compact replay payload instead of full match snapshots", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "22222222-2222-2222-2222-222222222222" as MatchId,
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    match.state.status = { type: "completed", winner: setup.playerOrder[0] };
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          deckSubmission: readySubmission("first-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          deckSubmission: readySubmission("second-hash", "OP05-060"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.playerOrder[0],
+      },
+      records: [],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+
+    const firstSetupPlayer = setup.players[0];
+    const secondSetupPlayer = setup.players[1];
+    expect(record).toBeDefined();
+    expect(record?.replay.initialSnapshot).toBeNull();
+    expect(record?.replay.finalState).toBeNull();
+    expect(record?.replay.initialDeckOrders).toEqual({
+      [setup.playerOrder[0]]: firstSetupPlayer.deckCardIds.map(String),
+      [setup.playerOrder[1]]: secondSetupPlayer.deckCardIds.map(String),
+    });
+
+    const persistedReplayBytes = Buffer.byteLength(
+      JSON.stringify(record?.replay),
+      "utf8",
+    );
+    expect(persistedReplayBytes).toBeLessThan(100_000);
+    expect(JSON.stringify(record?.replay.manifestSnapshot)).not.toContain(
+      "generated-dev-support",
+    );
+  });
+
   test("preserves verified account loadout snapshots for completed matches", async () => {
     const setup = await createPremadeDevMatchSetup({
       matchId: "11111111-1111-1111-1111-111111111111" as MatchId,
