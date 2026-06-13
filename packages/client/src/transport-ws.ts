@@ -111,30 +111,10 @@ export const createDevWebSocketMatchTransport = ({
     url.searchParams.set("playerId", String(playerId));
     url.searchParams.set("sessionToken", sessionToken);
 
-    const socket = new WebSocketImpl(url);
     const pending = new Map<string, PendingRequest>();
-    let opened = false;
-
-    const openPromise = new Promise<void>((resolve, reject) => {
-      socket.addEventListener(
-        "open",
-        () => {
-          opened = true;
-          resolve();
-        },
-        { once: true },
-      );
-      socket.addEventListener(
-        "error",
-        () => {
-          if (!opened) {
-            reject(new Error("Match WebSocket failed to open."));
-          }
-        },
-        { once: true },
-      );
-    });
-    void openPromise.catch(() => undefined);
+    let socket: WebSocket;
+    let openPromise: Promise<void>;
+    let intentionallyClosed = false;
 
     const rejectPending = (error: Error): void => {
       for (const request of pending.values()) {
@@ -143,7 +123,7 @@ export const createDevWebSocketMatchTransport = ({
       pending.clear();
     };
 
-    socket.addEventListener("message", (event) => {
+    const handleMessage = (event: MessageEvent): void => {
       let parsed: unknown;
       try {
         parsed = JSON.parse(String(event.data)) as unknown;
@@ -212,14 +192,68 @@ export const createDevWebSocketMatchTransport = ({
       if (isRecord(parsed) && parsed["type"] === "matchError") {
         onError(messageError(parsed));
       }
-    });
+    };
 
-    socket.addEventListener("close", () => {
-      rejectPending(new Error("Match WebSocket closed."));
-    });
-    socket.addEventListener("error", () => {
+    const handleError = (): void => {
       onError("Match WebSocket error.");
-    });
+    };
+
+    const connectSocket = (): void => {
+      let opened = false;
+      const nextSocket = new WebSocketImpl(url);
+      socket = nextSocket;
+      openPromise = new Promise<void>((resolve, reject) => {
+        nextSocket.addEventListener(
+          "open",
+          () => {
+            opened = true;
+            resolve();
+          },
+          { once: true },
+        );
+        nextSocket.addEventListener(
+          "error",
+          () => {
+            if (!opened) {
+              reject(new Error("Match WebSocket failed to open."));
+            }
+          },
+          { once: true },
+        );
+        nextSocket.addEventListener(
+          "close",
+          () => {
+            if (!opened) {
+              reject(new Error("Match WebSocket closed before opening."));
+            }
+          },
+          { once: true },
+        );
+      });
+      void openPromise.catch(() => undefined);
+      nextSocket.addEventListener("message", handleMessage);
+      nextSocket.addEventListener("close", () => {
+        if (nextSocket === socket) {
+          rejectPending(new Error("Match WebSocket closed."));
+        }
+      });
+      nextSocket.addEventListener("error", handleError);
+    };
+
+    connectSocket();
+
+    const ensureOpenSocket = async (): Promise<void> => {
+      if (intentionallyClosed) {
+        throw new Error("Match WebSocket closed.");
+      }
+      if (
+        socket.readyState === WebSocket.CLOSING ||
+        socket.readyState === WebSocket.CLOSED
+      ) {
+        connectSocket();
+      }
+      await openPromise;
+    };
 
     const sendRequest = async (
       payload: Record<string, unknown>,
@@ -229,7 +263,7 @@ export const createDevWebSocketMatchTransport = ({
         pending.set(clientActionId, { resolve, reject });
       });
       try {
-        await openPromise;
+        await ensureOpenSocket();
         socket.send(JSON.stringify(payload));
       } catch (error: unknown) {
         pending.delete(clientActionId);
@@ -240,7 +274,9 @@ export const createDevWebSocketMatchTransport = ({
 
     return {
       close() {
+        intentionallyClosed = true;
         socket.close();
+        rejectPending(new Error("Match WebSocket closed."));
       },
       submitVisibleAction(input) {
         const clientActionId = randomUUID();

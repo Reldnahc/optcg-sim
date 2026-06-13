@@ -44,6 +44,20 @@ const waitForSentPayload = async (socket: FakeWebSocket): Promise<string> => {
   throw new Error("Expected a sent WebSocket payload.");
 };
 
+const waitForSocket = async (
+  sockets: readonly FakeWebSocket[],
+  index: number,
+): Promise<FakeWebSocket> => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const socket = sockets[index];
+    if (socket !== undefined) {
+      return socket;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  throw new Error("Expected a WebSocket to be created.");
+};
+
 class FakeWebSocket extends EventTarget {
   public readonly sent: string[] = [];
   public readyState: number = WebSocket.CONNECTING;
@@ -200,6 +214,82 @@ describe("dev WebSocket match transport", () => {
       players: { ["p1" as PlayerId]: { cards: {} } },
     });
     assert.equal(receivedStates.length, 1);
+  });
+
+  test("reopens a closed match socket before sending the next action", async () => {
+    const recording = createRecordingWebSocket();
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      randomUUID: () => "client-action-1",
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onTimerSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
+      onRematchRequest() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const firstSocket = recording.sockets[0];
+    if (firstSocket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+    firstSocket.open();
+    firstSocket.close();
+
+    const resultPromise = connection.submitVisibleAction({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      actionIndex: 2,
+      expectedStateSeq: 7,
+    });
+
+    const secondSocket = await waitForSocket(recording.sockets, 1);
+    assert.equal(secondSocket.sent.length, 0);
+    secondSocket.open();
+    const sentPayload = await waitForSentPayload(secondSocket);
+    assert.deepEqual(JSON.parse(sentPayload) as unknown, {
+      type: "submitAction",
+      clientActionId: "client-action-1",
+      matchId: "match-1",
+      playerId: "p1",
+      actionIndex: 2,
+      expectedStateSeq: 7,
+      requestHash: expectedRequestHash({
+        actionIndex: 2,
+        expectedStateSeq: 7,
+        playerId: "p1",
+        type: "submitAction",
+      }),
+    });
+
+    secondSocket.receive({
+      type: "actionResult",
+      clientActionId: "client-action-1",
+      matchId: "match-1",
+      accepted: true,
+      stateSeq: 8,
+      actionSeq: 1,
+      errors: [],
+    });
+    secondSocket.receive({
+      type: "stateSync",
+      matchId: "match-1",
+      serverSeq: 3,
+      stateSeq: 8,
+      snapshot: { stateSeq: 8, players: {} },
+      cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
+    });
+
+    const result = await resultPromise;
+
+    assert.equal(result.snapshot.stateSeq, 8);
   });
 
   test("waits for a state sync at the accepted action state before resolving", async () => {
