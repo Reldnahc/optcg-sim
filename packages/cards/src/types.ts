@@ -71,6 +71,7 @@ export type PrimitiveEvidence =
   | "connector:ifPreviousNotSucceeded"
   | "connector:sentence"
   | "connector:andOrdered"
+  | "connector:commaBeforeLook"
   | "composition:conditionAnd"
   | "composition:conditionOr"
   | "composition:triggerAnyOf"

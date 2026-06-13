@@ -200,3 +200,72 @@ it("parses active DON movement followed by singular additional rested DON moveme
     ]),
   );
 });
+
+it("parses DON deck movement before a comma-led top-deck search", () => {
+  const result = parseCardEffectLine(
+    "[On K.O.] Add up to 1 DON!! card from your DON!! deck and rest it, look at 5 cards from the top of your deck; reveal up to 1 {Donquixote Pirates} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onKO" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "moveCards",
+              min: 0,
+              count: 1,
+              from: { player: "self", zone: "donDeck", position: "top" },
+              to: { player: "self", zone: "costArea" },
+              destinationState: "rested",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: { type: "revealTop", count: 5 },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "selectFromSet", max: 1 },
+                },
+                {
+                  connector: "ifPreviousSucceeded",
+                  effect: { type: "revealSelected" },
+                },
+                {
+                  connector: "ifPreviousSucceeded",
+                  effect: { type: "moveSelected", to: "hand" },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "placeSetRemainder", destination: "deck" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onKO",
+      "connector:commaBeforeLook",
+      "instruction:moveCards",
+      "zone:donDeck",
+      "state:rested",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "instruction:moveSelected",
+      "instruction:placeSetRemainder",
+    ]),
+  );
+});

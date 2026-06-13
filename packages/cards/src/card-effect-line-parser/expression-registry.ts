@@ -1,5 +1,6 @@
 import {
   parseAndConnector,
+  parseCommaBeforeLookConnector,
   parseSentenceConnector,
   parseThenConnector,
 } from "../connectors/index.js";
@@ -87,7 +88,12 @@ const singleInstructionExpressionParser = (input: ParseInput) => {
 
 function generalExpressionParser(input: ParseInput) {
   return parseExpression(input, {
-    connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
+    connectors: [
+      parseCommaBeforeLookConnector,
+      parseThenConnector,
+      parseSentenceConnector,
+      parseAndConnector,
+    ],
     segments: [
       optionalCostedEffectSegmentParser({
         instructions: instructionParsers,
@@ -115,6 +121,19 @@ function generalExpressionParser(input: ParseInput) {
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),
+      (segmentInput) => {
+        const parsed = searchRevealExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+          ...(parsed.presentationSpans === undefined
+            ? {}
+            : { presentationSpans: parsed.presentationSpans }),
+        };
+      },
       instructionExpressionSegmentParser({
         connectors: [parseAndConnector],
         instructions: instructionParsers,
