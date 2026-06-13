@@ -20,9 +20,15 @@ export const visibleCards = (
   }
   return [
     view.self.leader,
+    ...view.self.hand,
     ...view.self.characters,
+    ...view.self.costArea,
+    ...(view.self.stage === undefined ? [] : [view.self.stage]),
     view.opponent.leader,
+    ...(view.opponent.hand ?? []),
     ...view.opponent.characters,
+    ...view.opponent.costArea,
+    ...(view.opponent.stage === undefined ? [] : [view.opponent.stage]),
   ];
 };
 

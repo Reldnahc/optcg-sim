@@ -5,6 +5,7 @@ import {
   relatedCardsForAction,
 } from "./bot-context.js";
 import { chooseDefaultBotDecision } from "./bot-default-profile.js";
+import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import type {
   BotActionChoice,
   BotBehaviorProfile,
@@ -116,4 +117,4 @@ export const createBotStrategy = (
   },
 });
 
-export const defaultBotStrategy = createBotStrategy();
+export const defaultBotStrategy = createBotStrategy(redShanksBotProfile);

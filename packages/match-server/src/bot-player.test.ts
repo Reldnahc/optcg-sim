@@ -18,7 +18,9 @@ const snapshotWithActions = (
   actions: DevMatchSnapshot["players"][PlayerId]["actions"],
   cards: {
     readonly selfLeader?: Partial<PublicCardView>;
+    readonly selfHand?: readonly Partial<PublicCardView>[];
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
+    readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
     readonly opponentCharacters?: readonly Partial<PublicCardView>[];
   } = {},
@@ -50,7 +52,9 @@ const snapshotWithActions = (
               attachedDonIds: [],
               ...cards.selfLeader,
             },
+            hand: cards.selfHand ?? [],
             characters: cards.selfCharacters ?? [],
+            costArea: cards.selfCostArea ?? [],
           },
           opponent: {
             leader: {
@@ -64,12 +68,21 @@ const snapshotWithActions = (
               ...cards.opponentLeader,
             },
             characters: cards.opponentCharacters ?? [],
+            costArea: [],
           },
         },
         actions,
       },
     },
   }) as unknown as DevMatchSnapshot;
+
+const viewForBot = (snapshot: DevMatchSnapshot) => {
+  const player = snapshot.players[botId];
+  if (player === undefined) {
+    throw new Error("Expected bot player snapshot.");
+  }
+  return player.view;
+};
 
 describe("bot player", () => {
   test("keeps mulligans when a mulligan decision is available", () => {
@@ -112,6 +125,245 @@ describe("bot player", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("prioritizes OP16-012 over hard-casting Shanks when the cheat line is live", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play Shanks",
+            placement: { instanceId: "st23-shanks" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "playCard",
+            label: "Play Benn.Beckman",
+            placement: { instanceId: "op16-benn" as InstanceId },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "st23-shanks" as InstanceId,
+              cardId: "ST23-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+            {
+              instanceId: "op16-benn" as InstanceId,
+              cardId: "OP16-012" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCostArea: Array.from({ length: 10 }, (_, index) => ({
+            instanceId: `don-${String(index)}` as InstanceId,
+            cardId: "DON!!" as CardId,
+            zone: { playerId: botId, zone: "costArea" },
+          })),
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("chooses OP06-007 from the OP16-012 cheat when removal is live", () => {
+    const st23 = {
+      instanceId: "st23-shanks" as InstanceId,
+      cardId: "ST23-002" as CardId,
+      playerId: botId,
+    };
+    const op06 = {
+      instanceId: "op06-shanks" as InstanceId,
+      cardId: "OP06-007" as CardId,
+      playerId: botId,
+    };
+    const snapshot = snapshotWithActions([], {
+      opponentCharacters: [
+        {
+          instanceId: "opponent-character" as InstanceId,
+          currentPower: 8000,
+        },
+      ],
+    });
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:op16-cheat" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Play up to 1 Shanks.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "op16-benn" as InstanceId,
+        cardId: "OP16-012" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+      min: 1,
+      max: 1,
+      candidates: [{ card: st23 }, { card: op06 }],
+      choices: [
+        { card: st23, selectable: true },
+        { card: op06, selectable: true },
+      ],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:op16-cheat",
+      response: { type: "cards", cards: [op06] },
+    });
+  });
+
+  test("chooses OP16-012 from Red-Haired Pirates search results", () => {
+    const hongo = {
+      instanceId: "hongo" as InstanceId,
+      cardId: "OP09-011" as CardId,
+      playerId: botId,
+    };
+    const op16 = {
+      instanceId: "op16-benn" as InstanceId,
+      cardId: "OP16-012" as CardId,
+      playerId: botId,
+    };
+    const snapshot = snapshotWithActions([]);
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:search" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Reveal a Red-Haired Pirates card.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "searcher" as InstanceId,
+        cardId: "OP09-002" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+      min: 1,
+      max: 1,
+      candidates: [{ card: hongo }, { card: op16 }],
+      choices: [
+        { card: hongo, selectable: true },
+        { card: op16, selectable: true },
+      ],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:search",
+      response: { type: "cards", cards: [op16] },
+    });
+  });
+
+  test("activates OP09-001 leader power reduction when it changes battle math", () => {
+    const snapshot = snapshotWithActions([], {
+      selfLeader: {
+        cardId: "OP09-001" as CardId,
+        currentPower: 5000,
+      },
+      opponentLeader: { currentPower: 5000 },
+    });
+    viewForBot(snapshot).battle = {
+      attacker: {
+        instanceId: "opponent-leader" as InstanceId,
+        cardId: "OP01-002" as CardId,
+        playerId: "p1" as PlayerId,
+      },
+      originalTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      currentTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      step: "block",
+      damageCount: 1,
+    };
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:leader-defense" as DecisionId,
+      type: "chooseOptionalActivation",
+      playerId: botId,
+      prompt: "Activate leader effect?",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:leader-defense",
+      response: { type: "optionalActivation", choice: "activate" },
+    });
+  });
+
+  test("targets the current attacker with OP09-001 leader power reduction", () => {
+    const opponentCharacter = {
+      instanceId: "opponent-character" as InstanceId,
+      cardId: "OP01-003" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const opponentLeader = {
+      instanceId: "opponent-leader" as InstanceId,
+      cardId: "OP01-002" as CardId,
+      playerId: "p1" as PlayerId,
+    };
+    const snapshot = snapshotWithActions([], {
+      selfLeader: { cardId: "OP09-001" as CardId },
+    });
+    viewForBot(snapshot).battle = {
+      attacker: opponentLeader,
+      originalTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      currentTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      step: "block",
+      damageCount: 1,
+    };
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:leader-target" as DecisionId,
+      type: "selectTargets",
+      playerId: botId,
+      prompt: "Choose a target.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+      min: 1,
+      max: 1,
+      candidates: [{ card: opponentCharacter }, { card: opponentLeader }],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:leader-target",
+      response: { type: "targets", targets: [opponentLeader] },
+    });
   });
 
   test("allows a behavior profile to prefer attaching DON before playing cards", () => {
@@ -336,6 +588,51 @@ describe("bot player", () => {
               currentPower: 6000,
             },
           ],
+          opponentCharacters: [
+            {
+              instanceId: "opponent-character" as InstanceId,
+              currentPower: 5000,
+            },
+          ],
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("prefers attacking a character over leader when both attacks are live", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack character",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              currentPower: 6000,
+            },
+          ],
+          opponentLeader: { currentPower: 5000 },
           opponentCharacters: [
             {
               instanceId: "opponent-character" as InstanceId,
