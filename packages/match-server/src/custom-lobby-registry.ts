@@ -443,8 +443,6 @@ export const createCustomLobbyRegistry = async (
               firstPlayerChoice: {
                 source: "game-one-random-chooser",
                 chooserPlayerId: playerOrder[0],
-                choice: "goFirst",
-                resolvedFirstPlayerId: playerOrder[0],
               },
             }
           : lobby.firstPlayerChoice === undefined

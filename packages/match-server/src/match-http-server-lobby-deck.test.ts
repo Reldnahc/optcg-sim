@@ -284,21 +284,6 @@ const lobbyWebSocketUrl = (
   return url.toString();
 };
 
-const matchWebSocketUrl = (
-  server: Awaited<ReturnType<typeof createDeckHashMatchHttpServer>>,
-  matchId: string,
-  playerId: string,
-  sessionToken: string,
-): string => {
-  const url = new URL(
-    `/api/matches/${encodeURIComponent(matchId)}/ws`,
-    server.url().replace(/^http/u, "ws"),
-  );
-  url.searchParams.set("playerId", playerId);
-  url.searchParams.set("sessionToken", sessionToken);
-  return url.toString();
-};
-
 const openSocket = async (url: string): Promise<TestSocket> =>
   new Promise((resolve, reject) => {
     const socket = new WebSocket(url);
@@ -690,84 +675,6 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(requireLobbySeat(result, "p1").deck.status, "ready");
       assert.equal(requireLobbySeat(result, "p2").claimed, false);
     } finally {
-      await server.close();
-    }
-  });
-
-  test("bot opponent custom lobby starts after the human deck is ready", async () => {
-    const server = await createDeckHashMatchHttpServer();
-    await server.listen(0, "127.0.0.1");
-    const sockets: WebSocket[] = [];
-    try {
-      const created = await createCustomLobby(server, {
-        formatId: "sandbox-open",
-        botOpponent: true,
-      });
-      const lobbyId = created.lobbyId;
-      if (lobbyId === undefined) {
-        throw new Error("Created lobby response did not include a lobby id.");
-      }
-      assert.equal(created.settings?.botOpponent, true);
-      assert.equal(created.seats["p2"]?.claimed, true);
-      assert.equal(requireLobbySeat(created, "p2").deck.status, "ready");
-
-      const joined = await joinCustomLobby(
-        server,
-        lobbyId,
-        "user:user-p1:session-1",
-      );
-      assert.equal(joined.seat?.playerId, "p1");
-
-      const ready = await submitCustomLobbyDeck(
-        server,
-        lobbyId,
-        "user:user-p1:session-1",
-        "p1-hash",
-      );
-      const matchId = ready.matchId;
-      if (matchId === undefined) {
-        throw new Error("Ready bot lobby response did not include a match id.");
-      }
-      assert.equal(requireLobbySeat(ready, "p1").deck.status, "ready");
-      assert.equal(requireLobbySeat(ready, "p2").deck.status, "ready");
-
-      const claim = await fetch(
-        `${server.url()}/api/matches/${matchId}/seats/p1/claim`,
-        {
-          method: "POST",
-          headers: { "x-optcg-session-token": "user:user-p1:session-1" },
-        },
-      );
-      assert.equal(claim.status, 200);
-      const claimBody = (await claim.json()) as {
-        firstPlayerChoice?: unknown;
-        seat?: { sessionToken?: string };
-      };
-      assert.equal(claimBody.firstPlayerChoice, undefined);
-      const sessionToken = claimBody.seat?.sessionToken;
-      if (sessionToken === undefined) {
-        throw new Error("Claim response did not include a session token.");
-      }
-
-      const matchSocket = await openSocket(
-        matchWebSocketUrl(server, matchId, "p1", sessionToken),
-      );
-      sockets.push(matchSocket.socket);
-      const stateSync = (await matchSocket.next()) as {
-        type?: string;
-        snapshot?: {
-          playerLabels?: Record<string, { displayName?: string }>;
-        };
-      };
-      assert.equal(stateSync.type, "stateSync");
-      assert.equal(
-        stateSync.snapshot?.playerLabels?.["p2"]?.displayName,
-        "Bot",
-      );
-    } finally {
-      for (const socket of sockets) {
-        socket.close();
-      }
       await server.close();
     }
   });

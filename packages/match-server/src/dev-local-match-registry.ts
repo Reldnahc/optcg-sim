@@ -1,6 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import type { MatchId, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  MatchId,
+  PendingDecision,
+  PlayerId,
+  TimerState,
+} from "@optcg/types";
 
 import {
   buildLocalCompletedMatchRecord,
@@ -80,6 +86,7 @@ interface ActiveLocalDevMatchSession {
 
 interface PendingFirstPlayerLocalDevMatchSession {
   status: "choosingFirstPlayer";
+  match: LocalDevMatch;
   setup: LocalDevMatchSetup;
   seats: Record<string, LocalDevMatchSeat>;
   firstPlayerChoice: FirstPlayerChoiceState;
@@ -222,6 +229,41 @@ const resolvedFirstPlayerId = (
   );
 };
 
+const firstPlayerSetupDecision = (
+  firstPlayerChoice: FirstPlayerChoiceState,
+): PendingDecision => ({
+  id: `decision:first-player-choice:${String(
+    firstPlayerChoice.chooserPlayerId,
+  )}` as DecisionId,
+  type: "chooseQuantity",
+  playerId: firstPlayerChoice.chooserPlayerId,
+  prompt: "Choose first player.",
+  causedBy: { type: "ruleProcess", name: "firstPlayerChoice" },
+  visibility: { type: "public" },
+  mode: "exact",
+  min: 1,
+  max: 1,
+});
+
+const pausedTimerState = (timers: TimerState): TimerState => ({
+  players: Object.fromEntries(
+    Object.entries(timers.players).map(([playerId, timer]) => [
+      playerId,
+      { ...timer, isRunning: false },
+    ]),
+  ),
+  ...(timers.disconnects === undefined
+    ? {}
+    : {
+        disconnects: Object.fromEntries(
+          Object.entries(timers.disconnects).map(([playerId, timer]) => [
+            playerId,
+            { ...timer, isRunning: false },
+          ]),
+        ),
+      }),
+});
+
 const createActiveLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
   sessionService: MatchSessionService,
@@ -229,10 +271,14 @@ const createActiveLocalDevMatchSession = (
   firstPlayerChoice?: FirstPlayerChoiceState,
   timersEnabled = true,
   botPlayerIds: ReadonlySet<PlayerId> = new Set(),
+  initialTimers?: TimerState,
 ): ActiveLocalDevMatchSession => {
   const match = createLocalDevMatch(setup);
   if (timersEnabled) {
     initializeLocalDevMatchTimers(match, matchTimerPolicy);
+    if (initialTimers !== undefined) {
+      match.state = { ...match.state, timers: pausedTimerState(initialTimers) };
+    }
   } else {
     match.state = { ...match.state, timers: { players: {} } };
   }
@@ -261,18 +307,33 @@ const createActiveLocalDevMatchSession = (
 
 const createPendingLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
+  matchTimerPolicy: MatchTimerPolicy,
   firstPlayerChoice?: FirstPlayerChoiceState,
   seats?: Record<string, LocalDevMatchSeat>,
   timersEnabled = true,
   botPlayerIds: ReadonlySet<PlayerId> = new Set(),
-): PendingFirstPlayerLocalDevMatchSession => ({
-  status: "choosingFirstPlayer",
-  setup,
-  seats: seats ?? createLocalSeats(setup),
-  firstPlayerChoice: pendingFirstPlayerChoice(setup, firstPlayerChoice),
-  timersEnabled,
-  botPlayerIds,
-});
+): PendingFirstPlayerLocalDevMatchSession => {
+  const pendingChoice = pendingFirstPlayerChoice(setup, firstPlayerChoice);
+  const match = createLocalDevMatch(setup);
+  if (timersEnabled) {
+    initializeLocalDevMatchTimers(match, matchTimerPolicy);
+  } else {
+    match.state = { ...match.state, timers: { players: {} } };
+  }
+  match.state = {
+    ...match.state,
+    pendingDecision: firstPlayerSetupDecision(pendingChoice),
+  };
+  return {
+    status: "choosingFirstPlayer",
+    match,
+    setup,
+    seats: seats ?? createLocalSeats(setup),
+    firstPlayerChoice: pendingChoice,
+    timersEnabled,
+    botPlayerIds,
+  };
+};
 
 const createdSeatResponse = (
   seats: Record<string, LocalDevMatchSeat>,
@@ -523,6 +584,7 @@ export const createLocalDevMatchRegistry = async (
         options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
           ? createPendingLocalDevMatchSession(
               actualSetup,
+              matchTimerPolicy,
               options?.firstPlayerChoice,
               options?.seats,
               options?.timersEnabled,
@@ -601,7 +663,11 @@ export const createLocalDevMatchRegistry = async (
       if (session === undefined) {
         return "matchNotFound";
       }
-      if (session.status === "active") {
+      if (
+        session.status === "active" ||
+        session.match.state.status.type === "completed" ||
+        session.match.state.status.type === "gameOver"
+      ) {
         return "alreadyStarted";
       }
       if (playerId !== session.firstPlayerChoice.chooserPlayerId) {
@@ -629,6 +695,7 @@ export const createLocalDevMatchRegistry = async (
           resolvedChoice,
           session.timersEnabled,
           session.botPlayerIds,
+          session.match.state.timers,
         ),
         seats: session.seats,
       };
@@ -736,13 +803,28 @@ export const createLocalDevMatchRegistry = async (
     },
     getMatch(matchId) {
       const session = sessions.get(matchId);
-      return session?.status === "active" ? session.match : undefined;
+      if (session === undefined) {
+        return undefined;
+      }
+      if (session.status === "active") {
+        return session.match;
+      }
+      return session.match.state.status.type === "completed" ||
+        session.match.state.status.type === "gameOver"
+        ? session.match
+        : undefined;
     },
     getFirstPlayerChoice(matchId) {
       const session = sessions.get(matchId);
-      return session === undefined
-        ? undefined
-        : firstPlayerChoiceResponse(session.firstPlayerChoice);
+      if (
+        session === undefined ||
+        session.status === "active" ||
+        session.match.state.status.type === "completed" ||
+        session.match.state.status.type === "gameOver"
+      ) {
+        return undefined;
+      }
+      return firstPlayerChoiceResponse(session.firstPlayerChoice);
     },
     async applyEnvelope(envelope) {
       const session = sessions.get(envelope.matchId);
@@ -773,7 +855,6 @@ export const createLocalDevMatchRegistry = async (
       const changedMatches: TimerAdvanceBroadcast[] = [];
       for (const [matchId, session] of sessions) {
         if (
-          session.status !== "active" ||
           !session.timersEnabled ||
           (allowedMatchIds !== undefined && !allowedMatchIds.has(matchId))
         ) {

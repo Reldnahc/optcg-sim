@@ -10,12 +10,18 @@ import {
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
 import type { DevMatchSetup } from "./local-match.js";
+import type { MatchTimerPolicy } from "./match-timers.js";
 import type {
   ClientActionEnvelope,
   SessionActionRequest,
 } from "./session-types.js";
 
 let premadeSetup: DevMatchSetup;
+
+const shortTimerPolicy: MatchTimerPolicy = {
+  gameTimeMs: 1_000,
+  disconnectGraceMs: 120_000,
+};
 
 beforeAll(async () => {
   premadeSetup = await createFixtureDevMatchSetup();
@@ -118,4 +124,78 @@ test("accepted registry actions include snapshots for replay frames", async () =
     assert.equal(result.accepted, true);
     assert.ok(result.snapshot?.players[playerId] !== undefined);
   }
+});
+
+test("first-player choice drains the chooser game timer before the engine starts", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { createDefaultMatch: false, matchTimerPolicy: shortTimerPolicy },
+  );
+  const matchId = "timed-first-player-choice" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const chooser = created.firstPlayerChoice.chooserPlayerId;
+
+  assert.deepEqual(
+    registry.advanceTimers({
+      elapsedMs: 250,
+      connectedPlayerIds: () =>
+        new Set([premadeSetup.playerOrder[0], premadeSetup.playerOrder[1]]),
+      matchIds: [matchId],
+    }),
+    [{ matchId, sync: "timers" }],
+  );
+
+  const ready = registry.chooseFirstPlayer(matchId, chooser, "goFirst");
+  if (typeof ready === "string") {
+    throw new Error(`Unable to start match: ${ready}`);
+  }
+  if (ready.snapshot === undefined) {
+    throw new Error("Unable to start match without a snapshot.");
+  }
+  assert.equal(
+    ready.snapshot.players[chooser]?.view.timers.players[chooser]?.remainingMs,
+    750,
+  );
+});
+
+test("first-player choice timeout concedes the chooser", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { createDefaultMatch: false, matchTimerPolicy: shortTimerPolicy },
+  );
+  const matchId = "expired-first-player-choice" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const chooser = created.firstPlayerChoice.chooserPlayerId;
+  const opponent = premadeSetup.playerOrder.find(
+    (playerId) => playerId !== chooser,
+  );
+  if (opponent === undefined) {
+    throw new Error("Expected opponent player id.");
+  }
+
+  assert.deepEqual(
+    registry.advanceTimers({
+      elapsedMs: 1_000,
+      connectedPlayerIds: () =>
+        new Set([premadeSetup.playerOrder[0], premadeSetup.playerOrder[1]]),
+      matchIds: [matchId],
+    }),
+    [{ matchId, sync: "state" }],
+  );
+  const ready = registry.chooseFirstPlayer(matchId, chooser, "goFirst");
+
+  assert.equal(ready, "alreadyStarted");
+  const match = registry.getMatch(matchId);
+  assert.deepEqual(match?.state.status, {
+    type: "completed",
+    winner: opponent,
+  });
 });
