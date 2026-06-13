@@ -263,6 +263,23 @@ describe("field target parsers", () => {
     });
   });
 
+  it("parses typed own Leader target and leaves modifier text", () => {
+    expect(
+      parseYourLeaderTarget({
+        text: "your {Supernovas} type Leader gains +1000 power until the end of your opponent's next turn.",
+      }),
+    ).toEqual({
+      target: {
+        type: "all",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], typesAny: ["Supernovas"] },
+      },
+      evidence: ["target:yourLeader", "filter:type", "filter:category:leader"],
+      rest: "gains +1000 power until the end of your opponent's next turn.",
+    });
+  });
+
   it("parses your named field cards target and leaves modifier text", () => {
     expect(
       parseYourNamedCardsTarget({

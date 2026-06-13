@@ -12,6 +12,22 @@ import type { FieldTargetParseResult } from "./types.js";
 export function parseYourLeaderTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
+  const typedMatch =
+    /^your \{(?<type>[^}]+)\} type Leader\b\s*(?<rest>.*)$/i.exec(input.text);
+  const type = typedMatch?.groups?.["type"]?.trim();
+  if (type !== undefined && type.length > 0) {
+    return {
+      target: {
+        type: "all",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], typesAny: [type] },
+      },
+      evidence: ["target:yourLeader", "filter:type", "filter:category:leader"],
+      rest: typedMatch?.groups?.["rest"]?.trim() ?? "",
+    };
+  }
+
   const namedMatch = /^your \[(?<name>[^\]]+)\] Leader\b\s*(?<rest>.*)$/i.exec(
     input.text,
   );
