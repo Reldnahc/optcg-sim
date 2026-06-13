@@ -164,6 +164,7 @@ export interface CustomLobby {
 export interface CustomLobbySettings {
   formatId: string;
   timerDisabled?: boolean;
+  botOpponent?: boolean;
 }
 
 export interface CreateCustomLobbyInput {

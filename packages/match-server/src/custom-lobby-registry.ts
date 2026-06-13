@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { createRedisCardDataCache, type CardDataCache } from "@optcg/cards";
-import type { MatchId, PlayerId } from "@optcg/types";
+import type { CardId, MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDevMatchSetupFromDeckSubmissions,
@@ -194,6 +194,7 @@ const createLobbySettings = (
 ): CustomLobbySettings => ({
   formatId: settings?.formatId ?? defaultDevDeckFormatId,
   ...(settings?.timerDisabled === true ? { timerDisabled: true } : {}),
+  ...(settings?.botOpponent === true ? { botOpponent: true } : {}),
 });
 
 const lobbySettings = (lobby: CustomLobbyState): CustomLobbySettings =>
@@ -216,6 +217,24 @@ const lobbyResponse = (
     ]),
   ),
   ...(lobby.matchId === undefined ? {} : { matchId: lobby.matchId }),
+});
+
+const botSubject = {
+  type: "user" as const,
+  userId: "bot",
+  sessionId: "bot",
+  displayName: "Bot",
+};
+
+const botDeckSubmission = (): ReadyDeckSubmission => ({
+  source: "deckHash",
+  hash: "bot-default",
+  status: "ready",
+  decoded: {
+    leader: { cardId: "OP13-079" as CardId, count: 1 },
+    main: [{ cardId: "OP13-080" as CardId, count: 50 }],
+  },
+  donDeckCount: 10,
 });
 
 const createLobbyStore = async (
@@ -419,11 +438,23 @@ export const createCustomLobbyRegistry = async (
             }),
       }),
       {
-        ...(lobby.firstPlayerChoice === undefined
-          ? {}
-          : { firstPlayerChoice: lobby.firstPlayerChoice }),
+        ...(lobbySettings(lobby).botOpponent === true
+          ? {
+              firstPlayerChoice: {
+                source: "game-one-random-chooser",
+                chooserPlayerId: playerOrder[0],
+                choice: "goFirst",
+                resolvedFirstPlayerId: playerOrder[0],
+              },
+            }
+          : lobby.firstPlayerChoice === undefined
+            ? {}
+            : { firstPlayerChoice: lobby.firstPlayerChoice }),
         seats: matchSeatsWithMatchId(lobby.seats, matchId),
         timersEnabled: lobbySettings(lobby).timerDisabled !== true,
+        ...(lobbySettings(lobby).botOpponent === true
+          ? { botPlayerIds: [playerOrder[1]] }
+          : {}),
       },
     );
     lobby.matchId = created.matchId;
@@ -464,11 +495,20 @@ export const createCustomLobbyRegistry = async (
     async createLobby(settings) {
       const lobbyId = lobbyStore.createLobbyId();
       const joinCode = await lobbyStore.createLobbyJoinCode(lobbyId);
+      const createdSettings = createLobbySettings(settings);
+      const seats = createDefaultLobbySeats();
+      if (createdSettings.botOpponent === true) {
+        const botSeat = seats["p2"];
+        if (botSeat !== undefined) {
+          botSeat.subject = botSubject;
+          botSeat.deckSubmission = botDeckSubmission();
+        }
+      }
       const lobby: CustomLobbyState = {
         lobbyId,
         joinCode,
-        settings: createLobbySettings(settings),
-        seats: createDefaultLobbySeats(),
+        settings: createdSettings,
+        seats,
       };
       return lobbyResponse(await lobbyStore.createLobby(lobby));
     },

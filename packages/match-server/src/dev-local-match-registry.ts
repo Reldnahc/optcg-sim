@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
@@ -37,6 +37,8 @@ import type {
   SessionActionResult,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
+import { chooseBotAction } from "./bot-player.js";
+import { requestHash } from "./action-envelope.js";
 
 type LocalDevMatchSetup = Parameters<typeof createLocalDevMatch>[0];
 
@@ -73,6 +75,7 @@ interface ActiveLocalDevMatchSession {
   setup: LocalDevMatchSetup;
   firstPlayerChoice: FirstPlayerChoiceState;
   timersEnabled: boolean;
+  botPlayerIds: ReadonlySet<PlayerId>;
 }
 
 interface PendingFirstPlayerLocalDevMatchSession {
@@ -81,6 +84,7 @@ interface PendingFirstPlayerLocalDevMatchSession {
   seats: Record<string, LocalDevMatchSeat>;
   firstPlayerChoice: FirstPlayerChoiceState;
   timersEnabled: boolean;
+  botPlayerIds: ReadonlySet<PlayerId>;
 }
 
 type LocalDevMatchSession =
@@ -94,6 +98,7 @@ export interface LocalDevMatchRegistry {
       firstPlayerChoice?: FirstPlayerChoiceState;
       seats?: Record<string, LocalDevMatchSeat>;
       timersEnabled?: boolean;
+      botPlayerIds?: readonly PlayerId[];
     },
   ) => Promise<CreatedDevMatchResponse>;
   createRematchSeed: (
@@ -223,6 +228,7 @@ const createActiveLocalDevMatchSession = (
   matchTimerPolicy: MatchTimerPolicy,
   firstPlayerChoice?: FirstPlayerChoiceState,
   timersEnabled = true,
+  botPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): ActiveLocalDevMatchSession => {
   const match = createLocalDevMatch(setup);
   if (timersEnabled) {
@@ -249,6 +255,7 @@ const createActiveLocalDevMatchSession = (
     seats: createLocalSeats(setup),
     firstPlayerChoice: resolvedChoice,
     timersEnabled,
+    botPlayerIds,
   };
 };
 
@@ -257,12 +264,14 @@ const createPendingLocalDevMatchSession = (
   firstPlayerChoice?: FirstPlayerChoiceState,
   seats?: Record<string, LocalDevMatchSeat>,
   timersEnabled = true,
+  botPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): PendingFirstPlayerLocalDevMatchSession => ({
   status: "choosingFirstPlayer",
   setup,
   seats: seats ?? createLocalSeats(setup),
   firstPlayerChoice: pendingFirstPlayerChoice(setup, firstPlayerChoice),
   timersEnabled,
+  botPlayerIds,
 });
 
 const createdSeatResponse = (
@@ -460,6 +469,47 @@ export const createLocalDevMatchRegistry = async (
     completedPersistedMatchIds.add(session.match.state.matchId);
   };
 
+  const runBotActions = async (
+    session: ActiveLocalDevMatchSession,
+  ): Promise<void> => {
+    if (session.botPlayerIds.size === 0) {
+      return;
+    }
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      let acceptedAction = false;
+      for (const botPlayerId of session.botPlayerIds) {
+        const snapshot = getLocalDevSnapshot(session.match);
+        const choice = chooseBotAction(snapshot, botPlayerId);
+        if (choice === undefined) {
+          continue;
+        }
+        const request = {
+          type: "submitAction" as const,
+          playerId: botPlayerId,
+          actionIndex: choice.actionIndex,
+          expectedStateSeq: snapshot.stateSeq,
+        };
+        const result = sessionService.applyEnvelope({
+          protocolVersion: "dev",
+          matchId: session.match.state.matchId,
+          playerId: botPlayerId,
+          clientActionId: `bot:${randomUUID()}`,
+          expectedStateSeq: snapshot.stateSeq,
+          requestHash: requestHash(request),
+          request,
+        });
+        if (!result.accepted) {
+          continue;
+        }
+        acceptedAction = true;
+        await persistCompletedMatchIfNeeded(session);
+      }
+      if (!acceptedAction) {
+        return;
+      }
+    }
+  };
+
   return {
     defaultMatchId,
     async createMatch(setup, options) {
@@ -468,13 +518,36 @@ export const createLocalDevMatchRegistry = async (
         (await createTemplateSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
-      const session = createPendingLocalDevMatchSession(
-        actualSetup,
-        options?.firstPlayerChoice,
-        options?.seats,
-        options?.timersEnabled,
-      );
+      const botPlayerIds = new Set(options?.botPlayerIds ?? []);
+      const session =
+        options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
+          ? createPendingLocalDevMatchSession(
+              actualSetup,
+              options?.firstPlayerChoice,
+              options?.seats,
+              options?.timersEnabled,
+              botPlayerIds,
+            )
+          : {
+              ...createActiveLocalDevMatchSession(
+                {
+                  ...actualSetup,
+                  firstPlayerId:
+                    options.firstPlayerChoice.resolvedFirstPlayerId,
+                },
+                sessionService,
+                matchTimerPolicy,
+                options.firstPlayerChoice,
+                options.timersEnabled,
+                botPlayerIds,
+              ),
+              ...(options.seats === undefined ? {} : { seats: options.seats }),
+            };
       sessions.set(actualSetup.matchId, session);
+      if (session.status === "active") {
+        syncActiveSessionPlayerLabels(session);
+        await runBotActions(session);
+      }
       return buildCreatedResponse(actualSetup, session);
     },
     createRematchSeed(sourceMatchId, playerId, auth) {
@@ -555,11 +628,13 @@ export const createLocalDevMatchRegistry = async (
           matchTimerPolicy,
           resolvedChoice,
           session.timersEnabled,
+          session.botPlayerIds,
         ),
         seats: session.seats,
       };
       syncActiveSessionPlayerLabels(sessionWithSeats);
       sessions.set(matchId, sessionWithSeats);
+      void runBotActions(sessionWithSeats);
       return buildCreatedResponse(resolvedSetup, sessionWithSeats);
     },
     claimSeat(matchId, playerId, auth) {
@@ -688,6 +763,7 @@ export const createLocalDevMatchRegistry = async (
       const result = sessionService.applyEnvelope(envelope);
       if (result.accepted) {
         await persistCompletedMatchIfNeeded(session);
+        await runBotActions(session);
       }
       return result;
     },

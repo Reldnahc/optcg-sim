@@ -4,6 +4,7 @@ import type {
 } from "../controller.js";
 import {
   lobbyFormatIdFromUrl,
+  lobbyBotOpponentFromUrl,
   lobbyJoinCodeFromPath,
   lobbyIdFromPath,
   lobbyTimerDisabledFromUrl,
@@ -37,13 +38,15 @@ export const loadInitialMatchClientState = async (
   }
   const lobbyFormatId = lobbyFormatIdFromUrl();
   const timerDisabled = lobbyTimerDisabledFromUrl();
+  const botOpponent = lobbyBotOpponentFromUrl();
   return await controller.startCustomLobby(
-    lobbyFormatId === undefined && !timerDisabled
+    lobbyFormatId === undefined && !timerDisabled && !botOpponent
       ? undefined
       : {
           settings: {
             formatId: lobbyFormatId ?? "sandbox-open",
             ...(timerDisabled ? { timerDisabled: true } : {}),
+            ...(botOpponent ? { botOpponent: true } : {}),
           },
         },
   );

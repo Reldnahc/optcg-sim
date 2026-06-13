@@ -28,6 +28,9 @@ const parseCreateLobbySettings = (
     ...(requestBody.settings["timerDisabled"] === true
       ? { timerDisabled: true }
       : {}),
+    ...(requestBody.settings["botOpponent"] === true
+      ? { botOpponent: true }
+      : {}),
   };
 };
 

@@ -16,18 +16,21 @@ test("private lobby creation can disable the match timer", () => {
       loadoutsStatus: "idle",
       selectedLoadoutId: "",
       privateLobbyTimerDisabled: true,
+      privateLobbyBotOpponent: true,
       onSelectMode: () => undefined,
       onSelectFormat: () => undefined,
       onSelectLoadout: () => undefined,
       onRefreshLoadouts: () => undefined,
       onSetPrivateLobbyTimerDisabled: () => undefined,
+      onSetPrivateLobbyBotOpponent: () => undefined,
     }),
   );
 
   assert.match(html, /type="checkbox"[^>]*checked=""/u);
   assert.equal(html.includes("Disable timer"), true);
+  assert.equal(html.includes("Play against bot"), true);
   assert.match(
     html,
-    /href="\/match\?lobbyFormat=sandbox-open&amp;timerDisabled=1"/u,
+    /href="\/match\?lobbyFormat=sandbox-open&amp;timerDisabled=1&amp;botOpponent=1"/u,
   );
 });
