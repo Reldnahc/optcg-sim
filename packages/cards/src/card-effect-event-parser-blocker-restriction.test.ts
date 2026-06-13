@@ -166,6 +166,91 @@ describe("card effect event parser blocker restrictions", () => {
     );
   });
 
+  it("parses Main Event named selected attacker Blocker activation restriction through the same saved-target flow", () => {
+    const result = parseCardEffectLine(
+      "[Main] Select up to 1 of your [Trafalgar Law] cards and that card gains +2000 power during this turn. Then, if the selected card attacks during this turn, your opponent cannot activate [Blocker].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "selected:blocker-restricted-attacker",
+              effect: {
+                type: "selectTargets",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  player: "self",
+                  zones: ["leaderArea", "characterArea"],
+                  min: 0,
+                  max: 1,
+                  allowFewerIfUnavailable: true,
+                  visibility: "public",
+                  filter: {
+                    names: ["Trafalgar Law"],
+                  },
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "selectedTargets",
+                    saveResultAs: "selected:blocker-restricted-attacker",
+                  },
+                  zones: ["leaderArea", "characterArea"],
+                  player: "self",
+                },
+                value: 2000,
+                duration: { type: "thisTurn" },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "preventBlockerActivation",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "selectedTargets",
+                    saveResultAs: "selected:blocker-restricted-attacker",
+                  },
+                  zones: ["leaderArea", "characterArea"],
+                  player: "self",
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "composition:selectThenApply",
+        "target:yourNamedCards",
+        "filter:name",
+        "instruction:modifyPower",
+        "modifier:positivePower",
+        "duration:thisTurn",
+        "instruction:preventBlockerActivation",
+        "activation:blocker",
+      ]),
+    );
+  });
+
   it("parses costed Main Event Leader attack Blocker restriction behind Life condition", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 1 of your DON!! cards: If you have 1 or less Life cards, your opponent cannot activate [Blocker] whenever your Leader attacks during this turn.",

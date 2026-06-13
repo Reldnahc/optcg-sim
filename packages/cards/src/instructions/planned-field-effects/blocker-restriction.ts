@@ -1,4 +1,10 @@
-import type { CardCategory, Duration, Zone } from "@optcg/types";
+import type {
+  Duration,
+  SavedFieldObjectZone,
+  SelectTargetsEffect,
+  Target,
+  Zone,
+} from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
@@ -8,13 +14,18 @@ import {
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import { sourceSpan } from "../../source-slices.js";
-import { parseOpponentCharactersTarget } from "../../targets/index.js";
+import {
+  parseOpponentCharactersTarget,
+  parseTargetFromSet,
+  selectedPowerGainTargetParsers,
+} from "../../targets/index.js";
 import type {
   InstructionParseResult,
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
 } from "../../types.js";
+import { withCardinality } from "../modify-power/shared.js";
 import {
   thatCharacterSavedTarget,
   thatCharacterSelectionId,
@@ -267,12 +278,11 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
   if (cardinality === undefined) {
     return undefined;
   }
-  const targetMatch =
-    /^of your \{(?<type>[^}]+)\} type Leader or Character cards?\s*$/iu.exec(
-      cardinality.rest,
-    );
-  const typeName = targetMatch?.groups?.["type"]?.trim();
-  if (typeName === undefined || typeName.length === 0) {
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    selectedPowerGainTargetParsers(),
+  );
+  if (target?.target === undefined || target.rest.trim().length > 0) {
     return undefined;
   }
 
@@ -298,8 +308,14 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
     return undefined;
   }
   const parsedDuration: Duration = duration.duration;
-  const targetZones: Zone[] = ["leaderArea", "characterArea"];
-  const targetCategories: CardCategory[] = ["leader", "character"];
+  const selectionTarget = withCardinality(
+    target.target,
+    cardinality.cardinality,
+  );
+  const selectionRequest = publicFieldSelectionRequest(selectionTarget);
+  if (selectionRequest === undefined) {
+    return undefined;
+  }
 
   const selectSegment = {
     id: "select:blocker-restricted-attacker",
@@ -307,20 +323,7 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
     saveResultAs: selectedBlockerRestrictedAttackerId,
     effect: {
       type: "selectTargets" as const,
-      request: {
-        timing: "onResolution" as const,
-        chooser: "self" as const,
-        player: "self" as const,
-        zones: targetZones,
-        min: cardinality.cardinality.min,
-        max: cardinality.cardinality.max,
-        allowFewerIfUnavailable: true,
-        visibility: "public" as const,
-        filter: {
-          categories: targetCategories,
-          typesAny: [typeName],
-        },
-      },
+      request: selectionRequest,
     },
   };
 
@@ -340,11 +343,8 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
     "composition:selectThenApply",
     ...cardinality.evidence,
     "chooser:self:upTo",
-    "target:yourLeaderOrCharacters",
     "player:self",
-    "filter:type",
-    "filter:category:leader",
-    "filter:category:character",
+    ...target.evidence,
     "instruction:modifyPower",
     ...modifier.evidence,
     ...duration.evidence,
@@ -379,3 +379,42 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
         }),
   };
 };
+
+function publicFieldSelectionRequest(
+  target: Target,
+): SelectTargetsEffect["request"] | undefined {
+  if (target.type === "choose") {
+    if (
+      !isSavedFieldObjectZone(target.request.zone) ||
+      target.request.visibility !== "public"
+    ) {
+      return undefined;
+    }
+    return {
+      ...target.request,
+      zone: target.request.zone,
+      visibility: "public",
+    };
+  }
+
+  if (target.type === "chooseFromZones") {
+    if (
+      target.request.visibility !== "public" ||
+      target.request.zones.some((zone) => !isSavedFieldObjectZone(zone))
+    ) {
+      return undefined;
+    }
+    return target.request;
+  }
+
+  return undefined;
+}
+
+function isSavedFieldObjectZone(zone: Zone): zone is SavedFieldObjectZone {
+  return (
+    zone === "leaderArea" ||
+    zone === "characterArea" ||
+    zone === "stageArea" ||
+    zone === "costArea"
+  );
+}
