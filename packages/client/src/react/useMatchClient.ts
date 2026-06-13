@@ -245,6 +245,8 @@ export const useMatchClient = ({
           setAccountLoadoutsStatus("ready");
           return;
         }
+        setAccountLoadouts(uncheckedLocalLoadouts(loadouts));
+        setAccountLoadoutsStatus("ready");
         const validated =
           loadouts.length === 0
             ? []
