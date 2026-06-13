@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   createPostgresCompletedMatchRepository,
+  createPostgresCompletedMatchReplayRepository,
   type CompletedMatchRecord,
 } from "./postgres-completed-match.js";
 import type { MatchId, PlayerId } from "@optcg/types";
@@ -196,5 +197,122 @@ describe("Postgres completed match repository", () => {
         schema: "sim; drop schema auth",
       }),
     ).toThrow(/Invalid completed match schema name/u);
+  });
+});
+
+describe("Postgres completed match replay repository", () => {
+  test("lists replay summaries for matches where the user participated", async () => {
+    const calls: Array<{
+      readonly sql: string;
+      readonly params: readonly unknown[];
+    }> = [];
+    const repository = createPostgresCompletedMatchReplayRepository({
+      schema: "sim_dev",
+      query(sql, params = []) {
+        calls.push({ sql, params });
+        return Promise.resolve({
+          rows: [
+            {
+              match_id: "match-1",
+              status: "completed",
+              game_type: "dev",
+              format_id: "dev",
+              lobby_id: "lobby-1",
+              winner_user_id: "user-1",
+              winner_seat_id: "p1",
+              started_at: "2026-06-13T00:00:00.000Z",
+              ended_at: "2026-06-13T00:10:00.000Z",
+              turn_count: 4,
+              action_count: 12,
+              players: [
+                {
+                  seatId: "p1",
+                  userId: "user-1",
+                  displayName: "Winner",
+                  leaderCardNumber: "OP01-001",
+                  result: "win",
+                  isWinner: true,
+                },
+              ],
+            },
+          ],
+        });
+      },
+    });
+
+    const summaries = await repository.listReplaysForUser("user-1");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.sql).toContain("FROM sim_dev.matches");
+    expect(calls[0]?.sql).toContain("viewer.user_id = $1");
+    expect(calls[0]?.params).toEqual(["user-1", 25]);
+    expect(summaries).toEqual([
+      {
+        matchId: "match-1",
+        status: "completed",
+        gameType: "dev",
+        formatId: "dev",
+        lobbyId: "lobby-1",
+        winnerUserId: "user-1",
+        winnerSeatId: "p1",
+        startedAt: "2026-06-13T00:00:00.000Z",
+        endedAt: "2026-06-13T00:10:00.000Z",
+        turnCount: 4,
+        actionCount: 12,
+        players: [
+          {
+            seatId: "p1",
+            userId: "user-1",
+            displayName: "Winner",
+            leaderCardNumber: "OP01-001",
+            result: "win",
+            isWinner: true,
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("returns replay detail only for a participating user", async () => {
+    const calls: Array<{
+      readonly sql: string;
+      readonly params: readonly unknown[];
+    }> = [];
+    const repository = createPostgresCompletedMatchReplayRepository({
+      schema: "sim_dev",
+      query(sql, params = []) {
+        calls.push({ sql, params });
+        return Promise.resolve({
+          rows: [
+            {
+              match_id: "match-1",
+              status: "completed",
+              game_type: "dev",
+              format_id: "dev",
+              lobby_id: "lobby-1",
+              winner_user_id: "user-1",
+              winner_seat_id: "p1",
+              started_at: "2026-06-13T00:00:00.000Z",
+              ended_at: "2026-06-13T00:10:00.000Z",
+              turn_count: 4,
+              action_count: 12,
+              players: [],
+              replay: { deterministicEntries: [{ type: "action" }] },
+            },
+          ],
+        });
+      },
+    });
+
+    const detail = await repository.getReplayForUser("user-1", matchId);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.sql).toContain("viewer.user_id = $1");
+    expect(calls[0]?.sql).toContain("m.id = $2");
+    expect(calls[0]?.params).toEqual(["user-1", matchId]);
+    expect(detail?.matchId).toBe("match-1");
+    expect(detail?.replay).toEqual({
+      deterministicEntries: [{ type: "action" }],
+    });
   });
 });

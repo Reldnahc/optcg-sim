@@ -107,8 +107,57 @@ export interface CompletedMatchRepository {
   readonly saveCompletedMatch: (record: CompletedMatchRecord) => Promise<void>;
 }
 
+export interface CompletedMatchReplayPlayerSummary {
+  readonly seatId: string;
+  readonly userId: string | null;
+  readonly displayName: string | null;
+  readonly leaderCardNumber: string;
+  readonly result: SimMatchPlayerResult;
+  readonly isWinner: boolean;
+}
+
+export interface CompletedMatchReplaySummary {
+  readonly matchId: string;
+  readonly status: Exclude<SimMatchStatus, "active">;
+  readonly gameType: SimGameType;
+  readonly formatId: string;
+  readonly lobbyId: string | null;
+  readonly winnerUserId: string | null;
+  readonly winnerSeatId: string | null;
+  readonly startedAt: string;
+  readonly endedAt: string;
+  readonly turnCount: number | null;
+  readonly actionCount: number;
+  readonly players: readonly CompletedMatchReplayPlayerSummary[];
+}
+
+export interface CompletedMatchReplayDetail extends CompletedMatchReplaySummary {
+  readonly replay: JsonObject;
+}
+
+export interface CompletedMatchReplayRepository {
+  readonly listReplaysForUser: (
+    userId: string,
+    limit?: number,
+  ) => Promise<readonly CompletedMatchReplaySummary[]>;
+  readonly getReplayForUser: (
+    userId: string,
+    matchId: MatchId,
+  ) => Promise<CompletedMatchReplayDetail | undefined>;
+}
+
 export interface CreatePostgresCompletedMatchRepositoryOptions {
   readonly transaction?: CompletedMatchTransaction;
+  readonly schema?: string;
+}
+
+export type CompletedMatchReadQuery = (
+  sql: string,
+  params?: readonly unknown[],
+) => Promise<{ readonly rows?: readonly unknown[] }>;
+
+export interface CreatePostgresCompletedMatchReplayRepositoryOptions {
+  readonly query?: CompletedMatchReadQuery;
   readonly schema?: string;
 }
 
@@ -220,6 +269,202 @@ const replayValues = (record: CompletedMatchRecord): readonly unknown[] => {
     replay.artifactSizeBytes,
   ];
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stringValue = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
+const nullableStringValue = (value: unknown): string | null =>
+  typeof value === "string" ? value : null;
+
+const nullableNumberValue = (value: unknown): number | null =>
+  typeof value === "number" ? value : null;
+
+const booleanValue = (value: unknown): boolean => value === true;
+
+const playerSummaryFromRow = (
+  value: unknown,
+): CompletedMatchReplayPlayerSummary | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const result = stringValue(value["result"]);
+  if (result !== "win" && result !== "loss" && result !== "draw") {
+    return undefined;
+  }
+  return {
+    seatId: stringValue(value["seatId"]),
+    userId: nullableStringValue(value["userId"]),
+    displayName: nullableStringValue(value["displayName"]),
+    leaderCardNumber: stringValue(value["leaderCardNumber"]),
+    result,
+    isWinner: booleanValue(value["isWinner"]),
+  };
+};
+
+const playerSummariesFromRow = (
+  value: unknown,
+): readonly CompletedMatchReplayPlayerSummary[] =>
+  Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const player = playerSummaryFromRow(entry);
+        return player === undefined ? [] : [player];
+      })
+    : [];
+
+const replaySummaryFromRow = (
+  row: unknown,
+): CompletedMatchReplaySummary | undefined => {
+  if (!isRecord(row)) {
+    return undefined;
+  }
+  const status = stringValue(row["status"]);
+  if (status !== "completed" && status !== "draw" && status !== "abandoned") {
+    return undefined;
+  }
+  const gameType = stringValue(row["game_type"]);
+  if (gameType !== "ranked" && gameType !== "unranked" && gameType !== "dev") {
+    return undefined;
+  }
+  return {
+    matchId: stringValue(row["match_id"]),
+    status,
+    gameType,
+    formatId: stringValue(row["format_id"]),
+    lobbyId: nullableStringValue(row["lobby_id"]),
+    winnerUserId: nullableStringValue(row["winner_user_id"]),
+    winnerSeatId: nullableStringValue(row["winner_seat_id"]),
+    startedAt: stringValue(row["started_at"]),
+    endedAt: stringValue(row["ended_at"]),
+    turnCount: nullableNumberValue(row["turn_count"]),
+    actionCount:
+      typeof row["action_count"] === "number" ? row["action_count"] : 0,
+    players: playerSummariesFromRow(row["players"]),
+  };
+};
+
+const replayDetailFromRow = (
+  row: unknown,
+): CompletedMatchReplayDetail | undefined => {
+  const summary = replaySummaryFromRow(row);
+  if (summary === undefined || !isRecord(row)) {
+    return undefined;
+  }
+  return {
+    ...summary,
+    replay: isRecord(row["replay"]) ? row["replay"] : {},
+  };
+};
+
+const replaySummarySelectSql = (schema: string): string => `
+  SELECT
+    m.id AS match_id,
+    m.status,
+    m.game_type,
+    m.format_id,
+    m.lobby_id,
+    m.winner_user_id,
+    m.winner_seat_id,
+    m.started_at::text AS started_at,
+    m.ended_at::text AS ended_at,
+    m.turn_count,
+    m.action_count,
+    COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'seatId', players.seat_id,
+          'userId', players.user_id,
+          'displayName', players.display_name,
+          'leaderCardNumber', players.leader_card_number,
+          'result', players.result,
+          'isWinner', players.is_winner
+        )
+        ORDER BY players.seat_id
+      ) FILTER (WHERE players.seat_id IS NOT NULL),
+      '[]'::jsonb
+    ) AS players
+  FROM ${qualify(schema, "matches")} m
+  INNER JOIN ${qualify(schema, "match_players")} viewer
+    ON viewer.match_id = m.id AND viewer.user_id = $1
+  INNER JOIN ${qualify(schema, "match_replays")} replay
+    ON replay.match_id = m.id
+  LEFT JOIN ${qualify(schema, "match_players")} players
+    ON players.match_id = m.id
+`;
+
+const replaySummaryGroupSql = `
+  GROUP BY m.id
+  ORDER BY m.ended_at DESC
+  LIMIT $2
+`;
+
+const replayDetailSql = (schema: string): string => `
+  SELECT
+    m.id AS match_id,
+    m.status,
+    m.game_type,
+    m.format_id,
+    m.lobby_id,
+    m.winner_user_id,
+    m.winner_seat_id,
+    m.started_at::text AS started_at,
+    m.ended_at::text AS ended_at,
+    m.turn_count,
+    m.action_count,
+    COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'seatId', players.seat_id,
+          'userId', players.user_id,
+          'displayName', players.display_name,
+          'leaderCardNumber', players.leader_card_number,
+          'result', players.result,
+          'isWinner', players.is_winner
+        )
+        ORDER BY players.seat_id
+      ) FILTER (WHERE players.seat_id IS NOT NULL),
+      '[]'::jsonb
+    ) AS players,
+    jsonb_build_object(
+      'replayFormatVersion', replay.replay_format_version,
+      'engineVersion', replay.engine_version,
+      'rulesVersion', replay.rules_version,
+      'cardDataVersion', replay.card_data_version,
+      'effectDefinitionsVersion', replay.effect_definitions_version,
+      'customHandlerVersion', replay.custom_handler_version,
+      'banlistVersion', replay.banlist_version,
+      'protocolVersion', replay.protocol_version,
+      'rngAlgorithm', replay.rng_algorithm,
+      'rngSeedCommitment', replay.rng_seed_commitment,
+      'rngSeedRevealed', replay.rng_seed_revealed,
+      'manifestHash', replay.manifest_hash,
+      'manifestSnapshot', replay.manifest_snapshot,
+      'initialStateHash', replay.initial_state_hash,
+      'finalStateHash', replay.final_state_hash,
+      'initialSnapshot', replay.initial_snapshot,
+      'initialDeckOrders', replay.initial_deck_orders,
+      'deterministicEntries', replay.deterministic_entries,
+      'auditEntries', replay.audit_entries,
+      'checkpoints', replay.checkpoints,
+      'finalState', replay.final_state,
+      'compressed', replay.compressed,
+      'artifactStorage', replay.artifact_storage,
+      'artifactKey', replay.artifact_key,
+      'artifactSha256', replay.artifact_sha256,
+      'artifactSizeBytes', replay.artifact_size_bytes
+    ) AS replay
+  FROM ${qualify(schema, "matches")} m
+  INNER JOIN ${qualify(schema, "match_players")} viewer
+    ON viewer.match_id = m.id AND viewer.user_id = $1
+  INNER JOIN ${qualify(schema, "match_replays")} replay
+    ON replay.match_id = m.id
+  LEFT JOIN ${qualify(schema, "match_players")} players
+    ON players.match_id = m.id
+  WHERE m.id = $2
+  GROUP BY m.id, replay.match_id
+`;
 
 const createSaveMatchSql = (schema: string): string => `
   INSERT INTO ${qualify(schema, "matches")} (
@@ -483,6 +728,32 @@ export const createPostgresCompletedMatchRepository = ({
         }
         await query(saveReplaySql, replayValues(record));
       });
+    },
+  };
+};
+
+export const createPostgresCompletedMatchReplayRepository = ({
+  query = (sql, params) =>
+    defaultWithTransaction((client) =>
+      client.query(sql, params === undefined ? undefined : [...params]),
+    ),
+  schema = configuredSchema(),
+}: CreatePostgresCompletedMatchReplayRepositoryOptions = {}): CompletedMatchReplayRepository => {
+  const matchSchema = assertValidSchemaName(schema);
+  const listSql = `${replaySummarySelectSql(matchSchema)}${replaySummaryGroupSql}`;
+  const detailSql = replayDetailSql(matchSchema);
+  return {
+    async listReplaysForUser(userId, limit = 25) {
+      const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
+      const result = await query(listSql, [userId, safeLimit]);
+      return (result.rows ?? []).flatMap((row) => {
+        const summary = replaySummaryFromRow(row);
+        return summary === undefined ? [] : [summary];
+      });
+    },
+    async getReplayForUser(userId, requestedMatchId) {
+      const result = await query(detailSql, [userId, requestedMatchId]);
+      return replayDetailFromRow(result.rows?.[0]);
     },
   };
 };
