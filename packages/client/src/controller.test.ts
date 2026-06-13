@@ -566,6 +566,75 @@ describe("match client controller", () => {
     assert.equal("lobbyId" in next, true);
   });
 
+  test("keeps lobby state when ready match claiming races with match creation", async () => {
+    const transport = createFakeTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    transport.submitLobbyDeck = (input) => {
+      transport.submittedLobbyDecks.push(input);
+      return Promise.resolve({
+        lobbyId: input.lobbyId,
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: {
+            playerId: "p1" as PlayerId,
+            claimed: true,
+            deck: { status: "ready" },
+          },
+          p2: {
+            playerId: "p2" as PlayerId,
+            claimed: true,
+            deck: { status: "ready" },
+          },
+        },
+      });
+    };
+    let claimAttempts = 0;
+    transport.claimSeat = (input) => {
+      transport.claimedSeats.push(input);
+      claimAttempts += 1;
+      if (claimAttempts === 1) {
+        return Promise.reject(
+          new Error(
+            'Match transport request failed with HTTP 404: {"errors":["Match match-1 not found."]}',
+          ),
+        );
+      }
+      return Promise.resolve({
+        matchId: input.matchId,
+        seat: {
+          playerId: input.playerId,
+          sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
+        },
+      });
+    };
+    await controller.joinCustomLobby({ lobbyId: "lobby-1" });
+
+    const raced = await controller.submitLobbyDeck({
+      deckHash: "deck-hash",
+      donDeckCount: 10,
+    });
+
+    assert.equal("lobbyId" in raced, true);
+    assert.equal(controller.currentCredential(), undefined);
+
+    const retried = await controller.submitLobbyDeck({
+      deckHash: "deck-hash",
+      donDeckCount: 10,
+    });
+
+    assert.equal("matchId" in retried, true);
+    assert.deepEqual(
+      transport.claimedSeats.map((claim) => claim.matchId),
+      ["match-1", "match-1"],
+    );
+  });
+
   test("refuses to submit actions before a seat is claimed", async () => {
     const controller = createMatchClientController({
       accountSessionToken,

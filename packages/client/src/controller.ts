@@ -171,6 +171,11 @@ const isPendingRematch = (
   value: Awaited<ReturnType<MatchTransport["createRematch"]>>,
 ): value is PendingRematch => "rematch" in value;
 
+const isTransientMatchNotFound = (error: unknown, matchId: string): boolean =>
+  error instanceof Error &&
+  error.message.includes("HTTP 404") &&
+  error.message.includes(`Match ${matchId} not found`);
+
 export const createMatchClientController = ({
   transport,
   liveTransport,
@@ -253,10 +258,18 @@ export const createMatchClientController = ({
       currentLobbyState = lobbyState;
       return lobbyState;
     }
-    return claimAndLoad(
-      { matchId, playerId: lobbyState.seat.playerId },
-      lobbyState.seat.sessionToken,
-    );
+    try {
+      return await claimAndLoad(
+        { matchId, playerId: lobbyState.seat.playerId },
+        lobbyState.seat.sessionToken,
+      );
+    } catch (error: unknown) {
+      if (isTransientMatchNotFound(error, String(matchId))) {
+        currentLobbyState = lobbyState;
+        return lobbyState;
+      }
+      throw error;
+    }
   };
 
   return {
