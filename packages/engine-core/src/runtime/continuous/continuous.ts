@@ -442,6 +442,9 @@ const isSupportedPowerEffectValue = (
         value.target.type === "savedFieldObject")
     );
   }
+  if (value.type === "savedNumber") {
+    return false;
+  }
   return (
     value.player === "self" &&
     Number.isSafeInteger(value.per) &&

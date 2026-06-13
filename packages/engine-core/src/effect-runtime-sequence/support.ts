@@ -46,6 +46,7 @@ import {
 } from "./support/basic.js";
 import {
   isSupportedAttachSelectedDonSegment,
+  isSupportedChooseNumberSegment,
   isSupportedPlaceSetRemainderSegment,
   isSupportedPlaySourceSegment,
   isSupportedRevealSelectedSegment,
@@ -55,6 +56,7 @@ import {
   isSupportedMoveSelectedSegment,
   savedSelectedCardsKindForSelectCardsSegment,
   type AttachSelectedDonEffect,
+  type ChooseNumberEffect,
   type MoveSelectedEffect,
   type PlaceSetRemainderEffect,
   type PlaySourceEffect,
@@ -116,6 +118,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | TrashFromHandUntilCountEffect
     | PlaceTopDeckCardsEffect
     | PayCostEffect
+    | ChooseNumberEffect
     | SelectCardsEffect
     | MoveSelectedEffect
     | AttachSelectedDonEffect
@@ -162,6 +165,7 @@ interface SequenceSupportState {
   savedSelectedCards: Map<string, SavedSelectedCardsKind>;
   savedSelectedCardMaxCounts: Map<string, number>;
   savedSelectionSets: Set<string>;
+  savedNumbers: Set<string>;
   savedSelectedTargets: Set<string>;
 }
 
@@ -172,6 +176,7 @@ const emptySequenceSupportState = (
   savedSelectedCards: new Map(),
   savedSelectedCardMaxCounts: new Map(),
   savedSelectionSets: new Set(),
+  savedNumbers: new Set(),
   savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
 });
 
@@ -182,6 +187,7 @@ const cloneSequenceSupportState = (
   savedSelectedCards: new Map(state.savedSelectedCards),
   savedSelectedCardMaxCounts: new Map(state.savedSelectedCardMaxCounts),
   savedSelectionSets: new Set(state.savedSelectionSets),
+  savedNumbers: new Set(state.savedNumbers),
   savedSelectedTargets: new Set(state.savedSelectedTargets),
 });
 
@@ -201,6 +207,11 @@ const hasSavedSelectionSet = (
   state: SequenceSupportState,
   selectionSet: unknown,
 ): boolean => state.savedSelectionSets.has(String(selectionSet));
+
+const hasSavedNumber = (
+  state: SequenceSupportState,
+  selection: unknown,
+): boolean => state.savedNumbers.has(String(selection));
 
 const hasSavedSelectedTargets = (
   state: SequenceSupportState,
@@ -446,11 +457,20 @@ const isSupportedSequenceBlockWithState = (
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
+      if (isSupportedChooseNumberSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        supportState.savedNumbers.add(String(segment.effect.saveAs));
+        return true;
+      }
       if (isSupportedRevealTopSegment(segment.effect)) {
         supportState.savedSelectionSets.add(String(segment.effect.saveAs));
         return true;
       }
-      if (isSupportedSelectFromSetSegment(segment.effect)) {
+      if (
+        isSupportedSelectFromSetSegment(segment.effect, (selection) =>
+          hasSavedNumber(supportState, selection),
+        )
+      ) {
         if (!hasSavedSelectionSet(supportState, segment.effect.set)) {
           return false;
         }

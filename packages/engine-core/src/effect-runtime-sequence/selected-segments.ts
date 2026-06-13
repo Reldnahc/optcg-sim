@@ -231,6 +231,7 @@ export const createSelectFromSetDecision = (params: {
         card.playerId,
         deckCard,
         params.effect.filter,
+        params.ledgers.savedReferences,
       )
     );
   });

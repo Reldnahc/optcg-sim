@@ -301,3 +301,156 @@ test("queued set search still asks to order the full remainder when no card is s
     "orderCards",
   );
 });
+
+test("queued set selection can filter revealed opponent top deck by a saved chosen cost", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const opponentTop = must(p2State.deck[0], "opponent top deck");
+  opponentTop.cardId = toCardId("chosen-cost-revealed-match");
+  state.cardManifest.cards[opponentTop.cardId] = {
+    ...resolvedCard({
+      cardId: opponentTop.cardId,
+      category: "character",
+    }),
+    cost: 4,
+  };
+  const source = p1State.leader;
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-chosen-cost-set-selection",
+      rulesVersion: "chosen-cost-set-selection-rules",
+      sourceTextHash: "chosen-cost-set-selection-source",
+    },
+  });
+  const baseDefinition = reviewedOnPlayDrawDefinition(
+    source.cardId,
+    supportCard.support,
+  );
+  const sequenceEffectId = toEffectId("effect-chosen-cost-set-selection");
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.effectDefinitionsVersion =
+    baseDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-chosen-cost-set-selection": {
+      ...baseDefinition,
+      effects: [
+        {
+          ...must(baseDefinition.effects[0], "base effect"),
+          id: sequenceEffectId,
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: {
+                  type: "chooseNumber",
+                  chooser: "self",
+                  purpose: "cost",
+                  min: 0,
+                  max: 20,
+                  saveAs: "chosenNumber:cost" as never,
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "revealTop",
+                  player: "opponent",
+                  zone: "deck",
+                  count: 1,
+                  saveAs: "set:opponent-chosen-cost" as never,
+                  visibility: "bothPlayers",
+                },
+              },
+              {
+                connector: "then",
+                effect: {
+                  type: "selectFromSet",
+                  set: "set:opponent-chosen-cost" as never,
+                  chooser: "self",
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    statComparisons: [
+                      {
+                        stat: "cost",
+                        op: "eq",
+                        value: {
+                          type: "savedNumber",
+                          selection: "chosenNumber:cost" as never,
+                        },
+                      },
+                    ],
+                  },
+                  saveAs: "revealSelection:chosen-cost" as never,
+                },
+              },
+              {
+                connector: "ifPreviousSucceeded",
+                effect: { type: "draw", player: "self", count: 1 },
+              },
+            ],
+          },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-chosen-cost-set-selection"),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: sequenceEffectId,
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+  const beforeHandCount = p1State.hand.length;
+
+  const chooseCost = processEffectRuntime(state);
+  const quantityDecision = must(chooseCost.state.pendingDecision, "quantity");
+  assert.equal(chooseCost.errors, undefined);
+  assert.equal(quantityDecision.type, "chooseQuantity");
+  assert.equal(quantityDecision.min, 0);
+  assert.equal(quantityDecision.max, 20);
+
+  const revealed = applyAction(chooseCost.state, {
+    type: "respondToDecision",
+    decisionId: quantityDecision.id,
+    response: { type: "chooseQuantity", quantity: 4 },
+  });
+  const selectDecision = must(revealed.state.pendingDecision, "select");
+  assert.equal(revealed.errors, undefined);
+  assert.equal(selectDecision.type, "selectCards");
+  assert.deepEqual(
+    selectDecision.candidates.map((candidate) => candidate.card.instanceId),
+    [opponentTop.instanceId],
+  );
+
+  const selected = applyAction(revealed.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(selectDecision.candidates[0], "candidate").card],
+    },
+  });
+
+  assert.equal(selected.errors, undefined);
+  assert.equal(selected.state.pendingDecision, undefined);
+  assert.equal(
+    must(selected.state.players[p1], "after p1").hand.length,
+    beforeHandCount + 1,
+  );
+});

@@ -14,6 +14,7 @@ export type AttachSelectedDonEffect = Extract<
 export type PlaySourceEffect = Extract<Effect, { type: "playSource" }>;
 export type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 export type SelectFromSetEffect = Extract<Effect, { type: "selectFromSet" }>;
+export type ChooseNumberEffect = Extract<Effect, { type: "chooseNumber" }>;
 export type RevealSelectedEffect = Extract<Effect, { type: "revealSelected" }>;
 export type PlaceSetRemainderEffect = Extract<
   Effect,
@@ -177,6 +178,7 @@ export const isSupportedRevealTopSegment = (
 
 export const isSupportedSelectFromSetSegment = (
   effect: SequenceSegmentEffect,
+  hasSavedNumber: (selection: string) => boolean = () => false,
 ): effect is SelectFromSetEffect =>
   effect.type === "selectFromSet" &&
   effect.chooser === "self" &&
@@ -184,7 +186,42 @@ export const isSupportedSelectFromSetSegment = (
   Number.isInteger(effect.max) &&
   effect.min >= 0 &&
   effect.max >= effect.min &&
-  isSupportedHandSelectionCardFilter(effect.filter);
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  hasSupportedSavedNumberFilterReferences(effect.filter, hasSavedNumber);
+
+export const isSupportedChooseNumberSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ChooseNumberEffect =>
+  effect.type === "chooseNumber" &&
+  effect.chooser === "self" &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
+const hasSupportedSavedNumberFilterReferences = (
+  filter: SelectFromSetEffect["filter"],
+  hasSavedNumber: (selection: string) => boolean,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (
+    filter.anyOf?.every((candidate) =>
+      hasSupportedSavedNumberFilterReferences(candidate, hasSavedNumber),
+    ) === false
+  ) {
+    return false;
+  }
+  return (
+    filter.statComparisons?.every((comparison) => {
+      return (
+        comparison.value.type === "savedNumber" &&
+        hasSavedNumber(String(comparison.value.selection))
+      );
+    }) ?? true
+  );
+};
 
 export const isSupportedRevealSelectedSegment = (
   effect: SequenceSegmentEffect,

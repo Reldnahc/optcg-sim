@@ -249,6 +249,10 @@ export const resolveDynamicNumberValue = (
       value.multiplier
     );
   }
+  if (value.type === "savedNumber") {
+    const reference = context?.savedReferences?.[value.selection];
+    return reference?.kind === "chosenNumber" ? reference.value : null;
+  }
   const reference = context?.savedReferences?.[value.selection];
   if (reference?.kind !== "selectedCards") {
     return null;

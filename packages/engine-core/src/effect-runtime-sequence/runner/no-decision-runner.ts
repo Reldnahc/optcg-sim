@@ -15,12 +15,15 @@ import {
 import { createSupportedHandSelectionChoiceDecision } from "../../effect-runtime-hand-selection.js";
 import { applyFieldMutationSequenceSegment } from "../field-segments.js";
 import {
-  createChooseQuantityDecisionForSequenceSegment,
   createChooseEffectOptionDecisionForSequenceSegment,
   createPayCostDecisionForSequenceSegment,
   createReturnDonDecisionForSequenceSegment,
   getSequenceOptionalPayCostOptions,
 } from "../frame-decisions.js";
+import {
+  createChooseNumberDecisionForSequenceSegment,
+  createChooseQuantityDecisionForSequenceSegment,
+} from "../quantity-decisions.js";
 import { applyPlaySelectedSequenceSegment } from "../../runtime/primitives/play-selected.js";
 import { applyActivateSelectedEventSequenceSegment } from "../../runtime/primitives/activate-selected-event.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
@@ -307,6 +310,23 @@ export const continueNoDecisionSegments = (
         index,
         segment.effect,
         segment.effect.count,
+      );
+      return pauseSequenceForPendingDecision({
+        decisionEvents: quantityDecision.events,
+        entry,
+        effectPath: [...effectPath],
+        events,
+        index,
+        ledgers: nextLedgers,
+        state: quantityDecision.state,
+      });
+    }
+    if (segment.effect.type === "chooseNumber") {
+      const quantityDecision = createChooseNumberDecisionForSequenceSegment(
+        nextState,
+        entry,
+        index,
+        segment.effect,
       );
       return pauseSequenceForPendingDecision({
         decisionEvents: quantityDecision.events,

@@ -39,5 +39,8 @@ export const chooseQuantityPromptForEffect = (effect: Effect): string => {
       effect.zone ?? "deck",
     )}.`;
   }
+  if (effect.type === "chooseNumber") {
+    return effect.purpose === "cost" ? "Choose a cost." : "Choose a number.";
+  }
   return "Choose quantity.";
 };

@@ -20,6 +20,7 @@ type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
+type ChooseNumberEffect = Extract<Effect, { type: "chooseNumber" }>;
 
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
@@ -139,7 +140,8 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "drawUpTo" &&
       pausedSegment.effect.type !== "moveCards" &&
-      pausedSegment.effect.type !== "revealTop")
+      pausedSegment.effect.type !== "revealTop" &&
+      pausedSegment.effect.type !== "chooseNumber")
   ) {
     return {
       error: params.sequenceRuntimeError(
@@ -149,7 +151,13 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
       ok: false,
     };
   }
-  if (quantity < 0 || quantity > pausedSegment.effect.count) {
+  const min =
+    pausedSegment.effect.type === "chooseNumber" ? pausedSegment.effect.min : 0;
+  const max =
+    pausedSegment.effect.type === "chooseNumber"
+      ? pausedSegment.effect.max
+      : pausedSegment.effect.count;
+  if (quantity < min || quantity > max) {
     return {
       error: params.sequenceRuntimeError(
         entry.effectBlockId,
@@ -163,25 +171,24 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     segmentResults: frame.segmentResults,
   };
   const resolved =
-    pausedSegment.effect.type === "drawUpTo"
-      ? applyResolvedQuantityDrawSegment(
-          params.state,
-          entry,
+    pausedSegment.effect.type === "chooseNumber"
+      ? applyResolvedChooseNumberSegment(
+          params.emptySegmentResult,
+          ledgers,
           pausedSegment as SequenceEffect["effects"][number] & {
-            effect: DrawUpToEffect;
+            effect: ChooseNumberEffect;
           },
           frame.pendingDecision.resumeAtSegmentIndex,
           quantity,
-          ledgers,
-          params.emptySegmentResult,
           (segment, index) => params.segmentKey(frame, segment, index),
+          params.state,
         )
-      : pausedSegment.effect.type === "moveCards"
-        ? applyResolvedQuantityMoveCardsSegment(
+      : pausedSegment.effect.type === "drawUpTo"
+        ? applyResolvedQuantityDrawSegment(
             params.state,
             entry,
             pausedSegment as SequenceEffect["effects"][number] & {
-              effect: MoveCardsEffect;
+              effect: DrawUpToEffect;
             },
             frame.pendingDecision.resumeAtSegmentIndex,
             quantity,
@@ -189,18 +196,31 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
             params.emptySegmentResult,
             (segment, index) => params.segmentKey(frame, segment, index),
           )
-        : applyResolvedQuantityRevealTopSegment(
-            params.state,
-            entry,
-            pausedSegment as SequenceEffect["effects"][number] & {
-              effect: RevealTopEffect;
-            },
-            frame.pendingDecision.resumeAtSegmentIndex,
-            quantity,
-            ledgers,
-            params.emptySegmentResult,
-            (segment, index) => params.segmentKey(frame, segment, index),
-          );
+        : pausedSegment.effect.type === "moveCards"
+          ? applyResolvedQuantityMoveCardsSegment(
+              params.state,
+              entry,
+              pausedSegment as SequenceEffect["effects"][number] & {
+                effect: MoveCardsEffect;
+              },
+              frame.pendingDecision.resumeAtSegmentIndex,
+              quantity,
+              ledgers,
+              params.emptySegmentResult,
+              (segment, index) => params.segmentKey(frame, segment, index),
+            )
+          : applyResolvedQuantityRevealTopSegment(
+              params.state,
+              entry,
+              pausedSegment as SequenceEffect["effects"][number] & {
+                effect: RevealTopEffect;
+              },
+              frame.pendingDecision.resumeAtSegmentIndex,
+              quantity,
+              ledgers,
+              params.emptySegmentResult,
+              (segment, index) => params.segmentKey(frame, segment, index),
+            );
   if (!resolved.ok) {
     return {
       error: params.sequenceRuntimeError(
@@ -220,3 +240,42 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     state: resolved.state,
   });
 };
+
+const applyResolvedChooseNumberSegment = (
+  emptySegmentResult: () => SequenceSegmentResult,
+  ledgers: SegmentLedgers,
+  segment: SequenceEffect["effects"][number] & { effect: ChooseNumberEffect },
+  index: number,
+  quantity: number,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+  state: GameState,
+): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  ok: true;
+  state: GameState;
+} => ({
+  events: [],
+  ledgers: {
+    savedReferences: {
+      ...ledgers.savedReferences,
+      [segment.effect.saveAs]: {
+        kind: "chosenNumber",
+        value: quantity,
+      },
+    },
+    segmentResults: {
+      ...ledgers.segmentResults,
+      [segmentKey(segment, index)]: {
+        ...emptySegmentResult(),
+        attempted: true,
+        succeeded: true,
+      },
+    },
+  },
+  ok: true,
+  state,
+});

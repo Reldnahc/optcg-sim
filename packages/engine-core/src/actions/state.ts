@@ -2,10 +2,13 @@ import type {
   CardInstance,
   CardFilter,
   CardRef,
+  Comparator,
+  DynamicNumberValue,
   GameState,
   PlayerId,
   PlayerState,
   ResolvedCard,
+  SequenceSavedResultReferenceMap,
 } from "@optcg/types";
 
 import { cardMatchesAnyName } from "../card-name-matching.js";
@@ -153,6 +156,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "names",
   "nameNot",
   "power",
+  "statComparisons",
   "state",
   "typesAny",
   "typesIncludeAny",
@@ -241,19 +245,57 @@ export const isSupportedHandSelectionCardFilter = (
     isSupportedNumericFilter(filter.cost) &&
     isSupportedNumericFilter(filter.baseCost) &&
     isSupportedNumericFilter(filter.power) &&
+    (filter.statComparisons === undefined ||
+      (filter.statComparisons.length > 0 &&
+        filter.statComparisons.every(
+          (comparison) =>
+            (comparison.stat === "cost" ||
+              comparison.stat === "baseCost" ||
+              comparison.stat === "power") &&
+            typeof comparison.op === "string",
+        ))) &&
     (filter.custom === undefined ||
       supportedHandSelectionCustomFilters.has(filter.custom))
   );
 };
 
+const resolveFilterNumberValue = (
+  value: number | DynamicNumberValue,
+  savedReferences?: SequenceSavedResultReferenceMap,
+): number | null => {
+  if (typeof value === "number") {
+    return value;
+  }
+  if (value.type !== "savedNumber") {
+    return null;
+  }
+  const reference = savedReferences?.[value.selection];
+  return reference?.kind === "chosenNumber" ? reference.value : null;
+};
+
+const numericComparisonMatches = (
+  left: number,
+  comparison: { op: Comparator; value: number },
+): boolean => {
+  if (comparison.op === "eq") return left === comparison.value;
+  if (comparison.op === "neq") return left !== comparison.value;
+  if (comparison.op === "gt") return left > comparison.value;
+  if (comparison.op === "gte") return left >= comparison.value;
+  if (comparison.op === "lt") return left < comparison.value;
+  return left <= comparison.value;
+};
+
 const cardMatchesBaseFilter = (
   card: ResolvedCard | undefined,
   filter: CardFilter,
+  savedReferences?: SequenceSavedResultReferenceMap,
 ): boolean => {
   if (card === undefined) return false;
   if (
     filter.anyOf !== undefined &&
-    !filter.anyOf.some((candidate) => cardMatchesBaseFilter(card, candidate))
+    !filter.anyOf.some((candidate) =>
+      cardMatchesBaseFilter(card, candidate, savedReferences),
+    )
   ) {
     return false;
   }
@@ -308,12 +350,7 @@ const cardMatchesBaseFilter = (
       return false;
     }
     if ("op" in filter.cost) {
-      if (filter.cost.op === "eq" && cost !== filter.cost.value) return false;
-      if (filter.cost.op === "neq" && cost === filter.cost.value) return false;
-      if (filter.cost.op === "gt" && cost <= filter.cost.value) return false;
-      if (filter.cost.op === "gte" && cost < filter.cost.value) return false;
-      if (filter.cost.op === "lt" && cost >= filter.cost.value) return false;
-      if (filter.cost.op === "lte" && cost > filter.cost.value) return false;
+      if (!numericComparisonMatches(cost, filter.cost)) return false;
     } else {
       if (filter.cost.min !== undefined && cost < filter.cost.min) return false;
       if (filter.cost.max !== undefined && cost > filter.cost.max) return false;
@@ -325,18 +362,7 @@ const cardMatchesBaseFilter = (
       return false;
     }
     if ("op" in filter.baseCost) {
-      if (filter.baseCost.op === "eq" && cost !== filter.baseCost.value)
-        return false;
-      if (filter.baseCost.op === "neq" && cost === filter.baseCost.value)
-        return false;
-      if (filter.baseCost.op === "gt" && cost <= filter.baseCost.value)
-        return false;
-      if (filter.baseCost.op === "gte" && cost < filter.baseCost.value)
-        return false;
-      if (filter.baseCost.op === "lt" && cost >= filter.baseCost.value)
-        return false;
-      if (filter.baseCost.op === "lte" && cost > filter.baseCost.value)
-        return false;
+      if (!numericComparisonMatches(cost, filter.baseCost)) return false;
     } else {
       if (filter.baseCost.min !== undefined && cost < filter.baseCost.min)
         return false;
@@ -350,14 +376,7 @@ const cardMatchesBaseFilter = (
       return false;
     }
     if ("op" in filter.power) {
-      if (filter.power.op === "eq" && power !== filter.power.value)
-        return false;
-      if (filter.power.op === "neq" && power === filter.power.value)
-        return false;
-      if (filter.power.op === "gt" && power <= filter.power.value) return false;
-      if (filter.power.op === "gte" && power < filter.power.value) return false;
-      if (filter.power.op === "lt" && power >= filter.power.value) return false;
-      if (filter.power.op === "lte" && power > filter.power.value) return false;
+      if (!numericComparisonMatches(power, filter.power)) return false;
     } else {
       if (filter.power.min !== undefined && power < filter.power.min)
         return false;
@@ -367,6 +386,24 @@ const cardMatchesBaseFilter = (
   }
   if (filter.currentPower !== undefined) {
     return false;
+  }
+  if (filter.statComparisons !== undefined) {
+    for (const comparison of filter.statComparisons) {
+      const value = resolveFilterNumberValue(comparison.value, savedReferences);
+      const left =
+        comparison.stat === "cost" || comparison.stat === "baseCost"
+          ? card.cost
+          : comparison.stat === "power"
+            ? card.power
+            : undefined;
+      if (
+        value === null ||
+        left === undefined ||
+        !numericComparisonMatches(left, { op: comparison.op, value })
+      ) {
+        return false;
+      }
+    }
   }
   return !(
     filter.nameNot !== undefined && cardMatchesAnyName(card, filter.nameNot)
@@ -415,12 +452,13 @@ export const cardMatchesHandSelectionFilter = (
   playerId: PlayerId,
   card: CardInstance,
   filter: CardFilter | undefined,
+  savedReferences?: SequenceSavedResultReferenceMap,
 ): boolean => {
   if (filter === undefined) {
     return true;
   }
   const resolved = state.cardManifest.cards[card.cardId];
-  if (!cardMatchesBaseFilter(resolved, filter)) {
+  if (!cardMatchesBaseFilter(resolved, filter, savedReferences)) {
     return false;
   }
   if (

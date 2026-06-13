@@ -5,6 +5,7 @@ export {
 export { applyEachContinuousExpressionParser } from "./apply-each-continuous.js";
 export { basePowerSwapExpressionParser } from "./base-power-swap.js";
 export { chooseOneExpressionParser } from "./choose-one.js";
+export { chosenCostRevealExpressionParser } from "./chosen-cost-reveal.js";
 export { costedEffectExpressionParser } from "./costed-effect.js";
 export {
   opponentOptionalCostExpressionParser,

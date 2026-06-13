@@ -192,6 +192,10 @@ export interface CardSelectionRequest {
 
 export type DynamicNumberValue =
   | {
+      type: "savedNumber";
+      selection: SelectionId;
+    }
+  | {
       type: "sumSelectedCardCosts";
       selection: SelectionSetId;
       multiplier: number;
@@ -453,11 +457,17 @@ export interface SavedProducedObjectsReference {
   objects: SavedFieldObjectReference[];
 }
 
+export interface SavedNumberReference {
+  kind: "chosenNumber";
+  value: number;
+}
+
 export type SequenceSavedResultReference =
   | SavedSelectedCardsReference
   | SavedSelectedTargetsReference
   | SavedPaidCostReference
-  | SavedProducedObjectsReference;
+  | SavedProducedObjectsReference
+  | SavedNumberReference;
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
@@ -599,6 +609,14 @@ export type Effect =
       min?: number;
       saveAs: SelectionSetId;
       visibility: Visibility;
+    }
+  | {
+      type: "chooseNumber";
+      chooser: PlayerRef;
+      purpose: "cost" | "number";
+      min: number;
+      max: number;
+      saveAs: SelectionId;
     }
   | {
       type: "selectFromSet";

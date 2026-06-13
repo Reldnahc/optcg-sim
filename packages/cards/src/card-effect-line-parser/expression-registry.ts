@@ -30,6 +30,7 @@ import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
   applyEachContinuousExpressionParser,
   basePowerSwapExpressionParser,
+  chosenCostRevealExpressionParser,
   chooseOneExpressionParser,
   activatedReactionExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser,
@@ -226,6 +227,10 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  chosenCostRevealExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
@@ -276,6 +281,13 @@ export const defaultRegistry = {
       expressions: [
         lookPlayFromTopExpressionParser,
         revealTopConditionalExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
+        chosenCostRevealExpressionParser({
           instructions: instructionParsers,
           expressions: [
             singleInstructionExpressionParser,
@@ -375,6 +387,13 @@ export const defaultRegistry = {
             generalExpressionParser,
           ],
         }),
+        chosenCostRevealExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         searchRevealExpressionParser,
         playedObjectKeywordGrantExpressionParser({
           instructions: instructionParsers,
@@ -413,6 +432,10 @@ export const defaultRegistry = {
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
     revealTopConditionalExpressionParser({
+      instructions: instructionParsers,
+      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+    }),
+    chosenCostRevealExpressionParser({
       instructions: instructionParsers,
       expressions: [singleInstructionExpressionParser, generalExpressionParser],
     }),
