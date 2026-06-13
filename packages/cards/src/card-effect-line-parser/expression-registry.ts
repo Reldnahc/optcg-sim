@@ -311,6 +311,7 @@ export const defaultRegistry = {
     }),
     implicitEventReactionExpressionParser({
       expressions: [
+        lookPlayFromTopExpressionParser,
         conditionalBlockExpressionParser({
           conditions: conditionParsers,
           connectors: [parseThenConnector, parseAndConnector],

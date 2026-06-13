@@ -59,6 +59,80 @@ describe("OP11 Activate Main parser primitives", () => {
     );
   });
 
+  it("parses implicit On K.O. reactions with looked-set play bodies", () => {
+    const result = parseCardEffectLine(
+      "When this Character is K.O.'d by your opponent's effect, look at 5 cards from the top of your deck and play up to 1 {Straw Hat Crew} type Character card with a cost of 5 or less. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "fieldRemoved",
+          target: "self",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "opponent",
+          sourceKind: "effect",
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 5,
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Straw Hat Crew"],
+                  cost: { max: 5 },
+                },
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: { type: "playSelected", ignoreCost: true },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:playSelected",
+        "instruction:placeSetRemainder",
+        "remaining:bottomDeck",
+      ]),
+    );
+  });
+
   it("parses conditional End of Your Turn Character and DON activation as composed primitives", () => {
     const result = parseCardEffectLine(
       "[End of Your Turn] If you have 6 or less cards in your hand, set up to 1 of your {Fish-Man} or {Merfolk} type Characters and up to 1 of your DON!! cards as active.",
