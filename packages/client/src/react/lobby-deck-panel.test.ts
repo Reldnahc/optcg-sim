@@ -115,6 +115,9 @@ describe("lobby deck panel", () => {
       /class="deck-loadout-submit-button modal-submit-button"/u,
     );
     assert.match(html, />Submit</u);
+    assert.doesNotMatch(html, /deck-status-list/u);
+    assert.doesNotMatch(html, /Your deck/u);
+    assert.doesNotMatch(html, /Opponent deck/u);
     assert.doesNotMatch(html, /Deck Loadout/u);
     assert.doesNotMatch(html, /Account loadout/u);
     assert.doesNotMatch(html, /<select/u);
@@ -337,10 +340,7 @@ describe("lobby deck panel", () => {
       styles,
       /\.deck-loadout-folder-header span:last-child\s*\{[^}]*margin-right:\s*12px;/u,
     );
-    assert.match(
-      styles,
-      /\.deck-status-list\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/u,
-    );
+    assert.doesNotMatch(styles, /\.deck-status-list/u);
     assert.match(
       styles,
       /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
@@ -367,7 +367,7 @@ describe("lobby deck panel", () => {
     );
   });
 
-  test("server ready deck status locks the selected deck loadout picker", () => {
+  test("server ready deck status locks the picker and waits on the submit button", () => {
     const html = renderToStaticMarkup(
       createElement(LobbyDeckPanel, {
         lobbyState: lobbyState({ selfDeckStatus: "ready" }),
@@ -378,7 +378,9 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(html, /Your deck<\/dt><dd>ready/u);
+    assert.doesNotMatch(html, /deck-status-list/u);
+    assert.doesNotMatch(html, /Your deck/u);
+    assert.doesNotMatch(html, /Opponent deck/u);
     assert.match(html, /class="deck-loadout-selected" type="button" disabled/u);
     assert.match(
       html,
@@ -386,7 +388,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       html,
-      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
+      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Waiting for opponent/u,
     );
   });
 

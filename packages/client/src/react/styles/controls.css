@@ -535,32 +535,6 @@
   opacity: 0.55;
 }
 
-.deck-status-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.deck-status-list div {
-  display: grid;
-  gap: 2px;
-  border: 1px solid var(--match-border-soft);
-  border-radius: 4px;
-  padding: 8px;
-  background: var(--match-surface-field);
-}
-
-.deck-status-list dt {
-  color: var(--match-text-muted);
-  font-size: 12px;
-}
-
-.deck-status-list dd {
-  margin: 0;
-  font-size: 15px;
-}
-
 .control-session-content {
   min-width: 0;
 }
