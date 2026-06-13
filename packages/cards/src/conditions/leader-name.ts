@@ -1,5 +1,5 @@
 import { parseCardFilterPredicates } from "../filters/index.js";
-import type { CardFilter } from "@optcg/types";
+import type { CardColor, CardFilter } from "@optcg/types";
 import type { ConditionParseResult, ConditionParser } from "../types.js";
 
 export const parseLeaderNameCondition: ConditionParser = (
@@ -60,6 +60,35 @@ export const parseLeaderNameCondition: ConditionParser = (
         "zone:leaderArea",
         "filter:category:leader",
         "filter:name",
+      ],
+      rest: "",
+    };
+  }
+
+  const colorIncludesMatch =
+    /^your Leader's colors include\s+(?<color>red|green|blue|purple|black|yellow)$/iu.exec(
+      input.text,
+    );
+  const includedColor = colorIncludesMatch?.groups?.["color"]
+    ?.trim()
+    .toLowerCase() as CardColor | undefined;
+  if (includedColor !== undefined && includedColor.length > 0) {
+    return {
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          colorsAny: [includedColor],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:color",
       ],
       rest: "",
     };

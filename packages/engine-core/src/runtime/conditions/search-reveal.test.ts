@@ -579,12 +579,6 @@ test("unsupported hasCardInZone shapes fail closed", () => {
     player: "turnPlayer",
     filter: { categories: ["leader"], typesAny: ["x"] },
   });
-  const unsupportedFilter = runWith({
-    type: "hasCardInZone",
-    zone: "leaderArea",
-    player: "self",
-    filter: { categories: ["leader"], typesAny: ["x"], colorsAny: ["red"] },
-  });
   assert.equal(
     must(wrongZone.errors, "wrongZone errors")[0]?.type,
     "effectRuntimeError",
@@ -593,10 +587,29 @@ test("unsupported hasCardInZone shapes fail closed", () => {
     must(wrongPlayer.errors, "wrongPlayer errors")[0]?.type,
     "effectRuntimeError",
   );
-  assert.equal(
-    must(unsupportedFilter.errors, "unsupportedFilter errors")[0]?.type,
-    "effectRuntimeError",
-  );
+});
+
+test("hasCardInZone supports reusable Leader color filters", () => {
+  const state = createActiveState();
+  const source = must(state.players[p1], "p1").leader;
+  state.cardManifest.cards[source.cardId] = {
+    ...resolvedCard({
+      cardId: source.cardId,
+      category: "leader",
+    }),
+    colors: ["red"],
+    types: [],
+    attributes: [],
+  };
+
+  const result = evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+    type: "hasCardInZone",
+    zone: "leaderArea",
+    player: "self",
+    filter: { categories: ["leader"], colorsAny: ["red"] },
+  });
+
+  assert.deepEqual(result, { supported: true, passed: true });
 });
 
 test("malformed comparator for count conditions fails closed", () => {

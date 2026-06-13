@@ -34,6 +34,7 @@ type SupportedLeaderZoneFilter = Required<Pick<CardFilter, "categories">> &
     | "typesAny"
     | "typesIncludeAny"
     | "attributesAny"
+    | "colorsAny"
     | "names"
     | "nameContains"
     | "power"
@@ -178,6 +179,7 @@ export const isSupportedLeaderZoneFilter = (
       key !== "typesAny" &&
       key !== "typesIncludeAny" &&
       key !== "attributesAny" &&
+      key !== "colorsAny" &&
       key !== "names" &&
       key !== "nameContains" &&
       key !== "power" &&
@@ -206,6 +208,10 @@ export const isSupportedLeaderZoneFilter = (
     Array.isArray(filter.attributesAny) &&
     filter.attributesAny.length > 0 &&
     filter.attributesAny.every((value) => typeof value === "string");
+  const hasColors =
+    Array.isArray(filter.colorsAny) &&
+    filter.colorsAny.length > 0 &&
+    filter.colorsAny.every((value) => typeof value === "string");
   const hasNames =
     Array.isArray(filter.names) &&
     filter.names.length > 0 &&
@@ -229,6 +235,7 @@ export const isSupportedLeaderZoneFilter = (
     (hasTypes ||
       hasTypesInclude ||
       hasAttributes ||
+      hasColors ||
       hasNames ||
       hasNameContains ||
       hasPower ||
@@ -258,6 +265,10 @@ const leaderMatchesFilter = (
       : filter.attributesAny.some((attribute) =>
           leader.attributes.includes(attribute),
         );
+  const colorsMatch =
+    filter.colorsAny === undefined
+      ? true
+      : filter.colorsAny.some((color) => leader.colors.includes(color));
   const namesMatch =
     filter.names === undefined
       ? true
@@ -288,6 +299,7 @@ const leaderMatchesFilter = (
     typesMatch &&
     typesIncludeMatch &&
     attributesMatch &&
+    colorsMatch &&
     namesMatch &&
     nameContainsMatch &&
     powerMatch &&

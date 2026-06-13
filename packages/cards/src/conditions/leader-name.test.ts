@@ -82,6 +82,32 @@ describe("leader name condition parser", () => {
     });
   });
 
+  it("parses Leader color membership as reusable leader-zone filter data", () => {
+    expect(
+      parseLeaderNameCondition({
+        text: "your Leader's colors include blue",
+      }),
+    ).toEqual({
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: {
+          categories: ["leader"],
+          colorsAny: ["blue"],
+        },
+      },
+      evidence: [
+        "condition:leaderIdentity",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:color",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses leader attribute predicates through reusable card filters", () => {
     expect(
       parseLeaderNameCondition({
