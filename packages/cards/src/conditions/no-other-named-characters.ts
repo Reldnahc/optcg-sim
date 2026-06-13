@@ -1,5 +1,6 @@
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ConditionParseResult, ConditionParser } from "../types.js";
+import type { CardFilter } from "@optcg/types";
 
 export const noOtherNamedCharactersConditionPrimitive = {
   primitiveId: "condition:fieldCount",
@@ -26,11 +27,16 @@ export const parseNoOtherNamedCharactersCondition: ConditionParser = (
   }
 
   const predicates = parseCardFilterPredicates({ text: predicateText });
+  const normalizedNamedFilter =
+    predicates === undefined
+      ? undefined
+      : normalizeNamedNoOtherFilter(predicates.filter);
   const namedCards =
     predicates !== undefined &&
+    normalizedNamedFilter !== undefined &&
     predicates.rest.length === 0 &&
-    predicates.filter.names !== undefined &&
-    predicates.filter.names.length > 0 &&
+    normalizedNamedFilter.filter.names !== undefined &&
+    normalizedNamedFilter.filter.names.length > 0 &&
     predicates.filter.categories === undefined;
   if (namedCards) {
     return {
@@ -38,7 +44,7 @@ export const parseNoOtherNamedCharactersCondition: ConditionParser = (
         type: "fieldCount",
         player: "self",
         filter: {
-          ...predicates.filter,
+          ...normalizedNamedFilter.filter,
           excludeSelf: true,
         },
         op: "eq",
@@ -47,7 +53,9 @@ export const parseNoOtherNamedCharactersCondition: ConditionParser = (
       evidence: [
         "condition:fieldCount",
         "player:self",
+        ...normalizedNamedFilter.evidence,
         "filter:name",
+        ...predicates.evidence.filter((evidence) => evidence !== "filter:name"),
         "filter:excludeSelf",
         "condition:comparator:eq",
         "condition:threshold:nonNegativeInteger",
@@ -88,5 +96,40 @@ export const parseNoOtherNamedCharactersCondition: ConditionParser = (
       "condition:threshold:nonNegativeInteger",
     ],
     rest: "",
+  };
+};
+
+const characterOnlyFilterKeys = new Set<keyof CardFilter>([
+  "attachedDon",
+  "baseCost",
+  "cost",
+  "currentPower",
+  "power",
+  "state",
+]);
+
+const normalizeNamedNoOtherFilter = (
+  filter: CardFilter,
+):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly [
+        "zone:characterArea",
+        "filter:category:character",
+      ];
+    }
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly [];
+    } => {
+  const needsCharacterCategory = Object.keys(filter).some((key) =>
+    characterOnlyFilterKeys.has(key as keyof CardFilter),
+  );
+  if (!needsCharacterCategory) {
+    return { filter, evidence: [] };
+  }
+  return {
+    filter: { categories: ["character"], ...filter },
+    evidence: ["zone:characterArea", "filter:category:character"],
   };
 };

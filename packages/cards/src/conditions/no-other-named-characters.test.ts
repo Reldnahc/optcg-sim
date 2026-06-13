@@ -32,3 +32,38 @@ it("parses no-other named Characters as a reusable self field-count primitive", 
     rest: "",
   });
 });
+
+it("parses no-other named base-cost filters as character field-count filters", () => {
+  expect(
+    parseNoOtherNamedCharactersCondition({
+      text: "you have no other [Shirahoshi] with a base cost of 2",
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        names: ["Shirahoshi"],
+        baseCost: { op: "eq", value: 2 },
+        excludeSelf: true,
+      },
+      op: "eq",
+      value: 0,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "player:self",
+      "zone:characterArea",
+      "filter:category:character",
+      "filter:name",
+      "filter:cost",
+      "condition:comparator:eq",
+      "condition:threshold:positiveInteger",
+      "filter:excludeSelf",
+      "condition:comparator:eq",
+      "condition:threshold:nonNegativeInteger",
+    ],
+    rest: "",
+  });
+});
