@@ -536,6 +536,34 @@ test("canonical event matcher matches lifeRemoved and opponentActivated event fa
   }
 });
 
+test("canonical event matcher matches On Block only for the activated blocker source", () => {
+  const { state, character } = setupEventHookState();
+  const blockerActivated = publicEvent(state, "blockerActivated", {
+    blocker: {
+      playerId: character.controller,
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      zone: character.zone,
+    },
+  });
+
+  assert.deepEqual(
+    matchEventTrigger(state, character, { type: "onBlock" }, blockerActivated),
+    { matched: true, triggerTypes: ["onBlock"] },
+  );
+
+  const otherSource = must(state.players[p1]?.leader, "other source");
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      otherSource,
+      { type: "onBlock" },
+      blockerActivated,
+    ),
+    { matched: false, triggerTypes: [] },
+  );
+});
+
 test("canonical event matcher de-duplicates anyOf trigger matches in child order", () => {
   const { source, state, character } = setupEventHookState();
   const event = publicEvent(state, "cardPlayed", {

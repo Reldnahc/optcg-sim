@@ -73,19 +73,6 @@ describe("card effect line parser", () => {
     });
   });
 
-  it("recognizes unsupported entry points without marking them supported", () => {
-    const result = parseCardEffectLine("[On Block] Draw 1 card.");
-
-    expect(result).toMatchObject({
-      block: {
-        trigger: { type: "onBlock" },
-      },
-    });
-    expect(result?.evidence).toContain("entry:onBlock");
-    expect(result?.evidence).toContain("entrySupport:unsupported");
-    expect(result?.evidence).toContain("instruction:draw");
-  });
-
   it("parses field-control primitives through composition instead of planned placeholders", () => {
     const result = parseCardEffectLine(
       "[On Play] Rest up to 1 of your opponent's Characters and that Character will not become active in your opponent's next Refresh Phase. Then, if your opponent has 2 or more rested Characters, your Leader gains +2000 power until the end of your opponent's next End Phase.",

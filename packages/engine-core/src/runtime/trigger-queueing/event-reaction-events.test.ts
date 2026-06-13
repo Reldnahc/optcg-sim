@@ -11,6 +11,7 @@ import {
 test("auto event reaction capabilities share one trigger family registry", () => {
   assert.equal(isSupportedAutoEventReactionTriggerType("lifeRemoved"), true);
   assert.equal(isSupportedAutoEventReactionTriggerType("fieldRemoved"), true);
+  assert.equal(isSupportedAutoEventReactionTriggerType("onBlock"), true);
   assert.equal(
     isSupportedAutoEventReactionTriggerType("onOpponentAttack"),
     false,
@@ -24,8 +25,13 @@ test("auto event reaction capabilities share one trigger family registry", () =>
     isAutoEventReactionTimingWindowId("timing-window:event:1:onOpponentAttack"),
     false,
   );
+  assert.equal(
+    isAutoEventReactionTimingWindowId("timing-window:event:1:onBlock"),
+    true,
+  );
 
   assert.equal(isAutoEventReactionRuntimeEventType("cardMoved"), true);
-  assert.equal(isAutoEventReactionRuntimeEventType("blockerActivated"), false);
+  assert.equal(isAutoEventReactionRuntimeEventType("blockerActivated"), true);
   assert.equal(autoEventReactionTriggerTypes.includes("lifeRemoved"), true);
+  assert.equal(autoEventReactionTriggerTypes.includes("onBlock"), true);
 });

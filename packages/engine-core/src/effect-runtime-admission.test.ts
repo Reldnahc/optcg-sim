@@ -1022,7 +1022,7 @@ test("runtime admission accepts saved Leader or Character effect invalidation se
   );
 });
 
-test("runtime admission rejects parsed unsupported entry adapters", () => {
+test("runtime admission accepts On Block through the reusable auto entry adapter", () => {
   const report = evaluateEffectBlockRuntimeSupport(
     block({
       category: "auto",
@@ -1032,13 +1032,5 @@ test("runtime admission rejects parsed unsupported entry adapters", () => {
     }),
   );
 
-  assert.equal(report.supported, false);
-  assert.equal(
-    report.reason,
-    "unsupported trigger/category/source-presence envelope",
-  );
-  const firstMissing = report.missing[0];
-  assert.ok(firstMissing);
-  assert.equal(firstMissing.family, "entryPoint");
-  assert.equal(firstMissing.id, "onBlock");
+  assertRuntimeSupported(report);
 });

@@ -37,6 +37,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "onOpponentAttack") {
     return autoAdapter("onOpponentAttack", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "onBlock") {
+    return autoAdapter("onBlock", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "onKO") {
     return autoAdapter("onKO", [
       "resolveFromDestinationZone",

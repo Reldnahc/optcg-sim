@@ -105,8 +105,8 @@ export const entryPointDefinitions: readonly EntryPointDefinition[] = [
   {
     text: "[On Block]",
     trigger: { type: "onBlock" },
-    evidence: ["entry:onBlock", "entrySupport:unsupported"],
-    supportStatus: "recognizedUnsupported",
+    evidence: ["entry:onBlock", "sourcePresence:mustRemain"],
+    supportStatus: "supported",
   },
 ];
 

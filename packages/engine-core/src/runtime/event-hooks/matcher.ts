@@ -22,6 +22,7 @@ export type EventReactionTriggerType =
   | "donReturned"
   | "donAttached"
   | "attackDeclared"
+  | "onBlock"
   | "effectQueued"
   | "effectResolved"
   | "triggerActivated"
@@ -547,6 +548,25 @@ const matchOpponentAttack = (
   );
 };
 
+const matchOnBlock = (
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "onBlock" }>,
+  event: EngineEvent,
+): boolean => {
+  void trigger;
+  const payload = publicPayload(event);
+  if (event.type !== "blockerActivated" || payload === undefined) {
+    return false;
+  }
+  const blocker = cardRefFromUnknown(payload["blocker"]);
+  return (
+    blocker !== undefined &&
+    blocker.playerId === source.controller &&
+    blocker.instanceId === source.instanceId &&
+    blocker.cardId === source.cardId
+  );
+};
+
 const payloadPlayerId = (
   payload: Record<string, unknown>,
 ): PlayerId | undefined =>
@@ -795,6 +815,9 @@ const matchPrimitiveEventTrigger = (
       "onOpponentAttack",
       matchOpponentAttack(state, source, trigger, event),
     );
+  }
+  if (trigger.type === "onBlock") {
+    return primitiveMatch("onBlock", matchOnBlock(source, trigger, event));
   }
   if (trigger.type === "opponentActivated") {
     return primitiveMatch(
