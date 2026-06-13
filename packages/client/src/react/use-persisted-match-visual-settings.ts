@@ -66,6 +66,38 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
       );
       setSettings((current) => ({ ...current, soundVolume }));
     },
+    setWindowColor: (value) => {
+      const windowColor = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "windowColor",
+        value,
+      );
+      setSettings((current) => ({ ...current, windowColor }));
+    },
+    setWindowOpacity: (value) => {
+      const windowOpacity = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "windowOpacity",
+        value,
+      );
+      setSettings((current) => ({ ...current, windowOpacity }));
+    },
+    setPlaymatColor: (value) => {
+      const playmatColor = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "playmatColor",
+        value,
+      );
+      setSettings((current) => ({ ...current, playmatColor }));
+    },
+    setPlaymatOpacity: (value) => {
+      const playmatOpacity = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "playmatOpacity",
+        value,
+      );
+      setSettings((current) => ({ ...current, playmatOpacity }));
+    },
     setZoneBackgroundVisibility: (value) => {
       const zoneBackgroundVisibility = saveMatchVisualSetting(
         browserPersistentStorage(),

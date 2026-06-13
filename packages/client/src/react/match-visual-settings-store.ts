@@ -56,12 +56,21 @@ const confirmAttachDonSetting =
     serialize: (value) => (value ? "true" : "false"),
   });
 
-const clampVisibility = (value: number, fallback: number): number =>
+const clampVisibility = (
+  value: number,
+  fallback: number,
+  minValue: number,
+): number =>
   Number.isFinite(value)
-    ? Math.min(100, Math.max(0, Math.round(value)))
+    ? Math.min(100, Math.max(minValue, Math.round(value)))
     : fallback;
 
-const visibilitySetting = <K extends MatchVisualSettingId>({
+const normalizeHexColor = (value: string, fallback: string): string => {
+  const trimmed = value.trim();
+  return /^#[0-9a-fA-F]{6}$/u.test(trimmed) ? trimmed.toLowerCase() : fallback;
+};
+
+const colorSetting = <K extends MatchVisualSettingId>({
   id,
   groupId,
   storageKey,
@@ -70,7 +79,39 @@ const visibilitySetting = <K extends MatchVisualSettingId>({
   readonly id: K;
   readonly groupId: MatchVisualSettingGroupId;
   readonly storageKey: string;
+  readonly defaultValue: Extract<MatchVisualSettingsValues[K], string>;
+}): MatchVisualSettingDefinition<K> => ({
+  id,
+  groupId,
+  storageKey,
+  defaultValue,
+  parse: (stored) =>
+    (stored === null
+      ? defaultValue
+      : normalizeHexColor(
+          stored,
+          defaultValue,
+        )) as MatchVisualSettingsValues[K],
+  normalize: (value) =>
+    normalizeHexColor(
+      String(value),
+      defaultValue,
+    ) as MatchVisualSettingsValues[K],
+  serialize: (value) => String(value),
+});
+
+const visibilitySetting = <K extends MatchVisualSettingId>({
+  id,
+  groupId,
+  storageKey,
+  defaultValue,
+  minValue,
+}: {
+  readonly id: K;
+  readonly groupId: MatchVisualSettingGroupId;
+  readonly storageKey: string;
   readonly defaultValue: Extract<MatchVisualSettingsValues[K], number>;
+  readonly minValue?: number;
 }): MatchVisualSettingDefinition<K> => ({
   id,
   groupId,
@@ -82,11 +123,13 @@ const visibilitySetting = <K extends MatchVisualSettingId>({
       : clampVisibility(
           Number.parseInt(stored, 10),
           defaultValue,
+          minValue ?? 0,
         )) as MatchVisualSettingsValues[K],
   normalize: (value) =>
     clampVisibility(
       value as number,
       defaultValue,
+      minValue ?? 0,
     ) as MatchVisualSettingsValues[K],
   serialize: (value) => String(value),
 });
@@ -127,6 +170,32 @@ export const matchVisualSettingDefinitions = {
     storageKey: "optcg:client:sound-volume",
     defaultValue: defaultMatchVisualSettingsValues.soundVolume,
   }),
+  windowColor: colorSetting({
+    id: "windowColor",
+    groupId: "appearance",
+    storageKey: "optcg:client:window-color",
+    defaultValue: defaultMatchVisualSettingsValues.windowColor,
+  }),
+  windowOpacity: visibilitySetting({
+    id: "windowOpacity",
+    groupId: "appearance",
+    storageKey: "optcg:client:window-opacity",
+    defaultValue: defaultMatchVisualSettingsValues.windowOpacity,
+    minValue: 50,
+  }),
+  playmatColor: colorSetting({
+    id: "playmatColor",
+    groupId: "appearance",
+    storageKey: "optcg:client:playmat-color",
+    defaultValue: defaultMatchVisualSettingsValues.playmatColor,
+  }),
+  playmatOpacity: visibilitySetting({
+    id: "playmatOpacity",
+    groupId: "appearance",
+    storageKey: "optcg:client:playmat-opacity",
+    defaultValue: defaultMatchVisualSettingsValues.playmatOpacity,
+    minValue: 50,
+  }),
   zoneBackgroundVisibility: visibilitySetting({
     id: "zoneBackgroundVisibility",
     groupId: "appearance",
@@ -150,6 +219,10 @@ export const matchVisualSettingIds = [
   "quickPayActivateMainCosts",
   "reducedMotion",
   "soundVolume",
+  "windowColor",
+  "windowOpacity",
+  "playmatColor",
+  "playmatOpacity",
   "zoneBackgroundVisibility",
   "zoneGuideVisibility",
 ] as const satisfies readonly MatchVisualSettingId[];
@@ -174,7 +247,7 @@ const loadWithDefinition = <K extends MatchVisualSettingId>(
 
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "backgroundImageUrl",
+  settingId: "backgroundImageUrl" | "windowColor" | "playmatColor",
 ): string;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
@@ -186,7 +259,12 @@ export function loadMatchVisualSetting(
 ): boolean;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "soundVolume" | "zoneBackgroundVisibility" | "zoneGuideVisibility",
+  settingId:
+    | "soundVolume"
+    | "windowOpacity"
+    | "playmatOpacity"
+    | "zoneBackgroundVisibility"
+    | "zoneGuideVisibility",
 ): number;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
@@ -197,6 +275,16 @@ export function loadMatchVisualSetting(
       return loadWithDefinition(
         storage,
         matchVisualSettingDefinitions.backgroundImageUrl,
+      );
+    case "windowColor":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.windowColor,
+      );
+    case "playmatColor":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.playmatColor,
       );
     case "confirmAttachDon":
       return loadWithDefinition(
@@ -223,6 +311,16 @@ export function loadMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.soundVolume,
       );
+    case "windowOpacity":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.windowOpacity,
+      );
+    case "playmatOpacity":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.playmatOpacity,
+      );
     case "zoneBackgroundVisibility":
       return loadWithDefinition(
         storage,
@@ -248,6 +346,10 @@ export const loadMatchVisualSettings = (
   ),
   reducedMotion: loadMatchVisualSetting(storage, "reducedMotion"),
   soundVolume: loadMatchVisualSetting(storage, "soundVolume"),
+  windowColor: loadMatchVisualSetting(storage, "windowColor"),
+  windowOpacity: loadMatchVisualSetting(storage, "windowOpacity"),
+  playmatColor: loadMatchVisualSetting(storage, "playmatColor"),
+  playmatOpacity: loadMatchVisualSetting(storage, "playmatOpacity"),
   zoneBackgroundVisibility: loadMatchVisualSetting(
     storage,
     "zoneBackgroundVisibility",
@@ -275,7 +377,7 @@ const saveWithDefinition = <K extends MatchVisualSettingId>(
 
 export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "backgroundImageUrl",
+  settingId: "backgroundImageUrl" | "windowColor" | "playmatColor",
   value: string,
 ): string;
 export function saveMatchVisualSetting(
@@ -289,7 +391,12 @@ export function saveMatchVisualSetting(
 ): boolean;
 export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "soundVolume" | "zoneBackgroundVisibility" | "zoneGuideVisibility",
+  settingId:
+    | "soundVolume"
+    | "zoneBackgroundVisibility"
+    | "zoneGuideVisibility"
+    | "windowOpacity"
+    | "playmatOpacity",
   value: number,
 ): number;
 export function saveMatchVisualSetting(
@@ -302,6 +409,18 @@ export function saveMatchVisualSetting(
       return saveWithDefinition(
         storage,
         matchVisualSettingDefinitions.backgroundImageUrl,
+        String(value),
+      );
+    case "windowColor":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.windowColor,
+        String(value),
+      );
+    case "playmatColor":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.playmatColor,
         String(value),
       );
     case "confirmAttachDon":
@@ -332,6 +451,18 @@ export function saveMatchVisualSetting(
       return saveWithDefinition(
         storage,
         matchVisualSettingDefinitions.soundVolume,
+        typeof value === "number" ? value : Number.NaN,
+      );
+    case "windowOpacity":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.windowOpacity,
+        typeof value === "number" ? value : Number.NaN,
+      );
+    case "playmatOpacity":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.playmatOpacity,
         typeof value === "number" ? value : Number.NaN,
       );
     case "zoneBackgroundVisibility":

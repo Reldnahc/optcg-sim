@@ -21,6 +21,61 @@ export const defaultSettingsWindowRect: WindowRect = {
   height: 220,
 };
 
+const colorSwatches = [
+  "#0d0d0e",
+  "#222224",
+  "#17150d",
+  "#1f2933",
+  "#2d1b1b",
+  "#10251b",
+] as const;
+
+const ColorSelector = ({
+  label,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+}): React.JSX.Element => (
+  <div className="settings-color-field">
+    <span>{label}</span>
+    <div className="settings-color-selector">
+      <div className="settings-color-swatches" aria-label={`${label} presets`}>
+        {colorSwatches.map((color) => (
+          <button
+            key={color}
+            type="button"
+            className={[
+              "settings-color-swatch",
+              value.toLowerCase() === color ? "is-selected" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{ backgroundColor: color }}
+            aria-label={`${label} ${color}`}
+            aria-pressed={value.toLowerCase() === color}
+            onClick={() => {
+              onChange(color);
+            }}
+          />
+        ))}
+      </div>
+      <input
+        type="text"
+        inputMode="text"
+        pattern="#[0-9a-fA-F]{6}"
+        value={value}
+        aria-label={label}
+        onChange={(event) => {
+          onChange(event.currentTarget.value);
+        }}
+      />
+    </div>
+  </div>
+);
+
 export const SettingsContent = (): React.JSX.Element => {
   const {
     backgroundImageUrl,
@@ -29,6 +84,10 @@ export const SettingsContent = (): React.JSX.Element => {
     quickPayActivateMainCosts,
     reducedMotion,
     soundVolume,
+    windowColor,
+    windowOpacity,
+    playmatColor,
+    playmatOpacity,
     zoneBackgroundVisibility,
     zoneGuideVisibility,
     setBackgroundImageUrl,
@@ -37,6 +96,10 @@ export const SettingsContent = (): React.JSX.Element => {
     setQuickPayActivateMainCosts,
     setReducedMotion,
     setSoundVolume,
+    setWindowColor,
+    setWindowOpacity,
+    setPlaymatColor,
+    setPlaymatOpacity,
     setZoneBackgroundVisibility,
     setZoneGuideVisibility,
   } = useMatchVisualSettings();
@@ -90,6 +153,48 @@ export const SettingsContent = (): React.JSX.Element => {
           }}
         />
       </label>
+      <section className="settings-surface-group" aria-label="Windows">
+        <h3>Windows</h3>
+        <label className="settings-field">
+          <span>Window opacity</span>
+          <input
+            type="range"
+            min="50"
+            max="100"
+            step="1"
+            value={windowOpacity}
+            onChange={(event) => {
+              setWindowOpacity(event.currentTarget.valueAsNumber);
+            }}
+          />
+        </label>
+        <ColorSelector
+          label="Window color"
+          value={windowColor}
+          onChange={setWindowColor}
+        />
+      </section>
+      <section className="settings-surface-group" aria-label="Playmat">
+        <h3>Playmat</h3>
+        <label className="settings-field">
+          <span>Playmat opacity</span>
+          <input
+            type="range"
+            min="50"
+            max="100"
+            step="1"
+            value={playmatOpacity}
+            onChange={(event) => {
+              setPlaymatOpacity(event.currentTarget.valueAsNumber);
+            }}
+          />
+        </label>
+        <ColorSelector
+          label="Playmat color"
+          value={playmatColor}
+          onChange={setPlaymatColor}
+        />
+      </section>
       <label className="settings-field">
         <span>Zone guide visibility</span>
         <input
