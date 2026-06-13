@@ -42,6 +42,58 @@ const jsonObject = (value: unknown): JsonObject => {
     : {};
 };
 
+const isJsonRecord = (value: unknown): value is JsonObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const compactVariantSnapshot = (variant: unknown): JsonObject => {
+  if (!isJsonRecord(variant)) {
+    return {};
+  }
+  return jsonObject({
+    stockImageFull: variant["stockImageFull"],
+    scanImageDisplay: variant["scanImageDisplay"],
+  });
+};
+
+const compactCardSnapshot = (card: unknown): JsonObject => {
+  if (!isJsonRecord(card)) {
+    return {};
+  }
+  const variants = Array.isArray(card["variants"])
+    ? card["variants"].slice(0, 1).map(compactVariantSnapshot)
+    : [];
+  return jsonObject({
+    cardId: card["cardId"],
+    name: card["name"],
+    category: card["category"],
+    cost: card["cost"],
+    power: card["power"],
+    counter: card["counter"],
+    attributes: card["attributes"],
+    types: card["types"],
+    effectText: card["effectText"],
+    triggerText: card["triggerText"],
+    variants,
+  });
+};
+
+const compactManifestSnapshot = (manifest: unknown): JsonObject => {
+  if (!isJsonRecord(manifest) || !isJsonRecord(manifest["cards"])) {
+    return {};
+  }
+  return jsonObject({
+    manifestHash: manifest["manifestHash"],
+    cardDataVersion: manifest["cardDataVersion"],
+    effectDefinitionsVersion: manifest["effectDefinitionsVersion"],
+    cards: Object.fromEntries(
+      Object.entries(manifest["cards"]).map(([cardId, card]) => [
+        cardId,
+        compactCardSnapshot(card),
+      ]),
+    ),
+  });
+};
+
 const hashJson = (value: unknown): string =>
   createHash("sha256")
     .update(canonicalJson(jsonObject(value)))
@@ -183,7 +235,9 @@ export const buildLocalCompletedMatchRecord = (
     rollbackPolicy: { mode: "mutual-consent" },
     runtimeVersions: jsonObject(input.match.state.version),
     cardManifestHash: hashJson(input.match.state.cardManifest),
-    cardManifestSnapshot: jsonObject(input.match.state.cardManifest),
+    cardManifestSnapshot: compactManifestSnapshot(
+      input.match.state.cardManifest,
+    ),
     firstPlayerSeatId: input.setup.firstPlayerId,
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
     winnerUserId: winnerSeat?.subject?.userId ?? null,
@@ -212,15 +266,15 @@ export const buildLocalCompletedMatchRecord = (
       rngSeedCommitment: hashJson(input.setup.rngSeed),
       rngSeedRevealed: seedText(input.setup.rngSeed),
       manifestHash: hashJson(input.match.state.cardManifest),
-      manifestSnapshot: jsonObject(input.match.state.cardManifest),
+      manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
       initialStateHash: hashJson(input.setup),
       finalStateHash,
-      initialSnapshot: jsonObject(input.setup),
+      initialSnapshot: null,
       initialDeckOrders,
       deterministicEntries: input.records.map((record) => jsonObject(record)),
       auditEntries: input.match.state.audit.map((entry) => jsonObject(entry)),
       checkpoints: [],
-      finalState: jsonObject(input.match.state),
+      finalState: null,
       compressed: false,
       artifactStorage: null,
       artifactKey: null,
