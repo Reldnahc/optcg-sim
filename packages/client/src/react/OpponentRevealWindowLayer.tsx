@@ -1,6 +1,5 @@
 import type { JSX } from "react";
 
-import type { ClientCardModel } from "../view-model.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import type { OpponentRevealWindow } from "./opponent-reveal-windows.js";
 import { revealWindowKey } from "./opponent-reveal-windows.js";
@@ -15,7 +14,6 @@ export interface OpponentRevealWindowLayerProps {
   onActivateWindow: (windowKey: string) => void;
   onToggleMinimized: (revealId: string) => void;
   onClose: (revealId: string) => void;
-  onPreviewCard: (card: ClientCardModel) => void;
   onRectChange: (windowKey: string, rect: WindowRect) => void;
   onDragMove: (rect: WindowRect) => void;
   onDragEnd: (windowKey: string, rect: WindowRect) => WindowRect | undefined;
@@ -30,7 +28,6 @@ export const OpponentRevealWindowLayer = ({
   onActivateWindow,
   onToggleMinimized,
   onClose,
-  onPreviewCard,
   onRectChange,
   onDragMove,
   onDragEnd,
@@ -58,7 +55,6 @@ export const OpponentRevealWindowLayer = ({
             onToggleMinimized={() => {
               onToggleMinimized(revealWindow.revealId);
             }}
-            onPreviewCard={onPreviewCard}
             onClose={() => {
               onClose(revealWindow.revealId);
             }}

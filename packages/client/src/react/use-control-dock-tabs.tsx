@@ -199,12 +199,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: revealWindow.model.title,
-        content: (
-          <RevealWindowContent
-            model={revealWindow.model}
-            onPreviewCard={previewCardModel}
-          />
-        ),
+        content: <RevealWindowContent model={revealWindow.model} />,
       };
     }
     return undefined;
