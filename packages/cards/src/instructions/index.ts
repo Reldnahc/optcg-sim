@@ -47,6 +47,7 @@ export { parsePreventPlayInstruction } from "./prevent-play.js";
 export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export { parseSelectFromTrashChoiceInstruction } from "./select-from-trash-choice.js";
 export { parseSelectTargetsInstruction } from "./select-targets.js";
+export { parseAddThisCardToHandInstruction } from "./source-card-movement.js";
 export {
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersBlockerActivationInstruction,

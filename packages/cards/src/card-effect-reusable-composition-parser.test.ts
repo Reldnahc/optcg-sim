@@ -28,6 +28,61 @@ describe("card effect reusable parser compositions", () => {
     expect(result?.evidence).not.toContain("reference:eventMain");
   });
 
+  it("parses trigger K.O. plus source-card hand movement as reusable sequence children", () => {
+    const result = parseCardEffectLine(
+      "[Trigger] K.O. up to 1 of your opponent's Characters with a cost of 1 or less and add this card to your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "trigger" },
+        sourcePresencePolicy: "noSourceRequired",
+      },
+    });
+    if (result === undefined || !("block" in result)) {
+      throw new Error("Expected runtime effect line.");
+    }
+    const effect = result.block.effect;
+    expect(effect.type).toBe("sequence");
+    if (effect.type !== "sequence") {
+      throw new Error("Expected sequence effect.");
+    }
+    const koSegment = effect.effects[0]?.effect;
+    expect(koSegment?.type).toBe("sequence");
+    if (koSegment?.type !== "sequence") {
+      throw new Error("Expected K.O. sequence segment.");
+    }
+    expect(koSegment.effects.map((segment) => segment.effect.type)).toEqual([
+      "selectTargets",
+      "ko",
+    ]);
+    expect(effect.effects[1]).toMatchObject({
+      connector: "then",
+      effect: {
+        type: "moveCards",
+        count: 1,
+        from: {
+          player: "self",
+          zone: "trash",
+          source: "effectSource",
+        },
+        to: { player: "self", zone: "hand" },
+        order: "original",
+      },
+    });
+    expect(result.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:lifeTrigger",
+        "instruction:ko",
+        "instruction:moveCards",
+        "target:thisCard",
+        "destination:hand",
+        "connector:andOrdered",
+      ]),
+    );
+  });
+
   it("parses turn-windowed triggered effects as composed entry conditions", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] [On K.O.] You may deal 1 damage to your opponent.",
