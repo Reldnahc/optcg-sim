@@ -23,6 +23,7 @@ import {
   applySetToLifeSelectedCardMoveSegment,
   applyTrashToLifeSelectedCardMoveSegment,
 } from "./selected-trash-to-life.js";
+import { applyHandToLifeSelectedCardMoveSegment } from "./selected-hand-to-life.js";
 import {
   applySetToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
@@ -367,6 +368,13 @@ export const applySelectedCardMoveSegment = (
       params.effect.position === "topOrBottom")
   ) {
     return applyHandToDeckSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    params.effect.from === "hand" &&
+    params.effect.to === "life" &&
+    (params.effect.position === "top" || params.effect.position === "bottom")
+  ) {
+    return applyHandToLifeSelectedCardMoveSegment(params, selected);
   }
   if (
     isSelectionSetSource(params.effect.from) &&

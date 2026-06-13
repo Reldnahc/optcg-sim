@@ -92,3 +92,89 @@ test("sequence support accepts controller-selected opponent trash moved to owner
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts single selected hand card movement to Life top", () => {
+  const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            player: "self",
+            zone: "hand",
+            chooser: "self",
+            visibility: "chooserOnly",
+            min: 0,
+            max: 1,
+            saveAs: selection,
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "hand",
+            to: "life",
+            position: "top",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support rejects multi-card selected hand movement to Life without ordering support", () => {
+  const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            player: "self",
+            zone: "hand",
+            chooser: "self",
+            visibility: "chooserOnly",
+            min: 0,
+            max: 2,
+            saveAs: selection,
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "hand",
+            to: "life",
+            position: "top",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), false);
+});

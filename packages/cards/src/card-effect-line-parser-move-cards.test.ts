@@ -248,6 +248,87 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses optional Life-to-hand cost before hand-to-Life-top movement", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may add 1 card from the top or bottom of your Life cards to your hand: Add up to 1 card from your hand to the top of your Life cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveCards",
+                  count: 1,
+                  chooser: "self",
+                  from: {
+                    player: "self",
+                    zone: "life",
+                    position: "topOrBottom",
+                  },
+                  to: { player: "self", zone: "hand" },
+                  order: "chooserChoice",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "handSelection:self-hand-to-life-placement",
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 1,
+                      saveAs: "handSelection:self-hand-to-life-placement",
+                      visibility: "chooserOnly",
+                    },
+                  },
+                  {
+                    connector: "ifPossible",
+                    effect: {
+                      type: "moveSelected",
+                      selection: "handSelection:self-hand-to-life-placement",
+                      from: "hand",
+                      to: "life",
+                      position: "top",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:optionalCostedEffect",
+        "cost:moveCards",
+        "zone:life",
+        "position:top",
+        "position:bottom",
+        "destination:hand",
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "zone:hand",
+        "destination:life",
+      ]),
+    );
+  });
+
   it("parses optional turn-Life-face-down cost before rested DON attachment", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may turn 1 card from the top of your Life cards face-down: Give up to 1 rested DON!! card to your Leader or 1 of your Characters.",

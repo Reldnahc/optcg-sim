@@ -85,6 +85,7 @@ export const isSupportedSequenceSelectCardsSegment = (
 export const isSupportedMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
   selectionKind?: SavedSelectedCardsKind,
+  selectionMax?: number,
   hasSourceSet = false,
 ): effect is MoveSelectedEffect =>
   effect.type === "moveSelected" &&
@@ -109,6 +110,12 @@ export const isSupportedMoveSelectedSegment = (
         effect.position === "topOrBottom") &&
       effect.destinationFaceUp === undefined &&
       selectionKind === "hand") ||
+    (effect.from === "hand" &&
+      effect.to === "life" &&
+      (effect.position === "top" || effect.position === "bottom") &&
+      effect.destinationFaceUp === undefined &&
+      selectionKind === "hand" &&
+      selectionMax === 1) ||
     (isSelectionSetSource(effect.from) &&
       effect.to === "hand" &&
       effect.position === undefined &&

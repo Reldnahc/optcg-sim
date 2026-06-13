@@ -160,6 +160,7 @@ export interface SequenceSupportOptions {
 interface SequenceSupportState {
   hasPendingDecisionSegment: boolean;
   savedSelectedCards: Map<string, SavedSelectedCardsKind>;
+  savedSelectedCardMaxCounts: Map<string, number>;
   savedSelectionSets: Set<string>;
   savedSelectedTargets: Set<string>;
 }
@@ -169,6 +170,7 @@ const emptySequenceSupportState = (
 ): SequenceSupportState => ({
   hasPendingDecisionSegment: false,
   savedSelectedCards: new Map(),
+  savedSelectedCardMaxCounts: new Map(),
   savedSelectionSets: new Set(),
   savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
 });
@@ -178,6 +180,7 @@ const cloneSequenceSupportState = (
 ): SequenceSupportState => ({
   hasPendingDecisionSegment: state.hasPendingDecisionSegment,
   savedSelectedCards: new Map(state.savedSelectedCards),
+  savedSelectedCardMaxCounts: new Map(state.savedSelectedCardMaxCounts),
   savedSelectionSets: new Set(state.savedSelectionSets),
   savedSelectedTargets: new Set(state.savedSelectedTargets),
 });
@@ -187,6 +190,12 @@ const savedSelectedCardsKind = (
   selection: unknown,
 ): SavedSelectedCardsKind | undefined =>
   state.savedSelectedCards.get(String(selection));
+
+const savedSelectedCardsMaxCount = (
+  state: SequenceSupportState,
+  selection: unknown,
+): number | undefined =>
+  state.savedSelectedCardMaxCounts.get(String(selection));
 
 const hasSavedSelectionSet = (
   state: SequenceSupportState,
@@ -449,6 +458,10 @@ const isSupportedSequenceBlockWithState = (
           String(segment.effect.saveAs),
           "set",
         );
+        supportState.savedSelectedCardMaxCounts.set(
+          String(segment.effect.saveAs),
+          segment.effect.max,
+        );
         return true;
       }
       if (isSupportedRevealSelectedSegment(segment.effect)) {
@@ -485,6 +498,10 @@ const isSupportedSequenceBlockWithState = (
           String(segment.effect.saveAs),
           kind,
         );
+        supportState.savedSelectedCardMaxCounts.set(
+          String(segment.effect.saveAs),
+          segment.effect.max,
+        );
         supportState.hasPendingDecisionSegment = true;
         return true;
       }
@@ -492,6 +509,7 @@ const isSupportedSequenceBlockWithState = (
         return isSupportedMoveSelectedSegment(
           segment.effect,
           savedSelectedCardsKind(supportState, segment.effect.selection),
+          savedSelectedCardsMaxCount(supportState, segment.effect.selection),
           hasSavedSelectionSet(supportState, segment.effect.from),
         );
       }

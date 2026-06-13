@@ -1,8 +1,14 @@
+import type { SelectionId } from "@optcg/types";
+
+import { parseUpToCardinality } from "../cardinality/index.js";
 import {
   parsePrimitivePattern,
   type PrimitivePatternDefinition,
 } from "../primitive-patterns.js";
 import type { InstructionParseResult, InstructionParser } from "../types.js";
+
+const handToLifeSelection =
+  "handSelection:self-hand-to-life-placement" as SelectionId;
 
 export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
   {
@@ -217,5 +223,75 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
     ],
   };
 
-export const parseLifeMovementInstruction: InstructionParser = (input) =>
-  parsePrimitivePattern(input, lifeMovementPrimitive);
+export const parseLifeMovementInstruction: InstructionParser = (input) => {
+  const handToLife = parseHandToLifeInstruction(input);
+  if (handToLife !== undefined) {
+    return handToLife;
+  }
+
+  return parsePrimitivePattern(input, lifeMovementPrimitive);
+};
+
+const parseHandToLifeInstruction: InstructionParser = (input) => {
+  const addMatch = /^add\s+(?<rest>.+)$/i.exec(input.text);
+  const afterAdd = addMatch?.groups?.["rest"];
+  if (afterAdd === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: afterAdd });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  if (
+    !/^cards? from your hand to the top of your Life cards\.?$/i.test(
+      cardinality.rest,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: handToLifeSelection,
+          effect: {
+            type: "selectCards",
+            zone: "hand",
+            player: "self",
+            chooser: "self",
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            saveAs: handToLifeSelection,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection: handToLifeSelection,
+            from: "hand",
+            to: "life",
+            position: "top",
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectCards",
+      "instruction:moveSelected",
+      ...cardinality.evidence,
+      "player:self",
+      "zone:hand",
+      "destination:life",
+      "position:top",
+      "chooser:self:upTo",
+      "composition:selectThenMove",
+    ],
+    rest: "",
+  };
+};

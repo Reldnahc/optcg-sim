@@ -369,3 +369,87 @@ test("self hand selection can be ordered onto the top of deck through an order d
     ),
   );
 });
+
+test("self hand selection moves one chosen card to the top of Life", () => {
+  const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
+  const state = queueSequence({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: selection,
+        effect: {
+          type: "selectCards",
+          zone: "hand",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          saveAs: selection,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        connector: "ifPossible",
+        effect: {
+          type: "moveSelected",
+          selection,
+          from: "hand",
+          to: "life",
+          position: "top",
+        },
+      },
+    ],
+  });
+  const player = must(state.players[p1], "p1");
+  const selected = must(player.hand[0], "selected hand card");
+  const originalLifeIds = player.life.map((life) => life.card.instanceId);
+
+  const paused = processEffectRuntime(state);
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(selectDecision.type, "selectCards");
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: selected.instanceId,
+          cardId: selected.cardId,
+          playerId: p1,
+          zone: selected.zone,
+        },
+      ],
+    },
+  });
+  const resolvedPlayer = must(resolved.state.players[p1], "resolved p1");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(
+    must(resolvedPlayer.life[0], "new life top").card.instanceId,
+    selected.instanceId,
+  );
+  assert.deepEqual(
+    resolvedPlayer.life.map((life) => life.card.instanceId),
+    [selected.instanceId, ...originalLifeIds],
+  );
+  assert.ok(
+    !resolvedPlayer.hand.some(
+      (card) => card.instanceId === selected.instanceId,
+    ),
+  );
+  assert.equal(
+    resolved.events.some(
+      (event) =>
+        event.visibility.type === "public" &&
+        JSON.stringify(event.payload).includes(String(selected.cardId)),
+    ),
+    false,
+  );
+});
