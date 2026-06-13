@@ -246,6 +246,7 @@
 
 .opponent-deck {
   grid-area: opponent-deck;
+  z-index: 2;
 }
 
 .opponent-don-deck {
@@ -254,6 +255,7 @@
 
 .opponent-trash {
   grid-area: opponent-trash;
+  z-index: 1;
 }
 
 .opponent-leader {
