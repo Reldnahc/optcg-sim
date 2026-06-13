@@ -25,6 +25,7 @@ import {
   isSupportedDerivedKeyword,
   isSupportedDuration,
   isSupportedTarget,
+  isSupportedTargetOrMyLeader,
 } from "./support.js";
 import type { ContinuousQueueEffect } from "./types.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
@@ -770,7 +771,7 @@ const effectToDerivedModifier = (
     effect.type === "cannotBecomeActive"
   ) {
     if (
-      !isSupportedTarget(effect.target) ||
+      !isSupportedTargetOrMyLeader(effect.target) ||
       !isSupportedDuration(effect.duration)
     ) {
       throw new TypeError(

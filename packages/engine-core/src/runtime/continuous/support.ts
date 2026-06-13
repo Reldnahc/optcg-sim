@@ -317,6 +317,9 @@ export const isSupportedTarget = (target: Target): boolean => {
   );
 };
 
+export const isSupportedTargetOrMyLeader = (target: Target): boolean =>
+  target.type === "myLeader" || isSupportedTarget(target);
+
 export const isSupportedContinuousQueueEffect = (
   effect: Effect,
 ): effect is ContinuousQueueEffect => {
@@ -420,7 +423,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "invalidateEffects" &&
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&
-    !isSupportedTarget(effect.target)
+    !isSupportedTargetOrMyLeader(effect.target)
   ) {
     return false;
   }

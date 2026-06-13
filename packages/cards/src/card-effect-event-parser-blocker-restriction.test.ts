@@ -165,4 +165,63 @@ describe("card effect event parser blocker restrictions", () => {
       ]),
     );
   });
+
+  it("parses costed Main Event Leader attack Blocker restriction behind Life condition", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may rest 1 of your DON!! cards: If you have 1 or less Life cards, your opponent cannot activate [Blocker] whenever your Leader attacks during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "restDon",
+                  count: 1,
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "lifeCount",
+                  player: "self",
+                  op: "lte",
+                  value: 1,
+                },
+                then: {
+                  type: "preventBlockerActivation",
+                  target: { type: "myLeader" },
+                  duration: { type: "thisTurn" },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "cost:restDon",
+        "condition:lifeCount",
+        "condition:comparator:lte",
+        "instruction:preventBlockerActivation",
+        "target:yourLeader",
+        "duration:thisTurn",
+        "activation:blocker",
+      ]),
+    );
+  });
 });

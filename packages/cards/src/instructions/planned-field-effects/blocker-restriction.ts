@@ -116,6 +116,11 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
 function parseOpponentCannotActivateBlocker(
   input: ParseInput,
 ): InstructionParseResult | undefined {
+  const leaderAttack = parseLeaderAttackBlockerRestriction(input.text);
+  if (leaderAttack !== undefined) {
+    return leaderAttack;
+  }
+
   const selectionText = /^Your opponent cannot activate\s+(?<rest>.+)$/iu.exec(
     input.text,
   )?.groups?.["rest"];
@@ -203,6 +208,43 @@ function parseOpponentCannotActivateBlocker(
       ...duration.evidence,
       "activation:blocker",
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function parseLeaderAttackBlockerRestriction(
+  text: string,
+): InstructionParseResult | undefined {
+  const durationText =
+    /^your opponent cannot activate \[Blocker\] whenever your Leader attacks\s+(?<duration>during this turn\.?)$/iu.exec(
+      text,
+    )?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  return {
+    effect: {
+      type: "preventBlockerActivation",
+      target: { type: "myLeader" },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:preventBlockerActivation",
+      "target:yourLeader",
+      ...duration.evidence,
+      "activation:blocker",
     ],
     rest: "",
   };
