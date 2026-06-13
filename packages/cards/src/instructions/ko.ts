@@ -10,6 +10,7 @@ import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
 const koOrReturnSelectionId = "selected:ko-or-return-target";
+const koOrRestSelectionId = "selected:ko-or-rest-target";
 
 export const koInstructionPrimitive = {
   primitiveId: "instruction:ko",
@@ -50,6 +51,11 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const alternate = parseKoOrReturnToOwnerHand(actionRest);
   if (alternate !== undefined) {
     return alternate;
+  }
+
+  const koOrRest = parseKoOrRest(actionRest);
+  if (koOrRest !== undefined) {
+    return koOrRest;
   }
 
   const allCharactersExceptSelf =
@@ -140,6 +146,91 @@ export const parseKoInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseKoOrRest(actionRest: string): ReturnType<InstructionParser> {
+  const match = /^or rest (?<target>.+)$/iu.exec(actionRest);
+  const targetText = match?.groups?.["target"];
+  if (targetText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: targetText });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
+    return undefined;
+  }
+  const category = target.filter?.categories?.[0];
+  const zone = category === "stage" ? "stageArea" : "characterArea";
+  const selectedTarget = selectedKoTarget(zone, koOrRestSelectionId);
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: `select:ko-or-rest-target:${koOrRestSelectionId}`,
+          connector: "always",
+          saveResultAs: koOrRestSelectionId,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone,
+              min: cardinality.cardinality.min,
+              max: cardinality.cardinality.max,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: target.filter ?? { categories: ["character"] },
+            },
+          },
+        },
+        {
+          id: "choose:ko-or-rest-target",
+          connector: "then",
+          effect: {
+            type: "choice",
+            chooser: "self",
+            min: 1,
+            max: 1,
+            options: [
+              {
+                id: "choice:ko",
+                label: "K.O. the selected card.",
+                effect: {
+                  type: "ko",
+                  target: selectedTarget,
+                },
+              },
+              {
+                id: "choice:rest",
+                label: "Rest the selected card.",
+                effect: {
+                  type: "rest",
+                  target: selectedTarget,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:ko",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      "instruction:rest",
+      "composition:chooseOne",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
 
 function parseKoOrReturnToOwnerHand(
   actionRest: string,

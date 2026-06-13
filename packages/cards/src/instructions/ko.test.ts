@@ -188,4 +188,54 @@ describe("K.O. instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses K.O.-or-rest as one selected target followed by reusable action choice", () => {
+    const result = parseKoInstruction({
+      text: "K.O. or rest up to 1 of your opponent's Characters with a base power of 6000 or less.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:ko-or-rest-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  power: { max: 6000 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "choice",
+              options: [
+                { effect: { type: "ko" } },
+                { effect: { type: "rest" } },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:ko",
+        "instruction:rest",
+        "composition:chooseOne",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
 });
