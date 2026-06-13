@@ -418,10 +418,15 @@ export const useMatchClient = ({
     submitAction,
   ]);
   useEffect(() => {
+    if (pendingDecision === undefined) {
+      if (!actionInFlight) {
+        quickPayActivateMainArmed.current = false;
+      }
+      return;
+    }
     if (
-      pendingDecision === undefined ||
-      (pendingDecision.type !== "chooseOptionalActivation" &&
-        pendingDecision.type !== "payCost")
+      pendingDecision.type !== "chooseOptionalActivation" &&
+      pendingDecision.type !== "payCost"
     ) {
       quickPayActivateMainArmed.current = false;
       return;
