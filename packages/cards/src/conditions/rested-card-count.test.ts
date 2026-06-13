@@ -16,6 +16,8 @@ it("defines rested card count as a field-count primitive parent", () => {
       "condition:threshold:positiveInteger",
       "player:opponent",
       "filter:state:rested",
+      "filter:type",
+      "filter:category:character",
     ],
   });
 });
@@ -87,6 +89,36 @@ it("parses exact rested card thresholds through the same comparison primitive", 
       "condition:threshold:positiveInteger",
       "player:self",
       "filter:state:rested",
+    ],
+    rest: "",
+  });
+});
+
+it("parses rested Character thresholds with reusable filter predicates", () => {
+  expect(
+    parseRestedCardCountCondition({
+      text: "you have 2 or more rested {ODYSSEY} type Characters",
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        typesAny: ["ODYSSEY"],
+        state: "rested",
+      },
+      op: "gte",
+      value: 2,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "player:self",
+      "filter:state:rested",
+      "filter:type",
+      "filter:category:character",
     ],
     rest: "",
   });

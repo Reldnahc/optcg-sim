@@ -117,10 +117,7 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const parsedTarget = parseCardFilterPredicates(
-    { text: targetText },
-    { powerSemantics: "current" },
-  );
+  const parsedTarget = parseActivationCharacterFilter(targetText);
   if (
     parsedTarget === undefined ||
     parsedTarget.rest.trim().length > 0 ||
@@ -185,6 +182,36 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseActivationCharacterFilter(
+  text: string,
+): ReturnType<typeof parseCardFilterPredicates> {
+  const parsed = parseCardFilterPredicates(
+    { text },
+    { powerSemantics: "current" },
+  );
+  if (parsed !== undefined) {
+    return parsed;
+  }
+
+  const rested = /^rested\s+(?<rest>.+)$/iu.exec(text.trim());
+  const filterText = rested?.groups?.["rest"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+  const filtered = parseCardFilterPredicates(
+    { text: filterText },
+    { powerSemantics: "current" },
+  );
+  if (filtered === undefined) {
+    return undefined;
+  }
+  return {
+    ...filtered,
+    filter: { ...filtered.filter, state: "rested" },
+    evidence: ["filter:state:rested", ...filtered.evidence],
+  };
+}
 
 function parseSetThisCharacterActive(
   text: string,

@@ -188,6 +188,22 @@ const parseOpponentRefreshLockTarget = (
   | undefined => {
   const cardinality = parseUpToCardinality({ text });
   if (cardinality !== undefined) {
+    const restedDon = parseOpponentRestedDonRefreshLockTarget(
+      cardinality.rest,
+      cardinality.cardinality.min,
+      cardinality.cardinality.max,
+    );
+    if (restedDon !== undefined) {
+      return {
+        target: restedDon.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...restedDon.evidence,
+        ],
+        rest: restedDon.rest,
+      };
+    }
     const restedCards = parseOpponentRestedCardsRefreshLockTarget(
       cardinality.rest,
       cardinality.cardinality.min,
@@ -295,6 +311,51 @@ const parseOpponentRefreshLockTarget = (
       ),
     ],
     rest: allTarget.rest.trim(),
+  };
+};
+
+const parseOpponentRestedDonRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+      readonly target: Target;
+    }
+  | undefined => {
+  const match =
+    /^of your opponent's rested DON!! cards?\b\s*(?<rest>.*)$/iu.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["costArea"],
+        filter: {
+          categories: ["don"],
+          state: "rested",
+        },
+        min,
+        max,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+    },
+    evidence: [
+      "target:opponentRestedCards",
+      "player:opponent",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:rested",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 };
 
