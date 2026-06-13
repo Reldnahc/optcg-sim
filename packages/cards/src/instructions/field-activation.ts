@@ -4,6 +4,7 @@ import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseYourLeaderOrCharacterCardsTarget } from "../targets/index.js";
 import type { InstructionParser } from "../types.js";
+import { parseSetDonActiveInstruction } from "./don-movement/set-active.js";
 
 const fieldActivationTarget = "targetSelection:set-field-active" as SelectionId;
 
@@ -16,6 +17,11 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
   const leaderActivation = parseSetYourLeaderActive(input.text);
   if (leaderActivation !== undefined) {
     return leaderActivation;
+  }
+
+  const selfOrDonActivation = parseSetThisCharacterOrDonActive(input.text);
+  if (selfOrDonActivation !== undefined) {
+    return selfOrDonActivation;
   }
 
   const massFieldActivation = parseSetLeaderAndCharactersActive(input.text);
@@ -186,6 +192,68 @@ function parseSetThisCharacterActive(
       target: { type: "self" },
     },
     evidence: ["instruction:activate", "target:thisCharacter", "state:active"],
+    rest: "",
+  };
+}
+
+function parseSetThisCharacterOrDonActive(
+  text: string,
+): ReturnType<InstructionParser> {
+  const match =
+    /^set this Character or (?<donTarget>up to [1-9]\d* of your DON!! cards) as active\.?$/iu.exec(
+      text,
+    );
+  const donTarget = match?.groups?.["donTarget"];
+  if (donTarget === undefined) {
+    return undefined;
+  }
+
+  const donActivation = parseSetDonActiveInstruction({
+    text: `set ${donTarget} as active`,
+  });
+  if (donActivation === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "choice",
+            chooser: "self",
+            min: 1,
+            max: 1,
+            options: [
+              {
+                id: "choice:activate-this-character",
+                label: "Set this Character as active.",
+                effect: {
+                  type: "activate",
+                  target: { type: "self" },
+                },
+              },
+              {
+                id: "choice:activate-don",
+                label: "Set DON!! cards as active.",
+                effect: donActivation.effect,
+              },
+            ],
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:activate",
+      "target:thisCharacter",
+      "state:active",
+      "composition:chooseOne",
+      "choice:option",
+      "choice:option",
+      ...donActivation.evidence,
+    ],
     rest: "",
   };
 }
