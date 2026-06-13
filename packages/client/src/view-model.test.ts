@@ -629,6 +629,8 @@ describe("board view model", () => {
       attackerInstanceId: "leader-1",
       attackPower: 7000,
       defendPower: 5000,
+      opponentPower: 5000,
+      selfPower: 7000,
       targetInstanceId: "opp-leader",
     });
   });
