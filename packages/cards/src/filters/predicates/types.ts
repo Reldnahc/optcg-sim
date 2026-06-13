@@ -24,7 +24,9 @@ export function parseBraceName(text: string): string | undefined {
 }
 
 export function parseAngleAttribute(text: string): Attribute | undefined {
-  const name = /^<(?<name>[^>]+)>$/.exec(text)?.groups?.["name"]?.trim();
+  const name = /^[<＜](?<name>[^>＞]+)[>＞]$/
+    .exec(text)
+    ?.groups?.["name"]?.trim();
   return name === undefined || name.length === 0
     ? undefined
     : (name.toLowerCase() as Attribute);

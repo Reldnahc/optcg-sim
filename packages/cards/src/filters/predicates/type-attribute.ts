@@ -8,6 +8,7 @@ import {
 } from "./types.js";
 
 const multiBraceTypesPattern = String.raw`\{[^}]+\}(?:(?:\s*,\s*)|(?:\s*,?\s+or\s+))\{[^}]+\}(?:(?:\s*,\s*)|(?:\s*,?\s+or\s+)\{[^}]+\})*`;
+const angleAttributePattern = String.raw`[<＜][^>＞]+[>＞]`;
 
 export const parseTypeLeaderOrCharacterPredicate: PredicateParser = (
   text,
@@ -109,10 +110,10 @@ export const parseTypeOrAttributeCategoryPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match =
-    /^(?<type>\{[^}]+\}) type or (?<attribute><[^>]+>) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<type>\\{[^}]+\\}) type or (?<attribute>${angleAttributePattern}) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const typeText = match?.groups?.["type"];
   const attributeText = match?.groups?.["attribute"];
   const categoryText = match?.groups?.["category"];
@@ -150,10 +151,10 @@ export const parseTypeOrAttributePredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match =
-    /^(?<type>\{[^}]+\}) type or (?:the\s+)?(?<attribute><[^>]+>) attribute\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<type>\\{[^}]+\\}) type or (?:the\\s+)?(?<attribute>${angleAttributePattern}) attribute\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const typeText = match?.groups?.["type"];
   const attributeText = match?.groups?.["attribute"];
   if (typeText === undefined || attributeText === undefined) {
@@ -280,10 +281,10 @@ export const parseAttributeCategoryPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match =
-    /^(?<attribute><[^>]+>) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
-      text,
-    );
+  const match = new RegExp(
+    `^(?<attribute>${angleAttributePattern}) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const attributeText = match?.groups?.["attribute"];
   const categoryText = match?.groups?.["category"];
   if (attributeText === undefined || categoryText === undefined) {
@@ -307,9 +308,10 @@ export const parseAttributeCategoryPredicate: PredicateParser = (
 };
 
 export const parseAttributeCardPredicate: PredicateParser = (text, current) => {
-  const match = /^(?<attribute><[^>]+>) attribute card\b\s*(?<rest>.*)$/i.exec(
-    text,
-  );
+  const match = new RegExp(
+    `^(?<attribute>${angleAttributePattern}) attribute card\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const attribute = parseAngleAttribute(match?.groups?.["attribute"] ?? "");
   if (attribute === undefined) {
     return undefined;
@@ -323,7 +325,10 @@ export const parseAttributeCardPredicate: PredicateParser = (text, current) => {
 };
 
 export const parseAttributeOnlyPredicate: PredicateParser = (text, current) => {
-  const match = /^(?<attribute><[^>]+>) attribute\b\s*(?<rest>.*)$/i.exec(text);
+  const match = new RegExp(
+    `^(?<attribute>${angleAttributePattern}) attribute\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
   const attribute = parseAngleAttribute(match?.groups?.["attribute"] ?? "");
   if (attribute === undefined) {
     return undefined;

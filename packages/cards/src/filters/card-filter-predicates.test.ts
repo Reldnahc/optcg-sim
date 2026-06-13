@@ -243,6 +243,20 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it.each([
+    ["<Special> attribute Characters", "special"],
+    ["＜Special＞ attribute Characters", "special"],
+  ])("parses %s as reusable attribute Character filters", (text, attribute) => {
+    expect(parseCardFilterPredicates({ text })).toEqual({
+      filter: {
+        attributesAny: [attribute],
+        categories: ["character"],
+      },
+      evidence: ["filter:attribute", "filter:category:character"],
+      rest: "",
+    });
+  });
+
   it("parses quoted type-including text and comma-separated current power predicates", () => {
     expect(
       parseCardFilterPredicates(
