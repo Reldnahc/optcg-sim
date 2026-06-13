@@ -31,6 +31,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "state",
   "typesAny",
   "typesIncludeAny",
+  "typesNotIncludeAny",
 ]);
 
 const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
@@ -153,7 +154,9 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean => {
       isNonEmptyStringArray(filter.colorsAny)) &&
     (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
     (filter.typesIncludeAny === undefined ||
-      isNonEmptyStringArray(filter.typesIncludeAny))
+      isNonEmptyStringArray(filter.typesIncludeAny)) &&
+    (filter.typesNotIncludeAny === undefined ||
+      isNonEmptyStringArray(filter.typesNotIncludeAny))
   );
 };
 

@@ -5,6 +5,7 @@ export {
 } from "./base-power.js";
 export { parseHandCounterSetInstruction } from "./counter.js";
 export { parseDonPhasePlacementInstruction } from "./don-phase-placement.js";
+export { parseContinuousInvalidateEffectsInstruction } from "./invalidation.js";
 export {
   parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,

@@ -863,4 +863,59 @@ describe("permanent card effect line parser", () => {
       ]),
     );
   });
+
+  it("parses continuous effect invalidation over your Leader and filtered Characters", () => {
+    const result = parseCardEffectLine(
+      'Your Leader and all of your Characters that do not have a type including "Roger Pirates" have their effects negated.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "invalidateEffects",
+                target: { type: "myLeader" },
+                duration: { type: "whileSourceOnField" },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "invalidateEffects",
+                target: {
+                  type: "all",
+                  player: "self",
+                  zone: "characterArea",
+                  filter: {
+                    categories: ["character"],
+                    typesNotIncludeAny: ["Roger Pirates"],
+                  },
+                },
+                duration: { type: "whileSourceOnField" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:invalidateEffects",
+        "target:yourLeader",
+        "target:yourCharacters",
+        "cardinality:all",
+        "filter:category:character",
+        "filter:type",
+        "duration:whileSourceOnField",
+        "composition:sequence",
+      ]),
+    );
+  });
 });

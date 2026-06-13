@@ -56,6 +56,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "statComparisons",
   "typesAny",
   "typesIncludeAny",
+  "typesNotIncludeAny",
 ]);
 
 const supportedZones = new Set<Zone>([
@@ -217,6 +218,8 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.typesIncludeAny === undefined ||
       isStringArray(filter.typesIncludeAny)) &&
+    (filter.typesNotIncludeAny === undefined ||
+      isStringArray(filter.typesNotIncludeAny)) &&
     isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
     (filter.excludeSelf === undefined || filter.excludeSelf) &&
     (filter.state === undefined ||
@@ -454,6 +457,14 @@ const cardMatchesFilter = (
   if (
     filter.typesIncludeAny !== undefined &&
     !filter.typesIncludeAny.some((typeText) =>
+      card.types.some((type) => type.includes(typeText)),
+    )
+  ) {
+    return false;
+  }
+  if (
+    filter.typesNotIncludeAny !== undefined &&
+    filter.typesNotIncludeAny.some((typeText) =>
       card.types.some((type) => type.includes(typeText)),
     )
   ) {

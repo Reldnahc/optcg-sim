@@ -4,7 +4,7 @@ export function parseImplicitPermanentEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
   if (
-    !/^(?:If\b|All of your\b|Give all of\b|Apply each of\b|The counter of\b|this (?:Leader|Character)\b)/i.test(
+    !/^(?:If\b|All of your\b|Your Leader and all of your\b|Give all of\b|Apply each of\b|The counter of\b|this (?:Leader|Character)\b)/i.test(
       input.text.trimStart(),
     )
   ) {

@@ -4,9 +4,10 @@ export { parseActivateReferencedEffectInstruction } from "./activate-referenced-
 export { parseActivateSelectedEventInstruction } from "./activate-selected-event.js";
 export {
   parseBasePowerBecomeInstruction,
-  parseHandCounterSetInstruction,
+  parseContinuousInvalidateEffectsInstruction,
   parseDonPhasePlacementInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,
+  parseHandCounterSetInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,

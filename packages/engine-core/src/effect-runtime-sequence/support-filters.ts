@@ -39,6 +39,7 @@ const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "statComparisons",
   "typesAny",
   "typesIncludeAny",
+  "typesNotIncludeAny",
 ]);
 
 export const isSupportedPublicFieldTargetFilter = (

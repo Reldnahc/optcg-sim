@@ -1,5 +1,6 @@
 export {
   parseBasePowerBecomeInstruction,
+  parseContinuousInvalidateEffectsInstruction,
   parseDonPhasePlacementInstruction,
   parseHandCounterSetInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,

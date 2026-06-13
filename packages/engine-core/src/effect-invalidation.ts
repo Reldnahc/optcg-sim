@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { cardMatchesContinuousModifierTarget } from "./runtime/continuous/target-matching.js";
 
 const isEffectInvalidationModifier = (
   effect: ContinuousEffectRecord,
@@ -29,6 +30,7 @@ export const isSupportedEffectInvalidationModifier = (
   isEffectInvalidationModifier(effect) &&
   isSupportedInvalidationDuration(effect.duration) &&
   (effect.modifier.target.type === "exactCard" ||
+    effect.modifier.target.type === "myLeader" ||
     effect.modifier.target.type === "self" ||
     effect.modifier.target.type === "all");
 
@@ -101,6 +103,7 @@ const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
   card.controller === ref.playerId;
 
 const cardMatchesInvalidationTarget = (
+  state: GameState,
   card: CardInstance,
   effect: ContinuousEffectRecord,
 ): boolean => {
@@ -115,19 +118,7 @@ const cardMatchesInvalidationTarget = (
       cardMatchesRef(card, target.card)
     );
   }
-  if (target.type !== "all") {
-    return false;
-  }
-  if (target.zone !== card.zone.zone) {
-    return false;
-  }
-  if (target.player === "self") {
-    return card.controller === effect.controller;
-  }
-  if (target.player === "opponent") {
-    return card.controller !== effect.controller;
-  }
-  return false;
+  return cardMatchesContinuousModifierTarget(state, card, effect);
 };
 
 export const isCardEffectInvalidated = (
@@ -139,5 +130,5 @@ export const isCardEffectInvalidated = (
       isSupportedEffectInvalidationModifier(effect) &&
       durationActive(state, effect) &&
       conditionPasses(state, effect) &&
-      cardMatchesInvalidationTarget(card, effect),
+      cardMatchesInvalidationTarget(state, card, effect),
   );

@@ -40,12 +40,17 @@ import {
   toSupportedDonPhasePlacementModifier,
 } from "./don-phase-placement-modifier.js";
 import {
+  isSupportedPermanentInvalidateEffects,
+  toInvalidateEffectsModifier,
+} from "./effect-invalidation-modifier.js";
+import {
   resolveBasePowerValue,
   resolveDynamicNumberValue,
   resolvePowerValue,
   type ContinuousResolutionContext,
 } from "./value-resolution.js";
 import { durationForDerivedEffect } from "./derived-duration.js";
+import { sourceSnapshotForContinuousCard } from "./source-snapshot.js";
 
 export { isSupportedContinuousQueueEffect };
 
@@ -475,6 +480,9 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
       supportsDuration: isSupportedDuration(effect.duration),
     });
   }
+  if (effect.type === "invalidateEffects") {
+    return isSupportedPermanentInvalidateEffects(effect);
+  }
   try {
     return (
       effectToDerivedModifier(
@@ -722,6 +730,9 @@ const effectToDerivedModifier = (
       supportsDuration: isSupportedDuration(effect.duration),
     });
   }
+  if (effect.type === "invalidateEffects") {
+    return toInvalidateEffectsModifier(effect);
+  }
   if (effect.type === "protectFromKO") {
     if (
       !isSupportedTarget(effect.target) ||
@@ -927,21 +938,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
     if (options.mode === "field" && isCardEffectInvalidated(state, card)) {
       continue;
     }
-    const sourceSnapshot: EffectQueueEntry["sourceSnapshot"] = {
-      instanceId: card.instanceId,
-      cardId: card.cardId,
-      ownerId: card.owner,
-      controllerId: card.controller,
-      zone: card.zone,
-      category:
-        card.zone.zone === "leaderArea" || card.zone.zone === "stageArea"
-          ? card.zone.zone === "leaderArea"
-            ? "leader"
-            : "stage"
-          : resolved.category,
-      colors: [],
-      keywords: [],
-    };
+    const sourceSnapshot = sourceSnapshotForContinuousCard(card, resolved);
 
     for (const block of permanentBlocks) {
       if (
