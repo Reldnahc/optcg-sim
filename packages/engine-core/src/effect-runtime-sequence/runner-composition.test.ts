@@ -6,6 +6,7 @@ import type {
   Effect,
   EffectDefinition,
   GameState,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -267,6 +268,95 @@ const turnOwnLifeFaceDown = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const nestedEmptyAttachThenRush = (): Extract<Effect, { type: "sequence" }> => {
+  const donSelection = "selection:missing-opponent-don" as SelectionId;
+  const targetSelection = "selection:missing-opponent-character" as SelectionId;
+
+  return {
+    type: "sequence",
+    effects: [
+      {
+        id: "nested-empty-attach",
+        connector: "always",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "select-missing-opponent-don",
+              connector: "always",
+              saveResultAs: donSelection,
+              effect: {
+                type: "selectTargets",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  player: "opponent",
+                  zone: "costArea",
+                  filter: { categories: ["don"], state: "rested" },
+                  min: 0,
+                  max: 3,
+                  allowFewerIfUnavailable: true,
+                  visibility: "public",
+                },
+              },
+            },
+            {
+              id: "select-missing-opponent-character",
+              connector: "ifYouDo",
+              saveResultAs: targetSelection,
+              effect: {
+                type: "selectTargets",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  player: "opponent",
+                  zone: "characterArea",
+                  filter: { categories: ["character"] },
+                  min: 1,
+                  max: 1,
+                  allowFewerIfUnavailable: false,
+                  visibility: "public",
+                },
+              },
+            },
+            {
+              id: "attach-empty-selection",
+              connector: "then",
+              effect: {
+                type: "attachSelectedDon",
+                selection: donSelection,
+                sourceState: "rested",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "selectedTargets",
+                    saveResultAs: targetSelection,
+                  },
+                  zone: "characterArea",
+                  player: "opponent",
+                  filter: { categories: ["character"] },
+                  visibility: "publicOnly",
+                  onFailure: "failClosed",
+                },
+              },
+            },
+          ],
+        },
+      },
+      {
+        id: "parent-rush-after-empty-nested-attach",
+        connector: "then",
+        effect: {
+          type: "giveKeyword",
+          target: { type: "self" },
+          keyword: "rush",
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+  };
+};
+
 test("sequence runner executes draw through root, nested, and conditional composition doors", () => {
   const cases = [
     { effect: rootDraw(), name: "root", withTrash: false },
@@ -303,6 +393,22 @@ test("sequence runner executes draw through root, nested, and conditional compos
     );
     assert.equal(drawEvents.length, 1, testCase.name);
   }
+});
+
+test("sequence runner preserves parent then clauses after a nested up-to attachment chooses no DON", () => {
+  const state = sequenceQueueState(nestedEmptyAttachThenRush());
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(resolved.state.continuousEffects.length, 1);
+  assert.equal(
+    must(resolved.state.continuousEffects[0], "Rush modifier").modifier
+      .operation.type,
+    "addKeyword",
+  );
 });
 
 test("sequence runner executes self-target rest through the reusable rest primitive", () => {

@@ -74,11 +74,12 @@ const flattenPayCostSequenceSegment = (
 
 const flattenNestedSequenceSegments = (
   segment: SequenceEffect["effects"][number],
+  preserveSequenceBoundary: boolean,
 ): SequenceEffect["effects"] | null => {
   if (segment.effect.type === "payCost") {
     return flattenPayCostSequenceSegment(segment);
   }
-  if (segment.effect.type !== "sequence") {
+  if (segment.effect.type !== "sequence" || preserveSequenceBoundary) {
     return [segment];
   }
   if (segment.optional === true) {
@@ -106,12 +107,24 @@ const flattenNestedSequenceSegments = (
   );
 };
 
+const hasDependentChildConnector = (effect: SequenceEffect): boolean =>
+  effect.effects.some((segment) => segment.connector !== "always");
+
 export const flattenSequenceEffect = (
   effect: SequenceEffect,
 ): SequenceEffect | null => {
   const effects: SequenceEffect["effects"] = [];
-  for (const segment of effect.effects) {
-    const flattened = flattenNestedSequenceSegments(segment);
+  for (const [index, segment] of effect.effects.entries()) {
+    const nextSegment = effect.effects[index + 1];
+    const preserveSequenceBoundary =
+      segment.effect.type === "sequence" &&
+      hasDependentChildConnector(segment.effect) &&
+      nextSegment !== undefined &&
+      nextSegment.connector !== "always";
+    const flattened = flattenNestedSequenceSegments(
+      segment,
+      preserveSequenceBoundary,
+    );
     if (flattened === null) {
       return null;
     }
