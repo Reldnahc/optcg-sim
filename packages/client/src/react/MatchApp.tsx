@@ -426,10 +426,16 @@ export const MatchApp = ({
       | "--zone-guide-label-alpha",
       string
     >;
+  const matchAppClassName = [
+    "match-app",
+    visualSettings.reducedMotion ? "is-reduced-motion" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <MatchVisualSettingsProvider value={visualSettings}>
-      <main className="match-app" style={matchAppStyle}>
+      <main className={matchAppClassName} style={matchAppStyle}>
         <MatchBoardSurface
           board={displayBoard}
           clientState={clientState}

@@ -50,6 +50,14 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
       );
       setSettings((current) => ({ ...current, quickPayActivateMainCosts }));
     },
+    setReducedMotion: (enabled) => {
+      const reducedMotion = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "reducedMotion",
+        enabled,
+      );
+      setSettings((current) => ({ ...current, reducedMotion }));
+    },
     setSoundVolume: (value) => {
       const soundVolume = saveMatchVisualSetting(
         browserPersistentStorage(),

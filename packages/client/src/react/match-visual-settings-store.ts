@@ -115,6 +115,12 @@ export const matchVisualSettingDefinitions = {
     storageKey: "optcg:client:quick-pay-activate-main-costs",
     defaultValue: defaultMatchVisualSettingsValues.quickPayActivateMainCosts,
   }),
+  reducedMotion: booleanSetting({
+    id: "reducedMotion",
+    groupId: "video",
+    storageKey: "optcg:client:reduced-motion",
+    defaultValue: defaultMatchVisualSettingsValues.reducedMotion,
+  }),
   soundVolume: visibilitySetting({
     id: "soundVolume",
     groupId: "sound",
@@ -142,6 +148,7 @@ export const matchVisualSettingIds = [
   "confirmAttachDon",
   "confirmEndTurn",
   "quickPayActivateMainCosts",
+  "reducedMotion",
   "soundVolume",
   "zoneBackgroundVisibility",
   "zoneGuideVisibility",
@@ -151,6 +158,7 @@ export const matchVisualSettingGroupIds = [
   "appearance",
   "gameplay",
   "sound",
+  "video",
 ] as const satisfies readonly MatchVisualSettingGroupId[];
 
 export { defaultMatchVisualSettingsValues };
@@ -173,7 +181,8 @@ export function loadMatchVisualSetting(
   settingId:
     | "confirmAttachDon"
     | "confirmEndTurn"
-    | "quickPayActivateMainCosts",
+    | "quickPayActivateMainCosts"
+    | "reducedMotion",
 ): boolean;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
@@ -204,6 +213,11 @@ export function loadMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
       );
+    case "reducedMotion":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.reducedMotion,
+      );
     case "soundVolume":
       return loadWithDefinition(
         storage,
@@ -232,6 +246,7 @@ export const loadMatchVisualSettings = (
     storage,
     "quickPayActivateMainCosts",
   ),
+  reducedMotion: loadMatchVisualSetting(storage, "reducedMotion"),
   soundVolume: loadMatchVisualSetting(storage, "soundVolume"),
   zoneBackgroundVisibility: loadMatchVisualSetting(
     storage,
@@ -268,7 +283,8 @@ export function saveMatchVisualSetting(
   settingId:
     | "confirmAttachDon"
     | "confirmEndTurn"
-    | "quickPayActivateMainCosts",
+    | "quickPayActivateMainCosts"
+    | "reducedMotion",
   value: boolean,
 ): boolean;
 export function saveMatchVisualSetting(
@@ -304,6 +320,12 @@ export function saveMatchVisualSetting(
       return saveWithDefinition(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
+        value === true,
+      );
+    case "reducedMotion":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.reducedMotion,
         value === true,
       );
     case "soundVolume":

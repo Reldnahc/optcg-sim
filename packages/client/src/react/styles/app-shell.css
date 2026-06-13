@@ -125,6 +125,19 @@
   overflow: visible;
 }
 
+.match-app.is-reduced-motion *,
+.match-app.is-reduced-motion *::before,
+.match-app.is-reduced-motion *::after {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+
+.match-app.is-reduced-motion animate,
+.match-app.is-reduced-motion animateTransform {
+  display: none;
+}
+
 .board-shell {
   display: grid;
   grid-template-areas: "hand-rail playmat-board .";
