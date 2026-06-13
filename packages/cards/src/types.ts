@@ -154,6 +154,7 @@ export type PrimitiveEvidence =
   | "choice:option"
   | "cost:trashSelf"
   | "cost:trashFromField"
+  | "cost:koFromField"
   | "cost:trashFromHand"
   | "cost:revealFromHand"
   | "cost:moveCards"

@@ -23,7 +23,10 @@ import {
   toCardRef,
   zonesEqual,
 } from "../../actions/state.js";
-import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
+import {
+  KO_TRASH_MOVEMENT_REASON,
+  moveConcreteCardsToTrash,
+} from "../../concrete-card-movement.js";
 import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
 import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
@@ -141,6 +144,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "modifyPower" &&
         decision.cost.type !== "trashFromHand" &&
         decision.cost.type !== "trashFromField" &&
+        decision.cost.type !== "koFromField" &&
         decision.cost.type !== "revealFromHand" &&
         decision.cost.type !== "chooseOne")
     ) {
@@ -194,7 +198,11 @@ export const applyOptionalActivationDecisionResponse = (
           }
         | {
             playerId: PlayerId;
-            optionId: "trashFromHand" | "trashFromField" | "revealFromHand";
+            optionId:
+              | "trashFromHand"
+              | "trashFromField"
+              | "koFromField"
+              | "revealFromHand";
             selectedCardInstanceIds: NonNullable<
               typeof action.response.selectedCardInstanceIds
             >;
@@ -439,7 +447,8 @@ export const applyOptionalActivationDecisionResponse = (
         costPaidPayload = paid.costPaidPayload;
       } else if (
         selectedOption.type === "trashFromHand" ||
-        selectedOption.type === "trashFromField"
+        selectedOption.type === "trashFromField" ||
+        selectedOption.type === "koFromField"
       ) {
         if (paymentResponse.selectedDonInstanceIds !== undefined) {
           return toEngineResult(
@@ -511,14 +520,17 @@ export const applyOptionalActivationDecisionResponse = (
           toCardRef(card, decision.playerId),
         );
         const returnedDonIds =
-          selectedOption.type === "trashFromField"
+          selectedOption.type === "trashFromField" ||
+          selectedOption.type === "koFromField"
             ? selectedCards.flatMap((card) => card.attachedDon)
             : [];
         const returnedDonIdSet = new Set(returnedDonIds);
         const reason =
           selectedOption.type === "trashFromHand"
             ? "trashFromHand"
-            : "trashFromField";
+            : selectedOption.type === "koFromField"
+              ? KO_TRASH_MOVEMENT_REASON
+              : "trashFromField";
         const sourceZone =
           selectedOption.type === "trashFromHand"
             ? "hand"
@@ -529,6 +541,27 @@ export const applyOptionalActivationDecisionResponse = (
             [],
             invalidDecision("Payment card selection is invalid."),
           );
+        }
+        if (selectedOption.type === "koFromField") {
+          for (const selectedCard of selectedCards) {
+            appendEvent(
+              state,
+              events,
+              "cardKOd",
+              {
+                playerId: decision.playerId,
+                instanceId: selectedCard.instanceId,
+              },
+              { type: "public" },
+            );
+            const koEvent = events[events.length - 1];
+            if (koEvent !== undefined) {
+              koEvent.causedBy = {
+                type: "decision",
+                decisionId: decision.id,
+              };
+            }
+          }
         }
         const movement = moveConcreteCardsToTrash(
           state,
@@ -555,7 +588,8 @@ export const applyOptionalActivationDecisionResponse = (
           );
         }
         nextPlayer =
-          selectedOption.type === "trashFromField"
+          selectedOption.type === "trashFromField" ||
+          selectedOption.type === "koFromField"
             ? {
                 ...movedPlayer,
                 costArea: movedPlayer.costArea.map((card) =>
@@ -566,7 +600,10 @@ export const applyOptionalActivationDecisionResponse = (
               }
             : movedPlayer;
         for (const selectedCard of selectedCards) {
-          if (selectedOption.type === "trashFromField") {
+          if (
+            selectedOption.type === "trashFromField" ||
+            selectedOption.type === "koFromField"
+          ) {
             for (const donId of selectedCard.attachedDon) {
               appendEvent(
                 state,

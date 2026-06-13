@@ -1,8 +1,8 @@
 import type { OptionalCost } from "@optcg/types";
 
 import { parseExactCardinality } from "../cardinality/index.js";
-import { parseCardFilterPredicates } from "../filters/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
+import { parseFieldCostFilter } from "./field-cost-filter.js";
 
 type RestFromFieldCost = Extract<OptionalCost, { type: "restFromField" }>;
 
@@ -32,11 +32,8 @@ export function parseRestFromFieldCost(
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates(
-    { text: filterText },
-    { powerSemantics: "current" },
-  );
-  if (predicates === undefined || predicates.rest.length > 0) {
+  const fieldFilter = parseFieldCostFilter({ text: filterText });
+  if (fieldFilter === undefined) {
     return undefined;
   }
 
@@ -45,9 +42,9 @@ export function parseRestFromFieldCost(
       type: "restFromField",
       count: cardinality.count,
       chooser: "self",
-      ...(Object.keys(predicates.filter).length === 0
+      ...(Object.keys(fieldFilter.filter).length === 0
         ? {}
-        : { filter: predicates.filter }),
+        : { filter: fieldFilter.filter }),
       optional: true,
     },
     evidence: [
@@ -55,7 +52,7 @@ export function parseRestFromFieldCost(
       ...cardinality.evidence,
       "chooser:self",
       "player:self",
-      ...predicates.evidence,
+      ...fieldFilter.evidence,
     ],
     rest: "",
   };

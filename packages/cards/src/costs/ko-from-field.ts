@@ -4,24 +4,24 @@ import { parseExactCardinality } from "../cardinality/index.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 import { parseFieldCostFilter } from "./field-cost-filter.js";
 
-type TrashFromFieldCost = Extract<OptionalCost, { type: "trashFromField" }>;
+type KoFromFieldCost = Extract<OptionalCost, { type: "koFromField" }>;
 
-export interface TrashFromFieldCostParseResult {
-  readonly cost: TrashFromFieldCost;
+export interface KoFromFieldCostParseResult {
+  readonly cost: KoFromFieldCost;
   readonly evidence: readonly PrimitiveEvidence[];
   readonly rest: string;
 }
 
-export function parseTrashFromFieldCost(
+export function parseKoFromFieldCost(
   input: ParseInput,
-): TrashFromFieldCostParseResult | undefined {
-  const match = /^trash\s+(?<rest>.+)$/iu.exec(input.text);
-  const afterTrash = match?.groups?.["rest"];
-  if (afterTrash === undefined) {
+): KoFromFieldCostParseResult | undefined {
+  const match = /^K\.O\.\s+(?<rest>.+)$/iu.exec(input.text);
+  const afterKo = match?.groups?.["rest"];
+  if (afterKo === undefined) {
     return undefined;
   }
 
-  const cardinality = parseExactCardinality({ text: afterTrash });
+  const cardinality = parseExactCardinality({ text: afterKo });
   if (cardinality === undefined) {
     return undefined;
   }
@@ -39,7 +39,7 @@ export function parseTrashFromFieldCost(
 
   return {
     cost: {
-      type: "trashFromField",
+      type: "koFromField",
       count: cardinality.count,
       chooser: "self",
       ...(Object.keys(fieldFilter.filter).length === 0
@@ -48,12 +48,11 @@ export function parseTrashFromFieldCost(
       optional: true,
     },
     evidence: [
-      "cost:trashFromField",
+      "cost:koFromField",
       ...cardinality.evidence,
       "chooser:self",
       "player:self",
       "zone:characterArea",
-      "zone:stageArea",
       ...fieldFilter.evidence,
     ],
     rest: "",

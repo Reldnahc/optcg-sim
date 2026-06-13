@@ -579,7 +579,7 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
-    if (option.type === "trashFromField") {
+    if (option.type === "trashFromField" || option.type === "koFromField") {
       if (!supportsChooseOneTrashFilter(option.filter)) {
         continue;
       }
@@ -735,6 +735,7 @@ export const getSequenceOptionalPayCostOptions = (
         | "trashFromHand"
         | "revealFromHand"
         | "trashFromField"
+        | "koFromField"
         | "moveCards"
         | "turnLifeFaceUp"
         | "setLifeFaceUp"
@@ -756,6 +757,7 @@ export const getSequenceOptionalPayCostOptions = (
           | "revealFromHand"
           | "restFromField"
           | "trashFromField"
+          | "koFromField"
           | "moveCards"
           | "turnLifeFaceUp"
           | "setLifeFaceUp"
@@ -864,7 +866,7 @@ export const getSequenceOptionalPayCostOptions = (
     }
     return paymentOptions;
   }
-  if (cost.type === "trashFromField") {
+  if (cost.type === "trashFromField" || cost.type === "koFromField") {
     if (!supportsChooseOneTrashFilter(cost.filter)) {
       return paymentOptions;
     }
@@ -876,8 +878,8 @@ export const getSequenceOptionalPayCostOptions = (
           ).length;
     if (fieldMatchCount >= cost.count) {
       paymentOptions.push({
-        id: "trashFromField",
-        type: "trashFromField",
+        id: cost.type,
+        type: cost.type,
         count: cost.count,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       });

@@ -10,6 +10,7 @@ import { parseAttachDonCost } from "./attach-don.js";
 import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseModifyPowerCost } from "./modify-power.js";
+import { parseKoFromFieldCost } from "./ko-from-field.js";
 import { parseRevealFromHandCost } from "./reveal-from-hand.js";
 import { parseRestFromFieldCost } from "./rest-from-field.js";
 import { parseRestSelfCost } from "./rest-self.js";
@@ -29,6 +30,7 @@ const costParsers = [
   parseModifyPowerCost,
   parseRevealFromHandCost,
   parseTurnLifeFaceUpCost,
+  parseKoFromFieldCost,
   parseTrashFromFieldCost,
   parseTrashFromHandCost,
 ] as const;
@@ -138,6 +140,14 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
         optional: true,
       };
+    case "koFromField":
+      return {
+        type: "koFromField",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        optional: true,
+      };
     case "turnLifeFaceUp":
       return { ...cost, optional: true };
     case "setLifeFaceUp":
@@ -202,6 +212,13 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
     case "trashFromField":
       return {
         type: "trashFromField",
+        count: cost.count,
+        chooser: cost.chooser,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      };
+    case "koFromField":
+      return {
+        type: "koFromField",
         count: cost.count,
         chooser: cost.chooser,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),

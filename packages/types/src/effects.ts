@@ -191,6 +191,13 @@ export type Cost =
       optional?: boolean;
     }
   | {
+      type: "koFromField";
+      count: number;
+      filter?: CardFilter;
+      chooser: "self";
+      optional?: boolean;
+    }
+  | {
       type: "discard";
       count: number;
       filter?: CardFilter;
@@ -227,6 +234,14 @@ export type OptionalMoveCardsCost = {
 
 export type ScopedOptionalFieldTrashCost = {
   type: "trashFromField";
+  count: number;
+  filter?: CardFilter;
+  chooser: "self";
+  optional: true;
+};
+
+export type ScopedOptionalFieldKOCost = {
+  type: "koFromField";
   count: number;
   filter?: CardFilter;
   chooser: "self";
@@ -279,6 +294,7 @@ export type OptionalCost =
     }
   | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | ScopedOptionalFieldTrashCost
+  | ScopedOptionalFieldKOCost
   | {
       type: "modifyPower";
       target: Target;

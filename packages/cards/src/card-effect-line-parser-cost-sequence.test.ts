@@ -205,6 +205,184 @@ it("parses filtered own field-card rest before an unrelated Main body", () => {
   });
 });
 
+it("parses filtered own field-card K.O. as an optional cost before an unrelated body", () => {
+  expect(
+    parseCardEffectLine(
+      "[On Play] You may K.O. 1 of your {Baroque Works} type Characters: Draw 1 card.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "koFromField",
+                count: 1,
+                chooser: "self",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Baroque Works"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", player: "self", count: 1 },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:onPlay",
+      "sourcePresence:mustRemain",
+      "composition:optionalCostedEffect",
+      "cost:koFromField",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "chooser:self",
+      "player:self",
+      "zone:characterArea",
+      "filter:type",
+      "filter:category:character",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
+it("parses filtered own field-card K.O. cost before an Activate Main all-field body", () => {
+  expect(
+    parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] You may K.O. 1 of your {Thriller Bark Pirates} type Characters: Your Leader and all of your Characters gain +1000 power during this turn.",
+    ),
+  ).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "koFromField",
+                count: 1,
+                chooser: "self",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Thriller Bark Pirates"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+            },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:koFromField",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "chooser:self",
+      "player:self",
+      "zone:characterArea",
+      "filter:type",
+      "filter:category:character",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "cardinality:all",
+      "player:self",
+      "zone:characterArea",
+      "filter:category:character",
+      "modifier:positivePower",
+      "duration:thisTurn",
+      "composition:entryExpression",
+    ],
+  });
+});
+
+it("parses own field-card K.O. cost with type-including filter before a composed body", () => {
+  expect(
+    parseCardEffectLine(
+      '[Activate: Main] [Once Per Turn] You may K.O. 1 of your Characters with a type including "Baroque Works": Draw 1 card.',
+    ),
+  ).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "koFromField",
+                count: 1,
+                chooser: "self",
+                filter: {
+                  categories: ["character"],
+                  typesIncludeAny: ["Baroque Works"],
+                },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "draw",
+              player: "self",
+              count: 1,
+            },
+          },
+        ],
+      },
+    },
+    evidence: [
+      "entry:activateMain",
+      "sourcePresence:mustRemain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:koFromField",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "chooser:self",
+      "player:self",
+      "zone:characterArea",
+      "filter:category:character",
+      "filter:type",
+      "instruction:draw",
+      "count:positiveInteger",
+      "player:self",
+      "composition:entryExpression",
+    ],
+  });
+});
+
 it("parses explicit active DON return as a reusable optional cost before draw", () => {
   expect(
     parseCardEffectLine(

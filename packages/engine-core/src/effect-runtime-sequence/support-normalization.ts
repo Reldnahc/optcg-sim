@@ -18,6 +18,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "trashFromField":
       return { ...cost, optional: true };
+    case "koFromField":
+      return { ...cost, optional: true };
     case "restDon":
       return { ...cost, optional: true };
     case "attachDon":

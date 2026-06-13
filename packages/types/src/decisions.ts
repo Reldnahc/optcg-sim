@@ -78,6 +78,7 @@ export type PaymentOption =
     }
   | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
+  | { id: string; type: "koFromField"; count: number; filter?: CardFilter }
   | {
       id: string;
       type: "modifyPower";
