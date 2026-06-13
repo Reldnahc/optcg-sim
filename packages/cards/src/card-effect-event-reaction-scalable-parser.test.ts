@@ -288,6 +288,83 @@ describe("scalable event reaction parser primitives", () => {
       ]),
     );
   });
+
+  it("parses opponent-effect field-removal reactions with type-including Character filters", () => {
+    const result = parseCardEffectLine(
+      '[Once Per Turn] When your Character with a type including "Roger Pirates" is removed from the field by your opponent\'s effect, add up to 1 DON!! card from your DON!! deck and rest it.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        oncePerTurn: true,
+        trigger: {
+          type: "fieldRemoved",
+          player: "self",
+          sourceController: "opponent",
+          sourceKind: "effect",
+          filter: {
+            categories: ["character"],
+            typesIncludeAny: ["Roger Pirates"],
+          },
+        },
+        effect: {
+          type: "moveCards",
+          min: 0,
+          count: 1,
+          from: { player: "self", zone: "donDeck", position: "top" },
+          to: { player: "self", zone: "costArea" },
+          destinationState: "rested",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        "instruction:moveCards",
+        "destination:costArea",
+        "state:rested",
+      ]),
+    );
+  });
+
+  it("parses another opponent-effect field-removal reaction with the same reusable pieces", () => {
+    const result = parseCardEffectLine(
+      '[Once Per Turn] When your Character with a type including "Navy" is removed from the field by your opponent\'s effect, add up to 2 DON!! cards from your DON!! deck and rest them.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: {
+          type: "fieldRemoved",
+          sourceController: "opponent",
+          sourceKind: "effect",
+          filter: {
+            categories: ["character"],
+            typesIncludeAny: ["Navy"],
+          },
+        },
+        effect: {
+          type: "moveCards",
+          count: 2,
+          destinationState: "rested",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "filter:type",
+        "replacementSource:opponent",
+        "instruction:moveCards",
+      ]),
+    );
+  });
 });
 
 function containsEffect(received: unknown, expected: unknown): boolean {

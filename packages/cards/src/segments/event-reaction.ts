@@ -434,7 +434,7 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const yourCharacter =
-    /^your (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect or K\.O\.'d)?)$/iu.exec(
+    /^your (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect(?: or K\.O\.'d)?)?)$/iu.exec(
       normalized,
     );
   const filterText = yourCharacter?.groups?.["filter"];
@@ -463,7 +463,12 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
       filter: parsed.filter,
       ...source.trigger,
     },
-    evidence: ["trigger:fieldRemoved", "player:self", ...parsed.evidence],
+    evidence: [
+      "trigger:fieldRemoved",
+      "player:self",
+      ...parsed.evidence,
+      ...source.evidence,
+    ],
   };
 };
 
@@ -475,13 +480,22 @@ const parseFieldRemovalSource = (
         Extract<Trigger, { type: "fieldRemoved" }>,
         "sourceController" | "sourceKind"
       >;
+      readonly evidence: readonly ExpressionParseResult["evidence"][number][];
     }
   | undefined => {
   if (text.toLowerCase() === "k.o.'d") {
-    return { trigger: { sourceKind: "ko" } };
+    return { trigger: { sourceKind: "ko" }, evidence: [] };
   }
   if (text.toLowerCase() === "removed from the field") {
-    return { trigger: { sourceKind: "any" } };
+    return { trigger: { sourceKind: "any" }, evidence: [] };
+  }
+  if (
+    text.toLowerCase() === "removed from the field by your opponent's effect"
+  ) {
+    return {
+      trigger: { sourceController: "opponent", sourceKind: "effect" },
+      evidence: ["replacementSource:opponent", "replacementSource:cardEffect"],
+    };
   }
   if (
     text.toLowerCase() ===
@@ -489,6 +503,7 @@ const parseFieldRemovalSource = (
   ) {
     return {
       trigger: { sourceController: "opponent", sourceKind: "any" },
+      evidence: ["replacementSource:opponent"],
     };
   }
   return undefined;
