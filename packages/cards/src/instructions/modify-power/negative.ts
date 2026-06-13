@@ -23,6 +23,12 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     return modifierFirst;
   }
 
+  const opponentLeaderAndCharacters =
+    parseOpponentLeaderAndAllCharactersNegativePowerInstruction(actionRest);
+  if (opponentLeaderAndCharacters !== undefined) {
+    return opponentLeaderAndCharacters;
+  }
+
   const allTarget = parseAllFieldTarget({ text: actionRest });
   if (allTarget !== undefined) {
     const modifier = parseNegativePowerModifier({ text: allTarget.rest });
@@ -107,6 +113,80 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseOpponentLeaderAndAllCharactersNegativePowerInstruction(
+  actionRest: string,
+): ReturnType<InstructionParser> {
+  const match =
+    /^your opponent's Leader and all of (?:their|your opponent's) Characters?\s+(?<modifier>[\s\S]+)$/iu.exec(
+      actionRest,
+    );
+  const modifierText = match?.groups?.["modifier"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier = parseNegativePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    fieldEffectDurationParsers,
+  );
+  if (duration === undefined || duration.duration === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "modifyPower",
+            target: {
+              type: "all",
+              zone: "leaderArea",
+              player: "opponent",
+              filter: { categories: ["leader"] },
+            },
+            value: modifier.value,
+            duration: duration.duration,
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "modifyPower",
+            target: {
+              type: "all",
+              zone: "characterArea",
+              player: "opponent",
+              filter: { categories: ["character"] },
+            },
+            value: modifier.value,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:modifyPower",
+      "cardinality:all",
+      "target:opponentLeaderOrCharacters",
+      "player:opponent",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:leader",
+      "filter:category:character",
+      ...modifier.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
 
 function parseModifierFirstNegativePowerInstruction(
   actionRest: string,

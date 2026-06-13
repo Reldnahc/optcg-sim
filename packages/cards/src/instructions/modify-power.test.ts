@@ -210,6 +210,59 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses opponent Leader and all opponent Characters negative power as an all-zones target", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give your opponent's Leader and all of their Characters -1000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                zone: "leaderArea",
+                player: "opponent",
+                filter: { categories: ["leader"] },
+              },
+              value: -1000,
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "opponent",
+                filter: { categories: ["character"] },
+              },
+              value: -1000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:all",
+        "target:opponentLeaderOrCharacters",
+        "player:opponent",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:leader",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses positive power for self Leader or Character targets during this turn", () => {
     expect(
       parseModifyPowerInstruction({
