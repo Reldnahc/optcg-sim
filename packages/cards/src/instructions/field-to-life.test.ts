@@ -70,4 +70,51 @@ describe("field-to-Life instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses add-to-owner-Life face-down wording through the same field movement primitive", () => {
+    const result = parsePlaceAtOwnerLifeInstruction({
+      text: "Add up to 1 Character with a cost of 9 or less to the top or bottom of the owner's Life cards face-down.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:field-to-life",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "anyPlayer",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: { categories: ["character"], cost: { max: 9 } },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "choice",
+              options: [
+                { effect: { destination: "lifeTop" } },
+                { effect: { destination: "lifeBottom" } },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:moveSelected",
+        "player:any",
+        "destination:life",
+        "position:top",
+        "position:bottom",
+        "destination:faceDown",
+      ]),
+    );
+  });
 });

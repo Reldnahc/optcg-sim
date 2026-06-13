@@ -144,10 +144,7 @@ const normalizePosition = (text: string): "top" | "bottom" | "topOrBottom" =>
       : "bottom";
 
 export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
-  const match =
-    /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:their|the owner's) Life cards(?<faceUp>\s+face-up)?\.?$/iu.exec(
-      input.text,
-    );
+  const match = parseFieldToLifeWording(input.text);
   if (match === null) {
     return undefined;
   }
@@ -168,7 +165,8 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
   }
 
   const position = normalizePosition(positionText);
-  const faceUp = match.groups?.["faceUp"] !== undefined;
+  const faceText = match.groups?.["face"]?.trim().toLowerCase();
+  const faceUp = faceText === "face-up";
   return {
     effect: selectThenPlaceAtOwnerLife(
       target.player,
@@ -193,9 +191,21 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
         : position === "top"
           ? (["position:top"] as const)
           : (["position:bottom"] as const)),
-      ...(faceUp ? (["destination:faceUp"] as const) : []),
+      ...(faceText === "face-up"
+        ? (["destination:faceUp"] as const)
+        : faceText === "face-down"
+          ? (["destination:faceDown"] as const)
+          : []),
       "composition:selectThenApply",
     ],
     rest: "",
   };
 };
+
+const parseFieldToLifeWording = (text: string): RegExpExecArray | null =>
+  /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:their|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+    text,
+  ) ??
+  /^add\s+(?<selection>.+?)\s+to the (?<position>top|bottom|top or bottom) of (?:their|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+    text,
+  );
