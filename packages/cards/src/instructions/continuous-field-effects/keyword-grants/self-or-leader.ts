@@ -5,6 +5,7 @@ import {
 import { parseThatCharacterReference } from "../../../references/index.js";
 import type { InstructionParseResult } from "../../../types.js";
 import type { ContinuousInstructionParser } from "../shared.js";
+import { continuousDuration, continuousDurationEvidence } from "../shared.js";
 import { parseKeywordAndPositivePowerGrant } from "./keyword-and-power.js";
 import { parseNamedCardsAndSelfKeywordGrant } from "./named-and-self.js";
 import { parseKeywordGrantForTarget } from "./shared.js";
@@ -24,6 +25,7 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
     parseLeaderKeywordGrant(input, context) ??
     parseThatCharacterKeywordGrant(input.text, context) ??
     parseNamedCardsAndSelfKeywordGrant(input.text, context) ??
+    parseNaturalRushCharacterGrant(input.text, context) ??
     parseSelfKeywordGrant(input.text, context);
 
 const parseLeaderKeywordGrant: ContinuousInstructionParser = (
@@ -89,6 +91,35 @@ const parseSelfKeywordGrant = (
       context,
     })
   );
+};
+
+const parseNaturalRushCharacterGrant = (
+  text: string,
+  context: Parameters<ContinuousInstructionParser>[1],
+): InstructionParseResult | undefined => {
+  if (
+    !/^this Character can attack Characters on the turn in which it is played\.?$/iu.test(
+      text,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "giveKeyword",
+      target: { type: "self" },
+      keyword: "rushCharacter",
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:giveKeyword",
+      "target:thisCharacter",
+      "keyword:anySupported",
+      continuousDurationEvidence(context.condition),
+    ],
+    rest: "",
+  };
 };
 
 const parseThatCharacterKeywordGrant = (
