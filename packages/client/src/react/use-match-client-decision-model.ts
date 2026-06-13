@@ -17,6 +17,7 @@ import {
   optionalCardCostActionForSelection,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
+  quickPayActivateMainCostActionIndex,
 } from "../index.js";
 import type {
   AttackTargetChoice,
@@ -62,6 +63,7 @@ export interface MatchClientDecisionModel {
   optionalCardCostChoice?: OptionalCardCostChoice | undefined;
   canonicalDonPaymentActions?: ClientActionModel[] | undefined;
   automaticPayCostActionIndex?: number | undefined;
+  quickPayActivateMainCostActionIndex?: number | undefined;
   activeCardCostGroup?: OptionalCardCostGroup | undefined;
   explicitCardCostChoiceActive: boolean;
   cardCostChoiceActive: boolean;
@@ -85,6 +87,8 @@ export interface CreateMatchClientDecisionModelInput {
   activeCardCostChoice: ActiveCardCostChoice | undefined;
   activeCardCostSelectedInstanceIds: readonly string[];
   decisionDraft: DecisionDraft | undefined;
+  quickPayActivateMainCosts?: boolean | undefined;
+  quickPayActivateMainArmed?: boolean | undefined;
 }
 
 export const createMatchClientDecisionModel = ({
@@ -96,6 +100,8 @@ export const createMatchClientDecisionModel = ({
   activeCardCostChoice,
   activeCardCostSelectedInstanceIds,
   decisionDraft,
+  quickPayActivateMainCosts = false,
+  quickPayActivateMainArmed = false,
 }: CreateMatchClientDecisionModelInput): MatchClientDecisionModel => {
   const activeCardInstanceIds = activeCardInstanceIdsForUi({
     attackSourceInstanceId: activeAttackTargetChoice?.attackerInstanceId,
@@ -146,6 +152,13 @@ export const createMatchClientDecisionModel = ({
     pendingDecision,
     pendingDecisionResponseActions,
   );
+  const quickPayActionIndex =
+    quickPayActivateMainCosts && quickPayActivateMainArmed
+      ? quickPayActivateMainCostActionIndex(
+          pendingDecision,
+          pendingDecisionResponseActions,
+        )
+      : undefined;
   const explicitCardCostGroup =
     activeCardCostChoice === undefined ||
     optionalCardCostChoice === undefined ||
@@ -211,6 +224,7 @@ export const createMatchClientDecisionModel = ({
     activeDecisionDraft === undefined ||
     cardCostChoiceActive ||
     automaticPayCostActionIndex !== undefined ||
+    quickPayActionIndex !== undefined ||
     pendingDecisionInteractionMode !== "modal" ||
     isDecisionModalSuppressed(pendingDecision)
       ? undefined
@@ -253,6 +267,9 @@ export const createMatchClientDecisionModel = ({
     ...(automaticPayCostActionIndex === undefined
       ? {}
       : { automaticPayCostActionIndex }),
+    ...(quickPayActionIndex === undefined
+      ? {}
+      : { quickPayActivateMainCostActionIndex: quickPayActionIndex }),
     ...(activeCardCostGroup === undefined ? {} : { activeCardCostGroup }),
     explicitCardCostChoiceActive,
     cardCostChoiceActive,
