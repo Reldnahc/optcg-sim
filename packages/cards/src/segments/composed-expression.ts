@@ -78,6 +78,71 @@ export function delayedEndOfTurnSegmentParser(options: {
   };
 }
 
+export function eventTimedDelayedSegmentParser(options: {
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): SegmentParser {
+  return (input: ParseInput) => {
+    const match =
+      /^If this (?<subject>Leader|Character) battles your opponent's (?<target>Leader|Character) during this turn,\s*(?<body>[\s\S]+)$/iu.exec(
+        input.text,
+      );
+    const subject = match?.groups?.["subject"]?.toLowerCase();
+    const target = match?.groups?.["target"]?.toLowerCase();
+    const bodyText = match?.groups?.["body"];
+    if (
+      (subject !== "leader" && subject !== "character") ||
+      (target !== "leader" && target !== "character") ||
+      bodyText === undefined
+    ) {
+      return undefined;
+    }
+
+    const body = parseExpression(
+      { text: bodyText },
+      {
+        connectors: options.connectors,
+        segments: [
+          instructionExpressionSegmentParser(options),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
+      },
+    );
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "delayed",
+        timing: {
+          type: "event",
+          trigger: {
+            type: "attackDeclared",
+            role: "attacker",
+            player: "self",
+            filter: {
+              categories: [subject],
+            },
+            targetPlayer: "opponent",
+            targetFilter: {
+              categories: [target],
+            },
+          },
+          expires: { type: "endOfTurn", turn: "current" },
+        },
+        effect: body.effect,
+      },
+      evidence: [
+        "trigger:attackDeclared",
+        "duration:thisTurn",
+        "composition:delayed",
+        ...body.evidence,
+      ],
+    };
+  };
+}
+
 export function conditionalExpressionSegmentParser(options: {
   readonly conditions: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];

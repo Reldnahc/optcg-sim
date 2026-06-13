@@ -4,6 +4,7 @@ import { test } from "vitest";
 import type {
   CardInstance,
   ContinuousEffectRecord,
+  EngineEvent,
   Effect,
   EffectDefinition,
   GameState,
@@ -23,6 +24,7 @@ import {
   toInstanceId,
   reviewedOnPlayDrawDefinition,
   toEffectId,
+  toEngineEventId,
   toQueueEntryId,
   toSourceSnapshot,
   toTimingWindowId,
@@ -384,6 +386,88 @@ test("delayed end-of-turn sequence schedules DON activation and selects DON at e
   assert.equal(resolved.state.pendingDecision, undefined);
   assert.equal(resolved.state.players[p1]?.costArea[0]?.state, "active");
   assert.equal(resolved.state.delayedEffects?.length ?? 0, 0);
+});
+
+test("event-timed delayed sequence queues from a matching attack event and expires from delayed records", () => {
+  const { state, source } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "delayed",
+          timing: {
+            type: "event",
+            trigger: {
+              type: "attackDeclared",
+              role: "attacker",
+              player: "self",
+              filter: { categories: ["character"] },
+              targetPlayer: "opponent",
+              targetFilter: { categories: ["character"] },
+            },
+            expires: { type: "endOfTurn", turn: "current" },
+          },
+          effect: {
+            type: "activate",
+            target: { type: "self" },
+          },
+        },
+      },
+    ],
+  });
+  const p2State = must(state.players[p2], "p2");
+  const target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+  });
+  const scheduled = processEffectRuntime(state);
+  assert.equal(scheduled.errors, undefined);
+  assert.equal(scheduled.state.delayedEffects?.length, 1);
+  assert.equal(scheduled.state.effectQueue.length, 0);
+
+  const attackDeclared: EngineEvent = {
+    id: toEngineEventId("event:event-delayed-attack-declared"),
+    seq: scheduled.state.eventJournal.length + 1,
+    type: "attackDeclared",
+    payload: {
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: target.zone,
+      },
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:eventDelayedEffect" },
+    createdAtStateSeq: scheduled.state.seq,
+  };
+  const afterAttack = {
+    ...scheduled.state,
+    eventJournal: [...scheduled.state.eventJournal, attackDeclared],
+  };
+
+  const queued = processEffectRuntime(afterAttack);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+  assert.equal(
+    queued.state.effectQueue[0]?.effectBlockOverride?.effect.type,
+    "activate",
+  );
+  assert.equal(queued.state.delayedEffects?.length ?? 0, 0);
 });
 
 const selectRestedCharacterThenActivateSavedTargetSequence = (): Extract<

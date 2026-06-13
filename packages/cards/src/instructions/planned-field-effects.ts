@@ -1,5 +1,6 @@
 export {
   parsePreventOpponentCharactersAttackInstruction,
+  parseSelfAttackTargetRestrictionInstruction,
   parsePreventOpponentCharactersBlockerActivationInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,

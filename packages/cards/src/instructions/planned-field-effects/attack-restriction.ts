@@ -3,6 +3,7 @@ import {
   attackRestrictionDurationParsers,
   parseDurationFromSet,
 } from "../../durations/index.js";
+import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parseOpponentCharactersTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import {
@@ -94,3 +95,70 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
       rest: "",
     };
   };
+
+export const parseSelfAttackTargetRestrictionInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^This (?<subject>Leader|Character) cannot attack (?<target>your opponent's .+?) (?<duration>during this turn\.?)$/iu.exec(
+      input.text,
+    );
+  const subject = match?.groups?.["subject"]?.toLowerCase();
+  const targetText = match?.groups?.["target"];
+  const durationText = match?.groups?.["duration"];
+  if (
+    (subject !== "leader" && subject !== "character") ||
+    targetText === undefined ||
+    durationText === undefined
+  ) {
+    return undefined;
+  }
+
+  const targetMatch = /^your opponent's (?<filter>.+)$/iu.exec(targetText);
+  const filterText = targetMatch?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  if (
+    parsedFilter === undefined ||
+    parsedFilter.rest.trim().length > 0 ||
+    parsedFilter.filter.categories?.includes("character") !== true
+  ) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    attackRestrictionDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotAttackTarget",
+      target: subject === "leader" ? { type: "myLeader" } : { type: "self" },
+      attackTarget: {
+        player: "opponent",
+        zone: "characterArea",
+        filter: parsedFilter.filter,
+      },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:cannotAttackTarget",
+      subject === "leader" ? "target:yourLeader" : "target:thisCharacter",
+      "player:opponent",
+      "zone:characterArea",
+      ...parsedFilter.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+};

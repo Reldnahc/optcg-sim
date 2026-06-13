@@ -190,16 +190,20 @@ function parseSetThisCharacterActive(
   text: string,
 ): ReturnType<InstructionParser> {
   const match =
-    /^set this Character as active(?<delayed> at the end of this turn)?\.?$/i.exec(
+    /^set this (?<subject>Character|Leader) as active(?<delayed> at the end of this turn)?\.?$/i.exec(
       text,
     );
   if (match === null) {
     return undefined;
   }
+  const subject = match.groups?.["subject"]?.toLowerCase();
 
   const effect = {
     type: "activate" as const,
-    target: { type: "self" as const },
+    target:
+      subject === "leader"
+        ? ({ type: "myLeader" } as const)
+        : ({ type: "self" } as const),
   };
   if (match.groups?.["delayed"] !== undefined) {
     return {
@@ -210,7 +214,7 @@ function parseSetThisCharacterActive(
       },
       evidence: [
         "instruction:activate",
-        "target:thisCharacter",
+        subject === "leader" ? "target:yourLeader" : "target:thisCharacter",
         "state:active",
         "duration:endOfTurn",
         "composition:delayed",
@@ -221,7 +225,11 @@ function parseSetThisCharacterActive(
 
   return {
     effect,
-    evidence: ["instruction:activate", "target:thisCharacter", "state:active"],
+    evidence: [
+      "instruction:activate",
+      subject === "leader" ? "target:yourLeader" : "target:thisCharacter",
+      "state:active",
+    ],
     rest: "",
   };
 }

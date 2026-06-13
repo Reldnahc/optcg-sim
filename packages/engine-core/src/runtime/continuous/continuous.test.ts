@@ -54,6 +54,55 @@ test("cannotAttack restriction on self prevents attacker legal targets", () => {
   assert.deepEqual(view.legalAttackTargets[attacker.instanceId], []);
 });
 
+test("targeted cannotAttack restriction filters only matching attack targets", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  setMainTurnAfterFirstTurn(state);
+  p1State.characters = [withCharacter(p1, toCardId("char-rush"), 0)];
+  const lowCost = withCharacter(p2, toCardId("char-vanilla"), 0, {
+    state: "rested",
+  });
+  const highCost = withCharacter(p2, toCardId("char-high-cost"), 1, {
+    state: "rested",
+  });
+  p2State.characters = [lowCost, highCost];
+  state.cardManifest.cards[highCost.cardId] = resolvedCard({
+    cardId: highCost.cardId,
+    category: "character",
+    cost: 8,
+    power: 8000,
+  });
+  const attacker = must(p1State.characters[0], "attacker");
+  state.continuousEffects = [
+    {
+      ...continuousPowerEffectRecord(state, { source: attacker }),
+      id: "restrict-low-cost-character-targets",
+      modifier: {
+        layer: "restriction",
+        target: { type: "self" },
+        operation: {
+          type: "targetRestriction",
+          restriction: "cannotAttack",
+          attackTarget: {
+            player: "opponent",
+            zone: "characterArea",
+            filter: { categories: ["character"], baseCost: { max: 7 } },
+          },
+        },
+      },
+      duration: { type: "thisTurn" },
+    },
+  ];
+
+  const view = computeView(state);
+
+  assert.deepEqual(view.legalAttackTargets[attacker.instanceId], [
+    p2State.leader.instanceId,
+    highCost.instanceId,
+  ]);
+});
+
 test("cannotBlock all-opponent-character restriction disables blocker", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");

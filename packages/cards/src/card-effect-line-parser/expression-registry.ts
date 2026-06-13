@@ -42,6 +42,7 @@ import {
   costedEffectExpressionParser,
   delayedEndOfTurnSegmentParser,
   entryConditionContinuousExpressionParser,
+  eventTimedDelayedSegmentParser,
   implicitEventReactionExpressionParser,
   instructionExpressionSegmentParser,
   lookPlayFromTopExpressionParser,
@@ -90,6 +91,21 @@ const singleInstructionExpressionParser = (input: ParseInput) => {
 };
 
 function generalExpressionParser(input: ParseInput) {
+  const eventTimedDelayed = eventTimedDelayedSegmentParser({
+    connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
+    instructions: instructionParsers,
+  })(input);
+  if (eventTimedDelayed !== undefined) {
+    return {
+      effect: eventTimedDelayed.effect,
+      evidence: eventTimedDelayed.evidence,
+      rest: "",
+      ...(eventTimedDelayed.presentationSpans === undefined
+        ? {}
+        : { presentationSpans: eventTimedDelayed.presentationSpans }),
+    };
+  }
+
   return parseExpression(input, {
     connectors: [
       parseCommaBeforeLookConnector,
@@ -101,6 +117,14 @@ function generalExpressionParser(input: ParseInput) {
       optionalCostedEffectSegmentParser({
         instructions: instructionParsers,
         expressions: costedExpressions,
+      }),
+      eventTimedDelayedSegmentParser({
+        connectors: [
+          parseThenConnector,
+          parseSentenceConnector,
+          parseAndConnector,
+        ],
+        instructions: instructionParsers,
       }),
       conditionalExpressionSegmentParser({
         conditions: conditionParsers,

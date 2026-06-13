@@ -15,6 +15,7 @@ type ResolvedTargetContinuousCandidate = Extract<
       | "invalidateEffects"
       | "cannotBecomeActive"
       | "cannotAttack"
+      | "cannotAttackTarget"
       | "attackCost"
       | "cannotBlock"
       | "preventBlockerActivation";
@@ -37,6 +38,7 @@ const isResolvedTargetContinuousCandidate = (
   effect.type === "invalidateEffects" ||
   effect.type === "cannotBecomeActive" ||
   effect.type === "cannotAttack" ||
+  effect.type === "cannotAttackTarget" ||
   effect.type === "attackCost" ||
   effect.type === "cannotBlock" ||
   effect.type === "preventBlockerActivation";

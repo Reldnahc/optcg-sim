@@ -22,7 +22,10 @@ import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/proce
 import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
-import { queueDelayedEndOfTurnEffects } from "./runtime/trigger-queueing/delayed-effects.js";
+import {
+  queueDelayedEndOfTurnEffects,
+  queueDelayedEventEffects,
+} from "./runtime/trigger-queueing/delayed-effects.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime-definition-lookup.js";
 import { isLifeTriggerQueueEntry } from "./life-trigger/queue-origin.js";
@@ -435,6 +438,10 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromEventReaction = queueEventReactionTriggers(state);
   if (queuedFromEventReaction !== undefined) {
     return queuedFromEventReaction;
+  }
+  const queuedFromDelayedEvent = queueDelayedEventEffects(state);
+  if (queuedFromDelayedEvent !== undefined) {
+    return queuedFromDelayedEvent;
   }
   const queuedFromHandTrash = queueHandTrashedByEffectTriggers(state);
   if (queuedFromHandTrash !== undefined) {

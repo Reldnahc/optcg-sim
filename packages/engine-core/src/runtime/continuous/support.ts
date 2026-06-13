@@ -342,6 +342,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "protectFromKO" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
+    effect.type !== "cannotAttackTarget" &&
     effect.type !== "attackCost" &&
     effect.type !== "cannotBlock" &&
     effect.type !== "preventBlockerActivation" &&
@@ -445,6 +446,9 @@ export const isSupportedContinuousQueueEffect = (
       effect.type === "preventBlockerActivation" &&
       effect.target.type === "myLeader"
     ) &&
+    !(
+      effect.type === "cannotAttackTarget" && effect.target.type === "myLeader"
+    ) &&
     !isSupportedTarget(effect.target)
   ) {
     return false;
@@ -463,10 +467,13 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (
     (effect.type === "cannotAttack" ||
+      effect.type === "cannotAttackTarget" ||
       effect.type === "cannotBlock" ||
       effect.type === "preventPlayByEffects" ||
       effect.type === "preventBlockerActivation") &&
-    !supportedRestriction.has(effect.type)
+    !supportedRestriction.has(
+      effect.type === "cannotAttackTarget" ? "cannotAttack" : effect.type,
+    )
   ) {
     return false;
   }

@@ -238,6 +238,7 @@ export const effectToDerivedModifier = (
   }
   if (
     effect.type === "cannotAttack" ||
+    effect.type === "cannotAttackTarget" ||
     effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
@@ -249,6 +250,10 @@ export const effectToDerivedModifier = (
         effect.type === "preventBlockerActivation" &&
         effect.target.type === "myLeader"
       ) &&
+        !(
+          effect.type === "cannotAttackTarget" &&
+          effect.target.type === "myLeader"
+        ) &&
         !isSupportedTarget(effect.target)) ||
       !isSupportedDuration(effect.duration)
     ) {
@@ -262,7 +267,13 @@ export const effectToDerivedModifier = (
       operation:
         effect.type === "attackCost"
           ? { type: "attackCost", cost: effect.cost }
-          : { type: "restriction", restriction: effect.type },
+          : effect.type === "cannotAttackTarget"
+            ? {
+                type: "targetRestriction",
+                restriction: "cannotAttack",
+                attackTarget: effect.attackTarget,
+              }
+            : { type: "restriction", restriction: effect.type },
     };
   }
   if (effect.type !== "giveProtection") {

@@ -31,7 +31,10 @@ export const toDelayedEffectBlock = (
 ): EffectDefinition["effects"][number] => ({
   id: delayedEffectBlockId(entry, segmentKey),
   category: "auto",
-  trigger: { type: "endOfYourTurn" },
+  trigger:
+    effect.timing.type === "event"
+      ? effect.timing.trigger
+      : { type: "endOfYourTurn" },
   sourcePresencePolicy: "noSourceRequired",
   effect: effect.effect,
 });

@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardFilter,
   CardRef,
   ComputedCardView,
   ComputedGameView,
@@ -7,6 +8,7 @@ import type {
   InstanceId,
   Keyword,
   PlayerId,
+  PlayerRef,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -20,6 +22,7 @@ import {
 } from "./compute-view-continuous.js";
 import { fieldRemovalProtectionsForCard } from "../replacement/field-removal-protection.js";
 import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
+import { cardMatchesSearchFilter, getOpponentId } from "../actions/state.js";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   counterPower?: number;
@@ -126,6 +129,66 @@ const hasAttackPermission = (state: GameState, card: CardInstance): boolean => {
     if (!continuousEffectConditionPasses(state, effect)) continue;
     if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     return true;
+  }
+  return false;
+};
+
+const playerRefMatchesCard = (
+  state: GameState,
+  source: CardInstance,
+  ref: PlayerRef,
+  playerId: PlayerId,
+): boolean => {
+  switch (ref) {
+    case "self":
+    case "controller":
+      return playerId === source.controller;
+    case "owner":
+      return playerId === source.owner;
+    case "opponent":
+      return playerId === getOpponentId(state, source.controller);
+    case "turnPlayer":
+      return playerId === state.turn.turnPlayerId;
+    case "nonTurnPlayer":
+      return playerId === getOpponentId(state, state.turn.turnPlayerId);
+  }
+};
+
+const cardMatchesAttackTargetFilter = (
+  resolved: ResolvedCard,
+  filter: CardFilter | undefined,
+): boolean => filter === undefined || cardMatchesSearchFilter(resolved, filter);
+
+const attackTargetRestricted = (
+  state: GameState,
+  attacker: CardInstance,
+  target: CardInstance,
+  targetPlayerId: PlayerId,
+  targetResolved: ResolvedCard,
+): boolean => {
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
+    if (effect.modifier.layer !== "restriction") continue;
+    if (effect.modifier.operation.type !== "targetRestriction") continue;
+    if (effect.modifier.operation.restriction !== "cannotAttack") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, attacker, effect)) continue;
+    const attackTarget = effect.modifier.operation.attackTarget;
+    if (target.zone.zone !== attackTarget.zone) continue;
+    if (
+      !playerRefMatchesCard(
+        state,
+        attacker,
+        attackTarget.player,
+        targetPlayerId,
+      )
+    ) {
+      continue;
+    }
+    if (cardMatchesAttackTargetFilter(targetResolved, attackTarget.filter)) {
+      return true;
+    }
   }
   return false;
 };
@@ -333,13 +396,32 @@ const legalTargetsForAttacker = (
   const canAttackActiveCharacters = hasAttackPermission(state, attacker);
 
   if (!rushCharacterOnly) {
-    resolveCombatMetadata(state, opponent.leader);
-    targets.push(opponent.leader.instanceId);
+    const targetMetadata = resolveCombatMetadata(state, opponent.leader);
+    if (
+      !attackTargetRestricted(
+        state,
+        attacker,
+        opponent.leader,
+        opponentId,
+        targetMetadata,
+      )
+    ) {
+      targets.push(opponent.leader.instanceId);
+    }
   }
 
   for (const character of opponent.characters) {
-    resolveCombatMetadata(state, character);
-    if (character.state === "rested" || canAttackActiveCharacters) {
+    const targetMetadata = resolveCombatMetadata(state, character);
+    if (
+      (character.state === "rested" || canAttackActiveCharacters) &&
+      !attackTargetRestricted(
+        state,
+        attacker,
+        character,
+        opponentId,
+        targetMetadata,
+      )
+    ) {
       targets.push(character.instanceId);
     }
   }

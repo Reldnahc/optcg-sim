@@ -24,6 +24,7 @@ import type {
   RuntimeVersionSet,
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
+import type { Trigger } from "./effect-triggers.js";
 import type {
   AttackTrashCost,
   CardFilter,
@@ -139,7 +140,13 @@ export type EffectQueueOrigin =
 
 export interface DelayedEffectRecord {
   id: string;
-  timing: { type: "endOfTurn"; turn: "current" };
+  timing:
+    | { type: "endOfTurn"; turn: "current" }
+    | {
+        type: "event";
+        trigger: Trigger;
+        expires: { type: "endOfTurn"; turn: "current" };
+      };
   controllerId: PlayerId;
   source: CardRef;
   sourceSnapshot: CardSnapshot;
@@ -206,6 +213,15 @@ export type ModifierOperation =
       type: "restriction";
       restriction: string;
       sourceCategories?: CardCategory[];
+    }
+  | {
+      type: "targetRestriction";
+      restriction: string;
+      attackTarget: {
+        player: PlayerRef;
+        zone: "leaderArea" | "characterArea";
+        filter?: CardFilter;
+      };
     }
   | { type: "attackCost"; cost: AttackTrashCost }
   | { type: "protection"; protection: Protection }

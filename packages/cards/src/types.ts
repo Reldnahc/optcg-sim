@@ -117,6 +117,7 @@ export type PrimitiveEvidence =
   | "instruction:rest"
   | "instruction:returnDon"
   | "instruction:preventActivation"
+  | "instruction:cannotAttackTarget"
   | "instruction:selectAllTargets"
   | "instruction:attackCost"
   | "instruction:changeAttackTarget"

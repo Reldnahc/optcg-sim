@@ -1,5 +1,6 @@
 export {
   parsePreventOpponentCharactersAttackInstruction,
+  parseSelfAttackTargetRestrictionInstruction,
   preventOpponentCharactersAttackPrimitive,
 } from "./attack-restriction.js";
 export {

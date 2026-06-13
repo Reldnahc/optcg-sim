@@ -9,6 +9,7 @@ export const durationForDerivedEffect = (effect: Effect): Duration => {
     effect.type === "modifyCost" ||
     effect.type === "protectFromKO" ||
     effect.type === "cannotAttack" ||
+    effect.type === "cannotAttackTarget" ||
     effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
