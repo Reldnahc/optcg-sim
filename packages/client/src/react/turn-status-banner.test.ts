@@ -269,4 +269,21 @@ describe("turn status banner", () => {
       /82%\s*\{\s*opacity:\s*1;\s*transform:\s*translateX\(0\);\s*\}/u,
     );
   });
+
+  test("reduced motion keeps the banner timed with an opacity-only fade", async () => {
+    const css = await readFile(
+      join(sourceDirectory, "styles", "playmat.css"),
+      "utf8",
+    );
+
+    assert.match(
+      css,
+      /\.match-app\.is-reduced-motion\s+\.turn-status-banner\s*\{[^}]*animation:\s*turn-status-fade 1500ms ease-in-out both !important;/su,
+    );
+    assert.match(css, /@keyframes\s+turn-status-fade\s*\{/u);
+    assert.doesNotMatch(
+      css,
+      /@keyframes\s+turn-status-fade\s*\{[\s\S]*?transform:/u,
+    );
+  });
 });
