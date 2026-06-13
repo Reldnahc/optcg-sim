@@ -4,6 +4,7 @@ import type {
   MatchActionResult,
   MatchActionResultMessage,
   MatchLiveTransport,
+  MatchRematchRequestMessage,
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
@@ -71,6 +72,11 @@ const isSessionTransition = (
 ): value is MatchSessionTransitionMessage =>
   isRecord(value) && value["type"] === "sessionTransition";
 
+const isRematchRequest = (
+  value: unknown,
+): value is MatchRematchRequestMessage =>
+  isRecord(value) && value["type"] === "rematchRequest";
+
 const isLobbySync = (value: unknown): value is LobbyStateSyncMessage =>
   isRecord(value) && value["type"] === "lobbySync";
 
@@ -95,6 +101,7 @@ export const createDevWebSocketMatchTransport = ({
     onTimerSync,
     onSetupSync,
     onSessionTransition,
+    onRematchRequest,
     onError,
   }) {
     const url = new URL(
@@ -176,6 +183,11 @@ export const createDevWebSocketMatchTransport = ({
 
       if (isSessionTransition(parsed)) {
         onSessionTransition(parsed);
+        return;
+      }
+
+      if (isRematchRequest(parsed)) {
+        onRematchRequest(parsed);
         return;
       }
 

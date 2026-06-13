@@ -196,7 +196,11 @@ const nextSessionTransition = async (
     if (message.type === "sessionTransition") {
       return message;
     }
-    if (message.type === "stateSync" || message.type === "heartbeat") {
+    if (
+      message.type === "stateSync" ||
+      message.type === "heartbeat" ||
+      message.type === "rematchRequest"
+    ) {
       continue;
     }
     throw new Error(`Unexpected WebSocket message ${String(message.type)}.`);
@@ -718,6 +722,10 @@ describe("dev rematches", () => {
         "p1",
         loserToken,
       );
+      const rematchRequest = (await sourceP2.next()) as {
+        type?: string;
+        requestedBy?: string;
+      };
       await closeSocket(sourceP1);
       await waitForServerLifecycle();
       const nextPending = await createRematch(
@@ -728,6 +736,8 @@ describe("dev rematches", () => {
       );
 
       assert.equal(pending.status, 202);
+      assert.equal(rematchRequest.type, "rematchRequest");
+      assert.equal(rematchRequest.requestedBy, "p1");
       assert.equal(nextPending.status, 202);
       assert.deepEqual(nextPending.body.rematch, { status: "pending" });
       assert.equal(nextPending.body.lobbyId, undefined);

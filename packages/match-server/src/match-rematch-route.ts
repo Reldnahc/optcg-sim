@@ -27,6 +27,7 @@ export const handleRematchRequest = async ({
   matchId,
   lobbyRegistry,
   auth,
+  onPending,
   onCreated,
 }: {
   readonly request: IncomingMessage;
@@ -34,6 +35,7 @@ export const handleRematchRequest = async ({
   readonly matchId: MatchId;
   readonly lobbyRegistry: CustomLobbyRegistry;
   readonly auth: AuthContext | undefined;
+  readonly onPending: (requestedBy: PlayerId) => void;
   readonly onCreated: (created: CreatedCustomLobbyResponse) => void;
 }): Promise<void> => {
   let body: unknown;
@@ -77,6 +79,7 @@ export const handleRematchRequest = async ({
     return;
   }
   if (isPendingRematchResponse(result)) {
+    onPending(playerId as PlayerId);
     sendJson(response, 202, result);
     return;
   }

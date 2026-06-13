@@ -35,6 +35,7 @@ export interface ControlRailProps {
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
   turnState?: PublicTurnState | undefined;
   matchStatus?: string | undefined;
+  rematchStatus?: "requestedBySelf" | "requestedByOpponent" | undefined;
   width?: number | undefined;
   dockHeight?: number | undefined;
   dockActive?: boolean | undefined;
@@ -89,6 +90,7 @@ export const ControlRail = ({
   opponentConnectionStatus,
   turnState,
   matchStatus,
+  rematchStatus,
   width,
   dockHeight,
   dockActive = false,
@@ -131,6 +133,17 @@ export const ControlRail = ({
   const suppressTabClick = useRef(false);
   const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
   const matchIsOver = matchStatus === "completed" || matchStatus === "gameOver";
+  const opponentLeft = opponentConnectionStatus === "disconnected";
+  const rematchLabel = opponentLeft
+    ? "Opponent left"
+    : rematchStatus === undefined
+      ? "Rematch"
+      : "Rematch requested";
+  const rematchDisabled =
+    disabled ||
+    onRematch === undefined ||
+    opponentLeft ||
+    rematchStatus === "requestedBySelf";
   const activeDockTab =
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
@@ -210,6 +223,17 @@ export const ControlRail = ({
         {matchIsOver ? (
           <div className="end-match-actions" aria-label="Match ended actions">
             <button
+              className="action-button is-primary end-match-action"
+              type="button"
+              disabled={rematchDisabled}
+              aria-label={rematchLabel}
+              onClick={() => {
+                void onRematch?.();
+              }}
+            >
+              {rematchLabel}
+            </button>
+            <button
               className="action-button end-match-action"
               type="button"
               disabled={disabled}
@@ -217,17 +241,6 @@ export const ControlRail = ({
               onClick={onHome}
             >
               Home
-            </button>
-            <button
-              className="action-button end-match-action"
-              type="button"
-              disabled={disabled || onRematch === undefined}
-              aria-label="Rematch"
-              onClick={() => {
-                void onRematch?.();
-              }}
-            >
-              Rematch
             </button>
           </div>
         ) : null}

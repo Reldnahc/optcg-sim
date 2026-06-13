@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { InstanceId } from "@optcg/types";
+import type { InstanceId, PlayerId } from "@optcg/types";
 
 import {
   createDecisionDraft,
@@ -190,6 +190,7 @@ export const useMatchClient = ({
   const quickPayActivateMainArmed = useRef(false);
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [rematchRequestedBy, setRematchRequestedBy] = useState<PlayerId>();
 
   const currentPlayerId = clientState?.seat.playerId;
   const playerSnapshot =
@@ -248,6 +249,7 @@ export const useMatchClient = ({
     liveConnectionKey,
     lobbyConnectionKey,
     setClientState,
+    setRematchRequestedBy,
     setErrors,
   });
 
@@ -265,6 +267,7 @@ export const useMatchClient = ({
       setErrors,
       setSelectedCardInstanceId,
       setSelectedDonInstanceIds,
+      setRematchRequestedBy,
     });
 
   const refreshAccountLoadouts = useCallback((): void => {
@@ -389,6 +392,34 @@ export const useMatchClient = ({
       controller,
     ],
   );
+
+  useEffect(() => {
+    if (!isMatchClientState(clientState)) {
+      setRematchRequestedBy(undefined);
+      return;
+    }
+    if (
+      clientState.snapshot.status !== "completed" &&
+      clientState.snapshot.status !== "gameOver"
+    ) {
+      setRematchRequestedBy(undefined);
+      return;
+    }
+    const opponentConnectionStatus = Object.entries(
+      clientState.snapshot.playerLabels ?? {},
+    ).find(([playerId]) => playerId !== String(clientState.seat.playerId))?.[1]
+      ?.connectionStatus;
+    if (opponentConnectionStatus === "disconnected") {
+      setRematchRequestedBy(undefined);
+    }
+  }, [clientState]);
+
+  const rematchStatus =
+    rematchRequestedBy === undefined || currentPlayerId === undefined
+      ? undefined
+      : rematchRequestedBy === currentPlayerId
+        ? "requestedBySelf"
+        : "requestedByOpponent";
 
   const resetInteractionState = useCallback((): void => {
     setSelectedCardInstanceId(undefined);
@@ -781,6 +812,7 @@ export const useMatchClient = ({
       accountLoadoutsStatus,
       ...(accountLoadoutsError === undefined ? {} : { accountLoadoutsError }),
       accountLoadoutValidationRequired,
+      ...(rematchStatus === undefined ? {} : { rematchStatus }),
       actionInFlight,
       errors: visibleErrors(errors),
     },

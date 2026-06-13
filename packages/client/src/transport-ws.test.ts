@@ -139,6 +139,7 @@ describe("dev WebSocket match transport", () => {
       onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },
@@ -216,6 +217,7 @@ describe("dev WebSocket match transport", () => {
       onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },
@@ -277,6 +279,7 @@ describe("dev WebSocket match transport", () => {
     const recording = createRecordingWebSocket();
     const setupMessages: unknown[] = [];
     const transitionMessages: unknown[] = [];
+    const rematchRequestMessages: unknown[] = [];
     const transport = createDevWebSocketMatchTransport({
       baseUrl: "http://localhost:3000",
       WebSocket: recording.WebSocket,
@@ -292,6 +295,9 @@ describe("dev WebSocket match transport", () => {
       },
       onSessionTransition(message) {
         transitionMessages.push(message);
+      },
+      onRematchRequest(message) {
+        rematchRequestMessages.push(message);
       },
       onError(message) {
         throw new Error(message);
@@ -321,9 +327,23 @@ describe("dev WebSocket match transport", () => {
         choices: ["goFirst", "goSecond"],
       },
     });
+    socket.receive({
+      type: "rematchRequest",
+      matchId: "match-1",
+      serverSeq: 3,
+      requestedBy: "p2",
+    });
 
     assert.equal(setupMessages.length, 1);
     assert.equal(transitionMessages.length, 1);
+    assert.deepEqual(rematchRequestMessages, [
+      {
+        type: "rematchRequest",
+        matchId: "match-1",
+        serverSeq: 3,
+        requestedBy: "p2",
+      },
+    ]);
   });
 
   test("routes timer sync messages without requiring a full state sync", () => {
@@ -343,6 +363,7 @@ describe("dev WebSocket match transport", () => {
       },
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },
@@ -393,6 +414,7 @@ describe("dev WebSocket match transport", () => {
         onTimerSync() {},
         onSetupSync() {},
         onSessionTransition() {},
+        onRematchRequest() {},
         onError(message) {
           throw new Error(message);
         },
@@ -438,6 +460,7 @@ describe("dev WebSocket match transport", () => {
       onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },
@@ -509,6 +532,7 @@ describe("dev WebSocket match transport", () => {
       onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },
@@ -577,6 +601,7 @@ describe("dev WebSocket match transport", () => {
       onTimerSync() {},
       onSetupSync() {},
       onSessionTransition() {},
+      onRematchRequest() {},
       onError(message) {
         throw new Error(message);
       },

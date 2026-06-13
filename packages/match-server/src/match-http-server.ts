@@ -409,6 +409,13 @@ const handleApiRequest = async (
         matchId: matchId as MatchId,
         lobbyRegistry,
         auth: authProvider.authenticate(request),
+        onPending: (requestedBy) => {
+          broadcastRematchRequest(
+            matchId as MatchId,
+            requestedBy,
+            matchConnections,
+          );
+        },
         onCreated: (created) => {
           broadcastSessionTransition(
             matchId as MatchId,
@@ -500,6 +507,23 @@ const broadcastLobbyError = (
         lobbyId,
         serverSeq: ++connection.serverSeq,
         message,
+      });
+    }
+  }
+};
+
+const broadcastRematchRequest = (
+  matchId: MatchId,
+  requestedBy: PlayerId,
+  connections: Set<DevSocketConnection>,
+): void => {
+  for (const connection of connections) {
+    if (connection.matchId === matchId) {
+      sendSocketJson(connection, {
+        type: "rematchRequest",
+        matchId,
+        serverSeq: ++connection.serverSeq,
+        requestedBy,
       });
     }
   }

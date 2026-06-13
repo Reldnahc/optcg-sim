@@ -4,6 +4,7 @@ import type {
   MatchClientController,
   MatchClientSessionState,
 } from "../controller.js";
+import type { MatchRematchRequestMessage } from "../transport.js";
 import {
   isFirstPlayerSetupClientState,
   isLobbyClientState,
@@ -17,6 +18,9 @@ interface UseMatchLiveConnectionsInput {
   liveConnectionKey: string | undefined;
   lobbyConnectionKey: string | undefined;
   setClientState: Dispatch<SetStateAction<MatchClientSessionState | undefined>>;
+  setRematchRequestedBy: Dispatch<
+    SetStateAction<MatchRematchRequestMessage["requestedBy"] | undefined>
+  >;
   setErrors: Dispatch<SetStateAction<string[]>>;
 }
 
@@ -25,6 +29,7 @@ export const useMatchLiveConnections = ({
   liveConnectionKey,
   lobbyConnectionKey,
   setClientState,
+  setRematchRequestedBy,
   setErrors,
 }: UseMatchLiveConnectionsInput): void => {
   useEffect(() => {
@@ -43,7 +48,13 @@ export const useMatchLiveConnections = ({
           setLobbyLocation(nextState);
         }
         setClientState(nextState);
+        if (isLobbyClientState(nextState)) {
+          setRematchRequestedBy(undefined);
+        }
         setErrors([]);
+      },
+      onRematchRequest(message) {
+        setRematchRequestedBy(message.requestedBy);
       },
       onError(message) {
         setErrors([message]);
@@ -52,7 +63,13 @@ export const useMatchLiveConnections = ({
     return () => {
       controller.disconnectLive();
     };
-  }, [liveConnectionKey, controller, setClientState, setErrors]);
+  }, [
+    liveConnectionKey,
+    controller,
+    setClientState,
+    setErrors,
+    setRematchRequestedBy,
+  ]);
 
   useEffect(() => {
     if (lobbyConnectionKey === undefined) {

@@ -5,6 +5,7 @@ import type {
   LobbyStateSyncMessage,
   LiveMatchConnection,
   MatchLiveTransport,
+  MatchRematchRequestMessage,
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
@@ -199,6 +200,7 @@ export const createFakeLiveTransport = (options?: {
   emitState: (message: MatchStateSyncMessage) => void;
   emitTimer: (message: MatchTimerSyncMessage) => void;
   emitTransition: (message: MatchSessionTransitionMessage) => void;
+  emitRematchRequest: (message: MatchRematchRequestMessage) => void;
 } => {
   const submittedActions: number[] = [];
   const submittedDecisions: DecisionId[] = [];
@@ -208,6 +210,9 @@ export const createFakeLiveTransport = (options?: {
   let onTimerSync: ((message: MatchTimerSyncMessage) => void) | undefined;
   let onSessionTransition:
     | ((message: MatchSessionTransitionMessage) => void)
+    | undefined;
+  let onRematchRequest:
+    | ((message: MatchRematchRequestMessage) => void)
     | undefined;
   let cancelledRollbacks = 0;
   const connection: LiveMatchConnection = {
@@ -258,6 +263,7 @@ export const createFakeLiveTransport = (options?: {
       onStateSync = input.onStateSync;
       onTimerSync = input.onTimerSync;
       onSessionTransition = input.onSessionTransition;
+      onRematchRequest = input.onRematchRequest;
       return connection;
     },
     emitSetup(message) {
@@ -283,6 +289,12 @@ export const createFakeLiveTransport = (options?: {
         throw new Error("Match live transport was not connected.");
       }
       onSessionTransition(message);
+    },
+    emitRematchRequest(message) {
+      if (onRematchRequest === undefined) {
+        throw new Error("Match live transport was not connected.");
+      }
+      onRematchRequest(message);
     },
   };
 };
