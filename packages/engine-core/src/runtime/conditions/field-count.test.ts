@@ -217,6 +217,95 @@ test("lifeCountTotal sums reusable player life-count operands", () => {
   );
 });
 
+test("fieldStatTotal sums matching field Character costs", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  const firstCharacter = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "first p1 hand card"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const secondCharacter = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[1], "second p1 hand card"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const stage = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[2], "p1 stage card"),
+    zone: "stageArea",
+  });
+  const opponentCharacter = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "p2 hand card"),
+    zone: "characterArea",
+    index: 0,
+  });
+  state.cardManifest.cards[firstCharacter.cardId] = resolvedCard({
+    cardId: firstCharacter.cardId,
+    category: "character",
+    cost: 2,
+    power: 2000,
+  });
+  state.cardManifest.cards[secondCharacter.cardId] = resolvedCard({
+    cardId: secondCharacter.cardId,
+    category: "character",
+    cost: 3,
+    power: 3000,
+  });
+  state.cardManifest.cards[stage.cardId] = resolvedCard({
+    cardId: stage.cardId,
+    category: "stage",
+    cost: 9,
+  });
+  state.cardManifest.cards[opponentCharacter.cardId] = resolvedCard({
+    cardId: opponentCharacter.cardId,
+    category: "character",
+    cost: 9,
+    power: 9000,
+  });
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "fieldStatTotal",
+      player: "self",
+      filter: { categories: ["character"] },
+      stat: "cost",
+      op: "gte",
+      value: 5,
+    } as unknown as Condition),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "fieldStatTotal",
+      player: "self",
+      filter: { categories: ["character"] },
+      stat: "cost",
+      op: "gt",
+      value: 5,
+    } as unknown as Condition),
+    { supported: true, passed: false },
+  );
+});
+
 const setupQueuedDrawWithCondition = (
   state: ReturnType<typeof createActiveState>,
   condition: Condition,

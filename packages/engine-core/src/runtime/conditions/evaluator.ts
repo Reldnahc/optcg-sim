@@ -38,6 +38,10 @@ import {
   isSupportedCardStatComparisonCondition,
   type ConditionEvaluationContext,
 } from "./card-stat-comparison.js";
+import {
+  evaluateFieldStatTotal,
+  isSupportedFieldStatTotalCondition,
+} from "./field-stat-total.js";
 
 interface ConditionEvaluationSuccess {
   supported: true;
@@ -807,6 +811,8 @@ const evaluateCondition = (
     }
     case "fieldCountDifference":
       return evaluateFieldCountDifference(state, entry, condition);
+    case "fieldStatTotal":
+      return evaluateFieldStatTotal(state, entry, condition);
     case "hasCardInZone":
       return evaluateHasCardInZone(state, entry, condition);
     case "onlyMatchingFieldCards":
@@ -933,6 +939,8 @@ export const isSupportedQueuedEffectConditionShape = (
         (condition.subtrahend.player === "self" ||
           condition.subtrahend.player === "opponent")
       );
+    case "fieldStatTotal":
+      return isSupportedFieldStatTotalCondition(condition);
     case "hasCardInZone":
       return (
         condition.zone === "leaderArea" &&

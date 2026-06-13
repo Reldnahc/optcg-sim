@@ -95,6 +95,14 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "fieldStatTotal";
+      player: PlayerRef;
+      filter: CardFilter;
+      stat: "cost" | "baseCost";
+      op: Comparator;
+      value: number;
+    }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "deckCount"; player: PlayerRef; op: Comparator; value: number }
   | {

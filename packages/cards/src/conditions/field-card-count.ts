@@ -47,6 +47,40 @@ const fieldCountEvidence = (
 export const parseFieldCardCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const totalCharacterCost =
+    /^the total cost of your Characters is (?<comparison>[1-9]\d*(?: or more| or less)?)$/i.exec(
+      input.text,
+    );
+  const totalCharacterCostComparison =
+    totalCharacterCost?.groups?.["comparison"];
+  if (totalCharacterCostComparison !== undefined) {
+    const comparison = parseLeadingCountComparison({
+      text: totalCharacterCostComparison,
+    });
+    if (comparison === undefined || comparison.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldStatTotal",
+        player: "self",
+        filter: { categories: ["character"] },
+        stat: "cost",
+        op: comparison.op,
+        value: comparison.value,
+      },
+      evidence: [
+        "condition:fieldStatTotal",
+        "condition:stat:cost",
+        "player:self",
+        "filter:category:character",
+        ...comparison.evidence,
+      ],
+      rest: "",
+    };
+  }
+
   const relativeCharacterCountMatch =
     /^the number of your Characters is at least (?<value>[1-9]\d*) less than the number of your opponent's Characters$/i.exec(
       input.text,

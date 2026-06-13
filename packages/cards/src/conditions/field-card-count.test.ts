@@ -210,4 +210,32 @@ describe("field card count condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses total Character cost as reusable field-stat-total data", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "the total cost of your Characters is 5 or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldStatTotal",
+        player: "self",
+        filter: {
+          categories: ["character"],
+        },
+        stat: "cost",
+        op: "gte",
+        value: 5,
+      },
+      evidence: [
+        "condition:fieldStatTotal",
+        "condition:stat:cost",
+        "player:self",
+        "filter:category:character",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
 });

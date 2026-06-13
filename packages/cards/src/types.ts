@@ -96,6 +96,7 @@ export type PrimitiveEvidence =
   | "condition:cardState"
   | "condition:cardStatComparison"
   | "condition:fieldCountDifference"
+  | "condition:fieldStatTotal"
   | "condition:comparator:eq"
   | "condition:comparator:lte"
   | "condition:comparator:gte"
