@@ -23,6 +23,30 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
     return undefined;
   }
 
+  const naturalRushCharacterText =
+    /^can attack Characters on the turn in which it is played\.?$/iu.exec(
+      target.rest,
+    );
+  if (naturalRushCharacterText !== null) {
+    return {
+      effect: {
+        type: "giveKeyword",
+        target: target.target,
+        keyword: "rushCharacter",
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...target.evidence,
+        "keyword:anySupported",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    };
+  }
+
   const keywordText = /^gains\s+(?<rest>.*)$/i.exec(target.rest)?.groups?.[
     "rest"
   ];

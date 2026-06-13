@@ -5,6 +5,7 @@ import {
   parseBasePowerBecomeInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
+  parseTargetedKeywordGrantInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseYourLeaderConditionalPowerInstruction,
   thisCharacterKeywordGrantPrimitive,
@@ -342,6 +343,37 @@ describe("continuous field-effect instruction parsers", () => {
       ],
       rest: "",
     });
+  });
+
+  it("parses selected played-turn Character attack permission as targeted rushCharacter grant", () => {
+    const result = parseTargetedKeywordGrantInstruction({
+      text: "Up to 1 of your {Fish-Man} or {Merfolk} type Characters can attack Characters on the turn in which it is played.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: {
+          type: "choose",
+        },
+        keyword: "rushCharacter",
+        duration: { type: "thisTurn" },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveKeyword",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourCharacters",
+        "filter:category:character",
+        "filter:type",
+        "keyword:anySupported",
+        "duration:thisTurn",
+      ]),
+    );
   });
 
   it("parses self-next-turn duration through multiple field effect body families", () => {

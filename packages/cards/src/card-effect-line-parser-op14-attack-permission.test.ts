@@ -73,4 +73,35 @@ describe("OP14 attack permission parser support", () => {
       );
     },
   );
+
+  it("parses selected played-turn Character attack permission under Activate Main", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] Up to 1 of your {Fish-Man} or {Merfolk} type Characters can attack Characters on the turn in which it is played.",
+    );
+
+    expect(result).toHaveProperty("block");
+    if (result === undefined || !("block" in result)) {
+      throw new Error("expected parsed effect line");
+    }
+    expect(result.block).toMatchObject({
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "giveKeyword",
+        keyword: "rushCharacter",
+        duration: { type: "thisTurn" },
+      },
+    });
+    expect(result.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "marker:oncePerTurn",
+        "instruction:giveKeyword",
+        "target:yourCharacters",
+        "filter:type",
+        "keyword:anySupported",
+        "duration:thisTurn",
+      ]),
+    );
+  });
 });
