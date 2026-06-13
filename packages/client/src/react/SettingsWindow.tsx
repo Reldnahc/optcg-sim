@@ -233,7 +233,39 @@ export const SettingsContent = (): React.JSX.Element => {
 
   return (
     <div className="settings-window-content">
-      <SettingsSection title="Customization">
+      <SettingsSection title="Gameplay">
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={quickPayActivateMainCosts}
+            onChange={(event) => {
+              setQuickPayActivateMainCosts(event.currentTarget.checked);
+            }}
+          />
+          <span>Quick pay Activate: Main costs</span>
+        </label>
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={confirmAttachDon}
+            onChange={(event) => {
+              setConfirmAttachDon(event.currentTarget.checked);
+            }}
+          />
+          <span>Confirm attach DON</span>
+        </label>
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={confirmEndTurn}
+            onChange={(event) => {
+              setConfirmEndTurn(event.currentTarget.checked);
+            }}
+          />
+          <span>Confirm end turn</span>
+        </label>
+      </SettingsSection>
+      <SettingsSection title="Personalization">
         <section className="settings-surface-group" aria-label="Background">
           <h4>Background</h4>
           <SegmentedControl
@@ -419,38 +451,6 @@ export const SettingsContent = (): React.JSX.Element => {
             }}
           />
           <span>Reduced motion</span>
-        </label>
-      </SettingsSection>
-      <SettingsSection title="Gameplay">
-        <label className="settings-checkbox-field">
-          <input
-            type="checkbox"
-            checked={quickPayActivateMainCosts}
-            onChange={(event) => {
-              setQuickPayActivateMainCosts(event.currentTarget.checked);
-            }}
-          />
-          <span>Quick pay Activate: Main costs</span>
-        </label>
-        <label className="settings-checkbox-field">
-          <input
-            type="checkbox"
-            checked={confirmAttachDon}
-            onChange={(event) => {
-              setConfirmAttachDon(event.currentTarget.checked);
-            }}
-          />
-          <span>Confirm attach DON</span>
-        </label>
-        <label className="settings-checkbox-field">
-          <input
-            type="checkbox"
-            checked={confirmEndTurn}
-            onChange={(event) => {
-              setConfirmEndTurn(event.currentTarget.checked);
-            }}
-          />
-          <span>Confirm end turn</span>
         </label>
       </SettingsSection>
     </div>
