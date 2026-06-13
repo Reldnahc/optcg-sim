@@ -238,6 +238,30 @@ export const parseLifeMovementInstruction: InstructionParser = (input) => {
 };
 
 const parseHandToLifeInstruction: InstructionParser = (input) => {
+  const revealMatch =
+    /^reveal\s+(?<rest>.+?)\s+from your hand and add it to the top of your Life cards(?<faceDown> face-down)?\.?$/iu.exec(
+      input.text,
+    );
+  const afterReveal = revealMatch?.groups?.["rest"];
+  if (afterReveal !== undefined) {
+    const cardinality = parseUpToCardinality({ text: afterReveal });
+    if (cardinality === undefined) {
+      return undefined;
+    }
+    const predicates = parseCardFilterPredicates({ text: cardinality.rest });
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return buildHandToLifeInstruction({
+      cardinality,
+      filter: predicates.filter,
+      filterEvidence: predicates.evidence,
+      destinationFaceUp: false,
+      selectionVisibility: "bothPlayers",
+    });
+  }
+
   const addMatch = /^add\s+(?<rest>.+)$/i.exec(input.text);
   const afterAdd = addMatch?.groups?.["rest"];
   if (afterAdd === undefined) {
@@ -257,6 +281,7 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
       cardinality,
       filterEvidence: [],
       destinationFaceUp: false,
+      selectionVisibility: "chooserOnly",
     });
   }
 
@@ -279,6 +304,7 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
     filter: predicates.filter,
     filterEvidence: predicates.evidence,
     destinationFaceUp: groups["faceUp"] !== undefined,
+    selectionVisibility: "chooserOnly",
   });
 };
 
@@ -287,6 +313,7 @@ function buildHandToLifeInstruction({
   destinationFaceUp,
   filter,
   filterEvidence,
+  selectionVisibility,
 }: {
   readonly cardinality: NonNullable<ReturnType<typeof parseUpToCardinality>>;
   readonly destinationFaceUp: boolean;
@@ -294,6 +321,7 @@ function buildHandToLifeInstruction({
     ReturnType<typeof parseCardFilterPredicates>
   >["filter"];
   readonly filterEvidence: readonly PrimitiveEvidence[];
+  readonly selectionVisibility: "bothPlayers" | "chooserOnly";
 }): InstructionParseResult {
   return {
     effect: {
@@ -310,7 +338,7 @@ function buildHandToLifeInstruction({
             min: cardinality.cardinality.min,
             max: cardinality.cardinality.max,
             saveAs: handToLifeSelection,
-            visibility: "chooserOnly",
+            visibility: selectionVisibility,
             ...(filter === undefined ? {} : { filter }),
           },
         },
@@ -337,6 +365,9 @@ function buildHandToLifeInstruction({
       "position:top",
       ...(destinationFaceUp ? ["visibility:faceUp" as const] : []),
       ...filterEvidence,
+      ...(selectionVisibility === "bothPlayers"
+        ? (["reveal:bothPlayers"] as const)
+        : []),
       "chooser:self:upTo",
       "composition:selectThenMove",
     ],

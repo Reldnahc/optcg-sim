@@ -63,4 +63,62 @@ describe("life movement instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses revealed hand to Life top placement as public select-then-move primitives", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "Reveal up to 1 {Supernovas} type Character card from your hand and add it to the top of your Life cards face-down.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              saveAs: "handSelection:self-hand-to-life-placement",
+              visibility: "bothPlayers",
+              filter: {
+                categories: ["character"],
+                typesAny: ["Supernovas"],
+              },
+            },
+            saveResultAs: "handSelection:self-hand-to-life-placement",
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "moveSelected",
+              selection: "handSelection:self-hand-to-life-placement",
+              from: "hand",
+              to: "life",
+              position: "top",
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+        "zone:hand",
+        "destination:life",
+        "position:top",
+        "filter:type",
+        "filter:category:character",
+        "reveal:bothPlayers",
+        "chooser:self:upTo",
+        "composition:selectThenMove",
+      ],
+      rest: "",
+    });
+  });
 });

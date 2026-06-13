@@ -79,6 +79,57 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses revealed hand selection moved to Life face-down as reusable select-then-move primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Reveal up to 1 {Supernovas} type Character card from your hand and add it to the top of your Life cards face-down.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectCards",
+                zone: "hand",
+                player: "self",
+                chooser: "self",
+                visibility: "bothPlayers",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Supernovas"],
+                },
+              },
+            },
+            {
+              effect: {
+                type: "moveSelected",
+                from: "hand",
+                to: "life",
+                position: "top",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "filter:type",
+        "filter:category:character",
+        "reveal:bothPlayers",
+        "destination:life",
+        "position:top",
+        "composition:selectThenMove",
+      ]),
+    );
+  });
+
   it("parses optional top-or-bottom Life to hand as a moveCards cost", () => {
     const result = parseCardEffectLine(
       "[On Play] You may add 1 card from the top or bottom of your Life cards to your hand: K.O. up to 1 of your opponent's Characters with a cost of 5 or less.",

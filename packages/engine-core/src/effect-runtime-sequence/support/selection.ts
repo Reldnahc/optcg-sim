@@ -55,7 +55,7 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
     effect.zone === "hand" &&
     effect.player === effect.chooser &&
     (effect.player === "self" || effect.player === "opponent") &&
-    effect.visibility === "chooserOnly"
+    (effect.visibility === "chooserOnly" || effect.visibility === "bothPlayers")
   ) {
     return "hand";
   }

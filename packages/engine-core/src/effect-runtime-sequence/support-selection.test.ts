@@ -185,6 +185,53 @@ test("sequence support accepts filtered hand card movement to Life face-up", () 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts revealed hand card movement to Life face-down", () => {
+  const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            player: "self",
+            zone: "hand",
+            chooser: "self",
+            visibility: "bothPlayers",
+            min: 0,
+            max: 1,
+            saveAs: selection,
+            filter: {
+              categories: ["character"],
+              typesAny: ["Supernovas"],
+            },
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "hand",
+            to: "life",
+            position: "top",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support rejects multi-card selected hand movement to Life without ordering support", () => {
   const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {
