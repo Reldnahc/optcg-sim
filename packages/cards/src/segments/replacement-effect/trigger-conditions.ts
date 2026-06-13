@@ -69,6 +69,11 @@ export function parseCombinedKoOrFieldRemovalReplacement(
 export function parseOpponentKoReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {
+  const battle = parseBattleKoReplacement(text);
+  if (battle !== undefined) {
+    return battle;
+  }
+
   const match =
     /^If (?<target>.+?) would be K\.O\.'d(?: by your opponent(?<effectOnly>'s effects?))?,\s*(?<body>.+)$/i.exec(
       text.trim(),
@@ -114,6 +119,50 @@ export function parseOpponentKoReplacement(
       ...(effectOnlyText === undefined
         ? []
         : ["replacementSource:cardEffect" as const]),
+      ...target.evidence,
+      ...instead.evidence,
+    ],
+  };
+}
+
+function parseBattleKoReplacement(
+  text: string,
+): ReplacementTriggerParseResult | undefined {
+  const match =
+    /^If (?<target>.+?) would be K\.O\.'d in battle,\s*(?<body>.+)$/i.exec(
+      text.trim(),
+    );
+  const targetText = match?.groups?.["target"];
+  const bodyText = match?.groups?.["body"];
+  if (targetText === undefined || bodyText === undefined) {
+    return undefined;
+  }
+
+  const target = parseYourFieldReplacementTarget({
+    text: normalizeFieldRemovalTargetText(targetText),
+  });
+  if (
+    target === undefined ||
+    target.rest.length > 0 ||
+    (target.target.type !== "all" && target.target.type !== "self")
+  ) {
+    return undefined;
+  }
+  const instead = parseInsteadEffect(bodyText);
+  if (instead === undefined) {
+    return undefined;
+  }
+
+  return {
+    when: {
+      type: "wouldBeKOd",
+      sourceKind: "battle",
+      target: target.target,
+    },
+    instead: instead.effect,
+    evidence: [
+      "replacement:wouldBeKOd",
+      "protectionSource:battle",
       ...target.evidence,
       ...instead.evidence,
     ],

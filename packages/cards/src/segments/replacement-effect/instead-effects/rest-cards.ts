@@ -1,5 +1,7 @@
-import type { Zone } from "@optcg/types";
+import type { CardFilter, Zone } from "@optcg/types";
 
+import { parseCardFilterPredicates } from "../../../filters/index.js";
+import type { PrimitiveEvidence } from "../../../types.js";
 import type { ReplacementInsteadParseResult } from "../shared.js";
 
 export function parseRestCardsInstead(
@@ -17,7 +19,7 @@ export function parseRestCardsInstead(
   const countText = match?.groups?.["count"];
   const targetText = match?.groups?.["target"];
   if (countText === undefined || targetText === undefined) {
-    return undefined;
+    return parseFilteredRestInstead(text);
   }
   const count = Number.parseInt(countText, 10);
   const target = targetText.toLowerCase();
@@ -54,6 +56,95 @@ export function parseRestCardsInstead(
       "cardinality:exact",
       "count:positiveInteger",
     ],
+  };
+}
+
+function parseFilteredRestInstead(
+  text: string,
+): ReplacementInsteadParseResult | undefined {
+  const match =
+    /^you may rest (?<count>[1-9]\d*) of your (?<target>.+?) instead\.?$/iu.exec(
+      text.trim(),
+    );
+  const countText = match?.groups?.["count"];
+  const targetText = match?.groups?.["target"];
+  if (countText === undefined || targetText === undefined) {
+    return undefined;
+  }
+
+  const parsedTarget = parseRestTargetFilter(targetText);
+  if (parsedTarget === undefined) {
+    return undefined;
+  }
+  const count = Number.parseInt(countText, 10);
+
+  return {
+    effect: {
+      type: "rest",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: parsedTarget.zones,
+          min: count,
+          max: count,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+          filter: parsedTarget.filter,
+        },
+      },
+    },
+    evidence: [
+      "instruction:rest",
+      ...parsedTarget.evidence,
+      "cardinality:exact",
+      "count:positiveInteger",
+    ],
+  };
+}
+
+function parseRestTargetFilter(text: string):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly zones: Zone[];
+    }
+  | undefined {
+  const normalized = text.trim();
+  const donMatch = /^(?<state>active|rested) DON!! cards?$/iu.exec(normalized);
+  const donState = donMatch?.groups?.["state"]?.toLowerCase();
+  if (donState === "active" || donState === "rested") {
+    return {
+      filter: { categories: ["don"], state: donState },
+      evidence: [
+        "target:yourDonCards",
+        "zone:costArea",
+        "filter:category:don",
+        donState === "active" ? "filter:state:active" : "filter:state:rested",
+      ],
+      zones: ["costArea"],
+    };
+  }
+
+  const predicates = parseCardFilterPredicates({ text: normalized });
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+  const category = predicates.filter.categories?.[0];
+  if (category !== "character") {
+    return undefined;
+  }
+
+  return {
+    filter: predicates.filter,
+    evidence: [
+      "target:yourCharacters",
+      "zone:characterArea",
+      ...predicates.evidence,
+    ],
+    zones: ["characterArea"],
   };
 }
 
