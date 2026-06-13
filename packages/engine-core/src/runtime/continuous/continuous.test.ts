@@ -15,7 +15,7 @@ import type {
 
 import { computeView } from "../../view/compute-view.js";
 import {
-  deriveImplementedDslPlayCostContinuousEffects,
+  deriveImplementedDslHandContinuousEffects,
   deriveImplementedDslPermanentContinuousEffects,
   isSupportedPermanentContinuousEffectBlock,
   isSupportedContinuousQueueEffect,
@@ -981,7 +981,7 @@ test("play-cost derivation ignores unsupported conditioned non-cost permanent ha
   };
   installPermanentDslCandidate(state, source, definition);
 
-  assert.deepEqual(deriveImplementedDslPlayCostContinuousEffects(state), []);
+  assert.deepEqual(deriveImplementedDslHandContinuousEffects(state), []);
 });
 
 test("permanent support admission rejects unsupported conditions before materialization", () => {

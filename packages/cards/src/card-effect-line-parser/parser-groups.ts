@@ -56,6 +56,7 @@ import {
   parsePlaySourceInstruction,
   parsePreventDonActivationInstruction,
   parsePreventDrawInstruction,
+  parsePreventPlayByEffectsInstruction,
   parsePreventOpponentCharactersAttackInstruction,
   parsePreventOpponentCharactersBlockerActivationInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
@@ -192,6 +193,7 @@ export const continuousInstructionParsers = [
   parseSetBasePowerInstruction,
   parseBasePowerBecomeInstruction,
   parseHandCounterSetInstruction,
+  parsePreventPlayByEffectsInstruction,
   parseContinuousFieldModifyCostInstruction,
   parseSelfHandModifyCostInstruction,
 ] as const;

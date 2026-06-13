@@ -15,6 +15,7 @@ const supportedRestriction = new Set([
   "cannotAttack",
   "cannotBlock",
   "preventBlockerActivation",
+  "preventPlayByEffects",
   "cannotBecomeActive",
   "cannotActivateDon",
 ]);
@@ -331,6 +332,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "preventDraw" &&
     effect.type !== "preventDonActivation" &&
     effect.type !== "preventPlay" &&
+    effect.type !== "preventPlayByEffects" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&
@@ -402,6 +404,13 @@ export const isSupportedContinuousQueueEffect = (
     );
   }
   if (
+    effect.type === "preventPlayByEffects" &&
+    effect.target.type !== "self" &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
+  if (
     effect.type === "invalidateEffects" &&
     effect.target.type !== "myLeader" &&
     !isSupportedTarget(effect.target)
@@ -444,6 +453,7 @@ export const isSupportedContinuousQueueEffect = (
   if (
     (effect.type === "cannotAttack" ||
       effect.type === "cannotBlock" ||
+      effect.type === "preventPlayByEffects" ||
       effect.type === "preventBlockerActivation") &&
     !supportedRestriction.has(effect.type)
   ) {

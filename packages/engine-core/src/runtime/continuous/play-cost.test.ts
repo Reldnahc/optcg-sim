@@ -13,7 +13,7 @@ import type {
 
 import { computeView } from "../../view/compute-view.js";
 import {
-  deriveImplementedDslPlayCostContinuousEffects,
+  deriveImplementedDslHandContinuousEffects,
   deriveImplementedDslPermanentContinuousEffects,
 } from "./continuous.js";
 import { createInitialState } from "../../setup/initial-state.js";
@@ -225,7 +225,7 @@ test("hand-only self cost modifiers do not affect this card on the field", () =>
 
   const view = computeView(state);
   const fieldRecords = deriveImplementedDslPermanentContinuousEffects(state);
-  const handCostRecords = deriveImplementedDslPlayCostContinuousEffects(state);
+  const handCostRecords = deriveImplementedDslHandContinuousEffects(state);
 
   assert.equal(view.cards[fieldSource.instanceId]?.baseCost, 3);
   assert.equal(view.cards[fieldSource.instanceId]?.currentCost, 3);

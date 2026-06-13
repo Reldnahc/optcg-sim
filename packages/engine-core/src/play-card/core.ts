@@ -46,6 +46,7 @@ import {
   getEffectivePlayCost,
   getPlayableHandCards,
   getSupportedPlayMetadata,
+  isEffectPlayBlockedByRestriction,
   isPlayBlockedByRestriction,
   type SupportedPlayMetadata,
 } from "./support.js";
@@ -366,6 +367,12 @@ export const applyRuntimePlaySelected = (params: {
     return illegalAction(
       state,
       "playSelected supports only Character and Stage cards.",
+    );
+  }
+  if (isEffectPlayBlockedByRestriction(state, playerId, sourceCard)) {
+    return illegalAction(
+      state,
+      "playSelected is blocked by an effect play restriction.",
     );
   }
   if (

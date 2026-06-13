@@ -20,31 +20,18 @@ import {
 import {
   isSupportedContinuousQueueEffect,
   isSupportedCostModifierEffect,
-  isSupportedDerivedKeyword,
   isSupportedDuration,
   isSupportedTarget,
 } from "./support.js";
 import type { ContinuousQueueEffect } from "./types.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
-  isSupportedFieldRemovalProtection,
-  isSupportedRestProtection,
-  malformedFieldRemovalProtectionMessage,
-} from "../../replacement/field-removal-protection-shape.js";
-import {
   isDonPhasePlacementEffect,
   isSupportedDonPhasePlacementEffect,
   toDonPhasePlacementModifier,
-  toSupportedDonPhasePlacementModifier,
 } from "./don-phase-placement-modifier.js";
-import {
-  isSupportedPermanentBasePowerEffect,
-  toPermanentBasePowerModifier,
-} from "./permanent-base-power.js";
-import {
-  isSupportedPermanentInvalidateEffects,
-  toInvalidateEffectsModifier,
-} from "./effect-invalidation-modifier.js";
+import { isSupportedPermanentBasePowerEffect } from "./permanent-base-power.js";
+import { isSupportedPermanentInvalidateEffects } from "./effect-invalidation-modifier.js";
 import {
   resolveBasePowerValue,
   resolveDynamicNumberValue,
@@ -53,6 +40,11 @@ import {
 } from "./value-resolution.js";
 import { durationForDerivedEffect } from "./derived-duration.js";
 import { sourceSnapshotForContinuousCard } from "./source-snapshot.js";
+import {
+  costModifierTargetForEffect,
+  effectToDerivedModifier,
+  unsupportedDerivedMessage,
+} from "./derived-modifier.js";
 
 export { isSupportedContinuousQueueEffect };
 
@@ -151,6 +143,16 @@ const mapEffectToModifier = (
       operation: { type: "restriction", restriction: "cannotPlay" },
     };
   }
+  if (effect.type === "preventPlayByEffects") {
+    return {
+      layer: "restriction",
+      target,
+      operation: {
+        type: "restriction",
+        restriction: "cannotPlayByEffects",
+      },
+    };
+  }
   if (effect.type === "redirectDonPhasePlacement") {
     return toDonPhasePlacementModifier(effect);
   }
@@ -172,20 +174,6 @@ const mapEffectToModifier = (
     layer: "restriction",
     target,
     operation: { type: "restriction", restriction: effect.type },
-  };
-};
-
-const costModifierTargetForEffect = (
-  effect: Extract<Effect, { type: "modifyCost" }>,
-): TargetSpec => {
-  if (effect.target !== undefined) {
-    return effect.target;
-  }
-  return {
-    type: "allMatching",
-    zone: effect.sourceZone ?? "hand",
-    player: effect.player,
-    ...(effect.filter === undefined ? {} : { filter: effect.filter }),
   };
 };
 
@@ -302,6 +290,17 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
+  if (effect.type === "preventPlayByEffects") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      effect.target,
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
   if (effect.type === "modifyCost" && effect.target?.type !== "choose") {
     const record = createRecord(
       state,
@@ -386,9 +385,6 @@ export const createContinuousRecordsForResolvedEffect = (
   const record = createRecord(state, entry, effect, target, 0, context);
   return record === null ? null : [record];
 };
-
-const unsupportedDerivedMessage = (reason: string): string =>
-  `Unsupported continuous effect materialization: ${reason}.`;
 
 const hasReviewMetadata = (definition: EffectDefinition): boolean =>
   definition.metadata.reviewer !== undefined ||
@@ -563,238 +559,6 @@ const createDerivedRecord = (
   createdAtStateSeq: state.seq,
 });
 
-const effectToDerivedModifier = (
-  state: GameState,
-  source: CardRef,
-  effect: Effect,
-): ContinuousEffectRecord["modifier"] | null => {
-  if (effect.type === "modifyPower") {
-    const value = resolvePowerValue(state, effect.value, {
-      controllerId: source.playerId,
-      source,
-    });
-    if (value === null) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported dynamic power value"),
-      );
-    }
-    if (
-      effect.target.type !== "self" &&
-      effect.target.type !== "myLeader" &&
-      !(effect.target.type === "all" && isSupportedTarget(effect.target))
-    ) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported power target"),
-      );
-    }
-    if (!isSupportedDuration(effect.duration)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported power duration"),
-      );
-    }
-    if (!Number.isSafeInteger(value)) {
-      throw new TypeError(unsupportedDerivedMessage("unsupported power value"));
-    }
-    return {
-      layer: "powerAdd",
-      target: effect.target,
-      operation: { type: "addPower", value },
-    };
-  }
-  if (effect.type === "giveKeyword") {
-    if (effect.target.type !== "self" && effect.target.type !== "myLeader") {
-      if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {
-        throw new TypeError(
-          unsupportedDerivedMessage("unsupported keyword target"),
-        );
-      }
-    }
-    if (!isSupportedDuration(effect.duration)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported keyword duration"),
-      );
-    }
-    if (!isSupportedDerivedKeyword(effect.keyword)) {
-      throw new TypeError(unsupportedDerivedMessage("unsupported keyword"));
-    }
-    return {
-      layer: "keywordAdd",
-      target: effect.target,
-      operation: { type: "addKeyword", keyword: effect.keyword },
-    };
-  }
-  if (effect.type === "giveAttribute") {
-    if (effect.target.type !== "self" && effect.target.type !== "myLeader") {
-      if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {
-        throw new TypeError(
-          unsupportedDerivedMessage("unsupported attribute target"),
-        );
-      }
-    }
-    if (!isSupportedDuration(effect.duration)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported attribute duration"),
-      );
-    }
-    return {
-      layer: "attributeAdd",
-      target: effect.target,
-      operation: { type: "addAttribute", attribute: effect.attribute },
-    };
-  }
-  if (effect.type === "setBasePower") {
-    return toPermanentBasePowerModifier(
-      state,
-      source,
-      effect,
-      unsupportedDerivedMessage,
-    );
-  }
-  if (effect.type === "modifyCost") {
-    if (!isSupportedCostModifierEffect(effect)) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported cost modifier shape"),
-      );
-    }
-    const value = resolveDynamicNumberValue(state, effect.value, {
-      controllerId: source.playerId,
-      source,
-    });
-    if (value === null) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported dynamic cost value"),
-      );
-    }
-    return {
-      layer: "costAdd",
-      target: costModifierTargetForEffect(effect),
-      operation: { type: "addCost", value },
-    };
-  }
-  if (effect.type === "modifyCounter") {
-    if (
-      effect.player !== "self" ||
-      effect.sourceZone !== "hand" ||
-      !Number.isSafeInteger(effect.value) ||
-      effect.value < 0
-    ) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported counter modifier shape"),
-      );
-    }
-    return {
-      layer: "counterSet",
-      target: {
-        type: "allMatching",
-        zone: "hand",
-        player: effect.player,
-        ...(effect.filter === undefined ? {} : { filter: effect.filter }),
-      },
-      operation: { type: "setCounter", value: effect.value },
-    };
-  }
-  if (isDonPhasePlacementEffect(effect)) {
-    return toSupportedDonPhasePlacementModifier(effect, {
-      supportsDuration: isSupportedDuration(effect.duration),
-    });
-  }
-  if (effect.type === "invalidateEffects") {
-    return toInvalidateEffectsModifier(effect);
-  }
-  if (effect.type === "protectFromKO") {
-    if (
-      !isSupportedTarget(effect.target) ||
-      !isSupportedDuration(effect.duration)
-    ) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported ko protection shape"),
-      );
-    }
-    return {
-      layer: "protection",
-      target: effect.target,
-      operation: {
-        type: "protection",
-        protection: {
-          process: "ko",
-          ...(effect.sourceKind === undefined
-            ? {}
-            : { sourceKind: effect.sourceKind }),
-          ...(effect.sourceControllerRelation === undefined
-            ? {}
-            : { sourceControllerRelation: effect.sourceControllerRelation }),
-          ...(effect.sourceCardCategories === undefined
-            ? {}
-            : { sourceCardCategories: effect.sourceCardCategories }),
-        },
-      },
-    };
-  }
-  if (
-    effect.type === "cannotAttack" ||
-    effect.type === "attackCost" ||
-    effect.type === "cannotBlock" ||
-    effect.type === "preventBlockerActivation" ||
-    effect.type === "cannotBecomeActive"
-  ) {
-    if (
-      (!(
-        effect.type === "preventBlockerActivation" &&
-        effect.target.type === "myLeader"
-      ) &&
-        !isSupportedTarget(effect.target)) ||
-      !isSupportedDuration(effect.duration)
-    ) {
-      throw new TypeError(
-        unsupportedDerivedMessage("unsupported restriction shape"),
-      );
-    }
-    return {
-      layer: "restriction",
-      target: effect.target,
-      operation:
-        effect.type === "attackCost"
-          ? { type: "attackCost", cost: effect.cost }
-          : { type: "restriction", restriction: effect.type },
-    };
-  }
-  if (effect.type !== "giveProtection") {
-    return null;
-  }
-  if (
-    !isSupportedTarget(effect.target) ||
-    !isSupportedDuration(effect.duration)
-  ) {
-    throw new TypeError(
-      unsupportedDerivedMessage("unsupported protection shape"),
-    );
-  }
-  if (effect.protection.process === "fieldRemoval") {
-    if (!isSupportedFieldRemovalProtection(effect.protection)) {
-      throw new TypeError(
-        malformedFieldRemovalProtectionMessage({
-          id: "implemented-dsl:malformed-protection",
-        } as ContinuousEffectRecord),
-      );
-    }
-    return {
-      layer: "protection",
-      target: effect.target,
-      operation: { type: "protection", protection: effect.protection },
-    };
-  }
-  if (!isSupportedRestProtection(effect.protection)) {
-    throw new TypeError(
-      unsupportedDerivedMessage("unsupported protection shape"),
-    );
-  }
-  return {
-    layer: "protection",
-    target: effect.target,
-    operation: { type: "protection", protection: effect.protection },
-  };
-};
-
 export const deriveImplementedDslPermanentContinuousEffects = (
   state: GameState,
 ): ContinuousEffectRecord[] => {
@@ -808,14 +572,14 @@ export const deriveImplementedDslPermanentContinuousEffects = (
   });
 };
 
-export const deriveImplementedDslPlayCostContinuousEffects = (
+export const deriveImplementedDslHandContinuousEffects = (
   state: GameState,
 ): ContinuousEffectRecord[] => {
   const handCards = Object.values(state.players).flatMap(
     (player) => player.hand,
   );
   return deriveImplementedDslContinuousEffectsForCards(state, handCards, {
-    mode: "playCostHand",
+    mode: "hand",
   });
 };
 
@@ -831,13 +595,22 @@ const isHandSelfPlayCostModifierPart = (part: SequencedEffect): boolean =>
   part.effect.sourceZone === "hand" &&
   part.effect.target?.type === "self";
 
-const hasHandSelfPlayCostModifierPart = (effect: Effect): boolean =>
-  effectPartsForPermanentBlock(effect).some(isHandSelfPlayCostModifierPart);
+const isHandSelfPlayRestrictionPart = (part: SequencedEffect): boolean =>
+  part.effect.type === "preventPlayByEffects" &&
+  part.effect.target.type === "self";
+
+const isSupportedHandDerivedPermanentPart = (part: SequencedEffect): boolean =>
+  isHandSelfPlayCostModifierPart(part) || isHandSelfPlayRestrictionPart(part);
+
+const hasHandDerivedPermanentPart = (effect: Effect): boolean =>
+  effectPartsForPermanentBlock(effect).some(
+    isSupportedHandDerivedPermanentPart,
+  );
 
 const deriveImplementedDslContinuousEffectsForCards = (
   state: GameState,
   cards: readonly CardInstance[],
-  options: { mode: "field" | "playCostHand" },
+  options: { mode: "field" | "hand" },
 ): ContinuousEffectRecord[] => {
   const derived: ContinuousEffectRecord[] = [];
 
@@ -847,7 +620,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
     if (resolved.support.status !== "implemented-dsl") continue;
     const effectDefinitionId = resolved.support.effectDefinitionId;
     if (effectDefinitionId === undefined) {
-      if (options.mode === "playCostHand") {
+      if (options.mode === "hand") {
         continue;
       }
       if (
@@ -863,7 +636,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
     const definition =
       state.cardManifest.effectDefinitions?.[effectDefinitionId];
     if (definition === undefined) {
-      if (options.mode === "playCostHand") {
+      if (options.mode === "hand") {
         continue;
       }
       throw new TypeError(
@@ -876,7 +649,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
       !resolved.support.tested ||
       resolved.support.cardDataVersion !== state.cardManifest.cardDataVersion
     ) {
-      if (options.mode === "playCostHand") {
+      if (options.mode === "hand") {
         continue;
       }
       throw new TypeError(
@@ -893,7 +666,7 @@ const deriveImplementedDslContinuousEffectsForCards = (
         state.cardManifest.effectDefinitionsVersion ||
       !hasReviewMetadata(definition)
     ) {
-      if (options.mode === "playCostHand") {
+      if (options.mode === "hand") {
         continue;
       }
       throw new TypeError(
@@ -914,8 +687,8 @@ const deriveImplementedDslContinuousEffectsForCards = (
 
     for (const block of permanentBlocks) {
       if (
-        options.mode === "playCostHand" &&
-        !hasHandSelfPlayCostModifierPart(block.effect)
+        options.mode === "hand" &&
+        !hasHandDerivedPermanentPart(block.effect)
       ) {
         continue;
       }
@@ -948,8 +721,8 @@ const deriveImplementedDslContinuousEffectsForCards = (
           continue;
         }
         if (
-          options.mode === "playCostHand" &&
-          !isHandSelfPlayCostModifierPart(part)
+          options.mode === "hand" &&
+          !isSupportedHandDerivedPermanentPart(part)
         ) {
           continue;
         }
@@ -965,14 +738,22 @@ const deriveImplementedDslContinuousEffectsForCards = (
         }
         const modifier = effectToDerivedModifier(state, source, part.effect);
         if (modifier === null) {
-          if (options.mode === "playCostHand") {
+          if (options.mode === "hand") {
             continue;
           }
           throw new TypeError(
             unsupportedDerivedMessage("unsupported permanent shape"),
           );
         }
-        if (options.mode === "playCostHand" && modifier.layer !== "costAdd") {
+        if (
+          options.mode === "hand" &&
+          modifier.layer !== "costAdd" &&
+          !(
+            modifier.layer === "restriction" &&
+            modifier.operation.type === "restriction" &&
+            modifier.operation.restriction === "cannotPlayByEffects"
+          )
+        ) {
           continue;
         }
         derived.push(

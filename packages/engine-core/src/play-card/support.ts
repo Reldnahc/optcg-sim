@@ -9,8 +9,8 @@ import type {
 } from "@optcg/types";
 
 import {
+  deriveImplementedDslHandContinuousEffects,
   deriveImplementedDslPermanentContinuousEffects,
-  deriveImplementedDslPlayCostContinuousEffects,
 } from "../runtime/continuous/continuous.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
@@ -228,6 +228,42 @@ const playRestrictionAppliesToCard = (
   return cardMatchesHandFilter(state, card, target.filter);
 };
 
+const effectPlayRestrictionAppliesToCard = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.modifier.layer !== "restriction") return false;
+  if (effect.modifier.operation.type !== "restriction") return false;
+  if (effect.modifier.operation.restriction !== "cannotPlayByEffects") {
+    return false;
+  }
+  if (!costModifierDurationIsActive(state, effect)) return false;
+  if (!costModifierConditionPasses(state, effect)) return false;
+  const target = effect.modifier.target;
+  if (target.type === "self") {
+    return (
+      card.zone.zone === "hand" &&
+      card.controller === playerId &&
+      card.instanceId === effect.source.instanceId &&
+      card.cardId === effect.source.cardId &&
+      card.controller === effect.controller
+    );
+  }
+  if (target.type !== "allMatching") return false;
+  if (target.zone !== "hand") return false;
+  if (card.zone.zone !== "hand") return false;
+  if (target.player === "self" && card.controller !== effect.controller) {
+    return false;
+  }
+  if (target.player === "opponent" && card.controller === effect.controller) {
+    return false;
+  }
+  if (card.controller !== playerId) return false;
+  return cardMatchesHandFilter(state, card, target.filter);
+};
+
 const hasOnlySupportedRelevantEffects = (
   effects: readonly EffectDefinition["effects"][number][],
   predicate: (effect: EffectDefinition["effects"][number]) => boolean,
@@ -363,7 +399,7 @@ export const getEffectivePlayCost = (
   const costDelta = [
     ...state.continuousEffects,
     ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslPlayCostContinuousEffects(state),
+    ...deriveImplementedDslHandContinuousEffects(state),
   ].reduce((total, effect) => {
     if (!costModifierAppliesToCard(state, playerId, card, effect)) {
       return total;
@@ -417,9 +453,22 @@ export const isPlayBlockedByRestriction = (
   [
     ...state.continuousEffects,
     ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslPlayCostContinuousEffects(state),
+    ...deriveImplementedDslHandContinuousEffects(state),
   ].some((effect) =>
     playRestrictionAppliesToCard(state, playerId, card, effect),
+  );
+
+export const isEffectPlayBlockedByRestriction = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+): boolean =>
+  [
+    ...state.continuousEffects,
+    ...deriveImplementedDslPermanentContinuousEffects(state),
+    ...deriveImplementedDslHandContinuousEffects(state),
+  ].some((effect) =>
+    effectPlayRestrictionAppliesToCard(state, playerId, card, effect),
   );
 
 export const getPlayableHandCards = (

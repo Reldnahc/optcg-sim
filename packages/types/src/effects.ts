@@ -783,6 +783,11 @@ export type Effect =
       duration: Duration;
     }
   | {
+      type: "preventPlayByEffects";
+      target: Target;
+      duration: Duration;
+    }
+  | {
       type: "placeTopDeckCards";
       player: PlayerRef;
       count: number;
