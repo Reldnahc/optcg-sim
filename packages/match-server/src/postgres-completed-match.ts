@@ -136,12 +136,10 @@ export interface CompletedMatchReplayDetail extends CompletedMatchReplaySummary 
 }
 
 export interface CompletedMatchReplayRepository {
-  readonly listReplaysForUser: (
-    userId: string,
+  readonly listReplays: (
     limit?: number,
   ) => Promise<readonly CompletedMatchReplaySummary[]>;
-  readonly getReplayForUser: (
-    userId: string,
+  readonly getReplay: (
     matchId: MatchId,
   ) => Promise<CompletedMatchReplayDetail | undefined>;
 }
@@ -386,8 +384,6 @@ const replaySummarySelectSql = (schema: string): string => `
       '[]'::jsonb
     ) AS players
   FROM ${qualify(schema, "matches")} m
-  INNER JOIN ${qualify(schema, "match_players")} viewer
-    ON viewer.match_id = m.id AND viewer.user_id = $1
   INNER JOIN ${qualify(schema, "match_replays")} replay
     ON replay.match_id = m.id
   LEFT JOIN ${qualify(schema, "match_players")} players
@@ -397,7 +393,7 @@ const replaySummarySelectSql = (schema: string): string => `
 const replaySummaryGroupSql = `
   GROUP BY m.id
   ORDER BY m.ended_at DESC
-  LIMIT $2
+  LIMIT $1
 `;
 
 const replayDetailSql = (schema: string): string => `
@@ -456,13 +452,11 @@ const replayDetailSql = (schema: string): string => `
       'artifactSizeBytes', replay.artifact_size_bytes
     ) AS replay
   FROM ${qualify(schema, "matches")} m
-  INNER JOIN ${qualify(schema, "match_players")} viewer
-    ON viewer.match_id = m.id AND viewer.user_id = $1
   INNER JOIN ${qualify(schema, "match_replays")} replay
     ON replay.match_id = m.id
   LEFT JOIN ${qualify(schema, "match_players")} players
     ON players.match_id = m.id
-  WHERE m.id = $2
+  WHERE m.id = $1
   GROUP BY m.id, replay.match_id
 `;
 
@@ -743,16 +737,16 @@ export const createPostgresCompletedMatchReplayRepository = ({
   const listSql = `${replaySummarySelectSql(matchSchema)}${replaySummaryGroupSql}`;
   const detailSql = replayDetailSql(matchSchema);
   return {
-    async listReplaysForUser(userId, limit = 25) {
+    async listReplays(limit = 25) {
       const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
-      const result = await query(listSql, [userId, safeLimit]);
+      const result = await query(listSql, [safeLimit]);
       return (result.rows ?? []).flatMap((row) => {
         const summary = replaySummaryFromRow(row);
         return summary === undefined ? [] : [summary];
       });
     },
-    async getReplayForUser(userId, requestedMatchId) {
-      const result = await query(detailSql, [userId, requestedMatchId]);
+    async getReplay(requestedMatchId) {
+      const result = await query(detailSql, [requestedMatchId]);
       return replayDetailFromRow(result.rows?.[0]);
     },
   };

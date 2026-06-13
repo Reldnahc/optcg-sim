@@ -42,29 +42,23 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
 });
 
 interface FakeReplayRepository extends CompletedMatchReplayRepository {
-  readonly listCalls: string[];
-  readonly detailCalls: Array<{
-    readonly userId: string;
-    readonly matchId: MatchId;
-  }>;
+  readonly listCalls: number[];
+  readonly detailCalls: MatchId[];
 }
 
 const createFakeReplayRepository = (): FakeReplayRepository => {
-  const listCalls: string[] = [];
-  const detailCalls: Array<{
-    readonly userId: string;
-    readonly matchId: MatchId;
-  }> = [];
+  const listCalls: number[] = [];
+  const detailCalls: MatchId[] = [];
   return {
     listCalls,
     detailCalls,
-    listReplaysForUser(userId) {
-      listCalls.push(userId);
-      return Promise.resolve(userId === "user-1" ? [replaySummary()] : []);
+    listReplays(limit = 25) {
+      listCalls.push(limit);
+      return Promise.resolve([replaySummary()]);
     },
-    getReplayForUser(userId, matchId) {
-      detailCalls.push({ userId, matchId });
-      if (userId !== "user-1" || matchId !== "match-1") {
+    getReplay(matchId) {
+      detailCalls.push(matchId);
+      if (matchId !== "match-1") {
         return Promise.resolve(undefined);
       }
       return Promise.resolve(replayDetail());
@@ -73,7 +67,7 @@ const createFakeReplayRepository = (): FakeReplayRepository => {
 };
 
 describe("match HTTP server replay routes", () => {
-  test("requires account auth to list replays", async () => {
+  test("lists replays without account auth", async () => {
     const repository = createFakeReplayRepository();
     const server = await createMatchHttpServer({
       createDefaultMatch: false,
@@ -83,11 +77,9 @@ describe("match HTTP server replay routes", () => {
     try {
       const response = await fetch(`${server.url()}/api/replays`);
 
-      assert.equal(response.status, 401);
-      assert.deepEqual(await response.json(), {
-        errors: ["Account session is required."],
-      });
-      assert.deepEqual(repository.listCalls, []);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { replays: [replaySummary()] });
+      assert.deepEqual(repository.listCalls, [25]);
     } finally {
       await server.close();
     }
@@ -107,7 +99,7 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { replays: [replaySummary()] });
-      assert.deepEqual(repository.listCalls, ["user-1"]);
+      assert.deepEqual(repository.listCalls, [25]);
     } finally {
       await server.close();
     }
@@ -127,15 +119,13 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { replay: replayDetail() });
-      assert.deepEqual(repository.detailCalls, [
-        { userId: "user-1", matchId: "match-1" },
-      ]);
+      assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
     }
   });
 
-  test("does not return replay detail for a non-participant", async () => {
+  test("returns replay detail for a non-participant", async () => {
     const repository = createFakeReplayRepository();
     const server = await createMatchHttpServer({
       createDefaultMatch: false,
@@ -147,13 +137,9 @@ describe("match HTTP server replay routes", () => {
         headers: { "x-optcg-session-token": "user:user-2:session-1" },
       });
 
-      assert.equal(response.status, 404);
-      assert.deepEqual(await response.json(), {
-        errors: ["Replay match-1 not found."],
-      });
-      assert.deepEqual(repository.detailCalls, [
-        { userId: "user-2", matchId: "match-1" },
-      ]);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { replay: replayDetail() });
+      assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
     }
