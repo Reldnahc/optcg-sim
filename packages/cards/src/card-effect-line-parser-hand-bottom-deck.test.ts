@@ -231,4 +231,60 @@ describe("card effect line parser hand to deck-bottom movement", () => {
       ]),
     );
   });
+
+  it("parses filtered opponent trash bottom-deck placement", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Your opponent places 3 Events from their trash at the bottom of their deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "trashSelection:opponent-trash-to-deck-bottom",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                player: "opponent",
+                chooser: "opponent",
+                min: 3,
+                max: 3,
+                filter: { categories: ["event"] },
+                saveAs: "trashSelection:opponent-trash-to-deck-bottom",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "moveSelected",
+                selection: "trashSelection:opponent-trash-to-deck-bottom",
+                from: "trash",
+                to: "deck",
+                position: "bottom",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:moveSelected",
+        "filter:category:event",
+        "zone:trash",
+        "player:opponent",
+        "chooser:opponent",
+        "zone:deck",
+        "position:bottom",
+        "composition:selectThenMove",
+      ]),
+    );
+  });
 });

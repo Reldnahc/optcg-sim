@@ -1,5 +1,6 @@
-import type { SelectionId } from "@optcg/types";
+import type { CardFilter, SelectionId } from "@optcg/types";
 
+import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const opponentHandToDeckBottomSelection =
@@ -30,10 +31,11 @@ const deckPlacementEvidence = (
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) cards? from (?<possessive>their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
+    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) (?<selection>.+?) from (?<possessive>their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
+  const selectionText = match?.groups?.["selection"]?.trim();
   const playerText = match?.groups?.["player"]?.toLowerCase() ?? "you";
   const possessive = match?.groups?.["possessive"]?.toLowerCase();
   const zoneText = match?.groups?.["zone"]?.toLowerCase();
@@ -41,6 +43,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const placementText = match?.groups?.["placement"]?.toLowerCase();
   if (
     countText === undefined ||
+    selectionText === undefined ||
     possessive === undefined ||
     zoneText === undefined ||
     deckPossessive === undefined ||
@@ -58,6 +61,10 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   }
   const zone = parseSourceZone(zoneText);
   if (zone === undefined) {
+    return undefined;
+  }
+  const selectionFilter = parseSelectionFilter(selectionText);
+  if (selectionFilter === undefined) {
     return undefined;
   }
   const player =
@@ -88,6 +95,9 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
             chooser: player,
             min: count,
             max: count,
+            ...(selectionFilter.filter === undefined
+              ? {}
+              : { filter: selectionFilter.filter }),
             saveAs: selection,
             visibility,
           },
@@ -108,6 +118,7 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
       "instruction:moveSelected",
       "cardinality:exact",
       "count:positiveInteger",
+      ...selectionFilter.evidence,
       `zone:${zone}`,
       player === "opponent" ? "player:opponent" : "player:self",
       player === "opponent" ? "chooser:opponent" : "chooser:self",
@@ -116,6 +127,27 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
       "composition:selectThenMove",
     ],
     rest: "",
+  };
+};
+
+const parseSelectionFilter = (
+  text: string,
+):
+  | {
+      readonly filter?: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  if (/^cards?$/iu.test(text)) {
+    return { evidence: [] };
+  }
+  const parsed = parseCardFilterPredicates({ text });
+  if (parsed === undefined || parsed.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    filter: parsed.filter,
+    evidence: parsed.evidence,
   };
 };
 
