@@ -1,5 +1,14 @@
+export type MatchBackgroundMode = "color" | "image";
+
+export type MatchBackgroundImageFit = "crop" | "stretch" | "fit" | "tile";
+
 export interface MatchVisualSettingsValues {
+  readonly backgroundColor: string;
   readonly backgroundImageUrl: string;
+  readonly backgroundImageFit: MatchBackgroundImageFit;
+  readonly backgroundImagePositionX: number;
+  readonly backgroundImagePositionY: number;
+  readonly backgroundMode: MatchBackgroundMode;
   readonly confirmAttachDon: boolean;
   readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
@@ -22,7 +31,12 @@ export type MatchVisualSettingGroupId =
   | "video";
 
 export interface MatchVisualSettings extends MatchVisualSettingsValues {
+  readonly setBackgroundColor: (value: string) => void;
   readonly setBackgroundImageUrl: (url: string) => void;
+  readonly setBackgroundImageFit: (value: MatchBackgroundImageFit) => void;
+  readonly setBackgroundImagePositionX: (value: number) => void;
+  readonly setBackgroundImagePositionY: (value: number) => void;
+  readonly setBackgroundMode: (value: MatchBackgroundMode) => void;
   readonly setConfirmAttachDon: (enabled: boolean) => void;
   readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
@@ -37,7 +51,12 @@ export interface MatchVisualSettings extends MatchVisualSettingsValues {
 }
 
 export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
+  backgroundColor: "#101010",
   backgroundImageUrl: "",
+  backgroundImageFit: "crop",
+  backgroundImagePositionX: 50,
+  backgroundImagePositionY: 50,
+  backgroundMode: "image",
   confirmAttachDon: true,
   confirmEndTurn: false,
   quickPayActivateMainCosts: false,
@@ -53,7 +72,12 @@ export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
 
 export const noopMatchVisualSettings: MatchVisualSettings = {
   ...defaultMatchVisualSettingsValues,
+  setBackgroundColor: () => undefined,
   setBackgroundImageUrl: () => undefined,
+  setBackgroundImageFit: () => undefined,
+  setBackgroundImagePositionX: () => undefined,
+  setBackgroundImagePositionY: () => undefined,
+  setBackgroundMode: () => undefined,
   setConfirmAttachDon: () => undefined,
   setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,

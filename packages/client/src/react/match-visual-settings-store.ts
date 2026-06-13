@@ -1,5 +1,7 @@
 import type { ClientStorage } from "../session.js";
 import type {
+  MatchBackgroundImageFit,
+  MatchBackgroundMode,
   MatchVisualSettingGroupId,
   MatchVisualSettingId,
   MatchVisualSettingsValues,
@@ -100,6 +102,36 @@ const colorSetting = <K extends MatchVisualSettingId>({
   serialize: (value) => String(value),
 });
 
+const oneOfStringSetting = <
+  K extends MatchVisualSettingId,
+  Value extends Extract<MatchVisualSettingsValues[K], string>,
+>({
+  id,
+  groupId,
+  storageKey,
+  defaultValue,
+  allowedValues,
+}: {
+  readonly id: K;
+  readonly groupId: MatchVisualSettingGroupId;
+  readonly storageKey: string;
+  readonly defaultValue: Value;
+  readonly allowedValues: readonly Value[];
+}): MatchVisualSettingDefinition<K> => {
+  const allowed = new Set<string>(allowedValues);
+  const normalize = (value: string): Value =>
+    allowed.has(value) ? (value as Value) : defaultValue;
+  return {
+    id,
+    groupId,
+    storageKey,
+    defaultValue,
+    parse: (stored) => (stored === null ? defaultValue : normalize(stored)),
+    normalize: (value) => normalize(String(value)),
+    serialize: (value) => String(value),
+  };
+};
+
 const visibilitySetting = <K extends MatchVisualSettingId>({
   id,
   groupId,
@@ -135,6 +167,12 @@ const visibilitySetting = <K extends MatchVisualSettingId>({
 });
 
 export const matchVisualSettingDefinitions = {
+  backgroundColor: colorSetting({
+    id: "backgroundColor",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-color",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundColor,
+  }),
   backgroundImageUrl: {
     id: "backgroundImageUrl",
     groupId: "appearance",
@@ -145,6 +183,32 @@ export const matchVisualSettingDefinitions = {
     normalize: trimString,
     serialize: (value) => (value.length === 0 ? undefined : value),
   },
+  backgroundImageFit: oneOfStringSetting({
+    id: "backgroundImageFit",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-image-fit",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundImageFit,
+    allowedValues: ["crop", "stretch", "fit", "tile"],
+  }),
+  backgroundImagePositionX: visibilitySetting({
+    id: "backgroundImagePositionX",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-image-position-x",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundImagePositionX,
+  }),
+  backgroundImagePositionY: visibilitySetting({
+    id: "backgroundImagePositionY",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-image-position-y",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundImagePositionY,
+  }),
+  backgroundMode: oneOfStringSetting({
+    id: "backgroundMode",
+    groupId: "appearance",
+    storageKey: "optcg:client:background-mode",
+    defaultValue: defaultMatchVisualSettingsValues.backgroundMode,
+    allowedValues: ["color", "image"],
+  }),
   confirmAttachDon: confirmAttachDonSetting(),
   confirmEndTurn: booleanSetting({
     id: "confirmEndTurn",
@@ -213,7 +277,12 @@ export const matchVisualSettingDefinitions = {
 };
 
 export const matchVisualSettingIds = [
+  "backgroundColor",
   "backgroundImageUrl",
+  "backgroundImageFit",
+  "backgroundImagePositionX",
+  "backgroundImagePositionY",
+  "backgroundMode",
   "confirmAttachDon",
   "confirmEndTurn",
   "quickPayActivateMainCosts",
@@ -247,8 +316,20 @@ const loadWithDefinition = <K extends MatchVisualSettingId>(
 
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "backgroundImageUrl" | "windowColor" | "playmatColor",
+  settingId:
+    | "backgroundColor"
+    | "backgroundImageUrl"
+    | "windowColor"
+    | "playmatColor",
 ): string;
+export function loadMatchVisualSetting(
+  storage: ClientStorage | undefined,
+  settingId: "backgroundImageFit",
+): MatchBackgroundImageFit;
+export function loadMatchVisualSetting(
+  storage: ClientStorage | undefined,
+  settingId: "backgroundMode",
+): MatchBackgroundMode;
 export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
@@ -261,6 +342,8 @@ export function loadMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
     | "soundVolume"
+    | "backgroundImagePositionX"
+    | "backgroundImagePositionY"
     | "windowOpacity"
     | "playmatOpacity"
     | "zoneBackgroundVisibility"
@@ -275,6 +358,31 @@ export function loadMatchVisualSetting(
       return loadWithDefinition(
         storage,
         matchVisualSettingDefinitions.backgroundImageUrl,
+      );
+    case "backgroundColor":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundColor,
+      );
+    case "backgroundImageFit":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImageFit,
+      );
+    case "backgroundImagePositionX":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImagePositionX,
+      );
+    case "backgroundImagePositionY":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImagePositionY,
+      );
+    case "backgroundMode":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundMode,
       );
     case "windowColor":
       return loadWithDefinition(
@@ -337,7 +445,18 @@ export function loadMatchVisualSetting(
 export const loadMatchVisualSettings = (
   storage: ClientStorage | undefined,
 ): MatchVisualSettingsValues => ({
+  backgroundColor: loadMatchVisualSetting(storage, "backgroundColor"),
   backgroundImageUrl: loadMatchVisualSetting(storage, "backgroundImageUrl"),
+  backgroundImageFit: loadMatchVisualSetting(storage, "backgroundImageFit"),
+  backgroundImagePositionX: loadMatchVisualSetting(
+    storage,
+    "backgroundImagePositionX",
+  ),
+  backgroundImagePositionY: loadMatchVisualSetting(
+    storage,
+    "backgroundImagePositionY",
+  ),
+  backgroundMode: loadMatchVisualSetting(storage, "backgroundMode"),
   confirmAttachDon: loadMatchVisualSetting(storage, "confirmAttachDon"),
   confirmEndTurn: loadMatchVisualSetting(storage, "confirmEndTurn"),
   quickPayActivateMainCosts: loadMatchVisualSetting(
@@ -377,9 +496,23 @@ const saveWithDefinition = <K extends MatchVisualSettingId>(
 
 export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
-  settingId: "backgroundImageUrl" | "windowColor" | "playmatColor",
+  settingId:
+    | "backgroundColor"
+    | "backgroundImageUrl"
+    | "windowColor"
+    | "playmatColor",
   value: string,
 ): string;
+export function saveMatchVisualSetting(
+  storage: ClientStorage | undefined,
+  settingId: "backgroundImageFit",
+  value: MatchBackgroundImageFit,
+): MatchBackgroundImageFit;
+export function saveMatchVisualSetting(
+  storage: ClientStorage | undefined,
+  settingId: "backgroundMode",
+  value: MatchBackgroundMode,
+): MatchBackgroundMode;
 export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
@@ -393,6 +526,8 @@ export function saveMatchVisualSetting(
   storage: ClientStorage | undefined,
   settingId:
     | "soundVolume"
+    | "backgroundImagePositionX"
+    | "backgroundImagePositionY"
     | "zoneBackgroundVisibility"
     | "zoneGuideVisibility"
     | "windowOpacity"
@@ -410,6 +545,36 @@ export function saveMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.backgroundImageUrl,
         String(value),
+      );
+    case "backgroundColor":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundColor,
+        String(value),
+      );
+    case "backgroundImageFit":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImageFit,
+        String(value) as MatchBackgroundImageFit,
+      );
+    case "backgroundImagePositionX":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImagePositionX,
+        typeof value === "number" ? value : Number.NaN,
+      );
+    case "backgroundImagePositionY":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundImagePositionY,
+        typeof value === "number" ? value : Number.NaN,
+      );
+    case "backgroundMode":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.backgroundMode,
+        String(value) as MatchBackgroundMode,
       );
     case "windowColor":
       return saveWithDefinition(

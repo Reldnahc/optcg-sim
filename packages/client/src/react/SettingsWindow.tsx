@@ -1,5 +1,10 @@
+import { useRef } from "react";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import type {
+  MatchBackgroundImageFit,
+  MatchBackgroundMode,
+} from "./match-visual-settings.js";
 import { useMatchVisualSettings } from "./match-visual-settings-context.js";
 
 export interface SettingsWindowProps {
@@ -22,6 +27,7 @@ export const defaultSettingsWindowRect: WindowRect = {
 };
 
 const colorSwatches = [
+  "#101010",
   "#0d0d0e",
   "#222224",
   "#17150d",
@@ -29,6 +35,49 @@ const colorSwatches = [
   "#2d1b1b",
   "#10251b",
 ] as const;
+
+const backgroundModeOptions = [
+  ["color", "Color"],
+  ["image", "Image"],
+] as const satisfies readonly (readonly [MatchBackgroundMode, string])[];
+
+const backgroundImageFitOptions = [
+  ["crop", "Crop"],
+  ["stretch", "Stretch"],
+  ["fit", "Fit"],
+  ["tile", "Tile"],
+] as const satisfies readonly (readonly [MatchBackgroundImageFit, string])[];
+
+const SegmentedControl = <T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  readonly label: string;
+  readonly value: T;
+  readonly options: readonly (readonly [T, string])[];
+  readonly onChange: (value: T) => void;
+}): React.JSX.Element => (
+  <div className="settings-segmented-field">
+    <span>{label}</span>
+    <div className="settings-segmented-control" role="group" aria-label={label}>
+      {options.map(([optionValue, optionLabel]) => (
+        <button
+          key={optionValue}
+          type="button"
+          className={value === optionValue ? "is-selected" : ""}
+          aria-pressed={value === optionValue}
+          onClick={() => {
+            onChange(optionValue);
+          }}
+        >
+          {optionLabel}
+        </button>
+      ))}
+    </div>
+  </div>
+);
 
 const ColorSelector = ({
   label,
@@ -89,9 +138,17 @@ const SettingsSection = ({
   </section>
 );
 
+const clampPercent = (value: number): number =>
+  Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 50;
+
 export const SettingsContent = (): React.JSX.Element => {
   const {
+    backgroundColor,
     backgroundImageUrl,
+    backgroundImageFit,
+    backgroundImagePositionX,
+    backgroundImagePositionY,
+    backgroundMode,
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
@@ -103,7 +160,12 @@ export const SettingsContent = (): React.JSX.Element => {
     playmatOpacity,
     zoneBackgroundVisibility,
     zoneGuideVisibility,
+    setBackgroundColor,
     setBackgroundImageUrl,
+    setBackgroundImageFit,
+    setBackgroundImagePositionX,
+    setBackgroundImagePositionY,
+    setBackgroundMode,
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
@@ -116,6 +178,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setZoneBackgroundVisibility,
     setZoneGuideVisibility,
   } = useMatchVisualSettings();
+  const cropDragPointerIdRef = useRef<number | undefined>(undefined);
 
   const selectBackgroundFile = (file: File | undefined): void => {
     if (file === undefined) {
@@ -129,31 +192,111 @@ export const SettingsContent = (): React.JSX.Element => {
     });
     reader.readAsDataURL(file);
   };
+  const updateCropFocusFromPointer = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ): void => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+    setBackgroundImagePositionX(
+      clampPercent(((event.clientX - rect.left) / rect.width) * 100),
+    );
+    setBackgroundImagePositionY(
+      clampPercent(((event.clientY - rect.top) / rect.height) * 100),
+    );
+  };
+  const cropPreviewStyle = {
+    backgroundColor,
+    ...(backgroundImageUrl.length === 0
+      ? {}
+      : { backgroundImage: `url(${JSON.stringify(backgroundImageUrl)})` }),
+  };
+  const cropFrameStyle = {
+    "--settings-crop-x": `${String(backgroundImagePositionX)}%`,
+    "--settings-crop-y": `${String(backgroundImagePositionY)}%`,
+  } as React.CSSProperties &
+    Record<"--settings-crop-x" | "--settings-crop-y", string>;
 
   return (
     <div className="settings-window-content">
       <SettingsSection title="Customization">
-        <label className="settings-field">
-          <span>Background image</span>
-          <input
-            type="file"
-            accept="image/*,.gif"
-            onChange={(event) => {
-              selectBackgroundFile(event.target.files?.[0]);
-              event.currentTarget.value = "";
-            }}
+        <section className="settings-surface-group" aria-label="Background">
+          <h4>Background</h4>
+          <SegmentedControl
+            label="Background type"
+            value={backgroundMode}
+            options={backgroundModeOptions}
+            onChange={setBackgroundMode}
           />
-        </label>
-        <button
-          className="settings-secondary-button"
-          type="button"
-          disabled={backgroundImageUrl.length === 0}
-          onClick={() => {
-            setBackgroundImageUrl("");
-          }}
-        >
-          Clear background
-        </button>
+          <ColorSelector
+            label="Background color"
+            value={backgroundColor}
+            onChange={setBackgroundColor}
+          />
+          <label className="settings-field">
+            <span>Background image</span>
+            <input
+              type="file"
+              accept="image/*,.gif"
+              onChange={(event) => {
+                selectBackgroundFile(event.target.files?.[0]);
+                setBackgroundMode("image");
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
+          <button
+            className="settings-secondary-button"
+            type="button"
+            disabled={backgroundImageUrl.length === 0}
+            onClick={() => {
+              setBackgroundImageUrl("");
+              setBackgroundMode("color");
+            }}
+          >
+            Clear background
+          </button>
+          <SegmentedControl
+            label="Image fit"
+            value={backgroundImageFit}
+            options={backgroundImageFitOptions}
+            onChange={setBackgroundImageFit}
+          />
+          {backgroundImageFit === "crop" ? (
+            <div className="settings-crop-helper">
+              <div
+                className="settings-crop-preview"
+                style={cropPreviewStyle}
+                role="img"
+                aria-label="Crop image focus"
+                onPointerDown={(event) => {
+                  cropDragPointerIdRef.current = event.pointerId;
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  updateCropFocusFromPointer(event);
+                }}
+                onPointerMove={(event) => {
+                  if (cropDragPointerIdRef.current !== event.pointerId) {
+                    return;
+                  }
+                  updateCropFocusFromPointer(event);
+                }}
+                onPointerUp={(event) => {
+                  if (cropDragPointerIdRef.current === event.pointerId) {
+                    cropDragPointerIdRef.current = undefined;
+                  }
+                }}
+                onPointerCancel={(event) => {
+                  if (cropDragPointerIdRef.current === event.pointerId) {
+                    cropDragPointerIdRef.current = undefined;
+                  }
+                }}
+              >
+                <div className="settings-crop-frame" style={cropFrameStyle} />
+              </div>
+            </div>
+          ) : null}
+        </section>
         <section className="settings-surface-group" aria-label="Windows">
           <h4>Windows</h4>
           <label className="settings-field">

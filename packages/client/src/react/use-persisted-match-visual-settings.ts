@@ -18,6 +18,14 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
 
   return {
     ...settings,
+    setBackgroundColor: (value) => {
+      const backgroundColor = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundColor",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundColor }));
+    },
     setBackgroundImageUrl: (url) => {
       const backgroundImageUrl = saveMatchVisualSetting(
         browserPersistentStorage(),
@@ -25,6 +33,38 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
         url,
       );
       setSettings((current) => ({ ...current, backgroundImageUrl }));
+    },
+    setBackgroundImageFit: (value) => {
+      const backgroundImageFit = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundImageFit",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundImageFit }));
+    },
+    setBackgroundImagePositionX: (value) => {
+      const backgroundImagePositionX = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundImagePositionX",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundImagePositionX }));
+    },
+    setBackgroundImagePositionY: (value) => {
+      const backgroundImagePositionY = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundImagePositionY",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundImagePositionY }));
+    },
+    setBackgroundMode: (value) => {
+      const backgroundMode = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "backgroundMode",
+        value,
+      );
+      setSettings((current) => ({ ...current, backgroundMode }));
     },
     setConfirmAttachDon: (enabled) => {
       const confirmAttachDon = saveMatchVisualSetting(
