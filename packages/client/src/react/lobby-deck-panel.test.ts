@@ -451,13 +451,17 @@ describe("lobby deck panel", () => {
 
     assert.match(supportSource, /refreshAccountLoadouts: \(\) => void;/u);
     assert.match(clientSource, /const refreshAccountLoadouts = useCallback/u);
-    assert.match(clientSource, /accountClient\s*\.listLoadouts\(\)/u);
     assert.match(
       clientSource,
-      /setAccountLoadouts\(uncheckedLocalLoadouts\(loadouts\)\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*controller\.validateLobbyDecks\(/u,
+      /accountClient\s*\.listLoadouts\(\{ includeDeckHashes: localRawDeckSubmissionsAllowed \}\)/u,
     );
-    assert.doesNotMatch(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
-    assert.match(clientSource, /controller\.validateLobbyDecks\(/u);
+    assert.match(
+      clientSource,
+      /setAccountLoadouts\(uncheckedLocalLoadouts\(loadouts\)\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*validatedLoadoutsFromHandoffs\(/u,
+    );
+    assert.match(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
+    assert.match(clientSource, /controller\.validateLobbyLoadouts\(/u);
+    assert.doesNotMatch(clientSource, /controller\.validateLobbyDecks\(/u);
     assert.match(clientSource, /accountClient\s*\.createSimHandoff\(/u);
     assert.match(
       matchAppSource,
