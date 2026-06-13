@@ -20,19 +20,14 @@ export function revealTopConditionalExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const match =
-      /^Reveal 1 card from the top of your deck\. If (?:the revealed card|that card) has (?<predicate>.+), (?<body>[\s\S]+)$/iu.exec(
-        input.text,
-      );
-    const predicateText = match?.groups?.["predicate"]?.trim();
-    const bodyText = match?.groups?.["body"]?.trim();
+    const match = parseRevealTopCondition(input.text);
+    const predicateText = match?.predicateText;
+    const bodyText = match?.body.trim();
     if (predicateText === undefined || bodyText === undefined) {
       return undefined;
     }
 
-    const predicates = parseCardFilterPredicates({
-      text: `card with ${predicateText}`,
-    });
+    const predicates = parseCardFilterPredicates({ text: predicateText });
     if (predicates === undefined || predicates.rest.length > 0) {
       return undefined;
     }
@@ -67,6 +62,44 @@ export function revealTopConditionalExpressionParser(options: {
             ],
           }),
     };
+  };
+}
+
+function parseRevealTopCondition(text: string):
+  | {
+      readonly body: string;
+      readonly predicateText: string;
+    }
+  | undefined {
+  const hasMatch =
+    /^Reveal 1 card from the top of your deck\. If (?:the revealed card|that card) has (?<predicate>.+), (?<body>[\s\S]+)$/iu.exec(
+      text,
+    );
+  const hasPredicate = hasMatch?.groups?.["predicate"]?.trim();
+  const hasBody = hasMatch?.groups?.["body"];
+  if (hasPredicate !== undefined && hasBody !== undefined) {
+    return {
+      body: hasBody,
+      predicateText: `card with ${hasPredicate}`,
+    };
+  }
+
+  const typeIncludesMatch =
+    /^Reveal 1 card from the top of your deck\. If (?:the revealed card's|that card's) type includes\s+"(?<type>[^"]+)",\s*(?<body>[\s\S]+)$/iu.exec(
+      text,
+    );
+  const typeText = typeIncludesMatch?.groups?.["type"]?.trim();
+  const typeBody = typeIncludesMatch?.groups?.["body"];
+  if (
+    typeText === undefined ||
+    typeText.length === 0 ||
+    typeBody === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    body: typeBody,
+    predicateText: `card with a type including "${typeText}"`,
   };
 }
 

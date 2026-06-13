@@ -89,3 +89,55 @@ it("reuses revealed-card condition with another supported body primitive", () =>
     },
   });
 });
+
+it("parses revealed-card type-includes condition with composed draw and trash body", () => {
+  const result = parseCardEffectLine(
+    `[On Play] Reveal 1 card from the top of your deck. If that card's type includes "Whitebeard Pirates", draw 2 cards and trash 1 card from your hand.`,
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          { connector: "always", effect: { type: "revealTop" } },
+          {
+            connector: "then",
+            effect: {
+              type: "selectFromSet",
+              filter: { typesIncludeAny: ["Whitebeard Pirates"] },
+            },
+          },
+          {
+            connector: "ifPreviousSucceeded",
+            effect: {
+              type: "sequence",
+              effects: [
+                { effect: { type: "draw", player: "self", count: 2 } },
+                {
+                  effect: {
+                    type: "trashFromHand",
+                    player: "self",
+                    chooser: "self",
+                    count: 1,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "filter:type",
+      "instruction:draw",
+      "instruction:trashFromHand",
+      "connector:andOrdered",
+    ]),
+  );
+});
