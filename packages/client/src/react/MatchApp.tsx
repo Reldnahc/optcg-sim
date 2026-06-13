@@ -39,8 +39,11 @@ import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-settings.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
+import type { MatchClientUi } from "./useMatchClient-support.js";
 export interface MatchAppProps {
-  readonly accountSessionToken: string;
+  readonly accountSessionToken?: string | undefined;
+  readonly client?: MatchClientUi | undefined;
+  readonly replayControls?: React.ReactNode | undefined;
 }
 
 const hexColorToRgb = (hexColor: string): string => {
@@ -85,13 +88,17 @@ const backgroundImageStyle = ({
 
 export const MatchApp = ({
   accountSessionToken,
+  client: suppliedClient,
+  replayControls,
 }: MatchAppProps): React.JSX.Element => {
   const visualSettings = usePersistedMatchVisualSettings();
-  const client = useMatchClient({
-    accountSessionToken,
+  const liveClient = useMatchClient({
+    accountSessionToken: accountSessionToken ?? "replay-disabled",
     confirmAttachDon: visualSettings.confirmAttachDon,
     quickPayActivateMainCosts: visualSettings.quickPayActivateMainCosts,
+    enabled: suppliedClient === undefined,
   });
+  const client = suppliedClient ?? liveClient;
   const [previewCard, setPreviewCard] = useState<ClientCardModel>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMinimized, setPreviewMinimized] = useState(false);
@@ -525,6 +532,11 @@ export const MatchApp = ({
             client.selectCard(undefined);
           }}
         />
+        {replayControls === undefined ? null : (
+          <div className="replay-match-controls" data-replay-match-surface="">
+            {replayControls}
+          </div>
+        )}
         {lobbyState === undefined ? null : (
           <LobbyDeckPanel
             disabled={client.state.actionInFlight}

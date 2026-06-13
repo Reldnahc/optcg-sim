@@ -50,4 +50,18 @@ describe("ReplayViewerPage", () => {
     assert.match(html, /submitAction/u);
     assert.match(html, /gameEnded/u);
   });
+
+  test("renders replay controls for shared match surface playback", () => {
+    const html = renderToStaticMarkup(
+      createElement(ReplayViewerPageView, {
+        status: "ready",
+        replay: replayDetail(),
+      }),
+    );
+
+    assert.match(html, /Previous action/u);
+    assert.match(html, /Next action/u);
+    assert.match(html, /Action 1 \/ 1/u);
+    assert.match(html, /data-replay-match-surface/u);
+  });
 });

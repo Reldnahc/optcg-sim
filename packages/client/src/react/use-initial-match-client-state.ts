@@ -13,14 +13,19 @@ import {
 
 export const useInitialMatchClientState = ({
   controller,
+  enabled = true,
   setClientState,
   setErrors,
 }: {
   controller: MatchClientController;
+  enabled?: boolean | undefined;
   setClientState: (state: MatchClientSessionState) => void;
   setErrors: (errors: string[]) => void;
 }): void => {
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
@@ -48,5 +53,5 @@ export const useInitialMatchClientState = ({
     return () => {
       cancelled = true;
     };
-  }, [controller, setClientState, setErrors]);
+  }, [controller, enabled, setClientState, setErrors]);
 };
