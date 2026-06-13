@@ -124,11 +124,11 @@ export const Zone = ({
   } as CSSProperties & Record<"--card-row-overlap", string>;
   const lifeCardIsSelf = presentationZoneKey === "self:life";
   const lifeCardStyle = (index: number, count: number): CSSProperties => {
-    const offsetIndex = lifeCardIsSelf ? index : count - index - 1;
+    const offsetIndex = count - index - 1;
     const offset = `${String(offsetIndex * 10)}%`;
     return {
       "--life-card-y-offset": offset,
-      zIndex: lifeCardIsSelf ? index + 1 : count - index,
+      zIndex: count - index,
       ...(lifeCardIsSelf
         ? { bottom: "var(--life-card-y-offset)" }
         : { top: "var(--life-card-y-offset)" }),
