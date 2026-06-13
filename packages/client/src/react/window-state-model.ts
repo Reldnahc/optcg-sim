@@ -203,6 +203,55 @@ export const floatingWindowStateAfterCollectionOpenChange = ({
   };
 };
 
+export const floatingWindowStateAfterExternalWindowSync = ({
+  current,
+  scope,
+  windowKeys,
+  managedWindowKeyPrefix,
+}: {
+  current: FloatingWindowRectState;
+  scope: string;
+  windowKeys: readonly string[];
+  managedWindowKeyPrefix: string;
+}): FloatingWindowRectState => {
+  const base = scopedFloatingWindowState({ current, scope });
+  const activeManagedWindowKeys = new Set(windowKeys);
+  const shouldKeepWindow = (windowKey: string): boolean =>
+    !windowKey.startsWith(managedWindowKeyPrefix) ||
+    activeManagedWindowKeys.has(windowKey);
+  const openWindowIds = new Set(
+    [...base.openWindowIds].filter(shouldKeepWindow),
+  );
+  for (const windowKey of windowKeys) {
+    openWindowIds.add(windowKey);
+  }
+  const dockedWindowIds = new Set(
+    [...base.dockedWindowIds].filter(shouldKeepWindow),
+  );
+  const floatingWindowZOrder = [
+    ...base.floatingWindowZOrder.filter(
+      (windowKey) =>
+        shouldKeepWindow(windowKey) &&
+        openWindowIds.has(windowKey) &&
+        !dockedWindowIds.has(windowKey),
+    ),
+    ...windowKeys.filter(
+      (windowKey) =>
+        !base.floatingWindowZOrder.includes(windowKey) &&
+        openWindowIds.has(windowKey) &&
+        !dockedWindowIds.has(windowKey),
+    ),
+  ];
+
+  return {
+    scope,
+    rects: base.rects,
+    openWindowIds,
+    dockedWindowIds,
+    floatingWindowZOrder,
+  };
+};
+
 export const floatingWindowStateAfterFloatingGroupOpen = ({
   current,
   scope,

@@ -7,6 +7,7 @@ import {
   emptyFloatingWindowRectState,
   floatingWindowStateAfterActivation,
   floatingWindowStateAfterDockedWindowReorder,
+  floatingWindowStateAfterExternalWindowSync,
   floatingWindowStateAfterFloatingGroupOpen,
   floatingWindowStateAfterCollectionOpenChange,
   floatingWindowStateAfterOpenChange,
@@ -32,6 +33,10 @@ export interface FloatingWindowStateController {
   }) => void;
   updateFloatingWindowOpen: (key: string, open: boolean) => void;
   updateCollectionWindowOpen: (key: string, open: boolean) => void;
+  syncExternalFloatingWindows: (input: {
+    windowKeys: readonly string[];
+    managedWindowKeyPrefix: string;
+  }) => void;
   dockFloatingWindow: (key: string, rect: WindowRect) => void;
   dockFloatingWindows: (input: {
     windowKeys: readonly string[];
@@ -279,6 +284,32 @@ export const useFloatingWindowState = ({
     [matchScope, revealWindowStateStore],
   );
 
+  const syncExternalFloatingWindows = useCallback(
+    ({
+      windowKeys,
+      managedWindowKeyPrefix,
+    }: {
+      windowKeys: readonly string[];
+      managedWindowKeyPrefix: string;
+    }): void => {
+      if (matchScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) => {
+        const next = floatingWindowStateAfterExternalWindowSync({
+          current,
+          scope: matchScope,
+          windowKeys,
+          managedWindowKeyPrefix,
+        });
+        revealWindowStateStore?.saveOpenWindowIds(next.openWindowIds);
+        revealWindowStateStore?.saveDockedWindowIds(next.dockedWindowIds);
+        return next;
+      });
+    },
+    [matchScope, revealWindowStateStore],
+  );
+
   const dockFloatingWindow = useCallback(
     (key: string, rect: WindowRect): void => {
       if (matchScope === undefined) {
@@ -481,6 +512,7 @@ export const useFloatingWindowState = ({
     openFloatingWindowGroup,
     updateFloatingWindowOpen,
     updateCollectionWindowOpen,
+    syncExternalFloatingWindows,
     dockFloatingWindow,
     dockFloatingWindows,
     dockFloatingWindowGroup,
