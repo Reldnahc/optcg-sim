@@ -100,6 +100,8 @@ export type Trigger =
       role: "attacker" | "target" | "attackerOrTarget";
       player: PlayerRef;
       filter?: CardFilter;
+      targetPlayer?: PlayerRef;
+      targetFilter?: CardFilter;
     }
   | {
       type: "effectQueued";

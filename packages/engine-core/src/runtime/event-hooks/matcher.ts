@@ -515,6 +515,38 @@ const attackRoleRefs = (
   return [attacker, target].filter((ref): ref is CardRef => ref !== undefined);
 };
 
+const attackTargetMatches = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "attackDeclared" }>,
+  payload: Record<string, unknown>,
+): boolean => {
+  if (
+    trigger.targetPlayer === undefined &&
+    trigger.targetFilter === undefined
+  ) {
+    return true;
+  }
+  const target = flattenedCardRef(payload, "target");
+  if (target === undefined) {
+    return false;
+  }
+  return (
+    (trigger.targetPlayer === undefined ||
+      playerRefMatchesSource(
+        state,
+        source,
+        trigger.targetPlayer,
+        target.playerId,
+      )) &&
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, target.cardId),
+      trigger.targetFilter,
+    )
+  );
+};
+
 const matchAttackDeclared = (
   state: GameState,
   source: CardInstance,
@@ -525,14 +557,17 @@ const matchAttackDeclared = (
   if (event.type !== "attackDeclared" || payload === undefined) {
     return false;
   }
-  return attackRoleRefs(payload, trigger.role).some(
-    (ref) =>
-      playerRefMatchesSource(state, source, trigger.player, ref.playerId) &&
-      matchesResolvedFilter(
-        state,
-        resolvedCardForId(state, ref.cardId),
-        trigger.filter,
-      ),
+  return (
+    attackTargetMatches(state, source, trigger, payload) &&
+    attackRoleRefs(payload, trigger.role).some(
+      (ref) =>
+        playerRefMatchesSource(state, source, trigger.player, ref.playerId) &&
+        matchesResolvedFilter(
+          state,
+          resolvedCardForId(state, ref.cardId),
+          trigger.filter,
+        ),
+    )
   );
 };
 

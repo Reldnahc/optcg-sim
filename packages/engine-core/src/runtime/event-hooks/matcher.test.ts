@@ -403,6 +403,55 @@ test("canonical event matcher matches attackDeclared roles for this leader attac
   );
 });
 
+test("canonical event matcher matches attackDeclared target constraints", () => {
+  const { source, state, opponentLeader, character } = setupEventHookState();
+  const leaderTarget = publicEvent(state, "attackDeclared", {
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: source.controller,
+      zone: source.zone,
+    },
+    target: {
+      instanceId: opponentLeader.instanceId,
+      cardId: opponentLeader.cardId,
+      playerId: opponentLeader.controller,
+      zone: opponentLeader.zone,
+    },
+  });
+  const characterTarget = publicEvent(state, "attackDeclared", {
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: source.controller,
+      zone: source.zone,
+    },
+    target: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: character.controller,
+      zone: character.zone,
+    },
+  });
+  const trigger: Trigger = {
+    type: "attackDeclared",
+    role: "attacker",
+    player: "self",
+    filter: { categories: ["leader"] },
+    targetPlayer: "opponent",
+    targetFilter: { categories: ["leader"] },
+  };
+
+  assert.deepEqual(matchEventTrigger(state, source, trigger, leaderTarget), {
+    matched: true,
+    triggerTypes: ["attackDeclared"],
+  });
+  assert.deepEqual(matchEventTrigger(state, source, trigger, characterTarget), {
+    matched: false,
+    triggerTypes: [],
+  });
+});
+
 test("canonical event matcher matches effectQueued entry point, category, and source filter evidence", () => {
   const { source, state } = setupEventHookState();
   const event = publicEvent(state, "effectQueued", {

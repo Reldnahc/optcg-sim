@@ -7,6 +7,7 @@ import {
   containsCharacterCategoryText,
   parseCharacterFilter,
 } from "./event-reaction-character-filter.js";
+import { parseAttackDeclaredPredicate } from "./event-reaction-predicates/attack-declared.js";
 
 const lifeRemovedTrigger = (
   players: PlayerRef[],
@@ -786,6 +787,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,
+    parseAttackDeclaredPredicate,
     parseHandTrashedByEffectPredicate,
     activatedReactionSpecificPredicate,
   ] as const;
@@ -829,6 +831,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,
+    parseAttackDeclaredPredicate,
     parseHandTrashedByEffectPredicate,
     implicitReactionSpecificPredicate,
   ] as const;

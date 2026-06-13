@@ -265,6 +265,79 @@ describe("card effect reusable parser compositions", () => {
     );
   });
 
+  it("parses leader-attacks-leader reactions as attack event primitives with separate conditions", () => {
+    const result = parseCardEffectLine(
+      "When this Leader attacks your opponent's Leader, if you have 2 or more Characters with a cost of 8 or more, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "attackDeclared",
+          role: "attacker",
+          player: "self",
+          filter: { categories: ["leader"] },
+          targetPlayer: "opponent",
+          targetFilter: { categories: ["leader"] },
+        },
+        effect: {
+          type: "conditional",
+          if: {
+            type: "fieldCount",
+            player: "self",
+            op: "gte",
+            value: 2,
+            filter: {
+              categories: ["character"],
+              cost: { min: 8 },
+            },
+          },
+          then: { type: "draw", player: "self", count: 1 },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:attackDeclared",
+        "target:thisLeader",
+        "target:opponentLeader",
+        "condition:fieldCount",
+        "filter:cost",
+        "instruction:draw",
+      ]),
+    );
+  });
+
+  it("parses character-attacks-character reactions through the same attack predicate primitive", () => {
+    const result = parseCardEffectLine(
+      "When this Character attacks your opponent's Character, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "attackDeclared",
+          role: "attacker",
+          player: "self",
+          filter: { categories: ["character"] },
+          targetPlayer: "opponent",
+          targetFilter: { categories: ["character"] },
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:attackDeclared",
+        "target:thisCharacter",
+        "target:opponentCharacter",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses activated life-removed wording as an optional event reaction", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",
