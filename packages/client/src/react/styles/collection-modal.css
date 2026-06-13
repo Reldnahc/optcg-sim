@@ -2,6 +2,21 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+.modal-frame-collection-decision {
+  --collection-card-width: calc(var(--card-height) * 5 / 7);
+  --collection-card-grid-gap: 8px;
+  --collection-card-grid-padding: 5px;
+
+  width: min(
+    calc(
+      (var(--collection-card-width) * 5) +
+        (var(--collection-card-grid-gap) * 4) +
+        (var(--collection-card-grid-padding) * 2) + (var(--modal-padding) * 2)
+    ),
+    calc(100vw - (var(--modal-viewport-gutter) * 2))
+  );
+}
+
 .collection-modal-card-grid {
   --collection-card-width: calc(var(--card-height) * 5 / 7);
 

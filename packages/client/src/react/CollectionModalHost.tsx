@@ -149,7 +149,10 @@ export const CollectionModalHost = ({
 
   if (presentation === "modal") {
     return (
-      <ModalFrame title={model.title} className="collection-modal">
+      <ModalFrame
+        title={model.title}
+        className="collection-modal modal-frame-collection-decision"
+      >
         {body}
       </ModalFrame>
     );
