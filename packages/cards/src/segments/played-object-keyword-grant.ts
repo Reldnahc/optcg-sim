@@ -85,6 +85,79 @@ export function playedObjectKeywordGrantExpressionParser(options: {
   };
 }
 
+export function playedObjectDelayedDeckBottomExpressionParser(options: {
+  readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input) => {
+    const match =
+      /^(?<playText>[\s\S]+?)(?:\.\s+Then,|\s+Then,)\s+place the (?<count>[1-9]\d*) Character played by this effect at the bottom of the owner's deck at the end of this turn\.?$/iu.exec(
+        input.text,
+      );
+    const playText = match?.groups?.["playText"]?.trim();
+    const countText = match?.groups?.["count"];
+    if (playText === undefined || countText === undefined) {
+      return undefined;
+    }
+
+    const play = parsePlayBody(playText, options);
+    if (play === undefined || play.rest.length > 0) {
+      return undefined;
+    }
+
+    const playSequence = withSavedPlayResult(play.effect);
+    if (playSequence === undefined) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          ...playSequence.effects,
+          {
+            id: "delayed:played-object-owner-deck-bottom",
+            connector: "ifPreviousSucceeded",
+            effect: {
+              type: "delayed",
+              timing: { type: "endOfTurn", turn: "current" },
+              effect: {
+                type: "bounce",
+                destination: "deckBottom",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "producedObjects",
+                    saveResultAs: playedObjectReference,
+                  },
+                  zone: "characterArea",
+                  player: "self",
+                  visibility: "publicOnly",
+                  onFailure: "failClosed",
+                },
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "expression:sequence",
+        ...play.evidence,
+        "instruction:bounce",
+        "reference:thatCharacter",
+        "destination:deck",
+        "position:bottom",
+        "duration:endOfTurn",
+        "composition:delayed",
+        "composition:selectThenMove",
+      ],
+      rest: "",
+    };
+  };
+}
+
 function parsePlayBody(
   text: string,
   options: {
@@ -131,15 +204,27 @@ function withSavedPlayResult(
   const effects: Extract<Effect, { type: "sequence" }>["effects"] = [];
   let foundPlaySelected = false;
   for (const segment of effect.effects) {
-    if (segment.effect.type !== "playSelected") {
+    if (segment.effect.type === "payCost") {
+      effects.push(segment);
+      continue;
+    }
+    const saved = withSavedPlayResult(segment.effect);
+    if (saved === undefined) {
       effects.push(segment);
       continue;
     }
     foundPlaySelected = true;
-    effects.push({
-      ...segment,
-      saveResultAs: playedObjectReference,
-    });
+    if (segment.effect.type === "playSelected") {
+      effects.push({
+        ...segment,
+        saveResultAs: playedObjectReference,
+      });
+    } else {
+      effects.push({
+        ...segment,
+        effect: saved,
+      });
+    }
   }
   return foundPlaySelected ? { ...effect, effects } : undefined;
 }

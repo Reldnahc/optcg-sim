@@ -54,6 +54,7 @@ import {
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
   playStageFromDeckExpressionParser,
+  playedObjectDelayedDeckBottomExpressionParser,
   playedObjectKeywordGrantExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
@@ -248,6 +249,10 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser],
   }),
+  playedObjectDelayedDeckBottomExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   opponentOptionalCostExpressionParser({
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -301,6 +306,13 @@ export const defaultRegistry = {
         playedObjectKeywordGrantExpressionParser({
           instructions: instructionParsers,
           expressions: [singleInstructionExpressionParser],
+        }),
+        playedObjectDelayedDeckBottomExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
         }),
         opponentOptionalCostExpressionParser({
           instructions: instructionParsers,
@@ -401,6 +413,13 @@ export const defaultRegistry = {
           instructions: instructionParsers,
           expressions: [singleInstructionExpressionParser],
         }),
+        playedObjectDelayedDeckBottomExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        }),
         selectedOpponentCharactersAttackCostExpressionParser,
         conditionalAdditionalSelectedPowerContinuationExpressionParser({
           conditions: conditionParsers,
@@ -446,6 +465,10 @@ export const defaultRegistry = {
     playedObjectKeywordGrantExpressionParser({
       instructions: instructionParsers,
       expressions: [singleInstructionExpressionParser],
+    }),
+    playedObjectDelayedDeckBottomExpressionParser({
+      instructions: instructionParsers,
+      expressions: [singleInstructionExpressionParser, generalExpressionParser],
     }),
     opponentOptionalCostExpressionParser({
       instructions: instructionParsers,
