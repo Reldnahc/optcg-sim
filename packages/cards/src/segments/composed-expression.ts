@@ -82,6 +82,9 @@ export function conditionalExpressionSegmentParser(options: {
   readonly conditions: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
 }): SegmentParser {
   return (input: ParseInput) => {
     const parsed = parseLeadingConditionalExpression(
@@ -102,6 +105,36 @@ export function conditionalExpressionSegmentParser(options: {
           ? {}
           : { source: sourceParts.thenSource }),
       };
+      for (const parser of options.expressions ?? []) {
+        const parsed = parser(thenInput);
+        if (parsed !== undefined && parsed.rest.length === 0) {
+          return {
+            effect: {
+              type: "conditional",
+              if: condition.condition,
+              then: parsed.effect,
+            },
+            evidence: [
+              "expression:conditional",
+              ...condition.evidence,
+              ...parsed.evidence,
+            ],
+            presentationSpans: [
+              ...(sourceParts?.conditionSource === undefined
+                ? []
+                : [
+                    sourceSpan(
+                      "span:condition:resolution",
+                      "condition",
+                      sourceParts.conditionSource,
+                      condition.evidence,
+                    ),
+                  ]),
+              ...(parsed.presentationSpans ?? []),
+            ],
+          };
+        }
+      }
       const directThen = syntheticInstructionSegmentParser(
         options.instructions,
       )(thenInput);

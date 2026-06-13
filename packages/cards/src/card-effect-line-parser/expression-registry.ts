@@ -145,6 +145,22 @@ function generalExpressionParser(input: ParseInput) {
 }
 
 const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
+  const conditionalSearch = conditionalExpressionSegmentParser({
+    conditions: conditionParsers,
+    connectors: [parseThenConnector, parseAndConnector],
+    instructions: instructionParsers,
+    expressions: [searchRevealExpressionParser],
+  })(input);
+  if (conditionalSearch !== undefined) {
+    return {
+      effect: conditionalSearch.effect,
+      evidence: conditionalSearch.evidence,
+      rest: "",
+      ...(conditionalSearch.presentationSpans === undefined
+        ? {}
+        : { presentationSpans: conditionalSearch.presentationSpans }),
+    };
+  }
   if (/\.\s+Then,\s+/u.test(input.text)) {
     return undefined;
   }
@@ -152,6 +168,10 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     conditions: conditionParsers,
     connectors: [parseThenConnector, parseAndConnector],
     instructions: instructionParsers,
+    expressions: [
+      searchRevealExpressionParser,
+      singleInstructionExpressionParser,
+    ],
   })(input);
   if (parsed === undefined) {
     return undefined;
