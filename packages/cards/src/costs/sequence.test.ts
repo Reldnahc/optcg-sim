@@ -111,6 +111,37 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses filtered trash-to-deck-bottom move-card costs with filter-before-card wording", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "place 3 {Revolutionary Army} type cards from your trash at the bottom of your deck in any order",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "moveCards",
+        count: 3,
+        chooser: "self",
+        from: { player: "self", zone: "trash" },
+        to: { player: "self", zone: "deck", position: "bottom" },
+        order: "chooserChoice",
+        filter: { typesAny: ["Revolutionary Army"] },
+        optional: true,
+      },
+      evidence: [
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:trash",
+        "destination:deck",
+        "position:bottom",
+        "order:anyOrder",
+        "filter:type",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses field card move costs to deck bottom as reusable moveCards costs", () => {
     expect(
       parseOptionalCostSequence({

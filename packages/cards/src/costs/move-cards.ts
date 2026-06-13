@@ -229,6 +229,21 @@ function parseTrashToBottomDeckCostRoute(text: string):
     return { evidence: [] };
   }
 
+  const filterBeforeCardMatch =
+    /^(?<filter>.+?\s+cards?)\s+from your trash at the bottom of your deck in any order$/i.exec(
+      text,
+    );
+  const filterBeforeCardText = filterBeforeCardMatch?.groups?.["filter"];
+  if (filterBeforeCardText !== undefined) {
+    const predicates = parseCardFilterPredicates({
+      text: filterBeforeCardText,
+    });
+    if (predicates === undefined || predicates.rest.length > 0) {
+      return undefined;
+    }
+    return { filter: predicates.filter, evidence: predicates.evidence };
+  }
+
   const filteredMatch =
     /^cards?\s+(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/i.exec(
       text,
