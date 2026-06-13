@@ -9,6 +9,7 @@ export const restedCardCountConditionPrimitive = {
     "condition:comparator:lte",
     "condition:comparator:eq",
     "condition:threshold:positiveInteger",
+    "player:opponent",
     "filter:state:rested",
   ],
 } as const;
@@ -16,11 +17,16 @@ export const restedCardCountConditionPrimitive = {
 export const parseRestedCardCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
-  const subjectMatch = /^you have\s+(?<comparison>.+)$/i.exec(input.text);
+  const subjectMatch =
+    /^(?<player>you|your opponent) (?:have|has)\s+(?<comparison>.+)$/i.exec(
+      input.text,
+    );
+  const playerText = subjectMatch?.groups?.["player"];
   const comparisonText = subjectMatch?.groups?.["comparison"];
-  if (comparisonText === undefined) {
+  if (playerText === undefined || comparisonText === undefined) {
     return undefined;
   }
+  const player = playerText.toLowerCase() === "you" ? "self" : "opponent";
 
   const comparison = parseLeadingCountComparison({ text: comparisonText });
   if (comparison === undefined) {
@@ -34,7 +40,7 @@ export const parseRestedCardCountCondition: ConditionParser = (
   return {
     condition: {
       type: "fieldCount",
-      player: "self",
+      player,
       filter: { state: "rested" },
       op: comparison.op,
       value: comparison.value,
@@ -42,7 +48,7 @@ export const parseRestedCardCountCondition: ConditionParser = (
     evidence: [
       "condition:fieldCount",
       ...comparison.evidence,
-      "player:self",
+      player === "self" ? "player:self" : "player:opponent",
       "filter:state:rested",
     ],
     rest: "",

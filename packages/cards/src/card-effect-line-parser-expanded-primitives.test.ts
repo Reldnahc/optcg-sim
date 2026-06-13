@@ -176,6 +176,56 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     });
   });
 
+  it("parses hand cost reduction with leader type, Life count, and opponent rested-card conditions", () => {
+    const result = parseCardEffectLine(
+      "If your Leader has the {Fish-Man} type, you have 3 or less Life cards and your opponent has 5 or more rested cards, give this card in your hand -3 cost.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          sourceZone: "hand",
+          target: { type: "self" },
+          value: -3,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "and",
+              conditions: [
+                { type: "hasCardInZone", filter: { typesAny: ["Fish-Man"] } },
+                { type: "lifeCount", player: "self", op: "lte", value: 3 },
+                {
+                  type: "fieldCount",
+                  player: "opponent",
+                  filter: { state: "rested" },
+                  op: "gte",
+                  value: 5,
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:conditionAnd",
+        "condition:leaderIdentity",
+        "filter:type",
+        "condition:lifeCount",
+        "condition:fieldCount",
+        "player:opponent",
+        "filter:state:rested",
+        "instruction:modifyCost",
+        "zone:hand",
+      ]),
+    );
+  });
+
   it("parses no-matching-character condition into negative power modifier", () => {
     const result = parseCardEffectLine(
       'If you have no Characters with a type including "Whitebeard Pirates" and a cost of 8 or more, give this Character -4000 power.',

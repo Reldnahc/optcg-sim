@@ -14,6 +14,7 @@ it("defines rested card count as a field-count primitive parent", () => {
       "condition:comparator:lte",
       "condition:comparator:eq",
       "condition:threshold:positiveInteger",
+      "player:opponent",
       "filter:state:rested",
     ],
   });
@@ -37,6 +38,30 @@ it("parses rested card thresholds as a reusable self field-count primitive", () 
       "condition:comparator:gte",
       "condition:threshold:positiveInteger",
       "player:self",
+      "filter:state:rested",
+    ],
+    rest: "",
+  });
+});
+
+it("parses rested card thresholds for opponent field counts", () => {
+  expect(
+    parseRestedCardCountCondition({
+      text: "your opponent has 5 or more rested cards",
+    }),
+  ).toEqual({
+    condition: {
+      type: "fieldCount",
+      player: "opponent",
+      filter: { state: "rested" },
+      op: "gte",
+      value: 5,
+    },
+    evidence: [
+      "condition:fieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "player:opponent",
       "filter:state:rested",
     ],
     rest: "",

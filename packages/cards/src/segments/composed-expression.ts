@@ -542,7 +542,7 @@ function splitConditionConjunction(text: string): string[] {
   const protectedSubject = "__condition_subject_you_and_your_opponent__";
   return text
     .replace(/\byou and your opponent\b/giu, protectedSubject)
-    .split(/\s+and\s+/iu)
+    .split(/\s+and\s+|,\s+(?=(?:you|your|your opponent|the number)\b)/iu)
     .map((part) =>
       part.replace(new RegExp(protectedSubject, "gu"), "you and your opponent"),
     );
