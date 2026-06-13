@@ -58,6 +58,7 @@ import {
   playedObjectKeywordGrantExpressionParser,
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
+  revealedHandPlayExpressionParser,
   revealTopConditionalExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
@@ -233,6 +234,7 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  revealedHandPlayExpressionParser,
   revealTopPlayRestedExpressionParser,
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
@@ -301,6 +303,7 @@ export const defaultRegistry = {
             generalExpressionParser,
           ],
         }),
+        revealedHandPlayExpressionParser,
         revealTopPlayRestedExpressionParser,
         searchRevealExpressionParser,
         playedObjectKeywordGrantExpressionParser({
@@ -408,6 +411,7 @@ export const defaultRegistry = {
             generalExpressionParser,
           ],
         }),
+        revealedHandPlayExpressionParser,
         searchRevealExpressionParser,
         playedObjectKeywordGrantExpressionParser({
           instructions: instructionParsers,
@@ -460,6 +464,7 @@ export const defaultRegistry = {
       instructions: instructionParsers,
       expressions: [singleInstructionExpressionParser, generalExpressionParser],
     }),
+    revealedHandPlayExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     playedObjectKeywordGrantExpressionParser({
