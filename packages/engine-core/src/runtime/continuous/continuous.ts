@@ -82,6 +82,16 @@ const mapEffectToModifier = (
       operation: { type: "addPower", value },
     };
   }
+  if (effect.type === "allowAttackActiveCharacters") {
+    return {
+      layer: "attackPermission",
+      target,
+      operation: {
+        type: "attackPermission",
+        permission: "attackActiveCharacters",
+      },
+    };
+  }
   if (effect.type === "giveKeyword") {
     return {
       layer: "keywordAdd",

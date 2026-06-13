@@ -324,6 +324,7 @@ export const isSupportedContinuousQueueEffect = (
 ): effect is ContinuousQueueEffect => {
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "allowAttackActiveCharacters" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "giveAttribute" &&
     effect.type !== "setBasePower" &&
@@ -346,6 +347,12 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (!isSupportedDuration(effect.duration)) return false;
+  if (
+    effect.type === "allowAttackActiveCharacters" &&
+    !isSupportedTarget(effect.target)
+  ) {
+    return false;
+  }
   if (
     effect.type === "modifyPower" &&
     (!isSupportedModifierValue(effect.value) ||
@@ -425,6 +432,7 @@ export const isSupportedContinuousQueueEffect = (
   }
   if (
     effect.type !== "modifyPower" &&
+    effect.type !== "allowAttackActiveCharacters" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "giveAttribute" &&
     effect.type !== "invalidateEffects" &&

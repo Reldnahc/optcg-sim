@@ -300,6 +300,42 @@ export function parseYourCharactersTarget(
     };
   }
 
+  const bareMatch = /^of your Characters?\b\s*(?<rest>.*)$/i.exec(input.text);
+  if (bareMatch !== null) {
+    const predicateText = bareMatch.groups?.["rest"]?.trim() ?? "";
+    const predicates =
+      predicateText.length > 0
+        ? parseCardFilterPredicates(
+            { text: predicateText },
+            { powerSemantics: "current" },
+          )
+        : undefined;
+
+    return {
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"], ...(predicates?.filter ?? {}) },
+        },
+      },
+      evidence: [
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        ...(predicates?.evidence ?? []),
+      ],
+      rest: normalizeTargetRest(predicates?.rest ?? predicateText),
+    };
+  }
+
   const typedMatch =
     /^of your\s+(?<predicates>.+?)\s+Characters?\b\s*(?<rest>.*)$/i.exec(
       input.text,
@@ -341,42 +377,7 @@ export function parseYourCharactersTarget(
     };
   }
 
-  const match = /^of your Characters?\b\s*(?<rest>.*)$/i.exec(input.text);
-  if (match === null) {
-    return undefined;
-  }
-  const predicateText = match.groups?.["rest"]?.trim() ?? "";
-  const predicates =
-    predicateText.length > 0
-      ? parseCardFilterPredicates(
-          { text: predicateText },
-          { powerSemantics: "current" },
-        )
-      : undefined;
-
-  return {
-    target: {
-      type: "choose",
-      request: {
-        timing: "onResolution",
-        chooser: "self",
-        player: "self",
-        zone: "characterArea",
-        min: 0,
-        max: 1,
-        allowFewerIfUnavailable: true,
-        visibility: "public",
-        filter: { categories: ["character"], ...(predicates?.filter ?? {}) },
-      },
-    },
-    evidence: [
-      "target:yourCharacters",
-      "player:self",
-      "filter:category:character",
-      ...(predicates?.evidence ?? []),
-    ],
-    rest: normalizeTargetRest(predicates?.rest ?? predicateText),
-  };
+  return undefined;
 }
 
 const isSameCardinality = (left: Cardinality, right: Cardinality): boolean =>

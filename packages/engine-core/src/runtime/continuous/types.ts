@@ -5,6 +5,7 @@ export type ContinuousQueueEffect = Extract<
   {
     type:
       | "modifyPower"
+      | "allowAttackActiveCharacters"
       | "giveKeyword"
       | "giveAttribute"
       | "setBasePower"

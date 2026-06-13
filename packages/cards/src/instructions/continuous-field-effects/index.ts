@@ -1,3 +1,4 @@
+export { parseAllowAttackActiveCharactersInstruction } from "./attack-permissions.js";
 export {
   parseBasePowerBecomeInstruction,
   parseSetBasePowerInstruction,

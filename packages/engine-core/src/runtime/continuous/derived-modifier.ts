@@ -105,6 +105,30 @@ export const effectToDerivedModifier = (
       operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }
+  if (effect.type === "allowAttackActiveCharacters") {
+    if (
+      effect.target.type !== "self" &&
+      effect.target.type !== "myLeader" &&
+      !(effect.target.type === "all" && isSupportedTarget(effect.target))
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported attack permission target"),
+      );
+    }
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported attack permission duration"),
+      );
+    }
+    return {
+      layer: "attackPermission",
+      target: effect.target,
+      operation: {
+        type: "attackPermission",
+        permission: "attackActiveCharacters",
+      },
+    };
+  }
   if (effect.type === "giveAttribute") {
     if (effect.target.type !== "self" && effect.target.type !== "myLeader") {
       if (!(effect.target.type === "all" && isSupportedTarget(effect.target))) {

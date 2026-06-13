@@ -35,4 +35,42 @@ describe("OP14 attack permission parser support", () => {
       ]),
     );
   });
+
+  it.each([
+    [
+      "[When Attacking]",
+      "[When Attacking] Up to 1 of your {Navy} type Leader or Character cards can also attack active Characters during this turn.",
+      "target:yourLeaderOrCharacters",
+    ],
+    [
+      "[Activate: Main]",
+      "[Activate: Main] You may rest this Character: Up to 1 of your {Navy} type Leader or Character cards can also attack active Characters during this turn.",
+      "target:yourLeaderOrCharacters",
+    ],
+    [
+      "[On Play]",
+      "[On Play] Up to 1 of your Characters can also attack active Characters during this turn.",
+      "target:yourCharacters",
+    ],
+  ])(
+    "parses active Character attack permission as a reusable body under %s",
+    (_entry, text, targetEvidence) => {
+      const result = parseCardEffectLine(text);
+
+      expect(result).toHaveProperty("block");
+      if (result === undefined || !("block" in result)) {
+        throw new Error("expected parsed effect line");
+      }
+      expect(JSON.stringify(result.block)).toContain(
+        "allowAttackActiveCharacters",
+      );
+      expect(result.evidence).toEqual(
+        expect.arrayContaining([
+          "instruction:allowAttackActiveCharacters",
+          targetEvidence,
+          "duration:thisTurn",
+        ]),
+      );
+    },
+  );
 });

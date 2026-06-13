@@ -26,24 +26,14 @@ import type {
 import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
 import type { Trigger } from "./effect-triggers.js";
 
+export type { FailurePolicy, SourcePresencePolicy } from "./effect-policies.js";
+
 export type {
   EffectCategory,
   EffectEntryPointFilter,
   OpponentActivationKind,
   Trigger,
 } from "./effect-triggers.js";
-
-export type FailurePolicy =
-  | "doAsMuchAsPossible"
-  | "requiresAll"
-  | "skipIfNoLegalTarget"
-  | "optionalIfPossible";
-
-export type SourcePresencePolicy =
-  | "mustRemainInSameZone"
-  | "resolveFromDestinationZone"
-  | "resolveFromLastKnownInformation"
-  | "noSourceRequired";
 
 export type Condition =
   | { type: "donCount"; target?: Target; min: number }
@@ -928,6 +918,11 @@ export type Effect =
       type: "modifyPower";
       target: Target;
       value: number | DynamicNumberValue;
+      duration: Duration;
+    }
+  | {
+      type: "allowAttackActiveCharacters";
+      target: Target;
       duration: Duration;
     }
   | { type: "setPowerToZero"; target: Target; duration: Duration }

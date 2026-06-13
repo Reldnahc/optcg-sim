@@ -186,6 +186,7 @@ export type ModifierLayer =
   | "keywordAdd"
   | "attributeAdd"
   | "keywordRemove"
+  | "attackPermission"
   | "restriction"
   | "protection"
   | "donPhasePlacement";
@@ -200,6 +201,7 @@ export type ModifierOperation =
   | { type: "addKeyword"; keyword: Keyword }
   | { type: "addAttribute"; attribute: Attribute }
   | { type: "removeKeyword"; keyword: Keyword }
+  | { type: "attackPermission"; permission: "attackActiveCharacters" }
   | {
       type: "restriction";
       restriction: string;

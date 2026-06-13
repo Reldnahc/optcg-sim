@@ -117,6 +117,19 @@ const hasRestriction = (
   return false;
 };
 
+const hasAttackPermission = (state: GameState, card: CardInstance): boolean => {
+  const effects = allContinuousEffects(state);
+  for (const effect of effects) {
+    if (effect.modifier.layer !== "attackPermission") continue;
+    if (effect.modifier.operation.type !== "attackPermission") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
+    return true;
+  }
+  return false;
+};
+
 export const attackTrashCostCountForCard = (
   state: GameState,
   card: CardInstance,
@@ -317,6 +330,7 @@ const legalTargetsForAttacker = (
     attacker.turnPlayed === state.turn.globalTurn;
   const rushCharacterOnly =
     isPlayedThisTurnCharacter && attackerKeywords.includes("rushCharacter");
+  const canAttackActiveCharacters = hasAttackPermission(state, attacker);
 
   if (!rushCharacterOnly) {
     resolveCombatMetadata(state, opponent.leader);
@@ -325,7 +339,7 @@ const legalTargetsForAttacker = (
 
   for (const character of opponent.characters) {
     resolveCombatMetadata(state, character);
-    if (character.state === "rested") {
+    if (character.state === "rested" || canAttackActiveCharacters) {
       targets.push(character.instanceId);
     }
   }

@@ -3,6 +3,7 @@ export { parseAddFromTrashToLifeInstruction } from "./add-from-trash-to-life.js"
 export { parseActivateReferencedEffectInstruction } from "./activate-referenced-effect.js";
 export { parseActivateSelectedEventInstruction } from "./activate-selected-event.js";
 export {
+  parseAllowAttackActiveCharactersInstruction,
   parseBasePowerBecomeInstruction,
   parseContinuousInvalidateEffectsInstruction,
   parseDonPhasePlacementInstruction,

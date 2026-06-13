@@ -119,6 +119,7 @@ export type PrimitiveEvidence =
   | "instruction:attackCost"
   | "instruction:changeAttackTarget"
   | "instruction:modifyPower"
+  | "instruction:allowAttackActiveCharacters"
   | "instruction:invalidateEffects"
   | "instruction:setBasePower"
   | "instruction:swapBasePower"
