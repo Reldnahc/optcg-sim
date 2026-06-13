@@ -484,6 +484,57 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses this Character keyword and cost gains as separate reusable modifiers", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "this Character gains [Blocker] and +3 cost.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "giveKeyword",
+              target: { type: "self" },
+              keyword: "blocker",
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "modifyCost",
+              player: "self",
+              target: { type: "self" },
+              value: 3,
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "modifier:positiveCost",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses implicit this Character power gain inside composed continuous text", () => {
     expect(
       parseYourLeaderConditionalPowerInstruction(

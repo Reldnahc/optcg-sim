@@ -6,6 +6,7 @@ import { parseThatCharacterReference } from "../../../references/index.js";
 import type { InstructionParseResult } from "../../../types.js";
 import type { ContinuousInstructionParser } from "../shared.js";
 import { continuousDuration, continuousDurationEvidence } from "../shared.js";
+import { parseKeywordAndPositiveCostGrant } from "./keyword-and-cost.js";
 import { parseKeywordAndPositivePowerGrant } from "./keyword-and-power.js";
 import { parseNamedCardsAndSelfKeywordGrant } from "./named-and-self.js";
 import { parseKeywordGrantForTarget } from "./shared.js";
@@ -43,6 +44,12 @@ const parseLeaderKeywordGrant: ContinuousInstructionParser = (
   }
 
   return (
+    parseKeywordAndPositiveCostGrant({
+      target: leaderTarget.target,
+      targetEvidence: leaderTarget.evidence,
+      text: leaderKeywordText,
+      context,
+    }) ??
     parseKeywordAndPositivePowerGrant({
       target: leaderTarget.target,
       targetEvidence: leaderTarget.evidence,
@@ -78,6 +85,12 @@ const parseSelfKeywordGrant = (
   }
 
   return (
+    parseKeywordAndPositiveCostGrant({
+      target: { type: "self" },
+      targetEvidence: target.evidence,
+      text: keywordText,
+      context,
+    }) ??
     parseKeywordGrantForTarget({
       target: { type: "self" },
       targetEvidence: target.evidence,
