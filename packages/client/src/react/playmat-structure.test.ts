@@ -548,4 +548,11 @@ describe("playmat structure", () => {
     );
     assert.match(modalStyles, /\.modal-frame\s*\{[^}]*z-index:\s*30;/u);
   });
+
+  test("opponent deck stack renders above opponent trash when stacked upward", async () => {
+    const styles = await readFile(playmatStylesPath, "utf8");
+
+    assert.match(styles, /\.opponent-deck\s*\{[^}]*z-index:\s*2;/u);
+    assert.match(styles, /\.opponent-trash\s*\{[^}]*z-index:\s*1;/u);
+  });
 });
