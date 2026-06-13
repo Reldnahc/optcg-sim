@@ -73,6 +73,7 @@ export {
   parseReturnToOwnerHandInstruction,
   selectThenReturnToOwnerHand,
 } from "./return-to-owner-hand.js";
+export { parseReturnOrDeckBottomInstruction } from "./return-or-deck-bottom.js";
 export { parseForcedReturnDonInstruction } from "./return-don.js";
 export {
   parseExplicitProtectionInstruction,
