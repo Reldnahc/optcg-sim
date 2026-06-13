@@ -18,7 +18,9 @@ export type CharacterFieldCountFilter = Required<
   Pick<CardFilter, "categories">
 > & {
   state?: "active" | "rested";
+  colorsAny?: NonNullable<CardFilter["colorsAny"]>;
   names?: string[];
+  nameNot?: string[];
   typesAny?: string[];
   typesIncludeAny?: string[];
   attachedDon?: NumericFilter;
@@ -41,7 +43,9 @@ export const isSupportedCharacterFieldCountFilter = (
     if (
       key !== "categories" &&
       key !== "state" &&
+      key !== "colorsAny" &&
       key !== "names" &&
+      key !== "nameNot" &&
       key !== "typesAny" &&
       key !== "typesIncludeAny" &&
       key !== "attachedDon" &&
@@ -64,7 +68,9 @@ export const isSupportedCharacterFieldCountFilter = (
   }
   return (
     isSupportedFieldState(filter.state) &&
+    isNonEmptyStringArray(filter.colorsAny) &&
     isNonEmptyStringArray(filter.names) &&
+    isNonEmptyStringArray(filter.nameNot) &&
     isNonEmptyStringArray(filter.typesAny) &&
     isNonEmptyStringArray(filter.typesIncludeAny) &&
     hasSupportedNumericFilter(filter.attachedDon) &&
@@ -95,6 +101,12 @@ export const cardMatchesCharacterFieldCountFilter = (
     return false;
   }
   if (
+    filter.colorsAny !== undefined &&
+    !filter.colorsAny.some((colorName) => metadata.colors.includes(colorName))
+  ) {
+    return false;
+  }
+  if (
     filter.typesAny !== undefined &&
     !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
   ) {
@@ -111,6 +123,12 @@ export const cardMatchesCharacterFieldCountFilter = (
   if (
     filter.names !== undefined &&
     !cardMatchesAnyName(metadata, filter.names)
+  ) {
+    return false;
+  }
+  if (
+    filter.nameNot !== undefined &&
+    cardMatchesAnyName(metadata, filter.nameNot)
   ) {
     return false;
   }
