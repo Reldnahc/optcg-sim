@@ -417,6 +417,20 @@ describe("event reaction predicate routing", () => {
       evidence: ["trigger:opponentActivated", "activation:event"],
     },
     {
+      text: "you activate an Event",
+      trigger: {
+        type: "effectQueued",
+        player: "self",
+        sourceFilter: { categories: ["event"] },
+      },
+      evidence: [
+        "trigger:effectQueued",
+        "player:self",
+        "filter:category:event",
+        "activation:event",
+      ],
+    },
+    {
       text: "your opponent activates an Event or [Blocker]",
       trigger: {
         type: "opponentActivated",

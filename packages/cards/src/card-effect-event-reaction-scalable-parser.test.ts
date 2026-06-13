@@ -202,6 +202,45 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses self Event activation reactions through canonical effect queue events", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [Once Per Turn] When you activate an Event, add up to 1 DON!! card from your DON!! deck and set it as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "opponentTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "effectQueued",
+          player: "self",
+          sourceFilter: { categories: ["event"] },
+        },
+        effect: {
+          type: "moveCards",
+          min: 0,
+          count: 1,
+          from: { player: "self", zone: "donDeck", position: "top" },
+          to: { player: "self", zone: "costArea" },
+          destinationState: "active",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:effectQueued",
+        "player:self",
+        "filter:category:event",
+        "activation:event",
+        "instruction:moveCards",
+        "zone:donDeck",
+        "destination:costArea",
+        "state:active",
+      ]),
+    );
+  });
+
   it("parses player-scoped Life-removal reactions independently from DON markers", () => {
     const result = parseCardEffectLine(
       "[DON!! x1] [Your Turn] [Once Per Turn] When a card is removed from your opponent's Life cards, draw 2 cards and trash 1 card from your hand.",
