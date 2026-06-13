@@ -407,6 +407,97 @@ describe("card effect line parser search effects", () => {
     );
   });
 
+  it("parses public top-of-deck name-or-event search as decomposed looked-set primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck; reveal up to 1 [Monkey.D.Luffy] or 1 red Event and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "revealTop",
+                player: "self",
+                zone: "deck",
+                count: 5,
+                saveAs: "set:search-look",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectFromSet",
+                set: "set:search-look",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  anyOf: [
+                    { names: ["Monkey.D.Luffy"] },
+                    { colorsAny: ["red"], categories: ["event"] },
+                  ],
+                },
+                saveAs: "searchSelection:hand",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "revealSelected",
+                selection: "searchSelection:hand",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "ifPreviousSucceeded",
+              effect: {
+                type: "moveSelected",
+                selection: "searchSelection:hand",
+                from: "set:search-look",
+                to: "hand",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "placeSetRemainder",
+                set: "set:search-look",
+                owner: "self",
+                destination: "deck",
+                position: "bottom",
+                order: "chooser",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:revealSelected",
+        "instruction:moveSelected",
+        "instruction:placeSetRemainder",
+        "filter:anyOf",
+        "filter:name",
+        "filter:color",
+        "filter:category:event",
+        "destination:hand",
+        "reveal:bothPlayers",
+        "remaining:bottomDeck",
+      ]),
+    );
+  });
+
   it("parses plural public top-of-deck type search with trailing hand trash", () => {
     const result = parseCardEffectLine(
       "[Main] Look at 5 cards from the top of your deck; reveal up to 2 {Navy} type cards, add them to your hand and place the rest at the bottom of your deck in any order. Then, trash 1 card from your hand.",

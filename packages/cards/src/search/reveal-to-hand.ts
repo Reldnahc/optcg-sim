@@ -156,7 +156,7 @@ const parseRepeatedUpToOneSearchSelection = (
   input: ParseInput,
 ): SearchFilterParseResult | undefined => {
   const match =
-    /^(?<left>.+?)\s+or\s+up to 1\s+(?<right>.+?)\s+and add it to your hand\.\s+(?<rest>.+)$/i.exec(
+    /^(?<left>.+?)\s+or\s+(?:up to )?1\s+(?<right>.+?)\s+and add it to your hand\.\s+(?<rest>.+)$/i.exec(
       input.text,
     );
   const leftText = match?.groups?.["left"];

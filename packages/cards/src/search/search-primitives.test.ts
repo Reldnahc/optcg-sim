@@ -203,6 +203,44 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses repeated one-name-or-event search filters independently from reveal wording", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 [Monkey.D.Luffy] or 1 red Event and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        anyOf: [
+          { names: ["Monkey.D.Luffy"] },
+          { colorsAny: ["red"], categories: ["event"] },
+        ],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+    });
+  });
+
+  it("parses mixed event-or-character search branches with repeated cardinality", () => {
+    expect(
+      parseSearchSelectionToHand({
+        text: "reveal up to 1 red Event or up to 1 Character card with a cost of 3 or more and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+      }),
+    ).toMatchObject({
+      filter: {
+        anyOf: [
+          { colorsAny: ["red"], categories: ["event"] },
+          { categories: ["character"], cost: { min: 3 } },
+        ],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+    });
+  });
+
   it("parses multi-type generic card filters with cost predicates", () => {
     expect(
       parseSearchSelectionToHand({
