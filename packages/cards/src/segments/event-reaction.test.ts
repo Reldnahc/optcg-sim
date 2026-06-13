@@ -533,6 +533,39 @@ describe("event reaction predicate routing", () => {
         "replacementSource:cardEffect",
       ],
     },
+    {
+      text: "a Character is rested by your effect",
+      trigger: {
+        type: "anyOf",
+        triggers: [
+          {
+            type: "cardRested",
+            target: "any",
+            player: "self",
+            filter: { categories: ["character"] },
+            sourceController: "self",
+            sourceKind: "effect",
+          },
+          {
+            type: "cardRested",
+            target: "any",
+            player: "opponent",
+            filter: { categories: ["character"] },
+            sourceController: "self",
+            sourceKind: "effect",
+          },
+        ],
+      },
+      evidence: [
+        "trigger:cardRested",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+        "replacementSource:self",
+        "replacementSource:cardEffect",
+      ],
+    },
   ] satisfies Array<{
     readonly text: string;
     readonly trigger: Trigger;

@@ -561,6 +561,38 @@ function parsePlayedUsingSourceEffect(
 const parseCardRestedPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
 
+  if (normalized.toLowerCase() === "a character is rested by your effect") {
+    return {
+      trigger: anyOfTrigger([
+        {
+          type: "cardRested",
+          target: "any",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+        {
+          type: "cardRested",
+          target: "any",
+          player: "opponent",
+          filter: { categories: ["character"] },
+          sourceController: "self",
+          sourceKind: "effect",
+        },
+      ]),
+      evidence: [
+        "trigger:cardRested",
+        "player:self",
+        "player:opponent",
+        "composition:triggerAnyOf",
+        "filter:category:character",
+        "replacementSource:self",
+        "replacementSource:cardEffect",
+      ],
+    };
+  }
+
   if (normalized.toLowerCase() === "this character becomes rested") {
     return {
       trigger: {
@@ -861,7 +893,9 @@ export function implicitEventReactionExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input: ParseInput) => {
-    const match = /^When (?<when>.+?),\s*(?<body>.+)$/iu.exec(input.text);
+    const match = /^(?:When|If) (?<when>.+?),\s*(?<body>.+)$/iu.exec(
+      input.text,
+    );
     const when = match?.groups?.["when"];
     const body = match?.groups?.["body"];
     if (when === undefined || body === undefined) {

@@ -87,6 +87,68 @@ describe("OP14 rested-state and rested-trigger parsing", () => {
     );
   });
 
+  it("parses if-worded reactions for Characters rested by your effect", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] If a Character is rested by your effect, set up to 1 of your DON!! cards as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "anyOf",
+          triggers: [
+            {
+              type: "cardRested",
+              target: "any",
+              player: "self",
+              filter: { categories: ["character"] },
+              sourceController: "self",
+              sourceKind: "effect",
+            },
+            {
+              type: "cardRested",
+              target: "any",
+              player: "opponent",
+              filter: { categories: ["character"] },
+              sourceController: "self",
+              sourceKind: "effect",
+            },
+          ],
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectTargets",
+                request: {
+                  player: "self",
+                  zone: "costArea",
+                  filter: { categories: ["don"], state: "rested" },
+                },
+              },
+            },
+            { effect: { type: "activate" } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "marker:oncePerTurn",
+        "trigger:cardRested",
+        "replacementSource:self",
+        "replacementSource:cardEffect",
+        "instruction:activate",
+        "filter:category:don",
+      ]),
+    );
+  });
+
   it("parses source-filtered rested reactions with optional return-DON action resume", () => {
     const result = parseCardEffectLine(
       "When this Character becomes rested by your opponent's Character's effect, you may return 1 DON!! card from your field to your DON!! deck. If you do, set this Character as active.",
