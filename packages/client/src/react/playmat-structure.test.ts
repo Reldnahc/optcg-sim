@@ -80,7 +80,12 @@ describe("playmat structure", () => {
     assert.match(appShellStyles, /--playmat-grid-gap:\s*6px;/);
     assert.match(
       appShellStyles,
-      /--match-surface-board:\s*rgba\(34,\s*34,\s*36,\s*0\.92\);/u,
+      /--match-playmat-color-rgb:\s*34,\s*34,\s*36;/u,
+    );
+    assert.match(appShellStyles, /--match-playmat-opacity:\s*0\.92;/u);
+    assert.match(
+      appShellStyles,
+      /--match-surface-board:\s*rgba\(\s*var\(--match-playmat-color-rgb\),\s*var\(--match-playmat-opacity\)\s*\);/u,
     );
     assert.match(
       appShellStyles,

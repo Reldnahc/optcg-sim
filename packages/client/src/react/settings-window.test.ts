@@ -40,6 +40,16 @@ describe("settings window", () => {
     assert.match(markup, /Clear background/u);
     assert.match(markup, /Zone guide visibility/u);
     assert.match(markup, /Zone background visibility/u);
+    assert.match(markup, /Windows/u);
+    assert.match(markup, /Window opacity/u);
+    assert.match(markup, /Window color/u);
+    assert.match(markup, /Playmat/u);
+    assert.match(markup, /Playmat opacity/u);
+    assert.match(markup, /Playmat color/u);
+    assert.match(markup, /<span>Window opacity<\/span><input[^>]*min="50"/u);
+    assert.match(markup, /<span>Playmat opacity<\/span><input[^>]*min="50"/u);
+    assert.match(markup, /class="[^"]*settings-color-swatch/u);
+    assert.match(markup, /pattern="#\[0-9a-fA-F\]\{6\}"/u);
     assert.match(markup, /Sound volume/u);
     assert.match(markup, /Reduced motion/u);
     assert.match(markup, /type="range"/u);
@@ -174,6 +184,10 @@ describe("settings window", () => {
     assert.match(settingsStore, /optcg:client:confirm-attach-don/u);
     assert.match(settingsStore, /optcg:client:reduced-motion/u);
     assert.match(settingsStore, /optcg:client:sound-volume/u);
+    assert.match(settingsStore, /optcg:client:window-color/u);
+    assert.match(settingsStore, /optcg:client:window-opacity/u);
+    assert.match(settingsStore, /optcg:client:playmat-color/u);
+    assert.match(settingsStore, /optcg:client:playmat-opacity/u);
     assert.match(settingsStore, /groupId:\s*"appearance"/u);
     assert.match(settingsStore, /groupId:\s*"gameplay"/u);
     assert.match(settingsStore, /groupId:\s*"sound"/u);
@@ -188,11 +202,58 @@ describe("settings window", () => {
     assert.match(settingsWindow, /type="file"/u);
     assert.match(settingsWindow, /setZoneGuideVisibility/u);
     assert.match(settingsWindow, /setZoneBackgroundVisibility/u);
+    assert.match(settingsWindow, /setWindowColor/u);
+    assert.match(settingsWindow, /setWindowOpacity/u);
+    assert.match(settingsWindow, /setPlaymatColor/u);
+    assert.match(settingsWindow, /setPlaymatOpacity/u);
+    assert.match(settingsWindow, /settings-color-swatch/u);
+    assert.doesNotMatch(settingsWindow, /type="color"/u);
     assert.match(settingsWindow, /setSoundVolume/u);
     assert.match(settingsWindow, /setReducedMotion/u);
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
+  });
+
+  test("match app applies custom window and playmat color variables", async () => {
+    const [matchApp, appShellStyles, floatingWindowStyles, playmatStyles] =
+      await Promise.all([
+        readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+        readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+        readFile(
+          join(sourceDirectory, "styles", "floating-window.css"),
+          "utf8",
+        ),
+        readFile(join(sourceDirectory, "styles", "playmat.css"), "utf8"),
+      ]);
+
+    assert.match(matchApp, /windowSurfaceRgb/u);
+    assert.match(matchApp, /playmatSurfaceRgb/u);
+    assert.match(matchApp, /--match-window-color-rgb/u);
+    assert.match(matchApp, /--match-window-opacity/u);
+    assert.match(matchApp, /--match-playmat-color-rgb/u);
+    assert.match(matchApp, /--match-playmat-opacity/u);
+    assert.match(
+      appShellStyles,
+      /--match-surface-window:\s*rgba\(\s*var\(--match-window-color-rgb\),\s*var\(--match-window-opacity\)\s*\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--match-surface-board:\s*rgba\(\s*var\(--match-playmat-color-rgb\),\s*var\(--match-playmat-opacity\)\s*\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--match-surface-panel:\s*var\(--match-surface-window\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--match-surface-panel-raised:\s*var\(--match-surface-window\);/u,
+    );
+    assert.match(
+      floatingWindowStyles,
+      /background:\s*var\(--match-surface-window\);/u,
+    );
+    assert.match(playmatStyles, /background:\s*var\(--match-surface-board\);/u);
   });
 
   test("confirm attach DON setting reaches the selected-DON click path", async () => {

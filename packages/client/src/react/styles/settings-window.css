@@ -25,6 +25,65 @@
   accent-color: var(--match-accent);
 }
 
+.settings-surface-group {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.65);
+  min-width: 0;
+}
+
+.settings-surface-group h3 {
+  margin: 0;
+  color: var(--match-text);
+  font-size: var(--floating-window-small-font-size);
+  line-height: 1.2;
+}
+
+.settings-color-field {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.5);
+  min-width: 0;
+  color: var(--match-text);
+  font-size: var(--floating-window-small-font-size);
+}
+
+.settings-color-selector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(86px, 0.48fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.settings-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settings-color-swatch {
+  width: clamp(18px, calc(var(--card-height) / 8), 26px);
+  height: clamp(18px, calc(var(--card-height) / 8), 26px);
+  border: var(--floating-window-border-width) solid var(--match-border);
+  border-radius: calc(var(--floating-window-radius) * 0.42);
+  cursor: pointer;
+}
+
+.settings-color-swatch.is-selected {
+  border-color: var(--match-accent-strong);
+  box-shadow: 0 0 0 var(--floating-window-border-width) rgba(255, 220, 98, 0.35);
+}
+
+.settings-color-selector input[type="text"] {
+  min-width: 0;
+  border: var(--floating-window-border-width) solid var(--match-border-soft);
+  border-radius: calc(var(--floating-window-radius) * 0.55);
+  padding: 5px 7px;
+  color: var(--match-text);
+  background: var(--match-surface-field);
+  font: inherit;
+}
+
 .settings-secondary-button {
   min-height: clamp(30px, calc(var(--card-height) / 5), 40px);
   border: 0;

@@ -20,6 +20,10 @@ describe("match visual settings store", () => {
       "quickPayActivateMainCosts",
       "reducedMotion",
       "soundVolume",
+      "windowColor",
+      "windowOpacity",
+      "playmatColor",
+      "playmatOpacity",
       "zoneBackgroundVisibility",
       "zoneGuideVisibility",
     ] satisfies MatchVisualSettingId[]);
@@ -59,6 +63,10 @@ describe("match visual settings store", () => {
     saveMatchVisualSetting(storage, "quickPayActivateMainCosts", true);
     saveMatchVisualSetting(storage, "reducedMotion", true);
     saveMatchVisualSetting(storage, "soundVolume", 42);
+    saveMatchVisualSetting(storage, "windowColor", "  #223344  ");
+    saveMatchVisualSetting(storage, "windowOpacity", 49);
+    saveMatchVisualSetting(storage, "playmatColor", "#445566");
+    saveMatchVisualSetting(storage, "playmatOpacity", 63);
     saveMatchVisualSetting(storage, "zoneBackgroundVisibility", 37);
     saveMatchVisualSetting(storage, "zoneGuideVisibility", 82);
 
@@ -69,6 +77,10 @@ describe("match visual settings store", () => {
       quickPayActivateMainCosts: true,
       reducedMotion: true,
       soundVolume: 42,
+      windowColor: "#223344",
+      windowOpacity: 50,
+      playmatColor: "#445566",
+      playmatOpacity: 63,
       zoneBackgroundVisibility: 37,
       zoneGuideVisibility: 82,
     });
@@ -87,10 +99,28 @@ describe("match visual settings store", () => {
       "bad",
     );
     storage.setItem(matchVisualSettingDefinitions.soundVolume.storageKey, "-1");
+    storage.setItem(
+      matchVisualSettingDefinitions.windowColor.storageKey,
+      "red",
+    );
+    storage.setItem(
+      matchVisualSettingDefinitions.playmatColor.storageKey,
+      "#12345g",
+    );
+    storage.setItem(
+      matchVisualSettingDefinitions.windowOpacity.storageKey,
+      "120",
+    );
+    storage.setItem(
+      matchVisualSettingDefinitions.playmatOpacity.storageKey,
+      "-10",
+    );
 
     assert.deepEqual(loadMatchVisualSettings(storage), {
       ...defaultMatchVisualSettingsValues,
+      playmatOpacity: 50,
       soundVolume: 0,
+      windowOpacity: 100,
       zoneBackgroundVisibility: 100,
     });
   });

@@ -5,6 +5,10 @@ export interface MatchVisualSettingsValues {
   readonly quickPayActivateMainCosts: boolean;
   readonly reducedMotion: boolean;
   readonly soundVolume: number;
+  readonly windowColor: string;
+  readonly windowOpacity: number;
+  readonly playmatColor: string;
+  readonly playmatOpacity: number;
   readonly zoneBackgroundVisibility: number;
   readonly zoneGuideVisibility: number;
 }
@@ -24,6 +28,10 @@ export interface MatchVisualSettings extends MatchVisualSettingsValues {
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
   readonly setReducedMotion: (enabled: boolean) => void;
   readonly setSoundVolume: (value: number) => void;
+  readonly setWindowColor: (value: string) => void;
+  readonly setWindowOpacity: (value: number) => void;
+  readonly setPlaymatColor: (value: string) => void;
+  readonly setPlaymatOpacity: (value: number) => void;
   readonly setZoneBackgroundVisibility: (value: number) => void;
   readonly setZoneGuideVisibility: (value: number) => void;
 }
@@ -35,6 +43,10 @@ export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
   quickPayActivateMainCosts: false,
   reducedMotion: false,
   soundVolume: 70,
+  windowColor: "#0d0d0e",
+  windowOpacity: 86,
+  playmatColor: "#222224",
+  playmatOpacity: 92,
   zoneBackgroundVisibility: 18,
   zoneGuideVisibility: 60,
 };
@@ -47,6 +59,10 @@ export const noopMatchVisualSettings: MatchVisualSettings = {
   setQuickPayActivateMainCosts: () => undefined,
   setReducedMotion: () => undefined,
   setSoundVolume: () => undefined,
+  setWindowColor: () => undefined,
+  setWindowOpacity: () => undefined,
+  setPlaymatColor: () => undefined,
+  setPlaymatOpacity: () => undefined,
   setZoneBackgroundVisibility: () => undefined,
   setZoneGuideVisibility: () => undefined,
 };

@@ -85,11 +85,21 @@
     var(--floating-window-resize-handle-size) * 0.58
   );
   --match-surface-page: #101010;
-  --match-surface-board: rgba(34, 34, 36, 0.92);
-  --match-surface-window: rgba(13, 13, 14, 0.86);
+  --match-playmat-color-rgb: 34, 34, 36;
+  --match-playmat-opacity: 0.92;
+  --match-window-color-rgb: 13, 13, 14;
+  --match-window-opacity: 0.86;
+  --match-surface-board: rgba(
+    var(--match-playmat-color-rgb),
+    var(--match-playmat-opacity)
+  );
+  --match-surface-window: rgba(
+    var(--match-window-color-rgb),
+    var(--match-window-opacity)
+  );
   --match-surface-zone: rgba(0, 0, 0, var(--zone-guide-background-alpha));
-  --match-surface-panel: rgba(24, 24, 25, 0.82);
-  --match-surface-panel-raised: rgba(34, 34, 35, 0.88);
+  --match-surface-panel: var(--match-surface-window);
+  --match-surface-panel-raised: var(--match-surface-window);
   --match-surface-control: rgba(42, 42, 44, 0.78);
   --match-surface-control-hover: rgba(58, 58, 60, 0.84);
   --match-surface-control-active: rgba(46, 48, 48, 0.92);

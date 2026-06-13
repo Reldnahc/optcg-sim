@@ -43,6 +43,14 @@ export interface MatchAppProps {
   readonly accountSessionToken: string;
 }
 
+const hexColorToRgb = (hexColor: string): string => {
+  const normalized = /^#[0-9a-f]{6}$/u.test(hexColor) ? hexColor : "#000000";
+  const red = Number.parseInt(normalized.slice(1, 3), 16);
+  const green = Number.parseInt(normalized.slice(3, 5), 16);
+  const blue = Number.parseInt(normalized.slice(5, 7), 16);
+  return `${String(red)}, ${String(green)}, ${String(blue)}`;
+};
+
 export const MatchApp = ({
   accountSessionToken,
 }: MatchAppProps): React.JSX.Element => {
@@ -408,7 +416,13 @@ export const MatchApp = ({
   const zoneGuideBorderAlpha = zoneGuideStrength * 0.44;
   const zoneGuideLabelAlpha = zoneGuideStrength * 0.9;
   const zoneGuideBackgroundAlpha = zoneBackgroundStrength;
+  const windowSurfaceRgb = hexColorToRgb(visualSettings.windowColor);
+  const playmatSurfaceRgb = hexColorToRgb(visualSettings.playmatColor);
   const matchAppStyle = {
+    "--match-window-color-rgb": windowSurfaceRgb,
+    "--match-window-opacity": (visualSettings.windowOpacity / 100).toFixed(3),
+    "--match-playmat-color-rgb": playmatSurfaceRgb,
+    "--match-playmat-opacity": (visualSettings.playmatOpacity / 100).toFixed(3),
     "--zone-guide-border-alpha": zoneGuideBorderAlpha.toFixed(3),
     "--zone-guide-background-alpha": zoneGuideBackgroundAlpha.toFixed(3),
     "--zone-guide-label-alpha": zoneGuideLabelAlpha.toFixed(3),
@@ -423,7 +437,11 @@ export const MatchApp = ({
     Record<
       | "--zone-guide-background-alpha"
       | "--zone-guide-border-alpha"
-      | "--zone-guide-label-alpha",
+      | "--zone-guide-label-alpha"
+      | "--match-window-color-rgb"
+      | "--match-window-opacity"
+      | "--match-playmat-color-rgb"
+      | "--match-playmat-opacity",
       string
     >;
   const matchAppClassName = [
