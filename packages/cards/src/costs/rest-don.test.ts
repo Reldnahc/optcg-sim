@@ -35,4 +35,26 @@ describe("rest DON cost parser", () => {
       "chooser:self",
     ]);
   });
+
+  it("parses rest-any-number own DON as a variable reusable cost primitive", () => {
+    expect(
+      parseRestDonCost({ text: "rest any number of your DON!! cards" }),
+    ).toEqual({
+      cost: {
+        type: "restDon",
+        count: 0,
+        maxCount: "available",
+        chooser: "self",
+        optional: true,
+      },
+      evidence: [
+        "cost:restDon",
+        "count:anyNumber",
+        "target:yourDonCards",
+        "player:self",
+        "chooser:self",
+      ],
+      rest: "",
+    });
+  });
 });

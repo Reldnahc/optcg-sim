@@ -17,6 +17,7 @@ describe("DON field count condition parser", () => {
         "condition:threshold:positiveInteger",
         "filter:category:don",
         "filter:state:attached",
+        "filter:state:active",
       ],
     });
   });
@@ -89,6 +90,31 @@ describe("DON field count condition parser", () => {
         "condition:threshold:positiveInteger",
         "player:self",
         "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses active DON field-count conditions as state-filtered DON counts", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have 5 or less active DON!! cards",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"], state: "active" },
+        op: "lte",
+        value: 5,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:active",
       ],
       rest: "",
     });

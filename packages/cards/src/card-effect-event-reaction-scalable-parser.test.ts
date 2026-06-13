@@ -365,6 +365,141 @@ describe("scalable event reaction parser primitives", () => {
       ]),
     );
   });
+
+  it("parses variable rest-DON opponent-attack battle power scaling", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] [On Your Opponent's Attack] If you have 5 or less active DON!! cards, you may rest any number of your DON!! cards. For every DON!! card rested this way, this Leader or up to 1 of your {Straw Hat Crew} type Characters gains +2000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: {
+          type: "and",
+          conditions: [
+            { type: "attachedDonCount", value: 1 },
+            {
+              type: "fieldCount",
+              player: "self",
+              filter: { categories: ["don"], state: "active" },
+              op: "lte",
+              value: 5,
+            },
+          ],
+        },
+        trigger: { type: "onOpponentAttack" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              saveResultAs: "paidCost:restDon",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "restDon",
+                  count: 0,
+                  maxCount: "available",
+                  chooser: "self",
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    player: "self",
+                    zones: ["leaderArea", "characterArea"],
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      anyOf: [
+                        { categories: ["leader"] },
+                        {
+                          categories: ["character"],
+                          typesAny: ["Straw Hat Crew"],
+                        },
+                      ],
+                    },
+                  },
+                },
+                value: {
+                  type: "paidCostCardCount",
+                  cost: "paidCost:restDon",
+                  multiplier: 2000,
+                },
+                duration: { type: "thisBattle" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "entry:onOpponentAttack",
+        "condition:donFieldCount",
+        "filter:state:active",
+        "cost:restDon",
+        "count:anyNumber",
+        "instruction:modifyPower",
+        "value:dynamic:paidCostCardCount",
+        "filter:type",
+        "duration:thisBattle",
+      ]),
+    );
+  });
+
+  it("parses another variable rest-DON battle power scaling target type", () => {
+    const result = parseCardEffectLine(
+      "[On Your Opponent's Attack] If you have 3 or less active DON!! cards, you may rest any number of your DON!! cards. For every DON!! card rested this way, this Leader or up to 1 of your {Navy} type Characters gains +1000 power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        condition: {
+          type: "fieldCount",
+          value: 3,
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "restDon", count: 0, maxCount: "available" },
+              },
+            },
+            {
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    filter: {
+                      anyOf: [
+                        { categories: ["leader"] },
+                        { categories: ["character"], typesAny: ["Navy"] },
+                      ],
+                    },
+                  },
+                },
+                value: {
+                  type: "paidCostCardCount",
+                  cost: "paidCost:restDon",
+                  multiplier: 1000,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
 });
 
 function containsEffect(received: unknown, expected: unknown): boolean {

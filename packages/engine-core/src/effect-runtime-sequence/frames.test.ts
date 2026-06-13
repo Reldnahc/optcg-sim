@@ -984,6 +984,7 @@ test("optional cost payment records paidCost true, saves paidCost, and allows de
   assert.deepEqual(frame.savedReferences["paidOptionalCost"], {
     kind: "paidCost",
     paidCost: true,
+    selectedDonInstanceIds: [activeDon.instanceId],
   });
   assert.deepEqual(frame.segmentResults["1"], {
     attempted: true,

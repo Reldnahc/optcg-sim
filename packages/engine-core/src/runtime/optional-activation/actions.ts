@@ -50,16 +50,13 @@ import {
   resumeSequenceFrameAfterOptionalActivation,
   resumeSequenceFrameAfterOptionalCost,
 } from "../../effect-runtime-sequence/frames.js";
-import {
-  applyReturnDonPayment,
-  getReturnDonEligibleInstanceIds,
-} from "../primitives/return-don.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-from-hand.js";
 import { invalidDecision } from "../../engine-error-helpers.js";
 import {
   applyLifeVisibilityPayment,
   type LifeVisibilityCostPaidPayload,
 } from "./life-visibility-payment.js";
+import { applyDonPayment, type DonCostPaidPayload } from "./don-payment.js";
 
 const sameSource = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -160,6 +157,7 @@ export const applyOptionalActivationDecisionResponse = (
     let nextPlayers: GameState["players"] | undefined;
     let nextContinuousEffects = state.continuousEffects;
     let paidCostSelectedCards: CardRef[] = [];
+    let paidCostSelectedDonInstanceIds: CardInstance["instanceId"][] = [];
     if (action.response.type === "payment") {
       const paymentResponse = action.response;
       const selectedOption = decision.paymentOptions.find(
@@ -173,13 +171,7 @@ export const applyOptionalActivationDecisionResponse = (
         );
       }
       let costPaidPayload:
-        | {
-            playerId: PlayerId;
-            optionId: "restDon" | "returnDon";
-            selectedDonInstanceIds: NonNullable<
-              typeof action.response.selectedDonInstanceIds
-            >;
-          }
+        | DonCostPaidPayload
         | {
             playerId: PlayerId;
             optionId: "attachDon";
@@ -707,89 +699,20 @@ export const applyOptionalActivationDecisionResponse = (
             invalidDecision("Payment option mismatch."),
           );
         }
-        if (paymentResponse.selectedCardInstanceIds !== undefined) {
-          return toEngineResult(
-            state,
-            [],
-            invalidDecision("Payment DON!! selection must not include cards."),
-          );
-        }
-        const selected = paymentResponse.selectedDonInstanceIds;
-        if (
-          selected === undefined ||
-          selected.length !== selectedOption.count
-        ) {
-          return toEngineResult(
-            state,
-            [],
-            invalidDecision("Payment DON!! selection count mismatch."),
-          );
-        }
-        if (new Set(selected).size !== selected.length) {
-          return toEngineResult(
-            state,
-            [],
-            invalidDecision("Payment DON!! selection contains duplicates."),
-          );
-        }
-        if (selectedOption.type === "restDon") {
-          const costAreaById = new Map(
-            player.costArea.map((card) => [card.instanceId, card]),
-          );
-          for (const donId of selected) {
-            const don = costAreaById.get(donId);
-            if (don === undefined || don.state !== "active") {
-              return toEngineResult(
-                state,
-                [],
-                invalidDecision("Payment DON!! selection is invalid."),
-              );
-            }
-          }
-          const restedSet = new Set(selected);
-          nextPlayer = {
-            ...player,
-            costArea: player.costArea.map((card) =>
-              restedSet.has(card.instanceId)
-                ? { ...card, state: "rested" as const }
-                : card,
-            ),
-          };
-        } else {
-          const eligibleIds = new Set(
-            getReturnDonEligibleInstanceIds(player, selectedOption.sourceState),
-          );
-          for (const donId of selected) {
-            if (!eligibleIds.has(donId)) {
-              return toEngineResult(
-                state,
-                [],
-                invalidDecision("Payment DON!! selection is invalid."),
-              );
-            }
-          }
-          const returned = applyReturnDonPayment({
-            player,
-            playerId: decision.playerId,
-            selectedDonIds: selected,
-            ...(selectedOption.sourceState === undefined
-              ? {}
-              : { sourceState: selectedOption.sourceState }),
-          });
-          if (returned === null) {
-            return toEngineResult(
-              state,
-              [],
-              invalidDecision("Payment DON!! selection is invalid."),
-            );
-          }
-          nextPlayer = returned;
-        }
-        costPaidPayload = {
+        const paidDon = applyDonPayment({
+          player,
           playerId: decision.playerId,
-          optionId: selectedOption.type,
-          selectedDonInstanceIds: selected,
-        };
+          response: paymentResponse,
+          selectedOption,
+        });
+        if (!paidDon.ok) {
+          return toEngineResult(state, [], invalidDecision(paidDon.message));
+        }
+        nextPlayer = paidDon.player;
+        costPaidPayload = paidDon.costPaidPayload;
+        paidCostSelectedDonInstanceIds = [
+          ...paidDon.paidCostSelectedDonInstanceIds,
+        ];
       }
       paidCost = true;
       appendEvent(state, events, "costPaid", costPaidPayload, {
@@ -835,6 +758,7 @@ export const applyOptionalActivationDecisionResponse = (
       paidCost,
       createSupportedTrashFromHandChoiceDecision,
       paidCostSelectedCards,
+      paidCostSelectedDonInstanceIds,
     );
     if (resumed === undefined) {
       return null;

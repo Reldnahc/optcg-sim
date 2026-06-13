@@ -11,6 +11,7 @@ export const donFieldCountConditionPrimitive = {
     "condition:threshold:positiveInteger",
     "filter:category:don",
     "filter:state:attached",
+    "filter:state:active",
   ],
 } as const;
 
@@ -141,6 +142,26 @@ export const parseDonFieldCountCondition: ConditionParser = (
         player === "self" ? "player:self" : "player:opponent",
         "filter:category:don",
         "filter:state:attached",
+      ],
+      rest: "",
+    };
+  }
+
+  if (/^active DON!! cards$/i.test(comparison.rest)) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player,
+        filter: { categories: ["don"], state: "active" },
+        op: comparison.op,
+        value: comparison.value,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        ...comparison.evidence,
+        player === "self" ? "player:self" : "player:opponent",
+        "filter:category:don",
+        "filter:state:active",
       ],
       rest: "",
     };

@@ -127,7 +127,10 @@ const isSupportedCostChooser = (
 };
 
 const isSupportedCostCount = (cost: CountedCost): boolean => {
-  if (cost.type === "trashFromHand" && cost.maxCount !== undefined) {
+  if (
+    (cost.type === "trashFromHand" || cost.type === "restDon") &&
+    cost.maxCount !== undefined
+  ) {
     return (
       cost.maxCount === "available" &&
       Number.isInteger(cost.count) &&

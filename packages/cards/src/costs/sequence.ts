@@ -98,6 +98,7 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       return {
         type: "restDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
         optional: true,
       };
@@ -171,6 +172,7 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
       return {
         type: "restDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
         ...(cost.chooser === undefined ? {} : { chooser: cost.chooser }),
       };
     case "attachDon":

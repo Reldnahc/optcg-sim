@@ -4,6 +4,7 @@ import type {
   Effect,
   EngineEvent,
   GameState,
+  InstanceId,
   OptionalPayCostDecision,
   PayCostDecision,
   SequenceSegmentResult,
@@ -181,6 +182,7 @@ export const resumeSequenceFrameAfterOptionalCost = (
   paidCost: boolean,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
   paidCostSelectedCards: readonly CardRef[] = [],
+  paidCostSelectedDonInstanceIds: readonly InstanceId[] = [],
 ): SequenceFrameResumeResult => {
   const context = getSupportedFrameContext(state, decision.id);
   if (!context.ok) {
@@ -219,6 +221,9 @@ export const resumeSequenceFrameAfterOptionalCost = (
           ...(paidCostSelectedCards.length === 0
             ? {}
             : { selectedCards: [...paidCostSelectedCards] }),
+          ...(paidCostSelectedDonInstanceIds.length === 0
+            ? {}
+            : { selectedDonInstanceIds: [...paidCostSelectedDonInstanceIds] }),
         })
       : frame.savedReferences;
   return resumeSequenceFrameFromLedgers({

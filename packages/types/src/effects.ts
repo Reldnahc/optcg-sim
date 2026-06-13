@@ -1,6 +1,7 @@
 import type {
   CardId,
   Comparator,
+  InstanceId,
   PlayerRef,
   SelectionId,
   SelectionSetId,
@@ -121,7 +122,13 @@ export type Condition =
   | { type: "custom"; check: string };
 
 export type Cost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
+  | {
+      type: "restDon";
+      count: number;
+      maxCount?: number | "available";
+      chooser?: PlayerRef;
+      optional?: boolean;
+    }
   | {
       type: "restFromField";
       count: number;
@@ -240,7 +247,13 @@ export type OptionalChooseOneTrashCost = {
 };
 
 export type OptionalCost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
+  | {
+      type: "restDon";
+      count: number;
+      maxCount?: number | "available";
+      chooser?: PlayerRef;
+      optional: true;
+    }
   | {
       type: "attachDon";
       count: number;
@@ -592,6 +605,7 @@ export interface SavedPaidCostReference {
   kind: "paidCost";
   paidCost: true;
   selectedCards?: CardRef[];
+  selectedDonInstanceIds?: InstanceId[];
 }
 
 export interface SavedProducedObjectsReference {

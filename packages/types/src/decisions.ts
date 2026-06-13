@@ -54,7 +54,12 @@ export type PaymentOption =
       position: "top" | "bottom";
       faceUp: boolean;
     }
-  | { id: string; type: "restDon"; count: number }
+  | {
+      id: string;
+      type: "restDon";
+      count: number;
+      maxCount?: number | "available";
+    }
   | {
       id: string;
       type: "attachDon";

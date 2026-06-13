@@ -791,6 +791,7 @@ export const getSequenceOptionalPayCostOptions = (
         id: "restDon",
         type: "restDon",
         count: cost.count,
+        ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
       });
     }
     return paymentOptions;

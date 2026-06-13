@@ -35,6 +35,11 @@ export const parseRestDonCost = (
   const actionMatch = /^rest\s+(?<rest>.+)$/i.exec(input.text);
   const afterAction = actionMatch?.groups?.["rest"];
   if (afterAction !== undefined) {
+    const anyNumber = parseAnyNumberRestDonCost(afterAction);
+    if (anyNumber !== undefined) {
+      return anyNumber;
+    }
+
     const cardinality = parseExactCardinality({ text: afterAction });
     if (cardinality !== undefined) {
       const target = parseYourDonCardsCostTarget({ text: cardinality.rest });
@@ -59,6 +64,34 @@ export const parseRestDonCost = (
   }
 
   return undefined;
+};
+
+const parseAnyNumberRestDonCost = (
+  text: string,
+): CostParseResult | undefined => {
+  const target = parseYourDonCardsCostTarget({
+    text: text.replace(/^any number\s+/i, ""),
+  });
+  if (!/^any number of\s+/i.test(text) || target?.rest.length !== 0) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "restDon",
+      count: 0,
+      maxCount: "available",
+      chooser: "self",
+      optional: true,
+    },
+    evidence: [
+      "cost:restDon",
+      "count:anyNumber",
+      ...target.evidence,
+      "chooser:self",
+    ],
+    rest: "",
+  };
 };
 
 const circledDonCounts = new Map<string, number>([

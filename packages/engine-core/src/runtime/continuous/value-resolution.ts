@@ -243,7 +243,11 @@ export const resolveDynamicNumberValue = (
     if (reference?.kind !== "paidCost") {
       return null;
     }
-    return (reference.selectedCards?.length ?? 0) * value.multiplier;
+    return (
+      ((reference.selectedCards?.length ?? 0) +
+        (reference.selectedDonInstanceIds?.length ?? 0)) *
+      value.multiplier
+    );
   }
   const reference = context?.savedReferences?.[value.selection];
   if (reference?.kind !== "selectedCards") {
