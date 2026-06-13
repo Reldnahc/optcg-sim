@@ -1,6 +1,11 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { DecisionId, InstanceId, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  InstanceId,
+  PlayerId,
+  PublicCardView,
+} from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
@@ -9,6 +14,12 @@ const botId = "p2" as PlayerId;
 
 const snapshotWithActions = (
   actions: DevMatchSnapshot["players"][PlayerId]["actions"],
+  cards: {
+    readonly selfLeader?: Partial<PublicCardView>;
+    readonly selfCharacters?: readonly Partial<PublicCardView>[];
+    readonly opponentLeader?: Partial<PublicCardView>;
+    readonly opponentCharacters?: readonly Partial<PublicCardView>[];
+  } = {},
 ): DevMatchSnapshot =>
   ({
     stateSeq: 7,
@@ -25,7 +36,34 @@ const snapshotWithActions = (
     activePlayerId: botId,
     players: {
       [botId]: {
-        view: {},
+        view: {
+          self: {
+            leader: {
+              instanceId: "bot-leader",
+              cardId: "OP01-001",
+              owner: botId,
+              controller: botId,
+              zone: { player: botId, zone: "leader" },
+              attachedDonCount: 0,
+              attachedDonIds: [],
+              ...cards.selfLeader,
+            },
+            characters: cards.selfCharacters ?? [],
+          },
+          opponent: {
+            leader: {
+              instanceId: "opponent-leader",
+              cardId: "OP01-002",
+              owner: "p1",
+              controller: "p1",
+              zone: { player: "p1", zone: "leader" },
+              attachedDonCount: 0,
+              attachedDonIds: [],
+              ...cards.opponentLeader,
+            },
+            characters: cards.opponentCharacters ?? [],
+          },
+        },
         actions,
       },
     },
@@ -76,18 +114,138 @@ describe("bot player", () => {
 
   test("attacks before ending main phase", () => {
     const chosen = chooseBotAction(
-      snapshotWithActions([
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
         {
-          index: 0,
-          type: "endMainPhase",
-          label: "End main phase",
+          selfLeader: { currentPower: 7000 },
+          opponentLeader: { currentPower: 5000 },
         },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("does not attack leader when the attacker has lower power", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
         {
-          index: 1,
-          type: "declareAttack",
-          label: "Attack leader",
+          selfLeader: { currentPower: 5000 },
+          opponentLeader: { currentPower: 7000 },
         },
-      ]),
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("does not attack a character when the attacker has lower power", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack character",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              currentPower: 4000,
+            },
+          ],
+          opponentCharacters: [
+            {
+              instanceId: "opponent-character" as InstanceId,
+              currentPower: 5000,
+            },
+          ],
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("attacks a character when the attacker has enough power", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack character",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              currentPower: 6000,
+            },
+          ],
+          opponentCharacters: [
+            {
+              instanceId: "opponent-character" as InstanceId,
+              currentPower: 5000,
+            },
+          ],
+        },
+      ),
       botId,
     );
 

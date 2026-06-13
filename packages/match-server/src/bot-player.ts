@@ -1,4 +1,10 @@
-import type { DecisionId, DecisionResponse, PlayerId } from "@optcg/types";
+import type {
+  DecisionId,
+  DecisionResponse,
+  InstanceId,
+  PlayerId,
+  PublicCardView,
+} from "@optcg/types";
 
 import type {
   DevMatchSnapshot,
@@ -36,6 +42,56 @@ const actionPriority = (action: DevVisibleAction): number => {
   return 100;
 };
 
+const cardPower = (card: PublicCardView | undefined): number | undefined =>
+  card?.currentPower ?? card?.printedPower;
+
+const visibleCards = (snapshot: DevMatchSnapshot, playerId: PlayerId) => {
+  const view = snapshot.players[playerId]?.view;
+  if (view === undefined) {
+    return [];
+  }
+  return [
+    view.self.leader,
+    ...view.self.characters,
+    view.opponent.leader,
+    ...view.opponent.characters,
+  ];
+};
+
+const findVisibleCard = (
+  snapshot: DevMatchSnapshot,
+  playerId: PlayerId,
+  instanceId: InstanceId,
+): PublicCardView | undefined =>
+  visibleCards(snapshot, playerId).find(
+    (card) => card.instanceId === instanceId,
+  );
+
+const isPowerPositiveAttack = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+  action: DevVisibleAction,
+): boolean => {
+  if (action.type !== "declareAttack") {
+    return true;
+  }
+  const attack = action.attack;
+  if (attack === undefined) {
+    return false;
+  }
+  const attackerPower = cardPower(
+    findVisibleCard(snapshot, botPlayerId, attack.attackerInstanceId),
+  );
+  const targetPower = cardPower(
+    findVisibleCard(snapshot, botPlayerId, attack.targetInstanceId),
+  );
+  return (
+    attackerPower !== undefined &&
+    targetPower !== undefined &&
+    attackerPower >= targetPower
+  );
+};
+
 export const chooseBotAction = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
@@ -43,6 +99,7 @@ export const chooseBotAction = (
   const actions = snapshot.players[botPlayerId]?.actions ?? [];
   const chosen = [...actions]
     .filter((action) => action.type !== "concede")
+    .filter((action) => isPowerPositiveAttack(snapshot, botPlayerId, action))
     .sort((left, right) => actionPriority(left) - actionPriority(right))[0];
   if (chosen !== undefined) {
     return { type: "submitAction", actionIndex: chosen.index };
