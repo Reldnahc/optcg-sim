@@ -79,6 +79,7 @@ export {
   parseProtectionInstruction,
 } from "./protection.js";
 export { syntheticInstructionParser } from "./synthetic.js";
+export { parseTopDeckLookInstruction } from "./top-deck-look.js";
 export { parseTopDeckPlacementInstruction } from "./top-deck-placement.js";
 export {
   parseTrashAllYourCharactersInstruction,

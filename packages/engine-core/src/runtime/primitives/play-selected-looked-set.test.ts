@@ -15,6 +15,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -338,6 +339,52 @@ test("looked-set playSelected plays selected deck cards and bottoms only the rem
     finalPlayer.deck.slice(-3).map((card) => card.instanceId),
     expectedRemainder.map((card) => card.instanceId).reverse(),
   );
+});
+
+test("chooser-only opponent top-deck reveal records opponent card privately", () => {
+  const lookedSet = "set:opponent-top-deck" as SelectionSetId;
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "opponent",
+          zone: "deck",
+          count: 1,
+          saveAs: lookedSet,
+          visibility: "chooserOnly",
+        },
+      },
+    ],
+  });
+  const opponentTopDeck = must(
+    must(state.players[p2], "p2").deck[0],
+    "opponent top deck",
+  );
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  const revealEvent = must(
+    resolved.events.find((event) => event.type === "cardRevealed"),
+    "cardRevealed event",
+  );
+  assert.deepEqual(revealEvent.visibility, { type: "private", playerId: p1 });
+  assert.deepEqual(revealEvent.payload, {
+    revealId: `reveal:sequence:${String(state.effectQueue[0]?.id)}:0`,
+    cards: [
+      {
+        instanceId: opponentTopDeck.instanceId,
+        cardId: opponentTopDeck.cardId,
+        playerId: p2,
+        zone: opponentTopDeck.zone,
+      },
+    ],
+    origin: "topOfDeck",
+    selectionSetId: lookedSet,
+  });
 });
 
 test("looked-set remainder can be placed at the top or bottom of the deck", () => {

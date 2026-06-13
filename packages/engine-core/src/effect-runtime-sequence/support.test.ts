@@ -704,6 +704,36 @@ test("sequence support accepts looked-set selection moved to Life top before bot
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts chooser-only opponent top-deck reveal", () => {
+  const lookedSet = "set:opponent-top-deck" as SelectionSetId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "opponent",
+            zone: "deck",
+            count: 1,
+            saveAs: lookedSet,
+            visibility: "chooserOnly",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts looked-set selection moved to Life bottom face-up", () => {
   const lookedSet = "set:looked-life-candidates" as SelectionSetId;
   const selection = "revealSelection:life" as SelectionId;

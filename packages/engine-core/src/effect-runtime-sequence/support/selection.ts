@@ -162,7 +162,7 @@ export const isSupportedRevealTopSegment = (
   effect: SequenceSegmentEffect,
 ): effect is RevealTopEffect =>
   effect.type === "revealTop" &&
-  effect.player === "self" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   (effect.zone === undefined ||
     effect.zone === "deck" ||
     effect.zone === "life") &&

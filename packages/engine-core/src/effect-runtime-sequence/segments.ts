@@ -18,6 +18,7 @@ import { appendEvent, toStateSeq } from "../action-results.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
+  resolvePlayerId,
 } from "../runtime/primitives/execute.js";
 import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import {
@@ -319,14 +320,17 @@ export const applyResolvedQuantityRevealTopSegment = (
       state: GameState;
     }
   | { ok: false } => {
-  const player = state.players[entry.controllerId];
+  const revealedPlayerId = resolvePlayerId(state, entry, segment.effect.player);
   if (
-    player === undefined ||
-    segment.effect.player !== "self" ||
+    revealedPlayerId === undefined ||
     !Number.isInteger(quantity) ||
     quantity < 0 ||
     quantity > segment.effect.count
   ) {
+    return { ok: false };
+  }
+  const player = state.players[revealedPlayerId];
+  if (player === undefined) {
     return { ok: false };
   }
   const sourceZone = segment.effect.zone ?? "deck";
@@ -336,7 +340,7 @@ export const applyResolvedQuantityRevealTopSegment = (
       : player.deck;
   const revealedCards = sourceCards
     .slice(0, quantity)
-    .map((card) => toCardRef(card, entry.controllerId));
+    .map((card) => toCardRef(card, revealedPlayerId));
   const revealId = `reveal:sequence:${String(entry.id)}:${String(index)}`;
   const visibility = revealTopVisibility(
     segment.effect.visibility,
@@ -344,7 +348,7 @@ export const applyResolvedQuantityRevealTopSegment = (
   );
   const origin =
     sourceZone === "life"
-      ? ({ zone: "life", playerId: entry.controllerId } as const)
+      ? ({ zone: "life", playerId: revealedPlayerId } as const)
       : ("topOfDeck" as const);
   const events: EngineEvent[] = [];
   if (revealedCards.length > 0) {

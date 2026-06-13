@@ -289,4 +289,57 @@ describe("OP11 Activate Main parser primitives", () => {
       ]),
     );
   });
+
+  it("parses costed Activate Main opponent top-deck look bodies", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] DON!! −1, You may rest this Character: Look at 1 card from the top of your opponent's deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "sequence",
+                  optional: true,
+                  costs: [
+                    { type: "returnDon", count: 1 },
+                    { type: "restSelf" },
+                  ],
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "revealTop",
+                player: "opponent",
+                zone: "deck",
+                count: 1,
+                visibility: "chooserOnly",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "cost:returnDon",
+        "cost:restSelf",
+        "instruction:revealTop",
+        "player:opponent",
+        "zone:deck",
+        "look:topDeck",
+      ]),
+    );
+  });
 });
