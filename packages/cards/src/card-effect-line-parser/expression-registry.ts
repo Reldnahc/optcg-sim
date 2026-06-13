@@ -316,6 +316,10 @@ export const defaultRegistry = {
           connectors: [parseThenConnector, parseAndConnector],
           instructions: instructionParsers,
         }),
+        optionalCostedEffectExpressionParser({
+          instructions: instructionParsers,
+          expressions: costedExpressions,
+        }),
         singleInstructionExpressionParser,
         generalExpressionParser,
       ],
