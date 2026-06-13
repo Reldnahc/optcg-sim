@@ -2,6 +2,7 @@ import type {
   CardInstance,
   EffectQueueEntry,
   GameState,
+  InstanceId,
   OptionalCost,
   OptionalPayCostDecision,
   PlayerId,
@@ -20,6 +21,7 @@ type PlayerState = NonNullable<
 
 export const expandMoveCardsCostRoutes = (
   cost: Extract<OptionalCost, { type: "moveCards" }>,
+  sourceInstanceId?: InstanceId,
 ): MoveCardsPaymentOption[] => {
   if (
     cost.from.player !== "self" ||
@@ -40,9 +42,18 @@ export const expandMoveCardsCostRoutes = (
         id: "moveCards",
         type: "moveCards",
         count: cost.count,
-        from: { player: cost.from.player, zone: cost.from.zone },
+        from: {
+          player: cost.from.player,
+          zone: cost.from.zone,
+          ...(cost.from.source === undefined
+            ? {}
+            : { source: cost.from.source }),
+        },
         to: cost.to,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        ...(cost.from.source === undefined || sourceInstanceId === undefined
+          ? {}
+          : { sourceInstanceId }),
       },
     ];
   }
@@ -79,9 +90,18 @@ export const expandMoveCardsCostRoutes = (
         id: "moveCards",
         type: "moveCards",
         count: cost.count,
-        from: { player: cost.from.player, zone: cost.from.zone },
+        from: {
+          player: cost.from.player,
+          zone: cost.from.zone,
+          ...(cost.from.source === undefined
+            ? {}
+            : { source: cost.from.source }),
+        },
         to: cost.to,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        ...(cost.from.source === undefined || sourceInstanceId === undefined
+          ? {}
+          : { sourceInstanceId }),
       },
     ];
   }
@@ -96,9 +116,18 @@ export const expandMoveCardsCostRoutes = (
         id: "moveCards",
         type: "moveCards",
         count: cost.count,
-        from: { player: cost.from.player, zone: cost.from.zone },
+        from: {
+          player: cost.from.player,
+          zone: cost.from.zone,
+          ...(cost.from.source === undefined
+            ? {}
+            : { source: cost.from.source }),
+        },
         to: cost.to,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        ...(cost.from.source === undefined || sourceInstanceId === undefined
+          ? {}
+          : { sourceInstanceId }),
       },
     ];
   }
@@ -180,6 +209,22 @@ export const selectableMoveCardsCostIds = (
     option.to.zone === "deck" &&
     option.to.position === "bottom"
   ) {
+    if (option.from.source === "effectSource") {
+      return option.sourceInstanceId === undefined
+        ? []
+        : player.characters
+            .filter(
+              (card) =>
+                card.instanceId === option.sourceInstanceId &&
+                cardMatchesHandSelectionFilter(
+                  state,
+                  playerId,
+                  card,
+                  option.filter,
+                ),
+            )
+            .map((card) => card.instanceId);
+    }
     return player.characters
       .filter((card) =>
         cardMatchesHandSelectionFilter(state, playerId, card, option.filter),
@@ -192,6 +237,19 @@ export const selectableMoveCardsCostIds = (
     option.to.zone === "deck" &&
     option.to.position === "bottom"
   ) {
+    if (option.from.source === "effectSource") {
+      return player.stage !== undefined &&
+        option.sourceInstanceId !== undefined &&
+        player.stage.instanceId === option.sourceInstanceId &&
+        cardMatchesHandSelectionFilter(
+          state,
+          playerId,
+          player.stage,
+          option.filter,
+        )
+        ? [player.stage.instanceId]
+        : [];
+    }
     return player.stage !== undefined &&
       cardMatchesHandSelectionFilter(
         state,

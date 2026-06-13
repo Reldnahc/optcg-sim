@@ -49,7 +49,10 @@ export const isSupportedMoveCardsPaymentRoute = (
     option.to.zone === "deck" &&
     option.to.position === "bottom"
   ) {
-    return true;
+    return (
+      option.from.source !== "effectSource" ||
+      option.sourceInstanceId !== undefined
+    );
   }
   return (
     (option.from.zone === "deck" &&
@@ -266,6 +269,8 @@ export const applyMoveCardsPayment = (params: {
             : undefined;
       if (
         selectedCard === undefined ||
+        (params.selectedOption.from.source === "effectSource" &&
+          selectedCard.instanceId !== params.selectedOption.sourceInstanceId) ||
         !cardMatchesHandSelectionFilter(
           nextState,
           params.playerId,

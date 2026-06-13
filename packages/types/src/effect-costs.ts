@@ -77,6 +77,7 @@ export type Cost =
         player: PlayerRef;
         zone: Zone;
         position?: "top" | "bottom" | "topOrBottom";
+        source?: "effectSource";
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "chooserChoice";
@@ -139,6 +140,7 @@ export type OptionalMoveCardsCost = {
     player: PlayerRef;
     zone: Zone;
     position?: "top" | "bottom" | "topOrBottom";
+    source?: "effectSource";
   };
   to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
   order: "chooserChoice";

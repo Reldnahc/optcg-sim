@@ -44,7 +44,9 @@ export interface OptionalCostSequenceParseResult {
 export function parseOptionalCostSequence(
   input: ParseInput,
 ): OptionalCostSequenceParseResult | undefined {
-  const parts = normalizeAdjacentOptionalCostBoundaries(input.text)
+  const parts = normalizeCompositePlaceCostBoundaries(
+    normalizeAdjacentOptionalCostBoundaries(input.text),
+  )
     .split(/\s*(?:,|\band\b)\s*/i)
     .map(stripOptionalCostPrefix)
     .map((part) => part.trim())
@@ -316,4 +318,11 @@ function parseCostPart(text: string): CostParseResult | undefined {
 
 function normalizeAdjacentOptionalCostBoundaries(text: string): string {
   return text.replace(/\)\s+(?=You may\b)/giu, ") and ");
+}
+
+function normalizeCompositePlaceCostBoundaries(text: string): string {
+  return text.replace(
+    /^You may place this Character and (?<trashCost>[1-9]\d* .+? from your trash at the bottom of your deck in any order)$/iu,
+    "You may place this Character at the bottom of your deck and place $<trashCost>",
+  );
 }

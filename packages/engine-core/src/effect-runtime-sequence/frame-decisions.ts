@@ -834,7 +834,10 @@ export const getSequenceOptionalPayCostOptions = (
     if (cost.chooser !== "self") {
       return paymentOptions;
     }
-    for (const route of expandMoveCardsCostRoutes(cost)) {
+    for (const route of expandMoveCardsCostRoutes(
+      cost,
+      entry.source.instanceId,
+    )) {
       const selectable =
         currentPlayer === undefined
           ? undefined
@@ -857,6 +860,9 @@ export const getSequenceOptionalPayCostOptions = (
           from: route.from,
           to: route.to,
           ...(route.filter === undefined ? {} : { filter: route.filter }),
+          ...(route.sourceInstanceId === undefined
+            ? {}
+            : { sourceInstanceId: route.sourceInstanceId }),
         });
       }
     }

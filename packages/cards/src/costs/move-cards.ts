@@ -29,6 +29,36 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
+  const thisCharacterToDeckBottom =
+    parseThisCharacterToDeckBottomCostRoute(afterAction);
+  if (thisCharacterToDeckBottom !== undefined) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: 1,
+      chooser: "self",
+      from: {
+        player: "self",
+        zone: "characterArea",
+        source: "effectSource",
+      },
+      to: { player: "self", zone: "deck", position: "bottom" },
+      order: "chooserChoice",
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      "target:thisCharacter",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:characterArea",
+      "destination:deck",
+      "position:bottom",
+    ];
+
+    return { cost, evidence, rest: "" };
+  }
+
   const thisStageToOwnerDeckBottom =
     parseThisStageToOwnerDeckBottomCostRoute(afterAction);
   if (thisStageToOwnerDeckBottom !== undefined) {
@@ -248,7 +278,11 @@ function parseTrashToBottomDeckCostRoute(text: string):
     /^cards?\s+(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/i.exec(
       text,
     );
-  const filterText = filteredMatch?.groups?.["filter"];
+  const filterText =
+    filteredMatch?.groups?.["filter"] ??
+    /^(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/iu.exec(
+      text,
+    )?.groups?.["filter"];
   if (filterText === undefined) {
     return undefined;
   }
@@ -292,6 +326,14 @@ function parseThisStageToOwnerDeckBottomCostRoute(
   text: string,
 ): true | undefined {
   return /^this Stage at the bottom of the owner's deck$/iu.test(text)
+    ? true
+    : undefined;
+}
+
+function parseThisCharacterToDeckBottomCostRoute(
+  text: string,
+): true | undefined {
+  return /^this Character at the bottom of your deck$/iu.test(text)
     ? true
     : undefined;
 }

@@ -95,9 +95,11 @@ export type PaymentOption =
         player: PlayerRef;
         zone: Zone;
         position?: "top" | "bottom";
+        source?: "effectSource";
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       filter?: CardFilter;
+      sourceInstanceId?: InstanceId;
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
   | { id: string; type: "custom"; action: string };
