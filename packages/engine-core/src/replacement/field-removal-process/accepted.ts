@@ -22,7 +22,10 @@ import {
   createReplacementTrashFromHandDecision,
 } from "../field-removal-decisions.js";
 import { fieldRemovalProcessTargets } from "../field-removal-targets.js";
-import { isSupportedTrashFromHandInsteadEffect } from "../instead-effects.js";
+import {
+  isSupportedTrashFromHandInsteadEffect,
+  supportedReplacementSequenceWithTrashFromHandInstead,
+} from "../instead-effects.js";
 import { createReplacementOwnerDeckBottomDecision } from "../owner-deck-bottom-decision.js";
 import { createReplacementPayCostDecision } from "../pay-cost-decision.js";
 import { replacementCandidatePresentation } from "../presentation-payload.js";
@@ -77,6 +80,148 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   const coveredTargets =
     candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
   const presentation = replacementCandidatePresentation(state, candidate);
+  const sequenceWithTrash =
+    supportedReplacementSequenceWithTrashFromHandInstead(
+      candidate.replacementEffect.instead,
+    );
+  if (sequenceWithTrash !== undefined) {
+    const sourceSnapshot = toReplacementDrawSourceSnapshot(
+      state,
+      candidate.source,
+    );
+    if (sourceSnapshot === null) {
+      return { error: acceptedReplacementError(effectId, "missing-card") };
+    }
+    const replacementEntry: EffectQueueEntry = {
+      id: `${process.id}:replacement:${candidate.id}:prefix` as EffectQueueEntry["id"],
+      state: "resolving",
+      timingWindowId: `replacement:${process.id}` as TimingWindowId,
+      generation: 0,
+      controllerId: candidate.controllerId,
+      source: candidate.source,
+      sourceSnapshot,
+      effectBlockId: candidate.effectBlockId,
+      orderingGroup:
+        candidate.controllerId === state.turn.turnPlayerId
+          ? "turnPlayer"
+          : "nonTurnPlayer",
+      createdAtEventSeq: state.eventJournal.length + events.length,
+      queuedAtStateSeq: state.seq,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      causedBy: { type: "replacement", replacementId: candidate.id },
+    };
+    let prefixState: GameState = {
+      ...state,
+      eventJournal: [...state.eventJournal, ...events],
+    };
+    for (const [index, segment] of sequenceWithTrash.prefix.entries()) {
+      const replaced = executeReplacementInsteadEffect(
+        prefixState,
+        {
+          ...replacementEntry,
+          id: `${String(replacementEntry.id)}:${String(index)}` as EffectQueueEntry["id"],
+        },
+        segment.effect,
+      );
+      if (replaced.errors !== undefined) {
+        return {
+          error:
+            replaced.errors[0] ??
+            acceptedReplacementError(effectId, "unsupported-effect-shape"),
+        };
+      }
+      if (replaced.state.pendingDecision !== undefined) {
+        return {
+          error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+        };
+      }
+      prefixState = replaced.state;
+      events.push(...rebaseEvents(state, replaced.events, events.length + 1));
+    }
+    const trashCandidate = {
+      ...candidate,
+      replacementEffect: {
+        ...candidate.replacementEffect,
+        instead: sequenceWithTrash.trashFromHand,
+      },
+    };
+    const trashFromHandDecision = createReplacementTrashFromHandDecision(
+      prefixState,
+      process,
+      trashCandidate,
+    );
+    if (trashFromHandDecision === undefined) {
+      return {
+        error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
+      };
+    }
+    appendEvent(
+      prefixState,
+      events,
+      "decisionCreated",
+      {
+        decisionId: trashFromHandDecision.id,
+        decisionType: trashFromHandDecision.type,
+        playerId: trashFromHandDecision.playerId,
+      },
+      trashFromHandDecision.visibility,
+    );
+    const created = events[events.length - 1];
+    if (created !== undefined) {
+      created.causedBy = trashFromHandDecision.causedBy;
+    }
+    const oncePerTurn =
+      candidate.oncePerTurn === true
+        ? {
+            cardInstanceId: candidate.source.instanceId,
+            effectId: candidate.effectBlockId,
+            turnNumber: state.turn.globalTurn,
+          }
+        : undefined;
+    return {
+      state: {
+        ...prefixState,
+        seq: toStateSeq(prefixState.seq + 1),
+        pendingDecision: trashFromHandDecision,
+        replacementState: [
+          ...prefixState.replacementState.filter(
+            (candidateState) => candidateState.processId !== process.id,
+          ),
+          {
+            processId: process.id,
+            type: process.type,
+            usedReplacementIds: usedProcess.usedReplacementIds,
+            payload: {
+              ...(typeof process.payload === "object" &&
+              process.payload !== null
+                ? process.payload
+                : {}),
+              pendingReplacementTrashFromHandInstead: {
+                decisionId: trashFromHandDecision.id,
+                effectBlockId: candidate.effectBlockId,
+                replacementId: candidate.id,
+                source: candidate.source,
+                ...(process.target === undefined
+                  ? {}
+                  : { target: process.target }),
+                coveredTargets: [...coveredTargets],
+                causedBy: process.causedBy,
+                controllerId: candidate.controllerId,
+                count: trashFromHandDecision.request.min,
+                ...(presentation === undefined ? {} : { presentation }),
+                ...(sequenceWithTrash.trashFromHand.filter === undefined
+                  ? {}
+                  : { filter: sequenceWithTrash.trashFromHand.filter }),
+                ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
+              } satisfies PendingReplacementTrashFromHandInsteadPayload,
+            },
+          },
+        ],
+        eventJournal: [...state.eventJournal, ...events],
+      },
+      process: usedProcess,
+    };
+  }
   const ownerDeckBottomDecision = createReplacementOwnerDeckBottomDecision(
     state,
     process,

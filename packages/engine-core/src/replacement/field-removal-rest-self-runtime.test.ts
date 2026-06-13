@@ -235,6 +235,49 @@ const koSelfReplacementFixture = () => {
   return { ...fixture, effectId };
 };
 
+const restSelfTrashHandReplacementFixture = () => {
+  const fixture = restSelfReplacementFixture("active");
+  const effectDefinitionId = "definition:effect-removal-rest-self-active";
+  const effectId = toEffectId("replacement:effect-removal-rest-trash-hand");
+  const definition = must(
+    fixture.state.cardManifest.effectDefinitions?.[effectDefinitionId],
+    "replacement definition",
+  );
+  const effectBlock = must(definition.effects[0], "replacement effect");
+  if (effectBlock.effect.type !== "replacement") {
+    assert.fail("expected replacement effect");
+  }
+  definition.effects = [
+    {
+      ...effectBlock,
+      id: effectId,
+      effect: {
+        type: "replacement",
+        when: effectBlock.effect.when,
+        instead: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "rest", target: { type: "self" } },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHand",
+                player: "self",
+                chooser: "self",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    },
+  ];
+  return { ...fixture, effectId };
+};
+
 test("accepted opponent effect field-removal replacement rests its source Character instead of KOing matching Character", () => {
   const fixture = restSelfReplacementFixture("active");
   const paused = koTarget(fixture);
@@ -343,5 +386,66 @@ test("accepted opponent effect field-removal replacement K.O.s its source Charac
   assert.deepEqual(
     accepted.events.map((event) => event.type),
     ["decisionResolved", "replacementApplied", "cardKOd", "cardMoved"],
+  );
+});
+
+test("accepted opponent effect field-removal replacement can rest source then trash from hand", () => {
+  const fixture = restSelfTrashHandReplacementFixture();
+  const paused = koTarget(fixture);
+  const decision = paused.state.pendingDecision;
+  if (decision?.type !== "chooseReplacement") {
+    assert.fail("expected chooseReplacement decision");
+  }
+  const replacementId = must(decision.replacementIds[0], "replacement id");
+  assert.match(replacementId, new RegExp(`${fixture.effectId}$`, "u"));
+
+  const accepted = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "replacement", replacementId },
+  });
+  const trashDecision = accepted.state.pendingDecision;
+  if (trashDecision?.type !== "selectCards") {
+    assert.fail("expected replacement trash-from-hand decision");
+  }
+  const afterAcceptP2 = must(accepted.state.players[p2], "p2 after accept");
+  const restedSource = must(
+    afterAcceptP2.characters.find(
+      (card) => card.instanceId === fixture.replacementSource.instanceId,
+    ),
+    "replacement source",
+  );
+  const cardToTrash = must(afterAcceptP2.hand[0], "card to trash");
+
+  assert.equal(accepted.errors, undefined);
+  assert.equal(restedSource.state, "rested");
+  assert.equal(
+    afterAcceptP2.characters.some(
+      (card) => card.instanceId === fixture.targetCard.instanceId,
+    ),
+    true,
+  );
+
+  const resolved = applyAction(accepted.state, {
+    type: "respondToDecision",
+    decisionId: trashDecision.id,
+    response: {
+      type: "cards",
+      cards: [cardRef(cardToTrash, p2)],
+    },
+  });
+  const nextP2 = must(resolved.state.players[p2], "next p2");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    nextP2.characters.some(
+      (card) => card.instanceId === fixture.targetCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === cardToTrash.instanceId),
+    true,
   );
 });

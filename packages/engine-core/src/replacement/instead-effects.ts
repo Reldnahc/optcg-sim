@@ -17,6 +17,16 @@ interface SupportedOwnerDeckBottomInstead {
   readonly request: SelectTargetsEffect["request"];
 }
 
+export interface SupportedReplacementSequenceWithTrashFromHand {
+  readonly prefix: ReadonlyArray<
+    SequenceEffect["effects"][number] & { effect: Effect }
+  >;
+  readonly trashFromHand: Extract<
+    ReplacementInstead,
+    { type: "trashFromHand" }
+  >;
+}
+
 export const plural = (
   count: number,
   singular: string,
@@ -123,6 +133,7 @@ const isSupportedAtomicNoDecisionInsteadEffect = (
   (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
   (effect.type === "setLifeCardFaceUp" &&
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
+  (effect.type === "rest" && isSupportedRestSelfInsteadEffect(effect)) ||
   (effect.type === "modifyPower" &&
     isSupportedModifyPowerInsteadEffect(effect)) ||
   (effect.type === "trash" && isSupportedTrashSelfInsteadEffect(effect)) ||
@@ -150,6 +161,60 @@ export const isSupportedReplacementInsteadSequenceEffect = (
     )
   );
 };
+
+export const supportedReplacementSequenceWithTrashFromHandInstead = (
+  effect: Effect,
+): SupportedReplacementSequenceWithTrashFromHand | undefined => {
+  if (effect.type !== "sequence") {
+    return undefined;
+  }
+  const flattened = flattenSequenceEffect(effect);
+  if (flattened === null || flattened.effects.length < 2) {
+    return undefined;
+  }
+  if (
+    !flattened.effects.every(
+      (segment, index) =>
+        (index === 0
+          ? segment.connector === "always"
+          : segment.connector === "then" || segment.connector === "always") &&
+        segment.optional !== true &&
+        segment.saveResultAs === undefined,
+    )
+  ) {
+    return undefined;
+  }
+  const last = flattened.effects.at(-1);
+  if (
+    last === undefined ||
+    last.effect.type === "payCost" ||
+    !isSupportedTrashFromHandInsteadEffect(last.effect)
+  ) {
+    return undefined;
+  }
+  const prefix = flattened.effects.slice(0, -1);
+  if (
+    prefix.length === 0 ||
+    !prefix.every(
+      (segment) =>
+        segment.effect.type !== "payCost" &&
+        isSupportedAtomicNoDecisionInsteadEffect(segment.effect),
+    )
+  ) {
+    return undefined;
+  }
+  return {
+    prefix: prefix as Array<
+      SequenceEffect["effects"][number] & { effect: Effect }
+    >,
+    trashFromHand: last.effect,
+  };
+};
+
+export const isSupportedReplacementSequenceWithTrashFromHandInsteadEffect = (
+  effect: Effect,
+): effect is SequenceEffect =>
+  supportedReplacementSequenceWithTrashFromHandInstead(effect) !== undefined;
 
 export const supportedReplacementPayCostInstead = (
   effect: Effect,
@@ -255,6 +320,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
+  isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 

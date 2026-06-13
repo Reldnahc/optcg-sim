@@ -29,6 +29,7 @@ import {
   isSupportedReturnDonInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
+  supportedReplacementSequenceWithTrashFromHandInstead,
   supportedOwnerDeckBottomInstead,
 } from "../instead-effects.js";
 import { findCardByInstanceId } from "./source-lookup.js";
@@ -202,6 +203,28 @@ const canPayOpponentFieldRemovalReplacementCost = (
   effect: SupportedReplacementEffectBlock,
 ): boolean => {
   const instead = effect.effect.instead;
+  const sequenceWithTrash =
+    supportedReplacementSequenceWithTrashFromHandInstead(instead);
+  if (sequenceWithTrash !== undefined) {
+    return (
+      sequenceWithTrash.prefix.every((segment) =>
+        canPayReplacementInsteadSegment(state, source, segment.effect),
+      ) &&
+      canPayReplacementInsteadSegment(
+        state,
+        source,
+        sequenceWithTrash.trashFromHand,
+      )
+    );
+  }
+  return canPayReplacementInsteadSegment(state, source, instead);
+};
+
+const canPayReplacementInsteadSegment = (
+  state: GameState,
+  source: LocatedReplacementSource,
+  instead: SupportedReplacementEffectBlock["effect"]["instead"],
+): boolean => {
   if (isSupportedLifeTopToHandEffect(instead)) {
     const player = state.players[source.card.controller];
     return player !== undefined && player.life.length >= instead.count;

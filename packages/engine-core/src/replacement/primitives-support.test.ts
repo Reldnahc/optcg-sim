@@ -241,6 +241,33 @@ test("owner deck-bottom replacement support follows flattened sequence primitive
   assert.equal(isSupportedReplacementEffectBlock(block), true);
 });
 
+test("replacement support admits sequenced rest-self then trash-from-hand instead primitives", () => {
+  const block = replacementBlock(
+    "replacement-rest-self-trash-hand-sequence",
+    wouldMoveFromCharacterArea(),
+    {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: restSelfInstead(),
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "trashFromHand",
+            player: "self",
+            chooser: "self",
+            count: 1,
+          },
+        },
+      ],
+    },
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
 test("owner deck-bottom replacement fails closed when extra sequence behavior would be dropped", () => {
   const block = replacementBlock(
     "replacement-owner-bottom-extra-behavior",
