@@ -62,4 +62,61 @@ describe("play from trash instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses independently quantified play selections sharing the trash source", () => {
+    const result = parsePlayFromTrashInstruction({
+      text: 'play up to 1 Character card with a type including "Baroque Works" and a cost of 4 or less and up to 1 Character card with a type including "Baroque Works" and a cost of 1 from your trash.',
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesIncludeAny: ["Baroque Works"],
+                cost: { max: 4 },
+              },
+            },
+          },
+          { connector: "ifPossible", effect: { type: "playSelected" } },
+          {
+            connector: "then",
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesIncludeAny: ["Baroque Works"],
+                cost: { op: "eq", value: 1 },
+              },
+            },
+          },
+          { connector: "ifPossible", effect: { type: "playSelected" } },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "zone:trash",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "composition:selectThenPlay",
+        "expression:sequence",
+      ]),
+    );
+  });
 });
