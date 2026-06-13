@@ -29,6 +29,10 @@ it("parses rested DON attachment to the selected DON owner's Leader or Character
           {
             effect: {
               type: "selectTargets",
+              ownerConstraint: {
+                type: "sameAsSavedReferenceOwner",
+                selection: "donSelection:attach",
+              },
               request: {
                 chooser: "self",
                 player: "anyPlayer",

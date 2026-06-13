@@ -503,6 +503,10 @@ export interface SelectCardsEffect {
 
 export interface SelectTargetsEffect {
   type: "selectTargets";
+  ownerConstraint?: {
+    type: "sameAsSavedReferenceOwner";
+    selection: SelectionId;
+  };
   request: SelectedTargetsRequest | MultiZoneTargetRequest;
 }
 

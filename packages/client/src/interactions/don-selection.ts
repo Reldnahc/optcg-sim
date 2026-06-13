@@ -1,7 +1,11 @@
 import type { InstanceId } from "@optcg/types";
 
 import type { ClientVisibleAction } from "../transport.js";
-import type { BoardViewModel, ClientActionModel } from "../view-model.js";
+import type {
+  BoardViewModel,
+  ClientActionModel,
+  ClientCardModel,
+} from "../view-model.js";
 
 export const ATTACH_SELECTED_DON_ACTION_INDEX = -1;
 
@@ -33,6 +37,14 @@ const hasAttachDonActionForDon = (
       action.attachment?.donInstanceId === (donInstanceId as InstanceId),
   );
 
+const costAreaDon = (
+  board: BoardViewModel | undefined,
+  instanceId: string,
+): ClientCardModel | undefined =>
+  [...(board?.self.costArea ?? []), ...(board?.opponent.costArea ?? [])].find(
+    (candidate) => String(candidate.instanceId) === instanceId,
+  );
+
 export const selectedDonAttachmentClickIntent = ({
   confirmAttachDon,
   selectedDonInstanceIds,
@@ -56,15 +68,20 @@ export const isSelectableCostAreaDon = (
   instanceId: string,
   legalActions?: readonly ClientVisibleAction[],
 ): boolean => {
-  const card = board?.self.costArea.find(
-    (candidate) => String(candidate.instanceId) === instanceId,
-  );
+  const card = costAreaDon(board, instanceId);
+  if (
+    card === undefined ||
+    (String(card.cardId) !== "DON" && card.category.toLowerCase() !== "don")
+  ) {
+    return false;
+  }
+  if (legalActions !== undefined) {
+    return hasAttachDonActionForDon(legalActions, instanceId);
+  }
   return (
-    card !== undefined &&
-    card.state === "active" &&
-    (String(card.cardId) === "DON" || card.category.toLowerCase() === "don") &&
-    (legalActions === undefined ||
-      hasAttachDonActionForDon(legalActions, instanceId))
+    board?.self.costArea.some(
+      (candidate) => String(candidate.instanceId) === instanceId,
+    ) === true && card.state === "active"
   );
 };
 

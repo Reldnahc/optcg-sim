@@ -58,7 +58,10 @@ const board = (): BoardViewModel => ({
     leader: card("opponent-leader", "active"),
     handCount: 0,
     characters: [],
-    costArea: [card("opponent-active-don", "active")],
+    costArea: [
+      card("opponent-active-don", "active"),
+      card("opponent-rested-don", "rested"),
+    ],
     trash: [],
     deckCount: 0,
     donDeckCount: 0,
@@ -135,6 +138,30 @@ describe("DON selection interaction", () => {
     assert.equal(isSelectableCostAreaDon(model, "active-don", actions), true);
     assert.equal(isSelectableCostAreaDon(model, "rested-don", actions), false);
     assert.equal(isSelectableCostAreaDon(model, "active-don", []), false);
+  });
+
+  test("cost-area DON selection can use opponent DON when a legal attach action exposes it", () => {
+    const model = board();
+    const actions: ClientVisibleAction[] = [
+      {
+        index: 11,
+        type: "respondToDecision",
+        label: "Pay cost",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: "opponent-leader" as InstanceId,
+        },
+      },
+    ];
+
+    assert.equal(
+      isSelectableCostAreaDon(model, "opponent-rested-don", actions),
+      true,
+    );
+    assert.equal(
+      isSelectableCostAreaDon(model, "opponent-active-don", actions),
+      false,
+    );
   });
 
   test("creates a normal card menu action for selected DON attachment", () => {

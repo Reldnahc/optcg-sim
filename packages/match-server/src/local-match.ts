@@ -488,13 +488,29 @@ const actionPlacement = (
 const actionAttachment = (
   action: LegalAction,
 ): DevVisibleAction["attachment"] | undefined => {
-  if (action.type !== "attachDon") {
-    return undefined;
+  if (action.type === "attachDon") {
+    return {
+      donInstanceId: action.donInstanceId,
+      targetInstanceId: action.target.instanceId,
+    };
   }
-  return {
-    donInstanceId: action.donInstanceId,
-    targetInstanceId: action.target.instanceId,
-  };
+  if (
+    action.type === "respondToDecision" &&
+    action.response.type === "payment" &&
+    action.response.selectedDonInstanceIds?.length === 1 &&
+    action.response.selectedCardInstanceIds?.length === 1
+  ) {
+    const donInstanceId = action.response.selectedDonInstanceIds[0];
+    const targetInstanceId = action.response.selectedCardInstanceIds[0];
+    if (donInstanceId === undefined || targetInstanceId === undefined) {
+      return undefined;
+    }
+    return {
+      donInstanceId,
+      targetInstanceId,
+    };
+  }
+  return undefined;
 };
 
 const actionAttack = (

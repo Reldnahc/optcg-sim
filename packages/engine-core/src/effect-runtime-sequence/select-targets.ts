@@ -64,6 +64,8 @@ type SegmentLedgers = {
   segmentResults: EffectExecutionFrame["segmentResults"];
 };
 
+type TargetCandidate = SelectTargetsDecision["candidates"][number];
+
 type SequenceFrameResumeResult =
   | {
       events: EngineEvent[];
@@ -144,6 +146,41 @@ const isRestEffectWithChooseTarget = (
   );
 };
 
+const savedReferenceOwnerIds = (
+  ledgers: SegmentLedgers,
+  selection: string,
+): ReadonlySet<CardRef["playerId"]> | null => {
+  const saved = ledgers.savedReferences[selection];
+  if (saved?.kind === "selectedCards") {
+    return new Set(saved.cards.map((card) => card.playerId));
+  }
+  if (saved?.kind === "selectedTargets") {
+    return new Set(saved.targets.map((target) => target.object.playerId));
+  }
+  return null;
+};
+
+const applyOwnerConstraint = (
+  segment: Extract<
+    SupportedSequenceSegment["effect"],
+    { type: "selectTargets" }
+  >,
+  ledgers: SegmentLedgers,
+  candidates: readonly TargetCandidate[],
+): readonly TargetCandidate[] | null => {
+  const constraint = segment.ownerConstraint;
+  if (constraint === undefined) {
+    return candidates;
+  }
+  const ownerIds = savedReferenceOwnerIds(ledgers, constraint.selection);
+  if (ownerIds === null) {
+    return null;
+  }
+  return candidates.filter((candidate) =>
+    ownerIds.has(candidate.card.playerId),
+  );
+};
+
 export const applySelectTargetsSequenceSegment = (params: {
   entry: EffectQueueEntry;
   emptySegmentResult: () => SequenceSegmentResult;
@@ -187,7 +224,7 @@ export const applySelectTargetsSequenceSegment = (params: {
     segment,
     segmentKey,
   } = params;
-  const candidates = resolvePublicTargetCandidatesForRequest(
+  const resolvedCandidates = resolvePublicTargetCandidatesForRequest(
     nextState,
     segment.effect.request,
     {
@@ -199,13 +236,21 @@ export const applySelectTargetsSequenceSegment = (params: {
     entry,
     segment.effect.request.chooser,
   );
-  if (!candidates.ok || chooserId === undefined) {
+  if (!resolvedCandidates.ok || chooserId === undefined) {
+    return { ok: false };
+  }
+  const candidates = applyOwnerConstraint(
+    segment.effect,
+    nextLedgers,
+    resolvedCandidates.candidates,
+  );
+  if (candidates === null) {
     return { ok: false };
   }
   const minimumRequired = segment.effect.request.allowFewerIfUnavailable
-    ? Math.min(segment.effect.request.min, candidates.candidates.length)
+    ? Math.min(segment.effect.request.min, candidates.length)
     : segment.effect.request.min;
-  if (candidates.candidates.length < minimumRequired) {
+  if (candidates.length < minimumRequired) {
     return {
       kind: "continued",
       ledgers: {
@@ -223,7 +268,7 @@ export const applySelectTargetsSequenceSegment = (params: {
     };
   }
   if (
-    candidates.candidates.length === 0 &&
+    candidates.length === 0 &&
     segment.effect.request.min === 0 &&
     segment.effect.request.allowFewerIfUnavailable
   ) {
@@ -265,7 +310,7 @@ export const applySelectTargetsSequenceSegment = (params: {
     },
     visibility: { type: "public" },
     request: segment.effect.request,
-    candidates: candidates.candidates,
+    candidates: [...candidates],
   };
   const decisionEvents: EngineEvent[] = [];
   appendEvent(

@@ -150,6 +150,14 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
           saveResultAs: donAttachTarget,
           effect: {
             type: "selectTargets",
+            ...(target.targetOwner === "selectedDonOwner"
+              ? {
+                  ownerConstraint: {
+                    type: "sameAsSavedReferenceOwner" as const,
+                    selection: donAttachSelection,
+                  },
+                }
+              : {}),
             request: {
               timing: "onResolution",
               chooser: "self",
@@ -334,6 +342,10 @@ const parseOwnerRelativeDonAttachmentInstruction: InstructionParser = (
           saveResultAs: donAttachTarget,
           effect: {
             type: "selectTargets",
+            ownerConstraint: {
+              type: "sameAsSavedReferenceOwner",
+              selection: donAttachSelection,
+            },
             request: {
               timing: "onResolution",
               chooser: "self",

@@ -229,6 +229,14 @@ const hasSavedSelectedTargets = (
   selection: unknown,
 ): boolean => state.savedSelectedTargets.has(String(selection));
 
+const hasSavedOwnerConstraintReference = (
+  state: SequenceSupportState,
+  effect: SelectTargetsEffect,
+): boolean =>
+  effect.ownerConstraint === undefined ||
+  hasSavedSelectedCardSet(state, effect.ownerConstraint.selection) ||
+  hasSavedSelectedTargets(state, effect.ownerConstraint.selection);
+
 const requestSelectsDonFromCostArea = (
   request: SelectTargetsEffect["request"],
 ): boolean => {
@@ -577,7 +585,10 @@ const isSupportedSequenceBlockWithState = (
       }
       if (segment.effect.type === "selectTargets") {
         const request = segment.effect.request;
-        if (!isSupportedSequenceTargetRequest(request)) {
+        if (
+          !isSupportedSequenceTargetRequest(request) ||
+          !hasSavedOwnerConstraintReference(supportState, segment.effect)
+        ) {
           return false;
         }
         if (segment.saveResultAs !== undefined) {
