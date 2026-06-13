@@ -7,7 +7,6 @@ import {
   optionalCardCostInstanceIds,
   chooseDecisionTrigger,
   moveOrderedCardNear,
-  quickPayActivateMainCostActionIndex,
   setOrderedCardsPlacementDestination,
   setDecisionActionOption,
   setDecisionQuantity,
@@ -217,6 +216,8 @@ export const useMatchClient = ({
     activeCardCostChoice,
     activeCardCostSelectedInstanceIds,
     decisionDraft,
+    quickPayActivateMainCosts,
+    quickPayActivateMainArmed: quickPayActivateMainArmed.current,
   });
   const {
     activeCardCostGroup,
@@ -230,9 +231,9 @@ export const useMatchClient = ({
     explicitCardCostChoiceActive,
     modalResponseActions,
     optionalCardCostChoice,
-    pendingDecisionResponseActions,
     pendingChoiceInstanceIds,
     pendingDecisionInteractionMode,
+    quickPayActivateMainCostActionIndex: quickPayActionIndex,
     selectedCardCostActionIndex,
   } = decisionModel;
 
@@ -516,20 +517,16 @@ export const useMatchClient = ({
     ) {
       return;
     }
-    const actionIndex = quickPayActivateMainCostActionIndex(
-      pendingDecision,
-      pendingDecisionResponseActions,
-    );
-    if (actionIndex === undefined) {
+    if (quickPayActionIndex === undefined) {
       return;
     }
     autoSubmittedPayCostDecisionId.current = String(pendingDecision.id);
-    void submitAction(actionIndex);
+    void submitAction(quickPayActionIndex);
   }, [
     actionInFlight,
     pendingDecision,
-    pendingDecisionResponseActions,
     quickPayActivateMainCosts,
+    quickPayActionIndex,
     submitAction,
   ]);
   const selectCard = useMatchClientCardSelection({
