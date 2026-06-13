@@ -7,6 +7,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
 import { SettingsWindow } from "./SettingsWindow.js";
+import { MatchVisualSettingsProvider } from "./match-visual-settings-context.js";
+import { noopMatchVisualSettings } from "./match-visual-settings.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import { ControlRail } from "./ControlRail.js";
 import { SettingsButton } from "./SettingsButton.js";
@@ -36,18 +38,11 @@ describe("settings window", () => {
 
     assert.match(markup, /Background image/u);
     assert.match(markup, /Background color/u);
-    assert.match(markup, /Background type/u);
-    assert.match(markup, /Color/u);
-    assert.match(markup, /Image/u);
-    assert.match(markup, /Image fit/u);
-    assert.match(markup, /Crop/u);
-    assert.match(markup, /Crop zoom/u);
-    assert.match(markup, /Stretch/u);
-    assert.match(markup, /Fit/u);
-    assert.match(markup, /Tile/u);
-    assert.match(markup, /aria-label="Crop image focus"/u);
-    assert.match(markup, /settings-crop-preview/u);
-    assert.match(markup, /settings-crop-frame/u);
+    assert.doesNotMatch(markup, /Background type/u);
+    assert.doesNotMatch(markup, /Image fit/u);
+    assert.doesNotMatch(markup, /Crop zoom/u);
+    assert.doesNotMatch(markup, /aria-label="Crop image focus"/u);
+    assert.doesNotMatch(markup, /settings-crop-preview/u);
     assert.match(markup, /type="file"/u);
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
@@ -72,6 +67,37 @@ describe("settings window", () => {
     assert.match(markup, /Confirm attach DON/u);
     assert.match(markup, /Confirm end turn/u);
     assert.match(markup, /type="checkbox"/u);
+  });
+
+  test("background controls switch between color and image settings", () => {
+    const colorMarkup = renderToStaticMarkup(
+      createElement(SettingsWindow, {
+        onClose: () => undefined,
+      }),
+    );
+    const imageMarkup = renderToStaticMarkup(
+      createElement(
+        MatchVisualSettingsProvider,
+        {
+          value: {
+            ...noopMatchVisualSettings,
+            backgroundImageUrl: "data:image/png;base64,abc",
+          },
+        },
+        createElement(SettingsWindow, {
+          onClose: () => undefined,
+        }),
+      ),
+    );
+
+    assert.match(colorMarkup, /Background color/u);
+    assert.doesNotMatch(colorMarkup, /Image fit/u);
+    assert.doesNotMatch(colorMarkup, /settings-crop-preview/u);
+    assert.match(imageMarkup, /Image fit/u);
+    assert.match(imageMarkup, /Crop zoom/u);
+    assert.match(imageMarkup, /settings-crop-preview/u);
+    assert.doesNotMatch(imageMarkup, /Background color/u);
+    assert.doesNotMatch(imageMarkup, /Background type/u);
   });
 
   test("settings groups controls by setting type in preferred order", () => {
@@ -250,7 +276,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /setBackgroundImageCropZoom/u);
     assert.match(settingsWindow, /setBackgroundImagePositionX/u);
     assert.match(settingsWindow, /setBackgroundImagePositionY/u);
-    assert.match(settingsWindow, /setBackgroundMode/u);
+    assert.doesNotMatch(settingsWindow, /setBackgroundMode/u);
     assert.match(settingsWindow, /onPointerDown/u);
     assert.match(settingsWindow, /onPointerMove/u);
     assert.match(settingsWindow, /setPointerCapture/u);
@@ -277,7 +303,7 @@ describe("settings window", () => {
       readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
     ]);
 
-    assert.match(matchApp, /backgroundMode/u);
+    assert.doesNotMatch(matchApp, /backgroundMode\s*===/u);
     assert.match(matchApp, /backgroundImageFit/u);
     assert.match(matchApp, /backgroundImageCropZoom/u);
     assert.match(matchApp, /backgroundImagePositionX/u);

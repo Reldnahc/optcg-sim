@@ -456,9 +456,7 @@ export const MatchApp = ({
     positionX: visualSettings.backgroundImagePositionX,
     positionY: visualSettings.backgroundImagePositionY,
   });
-  const backgroundImageEnabled =
-    visualSettings.backgroundMode === "image" &&
-    visualSettings.backgroundImageUrl.length > 0;
+  const backgroundImageEnabled = visualSettings.backgroundImageUrl.length > 0;
   const matchAppStyle = {
     "--match-background-color": visualSettings.backgroundColor,
     "--match-background-size": backgroundStyle.size,
