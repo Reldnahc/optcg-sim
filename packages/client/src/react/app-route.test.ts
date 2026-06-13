@@ -25,6 +25,13 @@ describe("client app routes", () => {
     assert.equal(route.path, "/lobbies/lobby-1");
   });
 
+  test("maps room code URLs to the lobbies route", () => {
+    const route = appRouteFromPath("/r/ab12");
+
+    assert.equal(route.id, "lobbies");
+    assert.equal(route.path, "/r/ab12");
+  });
+
   test("preserves query strings for the match route", () => {
     const route = appRouteFromPath("/match?matchId=abc&seat=p2");
 

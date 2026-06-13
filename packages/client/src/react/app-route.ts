@@ -32,7 +32,10 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
   }
 
   const route = routeByPath.get(parsed.pathname);
-  if (parsed.pathname.startsWith("/lobbies/")) {
+  if (
+    parsed.pathname.startsWith("/lobbies/") ||
+    /^\/r\/[0-9a-z]{4}$/u.test(parsed.pathname)
+  ) {
     return {
       id: "lobbies",
       path: parsed.pathname,
