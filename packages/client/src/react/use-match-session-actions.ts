@@ -1,4 +1,5 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
+import type { PlayerId } from "@optcg/types";
 
 import type {
   AttackTargetChoice,
@@ -35,6 +36,7 @@ interface UseMatchSessionActionsInput {
   setClientState: Dispatch<SetStateAction<MatchClientSessionState | undefined>>;
   setDecisionDraft: Dispatch<SetStateAction<DecisionDraft | undefined>>;
   setErrors: Dispatch<SetStateAction<string[]>>;
+  setRematchRequestedBy: Dispatch<SetStateAction<PlayerId | undefined>>;
   setSelectedCardInstanceId: Dispatch<SetStateAction<string | undefined>>;
   setSelectedDonInstanceIds: Dispatch<SetStateAction<string[]>>;
 }
@@ -50,6 +52,7 @@ export const useMatchSessionActions = ({
   setClientState,
   setDecisionDraft,
   setErrors,
+  setRematchRequestedBy,
   setSelectedCardInstanceId,
   setSelectedDonInstanceIds,
 }: UseMatchSessionActionsInput): {
@@ -120,6 +123,7 @@ export const useMatchSessionActions = ({
     setActionInFlight(true);
     try {
       const result = await controller.requestRematch();
+      setRematchRequestedBy(result.seat.playerId);
       if (
         isMatchClientState(result) ||
         isHydratingMatchClientState(result) ||
@@ -128,11 +132,13 @@ export const useMatchSessionActions = ({
         setMatchLocation(result.matchId);
       } else if (isLobbyClientState(result)) {
         setLobbyLocation(result);
+        setRematchRequestedBy(undefined);
       }
       resetLocalInteractionState();
       setClientState(result);
       setErrors([]);
     } catch (error) {
+      setRematchRequestedBy(undefined);
       setErrors([error instanceof Error ? error.message : String(error)]);
     } finally {
       setActionInFlight(false);
@@ -143,6 +149,7 @@ export const useMatchSessionActions = ({
     setActionInFlight,
     setClientState,
     setErrors,
+    setRematchRequestedBy,
   ]);
 
   return { createNewMatch, chooseFirstPlayer, requestRematch };

@@ -267,6 +267,13 @@ export interface MatchSessionTransitionMessage {
   firstPlayerChoice?: FirstPlayerChoiceView;
 }
 
+export interface MatchRematchRequestMessage {
+  type: "rematchRequest";
+  matchId: MatchId;
+  serverSeq: number;
+  requestedBy: PlayerId;
+}
+
 export interface LobbyStateSyncMessage {
   type: "lobbySync";
   lobbyId: string;
@@ -309,6 +316,7 @@ export interface MatchLiveTransport {
     onTimerSync: (message: MatchTimerSyncMessage) => void;
     onSetupSync: (message: MatchSetupSyncMessage) => void;
     onSessionTransition: (message: MatchSessionTransitionMessage) => void;
+    onRematchRequest: (message: MatchRematchRequestMessage) => void;
     onError: (message: string) => void;
   }) => LiveMatchConnection;
 }

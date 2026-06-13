@@ -53,6 +53,7 @@ export interface MatchClientUiState {
   accountLoadoutsStatus: "idle" | "loading" | "ready" | "error";
   accountLoadoutsError?: string | undefined;
   accountLoadoutValidationRequired: boolean;
+  rematchStatus?: "requestedBySelf" | "requestedByOpponent" | undefined;
   actionInFlight: boolean;
   errors: string[];
 }
