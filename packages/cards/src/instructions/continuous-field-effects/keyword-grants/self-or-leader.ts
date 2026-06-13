@@ -27,6 +27,7 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
     parseThatCharacterKeywordGrant(input.text, context) ??
     parseNamedCardsAndSelfKeywordGrant(input.text, context) ??
     parseNaturalRushCharacterGrant(input.text, context) ??
+    parseFilteredNaturalRushCharacterGrant(input.text, context) ??
     parseSelfKeywordGrant(input.text, context);
 
 const parseLeaderKeywordGrant: ContinuousInstructionParser = (
@@ -128,6 +129,42 @@ const parseNaturalRushCharacterGrant = (
     evidence: [
       "instruction:giveKeyword",
       "target:thisCharacter",
+      "keyword:anySupported",
+      continuousDurationEvidence(context.condition),
+    ],
+    rest: "",
+  };
+};
+
+const parseFilteredNaturalRushCharacterGrant = (
+  text: string,
+  context: Parameters<ContinuousInstructionParser>[1],
+): InstructionParseResult | undefined => {
+  const match =
+    /^Your \{(?<type>[^}]+)\} type Characters can attack Characters on the turn in which they are played\.?$/iu.exec(
+      text,
+    );
+  const type = match?.groups?.["type"]?.trim();
+  if (type === undefined || type.length === 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "giveKeyword",
+      target: {
+        type: "all",
+        player: "self",
+        zone: "characterArea",
+        filter: { categories: ["character"], typesAny: [type] },
+      },
+      keyword: "rushCharacter",
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:giveKeyword",
+      "target:yourCharacters",
+      "filter:type",
       "keyword:anySupported",
       continuousDurationEvidence(context.condition),
     ],

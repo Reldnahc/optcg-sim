@@ -40,4 +40,19 @@ describe("implicit permanent entry point parser", () => {
       rest: "This Leader cannot attack.",
     });
   });
+
+  it("recognizes your-card continuous text without parsing the body", () => {
+    expect(
+      parseImplicitPermanentEntryPoint({
+        text: "Your {SWORD} type Characters can attack Characters on the turn in which they are played.",
+      }),
+    ).toMatchObject({
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+      },
+      evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
+    });
+  });
 });

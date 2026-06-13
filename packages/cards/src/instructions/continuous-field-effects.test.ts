@@ -307,6 +307,43 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses filtered played-turn Character attack permission as Rush:Character", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "Your {SWORD} type Characters can attack Characters on the turn in which they are played.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            typesAny: ["SWORD"],
+          },
+        },
+        keyword: "rushCharacter",
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "target:yourCharacters",
+        "filter:type",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses self-next-turn duration through multiple field effect body families", () => {
     expect(
       parseYourLeaderConditionalPowerInstruction(
