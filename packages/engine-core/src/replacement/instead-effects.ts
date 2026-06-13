@@ -10,6 +10,7 @@ type ReplacementInstead =
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 type SelectTargetsEffect = Extract<Effect, { type: "selectTargets" }>;
+type PayCostEffect = Extract<SequenceSegmentEffect, { type: "payCost" }>;
 
 interface SupportedOwnerDeckBottomInstead {
   readonly count: number;
@@ -150,6 +151,47 @@ export const isSupportedReplacementInsteadSequenceEffect = (
   );
 };
 
+export const supportedReplacementPayCostInstead = (
+  effect: Effect,
+): PayCostEffect | undefined => {
+  if (effect.type !== "sequence") {
+    return undefined;
+  }
+  const flattened = flattenSequenceEffect(effect);
+  if (flattened === null || flattened.effects.length !== 1) {
+    return undefined;
+  }
+  const segment = flattened.effects[0];
+  if (
+    segment?.connector !== "always" ||
+    segment.optional === true ||
+    segment.saveResultAs !== undefined ||
+    segment.effect.type !== "payCost"
+  ) {
+    return undefined;
+  }
+  const cost = segment.effect.cost;
+  if (
+    cost.type === "returnDon" ||
+    (cost.type === "moveCards" &&
+      cost.chooser === "self" &&
+      cost.from.player === "self" &&
+      cost.from.zone === "trash" &&
+      cost.from.position === undefined &&
+      cost.to.player === "self" &&
+      cost.to.zone === "deck" &&
+      cost.to.position === "bottom")
+  ) {
+    return segment.effect;
+  }
+  return undefined;
+};
+
+export const isSupportedReplacementPayCostInsteadEffect = (
+  effect: Effect,
+): effect is SequenceEffect =>
+  supportedReplacementPayCostInstead(effect) !== undefined;
+
 export const supportedOwnerDeckBottomInstead = (
   effect: Effect,
 ): SupportedOwnerDeckBottomInstead | undefined => {
@@ -213,6 +255,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
+  isSupportedReplacementPayCostInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const replacementOptionLabel = (
@@ -277,6 +320,14 @@ export const replacementOptionLabel = (
   }
   if (isSupportedReplacementInsteadSequenceEffect(instead)) {
     return "Apply replacement effects instead";
+  }
+  const payCost = supportedReplacementPayCostInstead(instead);
+  if (payCost?.cost.type === "moveCards") {
+    return `Place ${String(payCost.cost.count)} ${plural(
+      payCost.cost.count,
+      "card",
+      "cards",
+    )} from trash at the bottom of your deck instead`;
   }
   if (isSupportedOwnerDeckBottomInsteadEffect(instead)) {
     const count = supportedOwnerDeckBottomInstead(instead)?.count ?? 1;

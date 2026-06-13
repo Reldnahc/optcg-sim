@@ -13,6 +13,7 @@ import {
   isSupportedLifeVisibilityInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
   isSupportedOwnerDeckBottomInsteadEffect,
+  isSupportedReplacementPayCostInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
@@ -233,6 +234,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
+  isSupportedReplacementPayCostInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
 
 export const isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect = (

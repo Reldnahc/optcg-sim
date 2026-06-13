@@ -6,11 +6,17 @@ import type {
   EngineEvent,
   EngineResult,
   GameState,
+  OptionalCost,
   PlayerId,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
+import {
+  expandMoveCardsCostRoutes,
+  selectableMoveCardsCostIds,
+} from "../effect-runtime-sequence/move-card-cost-options.js";
+import { applyMoveCardsPayment } from "../movement/runtime-move-cards-payment.js";
 import {
   applyReturnDonPayment,
   getReturnDonEligibleInstanceIds,
@@ -31,7 +37,9 @@ type ReplacementDecisionResult = {
   result: EngineResult;
 };
 
-type ReturnDonCost = Extract<Cost, { type: "returnDon" }>;
+type ReplacementPayCost =
+  | Extract<Cost, { type: "returnDon" }>
+  | Extract<OptionalCost, { type: "moveCards" }>;
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -58,26 +66,66 @@ const cardRefArrayFromPayloadValue = (value: unknown): CardRef[] | undefined =>
       ? value
       : undefined;
 
-const returnDonCostFromPayloadValue = (
+const replacementPayCostFromPayloadValue = (
   value: unknown,
-): ReturnDonCost | undefined => {
+): ReplacementPayCost | undefined => {
   if (typeof value !== "object" || value === null || !("type" in value)) {
     return undefined;
   }
-  if (value.type !== "returnDon" || !("count" in value)) {
-    return undefined;
-  }
-  const count = value.count;
+  const candidate = value as Record<string, unknown>;
+  const count = candidate["count"];
   if (typeof count !== "number" || !Number.isInteger(count) || count <= 0) {
     return undefined;
   }
-  return { type: "returnDon", count };
+  if (candidate["type"] === "returnDon") {
+    return { type: "returnDon", count };
+  }
+  if (candidate["type"] !== "moveCards") {
+    return undefined;
+  }
+  const from = candidate["from"];
+  const to = candidate["to"];
+  if (
+    typeof from !== "object" ||
+    from === null ||
+    typeof to !== "object" ||
+    to === null ||
+    candidate["chooser"] !== "self" ||
+    candidate["order"] !== "chooserChoice" ||
+    candidate["optional"] !== true
+  ) {
+    return undefined;
+  }
+  const fromRecord = from as Record<string, unknown>;
+  const toRecord = to as Record<string, unknown>;
+  if (
+    fromRecord["player"] !== "self" ||
+    fromRecord["zone"] !== "trash" ||
+    fromRecord["position"] !== undefined ||
+    toRecord["player"] !== "self" ||
+    toRecord["zone"] !== "deck" ||
+    toRecord["position"] !== "bottom"
+  ) {
+    return undefined;
+  }
+  return {
+    type: "moveCards",
+    count,
+    chooser: "self",
+    from: { player: "self", zone: "trash" },
+    to: { player: "self", zone: "deck", position: "bottom" },
+    order: "chooserChoice",
+    optional: true,
+  };
 };
 
 const pendingReplacementPayCostInsteadFromPayload = (
   payload: unknown,
 ):
-  | (PendingReplacementPayCostInsteadPayload & { decisionId: string })
+  | (PendingReplacementPayCostInsteadPayload & {
+      cost: ReplacementPayCost;
+      decisionId: string;
+    })
   | undefined => {
   if (
     typeof payload !== "object" ||
@@ -91,7 +139,7 @@ const pendingReplacementPayCostInsteadFromPayload = (
     return undefined;
   }
   const candidate = pending as Record<string, unknown>;
-  const cost = returnDonCostFromPayloadValue(candidate["cost"]);
+  const cost = replacementPayCostFromPayloadValue(candidate["cost"]);
   if (
     typeof candidate["decisionId"] !== "string" ||
     typeof candidate["replacementId"] !== "string" ||
@@ -144,7 +192,9 @@ const pendingReplacementPayCostPayload = (
 ): {
   processId: string;
   processType: GameState["replacementState"][number]["type"];
-  payload: PendingReplacementPayCostInsteadPayload;
+  payload: PendingReplacementPayCostInsteadPayload & {
+    cost: ReplacementPayCost;
+  };
 } | null => {
   if (decision?.type !== "payCost") {
     return null;
@@ -198,16 +248,6 @@ export const applyReplacementPayCostDecisionResponse = (
     return null;
   }
   const cost = pending.payload.cost;
-  if (cost.type !== "returnDon") {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        invalidDecision("Replacement payCost type is unsupported."),
-      ),
-    };
-  }
   if (action.response.type !== "payment") {
     return {
       completedPayload: undefined,
@@ -218,29 +258,13 @@ export const applyReplacementPayCostDecisionResponse = (
       ),
     };
   }
-  if (action.response.optionId !== "returnDon") {
+  if (action.response.optionId !== cost.type) {
     return {
       completedPayload: undefined,
       result: toEngineResult(
         state,
         [],
         invalidDecision("Payment option mismatch."),
-      ),
-    };
-  }
-  const selected = action.response.selectedDonInstanceIds;
-  if (
-    selected === undefined ||
-    selected.length !== cost.count ||
-    new Set(selected).size !== selected.length ||
-    action.response.selectedCardInstanceIds !== undefined
-  ) {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        invalidDecision("Payment DON!! selection is invalid."),
       ),
     };
   }
@@ -255,34 +279,121 @@ export const applyReplacementPayCostDecisionResponse = (
       ),
     };
   }
-  const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
-  if (!selected.every((donId) => eligibleIds.has(donId))) {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        invalidDecision("Payment DON!! selection is invalid."),
-      ),
-    };
-  }
-  const returned = applyReturnDonPayment({
-    player,
-    playerId: pending.payload.controllerId,
-    selectedDonIds: selected,
-  });
-  if (returned === null) {
-    return {
-      completedPayload: undefined,
-      result: toEngineResult(
-        state,
-        [],
-        invalidDecision("Payment DON!! selection is invalid."),
-      ),
-    };
-  }
-
   const events: EngineEvent[] = [];
+  const paymentEvents: EngineEvent[] = [];
+  let nextPlayer;
+  let transformedPayload: Record<string, unknown>;
+  if (cost.type === "returnDon") {
+    const selected = action.response.selectedDonInstanceIds;
+    if (
+      selected === undefined ||
+      selected.length !== cost.count ||
+      new Set(selected).size !== selected.length ||
+      action.response.selectedCardInstanceIds !== undefined
+    ) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment DON!! selection is invalid."),
+        ),
+      };
+    }
+    const eligibleIds = new Set(getReturnDonEligibleInstanceIds(player));
+    if (!selected.every((donId) => eligibleIds.has(donId))) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment DON!! selection is invalid."),
+        ),
+      };
+    }
+    const returned = applyReturnDonPayment({
+      player,
+      playerId: pending.payload.controllerId,
+      selectedDonIds: selected,
+    });
+    if (returned === null) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment DON!! selection is invalid."),
+        ),
+      };
+    }
+    nextPlayer = returned;
+    transformedPayload = {
+      replacementId: pending.payload.replacementId,
+      selectedDonInstanceIds: selected,
+    };
+  } else {
+    const [selectedOption] = expandMoveCardsCostRoutes(cost);
+    const selected = action.response.selectedCardInstanceIds;
+    if (
+      selectedOption === undefined ||
+      selected === undefined ||
+      selected.length !== selectedOption.count ||
+      new Set(selected).size !== selected.length ||
+      action.response.selectedDonInstanceIds !== undefined
+    ) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment card selection is invalid."),
+        ),
+      };
+    }
+    const selectable = selectableMoveCardsCostIds(
+      state,
+      pending.payload.controllerId,
+      player,
+      selectedOption,
+    );
+    if (
+      selectable === undefined ||
+      !selected.every((cardId) => selectable.includes(cardId))
+    ) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment card selection is invalid."),
+        ),
+      };
+    }
+    const moved = applyMoveCardsPayment({
+      decisionId: decision.id,
+      events: paymentEvents,
+      player,
+      playerId: pending.payload.controllerId,
+      selected,
+      selectedOption,
+      state,
+    });
+    if (moved === null) {
+      return {
+        completedPayload: undefined,
+        result: toEngineResult(
+          state,
+          [],
+          invalidDecision("Payment card selection is invalid."),
+        ),
+      };
+    }
+    nextPlayer = moved;
+    transformedPayload = {
+      replacementId: pending.payload.replacementId,
+      selectedCardInstanceIds: selected,
+    };
+  }
   appendEvent(
     state,
     events,
@@ -305,8 +416,10 @@ export const applyReplacementPayCostDecisionResponse = (
     "costPaid",
     {
       playerId: pending.payload.controllerId,
-      optionId: "returnDon",
-      selectedDonInstanceIds: selected,
+      optionId: action.response.optionId,
+      ...(cost.type === "returnDon"
+        ? { selectedDonInstanceIds: action.response.selectedDonInstanceIds }
+        : { selectedCardInstanceIds: action.response.selectedCardInstanceIds }),
     },
     { type: "public" },
   );
@@ -314,10 +427,7 @@ export const applyReplacementPayCostDecisionResponse = (
   if (paid !== undefined) {
     paid.causedBy = { type: "decision", decisionId: decision.id };
   }
-  const transformedPayload = {
-    replacementId: pending.payload.replacementId,
-    selectedDonInstanceIds: selected,
-  };
+  events.push(...paymentEvents);
   appendEvent(
     state,
     events,
@@ -346,7 +456,7 @@ export const applyReplacementPayCostDecisionResponse = (
     ...state,
     players: {
       ...state.players,
-      [pending.payload.controllerId]: returned,
+      [pending.payload.controllerId]: nextPlayer,
     },
   };
   const completedPayload = replacementPayloadWithoutPending(

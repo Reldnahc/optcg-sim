@@ -457,6 +457,48 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses trash-to-deck-bottom replacement into reusable move-card instead primitives", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [Once Per Turn] If this Character would be K.O.'d, you may place 3 cards from your trash at the bottom of your deck in any order instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(replacementInstead(result), {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "moveCards",
+              count: 3,
+              chooser: "self",
+              from: { player: "self", zone: "trash" },
+              to: { player: "self", zone: "deck", position: "bottom" },
+              order: "chooserChoice",
+              optional: true,
+            },
+          },
+        },
+      ],
+    });
+    for (const evidence of [
+      "entry:replacement",
+      "condition:opponentTurn",
+      "marker:oncePerTurn",
+      "replacement:wouldBeKOd",
+      "instruction:moveCards",
+      "zone:trash",
+      "destination:deck",
+      "position:bottom",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses opponent effect field-removal replacement into reusable unfiltered hand-trash instead primitives", () => {
     const result = parseCardEffectLine(
       "If your Character with 7000 base power or less would be removed from the field by your opponent's effect, you may trash 1 card from your hand instead.",
