@@ -10,8 +10,11 @@ import {
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 
-const createFixtureMatchHttpServer = async () =>
+const createFixtureMatchHttpServer = async (
+  options: Parameters<typeof createMatchHttpServer>[0] = {},
+) =>
   createMatchHttpServer({
+    ...options,
     setup: await createFixtureDevMatchSetup(),
     fetchCard: createDefaultDevFixtureFetch(),
     deckHashCodec: {
@@ -749,7 +752,9 @@ describe("dev rematches", () => {
   });
 
   test("cancels rematch lobbies when a rematch lobby socket disconnects before start", async () => {
-    const server = await createFixtureMatchHttpServer();
+    const server = await createFixtureMatchHttpServer({
+      rematchLobbyDisconnectGraceMs: 0,
+    });
     await server.listen(0, "127.0.0.1");
     try {
       const match = await createReadyDevMatch(server);
@@ -796,6 +801,66 @@ describe("dev rematches", () => {
 
       await closeSocket(sourceP1);
       await closeSocket(sourceP2);
+      await closeSocket(rematchLobbyP2);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("keeps rematch lobbies alive when a rematch lobby socket reconnects before cleanup", async () => {
+    const server = await createFixtureMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const match = await createReadyDevMatch(server);
+      const loserToken = await claimDevSeat(server, match.matchId, "p1");
+      const { p2Token } = await concedeViaSocket(
+        server,
+        match.matchId,
+        "p1",
+        loserToken,
+      );
+      const sourceP1 = await openSocket(
+        webSocketUrl(server, match.matchId, "p1", loserToken),
+      );
+      const sourceP2 = await openSocket(
+        webSocketUrl(server, match.matchId, "p2", p2Token),
+      );
+      await sourceP1.next();
+      await sourceP2.next();
+      await createRematch(server, match.matchId, "p1", loserToken);
+      const rematch = await createRematch(server, match.matchId, "p2", p2Token);
+      const rematchLobbyId = rematch.body.lobbyId;
+      if (rematchLobbyId === undefined) {
+        throw new Error("Rematch response did not include lobby id.");
+      }
+      const rematchLobbyP1 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p1", loserToken),
+      );
+      const rematchLobbyP2 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p2", p2Token),
+      );
+      await rematchLobbyP1.next();
+      await rematchLobbyP2.next();
+
+      await closeSocket(rematchLobbyP1);
+      const reconnectedP1 = await openSocket(
+        lobbyWebSocketUrl(server, rematchLobbyId, "p1", loserToken),
+      );
+      await reconnectedP1.next();
+      await waitForServerLifecycle();
+      const afterReconnect = await submitCustomLobbyDeckResponse(
+        server,
+        rematchLobbyId,
+        loserToken,
+        "p1-rematch-hash",
+      );
+
+      assert.equal(afterReconnect.status, 200);
+      assert.equal(afterReconnect.body.seats?.["p1"]?.deck.status, "ready");
+
+      await closeSocket(sourceP1);
+      await closeSocket(sourceP2);
+      await closeSocket(reconnectedP1);
       await closeSocket(rematchLobbyP2);
     } finally {
       await server.close();
