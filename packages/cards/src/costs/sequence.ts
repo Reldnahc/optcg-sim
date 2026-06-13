@@ -291,7 +291,7 @@ function applyInheritedAction(
 ): string {
   if (
     inheritedAction === undefined ||
-    /^(?:rest|trash|place|reveal)\b/i.test(text)
+    /^(?:rest|trash|place|reveal|turn)\b/i.test(text)
   ) {
     return text;
   }

@@ -22,6 +22,31 @@ describe("field activation instruction parser", () => {
     });
   });
 
+  it("parses delayed this Character activation as a delayed self-target activate primitive", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "Set this Character as active at the end of this turn.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: {
+          type: "activate",
+          target: { type: "self" },
+        },
+      },
+      evidence: [
+        "instruction:activate",
+        "target:thisCharacter",
+        "state:active",
+        "duration:endOfTurn",
+        "composition:delayed",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses mass leader and character activation as reusable activate targets", () => {
     expect(
       parseSetFieldActiveInstruction({

@@ -182,15 +182,38 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
 function parseSetThisCharacterActive(
   text: string,
 ): ReturnType<InstructionParser> {
-  if (!/^set this Character as active\.?$/i.test(text)) {
+  const match =
+    /^set this Character as active(?<delayed> at the end of this turn)?\.?$/i.exec(
+      text,
+    );
+  if (match === null) {
     return undefined;
   }
 
+  const effect = {
+    type: "activate" as const,
+    target: { type: "self" as const },
+  };
+  if (match.groups?.["delayed"] !== undefined) {
+    return {
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect,
+      },
+      evidence: [
+        "instruction:activate",
+        "target:thisCharacter",
+        "state:active",
+        "duration:endOfTurn",
+        "composition:delayed",
+      ],
+      rest: "",
+    };
+  }
+
   return {
-    effect: {
-      type: "activate",
-      target: { type: "self" },
-    },
+    effect,
     evidence: ["instruction:activate", "target:thisCharacter", "state:active"],
     rest: "",
   };

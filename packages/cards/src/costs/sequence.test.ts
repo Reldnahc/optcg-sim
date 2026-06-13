@@ -233,6 +233,42 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("does not inherit rest into explicit turn-Life visibility costs", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "rest this Character and turn 1 card from the top of your Life cards face-down",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "restSelf" },
+          {
+            type: "setLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "top",
+            faceUp: false,
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCharacter",
+        "cost:setLifeFaceUp",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:life",
+        "position:top",
+        "destination:faceDown",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses reveal-from-hand costs with reusable hand card filters", () => {
     expect(
       parseOptionalCostSequence({
