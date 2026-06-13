@@ -12,8 +12,18 @@ export const donFieldCountConditionPrimitive = {
     "filter:category:don",
     "filter:state:attached",
     "filter:state:active",
+    "player:opponent",
   ],
 } as const;
+
+const isDonCardsOnPlayersField = (
+  text: string,
+  player: "self" | "opponent",
+): boolean => {
+  const fieldOwner = player === "opponent" ? "their" : "your";
+
+  return new RegExp(`^DON!! cards on ${fieldOwner} field$`, "i").test(text);
+};
 
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
@@ -187,8 +197,7 @@ export const parseDonFieldCountCondition: ConditionParser = (
     };
   }
 
-  const objectMatch = /^DON!! cards on your field$/i.exec(comparison.rest);
-  if (objectMatch === null) {
+  if (!isDonCardsOnPlayersField(comparison.rest, player)) {
     return undefined;
   }
 

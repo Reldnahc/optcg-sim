@@ -18,6 +18,7 @@ describe("DON field count condition parser", () => {
         "filter:category:don",
         "filter:state:attached",
         "filter:state:active",
+        "player:opponent",
       ],
     });
   });
@@ -68,6 +69,30 @@ describe("DON field count condition parser", () => {
         "player:self",
         "filter:category:don",
       ],
+    });
+  });
+
+  it("parses opponent DON on their field as the same opponent field-count primitive", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "your opponent has 6 or more DON!! cards on their field",
+      }),
+    ).toMatchObject({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: { categories: ["don"] },
+        op: "gte",
+        value: 6,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:category:don",
+      ],
+      rest: "",
     });
   });
 
