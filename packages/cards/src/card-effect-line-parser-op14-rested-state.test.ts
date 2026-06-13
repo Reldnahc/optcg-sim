@@ -130,4 +130,81 @@ describe("OP14 rested-state and rested-trigger parsing", () => {
       ]),
     );
   });
+
+  it("parses self-rested reactions with optional Life payment into Character or Stage refresh lock", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] When this Character becomes rested, you may add 1 card from the top of your Life cards to your hand. If you do, up to 1 of your opponent's rested Characters or Stages will not become active in your opponent's next Refresh Phase.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "cardRested",
+          target: "self",
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+        condition: { type: "yourTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveCards",
+                  count: 1,
+                  chooser: "self",
+                  optional: true,
+                  from: { player: "self", zone: "life", position: "top" },
+                  to: { player: "self", zone: "hand" },
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "cannotBecomeActive",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    player: "opponent",
+                    zones: ["characterArea", "stageArea"],
+                    filter: {
+                      categories: ["character", "stage"],
+                      state: "rested",
+                    },
+                    min: 0,
+                    max: 1,
+                  },
+                },
+                duration: {
+                  type: "untilStartOfNextTurn",
+                  player: "opponent",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "trigger:cardRested",
+        "composition:optionalCostedEffect",
+        "cost:moveCards",
+        "zone:life",
+        "destination:hand",
+        "instruction:preventActivation",
+        "zone:characterArea",
+        "zone:stageArea",
+        "filter:category:character",
+        "filter:category:stage",
+        "filter:state:rested",
+        "duration:opponentNextRefreshPhase",
+      ]),
+    );
+  });
 });

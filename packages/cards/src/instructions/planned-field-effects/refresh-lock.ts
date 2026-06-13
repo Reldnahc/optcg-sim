@@ -204,6 +204,23 @@ const parseOpponentRefreshLockTarget = (
         rest: restedCards.rest,
       };
     }
+    const restedCharactersOrStages =
+      parseOpponentRestedCharactersOrStagesRefreshLockTarget(
+        cardinality.rest,
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+      );
+    if (restedCharactersOrStages !== undefined) {
+      return {
+        target: restedCharactersOrStages.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...restedCharactersOrStages.evidence,
+        ],
+        rest: restedCharactersOrStages.rest,
+      };
+    }
     const anyRestedCharacter = parseAnyRestedCharacterRefreshLockTarget(
       cardinality.rest,
       cardinality.cardinality.min,
@@ -278,6 +295,55 @@ const parseOpponentRefreshLockTarget = (
       ),
     ],
     rest: allTarget.rest.trim(),
+  };
+};
+
+const parseOpponentRestedCharactersOrStagesRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+      readonly target: Target;
+    }
+  | undefined => {
+  const match =
+    /^of your opponent's rested Characters or Stages\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: ["characterArea", "stageArea"],
+        filter: {
+          categories: ["character", "stage"],
+          state: "rested",
+        },
+        min,
+        max,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+    },
+    evidence: [
+      "target:opponentRestedCards",
+      "player:opponent",
+      "zone:characterArea",
+      "zone:stageArea",
+      "filter:category:character",
+      "filter:category:stage",
+      "filter:state:rested",
+    ],
+    rest: match.groups?.["rest"]?.trim() ?? "",
   };
 };
 
