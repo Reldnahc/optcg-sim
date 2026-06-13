@@ -175,7 +175,6 @@ export type PrimitiveEvidence =
   | "composition:selectThenActivate"
   | "composition:selectThenApply"
   | "composition:selectThenMove"
-  | "composition:compoundActivation"
   | "composition:savedTargetCondition"
   | "composition:forEachSavedTarget"
   | "composition:sequence"
