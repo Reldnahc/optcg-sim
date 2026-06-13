@@ -224,6 +224,33 @@ describe("lobby deck panel", () => {
     );
   });
 
+  test("allows browsing unchecked loadouts while submit waits for validation", () => {
+    const uncheckedLoadouts: readonly AccountLoadout[] = loadouts.map(
+      (loadout) => ({
+        ...loadout,
+        validation: { status: "unchecked", errors: [] },
+      }),
+    );
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts: uncheckedLoadouts,
+        loadoutsStatus: "ready",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.doesNotMatch(
+      html,
+      /deck-loadout-option[^>]*disabled=""[\s\S]*Enel Yellow/u,
+    );
+    assert.match(
+      html,
+      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
+    );
+  });
+
   test("renders loading deck status in the deck action row", () => {
     const html = renderToStaticMarkup(
       createElement(LobbyDeckPanel, {
@@ -425,6 +452,10 @@ describe("lobby deck panel", () => {
     assert.match(supportSource, /refreshAccountLoadouts: \(\) => void;/u);
     assert.match(clientSource, /const refreshAccountLoadouts = useCallback/u);
     assert.match(clientSource, /accountClient\s*\.listLoadouts\(\)/u);
+    assert.match(
+      clientSource,
+      /setAccountLoadouts\(uncheckedLocalLoadouts\(loadouts\)\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*controller\.validateLobbyDecks\(/u,
+    );
     assert.doesNotMatch(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
     assert.match(clientSource, /controller\.validateLobbyDecks\(/u);
     assert.match(clientSource, /accountClient\s*\.createSimHandoff\(/u);
@@ -479,7 +510,7 @@ describe("lobby deck panel", () => {
     assert.match(pickerSource, /requirePlayableValidation = true/u);
     assert.match(
       pickerSource,
-      /!requirePlayableValidation \|\| loadout\.validation\?\.status === "playable"/u,
+      /const isSelectableLoadout = \([\s\S]*loadout\.validation\?\.status === "playable" \|\|\s*loadout\.validation\?\.status === "unchecked"\);/u,
     );
   });
 

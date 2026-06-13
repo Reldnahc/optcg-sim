@@ -84,9 +84,11 @@ const loadoutMeta = (loadout: AccountLoadout | undefined): string =>
           ? []
           : [
               loadout.validation.errors[0] ??
-                (loadout.validation.status === "unverified"
-                  ? "Unable to verify"
-                  : "Unplayable"),
+                (loadout.validation.status === "unchecked"
+                  ? "Checking deck"
+                  : loadout.validation.status === "unverified"
+                    ? "Unable to verify"
+                    : "Unplayable"),
             ]),
       ].join(" / ");
 
@@ -95,7 +97,9 @@ const isSelectableLoadout = (
   requirePlayableValidation: boolean,
 ): boolean =>
   loadout !== undefined &&
-  (!requirePlayableValidation || loadout.validation?.status === "playable");
+  (!requirePlayableValidation ||
+    loadout.validation?.status === "playable" ||
+    loadout.validation?.status === "unchecked");
 
 const LeaderCrop = ({
   loadout,
