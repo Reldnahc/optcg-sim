@@ -74,7 +74,7 @@ describe("settings window", () => {
     assert.match(markup, /type="checkbox"/u);
   });
 
-  test("settings groups controls by setting type", () => {
+  test("settings groups controls by setting type in preferred order", () => {
     const markup = renderToStaticMarkup(
       createElement(SettingsWindow, {
         onClose: () => undefined,
@@ -83,7 +83,11 @@ describe("settings window", () => {
 
     assert.match(
       markup,
-      /<section class="settings-section" aria-label="Customization"><h3>Customization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>/u,
+      /<section class="settings-section" aria-label="Gameplay"><h3>Gameplay<\/h3>.*Quick pay Activate: Main costs.*Confirm attach DON.*Confirm end turn.*<\/section>.*<section class="settings-section" aria-label="Personalization"><h3>Personalization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>.*<section class="settings-section" aria-label="Sound"><h3>Sound<\/h3>.*Sound volume.*<\/section>.*<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduced motion.*<\/section>/u,
+    );
+    assert.match(
+      markup,
+      /<section class="settings-section" aria-label="Personalization"><h3>Personalization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>/u,
     );
     assert.match(
       markup,
@@ -93,10 +97,7 @@ describe("settings window", () => {
       markup,
       /<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduced motion.*<\/section>/u,
     );
-    assert.match(
-      markup,
-      /<section class="settings-section" aria-label="Gameplay"><h3>Gameplay<\/h3>.*Quick pay Activate: Main costs.*Confirm attach DON.*Confirm end turn.*<\/section>/u,
-    );
+    assert.doesNotMatch(markup, /Customization/u);
   });
 
   test("match app wires the settings icon to the settings window", async () => {
