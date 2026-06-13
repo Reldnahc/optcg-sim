@@ -93,4 +93,19 @@ describe("bot player", () => {
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
+
+  test("does not concede when concession is the only visible action", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions([
+        {
+          index: 0,
+          type: "concede",
+          label: "Concede",
+        },
+      ]),
+      botId,
+    );
+
+    assert.equal(chosen, undefined);
+  });
 });

@@ -27,6 +27,11 @@ beforeAll(async () => {
   premadeSetup = await createFixtureDevMatchSetup();
 });
 
+const waitForBotMicrotasks = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 const resolveFirstPlayerChoice = (
   registry: Awaited<ReturnType<typeof createLocalDevMatchRegistry>>,
   created: CreatedDevMatchResponse,
@@ -246,4 +251,37 @@ test("bot players are exempt from disconnect timers", async () => {
   assert.notEqual(match?.state.status.type, "completed");
   assert.notEqual(match?.state.status.type, "gameOver");
   assert.equal(match?.state.timers.disconnects?.[botPlayerId], undefined);
+});
+
+test("bot players do not concede while waiting on human setup decisions", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { createDefaultMatch: false },
+  );
+  const matchId = "bot-waits-for-human-setup" as MatchId;
+  const humanPlayerId = premadeSetup.playerOrder[0];
+  const botPlayerId = premadeSetup.playerOrder[1];
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: humanPlayerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: humanPlayerId,
+      },
+      botPlayerIds: [botPlayerId],
+    },
+  );
+  await waitForBotMicrotasks();
+
+  const match = registry.getMatch(created.matchId);
+
+  assert.notEqual(match?.state.status.type, "completed");
+  assert.notEqual(match?.state.status.type, "gameOver");
+  assert.equal(match?.state.pendingDecision?.playerId, humanPlayerId);
 });

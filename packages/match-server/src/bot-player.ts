@@ -34,7 +34,7 @@ export const chooseBotAction = (
 ): BotActionChoice | undefined => {
   const actions = snapshot.players[botPlayerId]?.actions ?? [];
   const chosen = [...actions]
-    .filter((action) => action.type !== "concede" || actions.length === 1)
+    .filter((action) => action.type !== "concede")
     .sort((left, right) => actionPriority(left) - actionPriority(right))[0];
   return chosen === undefined
     ? undefined

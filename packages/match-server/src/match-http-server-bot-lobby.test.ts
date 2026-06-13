@@ -46,9 +46,19 @@ interface ClaimedMatchSeatBody {
 
 interface CreatedMatchBody {
   snapshot?: {
+    status?: string;
     playerLabels?: Record<string, { displayName?: string }>;
   };
 }
+
+const requireSnapshot = (
+  body: CreatedMatchBody,
+): NonNullable<CreatedMatchBody["snapshot"]> => {
+  if (body.snapshot === undefined) {
+    throw new Error("Match response did not include a snapshot.");
+  }
+  return body.snapshot;
+};
 
 const createDeckHashMatchHttpServer = async () =>
   createMatchHttpServer({
@@ -187,8 +197,11 @@ describe("dev HTTP bot lobbies", () => {
       }
 
       const resolved = await chooseFirstPlayer(server, matchId, chooser);
+      const snapshot = requireSnapshot(resolved);
 
-      assert.equal(resolved.snapshot?.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.notEqual(snapshot.status, "completed");
+      assert.notEqual(snapshot.status, "gameOver");
     } finally {
       await server.close();
     }
@@ -224,8 +237,11 @@ describe("dev HTTP bot lobbies", () => {
         chooser,
         "goSecond",
       );
+      const snapshot = requireSnapshot(resolved);
 
-      assert.equal(resolved.snapshot?.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.notEqual(snapshot.status, "completed");
+      assert.notEqual(snapshot.status, "gameOver");
     } finally {
       await server.close();
     }
