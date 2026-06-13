@@ -1,4 +1,4 @@
-import type { InstanceId } from "@optcg/types";
+import type { InstanceId, PublicSelectTargetsDecision } from "@optcg/types";
 
 import type { ClientVisibleAction } from "../transport.js";
 import type {
@@ -94,6 +94,31 @@ export const isSelectableCostAreaDon = (
     board?.self.costArea.some(
       (candidate) => String(candidate.instanceId) === instanceId,
     ) === true && card.state === "active"
+  );
+};
+
+const decisionHasCostAreaCandidate = (
+  decision: PublicSelectTargetsDecision,
+  instanceId: string,
+): boolean =>
+  decision.candidates.some(
+    (candidate) =>
+      String(candidate.card.instanceId) === instanceId &&
+      candidate.card.zone?.zone === "costArea",
+  );
+
+export const isZoneClickCostAreaDonSelection = (
+  board: BoardViewModel | undefined,
+  decision: PublicSelectTargetsDecision,
+  instanceId: string,
+): boolean => {
+  const card = costAreaDon(board, instanceId);
+  return (
+    decision.min === 0 &&
+    decision.max === 1 &&
+    card !== undefined &&
+    (String(card.cardId) === "DON" || card.category.toLowerCase() === "don") &&
+    decisionHasCostAreaCandidate(decision, instanceId)
   );
 };
 

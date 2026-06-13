@@ -9,6 +9,7 @@ import {
   counterTargetActionForInstance,
   hasSelectedDonAttachmentTargetAction,
   isSelectableCostAreaDon,
+  isZoneClickCostAreaDonSelection,
   optionalCardCostActionForSelection,
   optionalCardCostInstanceIds,
   progressClickSelection,
@@ -162,6 +163,14 @@ export const useMatchClientCardSelection = ({
           instanceId as InstanceId,
         );
         setSelectedCardInstanceId(undefined);
+        if (
+          pendingDecision.type === "selectTargets" &&
+          isZoneClickCostAreaDonSelection(board, pendingDecision, instanceId)
+        ) {
+          setSelectedDonInstanceIds([instanceId]);
+          void submitDecisionDraft(nextDraft);
+          return;
+        }
         setSelectedDonInstanceIds([]);
         setDecisionDraft(nextDraft);
         setActiveAttackTargetChoice(undefined);

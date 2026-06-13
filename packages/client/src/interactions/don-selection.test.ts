@@ -1,13 +1,18 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { InstanceId } from "@optcg/types";
+import type {
+  DecisionId,
+  InstanceId,
+  PublicSelectTargetsDecision,
+} from "@optcg/types";
 
 import {
   ATTACH_SELECTED_DON_ACTION_INDEX,
   findAttachDonActionIndex,
   hasSelectedDonAttachmentTargetAction,
   isSelectableCostAreaDon,
+  isZoneClickCostAreaDonSelection,
   selectedDonAttachmentClickIntent,
   selectedDonAttachmentMenuAction,
   toggleSelectedDonInstanceId,
@@ -161,6 +166,66 @@ describe("DON selection interaction", () => {
     );
     assert.equal(
       isSelectableCostAreaDon(model, "opponent-active-don", actions),
+      false,
+    );
+  });
+
+  test("zone-click cost-area DON selections submit active or rested cost-area DON directly", () => {
+    const model = board();
+    const decision: PublicSelectTargetsDecision = {
+      id: "decision:select-owner-don" as DecisionId,
+      type: "selectTargets",
+      playerId: "p1" as PublicSelectTargetsDecision["playerId"],
+      prompt: "Select DON!!.",
+      presentation: {
+        title: "Select DON!!",
+        instruction: "Select DON!!.",
+      },
+      causedBy: { type: "ruleProcess", name: "test" },
+      min: 0,
+      max: 1,
+      candidates: [
+        {
+          card: {
+            instanceId: "active-don" as InstanceId,
+            cardId:
+              "DON" as PublicSelectTargetsDecision["candidates"][number]["card"]["cardId"],
+            playerId: "p1" as PublicSelectTargetsDecision["playerId"],
+            zone: {
+              zone: "costArea",
+              playerId: "p1" as PublicSelectTargetsDecision["playerId"],
+              slot: "cost",
+              index: 0,
+            },
+          },
+        },
+        {
+          card: {
+            instanceId: "opponent-rested-don" as InstanceId,
+            cardId:
+              "DON" as PublicSelectTargetsDecision["candidates"][number]["card"]["cardId"],
+            playerId: "p2" as PublicSelectTargetsDecision["playerId"],
+            zone: {
+              zone: "costArea",
+              playerId: "p2" as PublicSelectTargetsDecision["playerId"],
+              slot: "cost",
+              index: 1,
+            },
+          },
+        },
+      ],
+    };
+
+    assert.equal(
+      isZoneClickCostAreaDonSelection(model, decision, "active-don"),
+      true,
+    );
+    assert.equal(
+      isZoneClickCostAreaDonSelection(model, decision, "opponent-rested-don"),
+      true,
+    );
+    assert.equal(
+      isZoneClickCostAreaDonSelection(model, decision, "opponent-active-don"),
       false,
     );
   });
