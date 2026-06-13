@@ -27,6 +27,7 @@ const supportedFilterKeys = new Set<keyof CardFilter>([
   "categories",
   "colorsAny",
   "cost",
+  "currentPower",
   "names",
   "power",
   "state",
@@ -118,6 +119,7 @@ const hasSupportedNumericFilter = (
     | CardFilter["attachedDon"]
     | CardFilter["baseCost"]
     | CardFilter["cost"]
+    | CardFilter["currentPower"]
     | CardFilter["power"],
 ): boolean => {
   if (filter === undefined) return true;
@@ -150,6 +152,7 @@ const isSupportedAllFilter = (filter: CardFilter | undefined): boolean => {
     hasSupportedNumericFilter(filter.baseCost) &&
     hasSupportedNumericFilter(filter.attachedDon) &&
     hasSupportedNumericFilter(filter.cost) &&
+    hasSupportedNumericFilter(filter.currentPower) &&
     hasSupportedNumericFilter(filter.power) &&
     (filter.colorsAny === undefined ||
       isNonEmptyStringArray(filter.colorsAny)) &&

@@ -6,7 +6,10 @@ import type {
   Zone,
 } from "@optcg/types";
 
-import { parseUpToCardinality } from "../../cardinality/index.js";
+import {
+  parseAllCardinality,
+  parseUpToCardinality,
+} from "../../cardinality/index.js";
 import {
   parseDurationFromSet,
   thisTurnOnlyDurationParsers,
@@ -47,6 +50,17 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
     const opponentCannotActivate = parseOpponentCannotActivateBlocker(input);
     if (opponentCannotActivate !== undefined) {
       return opponentCannotActivate;
+    }
+
+    const all = parseAllCardinality({ text: input.text });
+    if (all !== undefined) {
+      const allRestriction = parseAllOpponentCharactersCannotBlock(
+        all.rest,
+        all.evidence,
+      );
+      if (allRestriction !== undefined) {
+        return allRestriction;
+      }
     }
 
     const cardinality = parseUpToCardinality({ text: input.text });
@@ -104,7 +118,7 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
           {
             connector: "then",
             effect: {
-              type: "preventBlockerActivation",
+              type: "cannotBlock",
               target: thatCharacterSavedTarget,
               duration: duration.duration,
             },
@@ -112,7 +126,7 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
         ],
       },
       evidence: [
-        "instruction:preventBlockerActivation",
+        "instruction:cannotBlock",
         ...cardinality.evidence,
         "chooser:self:upTo",
         ...target.evidence,
@@ -207,7 +221,7 @@ function parseOpponentCannotActivateBlocker(
         {
           connector: "then",
           effect: {
-            type: "preventBlockerActivation",
+            type: "cannotBlock",
             target: thatCharacterSavedTarget,
             duration: duration.duration,
           },
@@ -215,7 +229,7 @@ function parseOpponentCannotActivateBlocker(
       ],
     },
     evidence: [
-      "instruction:preventBlockerActivation",
+      "instruction:cannotBlock",
       ...cardinality.evidence,
       "chooser:self:upTo",
       "player:opponent",
@@ -224,6 +238,56 @@ function parseOpponentCannotActivateBlocker(
       ...duration.evidence,
       "activation:blocker",
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function parseAllOpponentCharactersCannotBlock(
+  text: string,
+  cardinalityEvidence: readonly InstructionParseResult["evidence"][number][],
+): InstructionParseResult | undefined {
+  const target = parseOpponentCharactersTarget({ text });
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const durationText = /^cannot activate \[Blocker\]\s+(?<rest>.*)$/iu.exec(
+    target.rest,
+  )?.groups?.["rest"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotBlock",
+      target: {
+        type: "all",
+        player: "opponent",
+        zone: "characterArea",
+        filter: target.filter ?? { categories: ["character"] },
+      },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:cannotBlock",
+      ...cardinalityEvidence,
+      ...target.evidence,
+      ...duration.evidence,
+      "activation:blocker",
     ],
     rest: "",
   };

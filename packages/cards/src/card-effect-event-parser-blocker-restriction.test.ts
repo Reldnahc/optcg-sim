@@ -53,7 +53,7 @@ describe("card effect event parser blocker restrictions", () => {
                   {
                     connector: "then",
                     effect: {
-                      type: "preventBlockerActivation",
+                      type: "cannotBlock",
                       duration: { type: "thisTurn" },
                     },
                   },
@@ -69,7 +69,7 @@ describe("card effect event parser blocker restrictions", () => {
         "entry:activateMain",
         "marker:oncePerTurn",
         "cost:returnDon",
-        "instruction:preventBlockerActivation",
+        "instruction:cannotBlock",
         "target:opponentCharacters",
         "duration:thisTurn",
         "activation:blocker",

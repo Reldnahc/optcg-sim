@@ -105,6 +105,7 @@ export type PrimitiveEvidence =
   | "instruction:preventDonActivation"
   | "instruction:preventPlay"
   | "instruction:preventPlayByEffects"
+  | "instruction:cannotBlock"
   | "instruction:winGame"
   | "instruction:damage"
   | "instruction:preventBlockerActivation"

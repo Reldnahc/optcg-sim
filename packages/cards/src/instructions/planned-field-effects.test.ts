@@ -748,14 +748,14 @@ describe("planned field-effect instruction parsers", () => {
           {
             connector: "then",
             effect: {
-              type: "preventBlockerActivation",
+              type: "cannotBlock",
               duration: { type: "thisTurn" },
             },
           },
         ],
       },
       evidence: [
-        "instruction:preventBlockerActivation",
+        "instruction:cannotBlock",
         "cardinality:upTo",
         "count:positiveInteger",
         "chooser:self:upTo",
@@ -770,7 +770,7 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
-  it("parses opponent-owned Blocker activation wording into the same saved-target restriction", () => {
+  it("parses opponent-owned Blocker activation wording into blocker-card restrictions", () => {
     expect(
       parsePreventOpponentCharactersBlockerActivationInstruction({
         text: "Your opponent cannot activate up to 1 [Blocker] Character that has 4000 power or less during this turn.",
@@ -798,14 +798,14 @@ describe("planned field-effect instruction parsers", () => {
           {
             connector: "then",
             effect: {
-              type: "preventBlockerActivation",
+              type: "cannotBlock",
               duration: { type: "thisTurn" },
             },
           },
         ],
       },
       evidence: [
-        "instruction:preventBlockerActivation",
+        "instruction:cannotBlock",
         "cardinality:upTo",
         "count:positiveInteger",
         "chooser:self:upTo",
@@ -818,6 +818,41 @@ describe("planned field-effect instruction parsers", () => {
         "duration:thisTurn",
         "activation:blocker",
         "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses all low-power opponent Blocker activation restrictions", () => {
+    expect(
+      parsePreventOpponentCharactersBlockerActivationInstruction({
+        text: "All of your opponent's Characters with 2000 power or less cannot activate [Blocker] during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotBlock",
+        target: {
+          type: "all",
+          player: "opponent",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            currentPower: { max: 2000 },
+          },
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:cannotBlock",
+        "cardinality:all",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "duration:thisTurn",
+        "activation:blocker",
       ],
       rest: "",
     });

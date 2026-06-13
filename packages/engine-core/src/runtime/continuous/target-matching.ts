@@ -7,11 +7,21 @@ import type {
 } from "@optcg/types";
 
 import { cardMatchesAnyName } from "../../card-name-matching.js";
+import {
+  allContinuousEffects,
+  continuousEffectConditionPasses,
+  durationIsActive,
+  recordConditionPasses,
+} from "./active-effects.js";
 
 const cardMatchesRef = (card: CardInstance, ref: CardRef): boolean =>
   card.instanceId === ref.instanceId &&
   card.cardId === ref.cardId &&
   card.controller === ref.playerId;
+
+type BattleWithCounterPower = NonNullable<GameState["battle"]> & {
+  counterPower?: number;
+};
 
 const numericFilterMatches = (
   value: number | undefined,
@@ -19,6 +29,7 @@ const numericFilterMatches = (
     | CardFilter["attachedDon"]
     | CardFilter["baseCost"]
     | CardFilter["cost"]
+    | CardFilter["currentPower"]
     | CardFilter["power"],
 ): boolean => {
   if (filter === undefined) return true;
@@ -27,6 +38,86 @@ const numericFilterMatches = (
   if (filter.min !== undefined && value < filter.min) return false;
   if (filter.max !== undefined && value > filter.max) return false;
   return true;
+};
+
+const filterUsesCurrentPower = (filter: CardFilter | undefined): boolean => {
+  if (filter === undefined) return false;
+  return (
+    filter.currentPower !== undefined ||
+    (filter.anyOf !== undefined && filter.anyOf.some(filterUsesCurrentPower))
+  );
+};
+
+const modifierTargetUsesCurrentPower = (
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const target = effect.modifier.target;
+  return target.type === "all" && filterUsesCurrentPower(target.filter);
+};
+
+const continuousBasePowerForCard = (
+  state: GameState,
+  card: CardInstance,
+  printedPower: number | undefined,
+): number | undefined => {
+  let basePower: number | undefined;
+  for (const effect of allContinuousEffects(state)) {
+    if (effect.modifier.layer !== "basePowerSet") continue;
+    if (effect.modifier.operation.type !== "setBasePower") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!continuousEffectConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
+
+    basePower =
+      basePower === undefined
+        ? effect.modifier.operation.value
+        : Math.max(basePower, effect.modifier.operation.value);
+  }
+  return basePower ?? printedPower;
+};
+
+const continuousPowerBonusForCard = (
+  state: GameState,
+  card: CardInstance,
+): number => {
+  let powerBonus = 0;
+  for (const effect of allContinuousEffects(state)) {
+    if (effect.modifier.layer !== "powerAdd") continue;
+    if (effect.modifier.operation.type !== "addPower") continue;
+    if (modifierTargetUsesCurrentPower(effect)) continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!recordConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
+
+    powerBonus += effect.modifier.operation.value;
+  }
+  return powerBonus;
+};
+
+const currentPowerForCard = (
+  state: GameState,
+  card: CardInstance,
+  printedPower: number | undefined,
+): number | undefined => {
+  const basePower = continuousBasePowerForCard(state, card, printedPower);
+  if (basePower === undefined) return undefined;
+  const donBonus =
+    card.controller === state.turn.turnPlayerId
+      ? card.attachedDon.length * 1000
+      : 0;
+  const battle = state.battle as BattleWithCounterPower | undefined;
+  const counterBonus =
+    battle !== undefined &&
+    battle.currentTarget.instanceId === card.instanceId &&
+    battle.currentTarget.cardId === card.cardId
+      ? (battle.counterPower ?? 0)
+      : 0;
+  return (
+    basePower +
+    donBonus +
+    counterBonus +
+    continuousPowerBonusForCard(state, card)
+  );
 };
 
 const cardMatchesAllFilter = (
@@ -84,6 +175,11 @@ const cardMatchesAllFilter = (
     numericFilterMatches(card.attachedDon.length, filter.attachedDon) &&
     numericFilterMatches(metadata.cost, filter.baseCost) &&
     numericFilterMatches(metadata.cost, filter.cost) &&
+    (filter.currentPower === undefined ||
+      numericFilterMatches(
+        currentPowerForCard(state, card, metadata.power),
+        filter.currentPower,
+      )) &&
     numericFilterMatches(metadata.power, filter.power)
   );
 };
