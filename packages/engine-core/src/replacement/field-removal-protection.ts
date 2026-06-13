@@ -361,7 +361,13 @@ const sourceCardFilterMatchesProtection = (
 
 const isSupportedSourceCardFilter = (filter: CardFilter): boolean => {
   const keys = Object.keys(filter) as (keyof CardFilter)[];
-  return keys.every((key) => key === "categories" || key === "power");
+  return keys.every(
+    (key) =>
+      key === "attributesAny" ||
+      key === "attributesNotAny" ||
+      key === "categories" ||
+      key === "power",
+  );
 };
 
 const protectionRequiresOpponentController = (

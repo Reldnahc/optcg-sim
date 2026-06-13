@@ -26,6 +26,7 @@ describe("continuous protection instruction parser", () => {
         "protectionProcess:rest",
         "protectionSource:opponentCardCategoryEffects",
         "protectionSource:opponentCardFilterEffects",
+        "protectionSource:cardFilterEffects",
         "protectionSource:opponentEffects",
         "protectionSource:effects",
         "protectionSource:battle",
@@ -158,6 +159,49 @@ describe("continuous protection instruction parser", () => {
         "player:opponent",
         "filter:category:character",
         "filter:power",
+        "duration:whileSourceOnField",
+      ]),
+    );
+  });
+
+  it("parses K.O. protection from filtered effects without coupling source controller", () => {
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d by effects of Characters without the <Special> attribute.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: { type: "self" },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "eitherController",
+        sourceCardFilter: {
+          categories: ["character"],
+          attributesNotAny: ["special"],
+        },
+        duration: { type: "whileSourceOnField" },
+      },
+      rest: "",
+    });
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "This Character cannot be K.O.'d by effects of Characters without the <Special> attribute.",
+        },
+        { condition: undefined },
+      )?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "target:thisCharacter",
+        "protectionProcess:ko",
+        "protectionSource:cardFilterEffects",
+        "filter:category:character",
+        "filter:attribute",
+        "filter:negated",
         "duration:whileSourceOnField",
       ]),
     );

@@ -134,6 +134,7 @@ export const reorderDeckSlice = (params: {
 const supportedSearchFilterKeys = new Set([
   "anyOf",
   "attributesAny",
+  "attributesNotAny",
   "baseCost",
   "categories",
   "colorsAny",
@@ -147,6 +148,7 @@ const supportedSearchFilterKeys = new Set([
 const supportedHandSelectionFilterKeys = new Set([
   "anyOf",
   "attributesAny",
+  "attributesNotAny",
   "baseCost",
   "categories",
   "colorsAny",
@@ -201,6 +203,8 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
         filter.anyOf.every(isSupportedSearchCardFilter))) &&
     (filter.attributesAny === undefined ||
       isStringArray(filter.attributesAny)) &&
+    (filter.attributesNotAny === undefined ||
+      isStringArray(filter.attributesNotAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     isSupportedNumericFilter(filter.cost) &&
@@ -230,6 +234,8 @@ export const isSupportedHandSelectionCardFilter = (
         filter.anyOf.every(isSupportedHandSelectionCardFilter))) &&
     (filter.attributesAny === undefined ||
       isStringArray(filter.attributesAny)) &&
+    (filter.attributesNotAny === undefined ||
+      isStringArray(filter.attributesNotAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
@@ -336,6 +342,14 @@ const cardMatchesBaseFilter = (
   if (
     filter.attributesAny !== undefined &&
     !filter.attributesAny.some((attribute) =>
+      card.attributes.includes(attribute),
+    )
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesNotAny !== undefined &&
+    filter.attributesNotAny.some((attribute) =>
       card.attributes.includes(attribute),
     )
   ) {

@@ -341,6 +341,26 @@ export const parseAttributeOnlyPredicate: PredicateParser = (text, current) => {
   };
 };
 
+export const parseNegativeAttributePredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match = new RegExp(
+    `^without the\\s+(?<attribute>${angleAttributePattern}) attribute\\b\\s*(?<rest>.*)$`,
+    "i",
+  ).exec(text);
+  const attribute = parseAngleAttribute(match?.groups?.["attribute"] ?? "");
+  if (attribute === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, attributesNotAny: [attribute] },
+    evidence: ["filter:attribute", "filter:negated"],
+    rest: match?.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseMultiTypeCategoryPredicate: PredicateParser = (
   text,
   current,

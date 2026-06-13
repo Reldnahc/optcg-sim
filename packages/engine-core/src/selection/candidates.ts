@@ -41,6 +41,7 @@ const publicCandidateVisibility = { type: "public" } as const;
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attributesAny",
+  "attributesNotAny",
   "attachedDon",
   "baseCost",
   "categories",
@@ -211,6 +212,8 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
       (filter.anyOf.length > 0 && filter.anyOf.every(isSupportedFilter))) &&
     (filter.attributesAny === undefined ||
       isStringArray(filter.attributesAny)) &&
+    (filter.attributesNotAny === undefined ||
+      isStringArray(filter.attributesNotAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
@@ -473,6 +476,14 @@ const cardMatchesFilter = (
   if (
     filter.attributesAny !== undefined &&
     !filter.attributesAny.some((attribute) =>
+      card.attributes.includes(attribute),
+    )
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesNotAny !== undefined &&
+    filter.attributesNotAny.some((attribute) =>
       card.attributes.includes(attribute),
     )
   ) {

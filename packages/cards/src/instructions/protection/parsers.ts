@@ -24,6 +24,7 @@ export const protectionInstructionPrimitive = {
     "protectionProcess:rest",
     "protectionSource:opponentCardCategoryEffects",
     "protectionSource:opponentCardFilterEffects",
+    "protectionSource:cardFilterEffects",
     "protectionSource:opponentEffects",
     "protectionSource:effects",
     "protectionSource:battle",

@@ -126,4 +126,29 @@ describe("protection source parser", () => {
       rest: "",
     });
   });
+
+  it("parses effect cause with reusable negative source card filters", () => {
+    expect(
+      parseProtectionSource({
+        text: "by effects of Characters without the <Special> attribute.",
+      }),
+    ).toEqual({
+      source: {
+        kind: "cardEffect",
+        controllerRelation: "eitherController",
+        cardFilter: {
+          categories: ["character"],
+          attributesNotAny: ["special"],
+        },
+        cardCategories: ["character"],
+      },
+      evidence: [
+        "protectionSource:cardFilterEffects",
+        "filter:category:character",
+        "filter:attribute",
+        "filter:negated",
+      ],
+      rest: "",
+    });
+  });
 });

@@ -19,6 +19,8 @@ export type CharacterFieldCountFilter = Required<
 > & {
   state?: "active" | "rested";
   colorsAny?: NonNullable<CardFilter["colorsAny"]>;
+  attributesAny?: NonNullable<CardFilter["attributesAny"]>;
+  attributesNotAny?: NonNullable<CardFilter["attributesNotAny"]>;
   names?: string[];
   nameNot?: string[];
   typesAny?: string[];
@@ -44,6 +46,8 @@ export const isSupportedCharacterFieldCountFilter = (
       key !== "categories" &&
       key !== "state" &&
       key !== "colorsAny" &&
+      key !== "attributesAny" &&
+      key !== "attributesNotAny" &&
       key !== "names" &&
       key !== "nameNot" &&
       key !== "typesAny" &&
@@ -69,6 +73,8 @@ export const isSupportedCharacterFieldCountFilter = (
   return (
     isSupportedFieldState(filter.state) &&
     isNonEmptyStringArray(filter.colorsAny) &&
+    isNonEmptyStringArray(filter.attributesAny) &&
+    isNonEmptyStringArray(filter.attributesNotAny) &&
     isNonEmptyStringArray(filter.names) &&
     isNonEmptyStringArray(filter.nameNot) &&
     isNonEmptyStringArray(filter.typesAny) &&
@@ -103,6 +109,22 @@ export const cardMatchesCharacterFieldCountFilter = (
   if (
     filter.colorsAny !== undefined &&
     !filter.colorsAny.some((colorName) => metadata.colors.includes(colorName))
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesAny !== undefined &&
+    !filter.attributesAny.some((attributeName) =>
+      metadata.attributes.includes(attributeName),
+    )
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesNotAny !== undefined &&
+    filter.attributesNotAny.some((attributeName) =>
+      metadata.attributes.includes(attributeName),
+    )
   ) {
     return false;
   }

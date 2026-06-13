@@ -257,6 +257,27 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it.each([
+    ["Characters without the <Special> attribute", "special"],
+    ["Characters without the \uFF1CSpecial\uFF1E attribute", "special"],
+  ])(
+    "parses %s as reusable negative attribute Character filters",
+    (text, attribute) => {
+      expect(parseCardFilterPredicates({ text })).toEqual({
+        filter: {
+          categories: ["character"],
+          attributesNotAny: [attribute],
+        },
+        evidence: [
+          "filter:category:character",
+          "filter:attribute",
+          "filter:negated",
+        ],
+        rest: "",
+      });
+    },
+  );
+
   it("parses quoted type-including text and comma-separated current power predicates", () => {
     expect(
       parseCardFilterPredicates(

@@ -111,6 +111,7 @@ const isSupportedEventCardFilter = (
     (key) =>
       key === "anyOf" ||
       key === "attributesAny" ||
+      key === "attributesNotAny" ||
       key === "baseCost" ||
       key === "categories" ||
       key === "cost" ||

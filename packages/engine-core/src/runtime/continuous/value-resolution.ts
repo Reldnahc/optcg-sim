@@ -71,6 +71,22 @@ const cardMatchesBasicFilter = (
   ) {
     return false;
   }
+  if (
+    filter.attributesAny !== undefined &&
+    !filter.attributesAny.some((attribute) =>
+      metadata.attributes.includes(attribute),
+    )
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesNotAny !== undefined &&
+    filter.attributesNotAny.some((attribute) =>
+      metadata.attributes.includes(attribute),
+    )
+  ) {
+    return false;
+  }
   return true;
 };
 

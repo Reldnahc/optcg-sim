@@ -37,7 +37,13 @@ const isSupportedSourceCardFilter = (
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   return (
     keys.length > 0 &&
-    keys.every((key) => key === "categories" || key === "power")
+    keys.every(
+      (key) =>
+        key === "attributesAny" ||
+        key === "attributesNotAny" ||
+        key === "categories" ||
+        key === "power",
+    )
   );
 };
 
