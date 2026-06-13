@@ -170,6 +170,28 @@
   }
 }
 
+.match-app.is-reduced-motion .turn-status-banner {
+  animation: turn-status-fade 1500ms ease-in-out both !important;
+}
+
+@keyframes turn-status-fade {
+  0% {
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  82% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 .battle-arrow-power text {
   font-size: clamp(30px, calc(var(--card-height) / 3.7), 56px);
   font-weight: 900;
