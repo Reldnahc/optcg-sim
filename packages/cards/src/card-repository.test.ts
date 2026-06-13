@@ -56,6 +56,31 @@ describe("card repository", () => {
     assert.deepEqual(resolved, [card]);
   });
 
+  test("uses bulk cache reads when the cache supports them", async () => {
+    const cache = new FakeCardCache();
+    const cachedId = "OP01-001" as CardId;
+    const fetchedId = "OP01-002" as CardId;
+    await cache.setJson(createCardCacheKey({ cardId: cachedId, versions }), {
+      cacheSchemaVersion: 1,
+      versions,
+      card: resolvedCard(cachedId),
+    } satisfies CachedResolvedCard);
+    const client = new FakePoneglyphClient({
+      "OP01-002": poneglyphCard("OP01-002", null),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    await repository.resolveCards([cachedId, fetchedId]);
+
+    assert.equal(cache.getManyCalls, 1);
+    assert.equal(cache.getCalls, 0);
+    assert.deepEqual(client.batchRequests, [[fetchedId]]);
+  });
+
   test("batch fetches missing cards, caches resolved cards, and preserves variant images", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;
@@ -404,9 +429,17 @@ describe("card repository", () => {
 
 class FakeCardCache implements CardDataCache {
   readonly store = new Map<string, unknown>();
+  getCalls = 0;
+  getManyCalls = 0;
 
   getJson(key: string): Promise<unknown> {
+    this.getCalls += 1;
     return Promise.resolve(this.store.get(key));
+  }
+
+  getJsonMany(keys: readonly string[]): Promise<readonly unknown[]> {
+    this.getManyCalls += 1;
+    return Promise.resolve(keys.map((key) => this.store.get(key)));
   }
 
   setJson(key: string, value: unknown): Promise<void> {

@@ -23,6 +23,7 @@ import {
 } from "./default-dev-manifest.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 import type { LobbyValidationTimingSpan } from "./lobby-validation-timing-log.js";
+import type { CardDataCache } from "@optcg/cards";
 
 const readySubmission = (
   leaderCardId: CardId,
@@ -337,6 +338,49 @@ describe("default dev manifest boundary", () => {
     assert.equal(request.includes("OP13-080"), true);
   });
 
+  test("reuses cached validation manifests without rereading each card key", async () => {
+    const cache = new TrackingCardDataCache();
+    const fixtureFetch = createDefaultDevFixtureFetch();
+
+    await validateReadyDevDeckSubmissions({
+      submissions: [
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 50 },
+        ]),
+      ],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      fetchCard: fixtureFetch,
+      cardDataCache: cache,
+      validationCache: cache,
+    });
+    cache.readKeys = [];
+
+    const results = await validateReadyDevDeckSubmissions({
+      submissions: [
+        readySubmission("OP13-079" as CardId, [
+          { cardId: "OP13-080" as CardId, count: 50 },
+        ]),
+      ],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      fetchCard: fixtureFetch,
+      cardDataCache: cache,
+      validationCache: cache,
+    });
+
+    assert.deepEqual(
+      results.map((result) => result.valid),
+      [true],
+    );
+    assert.equal(
+      cache.readKeys.some((key) => key.startsWith("card:")),
+      false,
+    );
+    assert.equal(
+      cache.readKeys.some((key) => key.startsWith("dev-match-manifest:")),
+      true,
+    );
+  });
+
   test("records deck validation timing spans inside batched validation", async () => {
     const timingSpans: LobbyValidationTimingSpan[] = [];
 
@@ -519,3 +563,18 @@ describe("default dev manifest boundary", () => {
     );
   });
 });
+
+class TrackingCardDataCache implements CardDataCache {
+  readonly store = new Map<string, unknown>();
+  readKeys: string[] = [];
+
+  getJson(key: string): Promise<unknown> {
+    this.readKeys.push(key);
+    return Promise.resolve(this.store.get(key));
+  }
+
+  setJson(key: string, value: unknown): Promise<void> {
+    this.store.set(key, value);
+    return Promise.resolve();
+  }
+}

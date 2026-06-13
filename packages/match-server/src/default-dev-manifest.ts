@@ -1,6 +1,7 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   createRedisCardDataCache,
+  defaultDevManifestVersions,
   fetchDevPoneglyphCatalogSnapshot,
   type CardDataCache,
   type DevManifestVersions,
@@ -153,6 +154,7 @@ export const defaultDevEffectDefinitionsVersion = "generated-dev-v14";
 const defaultDevDeckValidatorVersion = "dev-deck-validator-v3";
 export const defaultDevDeckFormatId = "sandbox-open";
 const defaultDevCatalogVersionsTtlMs = 60_000;
+const manifestCacheSchemaVersion = 1;
 
 let cachedLiveDevCatalogVersions:
   | {
@@ -553,10 +555,11 @@ const buildDevManifestFromCardIds = async (
 ) => {
   const cache =
     input.cardDataCache ?? (await createRequestScopedRedisCache(input));
-  const versions =
+  const versions: DevManifestVersions =
     input.fetchCard === undefined
       ? await resolveLiveDevCatalogVersions(input)
       : {
+          ...defaultDevManifestVersions,
           cardDataVersion: "live-poneglyph-dev-v1",
           effectDefinitionsVersion: defaultDevEffectDefinitionsVersion,
           overlayVersion: "none",
@@ -564,7 +567,22 @@ const buildDevManifestFromCardIds = async (
   if (cache !== undefined && input.fetchCard === undefined) {
     await writeActiveSimCardCacheVersions(cache, versions);
   }
-  return await buildDevMatchCardManifestFromPoneglyphIds({
+  const manifestCacheKey =
+    cache === undefined
+      ? undefined
+      : createDevManifestCacheKey({
+          cardIds,
+          createdAt: input.createdAt,
+          devDonCount,
+          versions,
+        });
+  if (cache !== undefined && manifestCacheKey !== undefined) {
+    const cached = await cache.getJson(manifestCacheKey);
+    if (isCachedDevMatchManifest(cached, versions)) {
+      return cached.manifest;
+    }
+  }
+  const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
     cardIds,
     createdAt: input.createdAt,
     devDonCount,
@@ -573,6 +591,86 @@ const buildDevManifestFromCardIds = async (
     ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
     ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
   });
+  if (cache !== undefined && manifestCacheKey !== undefined) {
+    await cache.setJson(manifestCacheKey, {
+      cacheSchemaVersion: manifestCacheSchemaVersion,
+      versions,
+      manifest,
+    });
+  }
+  return manifest;
+};
+
+const createDevManifestCacheKey = ({
+  cardIds,
+  createdAt,
+  devDonCount,
+  versions,
+}: {
+  readonly cardIds: readonly CardId[];
+  readonly createdAt: string;
+  readonly devDonCount: number;
+  readonly versions: DevManifestVersions;
+}): string =>
+  [
+    "dev-match-manifest",
+    versions.cardDataVersion,
+    versions.effectDefinitionsVersion,
+    versions.overlayVersion,
+    versions.customHandlerVersion,
+    versions.banlistVersion,
+    versions.rulesVersion,
+    String(devDonCount),
+    sha256({ cardIds: [...new Set(cardIds)].sort(), createdAt }),
+  ].join(":");
+
+const isCachedDevMatchManifest = (
+  value: unknown,
+  versions: DevManifestVersions,
+): value is {
+  readonly cacheSchemaVersion: 1;
+  readonly versions: DevManifestVersions;
+  readonly manifest: Awaited<
+    ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
+  >;
+} => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as {
+    readonly cacheSchemaVersion?: unknown;
+    readonly versions?: Partial<DevManifestVersions>;
+    readonly manifest?: unknown;
+  };
+  return (
+    candidate.cacheSchemaVersion === manifestCacheSchemaVersion &&
+    candidate.versions?.cardDataVersion === versions.cardDataVersion &&
+    candidate.versions.effectDefinitionsVersion ===
+      versions.effectDefinitionsVersion &&
+    candidate.versions.overlayVersion === versions.overlayVersion &&
+    candidate.versions.customHandlerVersion === versions.customHandlerVersion &&
+    candidate.versions.banlistVersion === versions.banlistVersion &&
+    candidate.versions.rulesVersion === versions.rulesVersion &&
+    typeof candidate.manifest === "object" &&
+    candidate.manifest !== null
+  );
+};
+
+const sha256 = (value: unknown): string =>
+  createHash("sha256").update(stableJson(value)).digest("hex").slice(0, 24);
+
+const stableJson = (value: unknown): string => {
+  if (value === null || typeof value !== "object") {
+    return value === undefined ? "undefined" : JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  }
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record)
+    .sort()
+    .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`)
+    .join(",")}}`;
 };
 
 const createRequestScopedRedisCache = async (
