@@ -44,7 +44,7 @@ import type {
   SessionActionResult,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
-import { chooseBotAction } from "./bot-player.js";
+import { defaultBotStrategy, type BotStrategy } from "./bot-player.js";
 import { requestHash } from "./action-envelope.js";
 
 type LocalDevMatchSetup = Parameters<typeof createLocalDevMatch>[0];
@@ -466,6 +466,7 @@ export const createLocalDevMatchRegistry = async (
     readonly completedMatchRepository?: CompletedMatchRepository;
     readonly matchTimerPolicy?: MatchTimerPolicy;
     readonly onBotActionAccepted?: (matchId: MatchId) => void;
+    readonly botStrategy?: BotStrategy;
   } = {},
 ): Promise<LocalDevMatchRegistry> => {
   let nextMatchNumber = 1;
@@ -474,6 +475,7 @@ export const createLocalDevMatchRegistry = async (
   const activeBotRuns = new Set<MatchId>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
+  const botStrategy = options.botStrategy ?? defaultBotStrategy;
   const botActionDelayMs = options.botActionDelayMs ?? 1_000;
   const waitForBotActionDelay = async (): Promise<void> => {
     if (botActionDelayMs <= 0) {
@@ -557,7 +559,7 @@ export const createLocalDevMatchRegistry = async (
     botPlayerId: PlayerId,
     snapshot: ReturnType<typeof getLocalDevSnapshot>,
   ): SessionActionRequest | undefined => {
-    const choice = chooseBotAction(snapshot, botPlayerId);
+    const choice = botStrategy.chooseAction({ snapshot, botPlayerId });
     if (choice === undefined) {
       return undefined;
     }

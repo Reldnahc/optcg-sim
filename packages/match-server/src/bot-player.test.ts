@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type {
+  CardId,
   DecisionId,
   InstanceId,
   PlayerId,
@@ -8,6 +9,7 @@ import type {
 } from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
+import { createBotStrategy } from "./bot-strategy.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 
 const botId = "p2" as PlayerId;
@@ -110,6 +112,102 @@ describe("bot player", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("allows a behavior profile to prefer attaching DON before playing cards", () => {
+    const strategy = createBotStrategy({
+      scoreAction({ action }) {
+        return action.type === "attachDon" ? -10 : undefined;
+      },
+    });
+
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithActions([
+        {
+          index: 0,
+          type: "playCard",
+          label: "Play card",
+        },
+        {
+          index: 1,
+          type: "attachDon",
+          label: "Attach DON",
+        },
+      ]),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("allows a behavior profile to reject specific visible actions", () => {
+    const strategy = createBotStrategy({
+      scoreAction({ action }) {
+        return action.type === "playCard" ? false : undefined;
+      },
+    });
+
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithActions([
+        {
+          index: 0,
+          type: "playCard",
+          label: "Play card",
+        },
+        {
+          index: 1,
+          type: "endMainPhase",
+          label: "End main phase",
+        },
+      ]),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("allows card behavior profiles to score actions touching that card", () => {
+    const strategy = createBotStrategy({
+      cardBehaviors: {
+        "OP01-003": {
+          scoreAction({ action }) {
+            return action.type === "attachDon" ? -20 : undefined;
+          },
+        },
+      },
+    });
+
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "bot-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              cardId: "OP01-003" as CardId,
+            },
+          ],
+        },
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
   test("attacks before ending main phase", () => {
