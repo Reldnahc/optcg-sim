@@ -6,6 +6,7 @@ import {
   opponentCardCategoryEffectsProtectionSourcePrimitive,
   opponentEffectsProtectionSourcePrimitive,
   parseProtectionSource,
+  selfEffectsProtectionSourcePrimitive,
 } from "./source.js";
 
 describe("protection source parser", () => {
@@ -20,6 +21,9 @@ describe("protection source parser", () => {
     });
     expect(effectsProtectionSourcePrimitive).toMatchObject({
       primitiveId: "protectionSource:effects",
+    });
+    expect(selfEffectsProtectionSourcePrimitive).toMatchObject({
+      primitiveId: "protectionSource:selfEffects",
     });
     expect(opponentCardCategoryEffectsProtectionSourcePrimitive).toMatchObject({
       primitiveId: "protectionSource:opponentCardCategoryEffects",
@@ -94,6 +98,17 @@ describe("protection source parser", () => {
         controllerRelation: "eitherController",
       },
       evidence: ["protectionSource:effects"],
+      rest: "",
+    });
+  });
+
+  it("parses self effects source", () => {
+    expect(parseProtectionSource({ text: "by your effects." })).toEqual({
+      source: {
+        kind: "cardEffect",
+        controllerRelation: "selfControlled",
+      },
+      evidence: ["protectionSource:selfEffects"],
       rest: "",
     });
   });

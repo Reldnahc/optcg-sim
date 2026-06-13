@@ -18,6 +18,14 @@ const supportedRestSourceCategories = new Set([
   "stage",
 ]);
 
+const supportedSourceControllerRelations = new Set([
+  "opponentControlled",
+  "selfControlled",
+  "eitherController",
+]);
+
+const supportedTargetScopes = new Set(["thisCard", "anyFieldCard"]);
+
 export const isSupportedFieldRemovalProtection = (
   protection: Protection,
 ): protection is Extract<Protection, { process: "fieldRemoval" }> => {
@@ -31,8 +39,12 @@ export const isSupportedFieldRemovalProtection = (
     typeof metadata["classification"] === "string" &&
     supportedFieldRemovalClassifications.has(metadata["classification"]) &&
     metadata["sourceKind"] === "cardEffect" &&
-    metadata["sourceControllerRelation"] === "opponentControlled" &&
-    metadata["targetScope"] === "thisCard" &&
+    typeof metadata["sourceControllerRelation"] === "string" &&
+    supportedSourceControllerRelations.has(
+      metadata["sourceControllerRelation"],
+    ) &&
+    typeof metadata["targetScope"] === "string" &&
+    supportedTargetScopes.has(metadata["targetScope"]) &&
     exclusions["battleKO"] === "excluded" &&
     exclusions["ruleProcessTrash"] === "excluded" &&
     exclusions["controllerCost"] === "excluded" &&

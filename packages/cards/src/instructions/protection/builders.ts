@@ -12,7 +12,10 @@ export function buildProtectionEffect(options: {
   readonly process: "fieldRemoval" | "ko" | "rest";
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
   readonly sourceKind: "battle" | "cardEffect";
-  readonly sourceControllerRelation: "eitherController" | "opponentControlled";
+  readonly sourceControllerRelation:
+    | "eitherController"
+    | "opponentControlled"
+    | "selfControlled";
 }): Effect {
   const duration =
     options.context.condition === undefined
@@ -37,7 +40,10 @@ export function buildProtectionEffectWithTarget(options: {
   readonly process: "fieldRemoval" | "ko" | "rest";
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
   readonly sourceKind: "battle" | "cardEffect";
-  readonly sourceControllerRelation: "eitherController" | "opponentControlled";
+  readonly sourceControllerRelation:
+    | "eitherController"
+    | "opponentControlled"
+    | "selfControlled";
   readonly target: Extract<Effect, { type: "protectFromKO" }>["target"];
 }): Effect {
   if (options.process === "ko") {
@@ -70,6 +76,7 @@ export function buildProtectionEffectWithTarget(options: {
     protection: fieldRemovalProtection({
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
+      target: options.target,
     }),
     duration: options.duration,
   };
@@ -78,7 +85,10 @@ export function buildProtectionEffectWithTarget(options: {
 function restProtection(options: {
   readonly sourceCardCategories: readonly CardCategory[] | undefined;
   readonly sourceKind: "battle" | "cardEffect";
-  readonly sourceControllerRelation: "eitherController" | "opponentControlled";
+  readonly sourceControllerRelation:
+    | "eitherController"
+    | "opponentControlled"
+    | "selfControlled";
 }): EffectDslRestProtection {
   return {
     process: "rest",
@@ -92,7 +102,11 @@ function restProtection(options: {
 
 function fieldRemovalProtection(options: {
   readonly sourceKind: "battle" | "cardEffect";
-  readonly sourceControllerRelation: "eitherController" | "opponentControlled";
+  readonly sourceControllerRelation:
+    | "eitherController"
+    | "opponentControlled"
+    | "selfControlled";
+  readonly target: Extract<Effect, { type: "protectFromKO" }>["target"];
 }): EffectDslFieldRemovalProtection {
   return {
     process: "fieldRemoval",
@@ -101,7 +115,7 @@ function fieldRemovalProtection(options: {
       classification: "moveFromFieldToOtherZone",
       sourceKind: options.sourceKind,
       sourceControllerRelation: options.sourceControllerRelation,
-      targetScope: "thisCard",
+      targetScope: options.target.type === "self" ? "thisCard" : "anyFieldCard",
       exclusions: {
         battleKO: "excluded",
         ruleProcessTrash: "excluded",

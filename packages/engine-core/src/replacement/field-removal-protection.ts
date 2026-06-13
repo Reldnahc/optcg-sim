@@ -156,6 +156,7 @@ const isSupportedKoProtection = (protection: Protection): boolean =>
     protection.sourceKind === "battle") &&
   (protection.sourceControllerRelation === undefined ||
     protection.sourceControllerRelation === "opponentControlled" ||
+    protection.sourceControllerRelation === "selfControlled" ||
     protection.sourceControllerRelation === "eitherController");
 
 export const isSupportedProtectionModifier = (

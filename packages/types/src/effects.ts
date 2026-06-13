@@ -979,7 +979,10 @@ export type Effect =
       target: Target;
       duration: Duration;
       sourceKind?: "battle" | "cardEffect";
-      sourceControllerRelation?: "eitherController" | "opponentControlled";
+      sourceControllerRelation?:
+        | "eitherController"
+        | "opponentControlled"
+        | "selfControlled";
       sourceCardCategories?: CardCategory[];
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }

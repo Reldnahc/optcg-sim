@@ -118,4 +118,53 @@ describe("continuous protection instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses all-target field-removal protection by self effects", () => {
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "All of your opponent's Characters cannot be removed from the field by your effects.",
+        },
+        { condition: undefined },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "giveProtection",
+        target: {
+          type: "all",
+          player: "opponent",
+          zone: "characterArea",
+          filter: { categories: ["character"] },
+        },
+        protection: {
+          process: "fieldRemoval",
+          fieldRemoval: {
+            classification: "moveFromFieldToOtherZone",
+            sourceKind: "cardEffect",
+            sourceControllerRelation: "selfControlled",
+          },
+        },
+        duration: { type: "whileSourceOnField" },
+      },
+      rest: "",
+    });
+    expect(
+      parseProtectionInstruction(
+        {
+          text: "All of your opponent's Characters cannot be removed from the field by your effects.",
+        },
+        { condition: undefined },
+      )?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "cardinality:all",
+        "player:opponent",
+        "filter:category:character",
+        "protectionProcess:fieldRemoval",
+        "protectionSource:selfEffects",
+        "duration:whileSourceOnField",
+      ]),
+    );
+  });
 });

@@ -4,7 +4,10 @@ import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 export interface ProtectionSource {
   readonly kind: "battle" | "cardEffect";
-  readonly controllerRelation: "eitherController" | "opponentControlled";
+  readonly controllerRelation:
+    | "eitherController"
+    | "opponentControlled"
+    | "selfControlled";
   readonly cardCategories?: readonly CardCategory[];
 }
 
@@ -41,6 +44,15 @@ export const effectsProtectionSourcePrimitive = {
   ],
 } as const;
 
+export const selfEffectsProtectionSourcePrimitive = {
+  primitiveId: "protectionSource:selfEffects",
+  matches: [
+    {
+      id: "by-your-effects",
+    },
+  ],
+} as const;
+
 export const battleProtectionSourcePrimitive = {
   primitiveId: "protectionSource:battle",
   matches: [
@@ -68,6 +80,20 @@ export function parseProtectionSource(
       },
       evidence: ["protectionSource:opponentEffects"],
       rest: trimTrailingPeriod(opponentEffectsMatch.groups?.["rest"] ?? ""),
+    };
+  }
+
+  const selfEffectsMatch = /^by your effects\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
+  if (selfEffectsMatch !== null) {
+    return {
+      source: {
+        kind: "cardEffect",
+        controllerRelation: "selfControlled",
+      },
+      evidence: ["protectionSource:selfEffects"],
+      rest: trimTrailingPeriod(selfEffectsMatch.groups?.["rest"] ?? ""),
     };
   }
 

@@ -33,10 +33,12 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
-  const target = parseThisCharacterTarget({
-    text: input.text,
-    allowImplicit: true,
-  });
+  const target =
+    parseAllProtectionTarget(input.text) ??
+    parseThisCharacterTarget({
+      text: input.text,
+      allowImplicit: true,
+    });
   if (target === undefined) {
     return undefined;
   }
@@ -51,13 +53,31 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const effect = buildProtectionEffect({
-    context,
-    process: process.process.type,
-    sourceCardCategories: source.source.cardCategories,
-    sourceKind: source.source.kind,
-    sourceControllerRelation: source.source.controllerRelation,
-  });
+  const duration =
+    context.condition === undefined
+      ? { type: "whileSourceOnField" as const }
+      : {
+          type: "whileConditionTrue" as const,
+          condition: context.condition,
+        };
+
+  const effect =
+    target.target.type === "self"
+      ? buildProtectionEffect({
+          context,
+          process: process.process.type,
+          sourceCardCategories: source.source.cardCategories,
+          sourceKind: source.source.kind,
+          sourceControllerRelation: source.source.controllerRelation,
+        })
+      : buildProtectionEffectWithTarget({
+          duration,
+          process: process.process.type,
+          sourceCardCategories: source.source.cardCategories,
+          sourceKind: source.source.kind,
+          sourceControllerRelation: source.source.controllerRelation,
+          target: target.target,
+        });
 
   return {
     effect,
@@ -66,10 +86,30 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
       ...target.evidence,
       ...process.evidence,
       ...source.evidence,
-      "duration:whileConditionTrue",
+      context.condition === undefined
+        ? "duration:whileSourceOnField"
+        : "duration:whileConditionTrue",
     ],
     rest: "",
   };
+};
+
+const parseAllProtectionTarget = (
+  text: string,
+): ReturnType<typeof parseAllFieldTarget> => {
+  const match = /^(?<target>All of .+?)\s+(?<process>cannot be .+)$/iu.exec(
+    text,
+  );
+  const targetText = match?.groups?.["target"];
+  const processText = match?.groups?.["process"];
+  if (targetText === undefined || processText === undefined) {
+    return undefined;
+  }
+  const target = parseAllFieldTarget({ text: targetText });
+  if (target === undefined || target.rest.length > 0) {
+    return undefined;
+  }
+  return { ...target, rest: processText };
 };
 
 export const parseOpponentEffectFieldRemovalProtectionInstruction =

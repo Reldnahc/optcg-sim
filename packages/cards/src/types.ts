@@ -305,6 +305,7 @@ export type PrimitiveEvidence =
   | "protectionProcess:rest"
   | "protectionSource:opponentEffects"
   | "protectionSource:opponentCardCategoryEffects"
+  | "protectionSource:selfEffects"
   | "protectionSource:effects"
   | "protectionSource:battle"
   | "sourceCategory:leader"
