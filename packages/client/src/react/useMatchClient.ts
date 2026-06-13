@@ -54,6 +54,7 @@ export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
   readonly confirmAttachDon?: boolean | undefined;
   readonly quickPayActivateMainCosts?: boolean | undefined;
+  readonly enabled?: boolean | undefined;
 }
 
 const attachDeckPreviewValidation = (
@@ -142,6 +143,7 @@ export const useMatchClient = ({
   accountSessionToken,
   confirmAttachDon = true,
   quickPayActivateMainCosts = false,
+  enabled = true,
 }: UseMatchClientOptions): MatchClientUi => {
   const localRawDeckSubmissionsAllowed = useMemo(
     () =>
@@ -237,7 +239,12 @@ export const useMatchClient = ({
     selectedCardCostActionIndex,
   } = decisionModel;
 
-  useInitialMatchClientState({ controller, setClientState, setErrors });
+  useInitialMatchClientState({
+    controller,
+    enabled,
+    setClientState,
+    setErrors,
+  });
 
   useCostReset(
     optionalCardCostChoice?.decisionId,
@@ -247,8 +254,8 @@ export const useMatchClient = ({
 
   useMatchLiveConnections({
     controller,
-    liveConnectionKey,
-    lobbyConnectionKey,
+    liveConnectionKey: enabled ? liveConnectionKey : undefined,
+    lobbyConnectionKey: enabled ? lobbyConnectionKey : undefined,
     setClientState,
     setRematchRequestedBy,
     setErrors,

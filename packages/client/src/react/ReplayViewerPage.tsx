@@ -6,6 +6,11 @@ import {
   type ReplayPayload,
 } from "../replay-client.js";
 import { appRoutePath } from "./app-route.js";
+import { MatchApp } from "./MatchApp.js";
+import {
+  createReplayMatchClient,
+  replayFramesFromDetail,
+} from "./replay-match-client.js";
 
 type ReplayViewerStatus = "loading" | "ready" | "error";
 
@@ -47,6 +52,10 @@ export const ReplayViewerPageView = ({
   error,
 }: ReplayViewerPageViewProps): React.JSX.Element => {
   const entries = replay === undefined ? [] : replayEntries(replay.replay);
+  const actionCount = Math.max(
+    1,
+    replay?.replay.deterministicEntries?.length ?? 0,
+  );
   return (
     <section className="replay-viewer-page">
       <header className="replay-viewer-header">
@@ -71,6 +80,18 @@ export const ReplayViewerPageView = ({
       ) : null}
       {status === "ready" && replay !== undefined ? (
         <div className="replay-viewer-grid">
+          <section
+            className="replay-viewer-panel replay-controls-panel"
+            data-replay-match-surface=""
+          >
+            <button type="button" disabled>
+              Previous action
+            </button>
+            <span>{`Action 1 / ${String(actionCount)}`}</span>
+            <button type="button" disabled>
+              Next action
+            </button>
+          </section>
           <section className="replay-viewer-panel">
             <h2>Match</h2>
             <dl className="replay-viewer-facts">
@@ -160,6 +181,7 @@ export const ReplayViewerPage = ({
   );
   const [status, setStatus] = useState<ReplayViewerStatus>("loading");
   const [replay, setReplay] = useState<ReplayDetail>();
+  const [frameIndex, setFrameIndex] = useState(0);
   const [error, setError] = useState<string>();
   const client = useMemo(
     () =>
@@ -202,6 +224,59 @@ export const ReplayViewerPage = ({
       cancelled = true;
     };
   }, [client, matchId]);
+
+  const frames = useMemo(
+    () =>
+      replay === undefined
+        ? []
+        : replayFramesFromDetail({
+            matchId: replay.matchId,
+            manifestSnapshot: replay.replay.manifestSnapshot,
+            deterministicEntries: replay.replay.deterministicEntries ?? [],
+          }),
+    [replay],
+  );
+  const selectedFrameIndex =
+    frames.length === 0 ? 0 : Math.min(frameIndex, frames.length - 1);
+  const selectedFrame = frames[selectedFrameIndex];
+  const replayClient = useMemo(
+    () => createReplayMatchClient(selectedFrame),
+    [selectedFrame],
+  );
+  const replayControls =
+    replay === undefined ? undefined : (
+      <>
+        <button
+          type="button"
+          disabled={selectedFrameIndex <= 0}
+          onClick={() => {
+            setFrameIndex((current) => Math.max(0, current - 1));
+          }}
+        >
+          Previous action
+        </button>
+        <span>
+          {`Action ${String(selectedFrameIndex + 1)} / ${String(
+            Math.max(1, frames.length),
+          )}`}
+        </span>
+        <button
+          type="button"
+          disabled={selectedFrameIndex >= frames.length - 1}
+          onClick={() => {
+            setFrameIndex((current) =>
+              Math.min(Math.max(0, frames.length - 1), current + 1),
+            );
+          }}
+        >
+          Next action
+        </button>
+      </>
+    );
+
+  if (status === "ready" && replay !== undefined && frames.length > 0) {
+    return <MatchApp client={replayClient} replayControls={replayControls} />;
+  }
 
   return <ReplayViewerPageView status={status} replay={replay} error={error} />;
 };

@@ -11,6 +11,7 @@ export interface ReplayPlayerSummary {
 
 export interface ReplayPayload {
   readonly replayFormatVersion?: string;
+  readonly manifestSnapshot?: unknown;
   readonly deterministicEntries?: readonly unknown[];
   readonly auditEntries?: readonly unknown[];
   readonly finalState?: unknown;
