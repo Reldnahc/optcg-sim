@@ -51,6 +51,36 @@ const hexColorToRgb = (hexColor: string): string => {
   return `${String(red)}, ${String(green)}, ${String(blue)}`;
 };
 
+const backgroundImageStyle = ({
+  fit,
+  positionX,
+  positionY,
+}: {
+  readonly fit: string;
+  readonly positionX: number;
+  readonly positionY: number;
+}): {
+  readonly size: string;
+  readonly repeat: string;
+  readonly position: string;
+} => {
+  switch (fit) {
+    case "stretch":
+      return { size: "100% 100%", repeat: "no-repeat", position: "center" };
+    case "fit":
+      return { size: "contain", repeat: "no-repeat", position: "center" };
+    case "tile":
+      return { size: "auto", repeat: "repeat", position: "0 0" };
+    case "crop":
+    default:
+      return {
+        size: "cover",
+        repeat: "no-repeat",
+        position: `${String(positionX)}% ${String(positionY)}%`,
+      };
+  }
+};
+
 export const MatchApp = ({
   accountSessionToken,
 }: MatchAppProps): React.JSX.Element => {
@@ -418,7 +448,19 @@ export const MatchApp = ({
   const zoneGuideBackgroundAlpha = zoneBackgroundStrength;
   const windowSurfaceRgb = hexColorToRgb(visualSettings.windowColor);
   const playmatSurfaceRgb = hexColorToRgb(visualSettings.playmatColor);
+  const backgroundStyle = backgroundImageStyle({
+    fit: visualSettings.backgroundImageFit,
+    positionX: visualSettings.backgroundImagePositionX,
+    positionY: visualSettings.backgroundImagePositionY,
+  });
+  const backgroundImageEnabled =
+    visualSettings.backgroundMode === "image" &&
+    visualSettings.backgroundImageUrl.length > 0;
   const matchAppStyle = {
+    "--match-background-color": visualSettings.backgroundColor,
+    "--match-background-size": backgroundStyle.size,
+    "--match-background-repeat": backgroundStyle.repeat,
+    "--match-background-position": backgroundStyle.position,
     "--match-window-color-rgb": windowSurfaceRgb,
     "--match-window-opacity": (visualSettings.windowOpacity / 100).toFixed(3),
     "--match-playmat-color-rgb": playmatSurfaceRgb,
@@ -426,13 +468,13 @@ export const MatchApp = ({
     "--zone-guide-border-alpha": zoneGuideBorderAlpha.toFixed(3),
     "--zone-guide-background-alpha": zoneGuideBackgroundAlpha.toFixed(3),
     "--zone-guide-label-alpha": zoneGuideLabelAlpha.toFixed(3),
-    ...(visualSettings.backgroundImageUrl.length === 0
-      ? {}
-      : {
+    ...(backgroundImageEnabled
+      ? {
           backgroundImage: `url(${JSON.stringify(
             visualSettings.backgroundImageUrl,
           )})`,
-        }),
+        }
+      : {}),
   } as CSSProperties &
     Record<
       | "--zone-guide-background-alpha"
@@ -441,7 +483,11 @@ export const MatchApp = ({
       | "--match-window-color-rgb"
       | "--match-window-opacity"
       | "--match-playmat-color-rgb"
-      | "--match-playmat-opacity",
+      | "--match-playmat-opacity"
+      | "--match-background-color"
+      | "--match-background-size"
+      | "--match-background-repeat"
+      | "--match-background-position",
       string
     >;
   const matchAppClassName = [

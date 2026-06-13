@@ -35,6 +35,18 @@ describe("settings window", () => {
     );
 
     assert.match(markup, /Background image/u);
+    assert.match(markup, /Background color/u);
+    assert.match(markup, /Background type/u);
+    assert.match(markup, /Color/u);
+    assert.match(markup, /Image/u);
+    assert.match(markup, /Image fit/u);
+    assert.match(markup, /Crop/u);
+    assert.match(markup, /Stretch/u);
+    assert.match(markup, /Fit/u);
+    assert.match(markup, /Tile/u);
+    assert.match(markup, /aria-label="Crop image focus"/u);
+    assert.match(markup, /settings-crop-preview/u);
+    assert.match(markup, /settings-crop-frame/u);
     assert.match(markup, /type="file"/u);
     assert.match(markup, /accept="image\/\*,\.gif"/u);
     assert.match(markup, /Clear background/u);
@@ -202,6 +214,11 @@ describe("settings window", () => {
     assert.match(matchApp, /--zone-guide-label-alpha/u);
     assert.match(matchApp, /--zone-guide-background-alpha/u);
     assert.match(settingsStore, /optcg:client:background-image-url/u);
+    assert.match(settingsStore, /optcg:client:background-color/u);
+    assert.match(settingsStore, /optcg:client:background-image-fit/u);
+    assert.match(settingsStore, /optcg:client:background-image-position-x/u);
+    assert.match(settingsStore, /optcg:client:background-image-position-y/u);
+    assert.match(settingsStore, /optcg:client:background-mode/u);
     assert.match(settingsStore, /optcg:client:zone-guide-visibility/u);
     assert.match(settingsStore, /optcg:client:zone-background-visibility/u);
     assert.match(settingsStore, /optcg:client:confirm-end-turn/u);
@@ -225,6 +242,16 @@ describe("settings window", () => {
     assert.match(settingsWindow, /new FileReader\(\)/u);
     assert.match(settingsWindow, /reader\.readAsDataURL\(file\)/u);
     assert.match(settingsWindow, /type="file"/u);
+    assert.match(settingsWindow, /setBackgroundColor/u);
+    assert.match(settingsWindow, /setBackgroundImageFit/u);
+    assert.match(settingsWindow, /setBackgroundImagePositionX/u);
+    assert.match(settingsWindow, /setBackgroundImagePositionY/u);
+    assert.match(settingsWindow, /setBackgroundMode/u);
+    assert.match(settingsWindow, /onPointerDown/u);
+    assert.match(settingsWindow, /onPointerMove/u);
+    assert.match(settingsWindow, /setPointerCapture/u);
+    assert.match(settingsWindow, /settings-crop-preview/u);
+    assert.match(settingsWindow, /settings-crop-frame/u);
     assert.match(settingsWindow, /setZoneGuideVisibility/u);
     assert.match(settingsWindow, /setZoneBackgroundVisibility/u);
     assert.match(settingsWindow, /setWindowColor/u);
@@ -238,6 +265,38 @@ describe("settings window", () => {
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
     assert.match(appShellStyles, /background-repeat:\s*no-repeat;/u);
+  });
+
+  test("match app applies background color and image fit variables", async () => {
+    const [matchApp, appShellStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+    ]);
+
+    assert.match(matchApp, /backgroundMode/u);
+    assert.match(matchApp, /backgroundImageFit/u);
+    assert.match(matchApp, /backgroundImagePositionX/u);
+    assert.match(matchApp, /backgroundImagePositionY/u);
+    assert.match(matchApp, /--match-background-color/u);
+    assert.match(matchApp, /--match-background-size/u);
+    assert.match(matchApp, /--match-background-repeat/u);
+    assert.match(matchApp, /--match-background-position/u);
+    assert.match(
+      appShellStyles,
+      /background-color:\s*var\(--match-background-color\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /background-position:\s*var\(--match-background-position\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /background-repeat:\s*var\(--match-background-repeat\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /background-size:\s*var\(--match-background-size\);/u,
+    );
   });
 
   test("match app applies custom window and playmat color variables", async () => {
