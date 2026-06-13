@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAndConnector, parseThenConnector } from "../connectors/index.js";
-import { parseOpponentRestedCharactersCondition } from "../conditions/index.js";
+import {
+  parseDonFieldCountCondition,
+  parseHandCountCondition,
+  parseLeaderNameCondition,
+  parseOpponentRestedCharactersCondition,
+  parseSourcePlayedThisTurnCondition,
+} from "../conditions/index.js";
 import { parseExpression } from "../expression-parser.js";
 import {
   parsePreventThatCharacterRefreshInstruction,
@@ -12,6 +18,7 @@ import {
   conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
+  parseConditionExpression,
 } from "./composed-expression.js";
 
 const plannedInstructions = [
@@ -21,6 +28,56 @@ const plannedInstructions = [
 ] as const;
 
 describe("composed expression segment parsers", () => {
+  it("parses shared-subject count conjunction conditions", () => {
+    const result = parseConditionExpression(
+      "you have 7 or more DON!! cards on your field and 5 or less cards in your hand",
+      [parseDonFieldCountCondition, parseHandCountCondition],
+    );
+
+    expect(result).toMatchObject({
+      condition: {
+        type: "and",
+        conditions: [
+          { type: "fieldCount", player: "self" },
+          { type: "handCount", player: "self" },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:conditionAnd",
+        "condition:donFieldCount",
+        "condition:handCount",
+      ]),
+    );
+  });
+
+  it("parses comma-and conjunction conditions without binding to one body", () => {
+    const result = parseConditionExpression(
+      "your Leader has the {Blackbeard Pirates} type, and this Character was played on this turn",
+      [parseLeaderNameCondition, parseSourcePlayedThisTurnCondition],
+    );
+
+    expect(result).toMatchObject({
+      condition: {
+        type: "and",
+        conditions: [
+          { type: "hasCardInZone", zone: "leaderArea", player: "self" },
+          { type: "sourcePlayedThisTurn" },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:conditionAnd",
+        "condition:leaderIdentity",
+        "condition:sourcePlayedThisTurn",
+      ]),
+    );
+  });
+
   it("parses a nested and sequence without requiring a full-line template", () => {
     expect(
       instructionExpressionSegmentParser({

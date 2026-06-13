@@ -605,12 +605,44 @@ function splitConditionDisjunction(text: string): string[] {
 
 function splitConditionConjunction(text: string): string[] {
   const protectedSubject = "__condition_subject_you_and_your_opponent__";
-  return text
+  const parts = text
     .replace(/\byou and your opponent\b/giu, protectedSubject)
     .split(/\s+and\s+|,\s+(?=(?:you|your|your opponent|the number)\b)/iu)
     .map((part) =>
-      part.replace(new RegExp(protectedSubject, "gu"), "you and your opponent"),
+      part
+        .replace(new RegExp(protectedSubject, "gu"), "you and your opponent")
+        .replace(/,$/u, "")
+        .trim(),
     );
+  return expandSharedCountSubjectConjunction(parts);
+}
+
+function expandSharedCountSubjectConjunction(
+  parts: readonly string[],
+): string[] {
+  const first = parts[0];
+  if (first === undefined || parts.length < 2) {
+    return [...parts];
+  }
+
+  const subjectMatch =
+    /^(?<subject>you|your opponent) (?<verb>have|has)\s+.+$/iu.exec(first);
+  const subject = subjectMatch?.groups?.["subject"];
+  const verb = subjectMatch?.groups?.["verb"];
+  if (subject === undefined || verb === undefined) {
+    return [...parts];
+  }
+
+  return parts.map((part, index) => {
+    if (
+      index === 0 ||
+      /^(?:you|your opponent) (?:have|has)\b/iu.test(part) ||
+      !/^[1-9]\d*\s+or\s+(?:more|less)\s+cards?\b/iu.test(part)
+    ) {
+      return part;
+    }
+    return `${subject} ${verb} ${part}`;
+  });
 }
 
 function expandSharedLeaderSubjectDisjunction(
