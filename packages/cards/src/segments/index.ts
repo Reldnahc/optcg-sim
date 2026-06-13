@@ -14,6 +14,7 @@ export {
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
 } from "./optional-costed-effect.js";
+export { optionalActionEffectSegmentParser } from "./optional-action-effect.js";
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export { playedObjectKeywordGrantExpressionParser } from "./played-object-keyword-grant.js";
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";

@@ -6,6 +6,8 @@ import type {
   EngineError,
   EngineEvent,
   GameState,
+  PlayerId,
+  PlayerRef,
   SavedFieldObjectReference,
   SelectCardsDecision,
   SequenceSegmentResult,
@@ -98,7 +100,7 @@ const failedResult = (
 
 const findProducedPublicFieldObject = (
   state: GameState,
-  playerId: EffectQueueEntry["controllerId"],
+  playerId: PlayerId,
   instanceId: CardRef["instanceId"],
 ): CardRef | null => {
   const player = state.players[playerId];
@@ -115,6 +117,23 @@ const findProducedPublicFieldObject = (
     return toCardRef(player.stage, playerId);
   }
   return null;
+};
+
+const resolvePlaySelectedPlayer = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  player: PlayerRef | undefined,
+): PlayerId | null => {
+  if (player === undefined || player === "self") {
+    return entry.controllerId;
+  }
+  if (player !== "opponent") {
+    return null;
+  }
+  const opponentId = Object.keys(state.players).find(
+    (playerId) => playerId !== entry.controllerId,
+  );
+  return opponentId === undefined ? null : (opponentId as PlayerId);
 };
 
 export const applyPlaySelectedSequenceSegment = (params: {
@@ -140,6 +159,20 @@ export const applyPlaySelectedSequenceSegment = (params: {
   let nextLedgers = ledgers;
   const saved = nextLedgers.savedReferences[segment.effect.selection];
   const selectedCards = saved?.kind === "selectedCards" ? saved.cards : [];
+  const actorPlayerId = resolvePlaySelectedPlayer(
+    nextState,
+    entry,
+    segment.effect.player,
+  );
+  if (actorPlayerId === null) {
+    return {
+      events,
+      kind: "continued",
+      ledgers: nextLedgers,
+      ok: true,
+      state: nextState,
+    };
+  }
   const key = segmentKey(segment, index);
   const previousResult = nextLedgers.segmentResults[key];
   const auditedSelectedCards =
@@ -191,7 +224,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
   const producedObjects: CardRef[] = [];
   for (const selected of selectedCards) {
     if (
-      selected.playerId !== entry.controllerId ||
+      selected.playerId !== actorPlayerId ||
       (selected.zone?.zone !== "hand" &&
         selected.zone?.zone !== "trash" &&
         selected.zone?.zone !== "deck")
@@ -217,7 +250,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
     }
     const played = applyRuntimePlaySelected({
       state: nextState,
-      playerId: entry.controllerId,
+      playerId: actorPlayerId,
       cardInstanceId: selected.instanceId,
       sourceZone: selected.zone.zone,
       enterRested: segment.effect.enterRested === true,
@@ -294,7 +327,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
     changedState = changedState || played.events.length > 0;
     const producedObject = findProducedPublicFieldObject(
       nextState,
-      entry.controllerId,
+      actorPlayerId,
       selected.instanceId,
     );
     if (producedObject !== null) {

@@ -101,6 +101,7 @@ type ConditionalSequenceEffect = Extract<Effect, { type: "conditional" }> & {
 };
 type ConditionalEffect = Extract<Effect, { type: "conditional" }>;
 type ForEachSavedTargetEffect = Extract<Effect, { type: "forEachSavedTarget" }>;
+type NestedSequenceEffect = SequenceEffect;
 
 export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
@@ -139,6 +140,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | ConditionalSequenceEffect
     | ConditionalEffect
     | ForEachSavedTargetEffect
+    | NestedSequenceEffect
     | DelayedEffect
     | Extract<Effect, { type: "choice" }>
     | KoEffect;
@@ -407,6 +409,23 @@ const isSupportedSequenceBlockWithState = (
         return true;
       }
       if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return true;
+      }
+      if (segment.effect.type === "sequence") {
+        if (segment.saveResultAs !== undefined) {
+          return false;
+        }
+        const nestedState = cloneSequenceSupportState(supportState);
+        const supported = isSupportedSequenceBlockWithState(
+          entry,
+          { ...flattenedBlock, effect: segment.effect },
+          { ...options, allowInitialTrashFromHand: true },
+          nestedState,
+        );
+        if (!supported) {
+          return false;
+        }
         supportState.hasPendingDecisionSegment = true;
         return true;
       }

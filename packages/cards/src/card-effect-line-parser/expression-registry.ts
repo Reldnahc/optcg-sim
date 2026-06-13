@@ -42,6 +42,7 @@ import {
   lookPlayFromTopExpressionParser,
   opponentOptionalCostExpressionParser,
   opponentOptionalCostSegmentParser,
+  optionalActionEffectSegmentParser,
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
   playStageFromDeckExpressionParser,
@@ -100,6 +101,10 @@ function generalExpressionParser(input: ParseInput) {
         instructions: instructionParsers,
       }),
       opponentOptionalCostSegmentParser({
+        instructions: instructionParsers,
+        expressions: [singleInstructionExpressionParser],
+      }),
+      optionalActionEffectSegmentParser({
         instructions: instructionParsers,
         expressions: [singleInstructionExpressionParser],
       }),

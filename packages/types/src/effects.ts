@@ -668,6 +668,7 @@ export type HandSelectCardsEffect = SelectCardsEffect & {
 export interface PlaySelectedEffect {
   type: "playSelected";
   selection: SelectionId;
+  player?: PlayerRef;
   enterRested?: boolean;
   ignoreCost?: boolean;
 }

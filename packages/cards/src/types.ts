@@ -162,6 +162,7 @@ export type PrimitiveEvidence =
   | "composition:costedEffect"
   | "composition:conditionalCostedEffect"
   | "composition:optionalCostedEffect"
+  | "composition:optionalActionEffect"
   | "composition:opponentOptionalCost"
   | "composition:selectThenPlay"
   | "composition:selectThenActivate"

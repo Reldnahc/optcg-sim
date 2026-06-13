@@ -112,6 +112,61 @@ describe("play from hand instruction parser", () => {
     });
   });
 
+  it("parses opponent play from their hand as opponent-owned hand selection", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "your opponent plays up to 1 Character card with a cost of 4 or less from their hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "handSelection:play-from-hand",
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "opponent",
+              chooser: "opponent",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                cost: { max: 4 },
+              },
+              saveAs: "handSelection:play-from-hand",
+              visibility: "chooserOnly",
+            },
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+              player: "opponent",
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "zone:hand",
+        "player:opponent",
+        "chooser:opponent",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenPlay",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses play from hand with separated type-or-attribute alternatives and shared suffix filters", () => {
     expect(
       parsePlayFromHandInstruction({

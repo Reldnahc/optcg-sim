@@ -16,14 +16,19 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     return handOrTrash;
   }
 
-  const playMatch = /^Play\s+(?<rest>.+)$/i.exec(input.text);
+  const opponentPlayMatch = /^your opponent plays\s+(?<rest>.+)$/iu.exec(
+    input.text,
+  );
+  const playMatch =
+    opponentPlayMatch ?? /^Play\s+(?<rest>.+)$/iu.exec(input.text);
   const afterPlay = playMatch?.groups?.["rest"];
   if (afterPlay === undefined) {
     return undefined;
   }
+  const player = opponentPlayMatch === null ? "self" : "opponent";
 
   const alternativeSources = parsePlayFromHandAlternativeSources(afterPlay);
-  if (alternativeSources !== undefined) {
+  if (player === "self" && alternativeSources !== undefined) {
     return alternativeSources;
   }
 
@@ -32,7 +37,7 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const source = parsePlayFromHandSource(cardinality.rest);
+  const source = parsePlayFromHandSource(cardinality.rest, player);
   if (source === undefined) {
     return undefined;
   }
@@ -48,8 +53,8 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
           effect: {
             type: "selectCards",
             zone: "hand",
-            player: "self",
-            chooser: "self",
+            player,
+            chooser: player,
             min: cardinality.cardinality.min,
             max: cardinality.cardinality.max,
             filter: source.filter,
@@ -64,6 +69,7 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
             type: "playSelected",
             selection: handPlaySelection,
             ignoreCost: true,
+            ...(player === "self" ? {} : { player }),
             ...(source.enterRested ? { enterRested: true } : {}),
           },
         },
@@ -73,8 +79,8 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
       "instruction:playSelected",
       ...cardinality.evidence,
       "zone:hand",
-      "player:self",
-      "chooser:self:upTo",
+      player === "self" ? "player:self" : "player:opponent",
+      player === "self" ? "chooser:self:upTo" : "chooser:opponent",
       ...source.evidence,
       ...(source.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
@@ -308,7 +314,10 @@ function playSelectedFromZone({
   };
 }
 
-function parsePlayFromHandSource(text: string):
+function parsePlayFromHandSource(
+  text: string,
+  player: "self" | "opponent" = "self",
+):
   | {
       readonly filter: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
@@ -319,8 +328,11 @@ function parsePlayFromHandSource(text: string):
       readonly enterRested: boolean;
     }
   | undefined {
-  const sourceMatch =
-    /^(?<predicates>.+) from your hand(?<rested>\s+rested)?\.?$/i.exec(text);
+  const sourceText = player === "self" ? "your hand" : "their hand";
+  const sourceMatch = new RegExp(
+    `^(?<predicates>.+) from ${sourceText}(?<rested>\\s+rested)?\\.?$`,
+    "iu",
+  ).exec(text);
   if (sourceMatch === null) {
     return undefined;
   }

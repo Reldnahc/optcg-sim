@@ -79,7 +79,10 @@ const flattenNestedSequenceSegments = (
   if (segment.effect.type !== "sequence") {
     return [segment];
   }
-  if (segment.optional === true || segment.saveResultAs !== undefined) {
+  if (segment.optional === true) {
+    return [segment];
+  }
+  if (segment.saveResultAs !== undefined) {
     return null;
   }
   const flattened = flattenSequenceEffect(segment.effect);
