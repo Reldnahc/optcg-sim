@@ -163,6 +163,7 @@ const presentationRefFromSourceMap = (
       (span) =>
         span.role === "body" ||
         span.role === "cost" ||
+        span.role === "choice" ||
         span.role === "choiceOption",
     )
     .map((span) => span.id);
