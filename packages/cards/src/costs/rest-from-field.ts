@@ -21,7 +21,9 @@ export function parseRestFromFieldCost(
     return undefined;
   }
 
-  const cardinality = parseExactCardinality({ text: afterRest });
+  const cardinality = parseExactCardinality({
+    text: normalizeLeaderOrStageRestCost(afterRest),
+  });
   if (cardinality === undefined) {
     return undefined;
   }
@@ -56,4 +58,11 @@ export function parseRestFromFieldCost(
     ],
     rest: "",
   };
+}
+
+function normalizeLeaderOrStageRestCost(text: string): string {
+  return text.replace(
+    /^your Leader or 1 of your Stage cards?$/iu,
+    "1 of your Leader or Stage cards",
+  );
 }

@@ -11,6 +11,14 @@ export interface FieldCostFilterParseResult {
 export function parseFieldCostFilter(
   input: ParseInput,
 ): FieldCostFilterParseResult | undefined {
+  const leaderOrStageMatch = /^Leader or Stage cards?$/iu.exec(input.text);
+  if (leaderOrStageMatch !== null) {
+    return {
+      evidence: ["filter:category:leader", "filter:category:stage"],
+      filter: { categories: ["leader", "stage"] },
+    };
+  }
+
   const direct = parseCardFilterPredicates(
     { text: input.text },
     { powerSemantics: "current" },

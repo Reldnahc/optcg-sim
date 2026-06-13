@@ -48,4 +48,30 @@ describe("rest from field cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses own Leader-or-Stage rest as reusable field categories", () => {
+    expect(
+      parseRestFromFieldCost({
+        text: "rest your Leader or 1 of your Stage cards",
+      }),
+    ).toEqual({
+      cost: {
+        type: "restFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["leader", "stage"] },
+        optional: true,
+      },
+      evidence: [
+        "cost:restFromField",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "player:self",
+        "filter:category:leader",
+        "filter:category:stage",
+      ],
+      rest: "",
+    });
+  });
 });
