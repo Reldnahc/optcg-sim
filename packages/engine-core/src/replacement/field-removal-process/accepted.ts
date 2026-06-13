@@ -122,6 +122,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
           id: `${String(replacementEntry.id)}:${String(index)}` as EffectQueueEntry["id"],
         },
         segment.effect,
+        { replacementTargets: coveredTargets },
       );
       if (replaced.errors !== undefined) {
         return {
@@ -531,6 +532,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     { ...state, eventJournal: [...state.eventJournal, ...events] },
     replacementEntry,
     candidate.replacementEffect.instead,
+    { replacementTargets: coveredTargets },
   );
   if (replaced.errors !== undefined) {
     return {

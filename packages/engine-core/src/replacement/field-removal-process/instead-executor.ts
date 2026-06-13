@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardRef,
   EffectQueueEntry,
   EngineResult,
   EngineError,
@@ -19,20 +20,27 @@ import { restFieldObjects } from "../../effect-runtime-sequence/saved-field-obje
 import { executeMoveCardsPrimitive } from "../../effect-runtime-move-cards.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
 import { executeNoChoiceEffectPrimitive } from "../../runtime/primitives/draw.js";
+import { moveFieldCardToOwnerLife } from "../../movement/field-to-life.js";
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedLifeVisibilityInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
+  isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
 } from "../instead-effects.js";
 import { executeKoSelfInsteadEffect } from "../ko-self-instead.js";
 import type { SelectedTargetKoReplacementCandidate } from "../primitives.js";
+import { findCardByInstanceId } from "../primitives/source-lookup.js";
 import { currentPublicFieldRefForInstance } from "./source-snapshot.js";
 
 type ReplacementInsteadEffect =
   SelectedTargetKoReplacementCandidate["replacementEffect"]["instead"];
+
+interface ReplacementInsteadContext {
+  readonly replacementTargets?: readonly CardRef[];
+}
 
 export const acceptedReplacementError = (
   effectId: string,
@@ -47,6 +55,7 @@ export const executeReplacementInsteadEffect = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: ReplacementInsteadEffect,
+  context: ReplacementInsteadContext = {},
 ): EngineResult => {
   if (isSupportedReplacementInsteadSequenceEffect(effect)) {
     const flattened = flattenSequenceEffect(effect);
@@ -77,6 +86,7 @@ export const executeReplacementInsteadEffect = (
         nextState,
         entry,
         segment.effect,
+        context,
       );
       if (executed.errors !== undefined) {
         const [firstError, ...remainingErrors] = executed.errors;
@@ -113,6 +123,14 @@ export const executeReplacementInsteadEffect = (
   }
   if (isSupportedLifeVisibilityInsteadEffect(effect)) {
     return executeLifeVisibilityInsteadEffect(state, entry, effect);
+  }
+  if (isSupportedReplacementTargetLifeInsteadEffect(effect)) {
+    return executeReplacementTargetLifeInsteadEffect(
+      state,
+      entry,
+      effect,
+      context.replacementTargets ?? [],
+    );
   }
   if (isSupportedRestSelfInsteadEffect(effect)) {
     const source = currentPublicFieldRefForInstance(state, entry.source);
@@ -194,6 +212,61 @@ export const executeReplacementInsteadEffect = (
   return executeNoChoiceEffectPrimitive(state, entry, effect, {
     incrementStateSeq: false,
   });
+};
+
+const executeReplacementTargetLifeInsteadEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<ReplacementInsteadEffect, { type: "bounce" }> & {
+    target: Extract<
+      Extract<ReplacementInsteadEffect, { type: "bounce" }>["target"],
+      { type: "replacementTarget" }
+    >;
+    destination: "lifeTop" | "lifeBottom";
+  },
+  replacementTargets: readonly CardRef[],
+): EngineResult => {
+  if (replacementTargets.length === 0) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        acceptedReplacementError(
+          entry.effectBlockId,
+          "unsupported-effect-shape",
+        ),
+      ],
+    );
+  }
+
+  let nextState = state;
+  const events: EngineEvent[] = [];
+  for (const target of replacementTargets) {
+    const located = findCardByInstanceId(nextState, target.instanceId);
+    if (
+      located === null ||
+      (located.zone !== "characterArea" && located.zone !== "stageArea")
+    ) {
+      return toEngineResult(nextState, events, [
+        acceptedReplacementError(entry.effectBlockId, "missing-card"),
+      ]);
+    }
+    const moved = moveFieldCardToOwnerLife({
+      card: located.card,
+      causedBy: entry.causedBy,
+      events,
+      playerId: located.playerId,
+      position: effect.destination === "lifeTop" ? "top" : "bottom",
+      sourceZone: located.zone,
+      state: nextState,
+      ...(effect.destinationFaceUp === undefined
+        ? {}
+        : { faceUp: effect.destinationFaceUp }),
+    });
+    nextState = moved.state;
+  }
+
+  return toEngineResult(nextState, events);
 };
 
 const executeLifeVisibilityInsteadEffect = (

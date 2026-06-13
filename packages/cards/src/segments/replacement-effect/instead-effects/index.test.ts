@@ -54,4 +54,27 @@ describe("replacement instead-effect parser groups", () => {
       ],
     });
   });
+
+  it("parses replacement-subject Life placement instead as a bounce primitive", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may add it to the top of your Life cards face-down instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "bounce",
+        target: { type: "replacementTarget" },
+        destination: "lifeTop",
+        destinationFaceUp: false,
+      },
+      evidence: [
+        "instruction:bounce",
+        "target:replacementTarget",
+        "destination:life",
+        "position:top",
+        "visibility:faceDown",
+      ],
+    });
+  });
 });

@@ -127,12 +127,27 @@ export const isSupportedLifeVisibilityInsteadEffect = (
   Number.isInteger(effect.count) &&
   effect.count > 0;
 
+export const isSupportedReplacementTargetLifeInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "bounce" }> & {
+  target: Extract<
+    Extract<ReplacementInstead, { type: "bounce" }>["target"],
+    { type: "replacementTarget" }
+  >;
+  destination: "lifeTop" | "lifeBottom";
+} =>
+  effect.type === "bounce" &&
+  effect.target.type === "replacementTarget" &&
+  (effect.destination === "lifeTop" || effect.destination === "lifeBottom");
+
 const isSupportedAtomicNoDecisionInsteadEffect = (
   effect: SequenceSegmentEffect,
 ): boolean =>
   (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
   (effect.type === "setLifeCardFaceUp" &&
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
+  (effect.type === "bounce" &&
+    isSupportedReplacementTargetLifeInsteadEffect(effect)) ||
   (effect.type === "rest" && isSupportedRestSelfInsteadEffect(effect)) ||
   (effect.type === "modifyPower" &&
     isSupportedModifyPowerInsteadEffect(effect)) ||
@@ -319,6 +334,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
+  isSupportedReplacementTargetLifeInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||
@@ -348,6 +364,9 @@ export const replacementOptionLabel = (
       "card",
       "cards",
     )} ${instead.faceUp ? "face-up" : "face-down"} instead`;
+  }
+  if (isSupportedReplacementTargetLifeInsteadEffect(instead)) {
+    return `Add that card to ${instead.destination === "lifeTop" ? "top" : "bottom"} Life instead`;
   }
   if (isSupportedRestOwnCardsInsteadEffect(instead)) {
     return `Rest ${String(instead.target.request.min)} ${plural(

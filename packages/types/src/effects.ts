@@ -241,6 +241,7 @@ export type Target =
   | { type: "attackTarget" }
   | { type: "blocker" }
   | { type: "triggerCard" }
+  | { type: "replacementTarget" }
   | { type: "player"; player: PlayerRef }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }

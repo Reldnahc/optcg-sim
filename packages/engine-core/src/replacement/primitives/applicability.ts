@@ -24,6 +24,7 @@ import { cardRefsEqual } from "../field-removal-targets.js";
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
+  isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
@@ -290,6 +291,9 @@ const canPayReplacementInsteadSegment = (
       source.resolved.category === "character" &&
       source.ref.zone?.zone === "characterArea"
     );
+  }
+  if (isSupportedReplacementTargetLifeInsteadEffect(instead)) {
+    return true;
   }
   const ownerDeckBottom = supportedOwnerDeckBottomInstead(instead);
   if (ownerDeckBottom !== undefined) {

@@ -16,6 +16,7 @@ import {
   isSupportedReplacementPayCostInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect,
+  isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
@@ -234,6 +235,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedKoSelfInsteadEffect(effect) ||
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
+  isSupportedReplacementTargetLifeInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||
