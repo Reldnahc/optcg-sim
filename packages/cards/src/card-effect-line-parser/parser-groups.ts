@@ -35,6 +35,7 @@ import {
   parseContinuousFieldModifyCostInstruction,
   parseDamageInstruction,
   parseDrawInstruction,
+  parseDonPhasePlacementInstruction,
   parseExplicitProtectionInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,
   parseHandCounterSetInstruction,
@@ -180,6 +181,7 @@ export const conditionParsers = [
 
 export const continuousInstructionParsers = [
   parseOpponentEffectFieldRemovalProtectionInstruction,
+  parseDonPhasePlacementInstruction,
   parseThisCharacterKeywordGrantInstruction,
   parseSelfCannotAttackInstruction,
   parseYourLeaderConditionalPowerInstruction,

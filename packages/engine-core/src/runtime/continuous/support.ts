@@ -9,6 +9,7 @@ import type {
 
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
 import type { ContinuousQueueEffect } from "./types.js";
+import { isSupportedDonPhasePlacementEffect } from "./don-phase-placement-modifier.js";
 
 const supportedRestriction = new Set([
   "cannotAttack",
@@ -333,7 +334,8 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "cannotAttack" &&
     effect.type !== "attackCost" &&
     effect.type !== "cannotBlock" &&
-    effect.type !== "preventBlockerActivation"
+    effect.type !== "preventBlockerActivation" &&
+    effect.type !== "redirectDonPhasePlacement"
   ) {
     return false;
   }
@@ -377,6 +379,11 @@ export const isSupportedContinuousQueueEffect = (
       Number.isSafeInteger(effect.value) &&
       effect.value >= 0
     );
+  }
+  if (effect.type === "redirectDonPhasePlacement") {
+    return isSupportedDonPhasePlacementEffect(effect, {
+      supportsDuration: true,
+    });
   }
   if (effect.type === "preventDraw") {
     return effect.player === "self";

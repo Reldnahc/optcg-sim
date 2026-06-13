@@ -34,6 +34,12 @@ import {
   malformedFieldRemovalProtectionMessage,
 } from "../../replacement/field-removal-protection-shape.js";
 import {
+  isDonPhasePlacementEffect,
+  isSupportedDonPhasePlacementEffect,
+  toDonPhasePlacementModifier,
+  toSupportedDonPhasePlacementModifier,
+} from "./don-phase-placement-modifier.js";
+import {
   resolveBasePowerValue,
   resolveDynamicNumberValue,
   resolvePowerValue,
@@ -137,6 +143,9 @@ const mapEffectToModifier = (
       target,
       operation: { type: "restriction", restriction: "cannotPlay" },
     };
+  }
+  if (effect.type === "redirectDonPhasePlacement") {
+    return toDonPhasePlacementModifier(effect);
   }
   if (effect.type === "attackCost") {
     return {
@@ -461,6 +470,11 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
   if (effect.type === "modifyCost") {
     return isSupportedCostModifierEffect(effect);
   }
+  if (isDonPhasePlacementEffect(effect)) {
+    return isSupportedDonPhasePlacementEffect(effect, {
+      supportsDuration: isSupportedDuration(effect.duration),
+    });
+  }
   try {
     return (
       effectToDerivedModifier(
@@ -702,6 +716,11 @@ const effectToDerivedModifier = (
       },
       operation: { type: "setCounter", value: effect.value },
     };
+  }
+  if (isDonPhasePlacementEffect(effect)) {
+    return toSupportedDonPhasePlacementModifier(effect, {
+      supportsDuration: isSupportedDuration(effect.duration),
+    });
   }
   if (effect.type === "protectFromKO") {
     if (

@@ -145,6 +145,30 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses any DON on field as a reusable DON field-count condition", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have any DON!! cards on your field",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"] },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses opponent given DON as the same attached DON field-count primitive", () => {
     expect(
       parseDonFieldCountCondition({

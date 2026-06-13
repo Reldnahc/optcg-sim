@@ -4,6 +4,7 @@ export {
   setBasePowerPrimitive,
 } from "./base-power.js";
 export { parseHandCounterSetInstruction } from "./counter.js";
+export { parseDonPhasePlacementInstruction } from "./don-phase-placement.js";
 export {
   parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,

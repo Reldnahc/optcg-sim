@@ -117,6 +117,26 @@ export const parseDonFieldCountCondition: ConditionParser = (
     };
   }
 
+  if (/^any DON!! cards on your field$/i.test(comparisonText)) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player,
+        filter: { categories: ["don"] },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        player === "self" ? "player:self" : "player:opponent",
+        "filter:category:don",
+      ],
+      rest: "",
+    };
+  }
+
   const normalizedComparisonText = comparisonText
     .replace(/^a total of\s+/iu, "")
     .trim();

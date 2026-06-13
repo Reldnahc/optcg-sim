@@ -7,6 +7,7 @@ import { test } from "vitest";
 import type {
   CardId,
   CardInstance,
+  ContinuousEffectRecord,
   EffectDefinition,
   EngineEvent,
   EngineResult,
@@ -340,6 +341,71 @@ test("first-player one-DON!! first turn and normal two-DON!! later turns", () =>
   laterTurn.turn.globalTurn = 3;
   const later = advanceDonPhase(laterTurn);
   assert.equal(must(later.state.players[p1], "p1").costArea.length, 2);
+});
+
+test("DON Phase placement modifiers attach only their redirected placed DON!!", () => {
+  const state = createActiveState();
+  seedKnownTriggerFreeBoardManifest(state);
+  state.turn.phase = "don";
+  state.turn.globalTurn = 3;
+  const player = must(state.players[p1], "p1");
+  const leader = player.leader;
+  state.continuousEffects = [
+    {
+      id: "continuous:test:don-phase-placement",
+      source: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        playerId: p1,
+        zone: leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: leader.instanceId,
+        cardId: leader.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: leader.zone,
+        category: "leader",
+        colors: [],
+        keywords: [],
+      },
+      controller: p1,
+      modifier: {
+        layer: "donPhasePlacement",
+        target: { type: "myLeader" },
+        operation: {
+          type: "redirectDonPhasePlacement",
+          count: 1,
+          player: "self",
+        },
+      },
+      duration: { type: "whileSourceOnField" },
+      createdBy: { type: "ruleProcess", name: "test" },
+      createdAtStateSeq: state.seq,
+    } as unknown as ContinuousEffectRecord,
+  ];
+
+  const result = advanceDonPhase(state);
+  const nextPlayer = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(nextPlayer.donDeck.length, 1);
+  assert.equal(nextPlayer.costArea.length, 2);
+  assert.equal(nextPlayer.leader.attachedDon.length, 1);
+  assert.equal(
+    nextPlayer.costArea.filter((card) => card.state === "active").length,
+    1,
+  );
+  assert.equal(
+    nextPlayer.costArea.filter((card) =>
+      nextPlayer.leader.attachedDon.includes(card.instanceId),
+    ).length,
+    1,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "donAttached"),
+    true,
+  );
 });
 
 test("attached DON!! refresh return and readying", () => {

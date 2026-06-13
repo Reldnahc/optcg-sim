@@ -187,7 +187,8 @@ export type ModifierLayer =
   | "attributeAdd"
   | "keywordRemove"
   | "restriction"
-  | "protection";
+  | "protection"
+  | "donPhasePlacement";
 
 export type ModifierOperation =
   | { type: "setBasePower"; value: number }
@@ -205,7 +206,12 @@ export type ModifierOperation =
       sourceCategories?: CardCategory[];
     }
   | { type: "attackCost"; cost: AttackTrashCost }
-  | { type: "protection"; protection: Protection };
+  | { type: "protection"; protection: Protection }
+  | {
+      type: "redirectDonPhasePlacement";
+      count: number;
+      player: PlayerRef;
+    };
 
 export interface Modifier {
   layer: ModifierLayer;

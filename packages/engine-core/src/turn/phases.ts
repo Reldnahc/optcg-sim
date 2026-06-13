@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  ContinuousEffectRecord,
   EngineError,
   EngineEvent,
   EngineEventId,
@@ -17,6 +18,7 @@ import {
   processEffectRuntime,
 } from "../effect-runtime.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
+import { isDonPhasePlacementModifier } from "../runtime/continuous/don-phase-placement-modifier.js";
 import { canBecomeActive } from "../runtime/continuous/state-transition-guards.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
@@ -224,6 +226,18 @@ const withIndexedZone = (
 const materializeBoardContinuousEffects = (
   state: GameState,
 ): { cardId: CardInstance["cardId"]; reason: string } | undefined => {
+  const result = deriveBoardContinuousEffects(state);
+  return result.ok ? undefined : result.error;
+};
+
+const deriveBoardContinuousEffects = (
+  state: GameState,
+):
+  | { readonly ok: true; readonly records: readonly ContinuousEffectRecord[] }
+  | {
+      readonly ok: false;
+      readonly error: { cardId: CardInstance["cardId"]; reason: string };
+    } => {
   const cards: CardInstance[] = [];
   let firstImplementedDslCard: CardInstance | undefined;
   for (const player of Object.values(state.players)) {
@@ -241,16 +255,22 @@ const materializeBoardContinuousEffects = (
   }
   if (firstImplementedDslCard !== undefined) {
     try {
-      deriveImplementedDslPermanentContinuousEffects(state);
+      return {
+        ok: true,
+        records: deriveImplementedDslPermanentContinuousEffects(state),
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
-        cardId: firstImplementedDslCard.cardId,
-        reason: `unsupported-implemented-dsl-materialization:${message}`,
+        ok: false,
+        error: {
+          cardId: firstImplementedDslCard.cardId,
+          reason: `unsupported-implemented-dsl-materialization:${message}`,
+        },
       };
     }
   }
-  return undefined;
+  return { ok: true, records: [] };
 };
 
 const secondPlayerId = (
@@ -293,6 +313,53 @@ const readyPlayerCards = (
     next.stage = readyCardForRefresh(state, player.stage);
   }
   return next;
+};
+
+const donPhasePlacementRecords = (
+  state: GameState,
+):
+  | { readonly ok: true; readonly records: readonly ContinuousEffectRecord[] }
+  | {
+      readonly ok: false;
+      readonly error: { cardId: CardInstance["cardId"]; reason: string };
+    } => {
+  const derived = deriveBoardContinuousEffects(state);
+  if (!derived.ok) {
+    return derived;
+  }
+  return {
+    ok: true,
+    records: [...state.continuousEffects, ...derived.records].filter(
+      (record) =>
+        record.controller === state.turn.turnPlayerId &&
+        isDonPhasePlacementModifier(record),
+    ),
+  };
+};
+
+const selectDonPhasePlacementAttachments = (
+  records: readonly ContinuousEffectRecord[],
+  toPlace: readonly CardInstance[],
+): readonly CardInstance["instanceId"][] => {
+  if (records.length === 0) {
+    return [];
+  }
+  const selected: CardInstance["instanceId"][] = [];
+  let nextIndex = 0;
+  for (const record of records) {
+    const count =
+      record.modifier.operation.type === "redirectDonPhasePlacement"
+        ? record.modifier.operation.count
+        : 0;
+    for (let index = 0; index < count && nextIndex < toPlace.length; index++) {
+      const card = toPlace[nextIndex];
+      if (card !== undefined) {
+        selected.push(card.instanceId);
+      }
+      nextIndex += 1;
+    }
+  }
+  return selected;
 };
 
 export const advanceRefreshPhase = (
@@ -525,8 +592,30 @@ export const advanceDonPhase = (
     );
   }
 
+  const placementRecords = profilePhaseSpan(
+    options,
+    "advanceDonPhase:materializeContinuous",
+    () => donPhasePlacementRecords(state),
+  );
+  if (!placementRecords.ok) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        {
+          type: "effectRuntimeError",
+          effectId: "don-phase-continuous-materialization",
+          details: placementRecords.error,
+        },
+      ],
+    );
+  }
+
   const placeCount = isFirstPlayerFirstTurn(state, turnPlayerId) ? 1 : 2;
   const toPlace = turnPlayer.donDeck.slice(0, placeCount);
+  const attachedPlacementIds = new Set(
+    selectDonPhasePlacementAttachments(placementRecords.records, toPlace),
+  );
   const nextDonDeck = profilePhaseSpan(
     options,
     "advanceDonPhase:reindexDonDeck",
@@ -549,7 +638,9 @@ export const advanceDonPhase = (
           "cost",
           turnPlayer.costArea.length + index,
         ),
-        state: "active" as const,
+        ...(attachedPlacementIds.has(card.instanceId)
+          ? {}
+          : { state: "active" as const }),
       })),
     ],
   );
@@ -574,6 +665,20 @@ export const advanceDonPhase = (
       ),
   );
 
+  for (const donInstanceId of attachedPlacementIds) {
+    appendEvent(
+      events,
+      state,
+      "donAttached",
+      {
+        playerId: turnPlayerId,
+        donInstanceId,
+        targetInstanceId: turnPlayer.leader.instanceId,
+      },
+      { type: "replayOnly" },
+    );
+  }
+
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
@@ -581,6 +686,13 @@ export const advanceDonPhase = (
       ...state.players,
       [turnPlayerId]: {
         ...turnPlayer,
+        leader: {
+          ...turnPlayer.leader,
+          attachedDon: [
+            ...turnPlayer.leader.attachedDon,
+            ...attachedPlacementIds,
+          ],
+        },
         donDeck: nextDonDeck,
         costArea: nextCostArea,
       },

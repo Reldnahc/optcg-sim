@@ -13,7 +13,8 @@ export const durationForDerivedEffect = (effect: Effect): Duration => {
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
     effect.type === "cannotBecomeActive" ||
-    effect.type === "giveProtection"
+    effect.type === "giveProtection" ||
+    effect.type === "redirectDonPhasePlacement"
   ) {
     return effect.duration;
   }

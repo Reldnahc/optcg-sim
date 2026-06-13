@@ -20,6 +20,7 @@ export type ContinuousQueueEffect = Extract<
       | "cannotAttack"
       | "attackCost"
       | "cannotBlock"
-      | "preventBlockerActivation";
+      | "preventBlockerActivation"
+      | "redirectDonPhasePlacement";
   }
 >;

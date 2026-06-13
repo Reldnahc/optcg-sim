@@ -937,6 +937,13 @@ export type Effect =
   | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
   | {
+      type: "redirectDonPhasePlacement";
+      target: Target;
+      count: number;
+      player: PlayerRef;
+      duration: Duration;
+    }
+  | {
       type: "attachSelectedDon";
       selection: SelectionId;
       sourceState?: "active" | "rested";
