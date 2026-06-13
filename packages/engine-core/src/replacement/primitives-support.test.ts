@@ -45,7 +45,12 @@ const restSelfInstead = (): Extract<Effect, { type: "rest" }> => ({
   target: { type: "self" },
 });
 
-const restOwnCardsInstead = (): Extract<Effect, { type: "rest" }> => ({
+const restOwnCardsInstead = (
+  filter?: Extract<
+    Extract<Effect, { type: "rest" }>["target"],
+    { type: "chooseFromZones" }
+  >["request"]["filter"],
+): Extract<Effect, { type: "rest" }> => ({
   type: "rest",
   target: {
     type: "chooseFromZones",
@@ -58,6 +63,7 @@ const restOwnCardsInstead = (): Extract<Effect, { type: "rest" }> => ({
       max: 2,
       allowFewerIfUnavailable: false,
       visibility: "public",
+      ...(filter === undefined ? {} : { filter }),
     },
   },
 });
@@ -226,6 +232,19 @@ test("replacement support admits rest-own-cards instead under K.O. replacement t
     "replacement-ko-rest-own-cards",
     wouldBeKodByCardEffect(),
     restOwnCardsInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support admits filtered rest-own-cards instead primitives", () => {
+  const block = replacementBlock(
+    "replacement-ko-rest-filtered-own-card",
+    wouldBeKodByCardEffect(),
+    restOwnCardsInstead({
+      categories: ["leader"],
+      names: ["Fish-Man Island", "Shirahoshi"],
+    }),
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);

@@ -46,7 +46,7 @@ export const isSupportedRestOwnCardsInsteadEffect = (
   effect.target.request.timing === "onResolution" &&
   effect.target.request.chooser === "self" &&
   effect.target.request.player === "self" &&
-  effect.target.request.filter === undefined &&
+  isSupportedHandSelectionCardFilter(effect.target.request.filter) &&
   effect.target.request.min === effect.target.request.max &&
   effect.target.request.min > 0 &&
   !effect.target.request.allowFewerIfUnavailable &&

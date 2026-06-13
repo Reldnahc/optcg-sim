@@ -457,6 +457,53 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses self K.O. replacement into filtered named Leader rest instead primitives", () => {
+    const result = parseCardEffectLine(
+      "If this Character would be K.O.'d, you may rest 1 of your [Fish-Man Island] or your [Shirahoshi] Leader instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    assert.deepEqual(result.block.effect, {
+      type: "replacement",
+      when: {
+        type: "wouldBeKOd",
+        sourceControllerRelation: "any",
+        target: { type: "self" },
+      },
+      instead: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea"],
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+            filter: {
+              categories: ["leader"],
+              names: ["Fish-Man Island", "Shirahoshi"],
+            },
+          },
+        },
+      },
+    });
+    for (const evidence of [
+      "replacement:wouldBeKOd",
+      "instruction:rest",
+      "target:yourLeader",
+      "filter:name",
+      "cardinality:exact",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses trash-to-deck-bottom replacement into reusable move-card instead primitives", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] [Once Per Turn] If this Character would be K.O.'d, you may place 3 cards from your trash at the bottom of your deck in any order instead.",
