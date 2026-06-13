@@ -170,10 +170,6 @@
   }
 }
 
-.battle-arrow-power {
-  animation: battle-power-impact 620ms ease-out both;
-}
-
 .battle-arrow-power text {
   font-size: clamp(18px, calc(var(--card-height) / 5.8), 34px);
   font-weight: 900;
@@ -192,16 +188,6 @@
 
 .battle-arrow-power-value.is-weak {
   fill: #b9d7ff;
-}
-
-.battle-arrow-power-value.is-opponent {
-  animation: battle-power-slide-from-left 520ms
-    cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
-}
-
-.battle-arrow-power-value.is-self {
-  animation: battle-power-slide-from-right 520ms
-    cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
 }
 
 .battle-arrow-power-value.is-power-5000 {
@@ -226,47 +212,6 @@
 
 .battle-arrow-power-value.is-over-10000 {
   fill: #8f1010;
-}
-
-@keyframes battle-power-impact {
-  0% {
-    opacity: 0;
-    filter: drop-shadow(0 0 0 rgba(255, 216, 77, 0));
-  }
-
-  35% {
-    opacity: 1;
-    filter: drop-shadow(0 0 14px rgba(255, 216, 77, 0.82));
-  }
-
-  100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 5px rgba(255, 216, 77, 0.36));
-  }
-}
-
-@keyframes battle-power-slide-from-left {
-  0% {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes battle-power-slide-from-right {
-  0% {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 .opponent-cost {

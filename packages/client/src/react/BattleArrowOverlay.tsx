@@ -15,6 +15,8 @@ export interface ArrowLine {
 
 const emptyLine: ArrowLine = { x1: 0, y1: 0, x2: 0, y2: 0 };
 const leaderPowerLabelDefenderWeight = 0.72;
+const battlePowerEntryOffset = 34;
+const battlePowerEntryDurationMs = 360;
 
 type BattlePowerLabelTarget = "fieldCard" | "leader";
 type BattlePowerTone =
@@ -214,28 +216,52 @@ export const BattleArrowOverlay = ({
           className="battle-arrow-power"
           transform={`translate(${String(powerLabelPoint.x)} ${String(powerLabelPoint.y)})`}
         >
-          <text dominantBaseline="central" textAnchor="middle">
-            {renderOpponentPower === undefined ? null : (
-              <>
-                <tspan
-                  className={`battle-arrow-power-value is-opponent is-${battlePowerTone(renderOpponentPower)}`}
-                  x="0"
-                  dy="-0.72em"
-                >
-                  {renderOpponentPower}
-                </tspan>
-                <tspan className="battle-arrow-power-vs" x="0" dy="0.78em">
-                  vs
-                </tspan>
-              </>
-            )}
-            <tspan
-              className={`battle-arrow-power-value is-self is-${battlePowerTone(renderSelfPower)}`}
-              x="0"
-              dy={renderOpponentPower === undefined ? "0" : "0.86em"}
-            >
-              {renderSelfPower}
-            </tspan>
+          {renderOpponentPower === undefined ? null : (
+            <>
+              <text
+                className={`battle-arrow-power-value is-opponent is-${battlePowerTone(renderOpponentPower)}`}
+                dominantBaseline="central"
+                textAnchor="middle"
+                x="0"
+                y="-0.92em"
+              >
+                <animateTransform
+                  attributeName="transform"
+                  type="translate"
+                  from={`${String(-battlePowerEntryOffset)} 0`}
+                  to="0 0"
+                  dur={`${String(battlePowerEntryDurationMs)}ms`}
+                  fill="freeze"
+                />
+                {renderOpponentPower}
+              </text>
+              <text
+                className="battle-arrow-power-vs"
+                dominantBaseline="central"
+                textAnchor="middle"
+                x="0"
+                y="0"
+              >
+                vs
+              </text>
+            </>
+          )}
+          <text
+            className={`battle-arrow-power-value is-self is-${battlePowerTone(renderSelfPower)}`}
+            dominantBaseline="central"
+            textAnchor="middle"
+            x="0"
+            y={renderOpponentPower === undefined ? "0" : "0.98em"}
+          >
+            <animateTransform
+              attributeName="transform"
+              type="translate"
+              from={`${String(battlePowerEntryOffset)} 0`}
+              to="0 0"
+              dur={`${String(battlePowerEntryDurationMs)}ms`}
+              fill="freeze"
+            />
+            {renderSelfPower}
           </text>
         </g>
       ) : null}
