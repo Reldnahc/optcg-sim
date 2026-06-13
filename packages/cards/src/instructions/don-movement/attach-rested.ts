@@ -780,7 +780,7 @@ const parseRestedDonAttachmentTarget = (
         | { readonly zones: ["leaderArea", "characterArea"] };
     }
   | undefined => {
-  if (/^(?:your|this) Leader\.?$/iu.test(targetText)) {
+  if (/^(?:(?:1 of )?your|this) Leader\.?$/iu.test(targetText)) {
     return {
       evidence: ["zone:leaderArea", "filter:category:leader"],
       filter: { categories: ["leader"] },
