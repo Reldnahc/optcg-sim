@@ -154,4 +154,45 @@ describe("OP14 all-field stat gain parsing", () => {
       ]),
     );
   });
+
+  it("parses all named-or-typed Character power gains through opponent next End Phase", () => {
+    const result = parseCardEffectLine(
+      "[On Play] All of your [Donquixote Rosinante] and {Heart Pirates} type Characters gain +1000 power until the end of your opponent's next End Phase.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "all",
+            player: "self",
+            zone: "characterArea",
+            filter: {
+              categories: ["character"],
+              anyOf: [
+                { names: ["Donquixote Rosinante"] },
+                { typesAny: ["Heart Pirates"] },
+              ],
+            },
+          },
+          value: 1000,
+          duration: { type: "untilEndOfNextTurn", player: "opponent" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:modifyPower",
+        "cardinality:all",
+        "filter:anyOf",
+        "filter:name",
+        "filter:type",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
 });

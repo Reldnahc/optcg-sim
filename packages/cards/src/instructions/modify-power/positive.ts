@@ -1,6 +1,7 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   directPowerGainTargetParsers,
+  parseAllFieldTarget,
   parseTargetFromSet,
   selectedPowerGainTargetParsers,
 } from "../../targets/index.js";
@@ -18,6 +19,22 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
   const dynamicRevealedCostPower = parseThisCharacterRevealedCostPower(input);
   if (dynamicRevealedCostPower !== undefined) {
     return dynamicRevealedCostPower;
+  }
+
+  const allTarget = parseAllFieldTarget(input);
+  if (allTarget !== undefined) {
+    const parsed = parseGainsPositivePower(allTarget.target, allTarget.rest);
+    if (parsed !== undefined) {
+      return {
+        effect: parsed.effect,
+        evidence: [
+          "instruction:modifyPower",
+          ...allTarget.evidence,
+          ...parsed.evidence,
+        ],
+        rest: "",
+      };
+    }
   }
 
   const cardinality = parseUpToCardinality(input);

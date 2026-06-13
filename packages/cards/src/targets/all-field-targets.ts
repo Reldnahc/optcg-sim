@@ -42,6 +42,25 @@ export function parseAllFieldTarget(
     };
   }
 
+  const mixedNameAndType = parseNamedOrTypeCharactersFilter(ownership.rest);
+  if (mixedNameAndType !== undefined) {
+    return {
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: ownership.player,
+        filter: mixedNameAndType.filter,
+      },
+      evidence: [
+        ...cardinality.evidence,
+        ...ownership.evidence,
+        "zone:characterArea",
+        ...mixedNameAndType.evidence,
+      ],
+      rest: mixedNameAndType.rest,
+    };
+  }
+
   const predicates = parseCardFilterPredicates(
     { text: ownership.rest },
     { powerSemantics: "current" },
@@ -64,6 +83,43 @@ export function parseAllFieldTarget(
       ...predicates.evidence,
     ],
     rest: predicates.rest,
+  };
+}
+
+function parseNamedOrTypeCharactersFilter(text: string):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+    }
+  | undefined {
+  const match =
+    /^\[(?<name>[^\]]+)\]\s+(?:and|or)\s+\{(?<type>[^}]+)\}\s+type\s+Characters?\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  const name = match?.groups?.["name"]?.trim();
+  const type = match?.groups?.["type"]?.trim();
+  if (
+    name === undefined ||
+    name.length === 0 ||
+    type === undefined ||
+    type.length === 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      categories: ["character"],
+      anyOf: [{ names: [name] }, { typesAny: [type] }],
+    },
+    evidence: [
+      "filter:category:character",
+      "filter:anyOf",
+      "filter:name",
+      "filter:type",
+    ],
+    rest: match?.groups?.["rest"]?.trim() ?? "",
   };
 }
 
