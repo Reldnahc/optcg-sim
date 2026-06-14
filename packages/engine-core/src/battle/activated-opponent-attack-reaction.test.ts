@@ -8,7 +8,7 @@ import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import { applyDeclareAttack } from "./actions.js";
 import { setupAttackState } from "./test-fixtures.js";
 
-test("activated opponent-attack reaction pauses before Counter Step", () => {
+test("activated opponent-attack reaction resolves target selection and resumes battle flow", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -116,4 +116,26 @@ test("activated opponent-attack reaction pauses before Counter Step", () => {
   assert.equal(targetDecision.type, "selectTargets");
   assert.equal(targetDecision.playerId, p2);
   assert.deepEqual(accepted.state.battle?.step, "attack");
+
+  const resolved = applyAction(accepted.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(targetDecision.candidates[0], "leader target").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision?.type, "selectCards");
+  assert.equal(resolved.state.battle?.step, "counter");
+  assert.equal(
+    resolved.state.continuousEffects.some(
+      (record) =>
+        record.modifier.layer === "powerAdd" &&
+        record.modifier.operation.type === "addPower" &&
+        record.modifier.operation.value === -1000,
+    ),
+    true,
+  );
 });

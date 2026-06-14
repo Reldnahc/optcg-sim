@@ -47,6 +47,16 @@ import { evaluateQueuedEffectSourcePresence } from "./source-presence.js";
 import { resolveQueuedTrashFromHandDecision } from "./trash-from-hand.js";
 import { createUnsupportedEffectQueueResult } from "./unsupported.js";
 
+const replaceEffectQueueEntry = (
+  state: GameState,
+  replacement: EffectQueueEntry,
+): GameState => ({
+  ...state,
+  effectQueue: state.effectQueue.map((entry) =>
+    entry.id === replacement.id ? replacement : entry,
+  ),
+});
+
 export interface QueueEntryResolver {
   readonly resolveQueueEntriesInOrder: (
     state: GameState,
@@ -115,6 +125,7 @@ export const createQueueEntryResolver = (
         continue;
       }
       let queuedEffectForBodyResolution = queuedEffect;
+      let selectedForBodyResolution = selected;
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
       if (queuedEffect?.optional === true) {
         const optionalSupportShape =
@@ -149,6 +160,14 @@ export const createQueueEntryResolver = (
           ...optionalSupportShape,
           optional: false,
         };
+        selectedForBodyResolution = {
+          ...selected,
+          effectBlockOverride: queuedEffectForBodyResolution,
+        };
+        nextState = replaceEffectQueueEntry(
+          nextState,
+          selectedForBodyResolution,
+        );
         if (queuedEffectForBodyResolution.effect.type === "draw") {
           drawEffect = queuedEffectForBodyResolution.effect;
         }
@@ -156,12 +175,12 @@ export const createQueueEntryResolver = (
       const targetRequest =
         dependencies.targetDecisions.resolveQueuedTargetRequest(
           nextState,
-          selected,
+          selectedForBodyResolution,
         );
       if (targetRequest !== undefined) {
         return dependencies.targetDecisions.createSelectTargetsDecisionForQueuedEffect(
           nextState,
-          selected,
+          selectedForBodyResolution,
           targetRequest,
           {
             rollbackState: originalState,
@@ -172,20 +191,23 @@ export const createQueueEntryResolver = (
       }
       const referencedMainEffect = queueReferencedMainEffectFromTrigger(
         nextState,
-        selected,
+        selectedForBodyResolution,
         dependencies.resolveImplementedDslEffectDefinition,
       );
       if (referencedMainEffect !== undefined) {
         nextState = referencedMainEffect.state;
         allEvents.push(...referencedMainEffect.events);
-        const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+        const cleanup = cleanupResolvedLifeTrigger(
+          nextState,
+          selectedForBodyResolution,
+        );
         nextState = cleanup.state;
         allEvents.push(...cleanup.events);
         continue;
       }
       const sequenceFrame = createSupportedSequenceFrameDecision(
         nextState,
-        selected,
+        selectedForBodyResolution,
         queuedEffectForBodyResolution,
         createSupportedTrashFromHandChoiceDecision,
       );
@@ -201,16 +223,20 @@ export const createQueueEntryResolver = (
       }
       const primitiveBody = resolveQueuedPrimitiveBody(
         queuedEffectForBodyResolution,
-        selected,
+        selectedForBodyResolution,
       );
       const placement =
         primitiveBody?.kind === "placeTopDeckCards"
-          ? placeTopDeck(nextState, queuedEffectForBodyResolution, selected)
+          ? placeTopDeck(
+              nextState,
+              queuedEffectForBodyResolution,
+              selectedForBodyResolution,
+            )
           : undefined;
       if (placement !== undefined) return placement;
       const trashFromHandDecision = resolveQueuedTrashFromHandDecision(
         nextState,
-        selected,
+        selectedForBodyResolution,
         queuedEffectResolvers.resolveQueuedEffectDefinition,
         queuedEffectForBodyResolution,
       );
@@ -220,7 +246,7 @@ export const createQueueEntryResolver = (
       if (trashFromHandDecision?.kind === "decision") {
         const trashDecision = createSupportedTrashFromHandChoiceDecision(
           nextState,
-          selected,
+          selectedForBodyResolution,
           trashFromHandDecision.effect,
         );
         return trashDecision.ok
@@ -235,14 +261,17 @@ export const createQueueEntryResolver = (
       const playSourceEffect =
         queuedEffectResolvers.resolveQueuedPlaySourceEffect(
           nextState,
-          selected,
+          selectedForBodyResolution,
         );
       const drawUpToEffect =
         queuedEffectResolvers.resolveQueuedDrawUpToEffectBlock(
           queuedEffectForBodyResolution,
-          selected,
+          selectedForBodyResolution,
         ) ??
-        queuedEffectResolvers.resolveQueuedDrawUpToEffect(nextState, selected);
+        queuedEffectResolvers.resolveQueuedDrawUpToEffect(
+          nextState,
+          selectedForBodyResolution,
+        );
       const winGameEffect =
         primitiveBody?.kind === "winGame" ? primitiveBody.effect : undefined;
       const damageEffect =
@@ -250,7 +279,7 @@ export const createQueueEntryResolver = (
       const queuedContinuousEffect =
         queuedEffectResolvers.resolveQueuedContinuousEffect(
           nextState,
-          selected,
+          selectedForBodyResolution,
         );
       let resolvedMoveCardsAsNoop = false;
       const resolvedTrashUntilAsNoop = trashFromHandDecision?.kind === "noop";
@@ -260,14 +289,15 @@ export const createQueueEntryResolver = (
       ) {
         const min = moveCardsEffect.min ?? moveCardsEffect.count;
         const max = moveCardsEffect.count;
-        const resolvedQuantity = resolveQueuedQuantity(nextState, selected, {
-          min,
-          max,
-        });
+        const resolvedQuantity = resolveQueuedQuantity(
+          nextState,
+          selectedForBodyResolution,
+          { min, max },
+        );
         if (resolvedQuantity === undefined) {
           const quantityDecision = createChooseQuantityDecision(
             nextState,
-            selected,
+            selectedForBodyResolution,
             moveCardsEffect,
             { min, max },
           );
@@ -289,19 +319,23 @@ export const createQueueEntryResolver = (
       let resolutionEventsForTrigger: EngineEvent[] = [];
       let removedSelectedFromQueue = false;
       if (drawUpToEffect !== undefined) {
-        const resolvedQuantity = resolveQueuedQuantity(nextState, selected, {
-          min: 0,
-          max: drawUpToEffect.count,
-        });
+        const resolvedQuantity = resolveQueuedQuantity(
+          nextState,
+          selectedForBodyResolution,
+          {
+            min: 0,
+            max: drawUpToEffect.count,
+          },
+        );
         if (resolvedQuantity !== undefined) {
           const resolvingEntry: EffectQueueEntry = {
-            ...selected,
+            ...selectedForBodyResolution,
             state: "resolving",
           };
           nextState = {
             ...nextState,
             effectQueue: nextState.effectQueue.filter(
-              (entry) => entry.id !== selected.id,
+              (entry) => entry.id !== selectedForBodyResolution.id,
             ),
           };
           removedSelectedFromQueue = true;
@@ -320,7 +354,7 @@ export const createQueueEntryResolver = (
         } else {
           const quantityDecision = createChooseQuantityDecision(
             nextState,
-            selected,
+            selectedForBodyResolution,
             drawUpToEffect,
             { min: 0, max: drawUpToEffect.count },
           );
@@ -332,7 +366,7 @@ export const createQueueEntryResolver = (
       } else {
         drawEffect ??= queuedEffectResolvers.resolveQueuedDrawEffect(
           nextState,
-          selected,
+          selectedForBodyResolution,
         );
         if (
           drawEffect === undefined &&
@@ -349,8 +383,8 @@ export const createQueueEntryResolver = (
       }
       if (queuedEffect?.oncePerTurn === true) {
         const oncePerTurnKey = toOncePerTurnKey({
-          cardInstanceId: selected.source.instanceId,
-          effectId: selected.effectBlockId,
+          cardInstanceId: selectedForBodyResolution.source.instanceId,
+          effectId: selectedForBodyResolution.effectBlockId,
           turnNumber: nextState.turn.globalTurn,
         });
         if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
@@ -360,14 +394,14 @@ export const createQueueEntryResolver = (
       }
 
       const resolvingEntry: EffectQueueEntry = {
-        ...selected,
+        ...selectedForBodyResolution,
         state: "resolving",
       };
       if (!removedSelectedFromQueue) {
         nextState = {
           ...nextState,
           effectQueue: nextState.effectQueue.filter(
-            (entry) => entry.id !== selected.id,
+            (entry) => entry.id !== selectedForBodyResolution.id,
           ),
         };
       }
@@ -417,12 +451,15 @@ export const createQueueEntryResolver = (
             return unsupportedEffectQueueResult(originalState);
           }
           const pendingState = resolution.state.effectQueue.some(
-            (entry) => entry.id === selected.id,
+            (entry) => entry.id === selectedForBodyResolution.id,
           )
             ? resolution.state
             : {
                 ...resolution.state,
-                effectQueue: [...resolution.state.effectQueue, selected],
+                effectQueue: [
+                  ...resolution.state.effectQueue,
+                  selectedForBodyResolution,
+                ],
               };
           return toEngineResult(pendingState, [
             ...allEvents,
@@ -486,9 +523,9 @@ export const createQueueEntryResolver = (
       appendEffectResolvedEvent(
         resolvedEventBaseState,
         resolvedEvents,
-        selected,
+        selectedForBodyResolution,
         queuedEffectForBodyResolution,
-        nextState.cardManifest.cards[selected.source.cardId],
+        nextState.cardManifest.cards[selectedForBodyResolution.source.cardId],
       );
       const resolvedEvent = resolvedEvents[0];
       if (resolvedEvent !== undefined) {
@@ -518,8 +555,8 @@ export const createQueueEntryResolver = (
           ),
           causedBy: {
             type: "effect",
-            queueEntryId: selected.id,
-            effectId: selected.effectBlockId,
+            queueEntryId: selectedForBodyResolution.id,
+            effectId: selectedForBodyResolution.effectBlockId,
           },
         }),
       });
@@ -531,7 +568,10 @@ export const createQueueEntryResolver = (
         allEvents.push(...checkpointEvents);
       }
 
-      const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
+      const cleanup = cleanupResolvedLifeTrigger(
+        nextState,
+        selectedForBodyResolution,
+      );
       nextState = cleanup.state;
       allEvents.push(...cleanup.events);
 
@@ -541,7 +581,7 @@ export const createQueueEntryResolver = (
 
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
         nextState,
-        selected,
+        selectedForBodyResolution,
         [...resolutionEventsForTrigger, ...resolvedEvents, ...cleanup.events],
       );
       if (triggered !== undefined) {
