@@ -97,3 +97,28 @@ test("append admitted trigger entries appends queue and effectQueued events toge
   assert.equal(result.events.length, 1);
   assert.equal(result.events[0]?.type, "effectQueued");
 });
+
+test("append admitted trigger entries filters same-batch once-per-turn duplicates", () => {
+  const state = createActiveState();
+  const first = entry("first");
+  const second = entry("second");
+  const resolved = resolvedCard({
+    cardId: first.source.cardId,
+    category: "leader",
+  });
+
+  assert.equal(canAdmitTriggerQueueEntry(state, first, effect(true)).ok, true);
+  assert.equal(canAdmitTriggerQueueEntry(state, second, effect(true)).ok, true);
+
+  const result = appendAdmittedTriggerEntries(state, [
+    { entry: first, effectBlock: effect(true), resolved },
+    { entry: second, effectBlock: effect(true), resolved },
+  ]);
+
+  assert.deepEqual(
+    result.state.effectQueue.map((queued) => queued.id),
+    [first.id],
+  );
+  assert.equal(result.events.length, 1);
+  assert.equal(result.events[0]?.type, "effectQueued");
+});

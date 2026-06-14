@@ -43,20 +43,62 @@ export const canAdmitTriggerQueueEntry = (
   return { ok: true };
 };
 
+const oncePerTurnBatchKey = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effectBlock: EffectDefinition["effects"][number],
+): string | undefined =>
+  effectBlock.oncePerTurn === true
+    ? [
+        String(entry.source.instanceId),
+        String(entry.effectBlockId),
+        String(state.turn.globalTurn),
+      ].join("\u0000")
+    : undefined;
+
+const filterSameBatchOncePerTurnCandidates = (
+  state: GameState,
+  candidates: readonly TriggerQueueCandidate[],
+): TriggerQueueCandidate[] => {
+  const admittedKeys = new Set<string>();
+  const admitted: TriggerQueueCandidate[] = [];
+  for (const candidate of candidates) {
+    if (
+      !canAdmitOncePerTurnEffect(state, candidate.entry, candidate.effectBlock)
+    ) {
+      continue;
+    }
+    const key = oncePerTurnBatchKey(
+      state,
+      candidate.entry,
+      candidate.effectBlock,
+    );
+    if (key !== undefined) {
+      if (admittedKeys.has(key)) {
+        continue;
+      }
+      admittedKeys.add(key);
+    }
+    admitted.push(candidate);
+  }
+  return admitted;
+};
+
 export const appendAdmittedTriggerEntries = (
   state: GameState,
   candidates: readonly TriggerQueueCandidate[],
 ): { readonly state: GameState; readonly events: EngineEvent[] } => {
+  const admitted = filterSameBatchOncePerTurnCandidates(state, candidates);
+  if (admitted.length === 0) {
+    return { events: [], state };
+  }
   const events: EngineEvent[] = [];
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
-    effectQueue: [
-      ...state.effectQueue,
-      ...candidates.map(({ entry }) => entry),
-    ],
+    effectQueue: [...state.effectQueue, ...admitted.map(({ entry }) => entry)],
   };
-  for (const { entry, effectBlock, resolved } of candidates) {
+  for (const { entry, effectBlock, resolved } of admitted) {
     appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
   }
   return {
