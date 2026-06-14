@@ -1,12 +1,10 @@
-import type { PlayerView } from "@optcg/types";
-
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
+import {
+  chooseCharacterOverflowDecision,
+  isCharacterOverflowDecision,
+  selectableCardsForDecision,
+} from "./bot-character-overflow.js";
 import { chooseCombatDecision } from "./bot-combat-evaluation.js";
-
-type SelectCardsDecision = Extract<
-  NonNullable<PlayerView["pendingDecision"]>,
-  { type: "selectCards" }
->;
 
 const defaultSelectableCardCount = (
   min: number,
@@ -19,22 +17,6 @@ const defaultSelectableCardCount = (
   return Math.min(Math.max(min, 1), max, availableCount);
 };
 
-const selectableCardsForDecision = (
-  decision: SelectCardsDecision,
-): SelectCardsDecision["candidates"][number]["card"][] => {
-  if (decision.choices.length > 0) {
-    return decision.choices
-      .filter((choice) => choice.selectable)
-      .map((choice) => choice.card);
-  }
-  return decision.candidates.map((candidate) => candidate.card);
-};
-
-const isCharacterOverflowDecision = (decision: SelectCardsDecision): boolean =>
-  String(decision.id).startsWith("decision:character-overflow:") ||
-  String(decision.id).startsWith("decision:play-selected-overflow:") ||
-  String(decision.id).startsWith("decision:play-source-overflow:");
-
 export const chooseDefaultBotDecision = ({
   snapshot,
   botPlayerId,
@@ -46,6 +28,13 @@ export const chooseDefaultBotDecision = ({
   const combatDecision = chooseCombatDecision({ snapshot, botPlayerId });
   if (combatDecision !== undefined) {
     return combatDecision;
+  }
+  const overflowDecision = chooseCharacterOverflowDecision({
+    snapshot,
+    botPlayerId,
+  });
+  if (overflowDecision !== undefined) {
+    return overflowDecision;
   }
   switch (decision.type) {
     case "chooseQuantity":
