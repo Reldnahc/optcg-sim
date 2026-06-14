@@ -534,6 +534,11 @@ const applyRespondToDecision = (
       return continueRuntimeAndAttackTimingAfterDecision(state, handSelection);
     }
   }
+  const replacementRestTargetResult =
+    applyReplacementRestTargetDecisionWithContinuation(state, action);
+  if (replacementRestTargetResult !== null) {
+    return replacementRestTargetResult;
+  }
   const battleResult = applyBattleDecisionResponse(state, action);
   if (battleResult !== null) {
     return battleResult.errors === undefined &&
@@ -567,11 +572,6 @@ const applyRespondToDecision = (
       }
     }
     return lifeTriggerResult;
-  }
-  const replacementRestTargetResult =
-    applyReplacementRestTargetDecisionWithContinuation(state, action);
-  if (replacementRestTargetResult !== null) {
-    return replacementRestTargetResult;
   }
   const returnDonBodyResult = applyReturnDonBodyDecisionResponse(state, action);
   if (returnDonBodyResult !== null) {
