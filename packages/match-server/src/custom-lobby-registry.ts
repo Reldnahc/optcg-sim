@@ -794,13 +794,19 @@ export const createCustomLobbyRegistry = async (
       }
       const votes =
         pendingRematchVotes.get(sourceMatchId) ?? new Set<PlayerId>();
+      for (const botPlayerId of seed.botPlayerIds) {
+        votes.add(botPlayerId);
+      }
       votes.add(playerId);
       pendingRematchVotes.set(sourceMatchId, votes);
-      if (votes.size < 2) {
+      const playerOrder = twoPlayerOrder(seed.playerOrder);
+      const acceptedByAllPlayers = playerOrder.every((orderedPlayerId) =>
+        votes.has(orderedPlayerId),
+      );
+      if (!acceptedByAllPlayers) {
         return { rematch: { status: "pending" } };
       }
       pendingRematchVotes.delete(sourceMatchId);
-      const playerOrder = twoPlayerOrder(seed.playerOrder);
       const sourceLobbyId = await lobbyStore.getLobbyIdByMatchId(sourceMatchId);
       const sourceLobby =
         sourceLobbyId === undefined

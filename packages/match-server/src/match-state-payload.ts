@@ -6,11 +6,13 @@ import { buildLocalDevCardCatalogForPlayer } from "./local-card-catalog.js";
 import { snapshotWithConnectionStatuses } from "./dev-match-connection-state.js";
 import type { DevSocketConnection } from "./dev-socket-connections.js";
 import { recordActionTimingSpan } from "./action-timing-log.js";
+import type { PlayerId } from "@optcg/types";
 
 export const playerStatePayload = (
   match: LocalDevMatch,
   connection: DevSocketConnection,
   connections: ReadonlySet<DevSocketConnection>,
+  virtualConnectedPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): Record<string, unknown> => {
   const snapshot = recordActionTimingSpan("statePayloadSnapshot", () =>
     snapshotWithConnectionStatuses(
@@ -18,6 +20,7 @@ export const playerStatePayload = (
       match,
       connection.matchId,
       connections,
+      virtualConnectedPlayerIds,
     ),
   );
   return {

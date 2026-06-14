@@ -16,7 +16,11 @@ export const playerConnectionStatus = (
   matchId: MatchId,
   playerId: PlayerId,
   connections: ReadonlySet<MatchSocketConnection>,
+  virtualConnectedPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): "connected" | "disconnected" => {
+  if (virtualConnectedPlayerIds.has(playerId)) {
+    return "connected";
+  }
   for (const connection of connections) {
     if (
       connection.matchId === matchId &&
@@ -52,12 +56,18 @@ export const snapshotWithConnectionStatuses = (
   match: LocalDevMatch,
   matchId: MatchId,
   connections: ReadonlySet<MatchSocketConnection>,
+  virtualConnectedPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): ReturnType<typeof getLocalDevSnapshotForPlayer> => {
   const playerLabels = { ...(snapshot.playerLabels ?? {}) };
   for (const playerId of Object.keys(match.state.players) as PlayerId[]) {
     playerLabels[playerId] = {
       ...(playerLabels[playerId] ?? {}),
-      connectionStatus: playerConnectionStatus(matchId, playerId, connections),
+      connectionStatus: playerConnectionStatus(
+        matchId,
+        playerId,
+        connections,
+        virtualConnectedPlayerIds,
+      ),
     };
   }
   return {

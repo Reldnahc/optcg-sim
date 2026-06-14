@@ -118,6 +118,7 @@ export interface LocalDevMatchRegistry {
         firstPlayerChoice: FirstPlayerChoiceState;
         playerOrder: readonly PlayerId[];
         seats: Record<string, Omit<LocalDevMatchSeat, "matchId">>;
+        botPlayerIds: readonly PlayerId[];
       }
     | "matchNotFound"
     | "unauthenticated"
@@ -159,6 +160,7 @@ export interface LocalDevMatchRegistry {
   getFirstPlayerChoice: (
     matchId: MatchId,
   ) => CreatedDevMatchResponse["firstPlayerChoice"] | undefined;
+  virtualConnectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
   applyEnvelope: (
     envelope: ClientActionEnvelope,
   ) => Promise<SessionActionResult | "matchNotFound">;
@@ -361,13 +363,18 @@ const createdSeatResponse = (
 
 const playerLabelsFromSeats = (
   seats: Record<string, LocalDevMatchSeat>,
+  virtualConnectedPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): ReturnType<typeof getLocalDevSnapshot>["playerLabels"] => {
   const labels = Object.fromEntries(
     Object.values(seats).flatMap((seat) => {
       const displayName = seat.subject?.displayName?.trim();
-      return displayName === undefined || displayName.length === 0
+      const connectionStatus = virtualConnectedPlayerIds.has(seat.playerId)
+        ? "connected"
+        : undefined;
+      return (displayName === undefined || displayName.length === 0) &&
+        connectionStatus === undefined
         ? []
-        : [[seat.playerId, { displayName }] as const];
+        : [[seat.playerId, { displayName, connectionStatus }] as const];
     }),
   ) as ReturnType<typeof getLocalDevSnapshot>["playerLabels"];
   return labels === undefined || Object.keys(labels).length === 0
@@ -381,7 +388,7 @@ const syncActiveSessionPlayerLabels = (session: LocalDevMatchSession): void => {
   }
   setLocalDevMatchPlayerLabels(
     session.match,
-    playerLabelsFromSeats(session.seats),
+    playerLabelsFromSeats(session.seats, session.botPlayerIds),
   );
 };
 
@@ -713,6 +720,7 @@ export const createLocalDevMatchRegistry = async (
         firstPlayerChoice,
         playerOrder: sourceSession.setup.playerOrder,
         seats: rematchSeatsFromSource(sourceSession.seats),
+        botPlayerIds: [...sourceSession.botPlayerIds],
       };
     },
     async resetMatch(matchId, setup) {
@@ -893,6 +901,9 @@ export const createLocalDevMatchRegistry = async (
         return undefined;
       }
       return firstPlayerChoiceResponse(session.firstPlayerChoice);
+    },
+    virtualConnectedPlayerIds(matchId) {
+      return sessions.get(matchId)?.botPlayerIds ?? new Set();
     },
     async applyEnvelope(envelope) {
       const session = sessions.get(envelope.matchId);

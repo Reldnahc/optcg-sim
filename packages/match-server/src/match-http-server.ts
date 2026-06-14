@@ -673,7 +673,12 @@ const handleWebSocketUpgrade = async (
   } else {
     sendSocketJson(
       connection,
-      playerStatePayload(match, connection, connections),
+      playerStatePayload(
+        match,
+        connection,
+        connections,
+        registry.virtualConnectedPlayerIds(matchId),
+      ),
     );
     broadcastMatchState(matchId, registry, connections, {
       except: connection,

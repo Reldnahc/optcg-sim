@@ -76,7 +76,12 @@ export const broadcastMatchState = (
     if (connection.matchId === matchId && connection !== options.except) {
       sendSocketJson(
         connection,
-        playerStatePayload(match, connection, connections),
+        playerStatePayload(
+          match,
+          connection,
+          connections,
+          registry.virtualConnectedPlayerIds(matchId),
+        ),
       );
     }
   }
