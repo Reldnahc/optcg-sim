@@ -1,8 +1,15 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { DecisionId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  DecisionId,
+  InstanceId,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
+import { createBotStrategy } from "./bot-strategy.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -31,7 +38,76 @@ const snapshotWithDecision = (
     activePlayerId: botId,
     players: {
       [botId]: {
-        view: { pendingDecision },
+        view: { matchId: "match" as MatchId, pendingDecision },
+        actions,
+      },
+    },
+  }) as unknown as DevMatchSnapshot;
+
+const snapshotWithActions = (
+  actions: readonly DevVisibleAction[],
+): DevMatchSnapshot =>
+  ({
+    stateSeq: 7,
+    actionSeq: 3,
+    stateHash: "hash",
+    status: "active",
+    turn: {
+      turnNumber: 1,
+      turnPlayerId: botId,
+      phase: "main",
+      globalTurn: 1,
+      playerTurnCounts: { [botId]: 1 },
+    },
+    activePlayerId: botId,
+    players: {
+      [botId]: {
+        view: {
+          matchId: "match" as MatchId,
+          playerId: botId,
+          self: {
+            leader: {
+              instanceId: "bot-leader" as InstanceId,
+              cardId: "OP01-001" as CardId,
+              owner: botId,
+              controller: botId,
+              zone: { player: botId, zone: "leader" },
+              attachedDonCount: 0,
+              attachedDonIds: [],
+            },
+            hand: [],
+            characters: [
+              {
+                instanceId: "activate-source" as InstanceId,
+                cardId: "OP01-003" as CardId,
+                owner: botId,
+                controller: botId,
+                zone: { player: botId, zone: "character" },
+                attachedDonCount: 0,
+                attachedDonIds: [],
+              },
+            ],
+            costArea: [],
+            trash: [],
+            life: { count: 5, faceUpCards: [] },
+          },
+          opponent: {
+            handCount: 0,
+            leader: {
+              instanceId: "opponent-leader" as InstanceId,
+              cardId: "OP01-002" as CardId,
+              owner: "p1" as PlayerId,
+              controller: "p1" as PlayerId,
+              zone: { player: "p1" as PlayerId, zone: "leader" },
+              attachedDonCount: 0,
+              attachedDonIds: [],
+            },
+            characters: [],
+            costArea: [],
+            trash: [],
+            life: { count: 5, faceUpCards: [] },
+          },
+        },
         actions,
       },
     },
@@ -135,5 +211,54 @@ describe("bot decision liveness", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("does not reactivate the same effect after declining its cost", () => {
+    const strategy = createBotStrategy();
+    const activateAction: DevVisibleAction = {
+      index: 0,
+      type: "activateEffect",
+      label: "Activate effect",
+      placement: { instanceId: "activate-source" as InstanceId },
+    };
+    const endAction: DevVisibleAction = {
+      index: 1,
+      type: "endMainPhase",
+      label: "End turn",
+    };
+
+    assert.deepEqual(
+      strategy.chooseAction({
+        snapshot: snapshotWithActions([activateAction, endAction]),
+        botPlayerId: botId,
+      }),
+      { type: "submitAction", actionIndex: 0 },
+    );
+    assert.deepEqual(
+      strategy.chooseAction({
+        snapshot: snapshotWithDecision({
+          id: "decision:activation-cost" as DecisionId,
+          type: "payCost",
+          playerId: botId,
+          prompt: "Pay the cost?",
+          causedBy: { type: "ruleProcess", name: "test" },
+          presentation: { title: "Pay cost", instruction: "Pay the cost." },
+        }),
+        botPlayerId: botId,
+      }),
+      {
+        type: "respondToDecision",
+        decisionId: "decision:activation-cost",
+        response: { type: "paymentDeclined" },
+      },
+    );
+
+    assert.deepEqual(
+      strategy.chooseAction({
+        snapshot: snapshotWithActions([activateAction, endAction]),
+        botPlayerId: botId,
+      }),
+      { type: "submitAction", actionIndex: 1 },
+    );
   });
 });
