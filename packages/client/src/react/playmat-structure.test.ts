@@ -262,7 +262,7 @@ describe("playmat structure", () => {
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
-    assert.match(effectSpotlightStyles, /bottom:\s*24%;/u);
+    assert.match(effectSpotlightStyles, /bottom:\s*18%;/u);
     assert.match(effectSpotlightStyles, /left:\s*4%;/u);
     assert.match(effectSpotlightStyles, /min-height:\s*24%;/u);
     assert.match(effectSpotlightStyles, /max-height:\s*29%;/u);
