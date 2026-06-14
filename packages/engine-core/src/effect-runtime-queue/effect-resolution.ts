@@ -17,6 +17,8 @@ import {
 } from "../runtime/optional-activation/activate-main.js";
 import { isSupportedStartOfTurnRuntimeEffectBlock } from "../runtime/optional-activation/start-of-turn.js";
 import { isScopedStartOfTurnQueueEntry } from "../runtime/optional-activation/start-of-turn-support.js";
+import { isScopedActivatedReactionQueueEntry } from "../runtime/optional-activation/event-reaction-support.js";
+import { isSupportedActivatedReactionEffect } from "../runtime/optional-activation/event-reaction-runtime-support.js";
 import { isSupportedQueuedDrawEffectBlock } from "../runtime/primitives/execute.js";
 import { isSupportedDrawUpToBody } from "../effect-runtime-reusable-body-support.js";
 import type { QueuedEffectDefinitionResolverDependencies } from "./results-types.js";
@@ -60,6 +62,7 @@ export interface QueuedEffectResolvers {
   ) => effect is QueuedDrawEffectBlock;
   readonly isSupportedQueuedOptionalEffectBlock: (
     effect: EffectDefinition["effects"][number],
+    entry: EffectQueueEntry,
   ) => effect is EffectDefinition["effects"][number] & {
     sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   };
@@ -197,12 +200,18 @@ export const createQueuedEffectResolvers = (
 
   const isSupportedQueuedOptionalEffectBlock = (
     effect: EffectDefinition["effects"][number],
+    entry: EffectQueueEntry,
   ): effect is EffectDefinition["effects"][number] & {
     sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
   } =>
     effect.optional === true &&
     effect.sourcePresencePolicy !== undefined &&
-    evaluateEffectBlockRuntimeSupport(effect).supported;
+    (evaluateEffectBlockRuntimeSupport(effect).supported ||
+      (isScopedActivatedReactionQueueEntry(entry) &&
+        isSupportedActivatedReactionEffect(
+          { ...effect, optional: false },
+          entry,
+        )));
 
   const resolveQueuedContinuousEffect = (
     state: GameState,

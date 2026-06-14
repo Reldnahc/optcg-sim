@@ -1,6 +1,5 @@
 import type {
   Action,
-  CardFilter,
   CardInstance,
   CardRef,
   EffectDefinition,
@@ -20,16 +19,12 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { isMatchActive, zonesEqual } from "../../actions/state.js";
-import {
-  evaluateQueuedEffectCondition,
-  isSupportedQueuedEffectConditionShape,
-} from "../../effect-runtime-conditions.js";
+import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "../../effect-runtime.js";
-import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
 import {
   fieldTriggerSources,
   toSnapshot,
@@ -42,6 +37,7 @@ import {
   toOncePerTurnKey,
 } from "../../rules/once-per-turn.js";
 import { activatedReactionQueueingName } from "./event-reaction-support.js";
+import { isSupportedActivatedReactionEffect as isSupportedActivatedReactionEffectWithEntry } from "./event-reaction-runtime-support.js";
 
 const isFieldZoneForActivatedReaction = (
   zone: CardRef["zone"],
@@ -53,73 +49,10 @@ const isFieldZoneForActivatedReaction = (
 export const isSupportedActivatedReactionEffect = (
   effect: EffectDefinition["effects"][number],
 ): boolean =>
-  effect.category === "activate" &&
-  isSupportedActivatedReactionTrigger(effect.trigger) &&
-  effect.sourcePresencePolicy === "mustRemainInSameZone" &&
-  effect.effect.type === "sequence" &&
-  effect.optional !== true &&
-  effect.cost === undefined &&
-  effect.conditionTiming === undefined &&
-  effect.failurePolicy === undefined &&
-  isSupportedQueuedEffectConditionShape(effect.condition) &&
-  isSupportedSequenceBlock(syntheticActivatedReactionQueueEntry, effect);
-
-const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
-  if (trigger.type === "anyOf") {
-    return trigger.triggers.every(isSupportedActivatedReactionTrigger);
-  }
-  if (trigger.type === "lifeRemoved") {
-    return true;
-  }
-  if (trigger.type === "onOpponentAttack") {
-    return isSupportedEventCardFilter(trigger.attackerFilter);
-  }
-  if (trigger.type === "opponentActivated") {
-    return true;
-  }
-  if (trigger.type === "cardPlayed") {
-    return isSupportedActivatedReactionCardPlayedTrigger(trigger);
-  }
-  if (trigger.type === "fieldRemoved") {
-    return (
-      trigger.target !== "self" && isSupportedEventCardFilter(trigger.filter)
-    );
-  }
-  return false;
-};
-
-const isSupportedActivatedReactionCardPlayedTrigger = (
-  trigger: Extract<Trigger, { type: "cardPlayed" }>,
-): boolean =>
-  isSupportedEventCardFilter(trigger.filter) &&
-  isSupportedEventCardFilter(trigger.sourceFilter) &&
-  (trigger.anyOf === undefined ||
-    trigger.anyOf.every(
-      (branch) =>
-        isSupportedEventCardFilter(branch.filter) &&
-        isSupportedEventCardFilter(branch.sourceFilter),
-    ));
-
-const isSupportedEventCardFilter = (
-  filter: CardFilter | undefined,
-): boolean => {
-  if (filter === undefined) {
-    return true;
-  }
-  const keys = Object.keys(filter) as (keyof CardFilter)[];
-  return keys.every(
-    (key) =>
-      key === "anyOf" ||
-      key === "attributesAny" ||
-      key === "attributesNotAny" ||
-      key === "baseCost" ||
-      key === "categories" ||
-      key === "cost" ||
-      key === "effectEntryPoint" ||
-      key === "typesAny" ||
-      key === "typesIncludeAny",
+  isSupportedActivatedReactionEffectWithEntry(
+    effect,
+    syntheticActivatedReactionQueueEntry,
   );
-};
 
 const movedLifePlayer = (event: EngineEvent): PlayerId | undefined => {
   if (event.type !== "cardMoved" || event.visibility.type !== "public") {

@@ -123,6 +123,7 @@ export const createQueueEntryResolver = (
           queuedEffect.sourcePresencePolicy !== selected.sourcePresencePolicy ||
           !queuedEffectResolvers.isSupportedQueuedOptionalEffectBlock(
             optionalSupportShape,
+            selected,
           )
         ) {
           return unsupportedEffectQueueResult(originalState);

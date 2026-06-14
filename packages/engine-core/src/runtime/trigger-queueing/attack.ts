@@ -20,6 +20,8 @@ import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
 } from "../../effect-runtime-block-support.js";
+import { activatedReactionQueueingName } from "../optional-activation/event-reaction-support.js";
+import { isSupportedActivatedReactionEffect } from "../optional-activation/event-reaction-runtime-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OnOpponentAttackTriggerQueueingFailureReason,
@@ -31,6 +33,7 @@ import {
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import { matchEventTrigger } from "../event-hooks/matcher.js";
 
 const attackDeclaredPayloadMatchesBattle = (
   event: EngineEvent,
@@ -475,17 +478,92 @@ export const createAttackTriggerQueueing = (
         if (!lookup.ok) {
           return toEngineResult(state, [], [lookup.error]);
         }
-        const onOpponentAttackEffects = lookup.definition.effects.filter(
-          (effect) =>
-            isAutoRuntimeTriggerCandidate(effect, onOpponentAttackAutoAdapter),
-        );
-        if (onOpponentAttackEffects.length === 0) {
-          continue;
-        }
-        const matching = onOpponentAttackEffects.filter(
-          isSupportedOnOpponentAttackCompatibleQueuedEffect,
-        );
-        if (matching.length !== onOpponentAttackEffects.length) {
+        const onOpponentAttackEffects: Array<{
+          readonly effectBlock: EffectDefinition["effects"][number];
+          readonly entryOverride?: Pick<
+            EffectQueueEntry,
+            "effectBlockOverride" | "queueOrigin"
+          >;
+          readonly causedByName: string;
+        }> = [];
+        const unsupportedOnOpponentAttackEffects =
+          lookup.definition.effects.filter((effect) => {
+            const queueId =
+              `queue-entry:${String(event.id)}:onOpponentAttack:${String(source.instanceId)}:${String(effect.id)}` as EffectQueueEntry["id"];
+            const timingWindowId =
+              `timing-window:${String(event.id)}:onOpponentAttack` as EffectQueueEntry["timingWindowId"];
+            const entrySource = {
+              instanceId: source.instanceId,
+              cardId: source.cardId,
+              playerId: defenderId,
+              zone: source.zone,
+            };
+            const candidateEntry: EffectQueueEntry = {
+              id: queueId,
+              state: "pending",
+              timingWindowId,
+              generation: 0,
+              controllerId: defenderId,
+              source: entrySource,
+              sourceSnapshot: toSnapshot(source, resolved),
+              triggerEventId: event.id,
+              effectBlockId: effect.id,
+              orderingGroup: "nonTurnPlayer",
+              createdAtEventSeq: event.seq,
+              queuedAtStateSeq: toStateSeq(state.seq + 1),
+              sourcePresencePolicy:
+                effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+              causedBy: {
+                type: "ruleProcess",
+                name: "effectRuntime:onOpponentAttackTriggerQueueing",
+              },
+            };
+            if (
+              isAutoRuntimeTriggerCandidate(effect, onOpponentAttackAutoAdapter)
+            ) {
+              if (!isSupportedOnOpponentAttackCompatibleQueuedEffect(effect)) {
+                return true;
+              }
+              onOpponentAttackEffects.push({
+                effectBlock: effect,
+                causedByName: "effectRuntime:onOpponentAttackTriggerQueueing",
+              });
+              return false;
+            }
+            if (effect.category !== "activate") {
+              return false;
+            }
+            const match = matchEventTrigger(
+              state,
+              source,
+              effect.trigger,
+              event,
+            );
+            if (
+              !match.matched ||
+              !match.triggerTypes.includes("onOpponentAttack")
+            ) {
+              return false;
+            }
+            if (
+              !isSupportedActivatedReactionEffect(effect, {
+                ...candidateEntry,
+                queueOrigin: { type: "activatedReaction" },
+              })
+            ) {
+              return true;
+            }
+            onOpponentAttackEffects.push({
+              effectBlock: effect,
+              entryOverride: {
+                queueOrigin: { type: "activatedReaction" },
+                effectBlockOverride: { ...effect, optional: true },
+              },
+              causedByName: activatedReactionQueueingName,
+            });
+            return false;
+          });
+        if (unsupportedOnOpponentAttackEffects.length > 0) {
           return toEngineResult(
             state,
             [],
@@ -496,7 +574,25 @@ export const createAttackTriggerQueueing = (
             ],
           );
         }
-        for (const effectBlock of matching) {
+        if (onOpponentAttackEffects.length === 0) {
+          continue;
+        }
+        for (const {
+          causedByName,
+          effectBlock,
+          entryOverride,
+        } of onOpponentAttackEffects) {
+          if (effectBlock.sourcePresencePolicy === undefined) {
+            return toEngineResult(
+              state,
+              [],
+              [
+                onOpponentAttackTriggerQueueingError(
+                  "unsupported-on-opponent-attack-definition",
+                ),
+              ],
+            );
+          }
           const queueId =
             `queue-entry:${String(event.id)}:onOpponentAttack:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"];
           const timingWindowId =
@@ -504,7 +600,7 @@ export const createAttackTriggerQueueing = (
           const entrySource = {
             instanceId: source.instanceId,
             cardId: source.cardId,
-            playerId: source.zone.playerId,
+            playerId: defenderId,
             zone: source.zone,
           };
           const entry: EffectQueueEntry = {
@@ -512,7 +608,7 @@ export const createAttackTriggerQueueing = (
             state: "pending",
             timingWindowId,
             generation: 0,
-            controllerId: source.zone.playerId,
+            controllerId: defenderId,
             source: entrySource,
             sourceSnapshot: toSnapshot(source, resolved),
             triggerEventId: event.id,
@@ -523,8 +619,9 @@ export const createAttackTriggerQueueing = (
             sourcePresencePolicy: effectBlock.sourcePresencePolicy,
             causedBy: {
               type: "ruleProcess",
-              name: "effectRuntime:onOpponentAttackTriggerQueueing",
+              name: causedByName,
             },
+            ...entryOverride,
             ...effectQueueEntryPresentationForEffectBlock({
               effectBlock,
               resolvedCard: resolved,
