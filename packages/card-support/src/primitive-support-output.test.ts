@@ -87,4 +87,19 @@ describe("primitive support output", () => {
       "OP01-002 line 1 - runtime entryPoint:onBlock failed",
     ]);
   });
+
+  it("does not report empty runtime support as passed", () => {
+    const parserCertificate = {
+      complete: true,
+      records: [],
+      missing: [],
+    } satisfies ParserSupportCertificate;
+
+    expect(
+      formatPrimitiveSupportSections({
+        parserCertificate,
+        runtimeReports: [],
+      }),
+    ).toContain("Primitive runtime: failed");
+  });
 });

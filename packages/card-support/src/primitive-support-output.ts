@@ -14,7 +14,9 @@ export const formatPrimitiveSupportSections = ({
   parserCertificate,
   runtimeReports,
 }: PrimitiveSupportSectionInput): readonly string[] => {
-  const runtimeSupported = runtimeReports.every((report) => report.supported);
+  const runtimeSupported =
+    runtimeReports.length > 0 &&
+    runtimeReports.every((report) => report.supported);
   const runtimeRecords = runtimeReports.flatMap((report) => report.records);
   const runtimeMissing = runtimeReports.flatMap((report) => report.missing);
 

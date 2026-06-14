@@ -853,11 +853,15 @@ const evaluateParsedLine = (
     }),
   );
   const firstFailure = runtimeResults.find((result) => !result.supported);
+  const runtimeSupported =
+    parserCertificate.complete &&
+    runtimeResults.length > 0 &&
+    firstFailure === undefined;
   return {
     kind: "effect",
     parseOk: true,
     values,
-    runtimeSupported: parserCertificate.complete && firstFailure === undefined,
+    runtimeSupported,
     ...(firstFailure?.reason === undefined
       ? {}
       : { runtimeReason: firstFailure.reason }),

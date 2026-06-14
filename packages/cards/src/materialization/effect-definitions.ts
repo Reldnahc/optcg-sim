@@ -125,6 +125,7 @@ export const materializeEffectDefinition = (
   const runtimeSupported =
     parserCertificate.complete &&
     parsedLineCount === lines.length &&
+    blocks.length > 0 &&
     blocks.every((block) => evaluateRuntimeSupport(block).supported);
   if (!runtimeSupported) {
     return { runtimeSupported: false, diagnostics, parserCertificate };

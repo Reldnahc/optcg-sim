@@ -287,10 +287,25 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain(
       "Engine runtime reason: unsupported permanent effect body",
     );
+    expect(report.lines).not.toContain("Runtime support: supported");
     expect(report.lines).toContain("Missing runtime capability evidence:");
     expect(report.lines).toContain(
       "- runtime body:draw missing unsupported permanent effect body",
     );
+  });
+
+  it("reports conditioned optional opponent DON attachment as supported", async () => {
+    const report = await createSupportProbeReport({
+      text: "[On Play] If your Leader has the {East Blue} type, give up to 1 DON!! card from your opponent's cost area to 1 of your opponent's Characters.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+    expect(report.lines).toContain("Primitive runtime: passed");
+    expect(report.lines).not.toContain("unsupported auto effect body");
+    expect(report.lines).not.toContain("unsupported sequence");
+    expect(report.lines).not.toContain("unsupported-pending-runtime-work");
   });
 
   it("fetches card probe text from Poneglyph API instead of local fixtures", async () => {

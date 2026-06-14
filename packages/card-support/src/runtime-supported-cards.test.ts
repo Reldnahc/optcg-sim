@@ -104,6 +104,42 @@ describe("engine-backed card support package", () => {
     assert.ok(card.support.effectDefinitionId);
     assert.ok(manifest.effectDefinitions?.[card.support.effectDefinitionId]);
   });
+
+  test("does not mark parsed DSL supported when executable runtime support rejects it", async () => {
+    const cardId = "OP01-002" as CardId;
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: fetchFrom({
+        "OP01-002": baseCard("OP01-002", "[Your Turn] Draw 1 card."),
+      }),
+      createdAt: "2026-05-25T00:00:00.000Z",
+    });
+
+    const card = manifestCard(manifest.cards, cardId);
+
+    assert.equal(card.support.status, "unsupported");
+    assert.equal(card.support.effectDefinitionId, undefined);
+    assert.equal(Object.keys(manifest.effectDefinitions ?? {}).length, 0);
+  });
+
+  test("builds generated manifests for conditioned optional opponent DON attachment", async () => {
+    const cardId = "OP01-003" as CardId;
+    const line =
+      "[On Play] If your Leader has the {East Blue} type, give up to 1 DON!! card from your opponent's cost area to 1 of your opponent's Characters.";
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: fetchFrom({
+        "OP01-003": baseCard("OP01-003", line),
+      }),
+      createdAt: "2026-05-25T00:00:00.000Z",
+    });
+
+    const card = manifestCard(manifest.cards, cardId);
+
+    assert.equal(card.support.status, "implemented-dsl");
+    assert.ok(card.support.effectDefinitionId);
+    assert.ok(manifest.effectDefinitions?.[card.support.effectDefinitionId]);
+  });
 });
 
 const manifestCard = (
