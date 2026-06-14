@@ -19,6 +19,7 @@ const snapshotWithActions = (
   cards: {
     readonly selfLeader?: Partial<PublicCardView>;
     readonly selfHand?: readonly Partial<PublicCardView>[];
+    readonly selfCharacters?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
     readonly opponentCharacters?: readonly Partial<PublicCardView>[];
   } = {},
@@ -33,7 +34,7 @@ const snapshotWithActions = (
       turnPlayerId: opponentId,
       phase: "main",
       globalTurn: 1,
-      playerTurnCounts: { [opponentId]: 1 },
+      playerTurnCounts: { [botId]: 2, [opponentId]: 1 },
     },
     activePlayerId: botId,
     players: {
@@ -52,7 +53,7 @@ const snapshotWithActions = (
               ...cards.selfLeader,
             },
             hand: cards.selfHand ?? [],
-            characters: [],
+            characters: cards.selfCharacters ?? [],
             costArea: [],
             life: { count: 2, faceUpCards: [] },
           },
@@ -246,6 +247,128 @@ describe("red Shanks bot profile", () => {
       type: "respondToDecision",
       decisionId: "decision:op09-leader-target",
       response: { type: "targets", targets: [opponentLeader] },
+    });
+  });
+
+  test("does not activate configured power reduction effects without useful targets", () => {
+    const snapshot = snapshotWithActions(
+      [
+        { index: 0, type: "endMainPhase", label: "End Main" },
+        {
+          index: 1,
+          type: "activateEffect",
+          label: "Activate OP09-011",
+          placement: { instanceId: "op09-011" as InstanceId },
+        },
+      ],
+      {
+        selfCharacters: [
+          {
+            instanceId: "op09-011" as InstanceId,
+            cardId: "OP09-011" as CardId,
+            owner: botId,
+            controller: botId,
+            zone: { playerId: botId, zone: "characterArea" },
+            currentPower: 5000,
+          },
+        ],
+      },
+    );
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("activates configured power reduction effects when they enable an attack", () => {
+    const snapshot = snapshotWithActions(
+      [
+        { index: 0, type: "endMainPhase", label: "End Main" },
+        {
+          index: 1,
+          type: "activateEffect",
+          label: "Activate OP09-011",
+          placement: { instanceId: "op09-011" as InstanceId },
+        },
+      ],
+      {
+        selfCharacters: [
+          {
+            instanceId: "op09-011" as InstanceId,
+            cardId: "OP09-011" as CardId,
+            owner: botId,
+            controller: botId,
+            zone: { playerId: botId, zone: "characterArea" },
+            currentPower: 5000,
+          },
+        ],
+        opponentCharacters: [
+          {
+            instanceId: "opponent-7000" as InstanceId,
+            cardId: "OP01-004" as CardId,
+            owner: opponentId,
+            controller: opponentId,
+            zone: { playerId: opponentId, zone: "characterArea" },
+            currentPower: 7000,
+          },
+        ],
+      },
+    );
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("chooses useful targets for configured power reduction effects", () => {
+    const usefulTarget = {
+      instanceId: "opponent-7000" as InstanceId,
+      cardId: "OP01-004" as CardId,
+      playerId: opponentId,
+    };
+    const lowValueTarget = {
+      instanceId: "opponent-3000" as InstanceId,
+      cardId: "OP01-005" as CardId,
+      playerId: opponentId,
+    };
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "respondToDecision",
+          label: "Choose target",
+        },
+      ],
+      {
+        opponentCharacters: [
+          { ...usefulTarget, currentPower: 7000 },
+          { ...lowValueTarget, currentPower: 3000 },
+        ],
+      },
+    );
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:op09-011-target" as DecisionId,
+      type: "selectTargets",
+      playerId: botId,
+      prompt: "Choose a target.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "op09-011" as InstanceId,
+        cardId: "OP09-011" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+      min: 0,
+      max: 1,
+      candidates: [{ card: usefulTarget }, { card: lowValueTarget }],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:op09-011-target",
+      response: { type: "targets", targets: [usefulTarget] },
     });
   });
 });
