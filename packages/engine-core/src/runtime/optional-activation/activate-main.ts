@@ -29,6 +29,8 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "../../effect-runtime.js";
 import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
+import { getSequenceOptionalPayCostOptions } from "../../effect-runtime-sequence/frame-decisions.js";
+import { toFlattenedSequenceBlock } from "../../effect-runtime-sequence/support-normalization.js";
 import { canResolvePrimitiveBodyForEntry } from "../../effect-runtime-queue/primitive-resolution.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
@@ -228,6 +230,25 @@ const findSupportedActivateMainEffects = (
   });
 };
 
+const hasPayableInitialSequenceCost = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: EffectDefinition["effects"][number],
+): boolean => {
+  const flattened = toFlattenedSequenceBlock(effect);
+  const firstSegment =
+    flattened?.effect.type === "sequence"
+      ? flattened.effect.effects[0]
+      : undefined;
+  if (firstSegment?.effect.type !== "payCost") {
+    return true;
+  }
+  return (
+    getSequenceOptionalPayCostOptions(state, entry, firstSegment.effect.cost)
+      .length > 0
+  );
+};
+
 export const getActivateMainLegalActions = (
   state: GameState,
   playerId: PlayerId,
@@ -306,6 +327,9 @@ export const getActivateMainLegalActions = (
         effect.condition,
       );
       if (!condition.supported || !condition.passed) {
+        continue;
+      }
+      if (!hasPayableInitialSequenceCost(state, queueEntry, effect)) {
         continue;
       }
       if (!canAdmitOncePerTurnEffect(state, queueEntry, effect)) {
@@ -392,6 +416,12 @@ export const applyActivateMainAction = (
   );
   if (!condition.supported || !condition.passed) {
     return illegalAction(state, "activateEffect activation condition not met.");
+  }
+  if (!hasPayableInitialSequenceCost(state, entry, effect)) {
+    return illegalAction(
+      state,
+      "activateEffect activation cost cannot be paid.",
+    );
   }
 
   const queuedEvents: EngineEvent[] = [];
