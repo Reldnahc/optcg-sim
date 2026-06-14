@@ -87,6 +87,20 @@ const findVisibleBattleCard = (
   ].find((card) => card.instanceId === instanceId);
 };
 
+const counterPowerNeededToStop = (
+  attackerPower: number,
+  targetPower: number,
+): number => Math.max(0, attackerPower - targetPower + 1_000);
+
+const visibleHandCounterPower = ({
+  snapshot,
+  botPlayerId,
+}: BotDecisionContext): number =>
+  snapshot.players[botPlayerId]?.view.self.hand.reduce(
+    (total, card) => total + (card.printedCounter ?? 0),
+    0,
+  ) ?? 0;
+
 const attackTargetScore = ({
   action,
   snapshot,
@@ -190,10 +204,29 @@ const chooseLeaderDefense = (
   const targetPower = cardPower(
     findVisibleBattleCard(context, String(battle.currentTarget.instanceId)),
   );
+  if (attackerPower === undefined || targetPower === undefined) {
+    return undefined;
+  }
+  const currentCounterNeeded = counterPowerNeededToStop(
+    attackerPower,
+    targetPower,
+  );
+  if (currentCounterNeeded === 0) {
+    return undefined;
+  }
+  const reducedCounterNeeded = counterPowerNeededToStop(
+    attackerPower - 1_000,
+    targetPower,
+  );
+  const view = context.snapshot.players[context.botPlayerId]?.view;
+  const isLeaderTarget =
+    view?.self.leader.instanceId === battle.currentTarget.instanceId;
   if (
-    attackerPower === undefined ||
-    targetPower === undefined ||
-    attackerPower - 1_000 >= targetPower
+    reducedCounterNeeded > 0 &&
+    (!isLeaderTarget ||
+      view.self.life.count > 2 ||
+      reducedCounterNeeded >= currentCounterNeeded ||
+      visibleHandCounterPower(context) < reducedCounterNeeded)
   ) {
     return undefined;
   }

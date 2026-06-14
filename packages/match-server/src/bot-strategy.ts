@@ -1,3 +1,5 @@
+import type { PlayerView } from "@optcg/types";
+
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import {
   cardPower,
@@ -121,6 +123,17 @@ const mergedScore = (
     : Math.min(...numericScores);
 };
 
+type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
+
+const isCounterStepPassDecision = (
+  decision: BotPendingDecision,
+  battleStep: string | undefined,
+): boolean =>
+  battleStep === "counter" &&
+  decision.type === "selectCards" &&
+  decision.min === 0 &&
+  decision.max === 0;
+
 const choosePendingDecision = ({
   snapshot,
   botPlayerId,
@@ -135,7 +148,7 @@ const choosePendingDecision = ({
     decision.playerId !== botPlayerId ||
     decision.type === "payCost" ||
     decision.type === "mulligan" ||
-    battle?.step === "counter"
+    isCounterStepPassDecision(decision, battle?.step)
   ) {
     return undefined;
   }
