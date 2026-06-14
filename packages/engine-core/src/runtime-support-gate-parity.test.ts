@@ -152,3 +152,35 @@ test("canonical support and sequence execution preflight both reject unsupported
   assert.equal(evaluateEffectBlockRuntimeSupport(block).supported, false);
   assert.equal(toSupportedSequenceBlock(syntheticEntry(), block), undefined);
 });
+
+const unsupportedEnvelopeCases: readonly {
+  readonly name: string;
+  readonly mutate: (
+    block: EffectDefinition["effects"][number],
+  ) => EffectDefinition["effects"][number];
+}[] = [
+  {
+    name: "conditionTiming",
+    mutate: (block) => ({ ...block, conditionTiming: "resolution" }),
+  },
+  {
+    name: "failurePolicy",
+    mutate: (block) => ({ ...block, failurePolicy: "skip" }),
+  },
+  {
+    name: "unsupported condition",
+    mutate: (block) => ({
+      ...block,
+      condition: { type: "custom", check: "unsupported-condition" },
+    }),
+  },
+];
+
+for (const testCase of unsupportedEnvelopeCases) {
+  test(`canonical support and sequence preflight both reject ${testCase.name}`, () => {
+    const block = testCase.mutate(conditionedOptionalDonAttachBlock());
+
+    assert.equal(evaluateEffectBlockRuntimeSupport(block).supported, false);
+    assert.equal(toSupportedSequenceBlock(syntheticEntry(), block), undefined);
+  });
+}
