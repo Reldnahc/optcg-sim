@@ -6,6 +6,11 @@ import type {
   BotDecisionChoice,
   BotDecisionContext,
 } from "./bot-types.js";
+import {
+  choosePowerReductionTarget,
+  scorePowerReductionAction,
+  type BotPowerReductionBehaviors,
+} from "./bot-power-reduction-behavior.js";
 
 const op16BennBeckman = "OP16-012";
 const op09LeaderShanks = "OP09-001";
@@ -21,6 +26,13 @@ const setupPlayScores = new Map<string, number>([
   ["PRB02-002", 10],
   ["OP09-011", 18],
 ]);
+const powerReductionBehaviors = {
+  "OP09-011": {
+    amount: 2_000,
+    target: "opponentCharacter",
+    restsSource: true,
+  },
+} satisfies BotPowerReductionBehaviors;
 const shanksCardIds = new Set<string>([
   "OP06-007",
   "OP09-004",
@@ -328,6 +340,13 @@ export const redShanksBotProfile: BotBehaviorProfile = {
     if (context.action.type === "declareAttack") {
       return attackTargetScore(context);
     }
+    const powerReductionScore = scorePowerReductionAction(
+      context,
+      powerReductionBehaviors,
+    );
+    if (powerReductionScore !== undefined) {
+      return powerReductionScore;
+    }
     if (context.action.type !== "playCard") {
       return undefined;
     }
@@ -341,6 +360,7 @@ export const redShanksBotProfile: BotBehaviorProfile = {
     return (
       chooseLeaderDefense(context) ??
       chooseLeaderPowerTarget(context) ??
+      choosePowerReductionTarget(context, powerReductionBehaviors) ??
       chooseOp16Shanks(context) ??
       chooseSearchResult(context)
     );

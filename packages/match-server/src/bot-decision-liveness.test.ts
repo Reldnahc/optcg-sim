@@ -1,6 +1,12 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { DecisionId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  CardRef,
+  DecisionId,
+  InstanceId,
+  PlayerId,
+} from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
 import type {
@@ -207,5 +213,80 @@ describe("bot decision liveness", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("answers character overflow selectCards decisions from candidates", () => {
+    const overflowCard: CardRef = {
+      instanceId: "character-1" as InstanceId,
+      cardId: "OP01-001" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 0 },
+    };
+    const chosen = chooseBotAction(
+      snapshotWithDecision({
+        id: "decision:character-overflow:played-card" as DecisionId,
+        type: "selectCards",
+        playerId: botId,
+        prompt: "Choose a Character to trash.",
+        causedBy: { type: "ruleProcess", name: "characterOverflow" },
+        presentation: {
+          title: "Character overflow",
+          instruction: "Choose a Character to trash.",
+        },
+        min: 1,
+        max: 1,
+        candidates: [{ card: overflowCard }],
+        choices: [],
+      }),
+      botId,
+    );
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:character-overflow:played-card",
+      response: { type: "cards", cards: [overflowCard] },
+    });
+  });
+
+  test("answers runtime play overflow by selecting exactly one character", () => {
+    const firstCharacter: CardRef = {
+      instanceId: "character-1" as InstanceId,
+      cardId: "OP01-001" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 0 },
+    };
+    const secondCharacter: CardRef = {
+      instanceId: "character-2" as InstanceId,
+      cardId: "OP01-002" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 1 },
+    };
+    const chosen = chooseBotAction(
+      snapshotWithDecision({
+        id: "decision:play-selected-overflow:played-card" as DecisionId,
+        type: "selectCards",
+        playerId: botId,
+        prompt: "Choose a Character to trash.",
+        causedBy: { type: "ruleProcess", name: "playSelectedOverflow" },
+        presentation: {
+          title: "Character overflow",
+          instruction: "Choose a Character to trash.",
+        },
+        min: 0,
+        max: 5,
+        candidates: [{ card: firstCharacter }, { card: secondCharacter }],
+        choices: [
+          { card: firstCharacter, selectable: true },
+          { card: secondCharacter, selectable: true },
+        ],
+      }),
+      botId,
+    );
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:play-selected-overflow:played-card",
+      response: { type: "cards", cards: [firstCharacter] },
+    });
   });
 });
