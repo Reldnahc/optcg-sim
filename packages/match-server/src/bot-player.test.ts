@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type {
   CardId,
+  CardRef,
   DecisionId,
   InstanceId,
   PlayerId,
@@ -319,6 +320,53 @@ describe("bot player", () => {
       type: "respondToDecision",
       decisionId: "decision:op16-cheat",
       response: { type: "cards", cards: [op06] },
+    });
+  });
+
+  test("trashes a low-value character for OP16-012 play-selected overflow", () => {
+    const cheatedShanks: CardRef = {
+      instanceId: "op06-shanks" as InstanceId,
+      cardId: "OP06-007" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 5 },
+    };
+    const setupCharacter: CardRef = {
+      instanceId: "searcher" as InstanceId,
+      cardId: "OP09-002" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 0 },
+    };
+    const snapshot = snapshotWithActions([]);
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:play-selected-overflow:op16-benn" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Choose a Character to trash.",
+      causedBy: { type: "ruleProcess", name: "playSelectedOverflow" },
+      source: {
+        instanceId: "op16-benn" as InstanceId,
+        cardId: "OP16-012" as CardId,
+        playerId: botId,
+      },
+      presentation: {
+        title: "Character overflow",
+        instruction: "Choose a Character to trash.",
+      },
+      min: 0,
+      max: 5,
+      candidates: [{ card: cheatedShanks }, { card: setupCharacter }],
+      choices: [
+        { card: cheatedShanks, selectable: true },
+        { card: setupCharacter, selectable: true },
+      ],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:play-selected-overflow:op16-benn",
+      response: { type: "cards", cards: [setupCharacter] },
     });
   });
 

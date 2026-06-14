@@ -11,6 +11,7 @@ import {
   scorePowerReductionAction,
   type BotPowerReductionBehaviors,
 } from "./bot-power-reduction-behavior.js";
+import { chooseCharacterOverflowDecision } from "./bot-character-overflow.js";
 
 const op16BennBeckman = "OP16-012";
 const op09LeaderShanks = "OP09-001";
@@ -361,6 +362,9 @@ export const redShanksBotProfile: BotBehaviorProfile = {
       chooseLeaderDefense(context) ??
       chooseLeaderPowerTarget(context) ??
       choosePowerReductionTarget(context, powerReductionBehaviors) ??
+      chooseCharacterOverflowDecision(context, {
+        preserveCardIds: shanksCardIds,
+      }) ??
       chooseOp16Shanks(context) ??
       chooseSearchResult(context)
     );
