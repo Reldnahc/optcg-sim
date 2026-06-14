@@ -274,7 +274,9 @@ const hasOnlySupportedRelevantEffects = (
 
 const isRuntimeAdmittedEffect = (
   effect: EffectDefinition["effects"][number],
-): boolean => evaluateEffectBlockRuntimeSupport(effect).supported;
+  siblingBlocks: readonly EffectDefinition["effects"][number][],
+): boolean =>
+  evaluateEffectBlockRuntimeSupport(effect, { siblingBlocks }).supported;
 
 export const canResolveDestinationConflict = (
   player: GameState["players"][PlayerId],
@@ -309,18 +311,21 @@ export const getSupportedPlayMetadata = (
       return null;
     }
     if (resolved.category === "character") {
+      const isDefinitionRuntimeAdmittedEffect = (
+        effect: EffectDefinition["effects"][number],
+      ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
       const onPlayEffects = lookup.definition.effects.filter(
         (effect) => effect.trigger.type === "onPlay",
       );
       if (
         !hasOnlySupportedRelevantEffects(
           onPlayEffects,
-          isRuntimeAdmittedEffect,
+          isDefinitionRuntimeAdmittedEffect,
           { requireAtLeastOne: false },
         ) ||
         !lookup.definition.effects
           .filter((effect) => effect.trigger.type !== "onPlay")
-          .every(isRuntimeAdmittedEffect)
+          .every(isDefinitionRuntimeAdmittedEffect)
       ) {
         return null;
       }
@@ -330,13 +335,20 @@ export const getSupportedPlayMetadata = (
       };
     }
     if (resolved.category === "event") {
+      const isDefinitionRuntimeAdmittedEffect = (
+        effect: EffectDefinition["effects"][number],
+      ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
       const mainEffects = lookup.definition.effects.filter(
         (effect) => effect.trigger.type === "main",
       );
       if (
-        !hasOnlySupportedRelevantEffects(mainEffects, isRuntimeAdmittedEffect, {
-          requireAtLeastOne: true,
-        })
+        !hasOnlySupportedRelevantEffects(
+          mainEffects,
+          isDefinitionRuntimeAdmittedEffect,
+          {
+            requireAtLeastOne: true,
+          },
+        )
       ) {
         return null;
       }
@@ -346,7 +358,10 @@ export const getSupportedPlayMetadata = (
       };
     }
     if (resolved.category === "stage") {
-      if (!lookup.definition.effects.every(isRuntimeAdmittedEffect)) {
+      const isDefinitionRuntimeAdmittedEffect = (
+        effect: EffectDefinition["effects"][number],
+      ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
+      if (!lookup.definition.effects.every(isDefinitionRuntimeAdmittedEffect)) {
         return null;
       }
       return {

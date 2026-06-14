@@ -38,12 +38,13 @@ const mainEventAutoAdapter = {
 
 const isSupportedMainEventEffect = (
   effect: EffectDefinition["effects"][number],
+  siblingBlocks: readonly EffectDefinition["effects"][number][],
 ): effect is EffectDefinition["effects"][number] & {
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
 } =>
   isAutoRuntimeTriggerCandidate(effect, mainEventAutoAdapter) &&
   effect.sourcePresencePolicy === "resolveFromDestinationZone" &&
-  evaluateEffectBlockRuntimeSupport(effect).supported;
+  evaluateEffectBlockRuntimeSupport(effect, { siblingBlocks }).supported;
 
 const queuedMainEventTriggerEventIds = (state: GameState): Set<string> =>
   new Set(
@@ -184,7 +185,9 @@ export const createMainEventTriggerQueueing = (
       if (mainEffects.length === 0) {
         continue;
       }
-      const matching = mainEffects.filter(isSupportedMainEventEffect);
+      const matching = mainEffects.filter((effect) =>
+        isSupportedMainEventEffect(effect, lookup.definition.effects),
+      );
       if (matching.length !== mainEffects.length) {
         return toEngineResult(
           state,

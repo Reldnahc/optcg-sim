@@ -165,7 +165,7 @@ const unsupportedEnvelopeCases: readonly {
   },
   {
     name: "failurePolicy",
-    mutate: (block) => ({ ...block, failurePolicy: "skip" }),
+    mutate: (block) => ({ ...block, failurePolicy: "doAsMuchAsPossible" }),
   },
   {
     name: "unsupported condition",

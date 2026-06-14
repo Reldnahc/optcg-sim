@@ -10,6 +10,7 @@ import {
 const baseCard = (
   cardNumber: string,
   effect: string | null,
+  trigger: string | null = null,
 ): PoneglyphCardDetail => ({
   card_number: cardNumber,
   name: cardNumber,
@@ -28,7 +29,7 @@ const baseCard = (
   attribute: ["Special"],
   types: ["Test"],
   effect,
-  trigger: null,
+  trigger,
   block: null,
   variants: [
     {
@@ -130,6 +131,48 @@ describe("engine-backed card support package", () => {
       cardIds: [cardId],
       fetchCard: fetchFrom({
         "OP01-003": baseCard("OP01-003", line),
+      }),
+      createdAt: "2026-05-25T00:00:00.000Z",
+    });
+
+    const card = manifestCard(manifest.cards, cardId);
+
+    assert.equal(card.support.status, "implemented-dsl");
+    assert.ok(card.support.effectDefinitionId);
+    assert.ok(manifest.effectDefinitions?.[card.support.effectDefinitionId]);
+  });
+
+  test("does not mark referenced trigger activation supported without a referenced effect", async () => {
+    const cardId = "OP01-004" as CardId;
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: fetchFrom({
+        "OP01-004": baseCard(
+          "OP01-004",
+          null,
+          "[Trigger] Activate this card's [On K.O.] effect.",
+        ),
+      }),
+      createdAt: "2026-05-25T00:00:00.000Z",
+    });
+
+    const card = manifestCard(manifest.cards, cardId);
+
+    assert.equal(card.support.status, "unsupported");
+    assert.equal(card.support.effectDefinitionId, undefined);
+    assert.equal(Object.keys(manifest.effectDefinitions ?? {}).length, 0);
+  });
+
+  test("marks referenced trigger activation supported when the referenced effect exists", async () => {
+    const cardId = "OP01-005" as CardId;
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: fetchFrom({
+        "OP01-005": baseCard(
+          "OP01-005",
+          "[On K.O.] Draw 1 card.",
+          "[Trigger] Activate this card's [On K.O.] effect.",
+        ),
       }),
       createdAt: "2026-05-25T00:00:00.000Z",
     });

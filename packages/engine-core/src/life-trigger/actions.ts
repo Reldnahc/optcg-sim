@@ -54,7 +54,10 @@ export const registerLifeTriggerDamageContinuationResolver = (
   damageContinuationResolver = resolver;
 };
 
-const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
+const isSupportedTriggerEffect = (
+  effect: EffectBlock,
+  siblingBlocks: readonly EffectBlock[],
+): boolean => {
   if (effect.category !== "auto") return false;
   if (effect.trigger.type !== "trigger") return false;
   if (
@@ -63,7 +66,7 @@ const isSupportedTriggerEffect = (effect: EffectBlock): boolean => {
   ) {
     return false;
   }
-  return evaluateEffectBlockRuntimeSupport(effect).supported;
+  return evaluateEffectBlockRuntimeSupport(effect, { siblingBlocks }).supported;
 };
 
 const selectSupportedTriggerEffects = (
@@ -75,7 +78,9 @@ const selectSupportedTriggerEffects = (
   if (triggerEffects.length === 0) {
     return undefined;
   }
-  if (triggerEffects.some((effect) => !isSupportedTriggerEffect(effect))) {
+  if (
+    triggerEffects.some((effect) => !isSupportedTriggerEffect(effect, effects))
+  ) {
     return undefined;
   }
   return triggerEffects;

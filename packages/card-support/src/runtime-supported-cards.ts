@@ -9,8 +9,10 @@ import {
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type { MatchCardManifest } from "@optcg/types";
 
-export const engineRuntimeSupportEvaluator: RuntimeSupportEvaluator = (block) =>
-  evaluateEffectBlockRuntimeSupport(block);
+export const engineRuntimeSupportEvaluator: RuntimeSupportEvaluator = (
+  block,
+  context,
+) => evaluateEffectBlockRuntimeSupport(block, context);
 
 export const createRuntimeSupportedCardRepository = (
   input: Omit<CreateCardRepositoryInput, "runtimeSupportEvaluator">,

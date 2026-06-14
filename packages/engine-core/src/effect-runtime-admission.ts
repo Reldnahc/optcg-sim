@@ -12,6 +12,7 @@ import { isSupportedStartOfTurnRuntimeEffectBlock } from "./runtime/optional-act
 import {
   autoRuntimeEntryAdaptersForBlock,
   isSupportedAutoRuntimeEffectBlock,
+  triggerContainsType,
 } from "./effect-runtime-block-support.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
@@ -24,7 +25,47 @@ import { isSupportedStartOfGameEffectBlock } from "./setup/start-of-game-effects
 
 export type RuntimeSupportAdmissionResult = RuntimeSupportReport;
 
+export interface RuntimeSupportAdmissionContext {
+  readonly siblingBlocks?: readonly EffectBlock[];
+}
+
 export const evaluateEffectBlockRuntimeSupport = (
+  block: EffectBlock,
+  context: RuntimeSupportAdmissionContext = {},
+): RuntimeSupportAdmissionResult => {
+  const baseReport = evaluateEffectBlockRuntimeSupportWithoutContext(block);
+  if (!baseReport.supported) {
+    return baseReport;
+  }
+  if (
+    block.effect.type === "activateReferencedEffect" &&
+    !hasSupportedReferencedActivationEnvelope(block)
+  ) {
+    return unsupportedBodyReport(
+      block,
+      "unsupported referenced activation envelope",
+    );
+  }
+  if (
+    block.effect.type === "activateReferencedEffect" &&
+    !hasSupportedReferencedEffectBlock(block, context.siblingBlocks ?? [block])
+  ) {
+    return unsupportedBodyReport(block, "unsupported referenced effect target");
+  }
+  return baseReport;
+};
+
+const hasSupportedReferencedActivationEnvelope = (
+  block: EffectBlock,
+): boolean =>
+  block.category === "auto" &&
+  block.optional !== true &&
+  block.oncePerTurn !== true &&
+  block.cost === undefined &&
+  block.conditionTiming === undefined &&
+  block.failurePolicy === undefined;
+
+const evaluateEffectBlockRuntimeSupportWithoutContext = (
   block: EffectBlock,
 ): RuntimeSupportAdmissionResult => {
   if (block.category === "auto") {
@@ -84,6 +125,27 @@ export const evaluateEffectBlockRuntimeSupport = (
   }
 
   return unsupportedEnvelope(block);
+};
+
+const hasSupportedReferencedEffectBlock = (
+  block: EffectBlock,
+  siblingBlocks: readonly EffectBlock[],
+): boolean => {
+  if (
+    block.effect.type !== "activateReferencedEffect" ||
+    block.effect.source.type !== "triggerCard" ||
+    block.effect.trigger.type === "anyOf"
+  ) {
+    return true;
+  }
+  const referencedTrigger = block.effect.trigger;
+  return siblingBlocks.some(
+    (candidate) =>
+      candidate.id !== block.id &&
+      candidate.effect.type !== "activateReferencedEffect" &&
+      triggerContainsType(candidate.trigger, referencedTrigger.type) &&
+      evaluateEffectBlockRuntimeSupportWithoutContext(candidate).supported,
+  );
 };
 
 const supportedBlockReport = (block: EffectBlock): RuntimeSupportReport =>

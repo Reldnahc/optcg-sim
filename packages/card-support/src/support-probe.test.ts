@@ -73,17 +73,45 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
-  it("reports engine runtime support for trigger activating this card's On K.O. effect", async () => {
+  it("fails closed for referenced trigger activation without the referenced effect", async () => {
     const report = await createSupportProbeReport({
       text: "[Trigger] Activate this card's [On K.O.] effect.",
     });
 
-    expect(report.exitCode).toBe(0);
+    expect(report.exitCode).toBe(1);
     expect(report.lines).toContain("Parse: passed");
-    expect(report.lines).toContain("Engine runtime: passed");
+    expect(report.lines).toContain("Engine runtime: failed");
+    expect(report.lines).toContain(
+      "Engine runtime reason: unsupported referenced effect target",
+    );
     expect(report.lines).toContain(
       "- parser body:activateReferencedEffect spans span:body",
     );
+  });
+
+  it("reports referenced trigger activation as supported when the card has the referenced effect", async () => {
+    const report = await createSupportProbeReport({
+      cardId: "OP01-999",
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP01-999",
+                effect: "[On K.O.] Draw 1 card.",
+                trigger: "[Trigger] Activate this card's [On K.O.] effect.",
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Line 1 parse: passed");
+    expect(report.lines).toContain("Line 1 engine runtime: passed");
+    expect(report.lines).toContain("Line 2 parse: passed");
+    expect(report.lines).toContain("Line 2 engine runtime: passed");
   });
 
   it("reports engine runtime support for opponent-turn named-card base power", async () => {

@@ -25,8 +25,13 @@ export interface RuntimeSupportEvaluation {
   readonly reason?: string;
 }
 
+export interface RuntimeSupportEvaluationContext {
+  readonly siblingBlocks: readonly EffectBlock[];
+}
+
 export type RuntimeSupportEvaluator = (
   block: EffectBlock,
+  context?: RuntimeSupportEvaluationContext,
 ) => RuntimeSupportEvaluation;
 
 interface EffectMaterializationOptions {
@@ -100,15 +105,26 @@ export const materializeEffectDefinition = (
               )}` as EffectBlock["id"]),
         ...(presentation === undefined ? {} : { presentation }),
       };
-      const runtimeSupport = evaluateRuntimeSupport(block);
-      if (!runtimeSupport.supported) {
-        diagnostics.push(
-          `line ${String(index + 1)} runtime unsupported: ${
-            runtimeSupport.reason ?? "unknown reason"
-          }`,
-        );
-      }
       blocks.push(block);
+    }
+  }
+
+  const runtimeSupportByBlock = new Map<
+    EffectBlock["id"],
+    RuntimeSupportEvaluation
+  >();
+  for (const block of blocks) {
+    const runtimeSupport = evaluateRuntimeSupport(block, {
+      siblingBlocks: blocks,
+    });
+    runtimeSupportByBlock.set(block.id, runtimeSupport);
+    if (!runtimeSupport.supported) {
+      const lineNumber = blockLineNumber(block.id);
+      diagnostics.push(
+        `line ${lineNumber ?? "unknown"} runtime unsupported: ${
+          runtimeSupport.reason ?? "unknown reason"
+        }`,
+      );
     }
   }
 
@@ -126,7 +142,9 @@ export const materializeEffectDefinition = (
     parserCertificate.complete &&
     parsedLineCount === lines.length &&
     blocks.length > 0 &&
-    blocks.every((block) => evaluateRuntimeSupport(block).supported);
+    blocks.every(
+      (block) => runtimeSupportByBlock.get(block.id)?.supported === true,
+    );
   if (!runtimeSupported) {
     return { runtimeSupported: false, diagnostics, parserCertificate };
   }
@@ -151,6 +169,15 @@ export const materializeEffectDefinition = (
       },
     },
   };
+};
+
+const blockLineNumber = (id: EffectBlock["id"]): string | undefined => {
+  const parts = String(id).split(":generated:");
+  const suffix = parts[1];
+  if (suffix === undefined) {
+    return undefined;
+  }
+  return suffix.split(":")[0];
 };
 
 const presentationRefFromSourceMap = (

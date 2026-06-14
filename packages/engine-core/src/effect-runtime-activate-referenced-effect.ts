@@ -91,7 +91,7 @@ const resolveReferencedEffects = (
   for (const effect of lookup.definition.effects) {
     if (
       effect.id !== triggerEffect.id &&
-      isSupportedReferencedEffectBlock(effect) &&
+      isSupportedReferencedEffectBlock(effect, lookup.definition.effects) &&
       triggerContainsType(effect.trigger, triggerEffect.effect.trigger.type)
     ) {
       supportedReferencedEffects.push(effect);
@@ -105,11 +105,13 @@ const resolveReferencedEffects = (
 
 const isSupportedReferencedEffectBlock = (
   effect: EffectDefinition["effects"][number],
+  siblingBlocks: readonly EffectDefinition["effects"][number][],
 ): effect is EffectDefinition["effects"][number] & {
   readonly sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
 } =>
   effect.sourcePresencePolicy !== undefined &&
-  evaluateEffectBlockRuntimeSupport(effect).supported;
+  effect.effect.type !== "activateReferencedEffect" &&
+  evaluateEffectBlockRuntimeSupport(effect, { siblingBlocks }).supported;
 
 const sourceForReferencedEffect = (
   entry: EffectQueueEntry,

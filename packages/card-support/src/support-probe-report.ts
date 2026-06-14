@@ -1,7 +1,6 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type {
   CardId,
-  EffectBlock,
   ParserSupportCertificate,
   RuntimeSupportReport,
 } from "@optcg/types";
@@ -23,6 +22,11 @@ import {
   formatPrimitiveSupportSections,
   prefixPrimitiveSupportLines,
 } from "./primitive-support-output.js";
+import {
+  runtimeBlocksForValues,
+  runtimeContextForEffectLines,
+  type SupportProbeRuntimeContext,
+} from "./support-probe-runtime-context.js";
 
 export interface SupportProbeRequest {
   readonly text?: string;
@@ -357,11 +361,16 @@ const probeAggregatedCards = async (
       fetched.card.effect,
       fetched.card.trigger,
     ]);
+    const runtimeContext = runtimeContextForEffectLines(
+      effectLines,
+      (lineNumber) => `${card.cardId}:line:${String(lineNumber)}`,
+    );
     for (const [index, text] of effectLines.entries()) {
       const lineNumber = index + 1;
       const lineReport = evaluateParsedLine(
         text,
         `${card.cardId}:line:${String(lineNumber)}`,
+        runtimeContext,
       );
       if (!lineReport.parseOk) {
         exitCode = 1;
@@ -443,11 +452,19 @@ const createCardSupportProbeReport = async (
     fetched.card.effect,
     fetched.card.trigger,
   ]);
+  const runtimeContext = runtimeContextForEffectLines(
+    effectLines,
+    (lineNumber) => `line:${String(lineNumber)}`,
+  );
 
   let exitCode = 0;
   for (const [index, text] of effectLines.entries()) {
     const lineNumber = index + 1;
-    const lineReport = evaluateParsedLine(text, `line:${String(lineNumber)}`);
+    const lineReport = evaluateParsedLine(
+      text,
+      `line:${String(lineNumber)}`,
+      runtimeContext,
+    );
     lines.push(`Line ${String(lineNumber)} text: ${text}`);
     if (!lineReport.parseOk) {
       exitCode = 1;
@@ -804,6 +821,7 @@ type ParsedLineReport =
 const evaluateParsedLine = (
   text: string,
   effectId: string,
+  runtimeContext?: SupportProbeRuntimeContext,
 ): ParsedLineReport => {
   const rawKeyword = parseRawKeywordLine({ text });
   if (rawKeyword !== undefined) {
@@ -843,14 +861,10 @@ const evaluateParsedLine = (
     (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
   );
   const parserCertificate = createParserSupportCertificate(values);
-  const runtimeResults = values.map((value, index) =>
-    evaluateEffectBlockRuntimeSupport({
-      ...value.block,
-      id:
-        values.length === 1
-          ? (effectId as EffectBlock["id"])
-          : (`${effectId}:${String(index + 1)}` as EffectBlock["id"]),
-    }),
+  const blocks = runtimeBlocksForValues(values, effectId);
+  const siblingBlocks = runtimeContext?.siblingBlocks ?? blocks;
+  const runtimeResults = blocks.map((block) =>
+    evaluateEffectBlockRuntimeSupport(block, { siblingBlocks }),
   );
   const firstFailure = runtimeResults.find((result) => !result.supported);
   const runtimeSupported =
