@@ -192,91 +192,32 @@ type ScoredBotAction = {
   readonly score: number;
 };
 
-type BotTurnMemory = {
-  lastActivatedKey?: string;
-  readonly declinedActivationCostKeys: Set<string>;
-};
-
-const activateEffectActionKey = (
+const payCostDecisionActionScore = (
+  decision: BotPendingDecision | undefined,
   action: BotActionContext["action"],
-): string | undefined =>
-  action.type === "activateEffect" && action.placement !== undefined
-    ? `activateEffect:${String(action.placement.instanceId)}`
-    : undefined;
-
-const botTurnMemoryKey = ({
-  snapshot,
-  botPlayerId,
-}: Parameters<BotStrategy["chooseAction"]>[0]): string => {
-  const player = snapshot.players[botPlayerId];
-  return [
-    player?.view.matchId ?? "unknown-match",
-    botPlayerId,
-    snapshot.turn.globalTurn,
-    snapshot.turn.turnPlayerId,
-  ]
-    .map(String)
-    .join(":");
-};
-
-const rememberPaymentDeclined = (memory: BotTurnMemory): void => {
-  if (memory.lastActivatedKey !== undefined) {
-    memory.declinedActivationCostKeys.add(memory.lastActivatedKey);
-    delete memory.lastActivatedKey;
-  }
-};
-
-const rememberSubmittedAction = (
-  memory: BotTurnMemory,
-  action: BotActionContext["action"],
-): void => {
-  const activationKey = activateEffectActionKey(action);
-  if (activationKey !== undefined) {
-    memory.lastActivatedKey = activationKey;
-    return;
+): number | undefined => {
+  if (decision?.type !== "payCost" || action.type !== "respondToDecision") {
+    return undefined;
   }
   if (
-    action.type === "respondToDecision" &&
-    action.decisionPayment?.kind === "paymentDeclined"
+    action.decisionPayment?.kind === "paymentDeclined" ||
+    action.responseKey === "decline"
   ) {
-    rememberPaymentDeclined(memory);
-    return;
+    return 80;
   }
-  if (action.type !== "respondToDecision") {
-    delete memory.lastActivatedKey;
-  }
-};
-
-const rememberDecisionChoice = (
-  memory: BotTurnMemory,
-  choice: BotActionChoice,
-): void => {
-  if (
-    choice.type === "respondToDecision" &&
-    choice.response.type === "paymentDeclined"
-  ) {
-    rememberPaymentDeclined(memory);
-  }
+  return 5;
 };
 
 const scoredVisibleActions = ({
   snapshot,
   botPlayerId,
   profile,
-  declinedActivationCostKeys,
 }: Parameters<BotStrategy["chooseAction"]>[0] & {
   readonly profile: BotBehaviorProfile;
-  readonly declinedActivationCostKeys: ReadonlySet<string>;
 }): readonly ScoredBotAction[] => {
   const actions = snapshot.players[botPlayerId]?.actions ?? [];
+  const pendingDecision = snapshot.players[botPlayerId]?.view.pendingDecision;
   return actions.flatMap((action) => {
-    const activationKey = activateEffectActionKey(action);
-    if (
-      activationKey !== undefined &&
-      declinedActivationCostKeys.has(activationKey)
-    ) {
-      return [];
-    }
     const context = {
       snapshot,
       botPlayerId,
@@ -297,6 +238,7 @@ const scoredVisibleActions = ({
     if (cardScores.some((score) => score === false)) {
       return [];
     }
+    const payCostScore = payCostDecisionActionScore(pendingDecision, action);
     const numericCardScores = cardScores.filter(
       (score): score is number => typeof score === "number",
     );
@@ -304,6 +246,7 @@ const scoredVisibleActions = ({
       {
         action,
         score: mergedScore(context, [
+          payCostScore,
           combatScore,
           profileScore,
           ...numericCardScores,
@@ -327,78 +270,38 @@ const chooseBestVisibleDecisionAction = (
 
 export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
-): BotStrategy => {
-  const memoryByTurn = new Map<string, BotTurnMemory>();
-  const getMemory = (
-    input: Parameters<BotStrategy["chooseAction"]>[0],
-  ): BotTurnMemory => {
-    const key = botTurnMemoryKey(input);
-    const existing = memoryByTurn.get(key);
-    if (existing !== undefined) {
-      return existing;
+): BotStrategy => ({
+  chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const scored = scoredVisibleActions({ snapshot, botPlayerId, profile });
+    const player = snapshot.players[botPlayerId];
+    const pendingDecision = player?.view.pendingDecision;
+    const battleStep = player?.view.battle?.step;
+    if (
+      pendingDecision?.playerId === botPlayerId &&
+      shouldPreferVisibleDecisionAction(pendingDecision, battleStep)
+    ) {
+      const decisionAction = chooseBestVisibleDecisionAction(scored);
+      if (decisionAction !== undefined) {
+        return { type: "submitAction", actionIndex: decisionAction.index };
+      }
     }
-    const created: BotTurnMemory = {
-      declinedActivationCostKeys: new Set<string>(),
-    };
-    memoryByTurn.set(key, created);
-    return created;
-  };
-  const chooseSubmitAction = (
-    memory: BotTurnMemory,
-    action: BotActionContext["action"],
-  ): BotActionChoice => {
-    rememberSubmittedAction(memory, action);
-    return { type: "submitAction", actionIndex: action.index };
-  };
-  const chooseDecisionResponse = (
-    memory: BotTurnMemory,
-    choice: BotActionChoice,
-  ): BotActionChoice => {
-    rememberDecisionChoice(memory, choice);
-    return choice;
-  };
-
-  return {
-    chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
-      const memory = getMemory({ snapshot, botPlayerId });
-      const scored = scoredVisibleActions({
-        snapshot,
-        botPlayerId,
-        profile,
-        declinedActivationCostKeys: memory.declinedActivationCostKeys,
-      });
-      const player = snapshot.players[botPlayerId];
-      const pendingDecision = player?.view.pendingDecision;
-      const battleStep = player?.view.battle?.step;
-      if (
-        pendingDecision?.playerId === botPlayerId &&
-        shouldPreferVisibleDecisionAction(pendingDecision, battleStep)
-      ) {
-        const decisionAction = chooseBestVisibleDecisionAction(scored);
-        if (decisionAction !== undefined) {
-          return chooseSubmitAction(memory, decisionAction);
-        }
-      }
-      const pendingDecisionChoice = choosePendingDecision({
-        snapshot,
-        botPlayerId,
-        profile,
-      });
-      if (pendingDecisionChoice !== undefined) {
-        return chooseDecisionResponse(memory, pendingDecisionChoice);
-      }
-      const chosen = chooseBestAction(scored);
-      if (chosen !== undefined) {
-        return chooseSubmitAction(memory, chosen);
-      }
-      const fallbackChoice =
-        profile.chooseDecision?.({ snapshot, botPlayerId }) ??
-        chooseDefaultBotDecision({ snapshot, botPlayerId });
-      return fallbackChoice === undefined
-        ? undefined
-        : chooseDecisionResponse(memory, fallbackChoice);
-    },
-  };
-};
+    const pendingDecisionChoice = choosePendingDecision({
+      snapshot,
+      botPlayerId,
+      profile,
+    });
+    if (pendingDecisionChoice !== undefined) {
+      return pendingDecisionChoice;
+    }
+    const chosen = chooseBestAction(scored);
+    if (chosen !== undefined) {
+      return { type: "submitAction", actionIndex: chosen.index };
+    }
+    return (
+      profile.chooseDecision?.({ snapshot, botPlayerId }) ??
+      chooseDefaultBotDecision({ snapshot, botPlayerId })
+    );
+  },
+});
 
 export const defaultBotStrategy = createBotStrategy(redShanksBotProfile);
