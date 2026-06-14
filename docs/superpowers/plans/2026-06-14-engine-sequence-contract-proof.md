@@ -206,14 +206,19 @@ type ExpectedDoor = {
 const writerSignals = [
   { label: "saveReference call", pattern: /\bsaveReference\s*\(/ },
   {
-    label: "savedReferences literal with saved kind",
+    label: "inline savedReferences write",
     pattern:
-      /savedReferences\s*:\s*{[^}]*kind:\s*"(selectedCards|selectedTargets|paidCost|producedObjects|chosenNumber)"/s,
+      /savedReferences\s*:\s*{[\s\S]{0,1200}kind:\s*"(selectedCards|selectedTargets|paidCost|producedObjects|chosenNumber)"/,
   },
   {
     label: "savedReferences frame update",
     pattern:
       /\bsavedReferences\s*:\s*(next|updated|loop|seed)\w*SavedReferences\b/,
+  },
+  {
+    label: "initialSavedReferences seed",
+    pattern:
+      /initialSavedReferences[\s\S]{0,1200}kind:\s*"(selectedCards|selectedTargets|paidCost|producedObjects|chosenNumber)"/,
   },
 ] as const;
 
@@ -258,7 +263,7 @@ const knownSavedReferenceWriters: ExpectedDoor[] = [
   },
   {
     path: "packages/engine-core/src/effect-runtime-sequence/frames/start.ts",
-    signals: ["savedReferences literal with saved kind"],
+    signals: ["initialSavedReferences seed"],
     reason: "trigger-context produced object seed",
   },
   {
@@ -273,13 +278,19 @@ const knownSavedReferenceWriters: ExpectedDoor[] = [
   },
   {
     path: "packages/engine-core/src/effect-runtime-sequence/draw-upto.ts",
-    signals: ["saveReference call"],
-    reason: "drawUpTo producedObjects producer",
+    signals: ["inline savedReferences write"],
+    reason: "drawUpTo chosenNumber producer",
+  },
+  {
+    path: "packages/engine-core/src/runtime/primitives/activate-selected-event.ts",
+    signals: ["inline savedReferences write"],
+    reason: "activateSelectedEvent selectedCards consumption ledger update",
   },
   {
     path: "packages/engine-core/src/runtime/primitives/play-selected.ts",
-    signals: ["saveReference call"],
-    reason: "playSelected producedObjects producer",
+    signals: ["inline savedReferences write"],
+    reason:
+      "playSelected producedObjects producer and selectedCards consumption ledger update",
   },
 ];
 
@@ -594,6 +605,7 @@ Add tests for:
 - hand selectedCards -> `attachSelectedDon` is rejected
 - DON selectedCards -> hand `moveSelected` is rejected
 - hand selectedCards -> selected-to-hand helper is rejected
+- hand selectedCards with `max: 2` -> selected-hand-to-life helper is rejected
 - trash selectedCards -> selected-hand-to-life helper is rejected
 - hand selectedCards -> selected-trash-to-life helper is rejected
 - missing selectedCards reference -> rejected
@@ -604,9 +616,19 @@ The cost-area DON `selectTargets` test is required because that saved id has two
 
 Add tests for:
 
-- `selectTargets` -> `savedFieldObject` consumer through a representative field mutation from `support/field.ts`
-- `selectTargets` -> `savedFieldObject` consumer through a representative continuous modifier from `support/continuous.ts`
-- `selectTargets` -> `savedFieldObject` consumer through the swap/base-power support path
+- `selectTargets` -> `savedFieldObject` consumer through each current supported field door:
+  - KO / trash field target
+  - bounce field target
+  - rest field target
+  - activate field target
+  - change attack target
+- `selectTargets` -> `savedFieldObject` consumer through each current continuous door:
+  - continuous power modification
+  - continuous cost modification, if currently supported
+  - swap/base-power support path
+- `selectTargets` -> `savedFieldObject` consumer through each runtime primitive door found by the inventory:
+  - `packages/engine-core/src/effect-runtime-sequence/selected-bounce.ts`
+  - `packages/engine-core/src/runtime/primitives/target-ko.ts`
 - `selectAllTargets` -> `forEachSavedTarget`
 - `forEachSavedTarget` current item -> `savedFieldObject` consumer
 - ownerConstraint using selectedCards owner reference
@@ -614,7 +636,7 @@ Add tests for:
 - missing `savedFieldObject.binding.saveResultAs` target reference -> rejected
 - wrong family for `savedFieldObject` target -> rejected
 
-The representative saved-field-object cases must exercise current support doors that runtime resolves in `saved-field-object/segment-appliers.ts`, not only a synthetic helper.
+The saved-field-object matrix must be exhaustive for every savedFieldObject consumer file discovered by Task 2. If Task 2 observes another savedFieldObject reader, add a matrix test for that exact door before making the inventory test pass.
 
 - [ ] **Step 4: Add paidCost and producedObjects matrix tests**
 
@@ -622,7 +644,6 @@ Add tests for:
 
 - `payCost` with `saveResultAs: "paidCost"` -> `savedFieldObject` target with `family: "paidCost"` where the cost selected a field card or DON card
 - `draw` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
-- `drawUpTo` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
 - `playSelected` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
 - initial trigger-context `trigger:cardPlayed` produced object -> consumer support through `initialSavedSelectedTargets` or the contract equivalent
 - missing producedObjects reference -> rejected
@@ -633,6 +654,7 @@ Add tests for:
 Add tests for:
 
 - `chooseNumber` -> `selectFromSet` stat comparison using `savedNumber`
+- `drawUpTo` -> saved number consumer using the saved draw quantity
 - `revealTop` -> `placeSetRemainder`
 - missing number -> rejected
 - missing selection set -> rejected
@@ -720,7 +742,9 @@ const sameCapability = (
 ): boolean =>
   a.kind === b.kind &&
   (a.kind !== "selectedCards" ||
-    (b.kind === "selectedCards" && a.cardKind === b.cardKind));
+    (b.kind === "selectedCards" &&
+      a.cardKind === b.cardKind &&
+      a.max === b.max));
 
 export const addCapability = (
   state: StaticSavedResultState,
@@ -758,7 +782,8 @@ Add `recordProducer(state, segment)` that records:
 - `revealTop` -> `selectedCards:set` and transient set
 - `chooseNumber` -> `chosenNumber`
 - `payCost` with `saveResultAs` -> `paidCost`
-- `draw` or `drawUpTo` with `saveResultAs` -> `producedObjects`
+- `draw` with `saveResultAs` -> `producedObjects`
+- `drawUpTo` with `saveAs` -> `chosenNumber`
 - `playSelected` with `saveResultAs` -> `producedObjects`
 - `forEachSavedTarget` current item -> `selectedTargets` while validating its source selection exists
 - initial trigger-context produced object via explicit initial contract state
@@ -774,13 +799,16 @@ export const canConsumeSelectedCards = (
   state: StaticSavedResultState,
   selection: unknown,
   allowed: readonly SavedSelectedCardsKind[],
+  options: { readonly max?: number } = {},
 ): boolean =>
   hasReferenceCapability(
     state,
     selection,
     (capability) =>
       capability.kind === "selectedCards" &&
-      allowed.includes(capability.cardKind),
+      allowed.includes(capability.cardKind) &&
+      (options.max === undefined ||
+        (capability.max !== undefined && capability.max <= options.max)),
   );
 
 export const canConsumeSavedFieldObject = (
@@ -832,6 +860,8 @@ export const canConstrainByOwner = (
       capability.kind === "selectedTargets",
   );
 ```
+
+Consumers that depend on exactly one selected card, such as selected hand to life, must call `canConsumeSelectedCards(..., { max: 1 })`. Consumers that can accept any selected-card count must omit the `max` option.
 
 - [ ] **Step 4: Wire `support.ts` through the contract**
 
@@ -955,7 +985,7 @@ Add tests for:
 - accepted `payCost` saves `paidCost`
 - declined optional cost does not save `paidCost`
 - `draw` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
-- `drawUpTo` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
+- `drawUpTo` with `saveAs` saves `chosenNumber`, with `pauseKeeper()` as the next segment
 - `playSelected` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
 - trigger-context `cardPlayed` creates `producedObjects` seed, with `pauseKeeper()` as the next segment
 - `chooseNumber` saves `chosenNumber`, with `pauseKeeper()` as the next segment
@@ -1206,7 +1236,8 @@ Expected: clean working tree, or only unrelated user/agent files intentionally l
 - The plan covers every current `SequenceSavedResultReference` kind: `selectedCards`, `selectedTargets`, `paidCost`, `producedObjects`, and `chosenNumber`.
 - The plan covers static selected-card subkinds: hand, trash, DON, and set.
 - The plan covers every named producer, including `playSelected`.
-- The plan covers representative field, continuous, and swap/base-power savedFieldObject consumer paths.
+- The plan covers every savedFieldObject consumer door discovered by the inventory, including field, continuous, swap/base-power, selected-bounce, and primitive target-KO paths.
+- The static model preserves selected-card `max` cardinality so single-card consumers like selected hand to life cannot accidentally accept multi-card selections.
 - The static model uses capability sets per saved id, so a cost-area DON `selectTargets` save can be both `selectedTargets` and `selectedCards:don`.
 - Runtime tests must inspect paused frame ledgers, not just final gameplay results; non-pausing producers use `pauseKeeper()`.
 - Source-inventory tests recursively scan relevant source roots and force future saved-result producers/readers to update the contract.
