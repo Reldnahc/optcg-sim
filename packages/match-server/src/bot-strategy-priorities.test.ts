@@ -400,4 +400,155 @@ describe("bot strategy priorities", () => {
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
+
+  test("does not attach DON to a character with no remaining attack", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+            placement: { instanceId: "generic-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to exhausted character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "bot-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "generic-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              zone: { playerId: botId, zone: "characterArea" },
+              currentPower: 5000,
+              state: "rested",
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 5000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("does not attach DON to a newly played character that cannot attack", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+            placement: { instanceId: "generic-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to summoning sick character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "new-character" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "generic-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "new-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              zone: { playerId: botId, zone: "characterArea" },
+              currentPower: 5000,
+              turnPlayed: 1,
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 5000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("does not attach DON to leader when the bot has no legal attack on its first turn", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+            placement: { instanceId: "generic-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to leader",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "bot-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "generic-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfLeader: { currentPower: 5000 },
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 5000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
 });

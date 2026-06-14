@@ -72,12 +72,31 @@ const attackCardsToStop = (
         (attackerPower - targetPower + 1_000) / assumedCounterPowerPerHandCard,
       );
 
+const hasRemainingAttackForAttachment = ({
+  action,
+  snapshot,
+  botPlayerId,
+}: BotActionContext): boolean => {
+  const targetId = action.attachment?.targetInstanceId;
+  if (action.type !== "attachDon" || targetId === undefined) {
+    return true;
+  }
+  return (snapshot.players[botPlayerId]?.actions ?? []).some(
+    (candidate) =>
+      candidate.type === "declareAttack" &&
+      candidate.attack?.attackerInstanceId === targetId,
+  );
+};
+
 const actionIsLegalForEvaluation = ({
   context,
 }: Pick<BotActionEvaluationInput, "context">): boolean => {
   const { action, snapshot, botPlayerId } = context;
   if (action.type === "concede") {
     return false;
+  }
+  if (action.type === "attachDon") {
+    return hasRemainingAttackForAttachment(context);
   }
   if (action.type !== "declareAttack") {
     return true;

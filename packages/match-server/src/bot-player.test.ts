@@ -589,14 +589,25 @@ describe("bot player", () => {
               targetInstanceId: "bot-character" as InstanceId,
             },
           },
+          {
+            index: 2,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
         ],
         {
           selfCharacters: [
             {
               instanceId: "bot-character" as InstanceId,
               cardId: "OP01-003" as CardId,
+              currentPower: 5000,
             },
           ],
+          opponentLeader: { currentPower: 5000 },
         },
       ),
       botPlayerId: botId,
