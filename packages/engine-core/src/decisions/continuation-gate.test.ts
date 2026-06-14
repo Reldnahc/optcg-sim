@@ -8,7 +8,7 @@ import type {
   SelectTargetsDecision,
 } from "@optcg/types";
 
-import { createActiveState, p1 } from "../action-test-fixtures.js";
+import { createActiveState, p1, toStateSeq } from "../action-test-fixtures.js";
 import {
   clearPendingDecision,
   effectQueueEntryForDecision,
@@ -39,7 +39,7 @@ const queueEntry = (): EffectQueueEntry => ({
   effectBlockId: "effect:1" as EffectQueueEntry["effectBlockId"],
   orderingGroup: "turnPlayer",
   createdAtEventSeq: 1,
-  queuedAtStateSeq: 1,
+  queuedAtStateSeq: toStateSeq(1),
   sourcePresencePolicy: "mustRemainInSameZone",
   causedBy: { type: "ruleProcess", name: "test" },
 });
@@ -52,8 +52,7 @@ const stateWithDecision = (): GameState => {
     id: "decision:1" as DecisionId,
     type: "selectTargets",
     playerId: p1,
-    min: 0,
-    max: 1,
+    prompt: "Select target.",
     candidates: [],
     request: {
       timing: "onResolution",
@@ -65,7 +64,7 @@ const stateWithDecision = (): GameState => {
       allowFewerIfUnavailable: true,
       visibility: "public",
     },
-    visibility: { type: "private", playerIds: [p1] },
+    visibility: { type: "private", playerId: p1 },
     causedBy: {
       type: "effect",
       queueEntryId: entry.id,

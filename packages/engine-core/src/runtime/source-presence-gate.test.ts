@@ -55,12 +55,47 @@ test("fieldSourceStillPresent rejects stale zone movement", () => {
 test("fieldSourceCanUseEffects rejects negated live sources", () => {
   const state = createActiveState();
   const leader = must(state.players[p1], "p1").leader;
-  state.effectInvalidations = [
-    {
-      cardInstanceId: leader.instanceId,
-      until: { type: "endOfTurn" },
+  state.continuousEffects.push({
+    id: "continuous:invalidate-leader-effects",
+    source: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      playerId: p1,
+      zone: leader.zone,
     },
-  ];
+    sourceSnapshot: {
+      instanceId: leader.instanceId,
+      cardId: leader.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: leader.zone,
+      category: "leader",
+      colors: [],
+      keywords: [],
+    },
+    controller: p1,
+    modifier: {
+      layer: "effectInvalidation",
+      target: {
+        type: "exactCard",
+        card: {
+          instanceId: leader.instanceId,
+          cardId: leader.cardId,
+          playerId: p1,
+          zone: leader.zone,
+        },
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:invalidate-effects-target",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "invalidateEffects" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-effect-invalidation" },
+    createdAtStateSeq: state.seq,
+  });
 
   const found = fieldSourceCanUseEffects(state, {
     instanceId: leader.instanceId,

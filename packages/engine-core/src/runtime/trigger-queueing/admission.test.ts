@@ -7,6 +7,7 @@ import {
   createActiveState,
   p1,
   resolvedCard,
+  toStateSeq,
 } from "../../action-test-fixtures.js";
 import {
   appendAdmittedTriggerEntries,
@@ -38,7 +39,7 @@ const entry = (id: string, effectBlockId = "effect:1"): EffectQueueEntry => ({
   effectBlockId: effectBlockId as EffectQueueEntry["effectBlockId"],
   orderingGroup: "turnPlayer",
   createdAtEventSeq: 1,
-  queuedAtStateSeq: 1,
+  queuedAtStateSeq: toStateSeq(1),
   sourcePresencePolicy: "mustRemainInSameZone",
   causedBy: { type: "ruleProcess", name: "test" },
 });
@@ -83,7 +84,10 @@ test("trigger queue admission rejects already-used once-per-turn entries", () =>
 test("append admitted trigger entries appends queue and effectQueued events together", () => {
   const state = createActiveState();
   const candidate = entry("new");
-  const resolved = resolvedCard({ cardId: candidate.source.cardId });
+  const resolved = resolvedCard({
+    cardId: candidate.source.cardId,
+    category: "leader",
+  });
 
   const result = appendAdmittedTriggerEntries(state, [
     { entry: candidate, effectBlock: effect(), resolved },

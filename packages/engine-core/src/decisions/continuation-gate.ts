@@ -11,13 +11,14 @@ export const effectQueueEntryForDecision = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
 ): DecisionQueueEntryLookup => {
-  if (decision.causedBy.type !== "effect") {
+  const { causedBy } = decision;
+  if (causedBy.type !== "effect") {
     return { ok: false, reason: "not-effect-decision" };
   }
   const entry = state.effectQueue.find(
     (candidate) =>
-      candidate.id === decision.causedBy.queueEntryId &&
-      candidate.effectBlockId === decision.causedBy.effectId,
+      candidate.id === causedBy.queueEntryId &&
+      candidate.effectBlockId === causedBy.effectId,
   );
   return entry === undefined
     ? { ok: false, reason: "stale-effect-decision" }

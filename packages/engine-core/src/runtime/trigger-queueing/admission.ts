@@ -46,7 +46,7 @@ export const canAdmitTriggerQueueEntry = (
 export const appendAdmittedTriggerEntries = (
   state: GameState,
   candidates: readonly TriggerQueueCandidate[],
-): { readonly state: GameState; readonly events: readonly EngineEvent[] } => {
+): { readonly state: GameState; readonly events: EngineEvent[] } => {
   const events: EngineEvent[] = [];
   const nextState: GameState = {
     ...state,
