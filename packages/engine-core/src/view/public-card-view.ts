@@ -21,7 +21,11 @@ export const toPublicCardView = (
   card: CardInstance,
   state?: GameState,
 ): PublicCardView => {
-  const printedCounter = state?.cardManifest.cards[card.cardId]?.counter;
+  const metadata = state?.cardManifest.cards[card.cardId];
+  const printedCost = metadata?.cost;
+  const printedPower = metadata?.power;
+  const printedCounter = metadata?.counter;
+  const printedKeywords = metadata?.printedKeywords ?? [];
   return {
     instanceId: card.instanceId,
     cardId: card.cardId,
@@ -32,7 +36,10 @@ export const toPublicCardView = (
     attachedDonIds: [...card.attachedDon],
     ...(card.state === undefined ? {} : { state: card.state }),
     ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
+    ...(printedCost === undefined ? {} : { printedCost }),
+    ...(printedPower === undefined ? {} : { printedPower }),
     ...(printedCounter === undefined ? {} : { printedCounter }),
+    ...(printedKeywords.length === 0 ? {} : { keywords: printedKeywords }),
   };
 };
 

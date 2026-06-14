@@ -10,7 +10,17 @@ import type {
 const op16BennBeckman = "OP16-012";
 const op09LeaderShanks = "OP09-001";
 const hardCastOp16FallbackScore = 85;
-const searchSourceCardIds = new Set<string>(["OP09-002", "OP09-020"]);
+const searchSourceCardIds = new Set<string>([
+  "OP09-002",
+  "OP09-020",
+  "PRB02-002",
+]);
+const setupPlayScores = new Map<string, number>([
+  ["OP09-002", 8],
+  ["OP09-020", 9],
+  ["PRB02-002", 10],
+  ["OP09-011", 18],
+]);
 const shanksCardIds = new Set<string>([
   "OP06-007",
   "OP09-004",
@@ -292,7 +302,7 @@ export const redShanksBotProfile: BotBehaviorProfile = {
     if (card?.cardId === (op16BennBeckman as CardId)) {
       return isOp16CheatLineLive(context) ? -80 : hardCastOp16FallbackScore;
     }
-    return undefined;
+    return card === undefined ? undefined : setupPlayScores.get(card.cardId);
   },
   chooseDecision(context) {
     return (

@@ -28,13 +28,31 @@ const playCardCounterPenalty = (
 ): number => {
   const counter = actionPlacementCard(context)?.printedCounter ?? 0;
   if (counter >= 2_000) {
-    return 45;
+    return 26;
   }
   if (counter >= 1_000) {
-    return 15;
+    return 8;
   }
   return 0;
 };
+
+const playCardDevelopmentBonus = (
+  context: Pick<BotActionContext, "action" | "relatedCards">,
+): number => {
+  const card = actionPlacementCard(context);
+  if (card === undefined) {
+    return 0;
+  }
+  const power = cardPower(card) ?? 0;
+  const cost = card.currentCost ?? card.printedCost ?? 0;
+  const blockerBonus = card.keywords?.includes("blocker") === true ? 2 : 0;
+  return Math.min(16, power / 1_000 + cost * 1.5 + blockerBonus);
+};
+
+const playCardPriority = (
+  context: Pick<BotActionContext, "action" | "relatedCards">,
+): number =>
+  28 - playCardDevelopmentBonus(context) + playCardCounterPenalty(context);
 
 const baseActionPriority = (
   context: Pick<BotActionContext, "action" | "relatedCards">,
@@ -53,7 +71,7 @@ const baseActionPriority = (
     return 0;
   }
   if (action.type === "activateEffect") return 10;
-  if (action.type === "playCard") return 20 + playCardCounterPenalty(context);
+  if (action.type === "playCard") return playCardPriority(context);
   if (action.type === "attachDon") return 30;
   if (action.type === "declareAttack") return 40;
   if (action.type === "advanceToMainPhase") return 50;

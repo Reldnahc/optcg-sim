@@ -346,7 +346,7 @@ const scoreAttachDonForLeaderPressure = ({
     4,
     Math.max(1, Math.ceil((boostedPower - leaderPower) / 1_000)),
   );
-  return 18 - pressureBonus;
+  return 26 - pressureBonus;
 };
 
 const scoreCounterAction = ({

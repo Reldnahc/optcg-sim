@@ -203,13 +203,17 @@ test("includes printed counter value on visible hand cards", () => {
   state.cardManifest.cards[handCard.cardId] = resolvedCard({
     cardId: handCard.cardId,
     category: "character",
+    cost: 3,
     power: 3000,
     counter: 2000,
   });
 
   const view = filterStateForPlayer(state, p1);
+  const projectedHandCard = must(view.self.hand[0], "visible hand");
 
-  assert.equal(view.self.hand[0]?.printedCounter, 2000);
+  assert.equal(projectedHandCard.printedCost, 3);
+  assert.equal(projectedHandCard.printedPower, 3000);
+  assert.equal(projectedHandCard.printedCounter, 2000);
 });
 
 test("shows pending decision only to the recipient with public shape", () => {
