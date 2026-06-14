@@ -1,5 +1,12 @@
+import type { PlayerView } from "@optcg/types";
+
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
 import { chooseCombatDecision } from "./bot-combat-evaluation.js";
+
+type SelectCardsDecision = Extract<
+  NonNullable<PlayerView["pendingDecision"]>,
+  { type: "selectCards" }
+>;
 
 const defaultSelectableCardCount = (
   min: number,
@@ -11,6 +18,22 @@ const defaultSelectableCardCount = (
   }
   return Math.min(Math.max(min, 1), max, availableCount);
 };
+
+const selectableCardsForDecision = (
+  decision: SelectCardsDecision,
+): SelectCardsDecision["candidates"][number]["card"][] => {
+  if (decision.choices.length > 0) {
+    return decision.choices
+      .filter((choice) => choice.selectable)
+      .map((choice) => choice.card);
+  }
+  return decision.candidates.map((candidate) => candidate.card);
+};
+
+const isCharacterOverflowDecision = (decision: SelectCardsDecision): boolean =>
+  String(decision.id).startsWith("decision:character-overflow:") ||
+  String(decision.id).startsWith("decision:play-selected-overflow:") ||
+  String(decision.id).startsWith("decision:play-source-overflow:");
 
 export const chooseDefaultBotDecision = ({
   snapshot,
@@ -32,9 +55,7 @@ export const chooseDefaultBotDecision = ({
         response: { type: "chooseQuantity", quantity: decision.min },
       };
     case "selectCards": {
-      const selectableCards = decision.choices
-        .filter((choice) => choice.selectable)
-        .map((choice) => choice.card);
+      const selectableCards = selectableCardsForDecision(decision);
       return {
         type: "respondToDecision",
         decisionId: decision.id,
@@ -42,11 +63,13 @@ export const chooseDefaultBotDecision = ({
           type: "cards",
           cards: selectableCards.slice(
             0,
-            defaultSelectableCardCount(
-              decision.min,
-              decision.max,
-              selectableCards.length,
-            ),
+            isCharacterOverflowDecision(decision)
+              ? Math.min(1, selectableCards.length)
+              : defaultSelectableCardCount(
+                  decision.min,
+                  decision.max,
+                  selectableCards.length,
+                ),
           ),
         },
       };
