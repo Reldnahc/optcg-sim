@@ -52,6 +52,105 @@ const syntheticEntry = (
   causedBy: { type: "ruleProcess", name: "sequence-support-attach-don-test" },
 });
 
+const opponentCostAreaDonAttachBlock =
+  (): EffectDefinition["effects"][number] => {
+    const donSelection = "selected-don-for-opponent-attach" as SelectionId;
+    const targetSelection = "selected-target-for-opponent-attach";
+    return {
+      id: "sequence-support-attach-don-test-effect" as EffectDefinition["effects"][number]["id"],
+      category: "auto",
+      trigger: { type: "onPlay" },
+      condition: {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: { categories: ["leader"], typesAny: ["East Blue"] },
+      },
+      optional: false,
+      oncePerTurn: false,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: donSelection,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "costArea",
+                filter: { categories: ["don"] },
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            saveResultAs: targetSelection,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "attachSelectedDon",
+              selection: donSelection,
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: targetSelection,
+                },
+                zone: "characterArea",
+                player: "opponent",
+                filter: { categories: ["character"] },
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    };
+  };
+
+test("sequence support accepts block-conditioned optional source DON attachment", () => {
+  assert.equal(
+    isSupportedSequenceBlock(
+      syntheticEntry(),
+      opponentCostAreaDonAttachBlock(),
+    ),
+    true,
+  );
+});
+
+test("sequence support rejects unsupported block conditions on DON attachment", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    ...opponentCostAreaDonAttachBlock(),
+    condition: { type: "custom", check: "unsupported-condition" },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), false);
+});
+
 test("sequence support accepts conditional DON attachment through the shared segment support shape", () => {
   const donSelection = "selected-don-for-conditional-attach" as SelectionId;
   const targetSelection = "selected-target-for-conditional-attach";

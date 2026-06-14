@@ -387,6 +387,7 @@ const isSupportedSequenceBlockWithState = (
     !isSupportedCategoryForEntry ||
     flattenedBlock.optional === true ||
     flattenedBlock.cost !== undefined ||
+    !isSupportedQueuedEffectConditionShape(flattenedBlock.condition) ||
     flattenedBlock.conditionTiming !== undefined ||
     flattenedBlock.failurePolicy !== undefined ||
     flattenedBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||
