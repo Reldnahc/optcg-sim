@@ -492,10 +492,6 @@ it("parses opponent rested-DON cost and owner-relative DON attachment body separ
                 {
                   effect: {
                     type: "selectTargets",
-                    ownerConstraint: {
-                      type: "sameAsSavedReferenceOwner",
-                      selection: "paidCost",
-                    },
                     request: {
                       chooser: "self",
                       player: "anyPlayer",

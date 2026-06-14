@@ -26,6 +26,9 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
+import { applyAttachDonCostPayment } from "../runtime/costs/attach-don.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
+import { toDecisionId } from "../action-results.js";
 
 const ownerConstrainedTargetSequence = (): Extract<
   Effect,
@@ -93,67 +96,6 @@ const ownerConstrainedTargetSequence = (): Extract<
           filter: { categories: ["leader", "character"] },
           visibility: "publicOnly",
           onFailure: "failClosed",
-        },
-      },
-    },
-  ],
-});
-
-const ownerConstrainedPaidCostDonSequence = (): Extract<
-  Effect,
-  { type: "sequence" }
-> => ({
-  type: "sequence",
-  effects: [
-    {
-      id: "cost:attach-opponent-don",
-      connector: "always",
-      saveResultAs: "paidCost",
-      effect: {
-        type: "payCost",
-        cost: {
-          type: "attachDon",
-          count: 1,
-          sourcePlayer: "opponent",
-          sourceState: "rested",
-          optional: true,
-          target: {
-            type: "choose",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone: "characterArea",
-              filter: { categories: ["character"] },
-              min: 1,
-              max: 1,
-              allowFewerIfUnavailable: false,
-              visibility: "public",
-            },
-          },
-        },
-      },
-    },
-    {
-      id: "select-owner-matching-don",
-      connector: "ifYouDo",
-      saveResultAs: "selection:owner-source",
-      effect: {
-        type: "selectTargets",
-        ownerConstraint: {
-          type: "sameAsSavedReferenceOwner",
-          selection: "paidCost" as SelectionId,
-        },
-        request: {
-          timing: "onResolution",
-          chooser: "self",
-          player: "anyPlayer",
-          zone: "costArea",
-          filter: { categories: ["don"] },
-          min: 0,
-          max: 1,
-          allowFewerIfUnavailable: true,
-          visibility: "public",
         },
       },
     },
@@ -350,9 +292,9 @@ test("selectTargets owner constraint offers only opponent targets for a saved op
   );
 });
 
-test("selectTargets owner constraint can use the selected card from a paid attach-DON cost", () => {
+test("owner-relative DON body after paid attach-DON cost can select either player's unattached DON", () => {
   const state = createActiveState();
-  setupDefinition(state, ownerConstrainedPaidCostDonSequence());
+  const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   const p2Target = withCardInZone({
     state,
@@ -367,29 +309,71 @@ test("selectTargets owner constraint can use the selected card from a paid attac
     cardId: p2Target.cardId,
     category: "character",
   });
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+  });
 
-  const costResult = processEffectRuntime(state);
-  assert.equal(costResult.errors, undefined);
-  const costDecision = must(costResult.state.pendingDecision, "pay cost");
-  assert.equal(costDecision.type, "payCost");
-
-  const paid = applyAction(costResult.state, {
-    type: "respondToDecision",
-    decisionId: costDecision.id,
-    response: {
+  const paid = applyAttachDonCostPayment({
+    decisionId: toDecisionId("decision:attach-opponent-don-cost"),
+    paymentResponse: {
       type: "payment",
       optionId: "attachDon",
       selectedDonInstanceIds: [paidP2Don.instanceId],
       selectedCardInstanceIds: [p2Target.instanceId],
     },
+    player: p1State,
+    playerId: p1,
+    selectedOption: {
+      id: "attachDon",
+      type: "attachDon",
+      count: 1,
+      sourcePlayer: "opponent",
+      sourceState: "rested",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zone: "characterArea",
+          filter: { categories: ["character"] },
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    state,
   });
-  assert.equal(paid.errors, undefined);
-  const selectDon = must(paid.state.pendingDecision, "select owner DON");
-  assert.equal(selectDon.type, "selectTargets");
+  assert.equal(paid.ok, true);
+  const paidState: GameState = { ...state, players: paid.players };
+  const resolved = resolvePublicTargetCandidatesForRequest(
+    paidState,
+    {
+      timing: "onResolution",
+      chooser: "self",
+      player: "anyPlayer",
+      zone: "costArea",
+      filter: { categories: ["don"] },
+      min: 0,
+      max: 1,
+      allowFewerIfUnavailable: true,
+      visibility: "public",
+    },
+    { sourceControllerId: p1 },
+  );
+  assert.ok(resolved.ok);
 
-  const candidateIds = selectDon.candidates.map(
+  const candidateIds = resolved.candidates.map(
     (candidate) => candidate.card.instanceId,
   );
-  assert.deepEqual(candidateIds, [remainingP2Don.instanceId]);
-  assert.equal(candidateIds.includes(p1Don.instanceId), false);
+  assert.ok(candidateIds.includes(p1Don.instanceId));
+  assert.ok(candidateIds.includes(remainingP2Don.instanceId));
+  assert.equal(candidateIds.includes(paidP2Don.instanceId), false);
 });

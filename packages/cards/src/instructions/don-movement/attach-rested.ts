@@ -1,4 +1,4 @@
-import type { CardFilter, SelectTargetsEffect } from "@optcg/types";
+import type { CardFilter } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
@@ -46,7 +46,6 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
 
 type DonAttachSource = {
   readonly evidence: readonly PrimitiveEvidence[];
-  readonly ownerConstraint?: SelectTargetsEffect["ownerConstraint"];
   readonly player: "self" | "opponent" | "anyPlayer";
   readonly sourceState?: "rested";
   readonly targetOwner?: "selectedDonOwner";
@@ -79,7 +78,6 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
   }
   const source = parseDonAttachSource({
     opponentSource: match?.groups?.["opponentSource"],
-    ownerReference: input.ownerReference,
     rested: match?.groups?.["rested"],
     sourceZone: match?.groups?.["sourceZone"],
     targetText,
@@ -115,9 +113,6 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
         }
       : {
           type: "selectTargets" as const,
-          ...(source.ownerConstraint === undefined
-            ? {}
-            : { ownerConstraint: source.ownerConstraint }),
           request: {
             timing: "onResolution" as const,
             chooser: "self" as const,
@@ -229,7 +224,6 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
 
 const parseDonAttachSource = (input: {
   readonly opponentSource: string | undefined;
-  readonly ownerReference: SelectTargetsEffect["ownerConstraint"] | undefined;
   readonly rested: string | undefined;
   readonly sourceZone: string | undefined;
   readonly targetText: string;
@@ -248,9 +242,6 @@ const parseDonAttachSource = (input: {
   }
   return {
     evidence: ownerRelative ? ["reference:ownerOfSelected"] : [],
-    ...(ownerRelative && input.ownerReference !== undefined
-      ? { ownerConstraint: input.ownerReference }
-      : {}),
     player,
     ...(sourceState === undefined ? {} : { sourceState }),
     ...(ownerRelative ? { targetOwner: "selectedDonOwner" as const } : {}),

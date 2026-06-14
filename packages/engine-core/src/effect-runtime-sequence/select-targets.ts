@@ -157,9 +157,6 @@ const savedReferenceOwnerIds = (
   if (saved?.kind === "selectedTargets") {
     return new Set(saved.targets.map((target) => target.object.playerId));
   }
-  if (saved?.kind === "paidCost" && saved.selectedCards !== undefined) {
-    return new Set(saved.selectedCards.map((card) => card.playerId));
-  }
   return null;
 };
 
