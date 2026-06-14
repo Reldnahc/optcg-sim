@@ -57,6 +57,7 @@ import {
   isSupportedSelectFromSetSegment,
   isSupportedSequenceSelectCardsSegment,
   isSupportedMoveSelectedSegment,
+  savedSelectedCardsKindForSelectTargetsSegment,
   savedSelectedCardsKindForSelectCardsSegment,
   type AttachSelectedDonEffect,
   type ChooseNumberEffect,
@@ -236,23 +237,6 @@ const hasSavedOwnerConstraintReference = (
   effect.ownerConstraint === undefined ||
   hasSavedSelectedCardSet(state, effect.ownerConstraint.selection) ||
   hasSavedSelectedTargets(state, effect.ownerConstraint.selection);
-
-const requestSelectsDonFromCostArea = (
-  request: SelectTargetsEffect["request"],
-): boolean => {
-  const zones = "zones" in request ? request.zones : [request.zone];
-  return (
-    request.chooser === "self" &&
-    (request.player === "self" ||
-      request.player === "opponent" ||
-      request.player === "anyPlayer") &&
-    zones.length > 0 &&
-    zones.every((zone) => zone === "costArea") &&
-    request.visibility === "public" &&
-    request.filter?.categories?.length === 1 &&
-    request.filter.categories[0] === "don"
-  );
-};
 
 const isSupportedSelectAllTargetsRequest = (
   request: SelectAllTargetsEffect["request"],
@@ -586,6 +570,9 @@ const isSupportedSequenceBlockWithState = (
       }
       if (segment.effect.type === "selectTargets") {
         const request = segment.effect.request;
+        const selectedCardsKind = savedSelectedCardsKindForSelectTargetsSegment(
+          segment.effect,
+        );
         if (
           !isSupportedSequenceTargetRequest(request) ||
           !hasSavedOwnerConstraintReference(supportState, segment.effect)
@@ -597,9 +584,12 @@ const isSupportedSequenceBlockWithState = (
         }
         if (
           segment.saveResultAs !== undefined &&
-          requestSelectsDonFromCostArea(request)
+          selectedCardsKind !== undefined
         ) {
-          supportState.savedSelectedCards.set(segment.saveResultAs, "don");
+          supportState.savedSelectedCards.set(
+            segment.saveResultAs,
+            selectedCardsKind,
+          );
         }
         supportState.hasPendingDecisionSegment = true;
         return true;
