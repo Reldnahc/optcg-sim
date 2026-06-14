@@ -197,29 +197,143 @@ const scanRoots = [
   "packages/engine-core/src/runtime/primitives",
 ];
 
-const knownSavedReferenceWriters = [
-  "packages/engine-core/src/effect-runtime-sequence/segments.ts",
-  "packages/engine-core/src/effect-runtime-sequence/select-cards.ts",
-  "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
-  "packages/engine-core/src/effect-runtime-sequence/frames/optional.ts",
-  "packages/engine-core/src/effect-runtime-sequence/frames/start.ts",
-  "packages/engine-core/src/effect-runtime-sequence/runner/select-all-targets-segment.ts",
-  "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
-  "packages/engine-core/src/effect-runtime-sequence/draw-upto.ts",
-  "packages/engine-core/src/runtime/primitives/play-selected.ts",
-].sort();
+type ExpectedDoor = {
+  readonly path: string;
+  readonly signals: readonly string[];
+  readonly reason: string;
+};
 
-const knownSavedReferenceReaders = [
-  "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
-  "packages/engine-core/src/effect-runtime-sequence/selected-segments.ts",
-  "packages/engine-core/src/effect-runtime-sequence/selected-reveal.ts",
-  "packages/engine-core/src/effect-runtime-sequence/selected-to-hand.ts",
-  "packages/engine-core/src/effect-runtime-sequence/selected-hand-to-life.ts",
-  "packages/engine-core/src/effect-runtime-sequence/selected-trash-to-life.ts",
-  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts",
-  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/segment-appliers.ts",
-  "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
-].sort();
+const writerSignals = [
+  { label: "saveReference call", pattern: /\bsaveReference\s*\(/ },
+  {
+    label: "savedReferences literal with saved kind",
+    pattern:
+      /savedReferences\s*:\s*{[^}]*kind:\s*"(selectedCards|selectedTargets|paidCost|producedObjects|chosenNumber)"/s,
+  },
+  {
+    label: "savedReferences frame update",
+    pattern:
+      /\bsavedReferences\s*:\s*(next|updated|loop|seed)\w*SavedReferences\b/,
+  },
+] as const;
+
+const readerSignals = [
+  {
+    label: "savedReferences direct lookup",
+    pattern:
+      /(?:ledgers|frame|currentFrame|pendingFrame)\.savedReferences\[[^\]]+\]/,
+  },
+  {
+    label: "saved field object resolution",
+    pattern:
+      /\b(resolveSavedFieldObject|resolveSavedTarget|applySavedFieldObject|applySavedFieldObjectSegments)\s*\(/,
+  },
+  {
+    label: "savedReferences helper argument",
+    pattern:
+      /\b(savedReferences|ledgers\.savedReferences|frame\.savedReferences)\s*[,)]/,
+  },
+] as const;
+
+const knownSavedReferenceWriters: ExpectedDoor[] = [
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/segments.ts",
+    signals: ["saveReference call"],
+    reason: "generic sequenced segment save helper",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/select-cards.ts",
+    signals: ["saveReference call"],
+    reason: "selectCards producer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
+    signals: ["saveReference call"],
+    reason: "selectTargets producer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/frames/optional.ts",
+    signals: ["savedReferences frame update"],
+    reason: "optional branch frame propagation",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/frames/start.ts",
+    signals: ["savedReferences literal with saved kind"],
+    reason: "trigger-context produced object seed",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/runner/select-all-targets-segment.ts",
+    signals: ["saveReference call"],
+    reason: "selectAllTargets producer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
+    signals: ["saveReference call", "savedReferences frame update"],
+    reason: "forEachSavedTarget current-item producer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/draw-upto.ts",
+    signals: ["saveReference call"],
+    reason: "drawUpTo producedObjects producer",
+  },
+  {
+    path: "packages/engine-core/src/runtime/primitives/play-selected.ts",
+    signals: ["saveReference call"],
+    reason: "playSelected producedObjects producer",
+  },
+];
+
+const knownSavedReferenceReaders: ExpectedDoor[] = [
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "ownerConstraint reads saved owners",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-segments.ts",
+    signals: ["savedReferences direct lookup"],
+    reason:
+      "moveSelected, attachSelectedDon, playSelected, activateSelectedEvent",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-reveal.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "revealSelected consumer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-to-hand.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "selected-to-hand consumer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-hand-to-life.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "selected-hand-to-life consumer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-trash-to-life.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "selected-trash-to-life consumer",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts",
+    signals: [
+      "saved field object resolution",
+      "savedReferences helper argument",
+    ],
+    reason: "savedFieldObject reference resolution",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/saved-field-object/segment-appliers.ts",
+    signals: ["saved field object resolution"],
+    reason: "savedFieldObject field and continuous application",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "forEachSavedTarget source selection consumer",
+  },
+];
 
 const findSourceFiles = async (path: string): Promise<string[]> => {
   const entries = await readdir(`${repoRoot}/${path}`, { withFileTypes: true });
@@ -247,6 +361,35 @@ const findSourceFiles = async (path: string): Promise<string[]> => {
 const sourcePath = (path: string) =>
   relative(repoRoot, `${repoRoot}/${path}`).replaceAll("\\", "/");
 
+const matchedSignals = (
+  source: string,
+  signals: readonly { label: string; pattern: RegExp }[],
+): string[] =>
+  signals
+    .filter((signal) => signal.pattern.test(source))
+    .map((signal) => signal.label);
+
+const assertExpectedDoorSignals = (
+  observed: Map<string, readonly string[]>,
+  expected: readonly ExpectedDoor[],
+) => {
+  assert.deepEqual(
+    [...observed.keys()].sort(),
+    expected.map((door) => door.path).sort(),
+  );
+
+  for (const door of expected) {
+    const actualSignals = observed.get(door.path) ?? [];
+    for (const signal of door.signals) {
+      assert.equal(
+        actualSignals.includes(signal),
+        true,
+        `${door.path} must match ${signal}: ${door.reason}`,
+      );
+    }
+  }
+};
+
 test("saved-result contract inventory names every current saved-reference kind", async () => {
   const effectsSource = await readFile(
     new URL("../../../types/src/effects.ts", import.meta.url),
@@ -265,44 +408,33 @@ test("saved-result contract inventory names every current saved-reference kind",
 });
 
 test("saved-result contract inventory has explicit writer coverage", async () => {
-  const observed = new Set<string>();
+  const observed = new Map<string, readonly string[]>();
   const files = (await Promise.all(scanRoots.map(findSourceFiles))).flat();
 
   for (const path of files) {
     const source = await readFile(`${repoRoot}/${path}`, "utf8");
-    if (
-      source.includes("saveReference(") ||
-      source.includes("savedReferences:") ||
-      source.includes('kind: "selectedCards"') ||
-      source.includes('kind: "selectedTargets"') ||
-      source.includes('kind: "paidCost"') ||
-      source.includes('kind: "producedObjects"') ||
-      source.includes('kind: "chosenNumber"')
-    ) {
-      observed.add(sourcePath(path));
+    const signals = matchedSignals(source, writerSignals);
+    if (signals.length > 0) {
+      observed.set(sourcePath(path), signals);
     }
   }
 
-  assert.deepEqual([...observed].sort(), knownSavedReferenceWriters);
+  assertExpectedDoorSignals(observed, knownSavedReferenceWriters);
 });
 
 test("saved-result contract inventory has explicit reader coverage", async () => {
-  const observed = new Set<string>();
+  const observed = new Map<string, readonly string[]>();
   const files = (await Promise.all(scanRoots.map(findSourceFiles))).flat();
 
   for (const path of files) {
     const source = await readFile(`${repoRoot}/${path}`, "utf8");
-    if (
-      source.includes("ledgers.savedReferences[") ||
-      source.includes("frame.savedReferences[") ||
-      source.includes(".savedReferences[") ||
-      source.includes("savedReferences[")
-    ) {
-      observed.add(sourcePath(path));
+    const signals = matchedSignals(source, readerSignals);
+    if (signals.length > 0) {
+      observed.set(sourcePath(path), signals);
     }
   }
 
-  assert.deepEqual([...observed].sort(), knownSavedReferenceReaders);
+  assertExpectedDoorSignals(observed, knownSavedReferenceReaders);
 });
 ```
 
@@ -428,8 +560,17 @@ Add tests for:
 - costArea DON `selectTargets` -> `attachSelectedDon`
 - costArea DON `selectTargets` -> savedFieldObject target using the same save id
 - revealTop selectedCards/set -> `selectFromSet` -> `playSelected`
+- hand `selectCards` -> `activateSelectedEvent`
+- hand `selectCards` -> `revealSelected`
+- selectedCards:set -> `revealSelected`
+- hand `selectCards` -> selected-to-hand helper
+- hand `selectCards` -> selected-hand-to-life helper
+- trash `selectCards` -> selected-trash-to-life helper
+- selectedCards:set -> selected-to-life helper
 - hand selectedCards -> `attachSelectedDon` is rejected
 - DON selectedCards -> hand `moveSelected` is rejected
+- trash selectedCards -> selected-hand-to-life helper is rejected
+- hand selectedCards -> selected-trash-to-life helper is rejected
 - missing selectedCards reference -> rejected
 
 The cost-area DON `selectTargets` test is required because that saved id has two static capabilities: `selectedTargets` and `selectedCards:don`.
