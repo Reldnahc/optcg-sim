@@ -15,6 +15,7 @@ import {
   getPendingDecisionInteractionMode,
   isDecisionModalSuppressed,
   optionalCardCostActionForSelection,
+  optionalCardCostAttachmentTargetInstanceIds,
   optionalCardCostGroupForActionIndex,
   optionalCardCostInstanceIds,
   quickPayActivateMainCostActionIndex,
@@ -242,7 +243,13 @@ export const createMatchClientDecisionModel = ({
       : activeCounterTargetChoice !== undefined
         ? counterTargetInstanceIds(activeCounterTargetChoice)
         : activeCardCostGroup
-          ? optionalCardCostInstanceIds(activeCardCostGroup)
+          ? activeCardCostGroup.operation === "attachDon" &&
+            activeCardCostSelectedInstanceIds.length > 0
+            ? optionalCardCostAttachmentTargetInstanceIds(
+                activeCardCostGroup,
+                activeCardCostSelectedInstanceIds,
+              )
+            : optionalCardCostInstanceIds(activeCardCostGroup)
           : pendingDecisionInteractionMode === "zoneClick" &&
               pendingDecision !== undefined
             ? decisionCandidateInstanceIds(pendingDecision)

@@ -17,6 +17,7 @@ import {
   cardCostGroupRequiresManualConfirm,
   cardCostPaymentLabel,
   optionalCardCostActionForSelection,
+  optionalCardCostAttachmentTargetInstanceIds,
   optionalCardCostActionForInstance,
   optionalCardCostInstanceIds,
   createOptionalCardCostChoice,
@@ -314,13 +315,27 @@ describe("optional card-cost interaction", () => {
       requiredCount: 1,
       source: { zone: "costArea" },
       cardActions: [
-        { instanceIds: ["opponent-rested-don"], actionIndex: 2 },
-        { instanceIds: ["opponent-rested-don"], actionIndex: 3 },
+        {
+          instanceIds: ["opponent-rested-don"],
+          actionIndex: 2,
+          targetInstanceId: "opponent-character",
+        },
+        {
+          instanceIds: ["opponent-rested-don"],
+          actionIndex: 3,
+          targetInstanceId: "opponent-leader",
+        },
       ],
     });
     assert.deepEqual(optionalCardCostInstanceIds(group), [
       "opponent-rested-don",
     ]);
+    assert.deepEqual(
+      optionalCardCostAttachmentTargetInstanceIds(group, [
+        "opponent-rested-don",
+      ]),
+      ["opponent-character", "opponent-leader"],
+    );
   });
 
   test("collapses reveal-from-hand payments into one selectable hand group", () => {

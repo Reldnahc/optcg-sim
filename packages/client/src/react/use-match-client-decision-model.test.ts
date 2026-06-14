@@ -164,4 +164,47 @@ describe("match client decision model", () => {
     assert.deepEqual(model.pendingChoiceInstanceIds, ["opponent-rested-don"]);
     assert.equal(model.decisionPrompt, "Choose DON!! to attach");
   });
+
+  test("attach-DON pay costs highlight legal targets after selecting DON", () => {
+    const snapshot = playerSnapshot();
+    snapshot.view.opponent.costArea = [
+      {
+        ...card("opponent-rested-don", "DON", "costArea", p2),
+        state: "rested",
+      },
+    ];
+    snapshot.view.opponent.characters = [
+      card("opponent-character", "OP01-003", "characterArea", p2),
+    ];
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: "opponent-character" as InstanceId,
+        },
+      },
+    ];
+
+    const model = createMatchClientDecisionModel({
+      clientState: undefined,
+      playerSnapshot: snapshot,
+      pendingDecision: payCostDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: ["opponent-rested-don"],
+      decisionDraft: undefined,
+    });
+
+    assert.deepEqual(model.pendingChoiceInstanceIds, ["opponent-character"]);
+  });
 });

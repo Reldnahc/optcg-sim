@@ -19,6 +19,7 @@ export interface OptionalCardCostGroup {
   cardActions: Array<{
     instanceIds: string[];
     actionIndex: number;
+    targetInstanceId?: string | undefined;
     selectedCards?: CardCostPayment["selectedCards"] | undefined;
   }>;
 }
@@ -69,6 +70,7 @@ export const createOptionalCardCostChoice = (
       cardActions: Array<{
         instanceIds: string[];
         actionIndex: number;
+        targetInstanceId?: string | undefined;
         selectedCards?: CardCostPayment["selectedCards"] | undefined;
       }>;
     }
@@ -86,6 +88,7 @@ export const createOptionalCardCostChoice = (
       current.cardActions.push({
         instanceIds: [String(action.attachment.donInstanceId)],
         actionIndex: action.index,
+        targetInstanceId: String(action.attachment.targetInstanceId),
       });
       groupedActions.set(groupKey, current);
       continue;
@@ -207,6 +210,34 @@ export const optionalCardCostInstanceIds = (
   choice === undefined
     ? []
     : [...new Set(choice.cardActions.flatMap((action) => action.instanceIds))];
+
+export const optionalCardCostAttachmentTargetInstanceIds = (
+  choice: OptionalCardCostGroup | undefined,
+  selectedDonInstanceIds: readonly string[],
+): string[] => {
+  if (
+    choice === undefined ||
+    choice.operation !== "attachDon" ||
+    selectedDonInstanceIds.length === 0
+  ) {
+    return [];
+  }
+  const selected = [...selectedDonInstanceIds].map(String).sort();
+  return [
+    ...new Set(
+      choice.cardActions.flatMap((action) => {
+        if (action.targetInstanceId === undefined) {
+          return [];
+        }
+        const candidate = [...action.instanceIds].map(String).sort();
+        return candidate.length === selected.length &&
+          candidate.every((instanceId, index) => instanceId === selected[index])
+          ? [action.targetInstanceId]
+          : [];
+      }),
+    ),
+  ];
+};
 
 export const cardCostGroupRequiresManualConfirm = (
   group: Pick<OptionalCardCostGroup, "operation" | "source">,
