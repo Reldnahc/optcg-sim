@@ -132,6 +132,29 @@ const chooseBestVisibleDecisionAction = (
     evaluated.filter(({ action }) => action.type === "respondToDecision"),
   );
 
+const chooseCounterStepPass = (
+  decision: BotPendingDecision | undefined,
+  battleStep: string | undefined,
+  evaluated: readonly EvaluatedBotAction[],
+): BotActionChoice | undefined => {
+  if (
+    decision === undefined ||
+    !isCounterStepPassDecision(decision, battleStep)
+  ) {
+    return undefined;
+  }
+  const counterAction = chooseBestAction(
+    evaluated.filter(({ action }) => action.type === "useCounter"),
+  );
+  return counterAction === undefined
+    ? {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "cards", cards: [] },
+      }
+    : { type: "submitAction", actionIndex: counterAction.index };
+};
+
 export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
@@ -144,6 +167,14 @@ export const createBotStrategy = (
     const player = snapshot.players[botPlayerId];
     const pendingDecision = player?.view.pendingDecision;
     const battleStep = player?.view.battle?.step;
+    const counterStepPass = chooseCounterStepPass(
+      pendingDecision,
+      battleStep,
+      evaluated,
+    );
+    if (counterStepPass !== undefined) {
+      return counterStepPass;
+    }
     if (
       pendingDecision?.playerId === botPlayerId &&
       shouldPreferVisibleDecisionAction(pendingDecision, battleStep)

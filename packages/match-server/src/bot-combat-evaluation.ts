@@ -198,6 +198,26 @@ const isLethalBattleDamage = (
   return view.self.life.count < battle.damageCount;
 };
 
+const counterPowerForAction = ({
+  action,
+  relatedCards,
+}: BotActionContext): number => {
+  const counterCardId = action.counter?.cardInstanceId;
+  return counterCardId === undefined
+    ? 0
+    : (relatedCards.find((card) => card.instanceId === counterCardId)
+        ?.printedCounter ?? 0);
+};
+
+const visibleCounterPower = ({
+  snapshot,
+  botPlayerId,
+}: BotActionContext): number =>
+  snapshot.players[botPlayerId]?.view.self.hand.reduce(
+    (total, card) => total + (card.printedCounter ?? 0),
+    0,
+  ) ?? 0;
+
 export const scoreLeaderLethalAttack = ({
   snapshot,
   botPlayerId,
@@ -382,15 +402,24 @@ const scoreCounterAction = ({
   ) {
     return undefined;
   }
+  const counterNeeded = attackerPower - targetPower + 1_000;
+  const counterValue = counterPowerForAction({
+    snapshot,
+    botPlayerId,
+    action,
+    relatedCards,
+  });
+  if (
+    counterValue <= 0 ||
+    visibleCounterPower({ snapshot, botPlayerId, action, relatedCards }) <
+      counterNeeded
+  ) {
+    return undefined;
+  }
   if (isLethalBattleDamage(snapshot, botPlayerId)) {
     return lethalDefenseScore;
   }
   if (isBattleTargetLeader(snapshot, botPlayerId)) {
-    const counterCardId = action.counter.cardInstanceId;
-    const counterValue =
-      relatedCards.find((card) => card.instanceId === counterCardId)
-        ?.printedCounter ?? 0;
-    const counterNeeded = attackerPower - targetPower + 1_000;
     const lifeCount = snapshot.players[botPlayerId]?.view.self.life.count ?? 0;
     if (lifeCount < 4 && counterValue >= counterNeeded) {
       const lifePressurePenalty = lifeCount <= 2 ? 0 : 12;
