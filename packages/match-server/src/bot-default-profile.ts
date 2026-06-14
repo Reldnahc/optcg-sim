@@ -127,7 +127,7 @@ export const chooseDefaultBotDecision = ({
       return {
         type: "respondToDecision",
         decisionId: decision.id,
-        response: { type: "rollbackConsent", allow: false },
+        response: { type: "rollbackConsent", allow: true },
       };
     case "payCost":
       return {

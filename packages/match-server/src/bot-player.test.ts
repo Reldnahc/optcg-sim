@@ -110,6 +110,26 @@ describe("bot player", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("accepts rollback consent decisions", () => {
+    const snapshot = snapshotWithActions([]);
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:rollback:test" as DecisionId,
+      type: "rollbackConsent",
+      playerId: botId,
+      prompt: "Allow rollback?",
+      causedBy: { type: "ruleProcess", name: "test" },
+      presentation: { title: "Rollback", instruction: "Allow rollback?" },
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:rollback:test",
+      response: { type: "rollbackConsent", allow: true },
+    });
+  });
+
   test("plays cards before ending main phase", () => {
     const chosen = chooseBotAction(
       snapshotWithActions([
