@@ -353,6 +353,7 @@ const scoreCounterAction = ({
   snapshot,
   botPlayerId,
   action,
+  relatedCards,
 }: BotActionContext): number | undefined => {
   const battle = snapshot.players[botPlayerId]?.view.battle;
   if (
@@ -378,6 +379,22 @@ const scoreCounterAction = ({
   }
   if (isLethalBattleDamage(snapshot, botPlayerId)) {
     return lethalDefenseScore;
+  }
+  if (isBattleTargetLeader(snapshot, botPlayerId)) {
+    const counterCardId = action.counter.cardInstanceId;
+    const counterValue =
+      relatedCards.find((card) => card.instanceId === counterCardId)
+        ?.printedCounter ?? 0;
+    const counterNeeded = attackerPower - targetPower + 1_000;
+    const lifeCount = snapshot.players[botPlayerId]?.view.self.life.count ?? 0;
+    if (lifeCount < 4 && counterValue >= counterNeeded) {
+      const lifePressurePenalty = lifeCount <= 2 ? 0 : 12;
+      const overCounterPenalty =
+        Math.max(0, counterValue - counterNeeded) / 1_000;
+      return (
+        24 + lifePressurePenalty + counterValue / 1_000 + overCounterPenalty
+      );
+    }
   }
   const target = findCardRef(snapshot, botPlayerId, battle.currentTarget);
   if (
