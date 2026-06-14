@@ -8,10 +8,11 @@ type CardCostPayment = Extract<
   NonNullable<ClientActionModel["decisionPayment"]>,
   { kind: "cardCost" }
 >;
+type OptionalCardCostOperation = CardCostPayment["operation"] | "attachDon";
 
 export interface OptionalCardCostGroup {
   chooseActionIndex: number;
-  operation: CardCostPayment["operation"];
+  operation: OptionalCardCostOperation;
   chooseLabel: string;
   requiredCount: number;
   source?: CardCostPayment["source"] | undefined;
@@ -47,10 +48,11 @@ export const createOptionalCardCostChoice = (
       return false;
     }
     return !(
-      payment?.kind === "cardCost" &&
-      payment.selectedCardInstanceIds.length > 0 &&
-      (payment.selectedCardInstanceIds.length === 1 ||
-        payment.source !== undefined)
+      (payment?.kind === "cardCost" &&
+        payment.selectedCardInstanceIds.length > 0 &&
+        (payment.selectedCardInstanceIds.length === 1 ||
+          payment.source !== undefined)) ||
+      action.attachment !== undefined
     );
   });
   if (invalidPaymentAction) {
@@ -60,7 +62,7 @@ export const createOptionalCardCostChoice = (
   const groupedActions = new Map<
     string,
     {
-      operation: CardCostPayment["operation"];
+      operation: OptionalCardCostOperation;
       chooseLabel: string;
       requiredCount: number;
       source?: CardCostPayment["source"] | undefined;
@@ -72,6 +74,22 @@ export const createOptionalCardCostChoice = (
     }
   >();
   for (const action of actions) {
+    if (action.attachment !== undefined) {
+      const groupKey = "attachDon:attachment";
+      const current = groupedActions.get(groupKey) ?? {
+        operation: "attachDon" as const,
+        chooseLabel: "Choose DON!! to attach",
+        requiredCount: 1,
+        source: { zone: "costArea" as const },
+        cardActions: [],
+      };
+      current.cardActions.push({
+        instanceIds: [String(action.attachment.donInstanceId)],
+        actionIndex: action.index,
+      });
+      groupedActions.set(groupKey, current);
+      continue;
+    }
     const payment = action.decisionPayment;
     if (payment?.kind !== "cardCost") {
       continue;
@@ -398,6 +416,8 @@ export const cardCostPaymentLabel = (
       return group.chooseLabel;
     case "returnDon":
       return `Return ${countLabel(count, "DON!!", "DON!!")}`;
+    case "attachDon":
+      return `Attach ${countLabel(count, "DON!!", "DON!!")}`;
     case "reveal":
       if (group.source?.zone === "hand") {
         return `Reveal ${countLabel(count, "card", "cards")} from hand`;

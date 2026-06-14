@@ -73,6 +73,7 @@ export interface ClientActionModel {
   decisionPayment?: ClientVisibleAction["decisionPayment"];
   attack?: ClientVisibleAction["attack"];
   counter?: ClientVisibleAction["counter"];
+  attachment?: ClientVisibleAction["attachment"];
 }
 
 export interface StatusBannerModel {

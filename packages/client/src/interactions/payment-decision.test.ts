@@ -275,6 +275,54 @@ describe("optional card-cost interaction", () => {
     });
   });
 
+  test("collapses attach-DON payment actions into one cost-area selectable group", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: "opponent-character" as InstanceId,
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Attach DON!!",
+        attachment: {
+          donInstanceId: "opponent-rested-don" as InstanceId,
+          targetInstanceId: "opponent-leader" as InstanceId,
+        },
+      },
+    ];
+
+    const group = autoOptionalCardCostGroup(
+      createOptionalCardCostChoice(payCostDecision, actions),
+    );
+
+    assert.deepEqual(group, {
+      chooseActionIndex: -5,
+      operation: "attachDon",
+      chooseLabel: "Choose DON!! to attach",
+      requiredCount: 1,
+      source: { zone: "costArea" },
+      cardActions: [
+        { instanceIds: ["opponent-rested-don"], actionIndex: 2 },
+        { instanceIds: ["opponent-rested-don"], actionIndex: 3 },
+      ],
+    });
+    assert.deepEqual(optionalCardCostInstanceIds(group), [
+      "opponent-rested-don",
+    ]);
+  });
+
   test("collapses reveal-from-hand payments into one selectable hand group", () => {
     const source = { zone: "hand" as Zone, playerId: "p1" as PlayerId };
     const actions: readonly ClientActionModel[] = [

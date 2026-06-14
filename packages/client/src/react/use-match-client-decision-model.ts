@@ -136,6 +136,9 @@ export const createMatchClientDecisionModel = ({
             ...(action.decisionPayment === undefined
               ? {}
               : { decisionPayment: action.decisionPayment }),
+            ...(action.attachment === undefined
+              ? {}
+              : { attachment: action.attachment }),
           }));
   const optionalCardCostChoice =
     pendingDecision === undefined

@@ -115,6 +115,29 @@ export const useMatchClientCardSelection = ({
         }
       }
       if (activeCardCostGroup !== undefined) {
+        if (
+          activeCardCostGroup.operation === "attachDon" &&
+          selectedDonInstanceIds.length > 0 &&
+          hasSelectedDonAttachmentTargetAction(
+            selectedDonInstanceIds,
+            playerActions,
+            instanceId,
+          )
+        ) {
+          const intent = selectedDonAttachmentClickIntent({
+            confirmAttachDon,
+            selectedDonInstanceIds,
+            targetInstanceId: instanceId,
+          });
+          if (intent?.type === "attach") {
+            void attachSelectedDonToTarget(intent.targetInstanceId);
+            return;
+          }
+          if (intent?.type === "confirm") {
+            setSelectedCardInstanceId(intent.targetInstanceId);
+          }
+          return;
+        }
         const selectableInstanceIds =
           optionalCardCostInstanceIds(activeCardCostGroup);
         const progress = progressClickSelection({
@@ -132,10 +155,15 @@ export const useMatchClientCardSelection = ({
           return;
         }
         setSelectedCardInstanceId(undefined);
-        setSelectedDonInstanceIds([]);
+        setSelectedDonInstanceIds(
+          activeCardCostGroup.operation === "attachDon"
+            ? progress.selectedInstanceIds
+            : [],
+        );
         setActiveCardCostSelectedInstanceIds(progress.selectedInstanceIds);
         if (
           progress.complete &&
+          activeCardCostGroup.operation !== "attachDon" &&
           !cardCostGroupRequiresManualConfirm(activeCardCostGroup)
         ) {
           const actionIndex = optionalCardCostActionForSelection(
