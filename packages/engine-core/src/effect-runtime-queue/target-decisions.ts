@@ -247,6 +247,30 @@ const targetRequestsEqual = (
   right: TargetRequest | MultiZoneTargetRequest,
 ): boolean => JSON.stringify(left) === JSON.stringify(right);
 
+const resolveTargetDecisionEffectBlock = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  resolveImplementedDslEffectDefinition: ResolveImplementedDslEffectDefinition,
+): EffectDefinition["effects"][number] | undefined => {
+  if (entry.effectBlockOverride !== undefined) {
+    return entry.effectBlockOverride;
+  }
+  const resolved = state.cardManifest.cards[entry.source.cardId];
+  if (resolved === undefined) {
+    return undefined;
+  }
+  const lookup = resolveImplementedDslEffectDefinition(
+    resolved,
+    state.cardManifest,
+  );
+  if (!lookup.ok) {
+    return undefined;
+  }
+  return lookup.definition.effects.find(
+    (effect) => effect.id === entry.effectBlockId,
+  );
+};
+
 export const isUnsupportedSelectTargetsDecision = (
   state: GameState,
   decision: SelectTargetsDecision,
@@ -262,30 +286,30 @@ export const isUnsupportedSelectTargetsDecision = (
   if (entry === undefined) {
     return false;
   }
-  const resolved = state.cardManifest.cards[entry.source.cardId];
-  if (resolved === undefined) {
-    return false;
-  }
-  const lookup = resolveImplementedDslEffectDefinition(
-    resolved,
-    state.cardManifest,
+  const match = resolveTargetDecisionEffectBlock(
+    state,
+    entry,
+    resolveImplementedDslEffectDefinition,
   );
-  if (!lookup.ok) {
-    return resolved.support.status === "unsupported";
+  if (match === undefined) {
+    const resolved = state.cardManifest.cards[entry.source.cardId];
+    if (resolved === undefined || entry.effectBlockOverride !== undefined) {
+      return false;
+    }
+    const lookup = resolveImplementedDslEffectDefinition(
+      resolved,
+      state.cardManifest,
+    );
+    return !lookup.ok && resolved.support.status === "unsupported";
   }
-  const match = lookup.definition.effects.find(
-    (effect) => effect.id === entry.effectBlockId,
-  );
-  const request =
-    match === undefined ? undefined : targetRequestForEffect(match.effect);
+  const request = targetRequestForEffect(match.effect);
   return (
-    match !== undefined &&
-    (match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
-      !canResolveTargetRequestForEntry(match, entry) ||
-      (!isSupportedTargetChoiceEffectShape(match, entry) &&
-        !isSupportedTargetChoiceContinuousShape(match, entry)) ||
-      request === undefined ||
-      !targetRequestsEqual(request, decision.request))
+    match.sourcePresencePolicy !== entry.sourcePresencePolicy ||
+    !canResolveTargetRequestForEntry(match, entry) ||
+    (!isSupportedTargetChoiceEffectShape(match, entry) &&
+      !isSupportedTargetChoiceContinuousShape(match, entry)) ||
+    request === undefined ||
+    !targetRequestsEqual(request, decision.request)
   );
 };
 
@@ -310,19 +334,10 @@ export const createEffectRuntimeQueueTargetDecisions = (
     state: GameState,
     entry: EffectQueueEntry,
   ): TargetRequest | MultiZoneTargetRequest | undefined => {
-    const resolved = state.cardManifest.cards[entry.source.cardId];
-    if (resolved === undefined) {
-      return undefined;
-    }
-    const lookup = dependencies.resolveImplementedDslEffectDefinition(
-      resolved,
-      state.cardManifest,
-    );
-    if (!lookup.ok) {
-      return undefined;
-    }
-    const match = lookup.definition.effects.find(
-      (effect) => effect.id === entry.effectBlockId,
+    const match = resolveTargetDecisionEffectBlock(
+      state,
+      entry,
+      dependencies.resolveImplementedDslEffectDefinition,
     );
     if (
       match === undefined ||
@@ -360,19 +375,10 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (entry === undefined) {
       return { ok: false };
     }
-    const resolved = state.cardManifest.cards[entry.source.cardId];
-    if (resolved === undefined) {
-      return { ok: false };
-    }
-    const lookup = dependencies.resolveImplementedDslEffectDefinition(
-      resolved,
-      state.cardManifest,
-    );
-    if (!lookup.ok) {
-      return { ok: false };
-    }
-    const match = lookup.definition.effects.find(
-      (effect) => effect.id === entry.effectBlockId,
+    const match = resolveTargetDecisionEffectBlock(
+      state,
+      entry,
+      dependencies.resolveImplementedDslEffectDefinition,
     );
     const request =
       match === undefined ? undefined : targetRequestForEffect(match.effect);
