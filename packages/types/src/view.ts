@@ -55,6 +55,7 @@ export interface PublicCardView {
   currentPower?: number;
   printedCost?: number;
   currentCost?: number;
+  printedCounter?: number;
   keywords?: Keyword[];
   restrictions?: string[];
 }

@@ -1,4 +1,3 @@
-import type { DevVisibleAction } from "./dev-snapshot-types.js";
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import {
   cardPower,
@@ -9,11 +8,38 @@ import { chooseDefaultBotDecision } from "./bot-default-profile.js";
 import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import type {
   BotActionChoice,
+  BotActionContext,
   BotBehaviorProfile,
   BotStrategy,
 } from "./bot-types.js";
 
-const baseActionPriority = (action: DevVisibleAction): number => {
+const actionPlacementCard = ({
+  action,
+  relatedCards,
+}: Pick<BotActionContext, "action" | "relatedCards">) => {
+  const placementId = action.placement?.instanceId;
+  return placementId === undefined
+    ? undefined
+    : relatedCards.find((card) => card.instanceId === placementId);
+};
+
+const playCardCounterPenalty = (
+  context: Pick<BotActionContext, "action" | "relatedCards">,
+): number => {
+  const counter = actionPlacementCard(context)?.printedCounter ?? 0;
+  if (counter >= 2_000) {
+    return 45;
+  }
+  if (counter >= 1_000) {
+    return 15;
+  }
+  return 0;
+};
+
+const baseActionPriority = (
+  context: Pick<BotActionContext, "action" | "relatedCards">,
+): number => {
+  const { action } = context;
   if (
     action.type === "respondToDecision" &&
     action.decisionPayment?.kind === "cardCost"
@@ -27,7 +53,7 @@ const baseActionPriority = (action: DevVisibleAction): number => {
     return 0;
   }
   if (action.type === "activateEffect") return 10;
-  if (action.type === "playCard") return 20;
+  if (action.type === "playCard") return 20 + playCardCounterPenalty(context);
   if (action.type === "attachDon") return 30;
   if (action.type === "declareAttack") return 40;
   if (action.type === "advanceToMainPhase") return 50;
@@ -66,14 +92,14 @@ const defaultActionAllowed = ({
 };
 
 const mergedScore = (
-  action: DevVisibleAction,
+  context: Pick<BotActionContext, "action" | "relatedCards">,
   scores: readonly (number | undefined)[],
 ): number => {
   const numericScores = scores.filter(
     (score): score is number => typeof score === "number",
   );
   return numericScores.length === 0
-    ? baseActionPriority(action)
+    ? baseActionPriority(context)
     : Math.min(...numericScores);
 };
 
@@ -141,7 +167,7 @@ export const createBotStrategy = (
       return [
         {
           action,
-          score: mergedScore(action, [
+          score: mergedScore(context, [
             combatScore,
             profileScore,
             ...numericCardScores,

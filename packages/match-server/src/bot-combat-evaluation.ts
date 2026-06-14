@@ -309,6 +309,46 @@ const scoreAttachDonForLethal = ({
   return lethalSetupBaseScore - boostedCardsToStop;
 };
 
+const scoreAttachDonForLeaderPressure = ({
+  snapshot,
+  botPlayerId,
+  action,
+}: BotActionContext): number | undefined => {
+  const attachment = action.attachment;
+  const opponent = snapshot.players[botPlayerId]?.view.opponent;
+  if (
+    action.type !== "attachDon" ||
+    attachment === undefined ||
+    opponent === undefined ||
+    !canAttackLeaderWithBoostedCard(
+      snapshot,
+      botPlayerId,
+      String(attachment.targetInstanceId),
+    )
+  ) {
+    return undefined;
+  }
+  const target = findVisibleCard(
+    snapshot,
+    botPlayerId,
+    attachment.targetInstanceId,
+  );
+  const targetPower = cardPower(target);
+  const leaderPower = cardPower(opponent.leader);
+  if (targetPower === undefined || leaderPower === undefined) {
+    return undefined;
+  }
+  const boostedPower = targetPower + 1_000;
+  if (boostedPower < leaderPower) {
+    return undefined;
+  }
+  const pressureBonus = Math.min(
+    4,
+    Math.max(1, Math.ceil((boostedPower - leaderPower) / 1_000)),
+  );
+  return 18 - pressureBonus;
+};
+
 const scoreCounterAction = ({
   snapshot,
   botPlayerId,
@@ -354,6 +394,7 @@ export const scoreCombatAction = (
 ): number | undefined =>
   scoreLeaderLethalAttack(context) ??
   scoreAttachDonForLethal(context) ??
+  scoreAttachDonForLeaderPressure(context) ??
   scoreCounterAction(context) ??
   scoreCharacterAttack(context);
 

@@ -17,17 +17,24 @@ export interface ComputedBoardCardStats {
   restrictions?: readonly string[];
 }
 
-export const toPublicCardView = (card: CardInstance): PublicCardView => ({
-  instanceId: card.instanceId,
-  cardId: card.cardId,
-  owner: card.owner,
-  controller: card.controller,
-  zone: card.zone,
-  attachedDonCount: card.attachedDon.length,
-  attachedDonIds: [...card.attachedDon],
-  ...(card.state === undefined ? {} : { state: card.state }),
-  ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
-});
+export const toPublicCardView = (
+  card: CardInstance,
+  state?: GameState,
+): PublicCardView => {
+  const printedCounter = state?.cardManifest.cards[card.cardId]?.counter;
+  return {
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    owner: card.owner,
+    controller: card.controller,
+    zone: card.zone,
+    attachedDonCount: card.attachedDon.length,
+    attachedDonIds: [...card.attachedDon],
+    ...(card.state === undefined ? {} : { state: card.state }),
+    ...(card.turnPlayed === undefined ? {} : { turnPlayed: card.turnPlayed }),
+    ...(printedCounter === undefined ? {} : { printedCounter }),
+  };
+};
 
 export const toBoardPublicCardView = (
   card: CardInstance,
@@ -41,7 +48,7 @@ export const toBoardPublicCardView = (
   const printedPower = metadata?.power;
   const printedCost = metadata?.cost;
   return {
-    ...toPublicCardView(card),
+    ...toPublicCardView(card, state),
     ...(printedPower === undefined ? {} : { printedPower }),
     ...(computedStats?.currentPower === undefined
       ? {}

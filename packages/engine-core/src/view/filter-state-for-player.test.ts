@@ -196,6 +196,22 @@ test("ignores unsupported continuous modifier shapes when deriving board stats",
   assert.equal(view.self.leader.currentPower, 5000);
 });
 
+test("includes printed counter value on visible hand cards", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const handCard = must(p1State.hand[0], "p1 hand");
+  state.cardManifest.cards[handCard.cardId] = resolvedCard({
+    cardId: handCard.cardId,
+    category: "character",
+    power: 3000,
+    counter: 2000,
+  });
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.self.hand[0]?.printedCounter, 2000);
+});
+
 test("shows pending decision only to the recipient with public shape", () => {
   const setup = createInitialState(createInput());
   const withDecision = startMulliganFlow(setup).state;

@@ -59,7 +59,7 @@ const toVisiblePlayerState = (
     ...(revealPrivateZones
       ? { donDeck: player.donDeck.map((card) => toPublicCardView(card)) }
       : {}),
-    hand: player.hand.map((card) => toPublicCardView(card)),
+    hand: player.hand.map((card) => toPublicCardView(card, state)),
     trash: player.trash.map((card) => toPublicCardView(card)),
     leader: toBoardPublicCardView(
       player.leader,
@@ -101,7 +101,7 @@ const toOpponentVisibleState = (
       : {}),
     handCount: player.hand.length,
     ...(revealPrivateZones
-      ? { hand: player.hand.map((card) => toPublicCardView(card)) }
+      ? { hand: player.hand.map((card) => toPublicCardView(card, state)) }
       : {}),
     trash: player.trash.map((card) => toPublicCardView(card)),
     leader: toBoardPublicCardView(
