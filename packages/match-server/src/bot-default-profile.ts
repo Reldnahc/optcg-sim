@@ -76,7 +76,11 @@ export const chooseDefaultBotDecision = ({
     case "chooseTriggerOrder": {
       const triggerId = decision.choices[0]?.triggerId;
       return triggerId === undefined
-        ? undefined
+        ? {
+            type: "respondToDecision",
+            decisionId: decision.id,
+            response: { type: "orderedIds", ids: [] },
+          }
         : {
             type: "respondToDecision",
             decisionId: decision.id,
@@ -126,6 +130,10 @@ export const chooseDefaultBotDecision = ({
         response: { type: "rollbackConsent", allow: false },
       };
     case "payCost":
-      return undefined;
+      return {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "paymentDeclined" },
+      };
   }
 };

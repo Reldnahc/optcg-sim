@@ -134,6 +134,35 @@ const isCounterStepPassDecision = (
   decision.min === 0 &&
   decision.max === 0;
 
+const shouldPreferVisibleDecisionAction = (
+  decision: BotPendingDecision | undefined,
+  battleStep: string | undefined,
+): boolean => {
+  if (
+    decision === undefined ||
+    isCounterStepPassDecision(decision, battleStep)
+  ) {
+    return false;
+  }
+  switch (decision.type) {
+    case "payCost":
+    case "mulligan":
+    case "chooseEffectOption":
+    case "chooseReplacement":
+      return true;
+    case "chooseQuantity":
+    case "selectCards":
+    case "selectTargets":
+    case "orderCards":
+    case "chooseTriggerOrder":
+    case "confirmLifeTrigger":
+    case "chooseOptionalActivation":
+    case "declareLoopCount":
+    case "rollbackConsent":
+      return false;
+  }
+};
+
 const choosePendingDecision = ({
   snapshot,
   botPlayerId,
@@ -158,10 +187,85 @@ const choosePendingDecision = ({
   );
 };
 
+type ScoredBotAction = {
+  readonly action: BotActionContext["action"];
+  readonly score: number;
+};
+
+const scoredVisibleActions = ({
+  snapshot,
+  botPlayerId,
+  profile,
+}: Parameters<BotStrategy["chooseAction"]>[0] & {
+  readonly profile: BotBehaviorProfile;
+}): readonly ScoredBotAction[] => {
+  const actions = snapshot.players[botPlayerId]?.actions ?? [];
+  return actions.flatMap((action) => {
+    const context = {
+      snapshot,
+      botPlayerId,
+      action,
+      relatedCards: relatedCardsForAction(snapshot, botPlayerId, action),
+    };
+    if (!defaultActionAllowed(context)) {
+      return [];
+    }
+    const combatScore = scoreCombatAction(context);
+    const profileScore = profile.scoreAction?.(context);
+    if (profileScore === false) {
+      return [];
+    }
+    const cardScores = context.relatedCards.map((card) =>
+      profile.cardBehaviors?.[String(card.cardId)]?.scoreAction?.(context),
+    );
+    if (cardScores.some((score) => score === false)) {
+      return [];
+    }
+    const numericCardScores = cardScores.filter(
+      (score): score is number => typeof score === "number",
+    );
+    return [
+      {
+        action,
+        score: mergedScore(context, [
+          combatScore,
+          profileScore,
+          ...numericCardScores,
+        ]),
+      },
+    ];
+  });
+};
+
+const chooseBestAction = (
+  scored: readonly ScoredBotAction[],
+): BotActionContext["action"] | undefined =>
+  [...scored].sort((left, right) => left.score - right.score)[0]?.action;
+
+const chooseBestVisibleDecisionAction = (
+  scored: readonly ScoredBotAction[],
+): BotActionContext["action"] | undefined =>
+  chooseBestAction(
+    scored.filter(({ action }) => action.type === "respondToDecision"),
+  );
+
 export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
   chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const scored = scoredVisibleActions({ snapshot, botPlayerId, profile });
+    const player = snapshot.players[botPlayerId];
+    const pendingDecision = player?.view.pendingDecision;
+    const battleStep = player?.view.battle?.step;
+    if (
+      pendingDecision?.playerId === botPlayerId &&
+      shouldPreferVisibleDecisionAction(pendingDecision, battleStep)
+    ) {
+      const decisionAction = chooseBestVisibleDecisionAction(scored);
+      if (decisionAction !== undefined) {
+        return { type: "submitAction", actionIndex: decisionAction.index };
+      }
+    }
     const pendingDecisionChoice = choosePendingDecision({
       snapshot,
       botPlayerId,
@@ -170,44 +274,7 @@ export const createBotStrategy = (
     if (pendingDecisionChoice !== undefined) {
       return pendingDecisionChoice;
     }
-    const actions = snapshot.players[botPlayerId]?.actions ?? [];
-    const scored = actions.flatMap((action) => {
-      const context = {
-        snapshot,
-        botPlayerId,
-        action,
-        relatedCards: relatedCardsForAction(snapshot, botPlayerId, action),
-      };
-      if (!defaultActionAllowed(context)) {
-        return [];
-      }
-      const combatScore = scoreCombatAction(context);
-      const profileScore = profile.scoreAction?.(context);
-      if (profileScore === false) {
-        return [];
-      }
-      const cardScores = context.relatedCards.map((card) =>
-        profile.cardBehaviors?.[String(card.cardId)]?.scoreAction?.(context),
-      );
-      if (cardScores.some((score) => score === false)) {
-        return [];
-      }
-      const numericCardScores = cardScores.filter(
-        (score): score is number => typeof score === "number",
-      );
-      return [
-        {
-          action,
-          score: mergedScore(context, [
-            combatScore,
-            profileScore,
-            ...numericCardScores,
-          ]),
-        },
-      ];
-    });
-    const chosen = scored.sort((left, right) => left.score - right.score)[0]
-      ?.action;
+    const chosen = chooseBestAction(scored);
     if (chosen !== undefined) {
       return { type: "submitAction", actionIndex: chosen.index };
     }
