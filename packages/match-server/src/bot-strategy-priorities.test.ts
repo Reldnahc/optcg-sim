@@ -194,6 +194,110 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
   });
 
+  test("removes a high-value character before playing a setup searcher", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play searcher",
+            placement: { instanceId: "searcher-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack character",
+            attack: {
+              attackerInstanceId: "bot-character" as InstanceId,
+              targetInstanceId: "opponent-threat" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "searcher-card" as InstanceId,
+              cardId: "OP09-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+              printedCost: 1,
+              printedPower: 2000,
+              printedCounter: 1000,
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "bot-character" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "characterArea" },
+              currentPower: 8000,
+            },
+          ],
+          opponentCharacters: [
+            {
+              instanceId: "opponent-threat" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              zone: { playerId: "p1" as PlayerId, zone: "characterArea" },
+              currentPower: 8000,
+              printedCost: 8,
+            },
+          ],
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("attaches DON for a meaningful leader swing before playing a setup searcher", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play searcher",
+            placement: { instanceId: "searcher-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to leader",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "bot-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "searcher-card" as InstanceId,
+              cardId: "OP09-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+              printedCost: 1,
+              printedPower: 2000,
+              printedCounter: 1000,
+            },
+          ],
+          selfLeader: { currentPower: 5000 },
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 6000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
   test("attacks before playing a high-counter card", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(

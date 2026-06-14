@@ -192,6 +192,27 @@ type ScoredBotAction = {
   readonly score: number;
 };
 
+const lethalPlanScoreThreshold = -800;
+const highValueCharacterTargetThreshold = 8_000;
+
+const visibleCardValue = (card: BotActionContext["relatedCards"][number]) => {
+  const power = cardPower(card) ?? 0;
+  const cost = card.currentCost ?? card.printedCost ?? 0;
+  const blockerBonus = card.keywords?.includes("blocker") === true ? 2_000 : 0;
+  return power + cost * 1_000 + blockerBonus;
+};
+
+const opponentView = (
+  snapshot: Parameters<BotStrategy["chooseAction"]>[0]["snapshot"],
+  botPlayerId: Parameters<BotStrategy["chooseAction"]>[0]["botPlayerId"],
+): PlayerView["opponent"] | undefined => {
+  const player = snapshot.players[botPlayerId];
+  if (player === undefined || !("opponent" in player.view)) {
+    return undefined;
+  }
+  return player.view.opponent;
+};
+
 const payCostDecisionActionScore = (
   decision: BotPendingDecision | undefined,
   action: BotActionContext["action"],
@@ -261,6 +282,90 @@ const chooseBestAction = (
 ): BotActionContext["action"] | undefined =>
   [...scored].sort((left, right) => left.score - right.score)[0]?.action;
 
+const chooseLethalPlanAction = (
+  scored: readonly ScoredBotAction[],
+): BotActionContext["action"] | undefined =>
+  chooseBestAction(
+    scored.filter(({ score }) => score <= lethalPlanScoreThreshold),
+  );
+
+const chooseHighValueCharacterAttack = (
+  scored: readonly ScoredBotAction[],
+  snapshot: Parameters<BotStrategy["chooseAction"]>[0]["snapshot"],
+  botPlayerId: Parameters<BotStrategy["chooseAction"]>[0]["botPlayerId"],
+): BotActionContext["action"] | undefined => {
+  const opponent = opponentView(snapshot, botPlayerId);
+  if (opponent === undefined) {
+    return undefined;
+  }
+  const opponentCharacterIds = new Set(
+    opponent.characters.map((card) => card.instanceId),
+  );
+  return scored
+    .flatMap(({ action }) => {
+      const targetId = action.attack?.targetInstanceId;
+      if (
+        action.type !== "declareAttack" ||
+        targetId === undefined ||
+        !opponentCharacterIds.has(targetId)
+      ) {
+        return [];
+      }
+      const target = findVisibleCard(snapshot, botPlayerId, targetId);
+      if (target === undefined) {
+        return [];
+      }
+      const value = visibleCardValue(target);
+      return value >= highValueCharacterTargetThreshold
+        ? [{ action, value }]
+        : [];
+    })
+    .sort((left, right) => right.value - left.value)[0]?.action;
+};
+
+const chooseMeaningfulDonAttachment = (
+  scored: readonly ScoredBotAction[],
+  snapshot: Parameters<BotStrategy["chooseAction"]>[0]["snapshot"],
+  botPlayerId: Parameters<BotStrategy["chooseAction"]>[0]["botPlayerId"],
+): BotActionContext["action"] | undefined => {
+  const opponentLeader = opponentView(snapshot, botPlayerId)?.leader;
+  const opponentLeaderPower = cardPower(opponentLeader);
+  if (opponentLeaderPower === undefined) {
+    return undefined;
+  }
+  return scored.find(({ action }) => {
+    if (action.type !== "attachDon" || action.attachment === undefined) {
+      return false;
+    }
+    const target = findVisibleCard(
+      snapshot,
+      botPlayerId,
+      action.attachment.targetInstanceId,
+    );
+    const targetPower = cardPower(target);
+    return (
+      targetPower !== undefined &&
+      targetPower < opponentLeaderPower &&
+      targetPower + 1_000 >= opponentLeaderPower
+    );
+  })?.action;
+};
+
+const choosePlannedMainPhaseAction = (
+  scored: readonly ScoredBotAction[],
+  snapshot: Parameters<BotStrategy["chooseAction"]>[0]["snapshot"],
+  botPlayerId: Parameters<BotStrategy["chooseAction"]>[0]["botPlayerId"],
+): BotActionContext["action"] | undefined => {
+  if (snapshot.turn.phase !== "main") {
+    return undefined;
+  }
+  return (
+    chooseLethalPlanAction(scored) ??
+    chooseHighValueCharacterAttack(scored, snapshot, botPlayerId) ??
+    chooseMeaningfulDonAttachment(scored, snapshot, botPlayerId)
+  );
+};
+
 const chooseBestVisibleDecisionAction = (
   scored: readonly ScoredBotAction[],
 ): BotActionContext["action"] | undefined =>
@@ -292,6 +397,10 @@ export const createBotStrategy = (
     });
     if (pendingDecisionChoice !== undefined) {
       return pendingDecisionChoice;
+    }
+    const planned = choosePlannedMainPhaseAction(scored, snapshot, botPlayerId);
+    if (planned !== undefined) {
+      return { type: "submitAction", actionIndex: planned.index };
     }
     const chosen = chooseBestAction(scored);
     if (chosen !== undefined) {
