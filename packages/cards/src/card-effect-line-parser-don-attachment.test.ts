@@ -66,6 +66,89 @@ it("parses rested DON attachment to the selected DON owner's Leader or Character
   );
 });
 
+it("parses owner-relative DON attachment bodies through the same selection shape", () => {
+  const costAreaSource = parseCardEffectLine(
+    "[On Play] Give up to 1 DON!! card from its owner's cost area to its owner's Leader or 1 of their Characters.",
+  );
+  const restedSource = parseCardEffectLine(
+    "[On Play] Give up to 1 rested DON!! card to its owner's Leader or 1 of their Characters.",
+  );
+
+  expect(costAreaSource).toMatchObject({
+    block: {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:don-to-attach",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "anyPlayer",
+                zone: "costArea",
+                filter: { categories: ["don"] },
+              },
+            },
+          },
+          {
+            id: "select:don-attach-target",
+            effect: {
+              type: "selectTargets",
+              ownerConstraint: {
+                type: "sameAsSavedReferenceOwner",
+                selection: "donSelection:attach",
+              },
+              request: {
+                player: "anyPlayer",
+                zones: ["leaderArea", "characterArea"],
+                filter: { categories: ["leader", "character"] },
+              },
+            },
+          },
+          {
+            id: "attach:selected-don",
+            effect: {
+              type: "attachSelectedDon",
+              targetOwner: "selectedDonOwner",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(restedSource).toMatchObject({
+    block: {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:don-to-attach",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "anyPlayer",
+                zone: "costArea",
+                filter: { categories: ["don"], state: "rested" },
+              },
+            },
+          },
+          {
+            id: "select:don-attach-target",
+          },
+          {
+            id: "attach:selected-don",
+            effect: {
+              type: "attachSelectedDon",
+              sourceState: "rested",
+              targetOwner: "selectedDonOwner",
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
 it("parses opponent rested DON attachment to opponent Characters", () => {
   const result = parseCardEffectLine(
     "[On Play] Give up to 3 of your opponent's rested DON!! cards to 1 of your opponent's Characters.",
