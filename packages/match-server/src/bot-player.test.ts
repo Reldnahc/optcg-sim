@@ -338,7 +338,7 @@ describe("bot player", () => {
     };
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
-      id: "decision:play-selected-overflow:op16-benn" as DecisionId,
+      id: "decision:runtime:playSelected:overflow:op16-benn:11" as DecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Choose a Character to trash.",
@@ -365,7 +365,7 @@ describe("bot player", () => {
 
     assert.deepEqual(chosen, {
       type: "respondToDecision",
-      decisionId: "decision:play-selected-overflow:op16-benn",
+      decisionId: "decision:runtime:playSelected:overflow:op16-benn:11",
       response: { type: "cards", cards: [setupCharacter] },
     });
   });
