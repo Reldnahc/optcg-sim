@@ -38,6 +38,18 @@ const assertRuntimeSupported = (effectBlock, message) => {
   assert.deepEqual(report.missing, [], message);
 };
 
+const assertRuntimeSupportedWithSiblings = (
+  effectBlock,
+  siblingBlocks,
+  message,
+) => {
+  const report = evaluateEffectBlockRuntimeSupport(effectBlock, {
+    siblingBlocks,
+  });
+  assert.equal(report.supported, true, message);
+  assert.deepEqual(report.missing, [], message);
+};
+
 const activateMainSequenceEntry = {
   id: "queue-entry:activate-main:cards-engine-contract",
   state: "pending",
@@ -316,7 +328,6 @@ test("cards parser emits supported Event Main and Counter primitive blocks for r
     "[Main] You may rest 5 of your DON!! cards: If the only Characters on your field are {Celestial Dragons} type Characters, K.O. up to 1 of your opponent's Characters with a base cost of 6 or less.",
     "[Counter] Your Leader gains +3000 power during this battle.",
     "[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [The Five Elders Are at Your Service!!!] and add it to your hand. Then, trash the rest.",
-    "[Trigger] Activate this card's [Main] effect.",
     "[Your Turn] The cost of playing {Celestial Dragons} type Character cards with a cost of 2 or more from your hand will be reduced by 1.",
   ];
 
@@ -325,6 +336,18 @@ test("cards parser emits supported Event Main and Counter primitive blocks for r
 
     assertRuntimeSupported(effectBlock, text);
   }
+
+  const mainEffect = parseSupportedEffectBlock(
+    "[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [The Five Elders Are at Your Service!!!] and add it to your hand. Then, trash the rest.",
+  );
+  const triggerEffect = parseSupportedEffectBlock(
+    "[Trigger] Activate this card's [Main] effect.",
+  );
+  assertRuntimeSupportedWithSiblings(
+    triggerEffect,
+    [mainEffect, triggerEffect],
+    "[Trigger] Activate this card's [Main] effect.",
+  );
 });
 
 test("cards parser emits expanded leader, field-count, and replacement primitives accepted by engine admission", () => {
