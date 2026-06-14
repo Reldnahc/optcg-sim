@@ -17,6 +17,7 @@ import {
   createDecisionDraft,
   findAttachDonActionIndex,
   optionalCardCostGroupForActionIndex,
+  shouldPreserveSelectedDonAfterDecisionSubmit,
 } from "../index.js";
 import type {
   AttackTargetChoice,
@@ -195,7 +196,23 @@ export const useMatchClientActions = ({
           response,
         });
         setClientState(result);
-        resetInteractionState();
+        if (
+          pendingDecision.type === "selectTargets" &&
+          shouldPreserveSelectedDonAfterDecisionSubmit({
+            board,
+            decision: pendingDecision,
+            draft,
+          })
+        ) {
+          setSelectedCardInstanceId(undefined);
+          setDecisionDraft(undefined);
+          setActiveCardCostChoice(undefined);
+          setActiveCardCostSelectedInstanceIds([]);
+          setActiveAttackTargetChoice(undefined);
+          setActiveCounterTargetChoice(undefined);
+        } else {
+          resetInteractionState();
+        }
         setErrors([]);
       } catch (error) {
         setErrors([errorMessage(error)]);
@@ -205,12 +222,15 @@ export const useMatchClientActions = ({
     },
     [
       controller,
+      board,
       optionalCardCostChoice,
       pendingDecision,
       resetInteractionState,
+      setActiveAttackTargetChoice,
       setActionInFlight,
       setActiveCardCostChoice,
       setActiveCardCostSelectedInstanceIds,
+      setActiveCounterTargetChoice,
       setClientState,
       setDecisionDraft,
       setErrors,

@@ -13,10 +13,12 @@ import {
   hasSelectedDonAttachmentTargetAction,
   isSelectableCostAreaDon,
   isZoneClickCostAreaDonSelection,
+  shouldPreserveSelectedDonAfterDecisionSubmit,
   selectedDonAttachmentClickIntent,
   selectedDonAttachmentMenuAction,
   toggleSelectedDonInstanceId,
 } from "./don-selection.js";
+import type { DecisionDraft } from "./decision-modal.js";
 import type { ClientVisibleAction } from "../transport.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 
@@ -227,6 +229,53 @@ describe("DON selection interaction", () => {
     assert.equal(
       isZoneClickCostAreaDonSelection(model, decision, "opponent-active-don"),
       false,
+    );
+  });
+
+  test("preserves selected cost-area DON after source decision submit", () => {
+    const model = board();
+    const decision: PublicSelectTargetsDecision = {
+      id: "decision:select-owner-don" as DecisionId,
+      type: "selectTargets",
+      playerId: "p1" as PublicSelectTargetsDecision["playerId"],
+      prompt: "Select DON!!.",
+      presentation: {
+        title: "Select DON!!",
+        instruction: "Select DON!!.",
+      },
+      causedBy: { type: "ruleProcess", name: "test" },
+      min: 0,
+      max: 1,
+      candidates: [
+        {
+          card: {
+            instanceId: "opponent-rested-don" as InstanceId,
+            cardId:
+              "DON" as PublicSelectTargetsDecision["candidates"][number]["card"]["cardId"],
+            playerId: "p2" as PublicSelectTargetsDecision["playerId"],
+            zone: {
+              zone: "costArea",
+              playerId: "p2" as PublicSelectTargetsDecision["playerId"],
+              slot: "cost",
+              index: 1,
+            },
+          },
+        },
+      ],
+    };
+    const draft: DecisionDraft = {
+      kind: "selectCards",
+      decisionId: decision.id,
+      selectedInstanceIds: ["opponent-rested-don" as InstanceId],
+    };
+
+    assert.equal(
+      shouldPreserveSelectedDonAfterDecisionSubmit({
+        board: model,
+        decision,
+        draft,
+      }),
+      true,
     );
   });
 

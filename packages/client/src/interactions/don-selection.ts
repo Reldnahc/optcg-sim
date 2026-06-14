@@ -1,6 +1,7 @@
 import type { InstanceId, PublicSelectTargetsDecision } from "@optcg/types";
 
 import type { ClientVisibleAction } from "../transport.js";
+import type { DecisionDraft } from "./decision-modal.js";
 import type {
   BoardViewModel,
   ClientActionModel,
@@ -121,6 +122,23 @@ export const isZoneClickCostAreaDonSelection = (
     decisionHasCostAreaCandidate(decision, instanceId)
   );
 };
+
+export const shouldPreserveSelectedDonAfterDecisionSubmit = ({
+  board,
+  decision,
+  draft,
+}: {
+  board: BoardViewModel | undefined;
+  decision: PublicSelectTargetsDecision;
+  draft: DecisionDraft;
+}): boolean =>
+  draft.kind === "selectCards" &&
+  draft.selectedInstanceIds.length === 1 &&
+  isZoneClickCostAreaDonSelection(
+    board,
+    decision,
+    String(draft.selectedInstanceIds[0]),
+  );
 
 export const selectedDonAttachmentMenuAction = (
   selectedDonInstanceIds: readonly string[],
