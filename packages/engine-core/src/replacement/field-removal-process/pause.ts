@@ -2,6 +2,7 @@ import type { EngineEvent, GameState, ReplacementProcess } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "../../action-results.js";
 import { replacementOptionLabel } from "../instead-effects.js";
+import { replacementStateWithProcess } from "../process-gate.js";
 import type { SelectedTargetKoReplacementCandidate } from "../primitives.js";
 
 export const replacementCandidatesFromDetection = (detected: {
@@ -70,17 +71,11 @@ export const pauseSelectedTargetKoReplacementProcess = (
       ...state,
       seq: toStateSeq(state.seq + 1),
       pendingDecision,
-      replacementState: [
-        ...state.replacementState.filter(
-          (candidateState) => candidateState.processId !== process.id,
-        ),
-        {
-          processId: process.id,
-          type: process.type,
-          usedReplacementIds: [...process.usedReplacementIds],
-          payload: process.payload,
-        },
-      ],
+      replacementState: replacementStateWithProcess(
+        state,
+        process,
+        process.payload,
+      ),
       eventJournal: [...state.eventJournal, ...events],
     },
     paused: true,

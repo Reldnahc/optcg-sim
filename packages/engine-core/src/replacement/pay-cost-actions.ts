@@ -26,6 +26,7 @@ import {
   replacementProcessFromStoredPayload,
 } from "./field-removal-targets.js";
 import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
+import { removeReplacementProcessState } from "./process-gate.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
 import type {
   EngineInternalReplacementAppliedEventPayload,
@@ -489,9 +490,10 @@ export const applyReplacementPayCostDecisionResponse = (
   const nextState: GameState = {
     ...continued.state,
     seq: toStateSeq(continued.state.seq + 1),
-    replacementState: continued.state.replacementState.filter(
-      (candidate) => candidate.processId !== pending.processId,
-    ),
+    replacementState: removeReplacementProcessState(
+      continued.state,
+      pending.processId,
+    ).replacementState,
     eventJournal: [...continued.state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;

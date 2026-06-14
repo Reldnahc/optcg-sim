@@ -4,6 +4,7 @@ import {
   cardRefsEqual,
   fieldRemovalProcessTargets,
 } from "../field-removal-targets.js";
+import { replacementAlreadyUsed } from "../process-gate.js";
 import { opponentFieldRemovalReplacementCoveredTargets } from "./applicability.js";
 import {
   effectIdFromReplacementProcess,
@@ -97,7 +98,7 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
 
       for (const effect of supported) {
         const candidateId = toReplacementCandidateId(source, effect);
-        if (process.usedReplacementIds.includes(candidateId)) {
+        if (replacementAlreadyUsed(process, candidateId)) {
           continue;
         }
         let coveredTargets: readonly CardRef[] = [];

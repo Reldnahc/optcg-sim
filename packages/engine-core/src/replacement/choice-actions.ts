@@ -20,6 +20,7 @@ import {
 import { executeUnreplacedSelectedTargetFieldRemovalProcess } from "../runtime/primitives/execute.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence/frame-decisions.js";
 import { isReplacementContinuationDecision } from "./decision-actions.js";
+import { removeReplacementProcessState } from "./process-gate.js";
 import {
   getRespondingPlayerId,
   hasMalformedRespondToDecisionPlayerId,
@@ -261,9 +262,8 @@ export const applyChooseReplacementDecisionResponse = (
 
   const processState: GameState = {
     ...state,
-    replacementState: state.replacementState.filter(
-      (candidate) => candidate.processId !== decision.processId,
-    ),
+    replacementState: removeReplacementProcessState(state, decision.processId)
+      .replacementState,
   };
   delete processState.pendingDecision;
   const queuedEntryId = queueEntryIdFromStoredReplacementPayload(

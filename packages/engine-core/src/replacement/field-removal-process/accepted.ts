@@ -26,6 +26,11 @@ import {
 import { createReplacementOwnerDeckBottomDecision } from "../owner-deck-bottom-decision.js";
 import { createReplacementPayCostDecision } from "../pay-cost-decision.js";
 import { replacementCandidatePresentation } from "../presentation-payload.js";
+import {
+  markReplacementUsed,
+  replacementAlreadyUsed,
+  replacementStateWithProcess,
+} from "../process-gate.js";
 import { detectSupportedSelectedTargetKoReplacementCandidate } from "../primitives.js";
 import { continueUncoveredFieldRemovalTargets } from "../unreplaced-field-removal.js";
 import {
@@ -51,7 +56,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
 ):
   | { state: GameState; process: ReplacementProcess }
   | { error: EngineError } => {
-  if (process.usedReplacementIds.includes(replacementId)) {
+  if (replacementAlreadyUsed(process, replacementId)) {
     return {
       error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
     };
@@ -70,10 +75,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     };
   }
 
-  const usedProcess: ReplacementProcess = {
-    ...process,
-    usedReplacementIds: [...process.usedReplacementIds, candidate.id],
-  };
+  const usedProcess = markReplacementUsed(process, candidate.id);
   const coveredTargets =
     candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
   const presentation = replacementCandidatePresentation(state, candidate);
@@ -181,40 +183,33 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         ...prefixState,
         seq: toStateSeq(prefixState.seq + 1),
         pendingDecision: trashFromHandDecision,
-        replacementState: [
-          ...prefixState.replacementState.filter(
-            (candidateState) => candidateState.processId !== process.id,
-          ),
+        replacementState: replacementStateWithProcess(
+          prefixState,
+          usedProcess,
           {
-            processId: process.id,
-            type: process.type,
-            usedReplacementIds: usedProcess.usedReplacementIds,
-            payload: {
-              ...(typeof process.payload === "object" &&
-              process.payload !== null
-                ? process.payload
-                : {}),
-              pendingReplacementTrashFromHandInstead: {
-                decisionId: trashFromHandDecision.id,
-                effectBlockId: candidate.effectBlockId,
-                replacementId: candidate.id,
-                source: candidate.source,
-                ...(process.target === undefined
-                  ? {}
-                  : { target: process.target }),
-                coveredTargets: [...coveredTargets],
-                causedBy: process.causedBy,
-                controllerId: candidate.controllerId,
-                count: trashFromHandDecision.request.min,
-                ...(presentation === undefined ? {} : { presentation }),
-                ...(sequenceWithTrash.trashFromHand.filter === undefined
-                  ? {}
-                  : { filter: sequenceWithTrash.trashFromHand.filter }),
-                ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
-              } satisfies PendingReplacementTrashFromHandInsteadPayload,
-            },
+            ...(typeof process.payload === "object" && process.payload !== null
+              ? process.payload
+              : {}),
+            pendingReplacementTrashFromHandInstead: {
+              decisionId: trashFromHandDecision.id,
+              effectBlockId: candidate.effectBlockId,
+              replacementId: candidate.id,
+              source: candidate.source,
+              ...(process.target === undefined
+                ? {}
+                : { target: process.target }),
+              coveredTargets: [...coveredTargets],
+              causedBy: process.causedBy,
+              controllerId: candidate.controllerId,
+              count: trashFromHandDecision.request.min,
+              ...(presentation === undefined ? {} : { presentation }),
+              ...(sequenceWithTrash.trashFromHand.filter === undefined
+                ? {}
+                : { filter: sequenceWithTrash.trashFromHand.filter }),
+              ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
+            } satisfies PendingReplacementTrashFromHandInsteadPayload,
           },
-        ],
+        ),
         eventJournal: [...state.eventJournal, ...events],
       },
       process: usedProcess,
@@ -246,35 +241,22 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         ...state,
         seq: toStateSeq(state.seq + 1),
         pendingDecision: ownerDeckBottomDecision,
-        replacementState: [
-          ...state.replacementState.filter(
-            (candidateState) => candidateState.processId !== process.id,
-          ),
-          {
-            processId: process.id,
-            type: process.type,
-            usedReplacementIds: usedProcess.usedReplacementIds,
-            payload: {
-              ...(typeof process.payload === "object" &&
-              process.payload !== null
-                ? process.payload
-                : {}),
-              pendingReplacementOwnerDeckBottomInstead: {
-                decisionId: ownerDeckBottomDecision.id,
-                effectBlockId: candidate.effectBlockId,
-                replacementId: candidate.id,
-                source: candidate.source,
-                ...(process.target === undefined
-                  ? {}
-                  : { target: process.target }),
-                coveredTargets: [...coveredTargets],
-                causedBy: process.causedBy,
-                controllerId: candidate.controllerId,
-                ...(presentation === undefined ? {} : { presentation }),
-              },
-            },
+        replacementState: replacementStateWithProcess(state, usedProcess, {
+          ...(typeof process.payload === "object" && process.payload !== null
+            ? process.payload
+            : {}),
+          pendingReplacementOwnerDeckBottomInstead: {
+            decisionId: ownerDeckBottomDecision.id,
+            effectBlockId: candidate.effectBlockId,
+            replacementId: candidate.id,
+            source: candidate.source,
+            ...(process.target === undefined ? {} : { target: process.target }),
+            coveredTargets: [...coveredTargets],
+            causedBy: process.causedBy,
+            controllerId: candidate.controllerId,
+            ...(presentation === undefined ? {} : { presentation }),
           },
-        ],
+        }),
         eventJournal: [...state.eventJournal, ...events],
       },
       process: usedProcess,
@@ -306,35 +288,22 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         ...state,
         seq: toStateSeq(state.seq + 1),
         pendingDecision: restDecision,
-        replacementState: [
-          ...state.replacementState.filter(
-            (candidateState) => candidateState.processId !== process.id,
-          ),
-          {
-            processId: process.id,
-            type: process.type,
-            usedReplacementIds: usedProcess.usedReplacementIds,
-            payload: {
-              ...(typeof process.payload === "object" &&
-              process.payload !== null
-                ? process.payload
-                : {}),
-              pendingReplacementRestInstead: {
-                decisionId: restDecision.id,
-                effectBlockId: candidate.effectBlockId,
-                replacementId: candidate.id,
-                source: candidate.source,
-                ...(process.target === undefined
-                  ? {}
-                  : { target: process.target }),
-                coveredTargets: [...coveredTargets],
-                causedBy: process.causedBy,
-                controllerId: candidate.controllerId,
-                ...(presentation === undefined ? {} : { presentation }),
-              } satisfies PendingReplacementRestInsteadPayload,
-            },
-          },
-        ],
+        replacementState: replacementStateWithProcess(state, usedProcess, {
+          ...(typeof process.payload === "object" && process.payload !== null
+            ? process.payload
+            : {}),
+          pendingReplacementRestInstead: {
+            decisionId: restDecision.id,
+            effectBlockId: candidate.effectBlockId,
+            replacementId: candidate.id,
+            source: candidate.source,
+            ...(process.target === undefined ? {} : { target: process.target }),
+            coveredTargets: [...coveredTargets],
+            causedBy: process.causedBy,
+            controllerId: candidate.controllerId,
+            ...(presentation === undefined ? {} : { presentation }),
+          } satisfies PendingReplacementRestInsteadPayload,
+        }),
         eventJournal: [...state.eventJournal, ...events],
       },
       process: usedProcess,
@@ -380,40 +349,27 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         ...state,
         seq: toStateSeq(state.seq + 1),
         pendingDecision: trashFromHandDecision,
-        replacementState: [
-          ...state.replacementState.filter(
-            (candidateState) => candidateState.processId !== process.id,
-          ),
-          {
-            processId: process.id,
-            type: process.type,
-            usedReplacementIds: usedProcess.usedReplacementIds,
-            payload: {
-              ...(typeof process.payload === "object" &&
-              process.payload !== null
-                ? process.payload
-                : {}),
-              pendingReplacementTrashFromHandInstead: {
-                decisionId: trashFromHandDecision.id,
-                effectBlockId: candidate.effectBlockId,
-                replacementId: candidate.id,
-                source: candidate.source,
-                ...(process.target === undefined
-                  ? {}
-                  : { target: process.target }),
-                coveredTargets: [...coveredTargets],
-                causedBy: process.causedBy,
-                controllerId: candidate.controllerId,
-                count: trashFromHandDecision.request.min,
-                ...(presentation === undefined ? {} : { presentation }),
-                ...(trashInstead.filter === undefined
-                  ? {}
-                  : { filter: trashInstead.filter }),
-                ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
-              } satisfies PendingReplacementTrashFromHandInsteadPayload,
-            },
-          },
-        ],
+        replacementState: replacementStateWithProcess(state, usedProcess, {
+          ...(typeof process.payload === "object" && process.payload !== null
+            ? process.payload
+            : {}),
+          pendingReplacementTrashFromHandInstead: {
+            decisionId: trashFromHandDecision.id,
+            effectBlockId: candidate.effectBlockId,
+            replacementId: candidate.id,
+            source: candidate.source,
+            ...(process.target === undefined ? {} : { target: process.target }),
+            coveredTargets: [...coveredTargets],
+            causedBy: process.causedBy,
+            controllerId: candidate.controllerId,
+            count: trashFromHandDecision.request.min,
+            ...(presentation === undefined ? {} : { presentation }),
+            ...(trashInstead.filter === undefined
+              ? {}
+              : { filter: trashInstead.filter }),
+            ...(oncePerTurn === undefined ? {} : { oncePerTurn }),
+          } satisfies PendingReplacementTrashFromHandInsteadPayload,
+        }),
         eventJournal: [...state.eventJournal, ...events],
       },
       process: usedProcess,
@@ -445,36 +401,23 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         ...state,
         seq: toStateSeq(state.seq + 1),
         pendingDecision: payCostDecision,
-        replacementState: [
-          ...state.replacementState.filter(
-            (candidateState) => candidateState.processId !== process.id,
-          ),
-          {
-            processId: process.id,
-            type: process.type,
-            usedReplacementIds: usedProcess.usedReplacementIds,
-            payload: {
-              ...(typeof process.payload === "object" &&
-              process.payload !== null
-                ? process.payload
-                : {}),
-              pendingReplacementPayCostInstead: {
-                decisionId: payCostDecision.id,
-                effectBlockId: candidate.effectBlockId,
-                replacementId: candidate.id,
-                source: candidate.source,
-                ...(process.target === undefined
-                  ? {}
-                  : { target: process.target }),
-                coveredTargets: [...coveredTargets],
-                causedBy: process.causedBy,
-                controllerId: candidate.controllerId,
-                cost: payCostDecision.cost,
-                ...(presentation === undefined ? {} : { presentation }),
-              } satisfies PendingReplacementPayCostInsteadPayload,
-            },
-          },
-        ],
+        replacementState: replacementStateWithProcess(state, usedProcess, {
+          ...(typeof process.payload === "object" && process.payload !== null
+            ? process.payload
+            : {}),
+          pendingReplacementPayCostInstead: {
+            decisionId: payCostDecision.id,
+            effectBlockId: candidate.effectBlockId,
+            replacementId: candidate.id,
+            source: candidate.source,
+            ...(process.target === undefined ? {} : { target: process.target }),
+            coveredTargets: [...coveredTargets],
+            causedBy: process.causedBy,
+            controllerId: candidate.controllerId,
+            cost: payCostDecision.cost,
+            ...(presentation === undefined ? {} : { presentation }),
+          } satisfies PendingReplacementPayCostInsteadPayload,
+        }),
         eventJournal: [...state.eventJournal, ...events],
       },
       process: usedProcess,
