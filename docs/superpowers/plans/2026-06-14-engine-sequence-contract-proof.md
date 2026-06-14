@@ -221,7 +221,7 @@ const readerSignals = [
   {
     label: "savedReferences direct lookup",
     pattern:
-      /(?:ledgers|nextLedgers|frame|currentFrame|pendingFrame)\.savedReferences\[[^\]]+\]/,
+      /(?:(?:\b\w+\.)*(?:ledgers|nextLedgers|frame|currentFrame|pendingFrame)\.savedReferences|(?:\b\w+\.)*savedReferences)\[[^\]]+\]/,
   },
   {
     label: "saved field object resolution",
@@ -301,6 +301,11 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     reason: "revealSelected consumer",
   },
   {
+    path: "packages/engine-core/src/effect-runtime-sequence/selected-bounce.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "selected-card bounce consumer",
+  },
+  {
     path: "packages/engine-core/src/effect-runtime-sequence/selected-to-hand.ts",
     signals: ["savedReferences direct lookup"],
     reason: "selected-to-hand consumer",
@@ -342,6 +347,11 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     path: "packages/engine-core/src/runtime/primitives/play-selected.ts",
     signals: ["savedReferences direct lookup"],
     reason: "playSelected selectedCards consumer",
+  },
+  {
+    path: "packages/engine-core/src/runtime/primitives/target-ko.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "target KO savedFieldObject consumer",
   },
 ];
 
