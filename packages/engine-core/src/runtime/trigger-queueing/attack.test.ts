@@ -133,6 +133,32 @@ test("attackDeclared stale target zone rejects On Your Opponent's Attack queuein
   assert.deepEqual(result.state, before);
 });
 
+test("already queued current-sequence On Your Opponent's Attack timing window is not queued again", () => {
+  const { state } = opponentAttackQueueingState();
+  const queued = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 0);
+
+  const attackDeclared = must(
+    queued.state.eventJournal.find((event) => event.type === "attackDeclared"),
+    "attack declared event",
+  );
+  const afterQueueReturnedToAttackSeq = {
+    ...queued.state,
+    seq: attackDeclared.createdAtStateSeq,
+    effectQueue: [],
+  };
+
+  const repeated = processDefenderOpponentAttackTiming(
+    afterQueueReturnedToAttackSeq,
+  );
+
+  assert.equal(repeated.errors, undefined);
+  assert.deepEqual(repeated.events, []);
+  assert.equal(repeated.state.effectQueue.length, 0);
+});
+
 test("main runtime lets battle cleanup handle an attack target removed during When Attacking resolution", () => {
   const { state } = opponentAttackQueueingState();
   const p2State = must(state.players[p2], "p2");

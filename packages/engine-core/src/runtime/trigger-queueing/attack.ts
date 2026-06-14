@@ -98,7 +98,9 @@ const attackDeclaredEventsForOpponentAttackTiming = (
 ): EngineEvent[] => {
   const currentSequenceEvents = state.eventJournal.filter(
     (event) =>
-      event.type === "attackDeclared" && event.createdAtStateSeq === state.seq,
+      event.type === "attackDeclared" &&
+      event.createdAtStateSeq === state.seq &&
+      !hasQueuedOpponentAttackTimingWindow(state, event),
   );
   if (currentSequenceEvents.length > 0) {
     return currentSequenceEvents;
