@@ -17,6 +17,10 @@ import {
 } from "../../action-results.js";
 import { matchEventTrigger } from "../event-hooks/matcher.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import {
+  canAdmitTriggerQueueEntry,
+  hasPendingTriggerRuntimeWork,
+} from "./admission.js";
 
 const currentEndPhaseEvents = (state: GameState): readonly EngineEvent[] =>
   state.eventJournal.filter((event) => {
@@ -64,11 +68,7 @@ export const queueDelayedEndOfTurnEffects = (
   state: GameState,
 ): EngineResult | undefined => {
   const delayedEffects = state.delayedEffects ?? [];
-  if (
-    delayedEffects.length === 0 ||
-    state.effectQueue.length > 0 ||
-    state.deferredTriggers.length > 0
-  ) {
+  if (delayedEffects.length === 0 || hasPendingTriggerRuntimeWork(state)) {
     return undefined;
   }
   const phaseEvents = currentEndPhaseEvents(state);
@@ -89,36 +89,40 @@ export const queueDelayedEndOfTurnEffects = (
     }
     const due = dueDelayedEffects(delayedEffects, payload.playerId);
     for (const record of due) {
-      dueIds.add(record.id);
       const resolvedCard = state.cardManifest.cards[record.source.cardId];
-      appended.push({
-        entry: {
-          id: `queue-entry:delayed:${String(event.id)}:${record.id}` as EffectQueueEntry["id"],
-          state: "pending",
-          timingWindowId:
-            `timing-window:delayed:${String(event.id)}` as EffectQueueEntry["timingWindowId"],
-          generation: 0,
-          controllerId: record.controllerId,
-          source: record.source,
-          sourceSnapshot: record.sourceSnapshot,
-          effectBlockId: record.effectBlock.id,
-          effectBlockOverride: record.effectBlock,
-          orderingGroup: "turnPlayer",
-          createdAtEventSeq: event.seq,
-          queuedAtStateSeq: toStateSeq(state.seq + 1),
-          sourcePresencePolicy: "noSourceRequired",
-          causedBy: {
-            type: "ruleProcess",
-            name: "effectRuntime:delayedEndOfTurn",
-          },
-          ...(resolvedCard === undefined
-            ? {}
-            : effectQueueEntryPresentationForEffectBlock({
-                effectBlock: record.effectBlock,
-                resolvedCard,
-                source: record.source,
-              })),
+      const entry: EffectQueueEntry = {
+        id: `queue-entry:delayed:${String(event.id)}:${record.id}` as EffectQueueEntry["id"],
+        state: "pending",
+        timingWindowId:
+          `timing-window:delayed:${String(event.id)}` as EffectQueueEntry["timingWindowId"],
+        generation: 0,
+        controllerId: record.controllerId,
+        source: record.source,
+        sourceSnapshot: record.sourceSnapshot,
+        effectBlockId: record.effectBlock.id,
+        effectBlockOverride: record.effectBlock,
+        orderingGroup: "turnPlayer",
+        createdAtEventSeq: event.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: "noSourceRequired",
+        causedBy: {
+          type: "ruleProcess",
+          name: "effectRuntime:delayedEndOfTurn",
         },
+        ...(resolvedCard === undefined
+          ? {}
+          : effectQueueEntryPresentationForEffectBlock({
+              effectBlock: record.effectBlock,
+              resolvedCard,
+              source: record.source,
+            })),
+      };
+      if (!canAdmitTriggerQueueEntry(state, entry, record.effectBlock).ok) {
+        continue;
+      }
+      dueIds.add(record.id);
+      appended.push({
+        entry,
         effectBlock: record.effectBlock,
         resolved: resolvedCard,
       });
@@ -154,11 +158,7 @@ export const queueDelayedEventEffects = (
   state: GameState,
 ): EngineResult | undefined => {
   const delayedEffects = state.delayedEffects ?? [];
-  if (
-    delayedEffects.length === 0 ||
-    state.effectQueue.length > 0 ||
-    state.deferredTriggers.length > 0
-  ) {
+  if (delayedEffects.length === 0 || hasPendingTriggerRuntimeWork(state)) {
     return undefined;
   }
 
@@ -188,37 +188,41 @@ export const queueDelayedEventEffects = (
       if (!match.matched) {
         continue;
       }
-      dueIds.add(record.id);
       const resolvedCard = state.cardManifest.cards[record.source.cardId];
-      appended.push({
-        entry: {
-          id: `queue-entry:delayed:${String(event.id)}:${record.id}` as EffectQueueEntry["id"],
-          state: "pending",
-          timingWindowId:
-            `timing-window:delayed:${String(event.id)}` as EffectQueueEntry["timingWindowId"],
-          generation: 0,
-          controllerId: record.controllerId,
-          source: record.source,
-          sourceSnapshot: record.sourceSnapshot,
-          effectBlockId: record.effectBlock.id,
-          effectBlockOverride: record.effectBlock,
-          orderingGroup: "turnPlayer",
-          triggerEventId: event.id,
-          createdAtEventSeq: event.seq,
-          queuedAtStateSeq: toStateSeq(state.seq + 1),
-          sourcePresencePolicy: "noSourceRequired",
-          causedBy: {
-            type: "ruleProcess",
-            name: "effectRuntime:delayedEvent",
-          },
-          ...(resolvedCard === undefined
-            ? {}
-            : effectQueueEntryPresentationForEffectBlock({
-                effectBlock: record.effectBlock,
-                resolvedCard,
-                source: record.source,
-              })),
+      const entry: EffectQueueEntry = {
+        id: `queue-entry:delayed:${String(event.id)}:${record.id}` as EffectQueueEntry["id"],
+        state: "pending",
+        timingWindowId:
+          `timing-window:delayed:${String(event.id)}` as EffectQueueEntry["timingWindowId"],
+        generation: 0,
+        controllerId: record.controllerId,
+        source: record.source,
+        sourceSnapshot: record.sourceSnapshot,
+        effectBlockId: record.effectBlock.id,
+        effectBlockOverride: record.effectBlock,
+        orderingGroup: "turnPlayer",
+        triggerEventId: event.id,
+        createdAtEventSeq: event.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: "noSourceRequired",
+        causedBy: {
+          type: "ruleProcess",
+          name: "effectRuntime:delayedEvent",
         },
+        ...(resolvedCard === undefined
+          ? {}
+          : effectQueueEntryPresentationForEffectBlock({
+              effectBlock: record.effectBlock,
+              resolvedCard,
+              source: record.source,
+            })),
+      };
+      if (!canAdmitTriggerQueueEntry(state, entry, record.effectBlock).ok) {
+        continue;
+      }
+      dueIds.add(record.id);
+      appended.push({
+        entry,
         effectBlock: record.effectBlock,
         resolved: resolvedCard,
       });

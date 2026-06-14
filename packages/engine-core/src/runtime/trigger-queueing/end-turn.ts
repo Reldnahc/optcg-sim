@@ -10,11 +10,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import {
-  appendEffectQueuedEvent,
-  toEngineResult,
-  toStateSeq,
-} from "../../action-results.js";
+import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
@@ -25,8 +21,12 @@ import type {
   EndOfYourTurnTriggerQueueingFailureReason,
 } from "./core.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
-import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import {
+  appendAdmittedTriggerEntries,
+  canAdmitTriggerQueueEntry,
+  hasPendingTriggerRuntimeWork,
+} from "./admission.js";
 
 const endOfYourTurnAutoAdapter = {
   category: "auto" as const,
@@ -90,7 +90,7 @@ export const createEndOfTurnTriggerQueueing = (
   const queueEndOfYourTurnTriggers = (
     state: GameState,
   ): EngineResult | undefined => {
-    if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
     }
     const phaseEvents = endPhaseStartedEvents(state);
@@ -103,7 +103,6 @@ export const createEndOfTurnTriggerQueueing = (
       readonly effectBlock: EffectDefinition["effects"][number];
       readonly resolved: ResolvedCard;
     }> = [];
-    const events: EngineEvent[] = [];
     for (const event of phaseEvents) {
       const payload = event.payload as { playerId?: PlayerId };
       if (payload.playerId === undefined) {
@@ -186,7 +185,7 @@ export const createEndOfTurnTriggerQueueing = (
               source: entrySource,
             }),
           };
-          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          if (!canAdmitTriggerQueueEntry(state, entry, effectBlock).ok) {
             continue;
           }
           appended.push({
@@ -202,19 +201,8 @@ export const createEndOfTurnTriggerQueueing = (
       return undefined;
     }
 
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      effectQueue: [
-        ...state.effectQueue,
-        ...appended.map(({ entry }) => entry),
-      ],
-    };
-    for (const { entry, effectBlock, resolved } of appended) {
-      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
-    }
-    nextState.eventJournal = [...state.eventJournal, ...events];
-    return toEngineResult(nextState, events);
+    const queued = appendAdmittedTriggerEntries(state, appended);
+    return toEngineResult(queued.state, queued.events);
   };
 
   return { queueEndOfYourTurnTriggers };

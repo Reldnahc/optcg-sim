@@ -3,18 +3,13 @@ import type {
   EffectDefinition,
   EffectQueueEntry,
   EngineError,
-  EngineEvent,
   EngineResult,
   GameState,
   PlayerId,
   ResolvedCard,
 } from "@optcg/types";
 
-import {
-  appendEffectQueuedEvent,
-  toEngineResult,
-  toStateSeq,
-} from "../../action-results.js";
+import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "../../effect-runtime-admission.js";
 import { isAutoRuntimeTriggerCandidate } from "../../effect-runtime-block-support.js";
 import type {
@@ -25,8 +20,12 @@ import {
   findCardInstanceInTrash,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
-import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
+import {
+  appendAdmittedTriggerEntries,
+  canAdmitTriggerQueueEntry,
+  hasPendingTriggerRuntimeWork,
+} from "./admission.js";
 
 const mainEventAutoAdapter = {
   category: "auto" as const,
@@ -97,7 +96,7 @@ export const createMainEventTriggerQueueing = (
   const queueMainEventTriggers = (
     state: GameState,
   ): EngineResult | undefined => {
-    if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
     }
     const queuedMainEvents = queuedMainEventTriggerEventIds(state);
@@ -124,7 +123,6 @@ export const createMainEventTriggerQueueing = (
       readonly effectBlock: EffectDefinition["effects"][number];
       readonly resolved: ResolvedCard;
     }> = [];
-    const events: EngineEvent[] = [];
     for (const event of acceptedCardPlayed) {
       const payload = event.payload as {
         playerId?: PlayerId;
@@ -241,7 +239,7 @@ export const createMainEventTriggerQueueing = (
           },
           ...(presentation === undefined ? {} : { presentation }),
         };
-        if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+        if (!canAdmitTriggerQueueEntry(state, entry, effectBlock).ok) {
           continue;
         }
         appended.push({ entry, effectBlock, resolved });
@@ -252,19 +250,8 @@ export const createMainEventTriggerQueueing = (
       return undefined;
     }
 
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      effectQueue: [
-        ...state.effectQueue,
-        ...appended.map(({ entry }) => entry),
-      ],
-    };
-    for (const { entry, effectBlock, resolved } of appended) {
-      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
-    }
-    nextState.eventJournal = [...state.eventJournal, ...events];
-    return toEngineResult(nextState, events);
+    const queued = appendAdmittedTriggerEntries(state, appended);
+    return toEngineResult(queued.state, queued.events);
   };
 
   return { queueMainEventTriggers };

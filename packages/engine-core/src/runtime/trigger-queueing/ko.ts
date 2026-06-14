@@ -40,7 +40,6 @@ import {
   toSnapshot,
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
-import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import {
   activeEffectTextPresentationForEffectBlock,
   effectQueueEntryPresentationForEffectBlock,
@@ -49,6 +48,7 @@ import {
   isLifeTriggerQueueEntry,
   lifeTriggerQueueOrigin,
 } from "../../life-trigger/queue-origin.js";
+import { canAdmitTriggerQueueEntry } from "./admission.js";
 
 const onKOAutoAdapter = {
   category: "auto" as const,
@@ -292,7 +292,11 @@ export const createKOTriggerQueueing = (
           ? {}
           : { presentation: candidate.presentation }),
       };
-      if (!canAdmitOncePerTurnEffect(state, entry, candidate.effectBlock)) {
+      if (
+        !canAdmitTriggerQueueEntry(state, entry, candidate.effectBlock, {
+          allowPendingRuntimeWork: true,
+        }).ok
+      ) {
         continue;
       }
       appended.push({
@@ -418,7 +422,11 @@ export const createKOTriggerQueueing = (
             source: entrySource,
           }),
         };
-        if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+        if (
+          !canAdmitTriggerQueueEntry(state, entry, effectBlock, {
+            allowPendingRuntimeWork: true,
+          }).ok
+        ) {
           continue;
         }
         appended.push({ entry, effectBlock, resolved });

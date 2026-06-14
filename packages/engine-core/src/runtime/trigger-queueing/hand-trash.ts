@@ -13,11 +13,7 @@ import type {
   CardId,
 } from "@optcg/types";
 
-import {
-  appendEffectQueuedEvent,
-  toEngineResult,
-  toStateSeq,
-} from "../../action-results.js";
+import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { cardMatchesSearchFilter, getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
@@ -28,8 +24,12 @@ import {
   fieldTriggerSources,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
-import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import {
+  appendAdmittedTriggerEntries,
+  canAdmitTriggerQueueEntry,
+  hasPendingTriggerRuntimeWork,
+} from "./admission.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   HandTrashedByEffectTriggerQueueingFailureReason,
@@ -165,7 +165,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
   const queueHandTrashedByEffectTriggers = (
     state: GameState,
   ): EngineResult | undefined => {
-    if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
     }
     const alreadyQueued = queuedHandTrashTriggerEventIds(state);
@@ -184,7 +184,6 @@ export const createHandTrashedByEffectTriggerQueueing = (
       readonly effectBlock: EffectDefinition["effects"][number];
       readonly resolved: ResolvedCard;
     }> = [];
-    const events: EngineEvent[] = [];
     const sources = fieldTriggerSources(state);
     for (const event of handTrashEvents) {
       const trashedPlayerId = handTrashEventPlayer(event);
@@ -291,7 +290,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
               source: entrySource,
             }),
           };
-          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          if (!canAdmitTriggerQueueEntry(state, entry, effectBlock).ok) {
             continue;
           }
           appended.push({ entry, effectBlock, resolved });
@@ -303,19 +302,8 @@ export const createHandTrashedByEffectTriggerQueueing = (
       return undefined;
     }
 
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      effectQueue: [
-        ...state.effectQueue,
-        ...appended.map(({ entry }) => entry),
-      ],
-    };
-    for (const { entry, effectBlock, resolved } of appended) {
-      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
-    }
-    nextState.eventJournal = [...state.eventJournal, ...events];
-    return toEngineResult(nextState, events);
+    const queued = appendAdmittedTriggerEntries(state, appended);
+    return toEngineResult(queued.state, queued.events);
   };
 
   return { queueHandTrashedByEffectTriggers };

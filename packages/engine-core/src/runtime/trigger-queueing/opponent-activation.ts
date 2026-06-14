@@ -11,11 +11,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import {
-  appendEffectQueuedEvent,
-  toEngineResult,
-  toStateSeq,
-} from "../../action-results.js";
+import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
@@ -30,8 +26,12 @@ import {
   fieldTriggerSources,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
-import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
+import {
+  appendAdmittedTriggerEntries,
+  canAdmitTriggerQueueEntry,
+  hasPendingTriggerRuntimeWork,
+} from "./admission.js";
 
 const queuedOpponentActivationTriggerEventIds = (
   state: GameState,
@@ -185,7 +185,7 @@ export const createOpponentActivationTriggerQueueing = (
   const queueOpponentActivationTriggers = (
     state: GameState,
   ): EngineResult | undefined => {
-    if (state.effectQueue.length > 0 || state.deferredTriggers.length > 0) {
+    if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
     }
     const alreadyQueued = queuedOpponentActivationTriggerEventIds(state);
@@ -206,7 +206,6 @@ export const createOpponentActivationTriggerQueueing = (
       readonly effectBlock: EffectDefinition["effects"][number];
       readonly resolved: ResolvedCard;
     }> = [];
-    const events: EngineEvent[] = [];
     const sources = fieldTriggerSources(state);
     for (const event of activationEvents) {
       const activation = opponentActivationFromEvent(state, event);
@@ -308,7 +307,7 @@ export const createOpponentActivationTriggerQueueing = (
               source: entrySource,
             }),
           };
-          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          if (!canAdmitTriggerQueueEntry(state, entry, effectBlock).ok) {
             continue;
           }
           appended.push({ entry, effectBlock, resolved });
@@ -320,19 +319,8 @@ export const createOpponentActivationTriggerQueueing = (
       return undefined;
     }
 
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      effectQueue: [
-        ...state.effectQueue,
-        ...appended.map(({ entry }) => entry),
-      ],
-    };
-    for (const { entry, effectBlock, resolved } of appended) {
-      appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
-    }
-    nextState.eventJournal = [...state.eventJournal, ...events];
-    return toEngineResult(nextState, events);
+    const queued = appendAdmittedTriggerEntries(state, appended);
+    return toEngineResult(queued.state, queued.events);
   };
 
   return { queueOpponentActivationTriggers };
