@@ -194,7 +194,7 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
   });
 
-  test("removes a high-value character before playing a setup searcher", () => {
+  test("clears a high-value character before playing a profile-favored setup card", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(
         [
@@ -207,7 +207,7 @@ describe("bot strategy priorities", () => {
           {
             index: 1,
             type: "declareAttack",
-            label: "Attack character",
+            label: "Attack threat",
             attack: {
               attackerInstanceId: "bot-character" as InstanceId,
               targetInstanceId: "opponent-threat" as InstanceId,
@@ -231,6 +231,7 @@ describe("bot strategy priorities", () => {
               cardId: "OP01-004" as CardId,
               zone: { playerId: botId, zone: "characterArea" },
               currentPower: 8000,
+              printedCost: 6,
             },
           ],
           opponentCharacters: [
@@ -250,7 +251,7 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
-  test("attaches DON for a meaningful leader swing before playing a setup searcher", () => {
+  test("attaches DON to turn a leader swing live before playing a profile-favored setup card", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(
         [
@@ -267,6 +268,15 @@ describe("bot strategy priorities", () => {
             attachment: {
               donInstanceId: "don-1" as InstanceId,
               targetInstanceId: "bot-leader" as InstanceId,
+            },
+          },
+          {
+            index: 2,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
             },
           },
         ],
