@@ -1,4 +1,9 @@
-import type { Effect, SelectCardsEffect, Target } from "@optcg/types";
+import type {
+  Effect,
+  SelectCardsEffect,
+  SelectTargetsEffect,
+  Target,
+} from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "../../actions/state.js";
 import { isSupportedAttachDonTargetFilter } from "../support-filters.js";
@@ -82,6 +87,27 @@ export const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is SelectCardsEffect =>
   savedSelectedCardsKindForSelectCardsSegment(effect) !== undefined;
+
+export const savedSelectedCardsKindForSelectTargetsSegment = (
+  effect: SequenceSegmentEffect,
+): SavedSelectedCardsKind | undefined => {
+  if (effect.type !== "selectTargets") {
+    return undefined;
+  }
+  const request: SelectTargetsEffect["request"] = effect.request;
+  const zones = "zones" in request ? request.zones : [request.zone];
+  const selectsCostAreaDon =
+    request.chooser === "self" &&
+    (request.player === "self" ||
+      request.player === "opponent" ||
+      request.player === "anyPlayer") &&
+    zones.length > 0 &&
+    zones.every((zone) => zone === "costArea") &&
+    request.visibility === "public" &&
+    request.filter?.categories?.length === 1 &&
+    request.filter.categories[0] === "don";
+  return selectsCostAreaDon ? "don" : undefined;
+};
 
 export const isSupportedMoveSelectedSegment = (
   effect: SequenceSegmentEffect,

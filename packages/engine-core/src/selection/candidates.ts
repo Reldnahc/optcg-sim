@@ -66,6 +66,7 @@ const supportedZones = new Set<Zone>([
   "stageArea",
   "costArea",
 ]);
+const supportedFilterStates = new Set<string>(["active", "rested", "attached"]);
 
 const isValidTargetCount = (request: TargetRequest): boolean =>
   Number.isInteger(request.min) &&
@@ -242,9 +243,7 @@ const isSupportedFilter = (filter: CardFilter | undefined): boolean =>
       isStringArray(filter.typesNotIncludeAny)) &&
     isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
     (filter.excludeSelf === undefined || filter.excludeSelf) &&
-    (filter.state === undefined ||
-      filter.state === "active" ||
-      filter.state === "rested") &&
+    (filter.state === undefined || supportedFilterStates.has(filter.state)) &&
     (filter.statComparisons === undefined ||
       (filter.statComparisons.length > 0 &&
         filter.statComparisons.every(isSupportedStatComparison))) &&
@@ -457,6 +456,7 @@ const cardMatchesFilter = (
   card: ResolvedCard,
   filter: CardFilter | undefined,
   context: ResolvePublicTargetCandidatesContext,
+  effectiveState?: CardFilter["state"],
 ): boolean => {
   if (filter === undefined) {
     return true;
@@ -473,7 +473,14 @@ const cardMatchesFilter = (
   if (
     filter.anyOf !== undefined &&
     !filter.anyOf.some((candidate) =>
-      cardMatchesFilter(state, instance, card, candidate, context),
+      cardMatchesFilter(
+        state,
+        instance,
+        card,
+        candidate,
+        context,
+        effectiveState,
+      ),
     )
   ) {
     return false;
@@ -537,7 +544,10 @@ const cardMatchesFilter = (
   ) {
     return false;
   }
-  if (filter.state !== undefined && instance.state !== filter.state) {
+  if (
+    filter.state !== undefined &&
+    (effectiveState ?? instance.state) !== filter.state
+  ) {
     return false;
   }
   if (
@@ -607,18 +617,22 @@ const candidateCardsForZone = (
     return player.stage === undefined ? [] : [player.stage];
   }
   if (zone === "costArea") {
-    const attachedDonIds = new Set([
-      ...player.leader.attachedDon,
-      ...player.characters.flatMap((card) => card.attachedDon),
-      ...(player.stage?.attachedDon ?? []),
-    ]);
-    return player.costArea.filter(
-      (card) => !attachedDonIds.has(card.instanceId),
-    );
+    return player.costArea;
   }
 
   return null;
 };
+
+const attachedDonIdsForPlayer = (player: {
+  readonly leader: CardInstance;
+  readonly characters: readonly CardInstance[];
+  readonly stage?: CardInstance;
+}): ReadonlySet<CardInstance["instanceId"]> =>
+  new Set([
+    ...player.leader.attachedDon,
+    ...player.characters.flatMap((card) => card.attachedDon),
+    ...(player.stage?.attachedDon ?? []),
+  ]);
 
 export const resolvePublicTargetCandidates = (
   state: GameState,
@@ -657,20 +671,43 @@ export const resolvePublicTargetCandidates = (
 
   const candidates: TargetCandidate[] = [];
   for (const targetPlayerId of targetPlayerIds) {
+    const targetPlayer = state.players[targetPlayerId];
     const cards = candidateCardsForZone(state, targetPlayerId, request.zone);
-    if (cards === null) {
+    if (cards === null || targetPlayer === undefined) {
       return { ok: false, reason: "unresolvedPlayerRef" };
     }
+    const attachedDonIds =
+      request.zone === "costArea"
+        ? attachedDonIdsForPlayer(targetPlayer)
+        : undefined;
 
     for (const card of cards) {
       const metadata = state.cardManifest.cards[card.cardId];
       if (request.filter !== undefined && metadata === undefined) {
         return { ok: false, reason: "missingCardMetadata" };
       }
+      const effectiveState =
+        attachedDonIds?.has(card.instanceId) === true
+          ? ("attached" as const)
+          : card.state;
+      if (
+        request.zone === "costArea" &&
+        effectiveState === "attached" &&
+        request.filter?.state === undefined
+      ) {
+        continue;
+      }
 
       if (
         metadata === undefined ||
-        cardMatchesFilter(state, card, metadata, request.filter, context)
+        cardMatchesFilter(
+          state,
+          card,
+          metadata,
+          request.filter,
+          context,
+          effectiveState,
+        )
       ) {
         candidates.push({
           card: toCardRef(card, targetPlayerId),
