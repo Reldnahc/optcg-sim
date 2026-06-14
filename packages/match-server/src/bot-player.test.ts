@@ -790,6 +790,35 @@ describe("bot player", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("pays available optional costs before declining them", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions([
+        {
+          index: 0,
+          type: "respondToDecision",
+          label: "Decline cost",
+          responseKey: "decline",
+          decisionPayment: { kind: "paymentDeclined" },
+        },
+        {
+          index: 1,
+          type: "respondToDecision",
+          label: "Rest 1 DON!!",
+          responseKey: "payment:don:1",
+          decisionPayment: {
+            kind: "cardCost",
+            operation: "returnDon",
+            chooseLabel: "Choose DON!!",
+            selectedCardInstanceIds: ["don-1" as InstanceId],
+          },
+        },
+      ]),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
   test("attaches DON before ending main phase", () => {
     const chosen = chooseBotAction(
       snapshotWithActions([

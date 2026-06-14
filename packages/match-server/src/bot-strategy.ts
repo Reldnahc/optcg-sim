@@ -16,6 +16,12 @@ import type {
 const baseActionPriority = (action: DevVisibleAction): number => {
   if (
     action.type === "respondToDecision" &&
+    action.decisionPayment?.kind === "cardCost"
+  ) {
+    return 5;
+  }
+  if (
+    action.type === "respondToDecision" &&
     (action.responseKey === "keep" || action.responseKey === "deny")
   ) {
     return 0;
