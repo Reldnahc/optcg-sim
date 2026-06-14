@@ -493,6 +493,94 @@ describe("bot combat evaluation", () => {
       step: "counter",
       damageCount: 0,
     };
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:counterStep:pass:opponent-leader:12" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Use counter or end step.",
+      causedBy: { type: "ruleProcess", name: "counterStep" },
+      presentation: { title: "Counter", instruction: "Use counter." },
+      min: 0,
+      max: 0,
+      candidates: [],
+      choices: [],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:counterStep:pass:opponent-leader:12",
+      response: { type: "cards", cards: [] },
+    });
+  });
+
+  test("does not spend multiple counters to save a low-value character", () => {
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "respondToDecision",
+          label: "End counter step",
+        },
+        {
+          index: 1,
+          type: "useCounter",
+          label: "Counter with 1000",
+          counter: {
+            cardInstanceId: "counter-card-1" as InstanceId,
+            targetInstanceId: "bot-character" as InstanceId,
+          },
+        },
+      ],
+      {
+        selfCharacters: [
+          {
+            instanceId: "bot-character" as InstanceId,
+            cardId: "OP01-003" as CardId,
+            currentPower: 2000,
+            printedCost: 1,
+          },
+        ],
+        selfHand: [
+          {
+            instanceId: "counter-card-1" as InstanceId,
+            cardId: "OP01-004" as CardId,
+            printedCounter: 1000,
+          },
+          {
+            instanceId: "counter-card-2" as InstanceId,
+            cardId: "OP01-005" as CardId,
+            printedCounter: 1000,
+          },
+          {
+            instanceId: "counter-card-3" as InstanceId,
+            cardId: "OP01-006" as CardId,
+            printedCounter: 1000,
+          },
+        ],
+        opponentLeader: { currentPower: 4000 },
+      },
+    );
+    viewForBot(snapshot).battle = {
+      attacker: {
+        instanceId: "opponent-leader" as InstanceId,
+        cardId: "OP01-002" as CardId,
+        playerId: "p1" as PlayerId,
+      },
+      originalTarget: {
+        instanceId: "bot-character" as InstanceId,
+        cardId: "OP01-003" as CardId,
+        playerId: botId,
+      },
+      currentTarget: {
+        instanceId: "bot-character" as InstanceId,
+        cardId: "OP01-003" as CardId,
+        playerId: botId,
+      },
+      step: "counter",
+      damageCount: 0,
+    };
 
     const chosen = chooseBotAction(snapshot, botId);
 

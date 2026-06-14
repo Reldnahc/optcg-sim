@@ -19,6 +19,8 @@ type EvaluatedBotAction = {
   readonly utility: number;
 };
 
+const usefulCounterUtilityFloor = 100;
+
 const isCounterStepPassDecision = (
   decision: BotPendingDecision,
   battleStep: string | undefined,
@@ -144,7 +146,9 @@ const chooseCounterStepPass = (
     return undefined;
   }
   const counterAction = chooseBestAction(
-    evaluated.filter(({ action }) => action.type === "useCounter"),
+    evaluated
+      .filter(({ action }) => action.type === "useCounter")
+      .filter(({ utility }) => utility > usefulCounterUtilityFloor),
   );
   return counterAction === undefined
     ? {
