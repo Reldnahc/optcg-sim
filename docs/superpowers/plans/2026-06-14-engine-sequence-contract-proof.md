@@ -221,7 +221,7 @@ const readerSignals = [
   {
     label: "savedReferences direct lookup",
     pattern:
-      /(?:ledgers|frame|currentFrame|pendingFrame)\.savedReferences\[[^\]]+\]/,
+      /(?:ledgers|nextLedgers|frame|currentFrame|pendingFrame)\.savedReferences\[[^\]]+\]/,
   },
   {
     label: "saved field object resolution",
@@ -332,6 +332,16 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     path: "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
     signals: ["savedReferences direct lookup"],
     reason: "forEachSavedTarget source selection consumer",
+  },
+  {
+    path: "packages/engine-core/src/runtime/primitives/activate-selected-event.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "activateSelectedEvent selectedCards consumer",
+  },
+  {
+    path: "packages/engine-core/src/runtime/primitives/play-selected.ts",
+    signals: ["savedReferences direct lookup"],
+    reason: "playSelected selectedCards consumer",
   },
 ];
 
@@ -560,15 +570,20 @@ Add tests for:
 - costArea DON `selectTargets` -> `attachSelectedDon`
 - costArea DON `selectTargets` -> savedFieldObject target using the same save id
 - revealTop selectedCards/set -> `selectFromSet` -> `playSelected`
+- hand `selectCards` -> `playSelected`
+- trash `selectCards` -> `playSelected`
+- DON `selectCards` -> `playSelected` is rejected
 - hand `selectCards` -> `activateSelectedEvent`
 - hand `selectCards` -> `revealSelected`
 - selectedCards:set -> `revealSelected`
-- hand `selectCards` -> selected-to-hand helper
+- trash `selectCards` -> selected-to-hand helper
+- selectedCards:set -> selected-to-hand helper
 - hand `selectCards` -> selected-hand-to-life helper
 - trash `selectCards` -> selected-trash-to-life helper
 - selectedCards:set -> selected-to-life helper
 - hand selectedCards -> `attachSelectedDon` is rejected
 - DON selectedCards -> hand `moveSelected` is rejected
+- hand selectedCards -> selected-to-hand helper is rejected
 - trash selectedCards -> selected-hand-to-life helper is rejected
 - hand selectedCards -> selected-trash-to-life helper is rejected
 - missing selectedCards reference -> rejected
