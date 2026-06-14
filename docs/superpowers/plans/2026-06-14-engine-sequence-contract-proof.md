@@ -2,89 +2,131 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Prove the engine sequence saved-result boundary with a reusable producer/consumer contract matrix, so parser output can be checked against engine semantics instead of one narrow DON attachment path.
+**Goal:** Prove the engine sequence saved-result boundary for every current saved-reference producer and consumer category, then make parser output validate against that engine contract.
 
-**Architecture:** Create an engine-owned saved-result contract layer that classifies sequence producers and validates sequence consumers in one place. Add engine-core tests that cover producer kinds, consumer requirements, mismatch rejection, nested sequence flattening, and runtime ledger behavior. Add parser integration tests only after the engine contract is proven.
+**Architecture:** First inventory every runtime saved-reference kind and every engine write/read door. Then centralize the static support contract in `engine-core`, add a full producer/consumer matrix, and add runtime ledger tests that inspect saved references while frames are paused. Parser metadata comes last and is accepted only when the engine contract already proves the semantics.
 
 **Tech Stack:** TypeScript, Vitest, `@optcg/types`, `@optcg/engine-core`, `@optcg/cards`, `npm.cmd`/pnpm scripts.
 
 ---
 
-## Scope
+## Definition Of "Everything"
 
-This replaces the narrower `2026-06-14-explicit-sequence-save-result-kind.md` plan. The old plan should be removed from the branch and not executed.
+This plan must cover every current `SequenceSavedResultReference` kind in `packages/types/src/effects.ts`:
 
-This plan proves the engine boundary for saved-result producers and consumers:
+- `selectedCards`
+- `selectedTargets`
+- `paidCost`
+- `producedObjects`
+- `chosenNumber`
 
-- selected card producers: `selectCards`, cost-area DON via `selectTargets`, `selectFromSet`, `revealTop`
-- selected target producers: `selectTargets`, `selectAllTargets`, `forEachSavedTarget`, produced objects from trigger context
-- paid-cost producers: `payCost`
-- scalar producers: `chooseNumber`
-- selected card consumers: `moveSelected`, `attachSelectedDon`, `playSelected`, `revealSelected`, selected-card movement helpers
-- selected target consumers: `savedFieldObject`, `ownerConstraint`, `forEachSavedTarget`
-- set/number consumers: `selectFromSet`, `placeSetRemainder`, stat comparisons using `savedNumber`
+It must also cover the engine-only static support subkinds that decide which consumers may use a `selectedCards` reference:
 
-Parser changes come last and only assert that representative parser output lands on the proven engine contract.
+- selected hand cards
+- selected trash cards
+- selected DON cards
+- selected set cards
+
+It must cover every current producer door:
+
+- `selectCards`
+- `selectTargets`
+- `selectAllTargets`
+- `selectFromSet`
+- `revealTop`
+- `chooseNumber`
+- `payCost`
+- `draw`
+- `drawUpTo`
+- trigger-context produced object seed, currently `trigger:cardPlayed`
+- `forEachSavedTarget` current-item references
+
+It must cover every current consumer door:
+
+- `moveSelected`
+- `attachSelectedDon`
+- `playSelected`
+- `activateSelectedEvent`
+- `revealSelected`
+- selected-card movement helpers: selected to hand, selected to life, selected trash to life, selected hand to life
+- `selectFromSet`
+- `placeSetRemainder`
+- `savedNumber` stat comparisons
+- `ownerConstraint`
+- `savedFieldObject` targets
+- `forEachSavedTarget`
+- produced-object `savedFieldObject` targets
+- paid-cost `savedFieldObject` targets
+
+If any listed category cannot be handled in the first implementation slice, the plan executor must stop and revise the plan instead of silently narrowing the claim.
 
 ---
 
 ## File Structure
 
 - Create `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts`
-  - Engine-owned static contract for sequence saved-result producers and consumers.
+  - Central static support contract.
+  - Owns producer classification, consumer validation, and the support-time state map.
   - No parser imports.
-  - Exports small classification and validation helpers used by `support.ts`.
 
-- Modify `packages/engine-core/src/effect-runtime-sequence/support/selection.ts`
-  - Keep selection-shape helpers, but move cross-segment saved-result contract decisions to `save-result-contract.ts`.
-
-- Modify `packages/engine-core/src/effect-runtime-sequence/support.ts`
-  - Replace scattered `savedSelectedCards`, `savedSelectionSets`, `savedNumbers`, and `savedSelectedTargets` mutation logic with calls to the contract helper.
-  - Keep sequence orchestration here.
+- Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts`
+  - Source-inventory guard for saved-reference writes and reads.
+  - Fails when a new saved-reference producer or consumer appears outside known files without updating the contract plan/tests.
 
 - Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
-  - Static support matrix tests.
-  - These tests prove support admits valid producer/consumer paths and rejects mismatches.
+  - Static producer/consumer matrix for every category listed above.
 
 - Create `packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts`
-  - Runtime execution tests for representative paths.
-  - These tests prove frame ledgers and saved references actually line up with static support.
+  - Runtime ledger proof.
+  - Asserts `effectExecutionFrames[*].savedReferences` after pauses, not only final gameplay state.
 
-- Modify `packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts`
-  - Keep the existing regression, but it becomes one case in the broader matrix.
+- Modify `packages/engine-core/src/effect-runtime-sequence/support.ts`
+  - Replace scattered support-time saved-result maps/sets with the contract state.
+  - Keep sequence orchestration here.
+
+- Modify `packages/engine-core/src/effect-runtime-sequence/support/selection.ts`
+  - Keep local selection shape helpers only.
+  - Remove cross-segment saved-result authority from this file after contract centralization.
+
+- Modify runtime support helpers as needed:
+  - `packages/engine-core/src/effect-runtime-sequence/support/field.ts`
+  - `packages/engine-core/src/effect-runtime-sequence/support/continuous.ts`
+  - `packages/engine-core/src/effect-runtime-sequence/support/basic.ts`
+  - Only if consumer validation currently lives there and needs to call the central contract.
 
 - Modify `packages/types/src/effects.ts`
-  - Add optional explicit `saveResultKind` segment metadata only if the engine contract tests prove it is useful.
-  - This metadata is segment-level, not inner-effect-level.
+  - Add optional explicit segment metadata after engine proof exists.
 
 - Modify `packages/types/src/effects.test.ts`
-  - Type tests for `saveResultKind`, if Task 4 adds it.
+  - Type tests for explicit metadata.
 
-- Modify parser tests only after engine proof:
+- Modify parser integration files after engine proof exists:
+  - `packages/cards/src/instructions/don-movement/attach-rested.ts`
   - `packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts`
   - `packages/cards/src/card-effect-line-parser-don-sequence.test.ts`
   - `packages/cards/src/card-effect-line-parser-don-attachment.test.ts`
 
 ---
 
-## Shared Commit Rule
+## Shared Workspace Rule
 
-Before every commit step:
+Before every commit:
 
 ```powershell
 git status --short --branch
 ```
 
-Only stage the files listed in that task. If unrelated files are dirty, leave them alone. If a listed file contains unrelated user changes, inspect the diff and stage only the owned hunks with `git add -p`.
+If any task-owned file contains unrelated edits, use `git add -p` and stage only the hunks from the task. Do not use plain `git add <file>` on a file with mixed ownership.
+
+Each commit step below says `git add -p` intentionally.
 
 ---
 
-### Task 1: Remove The Narrow Plan
+### Task 1: Commit The Plan Replacement
 
 **Files:**
 
-- Delete: `docs/superpowers/plans/2026-06-14-explicit-sequence-save-result-kind.md`
-- Create: `docs/superpowers/plans/2026-06-14-engine-sequence-contract-proof.md`
+- Modify: `docs/superpowers/plans/2026-06-14-engine-sequence-contract-proof.md`
 
 - [ ] **Step 1: Confirm the narrow plan is gone**
 
@@ -96,7 +138,7 @@ Test-Path docs/superpowers/plans/2026-06-14-explicit-sequence-save-result-kind.m
 
 Expected: `False`.
 
-- [ ] **Step 2: Confirm this replacement plan exists**
+- [ ] **Step 2: Confirm this full proof plan exists**
 
 Run:
 
@@ -112,34 +154,172 @@ Run:
 
 ```powershell
 git status --short --branch
-git add docs/superpowers/plans/2026-06-14-explicit-sequence-save-result-kind.md docs/superpowers/plans/2026-06-14-engine-sequence-contract-proof.md
-git commit -m "Replace narrow save result plan with engine proof plan"
+git add -p docs/superpowers/plans/2026-06-14-engine-sequence-contract-proof.md
+git commit -m "Cover full engine sequence contract in plan"
 ```
+
+Expected: commit succeeds and only this plan file is included.
 
 ---
 
-### Task 2: Add Static Contract Matrix Tests First
+### Task 2: Add Saved-Reference Inventory Guard
+
+**Files:**
+
+- Create: `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts`
+
+- [ ] **Step 1: Write the inventory test**
+
+Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts`:
+
+```ts
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { test } from "vitest";
+
+const root = fileURLToPath(new URL("../../../../", import.meta.url));
+
+const knownSavedReferenceWriters = [
+  "packages/engine-core/src/effect-runtime-sequence/segments.ts",
+  "packages/engine-core/src/effect-runtime-sequence/select-cards.ts",
+  "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
+  "packages/engine-core/src/effect-runtime-sequence/frames/optional.ts",
+  "packages/engine-core/src/effect-runtime-sequence/frames/start.ts",
+  "packages/engine-core/src/effect-runtime-sequence/runner/select-all-targets-segment.ts",
+  "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
+  "packages/engine-core/src/effect-runtime-sequence/draw-upto.ts",
+].sort();
+
+const knownSavedReferenceReaders = [
+  "packages/engine-core/src/effect-runtime-sequence/select-targets.ts",
+  "packages/engine-core/src/effect-runtime-sequence/selected-segments.ts",
+  "packages/engine-core/src/effect-runtime-sequence/selected-reveal.ts",
+  "packages/engine-core/src/effect-runtime-sequence/selected-to-hand.ts",
+  "packages/engine-core/src/effect-runtime-sequence/selected-hand-to-life.ts",
+  "packages/engine-core/src/effect-runtime-sequence/selected-trash-to-life.ts",
+  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/resolve.ts",
+  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/continuous-records.ts",
+  "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
+].sort();
+
+const files = [
+  ...knownSavedReferenceWriters,
+  ...knownSavedReferenceReaders,
+  "packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts",
+];
+
+test("saved-result contract inventory names every current saved-reference kind", async () => {
+  const effectsSource = await readFile(
+    new URL("../../types/src/effects.ts", import.meta.url),
+    "utf8",
+  );
+
+  for (const kind of [
+    "selectedCards",
+    "selectedTargets",
+    "paidCost",
+    "producedObjects",
+    "chosenNumber",
+  ]) {
+    assert.equal(effectsSource.includes(`kind: "${kind}"`), true, kind);
+  }
+});
+
+test("saved-result contract inventory has explicit writer coverage", async () => {
+  const observed = new Set<string>();
+  for (const path of files) {
+    const source = await readFile(
+      new URL(`../../../../${path}`, import.meta.url),
+      "utf8",
+    );
+    if (
+      source.includes("saveReference(") ||
+      source.includes("savedReferences:") ||
+      source.includes('kind: "selectedCards"') ||
+      source.includes('kind: "selectedTargets"') ||
+      source.includes('kind: "paidCost"') ||
+      source.includes('kind: "producedObjects"') ||
+      source.includes('kind: "chosenNumber"')
+    ) {
+      observed.add(path);
+    }
+  }
+
+  assert.deepEqual([...observed].sort(), knownSavedReferenceWriters);
+});
+
+test("saved-result contract inventory has explicit reader coverage", async () => {
+  const observed = new Set<string>();
+  for (const path of files) {
+    const source = await readFile(
+      new URL(`../../../../${path}`, import.meta.url),
+      "utf8",
+    );
+    if (
+      source.includes("ledgers.savedReferences[") ||
+      source.includes("frame.savedReferences[") ||
+      source.includes(".savedReferences[") ||
+      source.includes("savedReferences[")
+    ) {
+      observed.add(path);
+    }
+  }
+
+  assert.deepEqual([...observed].sort(), knownSavedReferenceReaders);
+});
+```
+
+- [ ] **Step 2: Run the inventory test**
+
+Run:
+
+```powershell
+npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts
+```
+
+Expected: It may fail because exact file paths differ. If so, update the file lists to match the current source scan. Do not remove a writer or reader from the list just to make the test pass; either include it in the contract work or document why it is not a saved-result door.
+
+- [ ] **Step 3: Commit the inventory guard**
+
+Run:
+
+```powershell
+git status --short --branch
+git add -p packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts
+git commit -m "Inventory engine saved result doors"
+```
+
+Expected: commit succeeds.
+
+---
+
+### Task 3: Add Complete Static Matrix Tests
 
 **Files:**
 
 - Create: `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
-- Modify: `packages/engine-core/src/effect-runtime-sequence/support.ts` only after the RED step
 
-- [ ] **Step 1: Write the failing matrix test file**
+- [ ] **Step 1: Write the matrix harness**
 
-Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`:
+Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts` with a synthetic entry, a `block(effects)` helper, and `assertSupported` / `assertUnsupported` helpers. Use the shape already established in existing support tests:
 
 ```ts
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  Effect,
   EffectDefinition,
   EffectQueueEntry,
   SelectionId,
 } from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./support.js";
+
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+type SequenceSegment = SequenceEffect["effects"][number];
 
 const syntheticEntry = (): EffectQueueEntry => ({
   id: "save-result-contract-entry" as EffectQueueEntry["id"],
@@ -182,11 +362,7 @@ const syntheticEntry = (): EffectQueueEntry => ({
 });
 
 const block = (
-  effects: EffectDefinition["effects"][number]["effect"] extends infer E
-    ? E extends { type: "sequence"; effects: infer S }
-      ? S
-      : never
-    : never,
+  effects: SequenceSegment[],
 ): EffectDefinition["effects"][number] => ({
   id: "save-result-contract-effect" as EffectDefinition["effects"][number]["id"],
   category: "auto",
@@ -197,230 +373,80 @@ const block = (
   effect: { type: "sequence", effects },
 });
 
-const assertSupported = (effectBlock: EffectDefinition["effects"][number]) => {
-  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+const assertSupported = (effects: SequenceSegment[]) => {
+  assert.equal(
+    isSupportedSequenceBlock(syntheticEntry(), block(effects)),
+    true,
+  );
 };
 
-const assertUnsupported = (
-  effectBlock: EffectDefinition["effects"][number],
-) => {
-  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), false);
+const assertUnsupported = (effects: SequenceSegment[]) => {
+  assert.equal(
+    isSupportedSequenceBlock(syntheticEntry(), block(effects)),
+    false,
+  );
 };
-
-test("contract supports hand selectedCards producer consumed by moveSelected", () => {
-  const selection = "handSelection" as SelectionId;
-  assertSupported(
-    block([
-      {
-        connector: "always",
-        effect: {
-          type: "selectCards",
-          zone: "hand",
-          player: "self",
-          chooser: "self",
-          min: 1,
-          max: 1,
-          saveAs: selection,
-          visibility: "chooserOnly",
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "moveSelected",
-          selection,
-          from: "hand",
-          to: "deck",
-          position: "bottom",
-        },
-      },
-    ]),
-  );
-});
-
-test("contract rejects hand selectedCards producer consumed as DON attachment", () => {
-  const selection = "handSelection" as SelectionId;
-  const targetSelection = "targetSelection";
-  assertUnsupported(
-    block([
-      {
-        connector: "always",
-        effect: {
-          type: "selectCards",
-          zone: "hand",
-          player: "self",
-          chooser: "self",
-          min: 1,
-          max: 1,
-          saveAs: selection,
-          visibility: "chooserOnly",
-        },
-      },
-      {
-        connector: "then",
-        saveResultAs: targetSelection,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "self",
-            zone: "leaderArea",
-            filter: { categories: ["leader"] },
-            min: 1,
-            max: 1,
-            allowFewerIfUnavailable: false,
-            visibility: "public",
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "attachSelectedDon",
-          selection,
-          target: {
-            type: "savedFieldObject",
-            binding: {
-              family: "selectedTargets",
-              saveResultAs: targetSelection,
-            },
-            zone: "leaderArea",
-            player: "self",
-            filter: { categories: ["leader"] },
-            visibility: "publicOnly",
-            onFailure: "failClosed",
-          },
-        },
-      },
-    ]),
-  );
-});
-
-test("contract supports costArea DON selectTargets producer consumed by attachSelectedDon", () => {
-  const selection = "donSelection" as SelectionId;
-  const targetSelection = "targetSelection";
-  assertSupported(
-    block([
-      {
-        connector: "always",
-        saveResultAs: selection,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "anyPlayer",
-            zone: "costArea",
-            filter: { categories: ["don"] },
-            min: 0,
-            max: 1,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-          },
-        },
-      },
-      {
-        connector: "ifYouDo",
-        saveResultAs: targetSelection,
-        effect: {
-          type: "selectTargets",
-          ownerConstraint: { type: "sameAsSavedReferenceOwner", selection },
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "anyPlayer",
-            zones: ["leaderArea", "characterArea"],
-            filter: { categories: ["leader", "character"] },
-            min: 1,
-            max: 1,
-            allowFewerIfUnavailable: false,
-            visibility: "public",
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "attachSelectedDon",
-          selection,
-          targetOwner: "selectedDonOwner",
-          target: {
-            type: "savedFieldObject",
-            binding: {
-              family: "selectedTargets",
-              saveResultAs: targetSelection,
-            },
-            zones: ["leaderArea", "characterArea"],
-            player: "anyPlayer",
-            filter: { categories: ["leader", "character"] },
-            visibility: "publicOnly",
-            onFailure: "failClosed",
-          },
-        },
-      },
-    ]),
-  );
-});
-
-test("contract supports revealTop set producer consumed by selectFromSet and playSelected", () => {
-  const set = "revealedSet";
-  const selection = "setSelection" as SelectionId;
-  assertSupported(
-    block([
-      {
-        connector: "always",
-        effect: {
-          type: "revealTop",
-          player: "self",
-          zone: "deck",
-          count: 5,
-          saveAs: set,
-          visibility: "bothPlayers",
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "selectFromSet",
-          set,
-          chooser: "self",
-          min: 0,
-          max: 1,
-          saveAs: selection,
-        },
-      },
-      {
-        connector: "ifYouDo",
-        effect: {
-          type: "playSelected",
-          selection,
-          ignoreCost: true,
-        },
-      },
-    ]),
-  );
-});
-
-test("contract rejects unknown selectedCards selection consumed by moveSelected", () => {
-  assertUnsupported(
-    block([
-      {
-        connector: "always",
-        effect: {
-          type: "moveSelected",
-          selection: "missingSelection" as SelectionId,
-          from: "hand",
-          to: "deck",
-          position: "bottom",
-        },
-      },
-    ]),
-  );
-});
 ```
 
-- [ ] **Step 2: Run the matrix test to verify RED**
+- [ ] **Step 2: Add selectedCards matrix tests**
+
+Add tests for:
+
+- hand `selectCards` -> `moveSelected` from hand
+- trash `selectCards` -> `moveSelected` from trash
+- costArea DON `selectCards` -> `attachSelectedDon`
+- costArea DON `selectTargets` -> `attachSelectedDon`
+- revealTop selectedCards/set -> `selectFromSet` -> `playSelected`
+- hand selectedCards -> `attachSelectedDon` is rejected
+- DON selectedCards -> hand `moveSelected` is rejected
+- missing selectedCards reference -> rejected
+
+Each test must call `assertSupported([...])` or `assertUnsupported([...])` with concrete segment arrays.
+
+- [ ] **Step 3: Add selectedTargets and savedFieldObject matrix tests**
+
+Add tests for:
+
+- `selectTargets` -> `savedFieldObject` consumer
+- `selectAllTargets` -> `forEachSavedTarget`
+- `forEachSavedTarget` current item -> `savedFieldObject` consumer
+- ownerConstraint using selectedCards owner reference
+- ownerConstraint using selectedTargets owner reference
+- missing `savedFieldObject.binding.saveResultAs` target reference -> rejected
+- wrong family for `savedFieldObject` target -> rejected
+
+The missing target reference test must use a valid DON selection plus an `attachSelectedDon` target binding whose `saveResultAs` was never produced.
+
+- [ ] **Step 4: Add paidCost and producedObjects matrix tests**
+
+Add tests for:
+
+- `payCost` with `saveResultAs: "paidCost"` -> `savedFieldObject` target with `family: "paidCost"` where the cost selected a field card or DON card
+- `draw` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
+- `drawUpTo` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
+- initial trigger-context `trigger:cardPlayed` produced object -> consumer support through `initialSavedSelectedTargets` or the contract equivalent
+- missing producedObjects reference -> rejected
+- missing paidCost reference -> rejected
+
+- [ ] **Step 5: Add chosenNumber and remainder matrix tests**
+
+Add tests for:
+
+- `chooseNumber` -> `selectFromSet` stat comparison using `savedNumber`
+- `revealTop` -> `placeSetRemainder`
+- missing number -> rejected
+- missing selection set -> rejected
+
+- [ ] **Step 6: Add composition matrix tests**
+
+Add tests for:
+
+- nested sequence preserves produced selectedCards reference for later sibling consumer
+- flattened sequence preserves selectedTargets reference
+- conditional branch does not leak branch-local references into outer siblings unless the current engine intentionally supports it; assert current intended behavior explicitly
+- choice branch support validates each branch independently and does not merge references from one choice option into another
+
+- [ ] **Step 7: Run matrix tests RED**
 
 Run:
 
@@ -428,271 +454,162 @@ Run:
 npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
 ```
 
-Expected: FAIL if any current support behavior is missing or still hidden in scattered state. If it passes immediately, keep the test and continue to Task 3 because it documents existing behavior.
+Expected: FAIL for at least the currently missing target-binding validation and any other missing categories.
 
-- [ ] **Step 3: Commit the matrix tests if no production change is needed yet**
-
-Run:
-
-```powershell
-git status --short --branch
-git add packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
-git commit -m "Add engine saved result contract matrix tests"
-```
-
-If Step 2 failed, do not commit yet. Continue to Task 3 and commit tests with the implementation.
+Do not weaken tests to fit current behavior. If a category currently cannot be represented safely, keep the failing test and implement the missing contract support in Task 4.
 
 ---
 
-### Task 3: Centralize Static Saved-Result Contract
+### Task 4: Centralize The Complete Static Contract
 
 **Files:**
 
 - Create: `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts`
 - Modify: `packages/engine-core/src/effect-runtime-sequence/support.ts`
-- Modify: `packages/engine-core/src/effect-runtime-sequence/support/selection.ts`
-- Test: `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
+- Modify as needed:
+  - `packages/engine-core/src/effect-runtime-sequence/support/selection.ts`
+  - `packages/engine-core/src/effect-runtime-sequence/support/field.ts`
+  - `packages/engine-core/src/effect-runtime-sequence/support/continuous.ts`
 
-- [ ] **Step 1: Create the contract module**
+- [ ] **Step 1: Create the contract model**
 
-Create `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts`:
+Create `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts` with these concepts:
 
 ```ts
-import type { Effect, SelectionId } from "@optcg/types";
+import type { Effect, SavedFieldObjectReferenceFamily } from "@optcg/types";
 
-import {
-  savedSelectedCardsKindForSelectCardsSegment,
-  savedSelectedCardsKindForSelectTargetsSegment,
-  type SavedSelectedCardsKind,
-} from "./selection.js";
+import type { SavedSelectedCardsKind } from "./selection.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegment = SequenceEffect["effects"][number];
 
-export interface SequenceSavedResultContractState {
-  readonly selectedCards: ReadonlyMap<string, SavedSelectedCardsKind>;
-  readonly selectedCardMaxCounts: ReadonlyMap<string, number>;
-  readonly selectionSets: ReadonlySet<string>;
-  readonly numbers: ReadonlySet<string>;
-  readonly selectedTargets: ReadonlySet<string>;
+export type StaticSavedReferenceKind =
+  | { kind: "selectedCards"; cardKind: SavedSelectedCardsKind; max?: number }
+  | { kind: "selectedTargets" }
+  | { kind: "paidCost" }
+  | { kind: "producedObjects" }
+  | { kind: "chosenNumber" };
+
+export interface StaticSavedResultState {
+  readonly references: ReadonlyMap<string, StaticSavedReferenceKind>;
+  readonly transientSets: ReadonlySet<string>;
 }
 
-export const emptySequenceSavedResultContractState = (
-  initialSelectedTargets: readonly string[] = [],
-): SequenceSavedResultContractState => ({
-  selectedCards: new Map(),
-  selectedCardMaxCounts: new Map(),
-  selectionSets: new Set(),
-  numbers: new Set(),
-  selectedTargets: new Set(initialSelectedTargets),
+export const emptyStaticSavedResultState = (
+  initial: Record<string, StaticSavedReferenceKind> = {},
+): StaticSavedResultState => ({
+  references: new Map(Object.entries(initial)),
+  transientSets: new Set(),
 });
 
-const cloneWith = (
-  state: SequenceSavedResultContractState,
-  patch: Partial<{
-    selectedCards: Map<string, SavedSelectedCardsKind>;
-    selectedCardMaxCounts: Map<string, number>;
-    selectionSets: Set<string>;
-    numbers: Set<string>;
-    selectedTargets: Set<string>;
-  }>,
-): SequenceSavedResultContractState => ({
-  selectedCards: patch.selectedCards ?? new Map(state.selectedCards),
-  selectedCardMaxCounts:
-    patch.selectedCardMaxCounts ?? new Map(state.selectedCardMaxCounts),
-  selectionSets: patch.selectionSets ?? new Set(state.selectionSets),
-  numbers: patch.numbers ?? new Set(state.numbers),
-  selectedTargets: patch.selectedTargets ?? new Set(state.selectedTargets),
-});
+export const hasReference = (
+  state: StaticSavedResultState,
+  id: unknown,
+  predicate: (kind: StaticSavedReferenceKind) => boolean,
+): boolean => {
+  const kind = state.references.get(String(id));
+  return kind !== undefined && predicate(kind);
+};
+```
 
-export const selectedCardsKind = (
-  state: SequenceSavedResultContractState,
-  selection: unknown,
-): SavedSelectedCardsKind | undefined =>
-  state.selectedCards.get(String(selection));
+- [ ] **Step 2: Implement producer recording for every kind**
 
-export const selectedCardsMaxCount = (
-  state: SequenceSavedResultContractState,
-  selection: unknown,
-): number | undefined => state.selectedCardMaxCounts.get(String(selection));
+Add `recordProducer(state, segment)` that records:
 
-export const hasSelectionSet = (
-  state: SequenceSavedResultContractState,
-  selection: unknown,
-): boolean => state.selectionSets.has(String(selection));
+- `selectCards` -> `selectedCards` with subkind `hand`, `trash`, or `don`
+- `selectTargets` costArea DON -> both `selectedTargets` and `selectedCards:don`
+- other `selectTargets` -> `selectedTargets`
+- `selectAllTargets` -> `selectedTargets`
+- `selectFromSet` -> `selectedCards:set`
+- `revealTop` -> `selectedCards:set` and transient set
+- `chooseNumber` -> `chosenNumber`
+- `payCost` with `saveResultAs` -> `paidCost`
+- `draw` or `drawUpTo` with `saveResultAs` -> `producedObjects`
+- `forEachSavedTarget` current item -> `selectedTargets` while validating its source selection exists
+- initial trigger-context produced object via explicit initial contract state
 
-export const hasSelectedCardSet = (
-  state: SequenceSavedResultContractState,
+If the segment has `saveResultAs` and the producer type is not one of the supported producer kinds, return `null`.
+
+- [ ] **Step 3: Implement consumer validation for every door**
+
+Add validation helpers:
+
+```ts
+export const canConsumeSelectedCards = (
+  state: StaticSavedResultState,
   selection: unknown,
+  allowed: readonly SavedSelectedCardsKind[],
 ): boolean =>
-  hasSelectionSet(state, selection) ||
-  state.selectedCards.has(String(selection));
+  hasReference(
+    state,
+    selection,
+    (kind) => kind.kind === "selectedCards" && allowed.includes(kind.cardKind),
+  );
 
-export const hasNumber = (
-  state: SequenceSavedResultContractState,
-  selection: unknown,
-): boolean => state.numbers.has(String(selection));
-
-export const hasSelectedTargets = (
-  state: SequenceSavedResultContractState,
-  selection: unknown,
-): boolean => state.selectedTargets.has(String(selection));
-
-export const recordSequenceProducer = (
-  state: SequenceSavedResultContractState,
-  segment: SequenceSegment,
-): SequenceSavedResultContractState | null => {
-  if (segment.effect.type === "chooseNumber") {
-    const numbers = new Set(state.numbers);
-    numbers.add(String(segment.effect.saveAs));
-    return cloneWith(state, { numbers });
-  }
-  if (segment.effect.type === "revealTop") {
-    const selectionSets = new Set(state.selectionSets);
-    selectionSets.add(String(segment.effect.saveAs));
-    return cloneWith(state, { selectionSets });
-  }
-  if (segment.effect.type === "selectFromSet") {
-    const selectedCards = new Map(state.selectedCards);
-    const selectedCardMaxCounts = new Map(state.selectedCardMaxCounts);
-    selectedCards.set(String(segment.effect.saveAs), "set");
-    selectedCardMaxCounts.set(
-      String(segment.effect.saveAs),
-      segment.effect.max,
-    );
-    return cloneWith(state, { selectedCards, selectedCardMaxCounts });
-  }
-  if (segment.effect.type === "selectCards") {
-    const kind = savedSelectedCardsKindForSelectCardsSegment(segment.effect);
-    if (kind === undefined) return null;
-    const selectedCards = new Map(state.selectedCards);
-    const selectedCardMaxCounts = new Map(state.selectedCardMaxCounts);
-    selectedCards.set(String(segment.effect.saveAs), kind);
-    selectedCardMaxCounts.set(
-      String(segment.effect.saveAs),
-      segment.effect.max,
-    );
-    return cloneWith(state, { selectedCards, selectedCardMaxCounts });
-  }
-  if (segment.effect.type === "selectTargets") {
-    const selectedTargets = new Set(state.selectedTargets);
-    const selectedCards = new Map(state.selectedCards);
-    if (segment.saveResultAs !== undefined) {
-      selectedTargets.add(segment.saveResultAs);
-      const kind = savedSelectedCardsKindForSelectTargetsSegment(
-        segment.effect,
-      );
-      if (kind !== undefined) {
-        selectedCards.set(segment.saveResultAs, kind);
-      }
-    }
-    return cloneWith(state, { selectedTargets, selectedCards });
-  }
-  if (segment.effect.type === "selectAllTargets") {
-    if (segment.saveResultAs === undefined) return state;
-    const selectedTargets = new Set(state.selectedTargets);
-    selectedTargets.add(segment.saveResultAs);
-    return cloneWith(state, { selectedTargets });
-  }
-  return state;
+export const canConsumeSavedFieldObject = (
+  state: StaticSavedResultState,
+  family: SavedFieldObjectReferenceFamily,
+  saveResultAs: string,
+): boolean => {
+  const expected: Record<
+    SavedFieldObjectReferenceFamily,
+    StaticSavedReferenceKind["kind"]
+  > = {
+    selectedTargets: "selectedTargets",
+    forEachSavedTarget: "selectedTargets",
+    producedObjects: "producedObjects",
+    paidCost: "paidCost",
+  };
+  return hasReference(
+    state,
+    saveResultAs,
+    (kind) => kind.kind === expected[family],
+  );
 };
 
-export const ownerConstraintReferenceExists = (
-  state: SequenceSavedResultContractState,
-  selection: SelectionId,
+export const canConsumeNumber = (
+  state: StaticSavedResultState,
+  selection: unknown,
 ): boolean =>
-  hasSelectedCardSet(state, selection) || hasSelectedTargets(state, selection);
+  hasReference(state, selection, (kind) => kind.kind === "chosenNumber");
+
+export const canConsumeTransientSet = (
+  state: StaticSavedResultState,
+  set: unknown,
+): boolean => state.transientSets.has(String(set));
+
+export const canConstrainByOwner = (
+  state: StaticSavedResultState,
+  selection: unknown,
+): boolean =>
+  hasReference(
+    state,
+    selection,
+    (kind) => kind.kind === "selectedCards" || kind.kind === "selectedTargets",
+  );
 ```
 
-- [ ] **Step 2: Move state fields in `support.ts` behind the contract**
+- [ ] **Step 4: Wire `support.ts` through the contract**
 
-In `packages/engine-core/src/effect-runtime-sequence/support.ts`, replace the separate maps and sets in `SequenceSupportState` with:
+Replace support-time state fields with:
 
 ```ts
-savedResults: SequenceSavedResultContractState;
+savedResults: StaticSavedResultState;
 ```
 
-Update initialization:
+Every producer branch must call `recordProducer`.
 
-```ts
-savedResults: emptySequenceSavedResultContractState(
-  options.initialSavedSelectedTargets ?? [],
-),
-```
+Every consumer branch must call one of:
 
-Update cloning:
+- `canConsumeSelectedCards`
+- `canConsumeSavedFieldObject`
+- `canConsumeNumber`
+- `canConsumeTransientSet`
+- `canConstrainByOwner`
 
-```ts
-savedResults: {
-  selectedCards: new Map(state.savedResults.selectedCards),
-  selectedCardMaxCounts: new Map(state.savedResults.selectedCardMaxCounts),
-  selectionSets: new Set(state.savedResults.selectionSets),
-  numbers: new Set(state.savedResults.numbers),
-  selectedTargets: new Set(state.savedResults.selectedTargets),
-},
-```
+Do not leave direct `Map`/`Set` saved-result mutation in `support.ts` except inside the contract state.
 
-Replace local helpers with imports from `save-result-contract.ts`:
-
-```ts
-import {
-  emptySequenceSavedResultContractState,
-  hasNumber,
-  hasSelectedCardSet,
-  hasSelectedTargets,
-  hasSelectionSet,
-  ownerConstraintReferenceExists,
-  recordSequenceProducer,
-  selectedCardsKind,
-  selectedCardsMaxCount,
-  type SequenceSavedResultContractState,
-} from "./support/save-result-contract.js";
-```
-
-- [ ] **Step 3: Record producers through the contract**
-
-In `support.ts`, replace direct mutation for producer segments:
-
-```ts
-const nextSavedResults = recordSequenceProducer(
-  supportState.savedResults,
-  segment,
-);
-if (nextSavedResults === null) {
-  return false;
-}
-supportState.savedResults = nextSavedResults;
-```
-
-Apply this to producer branches:
-
-- `chooseNumber`
-- `revealTop`
-- `selectFromSet`
-- `selectCards`
-- `selectTargets`
-- `selectAllTargets`
-
-Keep branch-specific validation such as `isSupportedSequenceTargetRequest`, `isSupportedSelectFromSetSegment`, and `hasSavedOwnerConstraintReference`, but read saved state through `supportState.savedResults`.
-
-- [ ] **Step 4: Update consumer checks to use the contract**
-
-Replace consumer reads in `support.ts`:
-
-```ts
-selectedCardsKind(supportState.savedResults, segment.effect.selection);
-selectedCardsMaxCount(supportState.savedResults, segment.effect.selection);
-hasSelectionSet(supportState.savedResults, segment.effect.set);
-hasSelectedCardSet(supportState.savedResults, segment.effect.set);
-hasNumber(supportState.savedResults, selection);
-hasSelectedTargets(supportState.savedResults, segment.effect.selection);
-ownerConstraintReferenceExists(
-  supportState.savedResults,
-  segment.effect.ownerConstraint.selection,
-);
-```
-
-- [ ] **Step 5: Run the static matrix test**
+- [ ] **Step 5: Run matrix tests GREEN**
 
 Run:
 
@@ -702,288 +619,88 @@ npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-sav
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit contract centralization**
+- [ ] **Step 6: Commit static contract**
 
 Run:
 
 ```powershell
 git status --short --branch
-git add packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts packages/engine-core/src/effect-runtime-sequence/support.ts packages/engine-core/src/effect-runtime-sequence/support/selection.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
-git commit -m "Centralize engine sequence saved result contract"
+git add -p packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts packages/engine-core/src/effect-runtime-sequence/support.ts packages/engine-core/src/effect-runtime-sequence/support/selection.ts packages/engine-core/src/effect-runtime-sequence/support/field.ts packages/engine-core/src/effect-runtime-sequence/support/continuous.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
+git commit -m "Centralize full engine saved result contract"
 ```
+
+Expected: commit succeeds. If `field.ts` or `continuous.ts` were not touched, omit them from staging.
 
 ---
 
-### Task 4: Prove Runtime Ledgers Match Static Contract
+### Task 5: Add Runtime Ledger Proof For Every Reference Kind
 
 **Files:**
 
 - Create: `packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts`
 
-- [ ] **Step 1: Write runtime proof tests**
+- [ ] **Step 1: Add runtime test harness**
 
-Create `packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts` with tests that execute real decisions and inspect frame saved references:
+Create `packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts` using existing helpers from `effect-runtime-queue/test-support.ts`. Include:
+
+- `setupSequence(state, effect)` that installs an activate-main sequence on `p1` leader
+- `moveDonToCostArea(state, playerId)`
+- `pendingFrame(state)` helper:
 
 ```ts
-import assert from "node:assert/strict";
-import { test } from "vitest";
-
-import type {
-  CardInstance,
-  Effect,
-  GameState,
-  PlayerId,
-  SelectionId,
-} from "@optcg/types";
-
-import {
-  applyAction,
-  createActiveState,
-  must,
-  p1,
-  p2,
-  processEffectRuntime,
-  queueDrawForP1,
-  resolvedCard,
-  reviewedOnPlayDrawDefinition,
-  toEffectId,
-  toQueueEntryId,
-  toSourceSnapshot,
-  toTimingWindowId,
-  withCardInZone,
-} from "../effect-runtime-queue/test-support.js";
-
-const setupSequence = (state: GameState, effect: Effect): void => {
-  const p1State = must(state.players[p1], "p1");
-  state.turn.turnPlayerId = p1;
-  const source = p1State.leader;
-  const effectDefinitionId = "def-saved-result-contract";
-  const supportCard = resolvedCard({
-    cardId: source.cardId,
-    category: "leader",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId,
-      rulesVersion: "saved-result-contract-rules",
-      sourceTextHash: "saved-result-contract-source",
-    },
-  });
-  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
-  const definition = {
-    ...base,
-    effects: [
-      {
-        ...must(base.effects[0], "base effect"),
-        id: toEffectId("effect-saved-result-contract"),
-        category: "activate",
-        trigger: { type: "activateMain" },
-        sourcePresencePolicy: "mustRemainInSameZone",
-        effect,
-      },
-    ],
-  };
-  state.cardManifest.cards[source.cardId] = supportCard;
-  state.cardManifest.effectDefinitionsVersion =
-    definition.metadata.effectDefinitionsVersion;
-  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
-  state.effectQueue = [
-    {
-      ...queueDrawForP1(),
-      id: toQueueEntryId("queue-entry:saved-result-contract"),
-      timingWindowId: toTimingWindowId("timing-window:saved-result-contract"),
-      queueOrigin: { type: "activateMain" },
-      generation: 0,
-      controllerId: p1,
-      source: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
-        playerId: p1,
-        zone: source.zone,
-      },
-      sourceSnapshot: toSourceSnapshot(source, p1, p1),
-      effectBlockId: must(definition.effects[0], "effect").id,
-      sourcePresencePolicy: "mustRemainInSameZone",
-      causedBy: { type: "ruleProcess", name: "savedResultContractTest" },
-    },
-  ];
-};
-
-const moveDonToCostArea = (
-  state: GameState,
-  playerId: PlayerId,
-): CardInstance => {
-  const player = must(state.players[playerId], "player");
-  const don = must(player.donDeck[0], "DON");
-  player.donDeck = player.donDeck.slice(1);
-  const costDon = {
-    ...don,
-    zone: {
-      zone: "costArea",
-      playerId,
-      slot: "cost",
-      index: player.costArea.length,
-    },
-    state: "rested",
-  } satisfies CardInstance;
-  player.costArea = [...player.costArea, costDon];
-  state.cardManifest.cards[don.cardId] = resolvedCard({
-    cardId: don.cardId,
-    category: "don",
-  });
-  return costDon;
-};
-
-test("runtime saves costArea DON selectTargets and attachSelectedDon consumes it", () => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const p1Target = withCardInZone({
-    state,
-    playerId: p1,
-    card: must(p1State.hand[0], "p1 target"),
-    zone: "characterArea",
-  });
-  const p1Don = moveDonToCostArea(state, p1);
-  state.cardManifest.cards[p1Target.cardId] = resolvedCard({
-    cardId: p1Target.cardId,
-    category: "character",
-  });
-  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
-    cardId: p2State.leader.cardId,
-    category: "leader",
-  });
-  const donSelection = "donSelection" as SelectionId;
-  const targetSelection = "targetSelection";
-  setupSequence(state, {
-    type: "sequence",
-    effects: [
-      {
-        connector: "always",
-        saveResultAs: donSelection,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "self",
-            zone: "costArea",
-            filter: { categories: ["don"] },
-            min: 0,
-            max: 1,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-          },
-        },
-      },
-      {
-        connector: "ifYouDo",
-        saveResultAs: targetSelection,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "self",
-            zone: "characterArea",
-            filter: { categories: ["character"] },
-            min: 1,
-            max: 1,
-            allowFewerIfUnavailable: false,
-            visibility: "public",
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "attachSelectedDon",
-          selection: donSelection,
-          target: {
-            type: "savedFieldObject",
-            binding: {
-              family: "selectedTargets",
-              saveResultAs: targetSelection,
-            },
-            zone: "characterArea",
-            player: "self",
-            filter: { categories: ["character"] },
-            visibility: "publicOnly",
-            onFailure: "failClosed",
-          },
-        },
-      },
-    ],
-  });
-
-  const selectDonRun = processEffectRuntime(state);
-  assert.equal(selectDonRun.errors, undefined);
-  const selectDon = must(selectDonRun.state.pendingDecision, "select DON");
-  assert.equal(selectDon.type, "selectTargets");
-  const selectedDon = applyAction(selectDonRun.state, {
-    type: "respondToDecision",
-    decisionId: selectDon.id,
-    response: {
-      type: "targets",
-      targets: [
-        must(
-          selectDon.candidates.find(
-            (candidate) => candidate.card.instanceId === p1Don.instanceId,
-          ),
-          "DON candidate",
-        ).card,
-      ],
-    },
-  });
-  assert.equal(selectedDon.errors, undefined);
-  const selectTarget = must(selectedDon.state.pendingDecision, "select target");
-  assert.equal(selectTarget.type, "selectTargets");
-  const selectedTarget = applyAction(selectedDon.state, {
-    type: "respondToDecision",
-    decisionId: selectTarget.id,
-    response: {
-      type: "targets",
-      targets: [
-        must(
-          selectTarget.candidates.find(
-            (candidate) => candidate.card.instanceId === p1Target.instanceId,
-          ),
-          "target candidate",
-        ).card,
-      ],
-    },
-  });
-
-  assert.equal(selectedTarget.errors, undefined);
-  assert.deepEqual(
-    must(selectedTarget.state.players[p1], "p1 after").characters.find(
-      (card) => card.instanceId === p1Target.instanceId,
-    )?.attachedDon,
-    [p1Don.instanceId],
-  );
-});
+const pendingFrame = (state: GameState) =>
+  must(state.effectExecutionFrames[0], "pending effect execution frame");
 ```
 
-- [ ] **Step 2: Run runtime test**
+- `savedReference(state, id)` helper:
 
-Run:
-
-```powershell
-npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts
+```ts
+const savedReference = (state: GameState, id: string) =>
+  must(pendingFrame(state).savedReferences[id], `saved reference ${id}`);
 ```
 
-Expected: PASS, or FAIL with a real runtime ledger mismatch that must be fixed before moving on.
+- [ ] **Step 2: Add selectedCards runtime ledger tests**
 
-- [ ] **Step 3: Add at least one set-selection runtime proof**
+Add tests that pause after each producer and assert `savedReference(...).kind`:
 
-Add another test to the same file proving:
+- `selectCards` hand saves `selectedCards`
+- `selectCards` trash saves `selectedCards`
+- costArea DON via `selectTargets` saves `selectedTargets` at runtime but is statically allowed as DON only through the contract; assert runtime kind and final DON attachment
+- `selectFromSet` saves `selectedCards`
+- `revealTop` saves `selectedCards`
 
-- `revealTop` creates a set reference
-- `selectFromSet` creates selected cards
-- `revealSelected` or `playSelected` consumes those selected cards
+These tests must inspect `effectExecutionFrames[0].savedReferences` after the response that creates the reference, while the next decision is pending.
 
-Use existing helpers from `packages/engine-core/src/runtime/conditions/set-selection-sequence.test.ts` as reference for state setup and responses.
+- [ ] **Step 3: Add selectedTargets runtime ledger tests**
 
-- [ ] **Step 4: Run runtime test again**
+Add tests for:
+
+- `selectTargets` saves `selectedTargets`
+- `selectAllTargets` saves `selectedTargets`
+- `forEachSavedTarget` current item saves `selectedTargets` for the loop body
+- `ownerConstraint` uses selectedCards owner
+- `ownerConstraint` uses selectedTargets owner
+
+- [ ] **Step 4: Add paidCost, producedObjects, and chosenNumber runtime ledger tests**
+
+Add tests for:
+
+- accepted `payCost` saves `paidCost`
+- declined optional cost does not save `paidCost`
+- `draw` with `saveResultAs` saves `producedObjects`
+- `drawUpTo` with `saveResultAs` saves `producedObjects`
+- trigger-context `cardPlayed` creates `producedObjects` seed
+- `chooseNumber` saves `chosenNumber`
+
+- [ ] **Step 5: Add savedFieldObject negative runtime tests**
+
+Add tests for:
+
+- missing `selectedTargets` savedFieldObject binding fails before mutation
+- missing `producedObjects` savedFieldObject binding fails before mutation
+- missing `paidCost` savedFieldObject binding fails before mutation
+
+- [ ] **Step 6: Run runtime ledger proof**
 
 Run:
 
@@ -993,82 +710,51 @@ npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/saved-resul
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit runtime proof**
+- [ ] **Step 7: Commit runtime proof**
 
 Run:
 
 ```powershell
 git status --short --branch
-git add packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts
-git commit -m "Prove runtime saved result contract paths"
+git add -p packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts
+git commit -m "Prove runtime saved result ledgers"
 ```
 
 ---
 
-### Task 5: Add Explicit Segment Metadata After Engine Contract Is Proven
+### Task 6: Add Explicit Segment Metadata After Engine Proof
 
 **Files:**
 
 - Modify: `packages/types/src/effects.ts`
 - Modify: `packages/types/src/effects.test.ts`
 - Modify: `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts`
-- Test: `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
+- Modify: `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
 
-- [ ] **Step 1: Add RED tests for explicit metadata**
+- [ ] **Step 1: Add RED type and support tests**
 
-In `packages/types/src/effects.test.ts`, add:
-
-```ts
-test("TYP sequence segment may declare explicit saved result kind", () => {
-  const segment: SequencedEffect = {
-    connector: "always",
-    saveResultAs: "selectedDon",
-    saveResultKind: "selectedCards:don",
-    effect: {
-      type: "selectTargets",
-      request: {
-        timing: "onResolution",
-        chooser: "self",
-        player: "self",
-        zone: "costArea",
-        filter: { categories: ["don"] },
-        min: 0,
-        max: 1,
-        allowFewerIfUnavailable: true,
-        visibility: "public",
-      },
-    },
-  };
-
-  expect(segment.saveResultKind).toBe("selectedCards:don");
-});
-```
-
-In `support-save-result-contract.test.ts`, add:
+Add `SequenceSaveResultKind` expectations for every reference kind:
 
 ```ts
-test("contract rejects explicit selectedCards DON metadata on a hand producer", () => {
-  assertUnsupported(
-    block([
-      {
-        connector: "always",
-        saveResultAs: "badDon",
-        saveResultKind: "selectedCards:don",
-        effect: {
-          type: "selectCards",
-          zone: "hand",
-          player: "self",
-          chooser: "self",
-          min: 1,
-          max: 1,
-          saveAs: "badDon" as SelectionId,
-          visibility: "chooserOnly",
-        },
-      },
-    ]),
-  );
-});
+export type SequenceSaveResultKind =
+  | "selectedCards:hand"
+  | "selectedCards:trash"
+  | "selectedCards:don"
+  | "selectedCards:set"
+  | "selectedTargets"
+  | "paidCost"
+  | "producedObjects"
+  | "chosenNumber";
 ```
+
+Add support tests proving explicit metadata:
+
+- matches each valid producer
+- rejects `selectedCards:don` on hand producer
+- rejects `selectedTargets` on selectedCards producer
+- rejects `paidCost` on draw producer
+- rejects `producedObjects` on payCost producer
+- rejects `chosenNumber` on non-number producer
 
 - [ ] **Step 2: Run RED tests**
 
@@ -1078,62 +764,15 @@ Run:
 npm.cmd run test -- packages/types/src/effects.test.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
 ```
 
-Expected: FAIL because `saveResultKind` is not typed or validated yet.
+Expected: FAIL because metadata is not typed/validated yet.
 
-- [ ] **Step 3: Add segment metadata type**
+- [ ] **Step 3: Add type and validation**
 
-In `packages/types/src/effects.ts`, add:
+Add `SequenceSaveResultKind` to `packages/types/src/effects.ts` and `saveResultKind?: SequenceSaveResultKind` to `SequencedEffect`.
 
-```ts
-export type SequenceSaveResultKind =
-  | "selectedCards:hand"
-  | "selectedCards:trash"
-  | "selectedCards:don"
-  | "selectedCards:set"
-  | "selectedTargets"
-  | "selectionSet"
-  | "number"
-  | "paidCost";
-```
+In `save-result-contract.ts`, make `recordProducer` compare explicit metadata against inferred metadata for every producer. If explicit metadata exists and differs, return `null`.
 
-Update `SequencedEffect`:
-
-```ts
-saveResultKind?: SequenceSaveResultKind;
-```
-
-- [ ] **Step 4: Validate explicit metadata in the contract module**
-
-In `save-result-contract.ts`, add:
-
-```ts
-const kindForSelectedCards = (
-  kind: SavedSelectedCardsKind,
-): `selectedCards:${SavedSelectedCardsKind}` => `selectedCards:${kind}`;
-
-const explicitKindMatchesSelectedCards = (
-  explicit: SequenceSegment["saveResultKind"] | undefined,
-  inferred: SavedSelectedCardsKind,
-): boolean =>
-  explicit === undefined || explicit === kindForSelectedCards(inferred);
-```
-
-Use it in `recordSequenceProducer` for `selectCards`, `selectTargets` DON, and `selectFromSet`. If explicit metadata exists and does not match inferred producer kind, return `null`.
-
-For pure target producers:
-
-```ts
-if (
-  segment.saveResultKind !== undefined &&
-  segment.saveResultKind !== "selectedTargets"
-) {
-  return null;
-}
-```
-
-For `revealTop`, require `selectionSet` if explicit kind is present. For `chooseNumber`, require `number`. For paid cost, require `paidCost` in the relevant pay-cost support path.
-
-- [ ] **Step 5: Run explicit metadata tests**
+- [ ] **Step 4: Run GREEN tests**
 
 Run:
 
@@ -1143,38 +782,38 @@ npm.cmd run test -- packages/types/src/effects.test.ts packages/engine-core/src/
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit explicit metadata support**
+- [ ] **Step 5: Commit explicit metadata**
 
 Run:
 
 ```powershell
 git status --short --branch
-git add packages/types/src/effects.ts packages/types/src/effects.test.ts packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
-git commit -m "Add explicit sequence saved result metadata"
+git add -p packages/types/src/effects.ts packages/types/src/effects.test.ts packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts
+git commit -m "Add explicit saved result metadata contract"
 ```
 
 ---
 
-### Task 6: Parser Integration Against Proven Engine Contract
+### Task 7: Parser Integration Against The Engine Contract
 
 **Files:**
 
 - Modify: `packages/cards/src/instructions/don-movement/attach-rested.ts`
-- Modify: parser tests:
+- Modify:
   - `packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts`
   - `packages/cards/src/card-effect-line-parser-don-sequence.test.ts`
   - `packages/cards/src/card-effect-line-parser-don-attachment.test.ts`
 - Modify: `packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts`
 
-- [ ] **Step 1: Add parser RED assertions for explicit metadata**
+- [ ] **Step 1: Add parser RED expectations**
 
-In the parser tests, only add expected metadata to producer segments that save source DON selections:
+For each parser output segment that produces saved source DON cards, expect:
 
 ```ts
 saveResultKind: "selectedCards:don",
 ```
 
-Do not add it to target-selection segments unless the segment truly produces selected field targets and the expected value is:
+For target-selection producers that are asserted exactly, expect:
 
 ```ts
 saveResultKind: "selectedTargets",
@@ -1188,46 +827,29 @@ Run:
 npm.cmd run test -- packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts packages/cards/src/card-effect-line-parser-don-sequence.test.ts packages/cards/src/card-effect-line-parser-don-attachment.test.ts
 ```
 
-Expected: FAIL because parser output does not include `saveResultKind`.
+Expected: FAIL because parser output has not emitted metadata.
 
-- [ ] **Step 3: Emit metadata from parser producer sites**
+- [ ] **Step 3: Emit parser metadata**
 
-In `packages/cards/src/instructions/don-movement/attach-rested.ts`, add:
+In `packages/cards/src/instructions/don-movement/attach-rested.ts`, emit:
 
 ```ts
 saveResultKind: "selectedCards:don",
 ```
 
-to each DON source-selection segment that saves `donAttachSelection`.
+on every `donAttachSelection` source producer.
 
-Add:
+Emit:
 
 ```ts
 saveResultKind: "selectedTargets",
 ```
 
-only to target-selection producer segments when tests require it and support validation accepts it.
+on target-selection producer segments only when they save field targets.
 
 - [ ] **Step 4: Prove parser output is engine-supported**
 
-In `packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts`, keep the parsed owner-relative DON shape and assert:
-
-```ts
-assert.equal(
-  isSupportedSequenceBlock(
-    must(state.effectQueue[0], "queued effect"),
-    must(
-      Object.values(
-        must(state.cardManifest.effectDefinitions, "definitions"),
-      )[0]?.effects[0],
-      "effect block",
-    ),
-  ),
-  true,
-);
-```
-
-Expected: this remains true with explicit metadata because engine contract validation agrees with parser output.
+In `select-targets-owner-constraint.test.ts`, keep the parsed owner-relative DON regression and assert `isSupportedSequenceBlock(...) === true` with the explicit metadata included.
 
 - [ ] **Step 5: Run parser plus engine integration tests**
 
@@ -1245,24 +867,24 @@ Run:
 
 ```powershell
 git status --short --branch
-git add packages/cards/src/instructions/don-movement/attach-rested.ts packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts packages/cards/src/card-effect-line-parser-don-sequence.test.ts packages/cards/src/card-effect-line-parser-don-attachment.test.ts packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts
-git commit -m "Emit parser metadata for engine saved result contract"
+git add -p packages/cards/src/instructions/don-movement/attach-rested.ts packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts packages/cards/src/card-effect-line-parser-don-sequence.test.ts packages/cards/src/card-effect-line-parser-don-attachment.test.ts packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts
+git commit -m "Emit parser metadata for saved result contract"
 ```
 
 ---
 
-### Task 7: Full Verification
+### Task 8: Full Verification
 
 **Files:**
 
 - No source changes expected unless checks reveal issues.
 
-- [ ] **Step 1: Run focused engine and parser tests**
+- [ ] **Step 1: Run focused contract suite**
 
 Run:
 
 ```powershell
-npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts packages/types/src/effects.test.ts packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts packages/cards/src/card-effect-line-parser-don-sequence.test.ts packages/cards/src/card-effect-line-parser-don-attachment.test.ts
+npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts packages/engine-core/src/effect-runtime-sequence/select-targets-owner-constraint.test.ts packages/types/src/effects.test.ts packages/cards/src/card-effect-line-parser-costed-don-attachment.test.ts packages/cards/src/card-effect-line-parser-don-sequence.test.ts packages/cards/src/card-effect-line-parser-don-attachment.test.ts
 ```
 
 Expected: PASS.
@@ -1285,25 +907,15 @@ Run:
 git status --short --branch
 ```
 
-Expected: clean working tree, or only unrelated user/agent files that were intentionally not staged.
-
-- [ ] **Step 4: Commit formatter-only owned changes if needed**
-
-Only run this if `git status --short` shows owned modified files from this work:
-
-```powershell
-git add <owned-changed-files>
-git commit -m "Format engine sequence contract proof"
-```
-
-Expected: commit succeeds and pre-commit hook passes.
+Expected: clean working tree, or only unrelated user/agent files intentionally left unstaged.
 
 ---
 
 ## Self-Review
 
-- The plan no longer proves only one DON attachment path. It starts with an engine-core saved-result producer/consumer matrix and adds runtime ledger proof before parser integration.
-- Parser output is not treated as authority. Parser metadata is only accepted after the engine contract validates the semantics.
-- The plan explicitly tests mismatch rejection: hand cards cannot satisfy DON consumers, missing selections fail closed, and explicit metadata cannot contradict inferred producer kind.
-- The plan preserves compatibility by keeping inference when explicit metadata is absent, then adding metadata after the engine contract is centralized.
-- Shared-workspace commit rules are included before every commit.
+- The plan covers every current `SequenceSavedResultReference` kind: `selectedCards`, `selectedTargets`, `paidCost`, `producedObjects`, and `chosenNumber`.
+- The plan covers static selected-card subkinds: hand, trash, DON, and set.
+- The plan covers every named producer and consumer door, including `savedFieldObject` bindings, paid-cost references, produced objects, chosen numbers, and transient sets.
+- Runtime tests must inspect paused frame ledgers, not just final gameplay results.
+- Source-inventory tests force future saved-result producers/readers to update the contract.
+- Shared-workspace staging uses `git add -p` instead of plain file staging.
