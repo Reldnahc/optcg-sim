@@ -37,10 +37,7 @@ import {
   isFieldZoneForActivateMain,
   isScopedActivateMainQueueEntry,
 } from "./activate-main-support.js";
-import {
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
-} from "../../rules/once-per-turn.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 
 export { isScopedActivateMainQueueEntry };
 
@@ -348,15 +345,8 @@ export const getActivateMainLegalActions = (
       if (!condition.supported || !condition.passed) {
         continue;
       }
-      if (effect.oncePerTurn === true) {
-        const key = toOncePerTurnKey({
-          cardInstanceId: source.instanceId,
-          effectId: effect.id,
-          turnNumber: state.turn.globalTurn,
-        });
-        if (isOncePerTurnUsed(state, key)) {
-          continue;
-        }
+      if (!canAdmitOncePerTurnEffect(state, queueEntry, effect)) {
+        continue;
       }
       actions.push({
         type: "activateEffect",
@@ -416,16 +406,6 @@ export const applyActivateMainAction = (
       "activateEffect effect id is unsupported for source.",
     );
   }
-  if (effect.oncePerTurn === true) {
-    const key = toOncePerTurnKey({
-      cardInstanceId: action.source.instanceId,
-      effectId: effect.id,
-      turnNumber: state.turn.globalTurn,
-    });
-    if (isOncePerTurnUsed(state, key)) {
-      return illegalAction(state, "activateEffect once-per-turn already used.");
-    }
-  }
   const entry = createActivateMainQueueEntry({
     state,
     source: {
@@ -439,6 +419,9 @@ export const applyActivateMainAction = (
     effectBlock: effect,
     resolvedCard: live.resolved,
   });
+  if (!canAdmitOncePerTurnEffect(state, entry, effect)) {
+    return illegalAction(state, "activateEffect once-per-turn already used.");
+  }
   const condition = evaluateQueuedEffectCondition(
     state,
     entry,

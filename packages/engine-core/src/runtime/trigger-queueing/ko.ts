@@ -40,6 +40,7 @@ import {
   toSnapshot,
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import {
   activeEffectTextPresentationForEffectBlock,
   effectQueueEntryPresentationForEffectBlock,
@@ -291,6 +292,9 @@ export const createKOTriggerQueueing = (
           ? {}
           : { presentation: candidate.presentation }),
       };
+      if (!canAdmitOncePerTurnEffect(state, entry, candidate.effectBlock)) {
+        continue;
+      }
       appended.push({
         entry,
         effectBlock: candidate.effectBlock,
@@ -414,6 +418,9 @@ export const createKOTriggerQueueing = (
             source: entrySource,
           }),
         };
+        if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          continue;
+        }
         appended.push({ entry, effectBlock, resolved });
       }
     }

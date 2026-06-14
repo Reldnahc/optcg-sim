@@ -16,6 +16,7 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
@@ -302,6 +303,9 @@ export const createAttackTriggerQueueing = (
             source: entrySource,
           }),
         };
+        if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          continue;
+        }
         appended.push({ entry, effectBlock, resolved });
       }
     }
@@ -630,6 +634,9 @@ export const createAttackTriggerQueueing = (
               source: entrySource,
             }),
           };
+          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+            continue;
+          }
           appended.push({ entry, effectBlock, resolved });
         }
       }

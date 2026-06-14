@@ -11,10 +11,7 @@ import type {
 import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
-import {
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
-} from "../../rules/once-per-turn.js";
+import { createOncePerTurnGate } from "../../rules/once-per-turn.js";
 import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
 import {
   resolvePublicTargetCandidates,
@@ -99,15 +96,12 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
     return [];
   }
   if (
-    effect.oncePerTurn === true &&
-    isOncePerTurnUsed(
-      state,
-      toOncePerTurnKey({
-        cardInstanceId: source.card.instanceId,
-        effectId: effect.id,
-        turnNumber: state.turn.globalTurn,
-      }),
-    )
+    !createOncePerTurnGate({
+      sourceInstanceId: source.card.instanceId,
+      effectId: effect.id,
+      turnNumber: state.turn.globalTurn,
+      oncePerTurn: effect.oncePerTurn === true,
+    }).canUse(state)
   ) {
     return [];
   }

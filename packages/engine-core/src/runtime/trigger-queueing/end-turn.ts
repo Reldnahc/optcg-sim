@@ -25,6 +25,7 @@ import type {
   EndOfYourTurnTriggerQueueingFailureReason,
 } from "./core.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 
 const endOfYourTurnAutoAdapter = {
@@ -158,34 +159,38 @@ export const createEndOfTurnTriggerQueueing = (
             playerId: controllerId,
             zone: source.zone,
           };
-          appended.push({
-            entry: {
-              id: `queue-entry:${String(event.id)}:endOfYourTurn:${String(
-                effectBlock.id,
-              )}` as EffectQueueEntry["id"],
-              state: "pending",
-              timingWindowId:
-                `timing-window:${String(event.id)}:endOfYourTurn` as EffectQueueEntry["timingWindowId"],
-              generation: 0,
-              controllerId,
-              source: entrySource,
-              sourceSnapshot: toSnapshot(source, resolved),
-              triggerEventId: event.id,
-              effectBlockId: effectBlock.id,
-              orderingGroup: "turnPlayer",
-              createdAtEventSeq: event.seq,
-              queuedAtStateSeq: toStateSeq(state.seq + 1),
-              sourcePresencePolicy: effectBlock.sourcePresencePolicy,
-              causedBy: {
-                type: "ruleProcess",
-                name: "effectRuntime:endOfYourTurnTriggerQueueing",
-              },
-              ...effectQueueEntryPresentationForEffectBlock({
-                effectBlock,
-                resolvedCard: resolved,
-                source: entrySource,
-              }),
+          const entry: EffectQueueEntry = {
+            id: `queue-entry:${String(event.id)}:endOfYourTurn:${String(
+              effectBlock.id,
+            )}` as EffectQueueEntry["id"],
+            state: "pending",
+            timingWindowId:
+              `timing-window:${String(event.id)}:endOfYourTurn` as EffectQueueEntry["timingWindowId"],
+            generation: 0,
+            controllerId,
+            source: entrySource,
+            sourceSnapshot: toSnapshot(source, resolved),
+            triggerEventId: event.id,
+            effectBlockId: effectBlock.id,
+            orderingGroup: "turnPlayer",
+            createdAtEventSeq: event.seq,
+            queuedAtStateSeq: toStateSeq(state.seq + 1),
+            sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+            causedBy: {
+              type: "ruleProcess",
+              name: "effectRuntime:endOfYourTurnTriggerQueueing",
             },
+            ...effectQueueEntryPresentationForEffectBlock({
+              effectBlock,
+              resolvedCard: resolved,
+              source: entrySource,
+            }),
+          };
+          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+            continue;
+          }
+          appended.push({
+            entry,
             effectBlock,
             resolved,
           });

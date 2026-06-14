@@ -31,10 +31,7 @@ import {
 import { canResolvePrimitiveBodyForEntry } from "../../effect-runtime-queue/primitive-resolution.js";
 import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
-import {
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
-} from "../../rules/once-per-turn.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 import { isFieldZoneForActivateMain } from "./activate-main-support.js";
 import { startOfYourTurnQueueingName } from "./start-of-turn-support.js";
@@ -238,15 +235,7 @@ const isStartOfTurnActionLegal = (
   if (!condition.supported || !condition.passed) {
     return false;
   }
-  if (effect.oncePerTurn === true) {
-    const key = toOncePerTurnKey({
-      cardInstanceId: source.instanceId,
-      effectId: effect.id,
-      turnNumber: state.turn.globalTurn,
-    });
-    return !isOncePerTurnUsed(state, key);
-  }
-  return true;
+  return canAdmitOncePerTurnEffect(state, entry, effect);
 };
 
 export const getStartOfTurnLegalActions = (

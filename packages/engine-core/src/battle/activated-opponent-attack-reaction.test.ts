@@ -1,16 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, EffectId } from "@optcg/types";
+import type { EffectDefinition, EffectId, GameState } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import { applyDeclareAttack } from "./actions.js";
 import { setupAttackState } from "./test-fixtures.js";
 
-test("activated opponent-attack reaction resolves target selection and resumes battle flow", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
+const installActivatedOpponentAttackPowerDefinition = (
+  state: GameState,
+): EffectId => {
   const p2State = must(state.players[p2], "p2");
   const effectId = "activated-opponent-attack-power" as EffectId;
   const definition: EffectDefinition = {
@@ -77,7 +77,14 @@ test("activated opponent-attack reaction resolves target selection and resumes b
       sourceTextHash: definition.metadata.sourceTextHash,
     },
   });
+  return effectId;
+};
 
+test("activated opponent-attack reaction resolves target selection and resumes battle flow", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const effectId = installActivatedOpponentAttackPowerDefinition(state);
+  const p2State = must(state.players[p2], "p2");
   const opened = applyDeclareAttack(state, {
     type: "declareAttack",
     attacker: {
@@ -137,5 +144,44 @@ test("activated opponent-attack reaction resolves target selection and resumes b
         record.modifier.operation.value === -1000,
     ),
     true,
+  );
+});
+
+test("activated opponent-attack reaction is not offered after its once-per-turn marker is used", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const effectId = installActivatedOpponentAttackPowerDefinition(state);
+  state.oncePerTurn = [
+    {
+      cardInstanceId: p2State.leader.instanceId,
+      effectId,
+      turnNumber: state.turn.globalTurn,
+      usedAtStateSeq: state.seq,
+    },
+  ];
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.notEqual(
+    opened.state.pendingDecision?.type,
+    "chooseOptionalActivation",
+  );
+  assert.equal(
+    opened.state.effectQueue.some((entry) => entry.effectBlockId === effectId),
+    false,
   );
 });

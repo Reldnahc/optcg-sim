@@ -19,10 +19,7 @@ import { toCardRef, zonesEqual } from "../actions/state.js";
 import { cardMatchesHandSelectionFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
-import {
-  consumeOncePerTurn,
-  toOncePerTurnKey,
-} from "../rules/once-per-turn.js";
+import { consumeOncePerTurnForKey } from "../rules/once-per-turn.js";
 import {
   isCausalityRef,
   replacementProcessFromStoredPayload,
@@ -434,10 +431,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
   const afterOncePerTurn =
     pending.payload.oncePerTurn === undefined
       ? moved.state
-      : consumeOncePerTurn(
-          moved.state,
-          toOncePerTurnKey(pending.payload.oncePerTurn),
-        );
+      : consumeOncePerTurnForKey(moved.state, pending.payload.oncePerTurn);
   const process = replacementProcessFromStoredPayload({
     causedBy: pending.payload.causedBy,
     payload: completedPayload,

@@ -11,12 +11,14 @@ import { appendEffectResolvedForCompletedSequence } from "../frame-events.js";
 import { entryWithCompletedSequencePresentation } from "../completed-presentation.js";
 import { continueNoDecisionSegments } from "../runner.js";
 import { replaceQueueEntry, resolvingEntryFor } from "../segments.js";
-import { toSupportedSequenceBlock } from "../support.js";
+import {
+  toSupportedSequenceBlock,
+  type SupportedSequenceBlock,
+} from "../support.js";
 import { findCardInstance } from "../../effect-runtime-trigger-source-lookup.js";
 import {
-  consumeOncePerTurn,
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
+  canAdmitOncePerTurnEffect,
+  consumeOncePerTurnForQueueEntry,
 } from "../../rules/once-per-turn.js";
 import {
   createUnsupportedTrashDecision,
@@ -104,6 +106,19 @@ const initialSavedReferences = (
   };
 };
 
+const shouldDeferInitialOncePerTurnUse = (
+  effectBlock: SupportedSequenceBlock,
+): boolean => {
+  const firstSegment = effectBlock.effect.effects[0];
+  if (firstSegment === undefined) {
+    return false;
+  }
+  if (firstSegment.optional === true) {
+    return true;
+  }
+  return firstSegment.effect.type === "payCost";
+};
+
 export const createSupportedSequenceFrameDecision = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -124,15 +139,16 @@ export const createSupportedSequenceFrameDecision = (
 
   let nextState = state;
   if (effectBlock.oncePerTurn === true) {
-    const oncePerTurnKey = toOncePerTurnKey({
-      cardInstanceId: entry.source.instanceId,
-      effectId: entry.effectBlockId,
-      turnNumber: nextState.turn.globalTurn,
-    });
-    if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+    if (!canAdmitOncePerTurnEffect(nextState, entry, supportedBlock)) {
       return { ok: false };
     }
-    nextState = consumeOncePerTurn(nextState, oncePerTurnKey);
+    if (!shouldDeferInitialOncePerTurnUse(supportedBlock)) {
+      nextState = consumeOncePerTurnForQueueEntry(
+        nextState,
+        entry,
+        supportedBlock,
+      );
+    }
   }
 
   const resolvingEntry = resolvingEntryFor(entry);

@@ -27,6 +27,7 @@ import {
   findCardInstance,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 
 const onPlayAutoAdapter = {
@@ -223,6 +224,9 @@ export const createOnPlayTriggerQueueing = (
           },
           ...(presentation === undefined ? {} : { presentation }),
         };
+        if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+          continue;
+        }
         appended.push({ entry, effectBlock, resolved });
       }
     }

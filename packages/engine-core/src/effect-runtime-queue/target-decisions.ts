@@ -43,9 +43,8 @@ import {
 } from "../runtime/primitives/execute.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import {
-  consumeOncePerTurn,
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
+  canAdmitOncePerTurnEffect,
+  consumeOncePerTurnForQueueEntry,
 } from "../rules/once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
@@ -513,15 +512,14 @@ export const createEffectRuntimeQueueTargetDecisions = (
       }
       let nextState = state;
       if (resolved.oncePerTurn) {
-        const oncePerTurnKey = toOncePerTurnKey({
-          cardInstanceId: resolved.entry.source.instanceId,
-          effectId: resolved.entry.effectBlockId,
-          turnNumber: state.turn.globalTurn,
-        });
-        if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+        if (!canAdmitOncePerTurnEffect(nextState, resolved.entry, resolved)) {
           return unsupportedContinuationResult(state);
         }
-        nextState = consumeOncePerTurn(nextState, oncePerTurnKey);
+        nextState = consumeOncePerTurnForQueueEntry(
+          nextState,
+          resolved.entry,
+          resolved,
+        );
       }
 
       const resolvingEntry: EffectQueueEntry = {

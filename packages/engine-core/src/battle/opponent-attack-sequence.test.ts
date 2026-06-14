@@ -343,7 +343,7 @@ test("defender On Your Opponent's Attack sequence resolves before Counter Step p
 });
 
 test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or declined", () => {
-  const openAttackWithFilteredHandTrashCost = () => {
+  const openAttackWithFilteredHandTrashCost = (preUsed = false) => {
     const state = setupAttackState();
     const p1State = must(state.players[p1], "p1");
     const p2State = must(state.players[p2], "p2");
@@ -367,11 +367,22 @@ test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or
         effects: [
           {
             ...effect,
+            oncePerTurn: true,
             effect: optionalFilteredHandTrashThenSetBasePowerSequence(),
           },
         ],
       },
     };
+    if (preUsed) {
+      state.oncePerTurn = [
+        {
+          cardInstanceId: source.instanceId,
+          effectId: effect.id,
+          turnNumber: state.turn.globalTurn,
+          usedAtStateSeq: state.seq,
+        },
+      ];
+    }
 
     const opened = applyDeclareAttack(state, {
       type: "declareAttack",
@@ -388,10 +399,12 @@ test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or
     });
 
     assert.equal(opened.errors, undefined);
-    assert.equal(opened.state.pendingDecision?.type, "payCost");
-    assert.equal(opened.state.pendingDecision.playerId, p2);
-    assert.equal(opened.state.pendingDecision.cost.type, "trashFromHand");
-    return { opened, costCard, source };
+    if (!preUsed) {
+      assert.equal(opened.state.pendingDecision?.type, "payCost");
+      assert.equal(opened.state.pendingDecision.playerId, p2);
+      assert.equal(opened.state.pendingDecision.cost.type, "trashFromHand");
+    }
+    return { effect, opened, costCard, source };
   };
 
   const paidAttack = openAttackWithFilteredHandTrashCost();
@@ -410,6 +423,13 @@ test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or
   });
 
   assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.oncePerTurn.length, 1);
+  assert.deepEqual(paid.state.oncePerTurn[0], {
+    cardInstanceId: paidAttack.source.instanceId,
+    effectId: paidAttack.effect.id,
+    turnNumber: paidAttack.opened.state.turn.globalTurn,
+    usedAtStateSeq: paid.state.oncePerTurn[0]?.usedAtStateSeq,
+  });
   assert.equal(paid.state.battle?.step, "counter");
   assert.equal(paid.state.pendingDecision?.type, "selectCards");
   assert.equal(
@@ -448,10 +468,20 @@ test("defender On Your Opponent's Attack filtered hand-trash cost can be paid or
   });
 
   assert.equal(declined.errors, undefined);
+  assert.deepEqual(declined.state.oncePerTurn, []);
   assert.equal(declined.state.battle?.step, "counter");
   assert.equal(declined.state.pendingDecision?.type, "selectCards");
   assert.equal(must(declined.state.players[p2], "declined p2").trash.length, 0);
   assert.deepEqual(declined.state.continuousEffects, []);
+
+  const usedAttack = openAttackWithFilteredHandTrashCost(true);
+  assert.notEqual(usedAttack.opened.state.pendingDecision?.type, "payCost");
+  assert.equal(
+    usedAttack.opened.state.effectQueue.some(
+      (entry) => entry.effectBlockId === usedAttack.effect.id,
+    ),
+    false,
+  );
 });
 
 test("defender On Your Opponent's Attack selected target can become current attack target", () => {

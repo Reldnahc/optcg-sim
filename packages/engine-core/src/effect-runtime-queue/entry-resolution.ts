@@ -21,9 +21,8 @@ import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
 import {
-  consumeOncePerTurn,
-  isOncePerTurnUsed,
-  toOncePerTurnKey,
+  canAdmitOncePerTurnEffect,
+  consumeOncePerTurnForQueueEntry,
 } from "../rules/once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
@@ -139,15 +138,8 @@ export const createQueueEntryResolver = (
         ) {
           return unsupportedEffectQueueResult(originalState);
         }
-        if (queuedEffect.oncePerTurn === true) {
-          const oncePerTurnKey = toOncePerTurnKey({
-            cardInstanceId: selected.source.instanceId,
-            effectId: selected.effectBlockId,
-            turnNumber: nextState.turn.globalTurn,
-          });
-          if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
-            return unsupportedEffectQueueResult(originalState);
-          }
+        if (!canAdmitOncePerTurnEffect(nextState, selected, queuedEffect)) {
+          return unsupportedEffectQueueResult(originalState);
         }
         if (!acceptedOptionalQueueEntryIds.has(selected.id)) {
           const paused = createChooseOptionalActivationDecision(
@@ -381,16 +373,21 @@ export const createQueueEntryResolver = (
           return unsupportedEffectQueueResult(originalState);
         }
       }
-      if (queuedEffect?.oncePerTurn === true) {
-        const oncePerTurnKey = toOncePerTurnKey({
-          cardInstanceId: selectedForBodyResolution.source.instanceId,
-          effectId: selectedForBodyResolution.effectBlockId,
-          turnNumber: nextState.turn.globalTurn,
-        });
-        if (isOncePerTurnUsed(nextState, oncePerTurnKey)) {
+      if (queuedEffect !== undefined) {
+        if (
+          !canAdmitOncePerTurnEffect(
+            nextState,
+            selectedForBodyResolution,
+            queuedEffect,
+          )
+        ) {
           return unsupportedEffectQueueResult(originalState);
         }
-        nextState = consumeOncePerTurn(nextState, oncePerTurnKey);
+        nextState = consumeOncePerTurnForQueueEntry(
+          nextState,
+          selectedForBodyResolution,
+          queuedEffect,
+        );
       }
 
       const resolvingEntry: EffectQueueEntry = {

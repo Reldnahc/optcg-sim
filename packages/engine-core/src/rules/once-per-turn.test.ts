@@ -12,6 +12,7 @@ import type {
 
 import {
   consumeOncePerTurn,
+  createOncePerTurnGate,
   isOncePerTurnUsed,
   toOncePerTurnKey,
 } from "./once-per-turn.js";
@@ -237,4 +238,40 @@ test("consumeOncePerTurn is idempotent for the same key and preserves prior-turn
     ),
     true,
   );
+});
+
+test("once-per-turn gate is a no-op for effects without the marker", () => {
+  const state = createState();
+  const gate = createOncePerTurnGate({
+    sourceInstanceId: toInstanceId("card-1"),
+    effectId: "effect-a",
+    turnNumber: 3,
+    oncePerTurn: false,
+  });
+
+  assert.equal(gate.canUse(state), true);
+  assert.equal(gate.consume(state), state);
+  assert.equal(gate.key, undefined);
+});
+
+test("once-per-turn gate blocks and consumes marked effects by source effect and turn", () => {
+  const state = createState();
+  const gate = createOncePerTurnGate({
+    sourceInstanceId: toInstanceId("card-1"),
+    effectId: "effect-a",
+    turnNumber: 3,
+    oncePerTurn: true,
+  });
+
+  const consumed = gate.consume(state);
+
+  assert.equal(gate.canUse(state), true);
+  assert.equal(gate.canUse(consumed), false);
+  assert.equal(consumed.oncePerTurn.length, 1);
+  assert.deepEqual(consumed.oncePerTurn[0], {
+    cardInstanceId: toInstanceId("card-1"),
+    effectId: "effect-a",
+    turnNumber: 3,
+    usedAtStateSeq: toStateSeq(7),
+  });
 });

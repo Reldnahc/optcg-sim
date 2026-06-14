@@ -8,10 +8,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, rebaseEvents, toStateSeq } from "../../action-results.js";
-import {
-  consumeOncePerTurn,
-  toOncePerTurnKey,
-} from "../../rules/once-per-turn.js";
+import { consumeOncePerTurnForQueueEntry } from "../../rules/once-per-turn.js";
 import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 import type {
   EngineInternalReplacementAppliedEventPayload,
@@ -544,14 +541,9 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
 
   const afterReplacement =
     candidate.oncePerTurn === true
-      ? consumeOncePerTurn(
-          replaced.state,
-          toOncePerTurnKey({
-            cardInstanceId: candidate.source.instanceId,
-            effectId: candidate.effectBlockId,
-            turnNumber: state.turn.globalTurn,
-          }),
-        )
+      ? consumeOncePerTurnForQueueEntry(replaced.state, replacementEntry, {
+          oncePerTurn: candidate.oncePerTurn,
+        })
       : replaced.state;
   events.push(...rebaseEvents(state, replaced.events, events.length + 1));
   const continued = continueUncoveredFieldRemovalTargets(

@@ -23,6 +23,7 @@ import {
   segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
+import { consumeOncePerTurnForQueueEntry } from "../../rules/once-per-turn.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   SegmentLedgers,
@@ -63,6 +64,11 @@ export const resumeSequenceFrameAfterOptionalActivation = (
   let events: EngineEvent[] = [];
   let ledgers: SegmentLedgers;
   if (choice === "activate") {
+    nextState = consumeOncePerTurnForQueueEntry(
+      nextState,
+      entry,
+      supportedBlock,
+    );
     if (pausedSegment.effect.type === "draw") {
       const drawn = applyDrawSegment(
         nextState,
@@ -226,6 +232,9 @@ export const resumeSequenceFrameAfterOptionalCost = (
             : { selectedDonInstanceIds: [...paidCostSelectedDonInstanceIds] }),
         })
       : frame.savedReferences;
+  const nextState = paidCost
+    ? consumeOncePerTurnForQueueEntry(state, entry, supportedBlock)
+    : state;
   return resumeSequenceFrameFromLedgers({
     createTrashDecision,
     effectBlock: supportedBlock,
@@ -240,6 +249,6 @@ export const resumeSequenceFrameAfterOptionalCost = (
           segmentResult,
       },
     },
-    state,
+    state: nextState,
   });
 };

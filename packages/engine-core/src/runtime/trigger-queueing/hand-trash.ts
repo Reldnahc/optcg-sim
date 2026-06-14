@@ -28,6 +28,7 @@ import {
   fieldTriggerSources,
   toSnapshot,
 } from "../../effect-runtime-trigger-source-lookup.js";
+import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
@@ -290,6 +291,9 @@ export const createHandTrashedByEffectTriggerQueueing = (
               source: entrySource,
             }),
           };
+          if (!canAdmitOncePerTurnEffect(state, entry, effectBlock)) {
+            continue;
+          }
           appended.push({ entry, effectBlock, resolved });
         }
       }
