@@ -1,7 +1,6 @@
 import type {
   Action,
   CardInstance,
-  CardRef,
   EffectDefinition,
   EffectQueueEntry,
   EngineEvent,
@@ -18,9 +17,8 @@ import {
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
-import { isMatchActive, zonesEqual } from "../../actions/state.js";
+import { isMatchActive } from "../../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
-import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -35,13 +33,10 @@ import { matchEventTrigger } from "../event-hooks/matcher.js";
 import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activatedReactionQueueingName } from "./event-reaction-support.js";
 import { isSupportedActivatedReactionEffect as isSupportedActivatedReactionEffectWithEntry } from "./event-reaction-runtime-support.js";
-
-const isFieldZoneForActivatedReaction = (
-  zone: CardRef["zone"],
-): zone is NonNullable<CardRef["zone"]> =>
-  zone?.zone === "leaderArea" ||
-  zone?.zone === "characterArea" ||
-  zone?.zone === "stageArea";
+import {
+  fieldSourceCanUseEffects,
+  findFieldSource,
+} from "../source-presence-gate.js";
 
 export const isSupportedActivatedReactionEffect = (
   effect: EffectDefinition["effects"][number],
@@ -79,43 +74,6 @@ const isOpenLifeRemovedEvent = (
 
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
-
-const findLiveCardBySource = (
-  state: GameState,
-  source: CardRef,
-):
-  | {
-      card: CardInstance;
-      resolved: ResolvedCard;
-    }
-  | undefined => {
-  if (!isFieldZoneForActivatedReaction(source.zone)) {
-    return undefined;
-  }
-  const player = state.players[source.playerId];
-  if (player === undefined) {
-    return undefined;
-  }
-  const cards = [
-    player.leader,
-    ...player.characters,
-    ...(player.stage === undefined ? [] : [player.stage]),
-  ];
-  const card = cards.find(
-    (candidate) =>
-      candidate.instanceId === source.instanceId &&
-      candidate.cardId === source.cardId &&
-      zonesEqual(candidate.zone, source.zone),
-  );
-  if (card === undefined) {
-    return undefined;
-  }
-  const resolved = state.cardManifest.cards[card.cardId];
-  if (resolved === undefined) {
-    return undefined;
-  }
-  return { card, resolved };
-};
 
 const createActivatedReactionQueueEntry = (params: {
   state: GameState;
@@ -256,29 +214,31 @@ export const getActivatedReactionLegalActions = (
 ): LegalAction[] => {
   const actions: LegalAction[] = [];
   for (const source of fieldTriggerSources(state)) {
-    if (
-      source.controller !== playerId ||
-      isCardEffectInvalidated(state, source)
-    ) {
+    if (source.controller !== playerId) {
       continue;
     }
-    const resolved = state.cardManifest.cards[source.cardId];
-    if (resolved === undefined) {
+    const live = fieldSourceCanUseEffects(state, {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId,
+      zone: source.zone,
+    });
+    if (live === undefined) {
       continue;
     }
     const supported = findSupportedActivatedReactionEffects(
       state,
-      source,
-      resolved,
+      live.card,
+      live.resolved,
     );
     for (const { effect, triggerEvent } of supported) {
       if (
         !isActivatedReactionActionLegal(
           state,
-          source,
+          live.card,
           effect,
           triggerEvent,
-          resolved,
+          live.resolved,
         )
       ) {
         continue;
@@ -308,11 +268,11 @@ export const applyActivatedReactionAction = (
       "activateEffect is only legal while match is active.",
     );
   }
-  const live = findLiveCardBySource(state, action.source);
+  const live = findFieldSource(state, action.source);
   if (live === undefined || live.card.controller !== action.source.playerId) {
     return undefined;
   }
-  if (isCardEffectInvalidated(state, live.card)) {
+  if (fieldSourceCanUseEffects(state, action.source) === undefined) {
     return undefined;
   }
   const supported = findSupportedActivatedReactionEffects(

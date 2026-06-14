@@ -18,12 +18,11 @@ import {
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
-import { isMatchActive, zonesEqual } from "../../actions/state.js";
+import { isMatchActive } from "../../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "../../effect-runtime-conditions.js";
-import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -33,10 +32,11 @@ import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
-import { isFieldZoneForActivateMain } from "./activate-main-support.js";
 import { startOfYourTurnQueueingName } from "./start-of-turn-support.js";
-
-type StartOfTurnSource = CardRef & { zone: NonNullable<CardRef["zone"]> };
+import {
+  fieldSourceCanUseEffects,
+  findFieldSource,
+} from "../source-presence-gate.js";
 
 type StartOfTurnRuntimeEffectBlock = EffectDefinition["effects"][number] & {
   sourcePresencePolicy: SourcePresencePolicy;
@@ -106,43 +106,6 @@ export const isSupportedStartOfTurnRuntimeEffectBlock = (
   hasSupportedStartOfTurnEnvelope(effect) &&
   (canResolvePrimitiveBodyForEntry(effect, entry) ||
     isSupportedSequenceBlock(entry, effect));
-
-const findLiveCardBySource = (
-  state: GameState,
-  source: StartOfTurnSource,
-):
-  | {
-      card: CardInstance;
-      resolved: ResolvedCard;
-    }
-  | undefined => {
-  if (!isFieldZoneForActivateMain(source.zone)) {
-    return undefined;
-  }
-  const player = state.players[source.playerId];
-  if (player === undefined) {
-    return undefined;
-  }
-  const cards = [
-    player.leader,
-    ...player.characters,
-    ...(player.stage === undefined ? [] : [player.stage]),
-  ];
-  const card = cards.find(
-    (candidate) =>
-      candidate.instanceId === source.instanceId &&
-      candidate.cardId === source.cardId &&
-      zonesEqual(candidate.zone, source.zone),
-  );
-  if (card === undefined) {
-    return undefined;
-  }
-  const resolved = state.cardManifest.cards[card.cardId];
-  if (resolved === undefined) {
-    return undefined;
-  }
-  return { card, resolved };
-};
 
 const createStartOfTurnQueueEntry = (params: {
   state: GameState;
@@ -260,19 +223,25 @@ export const getStartOfTurnLegalActions = (
   ];
   const actions: LegalAction[] = [];
   for (const source of sources) {
-    if (
-      source.controller !== playerId ||
-      isCardEffectInvalidated(state, source)
-    ) {
+    if (source.controller !== playerId) {
       continue;
     }
-    const resolved = state.cardManifest.cards[source.cardId];
-    if (resolved === undefined) {
+    const live = fieldSourceCanUseEffects(state, {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId,
+      zone: source.zone,
+    });
+    if (live === undefined) {
       continue;
     }
-    const supported = findSupportedStartOfTurnEffects(state, source, resolved);
+    const supported = findSupportedStartOfTurnEffects(
+      state,
+      live.card,
+      live.resolved,
+    );
     for (const effect of supported) {
-      if (!isStartOfTurnActionLegal(state, source, effect, resolved)) {
+      if (!isStartOfTurnActionLegal(state, live.card, effect, live.resolved)) {
         continue;
       }
       actions.push({
@@ -315,17 +284,14 @@ export const applyStartOfTurnAction = (
       "start-of-turn activateEffect requires a field source.",
     );
   }
-  const live = findLiveCardBySource(state, {
-    ...action.source,
-    zone: action.source.zone,
-  });
+  const live = findFieldSource(state, action.source);
   if (live === undefined || live.card.controller !== action.source.playerId) {
     return illegalAction(
       state,
       "start-of-turn activateEffect source is stale or not controller-owned.",
     );
   }
-  if (isCardEffectInvalidated(state, live.card)) {
+  if (fieldSourceCanUseEffects(state, action.source) === undefined) {
     return illegalAction(
       state,
       "start-of-turn activateEffect source effects are negated.",

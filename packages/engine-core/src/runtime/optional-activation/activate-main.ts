@@ -18,13 +18,12 @@ import {
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
-import { isMatchActive, zonesEqual } from "../../actions/state.js";
+import { isMatchActive } from "../../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "../../effect-runtime-conditions.js";
 import { isSupportedContinuousQueueEffect } from "../continuous/continuous.js";
-import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
@@ -38,6 +37,10 @@ import {
   isScopedActivateMainQueueEntry,
 } from "./activate-main-support.js";
 import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
+import {
+  fieldSourceCanUseEffects,
+  findFieldSource,
+} from "../source-presence-gate.js";
 
 export { isScopedActivateMainQueueEntry };
 
@@ -137,43 +140,6 @@ export const isSupportedActivateMainRuntimeEffectBlock = (
     isSupportedActivateMainSequenceBody(effect, entry) ||
     isSupportedActivateMainContinuousBody(effect)
   );
-};
-
-const findLiveCardBySource = (
-  state: GameState,
-  source: CardRef,
-):
-  | {
-      card: CardInstance;
-      resolved: ResolvedCard;
-    }
-  | undefined => {
-  if (!isFieldZoneForActivateMain(source.zone)) {
-    return undefined;
-  }
-  const player = state.players[source.playerId];
-  if (player === undefined) {
-    return undefined;
-  }
-  const cards = [
-    player.leader,
-    ...player.characters,
-    ...(player.stage === undefined ? [] : [player.stage]),
-  ];
-  const card = cards.find(
-    (candidate) =>
-      candidate.instanceId === source.instanceId &&
-      candidate.cardId === source.cardId &&
-      zonesEqual(candidate.zone, source.zone),
-  );
-  if (card === undefined) {
-    return undefined;
-  }
-  const resolved = state.cardManifest.cards[card.cardId];
-  if (resolved === undefined) {
-    return undefined;
-  }
-  return { card, resolved };
 };
 
 const createActivateMainQueueEntry = (params: {
@@ -310,7 +276,7 @@ export const getActivateMainLegalActions = (
       ...source,
       zone: source.zone,
     };
-    const live = findLiveCardBySource(state, sourceWithZone);
+    const live = fieldSourceCanUseEffects(state, sourceWithZone);
     if (live === undefined || live.card.controller !== playerId) {
       continue;
     }
@@ -320,9 +286,6 @@ export const getActivateMainLegalActions = (
       live.card,
       live.resolved,
     );
-    if (isCardEffectInvalidated(state, live.card)) {
-      continue;
-    }
     for (const effect of supported) {
       const queueEntry = createActivateMainQueueEntry({
         state,
@@ -378,14 +341,14 @@ export const applyActivateMainAction = (
       "activateEffect requires controller main phase.",
     );
   }
-  const live = findLiveCardBySource(state, action.source);
+  const live = findFieldSource(state, action.source);
   if (live === undefined || live.card.controller !== action.source.playerId) {
     return illegalAction(
       state,
       "activateEffect source is stale or not controller-owned.",
     );
   }
-  if (isCardEffectInvalidated(state, live.card)) {
+  if (fieldSourceCanUseEffects(state, action.source) === undefined) {
     return illegalAction(state, "activateEffect source effects are negated.");
   }
   const supportedEffects = findSupportedActivateMainEffects(
