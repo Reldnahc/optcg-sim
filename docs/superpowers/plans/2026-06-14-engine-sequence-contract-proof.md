@@ -4,15 +4,15 @@
 
 **Goal:** Prove the engine sequence saved-result boundary for every current saved-reference producer and consumer category, then make parser output validate against that engine contract.
 
-**Architecture:** First inventory every runtime saved-reference kind and every engine write/read door. Then centralize the static support contract in `engine-core`, add a full producer/consumer matrix, and add runtime ledger tests that inspect saved references while frames are paused. Parser metadata comes last and is accepted only when the engine contract already proves the semantics.
+**Architecture:** First add an inventory guard that recursively scans the runtime source for saved-reference writes and reads. Then centralize static support in `engine-core` with capability sets per saved id, add a full producer/consumer matrix, and add runtime ledger tests that inspect saved references while frames are paused. Parser metadata comes last and is accepted only after the engine contract proves the semantics.
 
 **Tech Stack:** TypeScript, Vitest, `@optcg/types`, `@optcg/engine-core`, `@optcg/cards`, `npm.cmd`/pnpm scripts.
 
 ---
 
-## Definition Of "Everything"
+## Definition Of Everything
 
-This plan must cover every current `SequenceSavedResultReference` kind in `packages/types/src/effects.ts`:
+This plan covers every current `SequenceSavedResultReference` kind in `packages/types/src/effects.ts`:
 
 - `selectedCards`
 - `selectedTargets`
@@ -20,14 +20,14 @@ This plan must cover every current `SequenceSavedResultReference` kind in `packa
 - `producedObjects`
 - `chosenNumber`
 
-It must also cover the engine-only static support subkinds that decide which consumers may use a `selectedCards` reference:
+It also covers the engine-only static support subkinds that decide which consumers may use a `selectedCards` reference:
 
 - selected hand cards
 - selected trash cards
 - selected DON cards
 - selected set cards
 
-It must cover every current producer door:
+It covers every current producer door:
 
 - `selectCards`
 - `selectTargets`
@@ -38,10 +38,11 @@ It must cover every current producer door:
 - `payCost`
 - `draw`
 - `drawUpTo`
+- `playSelected`
 - trigger-context produced object seed, currently `trigger:cardPlayed`
 - `forEachSavedTarget` current-item references
 
-It must cover every current consumer door:
+It covers every current consumer door:
 
 - `moveSelected`
 - `attachSelectedDon`
@@ -53,12 +54,14 @@ It must cover every current consumer door:
 - `placeSetRemainder`
 - `savedNumber` stat comparisons
 - `ownerConstraint`
-- `savedFieldObject` targets
+- `savedFieldObject` targets through field support
+- `savedFieldObject` targets through continuous support
+- saved-field-object swap/base-power doors
 - `forEachSavedTarget`
 - produced-object `savedFieldObject` targets
 - paid-cost `savedFieldObject` targets
 
-If any listed category cannot be handled in the first implementation slice, the plan executor must stop and revise the plan instead of silently narrowing the claim.
+If any listed category cannot be handled in the first implementation slice, the executor must stop and revise the plan instead of silently narrowing the claim.
 
 ---
 
@@ -67,18 +70,21 @@ If any listed category cannot be handled in the first implementation slice, the 
 - Create `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts`
   - Central static support contract.
   - Owns producer classification, consumer validation, and the support-time state map.
+  - Stores capability sets per saved id, not one kind per saved id.
   - No parser imports.
 
 - Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts`
-  - Source-inventory guard for saved-reference writes and reads.
-  - Fails when a new saved-reference producer or consumer appears outside known files without updating the contract plan/tests.
+  - Recursive source-inventory guard for saved-reference writes and reads.
+  - Scans `packages/engine-core/src/effect-runtime-sequence` and `packages/engine-core/src/runtime/primitives`.
+  - Fails when a new saved-reference producer or consumer appears without updating the explicit expected list.
 
 - Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-contract.test.ts`
   - Static producer/consumer matrix for every category listed above.
+  - Includes a dual-capability id regression for cost-area DON selected via `selectTargets`.
 
 - Create `packages/engine-core/src/effect-runtime-sequence/saved-result-contract-runtime.test.ts`
   - Runtime ledger proof.
-  - Asserts `effectExecutionFrames[*].savedReferences` after pauses, not only final gameplay state.
+  - Asserts `effectExecutionFrames[*].savedReferences` while frames are paused, including non-pausing producers kept alive by a concrete next decision.
 
 - Modify `packages/engine-core/src/effect-runtime-sequence/support.ts`
   - Replace scattered support-time saved-result maps/sets with the contract state.
@@ -93,6 +99,11 @@ If any listed category cannot be handled in the first implementation slice, the 
   - `packages/engine-core/src/effect-runtime-sequence/support/continuous.ts`
   - `packages/engine-core/src/effect-runtime-sequence/support/basic.ts`
   - Only if consumer validation currently lives there and needs to call the central contract.
+
+- Reference existing runtime consumer files:
+  - `packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts`
+  - `packages/engine-core/src/effect-runtime-sequence/saved-field-object/segment-appliers.ts`
+  - `packages/engine-core/src/runtime/primitives/play-selected.ts`
 
 - Modify `packages/types/src/effects.ts`
   - Add optional explicit segment metadata after engine proof exists.
@@ -162,7 +173,7 @@ Expected: commit succeeds and only this plan file is included.
 
 ---
 
-### Task 2: Add Saved-Reference Inventory Guard
+### Task 2: Add Recursive Saved-Reference Inventory Guard
 
 **Files:**
 
@@ -174,12 +185,17 @@ Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-con
 
 ```ts
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { relative } from "node:path";
+import { readdir, readFile } from "node:fs/promises";
+import { extname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-const root = fileURLToPath(new URL("../../../../", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../../../../", import.meta.url));
+
+const scanRoots = [
+  "packages/engine-core/src/effect-runtime-sequence",
+  "packages/engine-core/src/runtime/primitives",
+];
 
 const knownSavedReferenceWriters = [
   "packages/engine-core/src/effect-runtime-sequence/segments.ts",
@@ -190,6 +206,7 @@ const knownSavedReferenceWriters = [
   "packages/engine-core/src/effect-runtime-sequence/runner/select-all-targets-segment.ts",
   "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
   "packages/engine-core/src/effect-runtime-sequence/draw-upto.ts",
+  "packages/engine-core/src/runtime/primitives/play-selected.ts",
 ].sort();
 
 const knownSavedReferenceReaders = [
@@ -199,20 +216,40 @@ const knownSavedReferenceReaders = [
   "packages/engine-core/src/effect-runtime-sequence/selected-to-hand.ts",
   "packages/engine-core/src/effect-runtime-sequence/selected-hand-to-life.ts",
   "packages/engine-core/src/effect-runtime-sequence/selected-trash-to-life.ts",
-  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/resolve.ts",
-  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/continuous-records.ts",
+  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts",
+  "packages/engine-core/src/effect-runtime-sequence/saved-field-object/segment-appliers.ts",
   "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
 ].sort();
 
-const files = [
-  ...knownSavedReferenceWriters,
-  ...knownSavedReferenceReaders,
-  "packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts",
-];
+const findSourceFiles = async (path: string): Promise<string[]> => {
+  const entries = await readdir(`${repoRoot}/${path}`, { withFileTypes: true });
+  const found: string[] = [];
+
+  for (const entry of entries) {
+    const child = `${path}/${entry.name}`;
+    if (entry.isDirectory()) {
+      found.push(...(await findSourceFiles(child)));
+      continue;
+    }
+
+    if (
+      [".ts", ".tsx"].includes(extname(entry.name)) &&
+      !entry.name.endsWith(".test.ts") &&
+      !entry.name.endsWith(".test.tsx")
+    ) {
+      found.push(child);
+    }
+  }
+
+  return found;
+};
+
+const sourcePath = (path: string) =>
+  relative(repoRoot, `${repoRoot}/${path}`).replaceAll("\\", "/");
 
 test("saved-result contract inventory names every current saved-reference kind", async () => {
   const effectsSource = await readFile(
-    new URL("../../types/src/effects.ts", import.meta.url),
+    new URL("../../../types/src/effects.ts", import.meta.url),
     "utf8",
   );
 
@@ -229,11 +266,10 @@ test("saved-result contract inventory names every current saved-reference kind",
 
 test("saved-result contract inventory has explicit writer coverage", async () => {
   const observed = new Set<string>();
+  const files = (await Promise.all(scanRoots.map(findSourceFiles))).flat();
+
   for (const path of files) {
-    const source = await readFile(
-      new URL(`../../../../${path}`, import.meta.url),
-      "utf8",
-    );
+    const source = await readFile(`${repoRoot}/${path}`, "utf8");
     if (
       source.includes("saveReference(") ||
       source.includes("savedReferences:") ||
@@ -243,7 +279,7 @@ test("saved-result contract inventory has explicit writer coverage", async () =>
       source.includes('kind: "producedObjects"') ||
       source.includes('kind: "chosenNumber"')
     ) {
-      observed.add(path);
+      observed.add(sourcePath(path));
     }
   }
 
@@ -252,18 +288,17 @@ test("saved-result contract inventory has explicit writer coverage", async () =>
 
 test("saved-result contract inventory has explicit reader coverage", async () => {
   const observed = new Set<string>();
+  const files = (await Promise.all(scanRoots.map(findSourceFiles))).flat();
+
   for (const path of files) {
-    const source = await readFile(
-      new URL(`../../../../${path}`, import.meta.url),
-      "utf8",
-    );
+    const source = await readFile(`${repoRoot}/${path}`, "utf8");
     if (
       source.includes("ledgers.savedReferences[") ||
       source.includes("frame.savedReferences[") ||
       source.includes(".savedReferences[") ||
       source.includes("savedReferences[")
     ) {
-      observed.add(path);
+      observed.add(sourcePath(path));
     }
   }
 
@@ -279,7 +314,7 @@ Run:
 npm.cmd run test -- packages/engine-core/src/effect-runtime-sequence/support-save-result-contract-inventory.test.ts
 ```
 
-Expected: It may fail because exact file paths differ. If so, update the file lists to match the current source scan. Do not remove a writer or reader from the list just to make the test pass; either include it in the contract work or document why it is not a saved-result door.
+Expected: It may fail because the explicit lists must be aligned to the current source. If it fails, inspect each observed file and either add it to the correct list or explain why it is not a saved-result door in a test comment. Do not restrict the scan to make the test pass.
 
 - [ ] **Step 3: Commit the inventory guard**
 
@@ -309,12 +344,7 @@ Create `packages/engine-core/src/effect-runtime-sequence/support-save-result-con
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type {
-  Effect,
-  EffectDefinition,
-  EffectQueueEntry,
-  SelectionId,
-} from "@optcg/types";
+import type { Effect, EffectDefinition, EffectQueueEntry } from "@optcg/types";
 
 import { isSupportedSequenceBlock } from "./support.js";
 
@@ -396,18 +426,21 @@ Add tests for:
 - trash `selectCards` -> `moveSelected` from trash
 - costArea DON `selectCards` -> `attachSelectedDon`
 - costArea DON `selectTargets` -> `attachSelectedDon`
+- costArea DON `selectTargets` -> savedFieldObject target using the same save id
 - revealTop selectedCards/set -> `selectFromSet` -> `playSelected`
 - hand selectedCards -> `attachSelectedDon` is rejected
 - DON selectedCards -> hand `moveSelected` is rejected
 - missing selectedCards reference -> rejected
 
-Each test must call `assertSupported([...])` or `assertUnsupported([...])` with concrete segment arrays.
+The cost-area DON `selectTargets` test is required because that saved id has two static capabilities: `selectedTargets` and `selectedCards:don`.
 
 - [ ] **Step 3: Add selectedTargets and savedFieldObject matrix tests**
 
 Add tests for:
 
-- `selectTargets` -> `savedFieldObject` consumer
+- `selectTargets` -> `savedFieldObject` consumer through a representative field mutation from `support/field.ts`
+- `selectTargets` -> `savedFieldObject` consumer through a representative continuous modifier from `support/continuous.ts`
+- `selectTargets` -> `savedFieldObject` consumer through the swap/base-power support path
 - `selectAllTargets` -> `forEachSavedTarget`
 - `forEachSavedTarget` current item -> `savedFieldObject` consumer
 - ownerConstraint using selectedCards owner reference
@@ -415,7 +448,7 @@ Add tests for:
 - missing `savedFieldObject.binding.saveResultAs` target reference -> rejected
 - wrong family for `savedFieldObject` target -> rejected
 
-The missing target reference test must use a valid DON selection plus an `attachSelectedDon` target binding whose `saveResultAs` was never produced.
+The representative saved-field-object cases must exercise current support doors that runtime resolves in `saved-field-object/segment-appliers.ts`, not only a synthetic helper.
 
 - [ ] **Step 4: Add paidCost and producedObjects matrix tests**
 
@@ -424,6 +457,7 @@ Add tests for:
 - `payCost` with `saveResultAs: "paidCost"` -> `savedFieldObject` target with `family: "paidCost"` where the cost selected a field card or DON card
 - `draw` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
 - `drawUpTo` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
+- `playSelected` with `saveResultAs` -> `savedFieldObject` target with `family: "producedObjects"`
 - initial trigger-context `trigger:cardPlayed` produced object -> consumer support through `initialSavedSelectedTargets` or the contract equivalent
 - missing producedObjects reference -> rejected
 - missing paidCost reference -> rejected
@@ -471,7 +505,7 @@ Do not weaken tests to fit current behavior. If a category currently cannot be r
   - `packages/engine-core/src/effect-runtime-sequence/support/field.ts`
   - `packages/engine-core/src/effect-runtime-sequence/support/continuous.ts`
 
-- [ ] **Step 1: Create the contract model**
+- [ ] **Step 1: Create the capability-set contract model**
 
 Create `packages/engine-core/src/effect-runtime-sequence/support/save-result-contract.ts` with these concepts:
 
@@ -483,33 +517,67 @@ import type { SavedSelectedCardsKind } from "./selection.js";
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegment = SequenceEffect["effects"][number];
 
-export type StaticSavedReferenceKind =
-  | { kind: "selectedCards"; cardKind: SavedSelectedCardsKind; max?: number }
-  | { kind: "selectedTargets" }
-  | { kind: "paidCost" }
-  | { kind: "producedObjects" }
-  | { kind: "chosenNumber" };
+export type SelectedCardsCapability = {
+  readonly kind: "selectedCards";
+  readonly cardKind: SavedSelectedCardsKind;
+  readonly max?: number;
+};
+
+export type SavedReferenceCapability =
+  | SelectedCardsCapability
+  | { readonly kind: "selectedTargets" }
+  | { readonly kind: "paidCost" }
+  | { readonly kind: "producedObjects" }
+  | { readonly kind: "chosenNumber" };
+
+export interface StaticSavedReferenceCapabilities {
+  readonly capabilities: readonly SavedReferenceCapability[];
+}
 
 export interface StaticSavedResultState {
-  readonly references: ReadonlyMap<string, StaticSavedReferenceKind>;
+  readonly references: ReadonlyMap<string, StaticSavedReferenceCapabilities>;
   readonly transientSets: ReadonlySet<string>;
 }
 
 export const emptyStaticSavedResultState = (
-  initial: Record<string, StaticSavedReferenceKind> = {},
+  initial: Record<string, readonly SavedReferenceCapability[]> = {},
 ): StaticSavedResultState => ({
-  references: new Map(Object.entries(initial)),
+  references: new Map(
+    Object.entries(initial).map(([id, capabilities]) => [id, { capabilities }]),
+  ),
   transientSets: new Set(),
 });
 
-export const hasReference = (
+const sameCapability = (
+  a: SavedReferenceCapability,
+  b: SavedReferenceCapability,
+): boolean =>
+  a.kind === b.kind &&
+  (a.kind !== "selectedCards" ||
+    (b.kind === "selectedCards" && a.cardKind === b.cardKind));
+
+export const addCapability = (
+  state: StaticSavedResultState,
+  id: string,
+  capability: SavedReferenceCapability,
+): StaticSavedResultState => {
+  const existing = state.references.get(id)?.capabilities ?? [];
+  const capabilities = existing.some((item) => sameCapability(item, capability))
+    ? existing
+    : [...existing, capability];
+
+  return {
+    references: new Map(state.references).set(id, { capabilities }),
+    transientSets: new Set(state.transientSets),
+  };
+};
+
+export const hasReferenceCapability = (
   state: StaticSavedResultState,
   id: unknown,
-  predicate: (kind: StaticSavedReferenceKind) => boolean,
-): boolean => {
-  const kind = state.references.get(String(id));
-  return kind !== undefined && predicate(kind);
-};
+  predicate: (capability: SavedReferenceCapability) => boolean,
+): boolean =>
+  state.references.get(String(id))?.capabilities.some(predicate) ?? false;
 ```
 
 - [ ] **Step 2: Implement producer recording for every kind**
@@ -517,7 +585,7 @@ export const hasReference = (
 Add `recordProducer(state, segment)` that records:
 
 - `selectCards` -> `selectedCards` with subkind `hand`, `trash`, or `don`
-- `selectTargets` costArea DON -> both `selectedTargets` and `selectedCards:don`
+- `selectTargets` costArea DON -> both `{ kind: "selectedTargets" }` and `{ kind: "selectedCards", cardKind: "don" }`
 - other `selectTargets` -> `selectedTargets`
 - `selectAllTargets` -> `selectedTargets`
 - `selectFromSet` -> `selectedCards:set`
@@ -525,6 +593,7 @@ Add `recordProducer(state, segment)` that records:
 - `chooseNumber` -> `chosenNumber`
 - `payCost` with `saveResultAs` -> `paidCost`
 - `draw` or `drawUpTo` with `saveResultAs` -> `producedObjects`
+- `playSelected` with `saveResultAs` -> `producedObjects`
 - `forEachSavedTarget` current item -> `selectedTargets` while validating its source selection exists
 - initial trigger-context produced object via explicit initial contract state
 
@@ -540,10 +609,12 @@ export const canConsumeSelectedCards = (
   selection: unknown,
   allowed: readonly SavedSelectedCardsKind[],
 ): boolean =>
-  hasReference(
+  hasReferenceCapability(
     state,
     selection,
-    (kind) => kind.kind === "selectedCards" && allowed.includes(kind.cardKind),
+    (capability) =>
+      capability.kind === "selectedCards" &&
+      allowed.includes(capability.cardKind),
   );
 
 export const canConsumeSavedFieldObject = (
@@ -553,17 +624,18 @@ export const canConsumeSavedFieldObject = (
 ): boolean => {
   const expected: Record<
     SavedFieldObjectReferenceFamily,
-    StaticSavedReferenceKind["kind"]
+    SavedReferenceCapability["kind"]
   > = {
     selectedTargets: "selectedTargets",
     forEachSavedTarget: "selectedTargets",
     producedObjects: "producedObjects",
     paidCost: "paidCost",
   };
-  return hasReference(
+
+  return hasReferenceCapability(
     state,
     saveResultAs,
-    (kind) => kind.kind === expected[family],
+    (capability) => capability.kind === expected[family],
   );
 };
 
@@ -571,7 +643,11 @@ export const canConsumeNumber = (
   state: StaticSavedResultState,
   selection: unknown,
 ): boolean =>
-  hasReference(state, selection, (kind) => kind.kind === "chosenNumber");
+  hasReferenceCapability(
+    state,
+    selection,
+    (capability) => capability.kind === "chosenNumber",
+  );
 
 export const canConsumeTransientSet = (
   state: StaticSavedResultState,
@@ -582,10 +658,12 @@ export const canConstrainByOwner = (
   state: StaticSavedResultState,
   selection: unknown,
 ): boolean =>
-  hasReference(
+  hasReferenceCapability(
     state,
     selection,
-    (kind) => kind.kind === "selectedCards" || kind.kind === "selectedTargets",
+    (capability) =>
+      capability.kind === "selectedCards" ||
+      capability.kind === "selectedTargets",
   );
 ```
 
@@ -659,13 +737,36 @@ const savedReference = (state: GameState, id: string) =>
   must(pendingFrame(state).savedReferences[id], `saved reference ${id}`);
 ```
 
+- `pauseKeeper(saveResultAs)` helper that appends a concrete next decision so non-pausing producers leave the frame inspectable:
+
+```ts
+const pauseKeeper = (saveResultAs = "pauseTarget"): SequenceSegment => ({
+  connector: "then",
+  effect: {
+    type: "selectTargets",
+    prompt: "Choose your Leader.",
+    min: 1,
+    max: 1,
+    saveResultAs,
+    target: {
+      type: "card",
+      player: "you",
+      zones: ["leaderArea"],
+      categories: ["leader"],
+    },
+  },
+});
+```
+
+Use `pauseKeeper()` after `draw`, `drawUpTo`, `playSelected`, trigger seed, and `chooseNumber` tests. Do not assert only final state for these producers.
+
 - [ ] **Step 2: Add selectedCards runtime ledger tests**
 
 Add tests that pause after each producer and assert `savedReference(...).kind`:
 
 - `selectCards` hand saves `selectedCards`
 - `selectCards` trash saves `selectedCards`
-- costArea DON via `selectTargets` saves `selectedTargets` at runtime but is statically allowed as DON only through the contract; assert runtime kind and final DON attachment
+- costArea DON via `selectTargets` saves `selectedTargets` at runtime and final DON attachment proves the static selectedCards:don capability
 - `selectFromSet` saves `selectedCards`
 - `revealTop` saves `selectedCards`
 
@@ -687,10 +788,11 @@ Add tests for:
 
 - accepted `payCost` saves `paidCost`
 - declined optional cost does not save `paidCost`
-- `draw` with `saveResultAs` saves `producedObjects`
-- `drawUpTo` with `saveResultAs` saves `producedObjects`
-- trigger-context `cardPlayed` creates `producedObjects` seed
-- `chooseNumber` saves `chosenNumber`
+- `draw` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
+- `drawUpTo` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
+- `playSelected` with `saveResultAs` saves `producedObjects`, with `pauseKeeper()` as the next segment
+- trigger-context `cardPlayed` creates `producedObjects` seed, with `pauseKeeper()` as the next segment
+- `chooseNumber` saves `chosenNumber`, with `pauseKeeper()` as the next segment
 
 - [ ] **Step 5: Add savedFieldObject negative runtime tests**
 
@@ -747,9 +849,17 @@ export type SequenceSaveResultKind =
   | "chosenNumber";
 ```
 
+Add plural metadata to `SequencedEffect` because one producer can create multiple static capabilities:
+
+```ts
+saveResultKinds?: readonly SequenceSaveResultKind[];
+```
+
 Add support tests proving explicit metadata:
 
 - matches each valid producer
+- accepts cost-area DON `selectTargets` with `["selectedTargets", "selectedCards:don"]`
+- rejects cost-area DON `selectTargets` if either required kind is missing
 - rejects `selectedCards:don` on hand producer
 - rejects `selectedTargets` on selectedCards producer
 - rejects `paidCost` on draw producer
@@ -768,9 +878,9 @@ Expected: FAIL because metadata is not typed/validated yet.
 
 - [ ] **Step 3: Add type and validation**
 
-Add `SequenceSaveResultKind` to `packages/types/src/effects.ts` and `saveResultKind?: SequenceSaveResultKind` to `SequencedEffect`.
+Add `SequenceSaveResultKind` to `packages/types/src/effects.ts` and `saveResultKinds?: readonly SequenceSaveResultKind[]` to `SequencedEffect`.
 
-In `save-result-contract.ts`, make `recordProducer` compare explicit metadata against inferred metadata for every producer. If explicit metadata exists and differs, return `null`.
+In `save-result-contract.ts`, make `recordProducer` compare explicit metadata against inferred metadata for every producer. Compare as sets so order does not matter. If explicit metadata exists and differs, return `null`.
 
 - [ ] **Step 4: Run GREEN tests**
 
@@ -807,16 +917,22 @@ git commit -m "Add explicit saved result metadata contract"
 
 - [ ] **Step 1: Add parser RED expectations**
 
-For each parser output segment that produces saved source DON cards, expect:
+For parser output that produces source DON through `selectCards`, expect:
 
 ```ts
-saveResultKind: "selectedCards:don",
+saveResultKinds: ["selectedCards:don"],
 ```
 
-For target-selection producers that are asserted exactly, expect:
+For parser output that produces source DON through cost-area `selectTargets`, expect:
 
 ```ts
-saveResultKind: "selectedTargets",
+saveResultKinds: ["selectedTargets", "selectedCards:don"],
+```
+
+For parser output that selects field targets, expect:
+
+```ts
+saveResultKinds: ["selectedTargets"],
 ```
 
 - [ ] **Step 2: Run parser tests RED**
@@ -834,15 +950,23 @@ Expected: FAIL because parser output has not emitted metadata.
 In `packages/cards/src/instructions/don-movement/attach-rested.ts`, emit:
 
 ```ts
-saveResultKind: "selectedCards:don",
+saveResultKinds: ["selectedCards:don"],
 ```
 
-on every `donAttachSelection` source producer.
+on every `donAttachSelection` source producer that uses `selectCards`.
 
 Emit:
 
 ```ts
-saveResultKind: "selectedTargets",
+saveResultKinds: ["selectedTargets", "selectedCards:don"],
+```
+
+on every source-DON producer that uses cost-area `selectTargets`.
+
+Emit:
+
+```ts
+saveResultKinds: ["selectedTargets"],
 ```
 
 on target-selection producer segments only when they save field targets.
@@ -915,7 +1039,9 @@ Expected: clean working tree, or only unrelated user/agent files intentionally l
 
 - The plan covers every current `SequenceSavedResultReference` kind: `selectedCards`, `selectedTargets`, `paidCost`, `producedObjects`, and `chosenNumber`.
 - The plan covers static selected-card subkinds: hand, trash, DON, and set.
-- The plan covers every named producer and consumer door, including `savedFieldObject` bindings, paid-cost references, produced objects, chosen numbers, and transient sets.
-- Runtime tests must inspect paused frame ledgers, not just final gameplay results.
-- Source-inventory tests force future saved-result producers/readers to update the contract.
+- The plan covers every named producer, including `playSelected`.
+- The plan covers representative field, continuous, and swap/base-power savedFieldObject consumer paths.
+- The static model uses capability sets per saved id, so a cost-area DON `selectTargets` save can be both `selectedTargets` and `selectedCards:don`.
+- Runtime tests must inspect paused frame ledgers, not just final gameplay results; non-pausing producers use `pauseKeeper()`.
+- Source-inventory tests recursively scan relevant source roots and force future saved-result producers/readers to update the contract.
 - Shared-workspace staging uses `git add -p` instead of plain file staging.
