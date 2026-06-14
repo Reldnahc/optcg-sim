@@ -512,6 +512,67 @@ describe("bot combat evaluation", () => {
     });
   });
 
+  test("does not block when a power reduction already makes the attack fail", () => {
+    const blocker = {
+      instanceId: "blocker" as InstanceId,
+      cardId: "OP01-004" as CardId,
+      playerId: botId,
+    };
+    const snapshot = snapshotWithActions([], {
+      selfLifeCount: 0,
+      selfLeader: { currentPower: 5000 },
+      selfCharacters: [
+        {
+          instanceId: "blocker" as InstanceId,
+          cardId: "OP01-004" as CardId,
+          currentPower: 2000,
+          printedCost: 1,
+          keywords: ["blocker"],
+        },
+      ],
+      opponentLeader: { currentPower: 4000 },
+    });
+    viewForBot(snapshot).battle = {
+      attacker: {
+        instanceId: "opponent-leader" as InstanceId,
+        cardId: "OP01-002" as CardId,
+        playerId: "p1" as PlayerId,
+      },
+      originalTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP01-001" as CardId,
+        playerId: botId,
+      },
+      currentTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP01-001" as CardId,
+        playerId: botId,
+      },
+      step: "block",
+      damageCount: 1,
+    };
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:blockStep:reduced:test" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Choose blocker or decline.",
+      causedBy: { type: "ruleProcess", name: "test" },
+      presentation: { title: "Block", instruction: "Choose blocker." },
+      min: 0,
+      max: 1,
+      candidates: [{ card: blocker }],
+      choices: [{ card: blocker, selectable: true }],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:blockStep:reduced:test",
+      response: { type: "cards", cards: [] },
+    });
+  });
+
   test("selects a useful optional card choice instead of defaulting to zero", () => {
     const searchHit = {
       instanceId: "search-hit" as InstanceId,

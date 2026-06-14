@@ -183,10 +183,15 @@ const isLethalBattleDamage = (
 ): boolean => {
   const view = snapshot.players[botPlayerId]?.view;
   const battle = view?.battle;
+  const attackerPower = battleAttackerPower(snapshot, botPlayerId);
+  const targetPower = battleTargetPower(snapshot, botPlayerId);
   if (
     view === undefined ||
     battle === undefined ||
-    !isBattleTargetLeader(snapshot, botPlayerId)
+    !isBattleTargetLeader(snapshot, botPlayerId) ||
+    attackerPower === undefined ||
+    targetPower === undefined ||
+    attackerPower < targetPower
   ) {
     return false;
   }
@@ -445,6 +450,24 @@ export const chooseCombatDecision = (
 ): BotDecisionChoice | undefined => {
   const decision =
     context.snapshot.players[context.botPlayerId]?.view.pendingDecision;
+  const battle = context.snapshot.players[context.botPlayerId]?.view.battle;
+  if (
+    decision?.type === "selectCards" &&
+    decision.playerId === context.botPlayerId &&
+    decision.min === 0 &&
+    decision.max === 1 &&
+    battle?.step === "block"
+  ) {
+    const blocker = bestBlockerChoice(context);
+    return {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "cards",
+        cards: blocker === undefined ? [] : [blocker],
+      },
+    };
+  }
   const blocker = bestBlockerChoice(context);
   if (decision === undefined || blocker === undefined) {
     return undefined;
