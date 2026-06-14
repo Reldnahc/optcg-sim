@@ -19,7 +19,6 @@ import type {
   AccountLoadoutValidation,
 } from "../account-client.js";
 import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
-import type { ValidatedLobbyLoadout } from "../transport.js";
 import type {
   ClientActionModel,
   DecisionDraft,
@@ -49,11 +48,6 @@ import { useMatchClientCardSelection } from "./use-match-client-card-selection.j
 import { createMatchClientDecisionModel } from "./use-match-client-decision-model.js";
 import { useMatchRollbackActions } from "./use-match-rollback-actions.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
-import {
-  loadoutsWithCachedValidation,
-  rememberLoadoutValidation,
-  sharedLoadoutValidationCache,
-} from "./loadout-validation-cache.js";
 
 export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
@@ -62,64 +56,18 @@ export interface UseMatchClientOptions {
   readonly enabled?: boolean | undefined;
 }
 
-const validationFromValidatedLoadout = (
-  loadoutId: string,
-  validated: readonly ValidatedLobbyLoadout[],
-): AccountLoadoutValidation => {
-  const validation = validated.find(
-    (loadout) => loadout.loadoutId === loadoutId,
-  );
-  if (validation === undefined) {
-    return {
-      status: "unverified",
-      errors: ["Deck validation did not return a result."],
-    };
-  }
-  return {
-    status: validation.status,
-    errors: validation.errors,
-  };
+const uncheckedLoadoutValidation: AccountLoadoutValidation = {
+  status: "unchecked",
+  errors: [],
 };
 
-const applyLoadoutValidation = (
+const loadoutsWithUncheckedValidation = (
   loadouts: readonly AccountLoadout[],
-  loadoutId: string,
-  validation: AccountLoadoutValidation,
-): readonly AccountLoadout[] => {
-  return loadouts.map((loadout) =>
-    loadout.id === loadoutId ? { ...loadout, validation } : loadout,
-  );
-};
-
-const validateLoadoutPreview = async ({
-  accountClient,
-  controller,
-  loadout,
-  lobbyId,
-}: {
-  readonly accountClient: ReturnType<typeof createPoneglyphAccountClient>;
-  readonly controller: ReturnType<typeof createController>;
-  readonly loadout: AccountLoadout;
-  readonly lobbyId: string;
-}): Promise<AccountLoadoutValidation> => {
-  try {
-    const handoffToken = await accountClient.createSimHandoff({
-      loadoutId: loadout.id,
-      lobbyId,
-    });
-    const validated = (
-      await controller.validateLobbyLoadouts({
-        handoffTokens: [handoffToken],
-      })
-    ).data.loadouts;
-    return validationFromValidatedLoadout(loadout.id, validated);
-  } catch (error) {
-    return {
-      status: "unverified",
-      errors: [error instanceof Error ? error.message : String(error)],
-    };
-  }
-};
+): readonly AccountLoadout[] =>
+  loadouts.map((loadout) => ({
+    ...loadout,
+    validation: uncheckedLoadoutValidation,
+  }));
 
 export const useMatchClient = ({
   accountSessionToken,
@@ -280,40 +228,10 @@ export const useMatchClient = ({
         }
         const validationRequired = !localRawDeckSubmissionsAllowed;
         setAccountLoadoutValidationRequired(validationRequired);
-        const formatId = clientState.lobby.settings?.formatId;
-        const loadoutsWithValidation = loadoutsWithCachedValidation({
-          cache: sharedLoadoutValidationCache,
-          loadouts,
-          formatId,
-        });
-        if (!validationRequired) {
-          setAccountLoadouts(loadoutsWithValidation);
-          setAccountLoadoutsStatus("ready");
-          return;
-        }
+        const loadoutsWithValidation =
+          loadoutsWithUncheckedValidation(loadouts);
         setAccountLoadouts(loadoutsWithValidation);
         setAccountLoadoutsStatus("ready");
-        for (const loadout of loadouts) {
-          void validateLoadoutPreview({
-            accountClient,
-            controller,
-            loadout,
-            lobbyId: clientState.lobbyId,
-          }).then((validation) => {
-            if (accountLoadoutsRequestId.current !== requestId) {
-              return;
-            }
-            rememberLoadoutValidation({
-              cache: sharedLoadoutValidationCache,
-              loadout,
-              formatId,
-              validation,
-            });
-            setAccountLoadouts((current) =>
-              applyLoadoutValidation(current, loadout.id, validation),
-            );
-          });
-        }
       })
       .catch((error: unknown) => {
         if (accountLoadoutsRequestId.current !== requestId) {
@@ -325,7 +243,7 @@ export const useMatchClient = ({
           error instanceof Error ? error.message : String(error),
         );
       });
-  }, [accountClient, clientState, controller, localRawDeckSubmissionsAllowed]);
+  }, [accountClient, clientState, localRawDeckSubmissionsAllowed]);
 
   useEffect(() => {
     if (!isLobbyClientState(clientState)) {

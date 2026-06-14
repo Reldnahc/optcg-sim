@@ -80,15 +80,14 @@ const loadoutMeta = (loadout: AccountLoadout | undefined): string =>
         loadout.leaderCardId === null ? "No leader" : loadout.leaderCardId,
         loadout.folderName ?? unfiledLoadoutGroupLabel,
         ...(loadout.validation?.status === undefined ||
-        loadout.validation.status === "playable"
+        loadout.validation.status === "playable" ||
+        loadout.validation.status === "unchecked"
           ? []
           : [
               loadout.validation.errors[0] ??
-                (loadout.validation.status === "unchecked"
-                  ? "Checking deck"
-                  : loadout.validation.status === "unverified"
-                    ? "Unable to verify"
-                    : "Unplayable"),
+                (loadout.validation.status === "unverified"
+                  ? "Unable to verify"
+                  : "Unplayable"),
             ]),
       ].join(" / ");
 

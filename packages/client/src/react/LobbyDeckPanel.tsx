@@ -30,23 +30,18 @@ export const LobbyDeckPanel = ({
   const [selectedLoadoutId, setSelectedLoadoutId] = useState(
     loadouts[0]?.id ?? "",
   );
-  const [hideIllegalLoadouts, setHideIllegalLoadouts] = useState(false);
   const { selfDeckStatus } = lobbyDeckStatuses(lobbyState);
-  const visibleLoadouts = hideIllegalLoadouts
-    ? loadouts.filter((loadout) =>
-        loadout.validation?.status !== "playable" ? false : true,
-      )
-    : loadouts;
   const selectedLoadout = loadouts.find(
     (loadout) => loadout.id === selectedLoadoutId,
   );
-  const selectedLoadoutExists = visibleLoadouts.some(
+  const selectedLoadoutExists = loadouts.some(
     (loadout) => loadout.id === selectedLoadoutId,
   );
   const pickerLocked = selfDeckStatus === "ready";
   const selectedLoadoutPlayable =
     !requirePlayableValidation ||
-    selectedLoadout?.validation?.status === "playable";
+    selectedLoadout?.validation?.status === "playable" ||
+    selectedLoadout?.validation?.status === "unchecked";
   const submitLabel = pickerLocked ? "Waiting for opponent" : "Submit";
   const canSubmit =
     selectedLoadoutExists &&
@@ -83,7 +78,7 @@ export const LobbyDeckPanel = ({
               selectedLoadoutId={selectedLoadoutId}
               disabled={disabled || loadoutsStatus !== "ready"}
               locked={pickerLocked}
-              loadouts={visibleLoadouts}
+              loadouts={loadouts}
               requirePlayableValidation={requirePlayableValidation}
               onChange={setSelectedLoadoutId}
             />
@@ -95,21 +90,6 @@ export const LobbyDeckPanel = ({
           ) : null}
           {loadoutsStatus === "ready" && loadouts.length === 0 ? (
             <p>No account loadouts are available.</p>
-          ) : null}
-          {requirePlayableValidation &&
-          loadoutsStatus === "ready" &&
-          loadouts.length > 0 ? (
-            <label className="deck-loadout-filter">
-              <input
-                type="checkbox"
-                checked={hideIllegalLoadouts}
-                disabled={disabled || pickerLocked}
-                onChange={(event) => {
-                  setHideIllegalLoadouts(event.currentTarget.checked);
-                }}
-              />
-              Hide illegal decks
-            </label>
           ) : null}
           <div className="deck-loadout-actions">
             <a

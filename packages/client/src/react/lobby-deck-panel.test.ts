@@ -179,7 +179,7 @@ describe("lobby deck panel", () => {
     );
   });
 
-  test("marks illegal loadouts unselectable and exposes a hide illegal toggle", () => {
+  test("marks explicit illegal loadouts unselectable without a hide illegal toggle", () => {
     const html = renderToStaticMarkup(
       createElement(LobbyDeckPanel, {
         lobbyState: lobbyState(),
@@ -190,7 +190,7 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(html, /Hide illegal decks/u);
+    assert.doesNotMatch(html, /Hide illegal decks/u);
     assert.match(html, /Resolved loadout is invalid\./u);
     assert.match(html, /deck-loadout-option[^>]*disabled=""[\s\S]*Luffy Life/u);
   });
@@ -224,7 +224,7 @@ describe("lobby deck panel", () => {
     );
   });
 
-  test("allows browsing unchecked loadouts while submit waits for validation", () => {
+  test("allows submitting unchecked loadouts so the selected deck validates once", () => {
     const uncheckedLoadouts: readonly AccountLoadout[] = loadouts.map(
       (loadout) => ({
         ...loadout,
@@ -245,7 +245,8 @@ describe("lobby deck panel", () => {
       html,
       /deck-loadout-option[^>]*disabled=""[\s\S]*Enel Yellow/u,
     );
-    assert.match(
+    assert.doesNotMatch(html, /Checking deck/u);
+    assert.doesNotMatch(
       html,
       /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
     );
@@ -457,18 +458,18 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       clientSource,
-      /const loadoutsWithValidation = loadoutsWithCachedValidation\(\{[\s\S]*cache: sharedLoadoutValidationCache,[\s\S]*loadouts,[\s\S]*formatId,[\s\S]*\}\);/u,
+      /const loadoutsWithValidation =\s*loadoutsWithUncheckedValidation\(loadouts\);/u,
     );
     assert.match(
       clientSource,
-      /setAccountLoadouts\(loadoutsWithValidation\);[\s\S]*setAccountLoadoutsStatus\("ready"\);[\s\S]*for \(const loadout of loadouts\)/u,
+      /setAccountLoadouts\(loadoutsWithValidation\);[\s\S]*setAccountLoadoutsStatus\("ready"\);/u,
     );
-    assert.match(clientSource, /validateLoadoutPreview/u);
-    assert.match(clientSource, /rememberLoadoutValidation\(\{/u);
-    assert.match(clientSource, /for \(const loadout of loadouts\)/u);
-    assert.match(clientSource, /setAccountLoadouts\(\(current\) =>/u);
+    assert.doesNotMatch(clientSource, /validateLoadoutPreview/u);
+    assert.doesNotMatch(clientSource, /rememberLoadoutValidation\(\{/u);
+    assert.doesNotMatch(clientSource, /for \(const loadout of loadouts\)/u);
+    assert.doesNotMatch(clientSource, /setAccountLoadouts\(\(current\) =>/u);
     assert.doesNotMatch(clientSource, /accountClient\s*\.createSimHandoffs\(/u);
-    assert.match(clientSource, /controller\.validateLobbyLoadouts\(/u);
+    assert.doesNotMatch(clientSource, /controller\.validateLobbyLoadouts\(/u);
     assert.doesNotMatch(clientSource, /controller\.validateLobbyDecks\(/u);
     assert.match(clientSource, /accountClient\s*\.createSimHandoff\(/u);
     assert.match(
@@ -494,18 +495,18 @@ describe("lobby deck panel", () => {
     assert.match(source, /setInitializedFolderState\(true\);/u);
   });
 
-  test("deck loadout picker can filter illegal decks", async () => {
+  test("deck loadout picker does not expose an illegal-deck filter for unchecked lists", async () => {
     const source = await readFile(
       new URL("LobbyDeckPanel.tsx", import.meta.url),
       "utf8",
     );
 
-    assert.match(source, /hideIllegalLoadouts/u);
-    assert.match(source, /setHideIllegalLoadouts/u);
-    assert.match(source, /validation\?\.status !== "playable"/u);
+    assert.doesNotMatch(source, /hideIllegalLoadouts/u);
+    assert.doesNotMatch(source, /setHideIllegalLoadouts/u);
+    assert.doesNotMatch(source, /Hide illegal decks/u);
   });
 
-  test("deck loadout picker fails closed when validation is missing", async () => {
+  test("deck loadout picker allows unchecked loadouts and blocks explicit unplayable loadouts", async () => {
     const panelSource = await readFile(
       new URL("LobbyDeckPanel.tsx", import.meta.url),
       "utf8",
@@ -517,7 +518,7 @@ describe("lobby deck panel", () => {
 
     assert.match(
       panelSource,
-      /!requirePlayableValidation \|\|\s*selectedLoadout\?\.validation\?\.status === "playable"/u,
+      /!requirePlayableValidation \|\|\s*selectedLoadout\?\.validation\?\.status === "playable" \|\|\s*selectedLoadout\?\.validation\?\.status === "unchecked"/u,
     );
     assert.match(pickerSource, /requirePlayableValidation = true/u);
     assert.match(
