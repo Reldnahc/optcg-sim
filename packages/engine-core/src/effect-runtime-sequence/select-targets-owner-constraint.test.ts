@@ -99,6 +99,67 @@ const ownerConstrainedTargetSequence = (): Extract<
   ],
 });
 
+const ownerConstrainedPaidCostDonSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "cost:attach-opponent-don",
+      connector: "always",
+      saveResultAs: "paidCost",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "attachDon",
+          count: 1,
+          sourcePlayer: "opponent",
+          sourceState: "rested",
+          optional: true,
+          target: {
+            type: "choose",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              filter: { categories: ["character"] },
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+            },
+          },
+        },
+      },
+    },
+    {
+      id: "select-owner-matching-don",
+      connector: "ifYouDo",
+      saveResultAs: "selection:owner-source",
+      effect: {
+        type: "selectTargets",
+        ownerConstraint: {
+          type: "sameAsSavedReferenceOwner",
+          selection: "paidCost" as SelectionId,
+        },
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "anyPlayer",
+          zone: "costArea",
+          filter: { categories: ["don"] },
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+    },
+  ],
+});
+
 const setupDefinition = (state: GameState, effect: Effect): void => {
   const p1State = must(state.players[p1], "p1");
   state.turn.turnPlayerId = p1;
@@ -171,10 +232,15 @@ const moveDonToCostArea = (
   }));
   const costDon: CardInstance = {
     ...don,
-    zone: { zone: "costArea", playerId, slot: "cost", index: 0 },
+    zone: {
+      zone: "costArea",
+      playerId,
+      slot: "cost",
+      index: player.costArea.length,
+    },
     state: "rested",
   };
-  player.costArea = [costDon];
+  player.costArea = [...player.costArea, costDon];
   state.cardManifest.cards[don.cardId] = resolvedCard({
     cardId: don.cardId,
     category: "don",
@@ -282,4 +348,48 @@ test("selectTargets owner constraint offers only opponent targets for a saved op
     candidates.every((candidate) => candidate.playerId === p2),
     true,
   );
+});
+
+test("selectTargets owner constraint can use the selected card from a paid attach-DON cost", () => {
+  const state = createActiveState();
+  setupDefinition(state, ownerConstrainedPaidCostDonSequence());
+  const p2State = must(state.players[p2], "p2");
+  const p2Target = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "p2 target"),
+    zone: "characterArea",
+  });
+  const p1Don = moveDonToCostArea(state, p1);
+  const paidP2Don = moveDonToCostArea(state, p2);
+  const remainingP2Don = moveDonToCostArea(state, p2);
+  state.cardManifest.cards[p2Target.cardId] = resolvedCard({
+    cardId: p2Target.cardId,
+    category: "character",
+  });
+
+  const costResult = processEffectRuntime(state);
+  assert.equal(costResult.errors, undefined);
+  const costDecision = must(costResult.state.pendingDecision, "pay cost");
+  assert.equal(costDecision.type, "payCost");
+
+  const paid = applyAction(costResult.state, {
+    type: "respondToDecision",
+    decisionId: costDecision.id,
+    response: {
+      type: "payment",
+      optionId: "attachDon",
+      selectedDonInstanceIds: [paidP2Don.instanceId],
+      selectedCardInstanceIds: [p2Target.instanceId],
+    },
+  });
+  assert.equal(paid.errors, undefined);
+  const selectDon = must(paid.state.pendingDecision, "select owner DON");
+  assert.equal(selectDon.type, "selectTargets");
+
+  const candidateIds = selectDon.candidates.map(
+    (candidate) => candidate.card.instanceId,
+  );
+  assert.deepEqual(candidateIds, [remainingP2Don.instanceId]);
+  assert.equal(candidateIds.includes(p1Don.instanceId), false);
 });

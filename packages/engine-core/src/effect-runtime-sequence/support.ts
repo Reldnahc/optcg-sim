@@ -170,6 +170,7 @@ interface SequenceSupportState {
   savedSelectedCardMaxCounts: Map<string, number>;
   savedSelectionSets: Set<string>;
   savedNumbers: Set<string>;
+  savedPaidCosts: Set<string>;
   savedSelectedTargets: Set<string>;
 }
 
@@ -181,6 +182,7 @@ const emptySequenceSupportState = (
   savedSelectedCardMaxCounts: new Map(),
   savedSelectionSets: new Set(),
   savedNumbers: new Set(),
+  savedPaidCosts: new Set(),
   savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
 });
 
@@ -192,6 +194,7 @@ const cloneSequenceSupportState = (
   savedSelectedCardMaxCounts: new Map(state.savedSelectedCardMaxCounts),
   savedSelectionSets: new Set(state.savedSelectionSets),
   savedNumbers: new Set(state.savedNumbers),
+  savedPaidCosts: new Set(state.savedPaidCosts),
   savedSelectedTargets: new Set(state.savedSelectedTargets),
 });
 
@@ -229,12 +232,18 @@ const hasSavedSelectedTargets = (
   selection: unknown,
 ): boolean => state.savedSelectedTargets.has(String(selection));
 
+const hasSavedPaidCost = (
+  state: SequenceSupportState,
+  selection: unknown,
+): boolean => state.savedPaidCosts.has(String(selection));
+
 const hasSavedOwnerConstraintReference = (
   state: SequenceSupportState,
   effect: SelectTargetsEffect,
 ): boolean =>
   effect.ownerConstraint === undefined ||
   hasSavedSelectedCardSet(state, effect.ownerConstraint.selection) ||
+  hasSavedPaidCost(state, effect.ownerConstraint.selection) ||
   hasSavedSelectedTargets(state, effect.ownerConstraint.selection);
 
 const requestSelectsDonFromCostArea = (
@@ -480,6 +489,9 @@ const isSupportedSequenceBlockWithState = (
       if (isSupportedPayCostSegment(segment.effect)) {
         if (segment.optional === true) {
           return false;
+        }
+        if (segment.saveResultAs !== undefined) {
+          supportState.savedPaidCosts.add(segment.saveResultAs);
         }
         supportState.hasPendingDecisionSegment = true;
         return true;

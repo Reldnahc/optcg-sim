@@ -109,6 +109,32 @@ const fieldTrashCandidates = (player: PlayerState): readonly CardInstance[] => [
   ...(player.stage === undefined ? [] : [player.stage]),
 ];
 
+const fieldCardsByInstanceIds = (
+  players: GameState["players"],
+  instanceIds: readonly CardInstance["instanceId"][],
+): CardRef[] => {
+  const remainingIds = new Set(instanceIds);
+  const cards: CardRef[] = [];
+  for (const playerId of Object.keys(players) as PlayerId[]) {
+    const player = players[playerId];
+    if (player === undefined) {
+      continue;
+    }
+    const fieldCards = [
+      player.leader,
+      ...player.characters,
+      ...(player.stage === undefined ? [] : [player.stage]),
+    ];
+    for (const card of fieldCards) {
+      if (remainingIds.has(card.instanceId)) {
+        cards.push(toCardRef(card, playerId));
+        remainingIds.delete(card.instanceId);
+      }
+    }
+  }
+  return cards;
+};
+
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -301,6 +327,10 @@ export const applyOptionalActivationDecisionResponse = (
         nextPlayers = paid.players;
         events.push(...paid.events);
         costPaidPayload = paid.costPaidPayload;
+        paidCostSelectedCards = fieldCardsByInstanceIds(
+          paid.players,
+          paid.costPaidPayload.selectedCardInstanceIds,
+        );
       } else if (
         selectedOption.type === "turnLifeFaceUp" ||
         selectedOption.type === "setLifeFaceUp"

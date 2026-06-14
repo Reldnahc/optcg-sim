@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, SelectionId } from "@optcg/types";
 
 import {
   optionalActivationCostParsers,
@@ -29,7 +29,17 @@ export function optionalCostedEffectExpressionParser(options: {
     const costRestSource = "restSource" in cost ? cost.restSource : undefined;
     const costPresentationSpans =
       "presentationSpans" in cost ? cost.presentationSpans : undefined;
-    const body = parseOptionalCostedBody(cost.rest, options, costRestSource);
+    const body = parseOptionalCostedBody(
+      cost.rest,
+      options,
+      costRestSource,
+      cost.cost.type === "attachDon"
+        ? {
+            type: "sameAsSavedReferenceOwner",
+            selection: "paidCost" as SelectionId,
+          }
+        : undefined,
+    );
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
@@ -130,11 +140,13 @@ function parseOptionalCostedBody(
     ) => ExpressionParseResult | undefined)[];
   },
   source?: SourceSlice,
+  ownerReference?: ParseInput["ownerReference"],
 ): ExpressionParseResult | undefined {
   for (const expression of options.expressions ?? []) {
     const parsed = expression({
       text,
       ...(source === undefined ? {} : { source }),
+      ...(ownerReference === undefined ? {} : { ownerReference }),
     });
     if (parsed !== undefined && parsed.rest.length === 0) {
       return parsed;
@@ -145,6 +157,7 @@ function parseOptionalCostedBody(
     {
       text,
       ...(source === undefined ? {} : { source }),
+      ...(ownerReference === undefined ? {} : { ownerReference }),
     },
     {
       connectors: [],

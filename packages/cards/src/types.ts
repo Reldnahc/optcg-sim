@@ -6,6 +6,7 @@ import type {
   EffectTextSourceMap,
   EffectTextSpan,
   SequencedEffect,
+  SelectTargetsEffect,
   SourcePresencePolicy,
   Trigger,
 } from "@optcg/types";
@@ -393,6 +394,7 @@ export interface ParseInput {
   readonly text: string;
   readonly source?: SourceSlice;
   readonly entryPoint?: EntryPointParseResult["node"];
+  readonly ownerReference?: SelectTargetsEffect["ownerConstraint"];
 }
 
 export interface ExpressionParseResult {

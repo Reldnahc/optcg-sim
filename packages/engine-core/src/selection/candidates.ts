@@ -607,7 +607,14 @@ const candidateCardsForZone = (
     return player.stage === undefined ? [] : [player.stage];
   }
   if (zone === "costArea") {
-    return player.costArea;
+    const attachedDonIds = new Set([
+      ...player.leader.attachedDon,
+      ...player.characters.flatMap((card) => card.attachedDon),
+      ...(player.stage?.attachedDon ?? []),
+    ]);
+    return player.costArea.filter(
+      (card) => !attachedDonIds.has(card.instanceId),
+    );
   }
 
   return null;
