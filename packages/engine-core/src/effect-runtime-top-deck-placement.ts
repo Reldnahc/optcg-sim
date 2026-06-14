@@ -21,6 +21,10 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { reorderDeckSlice, zonesEqual } from "./actions/state.js";
+import {
+  clearPendingDecision,
+  effectQueueEntryForDecision,
+} from "./decisions/continuation-gate.js";
 import { resolvePlayerId } from "./runtime/primitives/execute.js";
 import { isScopedActivateMainQueueEntry } from "./runtime/optional-activation/activate-main-support.js";
 
@@ -348,15 +352,10 @@ export const applyTopDeckPlacementDecisionResponse = (
     playerId: decision.playerId,
     sliceCount: decision.cards.length,
   });
-  const causedBy = decision.causedBy;
-  const queuedEntry =
-    causedBy.type === "effect"
-      ? state.effectQueue.find(
-          (entry) =>
-            entry.id === causedBy.queueEntryId &&
-            entry.effectBlockId === causedBy.effectId,
-        )
-      : undefined;
+  const queuedEntryLookup = effectQueueEntryForDecision(state, decision);
+  const queuedEntry = queuedEntryLookup.ok
+    ? queuedEntryLookup.entry
+    : undefined;
   const shouldResolveQueue =
     queuedEntry !== undefined && options.deferQueueResolution !== true;
   const events: EngineEvent[] = [];
@@ -379,7 +378,7 @@ export const applyTopDeckPlacementDecisionResponse = (
   for (const event of events) {
     event.causedBy = { type: "decision", decisionId: decision.id };
   }
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
@@ -392,6 +391,6 @@ export const applyTopDeckPlacementDecisionResponse = (
       : state.effectQueue.filter((entry) => entry.id !== queuedEntry.id),
     eventJournal: [...state.eventJournal, ...events],
   };
-  delete nextState.pendingDecision;
+  nextState = clearPendingDecision(nextState);
   return toEngineResult(nextState, events);
 };

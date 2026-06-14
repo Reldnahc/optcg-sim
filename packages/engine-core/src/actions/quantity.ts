@@ -9,6 +9,10 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  clearPendingDecision,
+  effectQueueEntryForDecision,
+} from "../decisions/continuation-gate.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -59,18 +63,18 @@ const hasCurrentChooseQuantityRuntimeContext = (
     { type: "chooseQuantity" }
   >,
 ): boolean => {
-  const causedBy = decision.causedBy;
-  if (causedBy.type !== "effect") {
+  const entryLookup = effectQueueEntryForDecision(state, decision);
+  if (!entryLookup.ok && entryLookup.reason === "not-effect-decision") {
     return true;
   }
-  const queueEntry = state.effectQueue.find(
-    (entry) =>
-      entry.id === causedBy.queueEntryId &&
-      entry.effectBlockId === causedBy.effectId,
-  );
-  if (queueEntry === undefined) {
+  if (!entryLookup.ok) {
     return false;
   }
+  const causedBy = decision.causedBy;
+  if (causedBy.type !== "effect") {
+    return false;
+  }
+  const queueEntry = entryLookup.entry;
   if (queueEntry.state === "pending") {
     return true;
   }
@@ -171,13 +175,13 @@ export const applyChooseQuantityDecisionResponse = (
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
 
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     eventJournal: [...state.eventJournal, ...events],
   };
-  delete nextState.pendingDecision;
+  nextState = clearPendingDecision(nextState);
 
   return toEngineResult(nextState, events);
 };

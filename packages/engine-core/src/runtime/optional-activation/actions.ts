@@ -60,6 +60,10 @@ import {
   type LifeVisibilityCostPaidPayload,
 } from "./life-visibility-payment.js";
 import { applyDonPayment, type DonCostPaidPayload } from "./don-payment.js";
+import {
+  clearPendingDecision,
+  effectQueueEntryForDecision,
+} from "../../decisions/continuation-gate.js";
 
 const sameSource = (left: CardRef, right: CardRef): boolean =>
   left.instanceId === right.instanceId &&
@@ -642,13 +646,8 @@ export const applyOptionalActivationDecisionResponse = (
             invalidDecision("Payment source rest selection is invalid."),
           );
         }
-        const causedBy = decision.causedBy;
-        const source =
-          causedBy.type === "effect" && "queueEntryId" in causedBy
-            ? state.effectQueue.find(
-                (entry) => entry.id === causedBy.queueEntryId,
-              )?.source
-            : undefined;
+        const entryLookup = effectQueueEntryForDecision(state, decision);
+        const source = entryLookup.ok ? entryLookup.entry.source : undefined;
         if (source === undefined) {
           return toEngineResult(
             state,
@@ -686,13 +685,8 @@ export const applyOptionalActivationDecisionResponse = (
             invalidDecision("Payment source trash selection is invalid."),
           );
         }
-        const causedBy = decision.causedBy;
-        const source =
-          causedBy.type === "effect" && "queueEntryId" in causedBy
-            ? state.effectQueue.find(
-                (entry) => entry.id === causedBy.queueEntryId,
-              )?.source
-            : undefined;
+        const entryLookup = effectQueueEntryForDecision(state, decision);
+        const source = entryLookup.ok ? entryLookup.entry.source : undefined;
         if (source === undefined) {
           return toEngineResult(
             state,
@@ -777,7 +771,7 @@ export const applyOptionalActivationDecisionResponse = (
     if (resolved !== undefined) {
       resolved.causedBy = { type: "decision", decisionId: decision.id };
     }
-    const nextState: GameState = {
+    let nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
@@ -788,7 +782,7 @@ export const applyOptionalActivationDecisionResponse = (
       continuousEffects: nextContinuousEffects,
       eventJournal: [...state.eventJournal, ...events],
     };
-    delete nextState.pendingDecision;
+    nextState = clearPendingDecision(nextState);
     const resumed = resumeSequenceFrameAfterOptionalCost(
       nextState,
       decision,
@@ -844,13 +838,13 @@ export const applyOptionalActivationDecisionResponse = (
     if (resolved !== undefined) {
       resolved.causedBy = { type: "decision", decisionId: decision.id };
     }
-    const nextState: GameState = {
+    let nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
       actionSeq: state.actionSeq + 1,
       eventJournal: [...state.eventJournal, ...events],
     };
-    delete nextState.pendingDecision;
+    nextState = clearPendingDecision(nextState);
     const resumed = resumeSequenceFrameAfterOptionalActivation(
       nextState,
       decision,
@@ -865,7 +859,8 @@ export const applyOptionalActivationDecisionResponse = (
     }
     return toEngineResult(resumed.state, [...events, ...resumed.events]);
   }
-  if (decision.causedBy.type !== "effect") {
+  const entryLookup = effectQueueEntryForDecision(state, decision);
+  if (!entryLookup.ok && entryLookup.reason === "not-effect-decision") {
     return toEngineResult(
       state,
       [],
@@ -874,16 +869,11 @@ export const applyOptionalActivationDecisionResponse = (
       ),
     );
   }
-  const effectCause = decision.causedBy;
-
-  const selected = state.effectQueue.find(
-    (entry) => entry.id === effectCause.queueEntryId,
-  );
+  const selected = entryLookup.ok ? entryLookup.entry : undefined;
   if (
     selected === undefined ||
     selected.state !== "pending" ||
     selected.effectBlockId !== decision.effectId ||
-    selected.effectBlockId !== effectCause.effectId ||
     !sameSource(decision.source, selected.source)
   ) {
     return toEngineResult(
@@ -913,7 +903,7 @@ export const applyOptionalActivationDecisionResponse = (
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
 
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
@@ -922,7 +912,7 @@ export const applyOptionalActivationDecisionResponse = (
       : state.effectQueue.filter((entry) => entry.id !== selected.id),
     eventJournal: [...state.eventJournal, ...events],
   };
-  delete nextState.pendingDecision;
+  nextState = clearPendingDecision(nextState);
 
   if (!shouldActivate) {
     const cleanup = cleanupResolvedLifeTrigger(nextState, selected);

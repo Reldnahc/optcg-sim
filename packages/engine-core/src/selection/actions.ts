@@ -16,6 +16,10 @@ import {
   continueSelectedTargetEffect,
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
+import {
+  clearPendingDecision,
+  effectQueueEntryForDecision,
+} from "../decisions/continuation-gate.js";
 import { isUnsupportedSelectTargetsDecision } from "../effect-runtime-queue/target-decisions.js";
 import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence/frames.js";
 import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence/select-targets.js";
@@ -82,16 +86,11 @@ const currentCandidatesForDecision = (
   state: GameState,
   decision: SelectTargetsDecision,
 ): TargetCandidate[] | null => {
-  const causedBy = decision.causedBy;
-  if (causedBy.type !== "effect") {
+  const entryLookup = effectQueueEntryForDecision(state, decision);
+  if (!entryLookup.ok) {
     return null;
   }
-  const entry = state.effectQueue.find(
-    (candidate) => candidate.id === causedBy.queueEntryId,
-  );
-  if (entry === undefined) {
-    return null;
-  }
+  const { entry } = entryLookup;
   const resolved = resolvePublicTargetCandidatesForRequest(
     state,
     decision.request,
@@ -267,13 +266,13 @@ export const applySelectTargetsDecisionResponse = (
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
 
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     eventJournal: [...state.eventJournal, ...events],
   };
-  delete nextState.pendingDecision;
+  nextState = clearPendingDecision(nextState);
   if (isSequenceFrameSelectTargetsDecision(state, decision.id)) {
     const resumed = resumeSequenceFrameAfterSelectTargets(
       nextState,

@@ -24,6 +24,7 @@ import {
   toCardRef,
   zonesEqual,
 } from "./actions/state.js";
+import { clearPendingDecision } from "./decisions/continuation-gate.js";
 import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence/frames.js";
 
 type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
@@ -632,13 +633,13 @@ export const applySupportedHandSelectionChoiceResponse = (
   if (resolved !== undefined) {
     resolved.causedBy = { type: "decision", decisionId: decision.id };
   }
-  const nextState: GameState = {
+  let nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
     eventJournal: [...state.eventJournal, ...events],
   };
-  delete nextState.pendingDecision;
+  nextState = clearPendingDecision(nextState);
 
   const resumed = resumeSequenceFrameAfterHandSelection(
     nextState,
