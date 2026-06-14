@@ -534,6 +534,10 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
   const sourceHand = must(p1State.hand[0], "source");
   const targetHand = must(p2State.hand[0], "target");
   const replacementCostCard = must(p2State.hand[1], "replacement cost card");
+  const secondReplacementCostCard = must(
+    p2State.hand[2],
+    "second replacement cost card",
+  );
   const source: CardInstance = {
     ...sourceHand,
     zone: { zone: "characterArea", playerId: p1, slot: "character", index: 0 },
@@ -587,6 +591,11 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
   });
   state.cardManifest.cards[replacementCostCard.cardId] = resolvedCard({
     cardId: replacementCostCard.cardId,
+    category: "character",
+    power: 6000,
+  });
+  state.cardManifest.cards[secondReplacementCostCard.cardId] = resolvedCard({
+    cardId: secondReplacementCostCard.cardId,
     category: "character",
     power: 6000,
   });
@@ -691,7 +700,7 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
   });
   assert.deepEqual(
     trashDecision.candidates.map((candidate) => candidate.card.instanceId),
-    [replacementCostCard.instanceId],
+    [replacementCostCard.instanceId, secondReplacementCostCard.instanceId],
   );
 
   const resolved = applyAction(accepted.state, {
@@ -730,6 +739,50 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
     resolved.events.map((event) => event.type),
     ["decisionResolved", "cardMoved", "cardTrashed", "replacementApplied"],
   );
+
+  const secondEntry: EffectQueueEntry = {
+    ...entry,
+    id: toQueueEntryId("queue-entry-ko-trash-from-hand-second"),
+    timingWindowId: "timing-window-ko-trash-from-hand-second" as TimingWindowId,
+  };
+  const secondAttempt = executeSelectedTargetEffectPrimitive(
+    resolved.state,
+    secondEntry,
+    {
+      type: "ko",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zone: "characterArea",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+    },
+    [cardRef(targetCard, p2)],
+  );
+  const afterSecondP2 = must(secondAttempt.state.players[p2], "after p2");
+
+  assert.equal(secondAttempt.errors, undefined);
+  assert.equal(secondAttempt.state.pendingDecision, undefined);
+  assert.equal(
+    afterSecondP2.characters.some(
+      (card) => card.instanceId === targetCard.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    afterSecondP2.trash.some(
+      (card) => card.instanceId === targetCard.instanceId,
+    ),
+    true,
+  );
+  assert.equal(secondAttempt.state.oncePerTurn.length, 1);
 });
 
 test("accepted opponent effect field-removal replacement rests selected own cards instead of KOing matching Character", () => {

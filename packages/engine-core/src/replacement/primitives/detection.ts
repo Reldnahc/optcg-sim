@@ -4,6 +4,7 @@ import {
   cardRefsEqual,
   fieldRemovalProcessTargets,
 } from "../field-removal-targets.js";
+import { createOncePerTurnGate } from "../../rules/once-per-turn.js";
 import { replacementAlreadyUsed } from "../process-gate.js";
 import { opponentFieldRemovalReplacementCoveredTargets } from "./applicability.js";
 import {
@@ -99,6 +100,16 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
       for (const effect of supported) {
         const candidateId = toReplacementCandidateId(source, effect);
         if (replacementAlreadyUsed(process, candidateId)) {
+          continue;
+        }
+        if (
+          !createOncePerTurnGate({
+            sourceInstanceId: source.card.instanceId,
+            effectId: effect.id,
+            turnNumber: state.turn.globalTurn,
+            oncePerTurn: effect.oncePerTurn === true,
+          }).canUse(state)
+        ) {
           continue;
         }
         let coveredTargets: readonly CardRef[] = [];
