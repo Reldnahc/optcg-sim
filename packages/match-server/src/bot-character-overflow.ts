@@ -16,8 +16,11 @@ export const isCharacterOverflowDecision = (
   decision: SelectCardsDecision,
 ): boolean =>
   String(decision.id).startsWith("decision:character-overflow:") ||
+  String(decision.id).startsWith("decision:playCard:overflow:") ||
   String(decision.id).startsWith("decision:play-selected-overflow:") ||
-  String(decision.id).startsWith("decision:play-source-overflow:");
+  String(decision.id).startsWith("decision:play-source-overflow:") ||
+  String(decision.id).startsWith("decision:runtime:playSelected:overflow:") ||
+  String(decision.id).startsWith("decision:runtime:playSource:overflow:");
 
 export const selectableCardsForDecision = (
   decision: SelectCardsDecision,

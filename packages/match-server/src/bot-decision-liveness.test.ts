@@ -263,7 +263,7 @@ describe("bot decision liveness", () => {
     };
     const chosen = chooseBotAction(
       snapshotWithDecision({
-        id: "decision:play-selected-overflow:played-card" as DecisionId,
+        id: "decision:runtime:playSelected:overflow:played-card:11" as DecisionId,
         type: "selectCards",
         playerId: botId,
         prompt: "Choose a Character to trash.",
@@ -285,7 +285,7 @@ describe("bot decision liveness", () => {
 
     assert.deepEqual(chosen, {
       type: "respondToDecision",
-      decisionId: "decision:play-selected-overflow:played-card",
+      decisionId: "decision:runtime:playSelected:overflow:played-card:11",
       response: { type: "cards", cards: [firstCharacter] },
     });
   });
