@@ -43,3 +43,117 @@ Spec refs: `18-acceptance-tests.s004`, `18-acceptance-tests.s007`, `11-testing-q
 | Broad real-card catalog remains intentionally unsupported outside reviewed implemented entries; unsupported cards must keep failing closed in public modes.                                                                            | `CARD-005`, `CARD-006`, `CARD-007`, `ENG-048`; `packages/cards/src/real-card-fixtures.test.ts`; `packages/engine-core/src/unsupported-nonvanilla-closeout.test.ts`                                                    | Open by policy (`09-card-data-and-support-policy.s011`), not a blocker for this milestone closeout |
 | Live Redis cache adapter and client-fetched display surfaces are not part of this engine/effect closeout.                                                                                                                              | `CARD-001F` explicitly defers Redis; ENG-049 non-scope excludes server/client/API/UI work.                                                                                                                            | Deferred to future card-data/server/client work                                                    |
 | This closeout verifies foundation acceptance, not full card-catalog gameplay support, replay-era infrastructure milestones, or server/client milestones.                                                                               | Scope boundary in `ENG-049`; acceptance is limited to `18-acceptance-tests.s004` and foundation-relevant `18-acceptance-tests.s007` rows.                                                                             | Closed as out-of-scope for ENG-049                                                                 |
+
+## Runtime Support Gate Parity
+
+Support status must not drift between probe, card materialization, admission,
+and execution. The canonical whole-block support contract is
+`evaluateEffectBlockRuntimeSupport(block)`.
+
+Strict support rule:
+
+- Parser success is not support.
+- Probe support requires executable runtime support.
+- If an in-game executor preflight would reject an effect, probe/card
+  materialization must mark it unsupported.
+- Support coverage may drop when false positives are removed.
+
+Gate ownership:
+
+- `effect-runtime-admission.ts` owns the canonical whole-block report.
+- `effect-runtime-block-support.ts` owns auto entry adapter compatibility and
+  delegates body capability.
+- `effect-runtime-sequence/support.ts` owns sequence body and segment
+  capability only.
+- `runtime/optional-activation/*` owns activation exposure and cost/optional
+  decision routing.
+- `runtime/continuous/*` owns continuous materialization capability.
+- `effect-runtime-replacement-primitives.ts` owns replacement primitive
+  capability.
+- `card-support/src/*` owns report/probe output and must call the canonical
+  engine support report.
+
+Known drift fixed by this plan:
+
+- Block-level supported conditions were accepted by auto entry support and
+  probe, then rejected by sequence support before execution.
+
+Future drift checks:
+
+- Any body support helper that rejects `condition`, `optional`, `cost`,
+  `conditionTiming`, `failurePolicy`, or `sourcePresencePolicy` must either be
+  the canonical owner for that concern or have a parity test proving the
+  canonical report rejects the same block.
+
+Gate parity checklist:
+
+- `packages/engine-core/src/effect-runtime-admission.ts:evaluateEffectBlockRuntimeSupport`:
+  canonical
+  - Decision: whole-block support source of truth.
+  - Required test or code action: parity tests compare downstream gates against
+    this report.
+- `packages/engine-core/src/effect-runtime-block-support.ts:isSupportedAutoRuntimeEffectBlock`:
+  delegates
+  - Decision: auto entry adapter and envelope gate used by the canonical report.
+  - Required test or code action: keep envelope ownership here; do not let
+    downstream sequence support add stricter block-level condition authority.
+- `packages/engine-core/src/effect-runtime-sequence/support.ts:toSupportedSequenceBlock`:
+  stale-duplicate
+  - Decision: sequence support owns body/segment executability, not block-level
+    supported condition rejection.
+  - Required test or code action: add canonical parity tests and align supported
+    condition handling.
+- `packages/engine-core/src/effect-runtime-sequence/support.ts:isSupportedSequenceBlock`:
+  parity-test-needed
+  - Decision: runtime execution preflight can remain as a defensive guard, but
+    it must agree with canonical support for shared envelopes.
+  - Required test or code action: cover conditioned sequence support and
+    unsupported envelope rejection.
+- `packages/engine-core/src/runtime/optional-activation/activate-main.ts:isSupportedActivateMainRuntimeEffectBlock`:
+  delegates
+  - Decision: activate-main exposure owns timing and optional decision routing,
+    then delegates sequence bodies to sequence support.
+  - Required test or code action: classify optional/cost envelope drift during
+    the envelope audit.
+- `packages/engine-core/src/runtime/optional-activation/start-of-turn.ts:isSupportedStartOfTurnRuntimeEffectBlock`:
+  delegates
+  - Decision: start-of-turn exposure owns timing and optional decision routing,
+    then delegates sequence bodies to sequence support.
+  - Required test or code action: classify optional/cost envelope drift during
+    the envelope audit.
+- `packages/engine-core/src/runtime/optional-activation/event-reaction.ts:isSupportedActivatedReactionEffect`:
+  delegates
+  - Decision: activated reaction exposure owns event timing and once-per-turn
+    admission, with runtime support delegated to the reaction support helpers.
+  - Required test or code action: keep separate from automatic queue support.
+- `packages/engine-core/src/runtime/continuous/continuous.ts:isSupportedPermanentContinuousEffectBlock`:
+  canonical
+  - Decision: continuous materialization capability is the owner for permanent
+    continuous blocks.
+  - Required test or code action: no sequence parity action.
+- `packages/engine-core/src/effect-runtime-replacement-primitives.ts:isSupportedReplacementEffectBlock`:
+  canonical
+  - Decision: replacement primitive capability is the owner for replacement
+    blocks.
+  - Required test or code action: no sequence parity action.
+- `packages/engine-core/src/effect-runtime-activate-referenced-effect.ts:isSupportedReferencedEffectBlock`:
+  delegates
+  - Decision: referenced effect activation already delegates referenced block
+    support to `evaluateEffectBlockRuntimeSupport`.
+  - Required test or code action: keep delegation.
+- `packages/engine-core/src/battle/resolution.ts:unsupported-pending-runtime-work`:
+  parity-test-needed
+  - Decision: this is an execution rollback signal and must not be reachable for
+    probe-supported effect blocks.
+  - Required test or code action: add a production play-card regression for the
+    0-DON optional attach no-op.
+- `packages/card-support/src/runtime-supported-cards.ts:engineRuntimeSupportEvaluator`:
+  delegates
+  - Decision: manifest/card support must use canonical engine reports.
+  - Required test or code action: add a parsed-runtime-unsupported false
+    positive regression.
+- `packages/card-support/src/support-probe-report.ts:evaluateParsedLine`:
+  delegates
+  - Decision: probe output must require at least one successful runtime report
+    for runtime effect lines.
+  - Required test or code action: fail closed on empty or failed runtime reports.
