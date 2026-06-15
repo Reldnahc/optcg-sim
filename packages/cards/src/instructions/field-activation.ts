@@ -3,7 +3,7 @@ import type { CardFilter, SelectionId } from "@optcg/types";
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseYourLeaderOrCharacterCardsTarget } from "../targets/index.js";
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 import { parseSetDonActiveInstruction } from "./don-movement/set-active.js";
 
 const fieldActivationTarget = "targetSelection:set-field-active" as SelectionId;
@@ -53,6 +53,65 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
   if (quantity === undefined) {
     return undefined;
   }
+  const leaderTarget = parseYourLeaderSelectionTarget(quantity.rest);
+  if (leaderTarget !== undefined) {
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:field-to-activate",
+            connector: "always",
+            saveResultAs: fieldActivationTarget,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                zone: "leaderArea",
+                player: "self",
+                filter: leaderTarget.filter,
+                min: quantity.cardinality.min,
+                max: quantity.cardinality.max,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            id: "activate:selected-field",
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: fieldActivationTarget,
+                },
+                zone: "leaderArea",
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        ...quantity.evidence,
+        "player:self",
+        "chooser:self:upTo",
+        "zone:leaderArea",
+        ...leaderTarget.evidence,
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const leaderOrCharacterTarget = parseYourLeaderOrCharacterCardsTarget({
     text: quantity.rest,
   });
@@ -210,6 +269,37 @@ function parseActivationCharacterFilter(
     ...filtered,
     filter: { ...filtered.filter, state: "rested" },
     evidence: ["filter:state:rested", ...filtered.evidence],
+  };
+}
+
+function parseYourLeaderSelectionTarget(text: string):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match = /^of your (?<predicate>.+?Leader(?: cards?)?)\.?$/iu.exec(
+    text.trim(),
+  );
+  const predicateText = match?.groups?.["predicate"];
+  if (predicateText === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.rest.trim().length > 0 ||
+    !isLeaderFilter(predicates.filter)
+  ) {
+    return undefined;
+  }
+
+  return {
+    filter: predicates.filter,
+    evidence: predicates.evidence,
   };
 }
 
@@ -526,4 +616,10 @@ function isCharacterFilter(
   filter: CardFilter,
 ): filter is CardFilter & { readonly categories: readonly ["character"] } {
   return filter.categories?.includes("character") === true;
+}
+
+function isLeaderFilter(
+  filter: CardFilter,
+): filter is CardFilter & { readonly categories: readonly ["leader"] } {
+  return filter.categories?.includes("leader") === true;
 }
