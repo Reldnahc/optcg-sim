@@ -13,6 +13,12 @@ const isExplicitActionKeywordDuration = (
   effect.duration.type !== "whileSourceOnField" &&
   effect.duration.type !== "whileConditionTrue";
 
+const isExplicitActionKeywordChoice = (effect: Effect): boolean =>
+  effect.type === "choice" &&
+  effect.options.every((option) =>
+    isExplicitActionKeywordDuration(option.effect),
+  );
+
 const isExplicitActionModifierSequence = (effect: Effect): boolean =>
   effect.type === "sequence" &&
   effect.effects.every((segment) => {
@@ -52,6 +58,7 @@ export const parseExplicitActionKeywordGrantInstruction = (
   if (
     parsed === undefined ||
     (!isExplicitActionKeywordDuration(parsed.effect) &&
+      !isExplicitActionKeywordChoice(parsed.effect) &&
       !isExplicitActionModifierSequence(parsed.effect))
   ) {
     return undefined;
