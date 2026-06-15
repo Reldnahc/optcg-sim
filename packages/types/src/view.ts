@@ -16,6 +16,7 @@ import type { CausalityRef, EngineEvent } from "./events.js";
 import type { PublicTimerState } from "./runtime.js";
 import type {
   ActiveEffectTextPresentation,
+  EffectSpotlightHistory,
   EffectTextSourceMap,
 } from "./effect-presentation.js";
 
@@ -253,6 +254,7 @@ export interface PlayerView {
   pendingDecision?: PublicPendingDecision;
   activeEffectSources?: CardRef[];
   activeEffectText?: ActiveEffectTextPresentation;
+  effectSpotlightHistory?: EffectSpotlightHistory;
   legalActions: PublicLegalAction[];
   revealedCards: PublicRevealRecord[];
   events: EngineEvent[];

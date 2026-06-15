@@ -54,3 +54,14 @@ export interface ActiveEffectTextPresentation {
   readonly activeSpanIds: readonly EffectTextSpanId[];
   readonly targetLinks?: readonly EffectTextTargetLink[];
 }
+
+export interface EffectSpotlightHistoryEntry {
+  readonly key: string;
+  readonly mode: "live" | "resolved";
+  readonly active: ActiveEffectTextPresentation;
+}
+
+export interface EffectSpotlightHistory {
+  readonly entries: readonly EffectSpotlightHistoryEntry[];
+  readonly presentKey?: string;
+}

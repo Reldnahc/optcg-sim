@@ -143,6 +143,20 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     opponent,
     battle,
     pendingDecision: decision,
+    effectSpotlightHistory: {
+      entries: [
+        {
+          key: "event-spotlight-1",
+          mode: "resolved",
+          active: {
+            source: cardRef("source", playerA),
+            textKind: "effect",
+            activeSpanIds: ["span:body:draw"],
+          },
+        },
+      ],
+      presentKey: "event-spotlight-1",
+    },
     legalActions: [legalAction],
     revealedCards: [reveal],
     events: [event],
@@ -181,6 +195,9 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
   };
 
   expect(playerView.legalActions).toHaveLength(1);
+  expect(playerView.effectSpotlightHistory?.presentKey).toBe(
+    "event-spotlight-1",
+  );
   expect(playerView.pendingDecision?.type).toBe("chooseQuantity");
   if (playerView.pendingDecision?.type !== "chooseQuantity") {
     throw new Error("expected chooseQuantity public decision");
