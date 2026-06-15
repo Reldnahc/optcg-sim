@@ -127,24 +127,43 @@ export const consumeSpotlightSourceSignatures = (
   }
 };
 
+const releaseSpotlightSourceSignatures = (
+  consumedSignatures: Set<string>,
+  source: EffectSpotlightActiveSourceInput,
+): void => {
+  for (const signature of spotlightSourceSignatures(source)) {
+    consumedSignatures.delete(signature);
+  }
+};
+
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,
+  suppressedResolvedSignatures,
   previous,
   sources,
 }: {
   readonly consumedKeys: ReadonlySet<string>;
-  readonly consumedSignatures?: ReadonlySet<string>;
+  readonly suppressedResolvedSignatures?: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
   const queuedKeys = new Set(previous.entries.map((source) => source.key));
   let entries: EffectSpotlightActiveSourceInput[] | undefined;
   for (const source of sources) {
-    if (!consumedKeys.has(source.key) && !queuedKeys.has(source.key)) {
-      entries ??= [...previous.entries];
-      entries.push(source);
-      queuedKeys.add(source.key);
+    if (consumedKeys.has(source.key) || queuedKeys.has(source.key)) {
+      continue;
     }
+    if (
+      source.mode === "resolved" &&
+      suppressedResolvedSignatures !== undefined &&
+      sourceSignaturesConsumed(suppressedResolvedSignatures, source)
+    ) {
+      releaseSpotlightSourceSignatures(suppressedResolvedSignatures, source);
+      continue;
+    }
+    entries ??= [...previous.entries];
+    entries.push(source);
+    queuedKeys.add(source.key);
   }
   if (entries === undefined) {
     return previous;
@@ -362,7 +381,7 @@ export const useEffectSpotlight = ({
   pendingDecisionId,
 }: UseEffectSpotlightInput): UseEffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
-  const consumedSourceSignatures = useRef(new Set<string>());
+  const suppressedResolvedSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [playback, setPlayback] = useState<EffectSpotlightPlaybackState>({
@@ -405,7 +424,7 @@ export const useEffectSpotlight = ({
     setPlayback((previous) =>
       appendSpotlightPlaybackSources({
         consumedKeys: consumedResolvedKeys.current,
-        consumedSignatures: consumedSourceSignatures.current,
+        suppressedResolvedSignatures: suppressedResolvedSignatures.current,
         previous,
         sources: normalizedSources,
       }),
@@ -420,7 +439,7 @@ export const useEffectSpotlight = ({
       effectiveActiveKey !== undefined &&
       effectiveActiveMode === "live"
     ) {
-      consumeSpotlightSourceSignatures(consumedSourceSignatures.current, [
+      consumeSpotlightSourceSignatures(suppressedResolvedSignatures.current, [
         { active: effectiveActive, key: effectiveActiveKey, mode: "live" },
       ]);
     }
@@ -462,9 +481,6 @@ export const useEffectSpotlight = ({
       if (currentSource.mode === "resolved") {
         consumedResolvedKeys.current.add(model.activeKey);
       }
-      consumeSpotlightSourceSignatures(consumedSourceSignatures.current, [
-        currentSource,
-      ]);
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: "autoAdvance",
@@ -529,10 +545,6 @@ export const useEffectSpotlight = ({
       setPlayback((previous) => {
         consumeResolvedSpotlightSourceKeys(
           consumedResolvedKeys.current,
-          previous.entries,
-        );
-        consumeSpotlightSourceSignatures(
-          consumedSourceSignatures.current,
           previous.entries,
         );
         return advanceSpotlightPlayback({

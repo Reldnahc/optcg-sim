@@ -322,6 +322,59 @@ describe("activeEffectTextForSpotlight", () => {
     ]);
   });
 
+  it("does not return live active text beside a matching latest resolved presentation", () => {
+    const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:body"],
+    };
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: activeEffectText,
+      },
+    });
+
+    const sources = activeEffectTextSourcesForSpotlight({
+      activeEffectText,
+      pendingDecision: undefined,
+      events: [resolved],
+    });
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      String(resolved.id),
+    ]);
+  });
+
+  it("keeps live active text after a newer effect queued event", () => {
+    const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:body"],
+    };
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: activeEffectText,
+      },
+    });
+
+    const sources = activeEffectTextSourcesForSpotlight({
+      activeEffectText,
+      pendingDecision: undefined,
+      events: [resolved, event({ type: "effectQueued", seq: 2 })],
+    });
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      String(resolved.id),
+      `active|${String(source.instanceId)}|effect|span:body`,
+    ]);
+  });
+
   it("keeps earlier resolved spotlights while an active effect exposes split resolved spans", () => {
     const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
       source,

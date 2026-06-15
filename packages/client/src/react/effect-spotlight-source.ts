@@ -200,6 +200,47 @@ const sameEffectTextSource = (
   left.cardId === right.cardId &&
   left.playerId === right.playerId;
 
+const spanKey = (
+  spanIds: readonly ActiveEffectTextPresentation["activeSpanIds"][number][],
+): string => spanIds.join("\n");
+
+const sameEffectTextPresentation = (
+  left: ActiveEffectTextPresentation,
+  right: ActiveEffectTextPresentation,
+): boolean =>
+  sameEffectTextSource(left.source, right.source) &&
+  (left.textKind ?? "effect") === (right.textKind ?? "effect") &&
+  spanKey(left.activeSpanIds) === spanKey(right.activeSpanIds);
+
+const hasMatchingResolvedPresentationSinceLastQueue = ({
+  activeEffectText,
+  events,
+}: {
+  readonly activeEffectText: ActiveEffectTextPresentation;
+  readonly events: readonly EngineEvent[];
+}): boolean => {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event === undefined || event.type === "effectQueued") {
+      return false;
+    }
+    if (
+      event.type !== "effectResolved" &&
+      event.type !== "replacementApplied"
+    ) {
+      continue;
+    }
+    if (
+      resolvedSpotlightSourcesForEvent(event).some((source) =>
+        sameEffectTextPresentation(source.active, activeEffectText),
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
 const newestSplitResolvedSourcesForActive = ({
   activeEffectText,
   events,
@@ -286,6 +327,15 @@ export const activeEffectTextSourcesForSpotlight = ({
     events,
   });
   if (activeSource?.mode === "live") {
+    if (
+      pendingDecision === undefined &&
+      hasMatchingResolvedPresentationSinceLastQueue({
+        activeEffectText: activeSource.active,
+        events,
+      })
+    ) {
+      return resolvedSources;
+    }
     return [...resolvedSources, activeSource];
   }
   if (pendingDecision !== undefined) {

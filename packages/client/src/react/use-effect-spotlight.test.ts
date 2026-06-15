@@ -66,7 +66,6 @@ describe("effect spotlight model", () => {
 
     const next = appendSpotlightPlaybackSources({
       consumedKeys: new Set<string>(),
-      consumedSignatures: new Set<string>(),
       previous,
       sources: [
         source("event:first", "span:first"),
@@ -84,15 +83,9 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
-  it("appends repeated effects when a new event key has an already-seen card span signature", () => {
-    const consumedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(consumedSignatures, [
-      source("event:first", "span:first"),
-    ]);
-
+  it("appends repeated effects when a new event key reuses a card span signature", () => {
     const next = appendSpotlightPlaybackSources({
       consumedKeys: new Set<string>(),
-      consumedSignatures,
       previous: {
         entries: [source("event:first", "span:first")],
         cursorIndex: 0,
@@ -105,6 +98,33 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
+  });
+
+  it("suppresses only the first resolved source already shown live", () => {
+    const suppressedResolvedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
+      source("decision:first", "span:first", "live"),
+    ]);
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      suppressedResolvedSignatures,
+      previous: {
+        entries: [source("decision:first", "span:first", "live")],
+        cursorIndex: 0,
+        paused: false,
+      },
+      sources: [
+        source("event:resolved-duplicate", "span:first"),
+        source("event:later-repeat", "span:first"),
+      ],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "decision:first",
+      "event:later-repeat",
+    ]);
+    expect([...suppressedResolvedSignatures]).toEqual([]);
   });
 
   it("keeps the cursor on a reviewed past entry when new sources arrive", () => {
