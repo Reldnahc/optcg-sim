@@ -85,13 +85,18 @@ export const battlePowerLabelPoint = (
   };
 };
 
+const cssStringValue = (value: string): string =>
+  value.replace(/\\/gu, "\\\\").replace(/"/gu, '\\"');
+
+export const cardInstanceSelector = (instanceId: string): string =>
+  `[data-card-instance-id="${cssStringValue(instanceId)}"]`;
+
 const cardElementForInstance = (
   board: HTMLElement,
   instanceId: string,
 ): HTMLElement | undefined =>
-  Array.from(
-    board.querySelectorAll<HTMLElement>("[data-card-instance-id]"),
-  ).find((element) => element.dataset["cardInstanceId"] === instanceId);
+  board.querySelector<HTMLElement>(cardInstanceSelector(instanceId)) ??
+  undefined;
 
 const battlePowerLabelTargetForElement = (
   element: HTMLElement,

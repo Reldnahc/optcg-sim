@@ -1,10 +1,36 @@
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
   battlePowerLabelPoint,
   battlePowerTone,
+  cardInstanceSelector,
   nextStableArrowLine,
 } from "./BattleArrowOverlay.js";
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
+
+describe("cardInstanceSelector", () => {
+  it("creates an attribute selector for a single card instance id", () => {
+    expect(cardInstanceSelector('card:"one"')).toBe(
+      '[data-card-instance-id="card:\\"one\\""]',
+    );
+  });
+
+  it("battle arrow lookup avoids scanning every rendered card", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "BattleArrowOverlay.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("board.querySelector<HTMLElement>");
+    expect(source).not.toContain(
+      'querySelectorAll<HTMLElement>("[data-card-instance-id]")',
+    );
+  });
+});
 
 describe("nextStableArrowLine", () => {
   it("reuses the previous line object when measured coordinates are unchanged", () => {
