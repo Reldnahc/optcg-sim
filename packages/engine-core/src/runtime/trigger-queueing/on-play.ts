@@ -9,7 +9,10 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "../../action-results.js";
-import { isCardEffectInvalidated } from "../../effect-invalidation.js";
+import {
+  isCardEffectInvalidated,
+  isEffectBlockInvalidated,
+} from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
@@ -158,8 +161,10 @@ export const createOnPlayTriggerQueueing = (
       if (!lookup.ok) {
         return toEngineResult(state, [], [lookup.error]);
       }
-      const onPlayEffects = lookup.definition.effects.filter((effect) =>
-        isAutoRuntimeTriggerCandidate(effect, onPlayAutoAdapter),
+      const onPlayEffects = lookup.definition.effects.filter(
+        (effect) =>
+          isAutoRuntimeTriggerCandidate(effect, onPlayAutoAdapter) &&
+          !isEffectBlockInvalidated(state, source, effect),
       );
       if (onPlayEffects.length === 0) {
         continue;

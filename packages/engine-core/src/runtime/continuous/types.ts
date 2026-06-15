@@ -17,6 +17,7 @@ export type ContinuousQueueEffect = Extract<
       | "enterRested"
       | "preventPlayByEffects"
       | "invalidateEffects"
+      | "invalidateEffectEntryPoint"
       | "giveProtection"
       | "protectFromKO"
       | "cannotBecomeActive"

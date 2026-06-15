@@ -2,18 +2,24 @@ import type {
   CardInstance,
   CardRef,
   ContinuousEffectRecord,
+  EffectDefinition,
   EffectQueueEntry,
   GameState,
+  PlayerId,
+  PlayerRef,
 } from "@optcg/types";
 
+import { getOpponentId } from "./actions/state.js";
 import { evaluateQueuedEffectCondition } from "./effect-runtime-conditions.js";
+import { triggerContainsType } from "./effect-runtime-entry-adapters.js";
 import { cardMatchesContinuousModifierTarget } from "./runtime/continuous/target-matching.js";
 
 const isEffectInvalidationModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   effect.modifier.layer === "effectInvalidation" &&
-  effect.modifier.operation.type === "invalidateEffects";
+  (effect.modifier.operation.type === "invalidateEffects" ||
+    effect.modifier.operation.type === "invalidateEffectEntryPoint");
 
 const isSupportedInvalidationDuration = (
   duration: ContinuousEffectRecord["duration"],
@@ -29,10 +35,12 @@ export const isSupportedEffectInvalidationModifier = (
 ): boolean =>
   isEffectInvalidationModifier(effect) &&
   isSupportedInvalidationDuration(effect.duration) &&
-  (effect.modifier.target.type === "exactCard" ||
-    effect.modifier.target.type === "myLeader" ||
-    effect.modifier.target.type === "self" ||
-    effect.modifier.target.type === "all");
+  (effect.modifier.operation.type === "invalidateEffectEntryPoint"
+    ? effect.modifier.target.type === "player"
+    : effect.modifier.target.type === "exactCard" ||
+      effect.modifier.target.type === "myLeader" ||
+      effect.modifier.target.type === "self" ||
+      effect.modifier.target.type === "all");
 
 const toConditionQueueEntry = (
   effect: ContinuousEffectRecord,
@@ -128,7 +136,62 @@ export const isCardEffectInvalidated = (
   state.continuousEffects.some(
     (effect) =>
       isSupportedEffectInvalidationModifier(effect) &&
+      effect.modifier.operation.type === "invalidateEffects" &&
       durationActive(state, effect) &&
       conditionPasses(state, effect) &&
       cardMatchesInvalidationTarget(state, card, effect),
+  );
+
+const playerRefMatchesController = (
+  state: GameState,
+  effectController: PlayerId,
+  ref: PlayerRef,
+  controller: PlayerId,
+): boolean => {
+  if (ref === "self" || ref === "controller") {
+    return controller === effectController;
+  }
+  if (ref === "opponent") {
+    return controller === getOpponentId(state, effectController);
+  }
+  return false;
+};
+
+const effectBlockMatchesEntryPointInvalidation = (
+  block: EffectDefinition["effects"][number],
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const operation = effect.modifier.operation;
+  return (
+    operation.type === "invalidateEffectEntryPoint" &&
+    triggerContainsType(block.trigger, operation.effectEntryPoint.type)
+  );
+};
+
+const sourceMatchesEntryPointInvalidationTarget = (
+  state: GameState,
+  source: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean =>
+  effect.modifier.target.type === "player" &&
+  playerRefMatchesController(
+    state,
+    effect.controller,
+    effect.modifier.target.player,
+    source.controller,
+  );
+
+export const isEffectBlockInvalidated = (
+  state: GameState,
+  source: CardInstance,
+  block: EffectDefinition["effects"][number],
+): boolean =>
+  isCardEffectInvalidated(state, source) ||
+  state.continuousEffects.some(
+    (effect) =>
+      isSupportedEffectInvalidationModifier(effect) &&
+      durationActive(state, effect) &&
+      conditionPasses(state, effect) &&
+      sourceMatchesEntryPointInvalidationTarget(state, source, effect) &&
+      effectBlockMatchesEntryPointInvalidation(block, effect),
   );

@@ -1,11 +1,19 @@
-import type { Effect, SavedFieldObjectZone, Target } from "@optcg/types";
+import type {
+  Duration,
+  Effect,
+  EffectEntryPointFilter,
+  SavedFieldObjectZone,
+  Target,
+} from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import {
   attackRestrictionDurationParsers,
+  fieldEffectDurationParsers,
   parseDurationFromSet,
   thisTurnOnlyDurationParsers,
 } from "../durations/index.js";
+import { supportedEntryPoints } from "../entry-point-definitions.js";
 import { parseNegativePowerModifier } from "../modifiers/index.js";
 import {
   parseOpponentCharactersTarget,
@@ -30,6 +38,12 @@ export const invalidateEffectsInstructionPrimitive = {
 } as const;
 
 export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
+  const entryPointInvalidation =
+    parseEntryPointEffectInvalidationInstruction(input);
+  if (entryPointInvalidation !== undefined) {
+    return entryPointInvalidation;
+  }
+
   if (
     /^this Character's effect is negated during this turn\.?$/iu.test(
       input.text,
@@ -178,6 +192,84 @@ export const parseInvalidateEffectsInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+export function parseEntryPointEffectInvalidationInstruction(
+  input: Parameters<InstructionParser>[0],
+  options: {
+    readonly defaultDuration?: Duration;
+    readonly defaultDurationEvidence?: PrimitiveEvidence;
+  } = {},
+): InstructionParseResult | undefined {
+  const match =
+    /^(?<owner>Your|Your opponent's) (?<entryPoint>\[[^\]]+\]) effects are negated(?<duration>.*)$/iu.exec(
+      input.text,
+    );
+  const owner = match?.groups?.["owner"];
+  const entryPointText = match?.groups?.["entryPoint"];
+  const rawDurationText = match?.groups?.["duration"]?.trim() ?? "";
+  const durationText = rawDurationText === "." ? "" : rawDurationText;
+  if (owner === undefined || entryPointText === undefined) {
+    return undefined;
+  }
+  const entryPoint = supportedEntryPoints.find(
+    (entry) => entry.text.toLowerCase() === entryPointText.toLowerCase(),
+  );
+  if (entryPoint === undefined) {
+    return undefined;
+  }
+  const effectEntryPoint = toEffectEntryPointFilter(entryPoint.trigger.type);
+  if (effectEntryPoint === undefined) {
+    return undefined;
+  }
+
+  const duration =
+    durationText.length === 0
+      ? options.defaultDuration === undefined
+        ? undefined
+        : {
+            duration: options.defaultDuration,
+            evidence:
+              options.defaultDurationEvidence === undefined
+                ? []
+                : [options.defaultDurationEvidence],
+            rest: "",
+          }
+      : parseDurationFromSet(
+          { text: durationText },
+          fieldEffectDurationParsers,
+        );
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  const player = owner.toLowerCase() === "your" ? "self" : "opponent";
+  return {
+    effect: {
+      type: "invalidateEffectEntryPoint",
+      player,
+      effectEntryPoint,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:invalidateEffects",
+      ...entryPoint.evidence.filter((evidence) =>
+        evidence.startsWith("entry:"),
+      ),
+      `player:${player}`,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function toEffectEntryPointFilter(
+  type: string,
+): EffectEntryPointFilter | undefined {
+  if (type === "anyOf" || type === "eventCount") {
+    return undefined;
+  }
+  return { type: type as EffectEntryPointFilter["type"] };
+}
 
 function parseOpponentLeaderAndAllCharactersInvalidateEffects(
   text: string,

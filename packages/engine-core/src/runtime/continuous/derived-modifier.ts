@@ -206,6 +206,23 @@ export const effectToDerivedModifier = (
   if (effect.type === "invalidateEffects") {
     return toInvalidateEffectsModifier(effect);
   }
+  if (effect.type === "invalidateEffectEntryPoint") {
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage(
+          "unsupported effect entry-point invalidation",
+        ),
+      );
+    }
+    return {
+      layer: "effectInvalidation",
+      target: { type: "player", player: effect.player },
+      operation: {
+        type: "invalidateEffectEntryPoint",
+        effectEntryPoint: effect.effectEntryPoint,
+      },
+    };
+  }
   if (effect.type === "protectFromKO") {
     if (
       !isSupportedTarget(effect.target) ||

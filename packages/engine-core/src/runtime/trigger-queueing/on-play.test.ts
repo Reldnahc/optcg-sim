@@ -39,6 +39,48 @@ test("queues one supported no-choice On Play draw effect from an accepted cardPl
   assert.equal(result.state.eventJournal.at(-1)?.type, "effectQueued");
 });
 
+test("entry-point invalidation suppresses matching On Play effects without card-wide invalidation", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  setupOnPlayDefinition(
+    state,
+    played,
+    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+    "def-on-play-entrypoint-invalidated",
+  );
+  state.continuousEffects.push({
+    id: "continuous:invalidate-self-on-play-effects",
+    source: {
+      instanceId: played.instanceId,
+      cardId: played.cardId,
+      playerId: p1,
+      zone: played.zone,
+    },
+    sourceSnapshot: toSourceSnapshot(played, p1, p1),
+    controller: p1,
+    modifier: {
+      layer: "effectInvalidation",
+      target: { type: "player", player: "self" },
+      operation: {
+        type: "invalidateEffectEntryPoint",
+        effectEntryPoint: { type: "onPlay" },
+      },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-effect-invalidation" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(result.events, []);
+  assert.equal(result.state.effectQueue.length, 0);
+});
+
 test("queued On Play effects carry active text presentation from parser spans", () => {
   const { state, played } = queueingState();
   const supportCard = resolvedCard({

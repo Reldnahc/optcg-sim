@@ -1,5 +1,6 @@
 import type { Effect } from "@optcg/types";
 
+import { parseEntryPointEffectInvalidationInstruction } from "../invalidate-effects.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import {
   continuousDuration,
@@ -9,6 +10,17 @@ import {
 
 export const parseContinuousInvalidateEffectsInstruction: ContinuousInstructionParser =
   (input, context) => {
+    const entryPointInvalidation = parseEntryPointEffectInvalidationInstruction(
+      input,
+      {
+        defaultDuration: continuousDuration(context.condition),
+        defaultDurationEvidence: continuousDurationEvidence(context.condition),
+      },
+    );
+    if (entryPointInvalidation !== undefined) {
+      return entryPointInvalidation;
+    }
+
     const leaderAndFilteredCharacters =
       parseYourLeaderAndFilteredCharactersInvalidation(input.text, context);
     if (leaderAndFilteredCharacters !== undefined) {

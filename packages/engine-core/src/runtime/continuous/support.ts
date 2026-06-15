@@ -364,6 +364,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "enterRested" &&
     effect.type !== "preventPlayByEffects" &&
     effect.type !== "invalidateEffects" &&
+    effect.type !== "invalidateEffectEntryPoint" &&
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&
     effect.type !== "cannotBecomeActive" &&
@@ -459,6 +460,12 @@ export const isSupportedContinuousQueueEffect = (
     !isSupportedTarget(effect.target)
   ) {
     return false;
+  }
+  if (effect.type === "invalidateEffectEntryPoint") {
+    return (
+      (effect.player === "self" || effect.player === "opponent") &&
+      effect.effectEntryPoint.type.length > 0
+    );
   }
   if (
     (effect.type === "giveProtection" || effect.type === "protectFromKO") &&

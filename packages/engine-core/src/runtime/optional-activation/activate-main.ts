@@ -32,6 +32,7 @@ import { isSupportedSequenceBlock } from "../../effect-runtime-sequence/support.
 import { getSequenceOptionalPayCostOptions } from "../../effect-runtime-sequence/frame-decisions.js";
 import { toFlattenedSequenceBlock } from "../../effect-runtime-sequence/support-normalization.js";
 import { canResolvePrimitiveBodyForEntry } from "../../effect-runtime-queue/primitive-resolution.js";
+import { isEffectBlockInvalidated } from "../../effect-invalidation.js";
 import { toSnapshot } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
 import {
@@ -209,6 +210,9 @@ const findSupportedActivateMainEffects = (
     return [];
   }
   return lookup.definition.effects.filter((effect) => {
+    if (isEffectBlockInvalidated(state, liveCard, effect)) {
+      return false;
+    }
     const sequenceSupportEntry = createActivateMainQueueEntry({
       state,
       source: {

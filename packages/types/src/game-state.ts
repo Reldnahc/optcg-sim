@@ -30,6 +30,7 @@ import type {
   CardFilter,
   Condition,
   Duration,
+  EffectEntryPointFilter,
   EffectDefinition,
   SavedFieldObjectTargetBinding,
   SourcePresencePolicy,
@@ -207,6 +208,10 @@ export type ModifierOperation =
   | { type: "addPower"; value: number }
   | { type: "addCost"; value: number }
   | { type: "invalidateEffects" }
+  | {
+      type: "invalidateEffectEntryPoint";
+      effectEntryPoint: EffectEntryPointFilter;
+    }
   | { type: "addKeyword"; keyword: Keyword }
   | { type: "addAttribute"; attribute: Attribute }
   | { type: "removeKeyword"; keyword: Keyword }

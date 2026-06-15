@@ -19,7 +19,7 @@ import type {
 import type { EffectTextPresentationRef } from "./effect-presentation.js";
 import type { OptionalCost } from "./effect-costs.js";
 import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
-import type { Trigger } from "./effect-triggers.js";
+import type { EffectEntryPointFilter, Trigger } from "./effect-triggers.js";
 import type { EffectDslProtection } from "./effect-protection.js";
 
 export type { FailurePolicy, SourcePresencePolicy } from "./effect-policies.js";
@@ -864,6 +864,12 @@ export type Effect =
     }
   | { type: "damage"; target: "leader"; player: PlayerRef; count: number }
   | { type: "invalidateEffects"; target: Target; duration: Duration }
+  | {
+      type: "invalidateEffectEntryPoint";
+      player: PlayerRef;
+      effectEntryPoint: EffectEntryPointFilter;
+      duration: Duration;
+    }
   | {
       type: "protectFromKO";
       target: Target;

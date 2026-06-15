@@ -189,6 +189,16 @@ const mapEffectToModifier = (
       operation: { type: "invalidateEffects" },
     };
   }
+  if (effect.type === "invalidateEffectEntryPoint") {
+    return {
+      layer: "effectInvalidation",
+      target,
+      operation: {
+        type: "invalidateEffectEntryPoint",
+        effectEntryPoint: effect.effectEntryPoint,
+      },
+    };
+  }
   return {
     layer: "restriction",
     target,
@@ -416,6 +426,17 @@ export const createContinuousRecordsForResolvedEffect = (
       entry,
       effect,
       effect.target,
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
+  if (effect.type === "invalidateEffectEntryPoint") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      { type: "player", player: effect.player },
       0,
       context,
     );
