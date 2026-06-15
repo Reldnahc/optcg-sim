@@ -165,6 +165,21 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
+  it("keeps the present spotlight available when automatic playback catches up", () => {
+    const current = {
+      entries: [source("event:first", "span:first")],
+      cursorIndex: 0,
+      paused: false,
+    };
+
+    const next = advanceSpotlightPlayback({
+      command: "autoAdvance",
+      state: current,
+    });
+
+    expect(next).toBe(current);
+  });
+
   it("keeps minimum dwell after a fast decision resolves", () => {
     const previous = {
       active: {

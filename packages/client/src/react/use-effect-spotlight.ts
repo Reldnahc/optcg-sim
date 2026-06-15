@@ -195,7 +195,7 @@ export const advanceSpotlightPlayback = ({
   if (cursorIndex < presentIndex) {
     return { ...state, cursorIndex: cursorIndex + 1 };
   }
-  return { entries: [], cursorIndex: undefined, paused: false };
+  return state;
 };
 
 export const queuedResolvedSpotlightSources = ({
@@ -404,11 +404,14 @@ export const useEffectSpotlight = ({
     pendingDecisionId,
   ]);
   useEffect(() => {
+    const canAutoStep =
+      cursorIndex !== undefined && cursorIndex < playback.entries.length - 1;
     if (
       model === undefined ||
       model.pinned ||
       playback.paused ||
-      currentSource === undefined
+      currentSource === undefined ||
+      (!canAutoStep && currentSource.mode === "live")
     ) {
       return;
     }
@@ -426,14 +429,22 @@ export const useEffectSpotlight = ({
           state: previous,
         }),
       );
-      setModel((previous) =>
-        previous?.activeKey === model.activeKey ? undefined : previous,
-      );
+      if (canAutoStep) {
+        setModel((previous) =>
+          previous?.activeKey === model.activeKey ? undefined : previous,
+        );
+      }
     }, delayMs);
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [currentSource, model, playback.paused]);
+  }, [
+    currentSource,
+    cursorIndex,
+    model,
+    playback.entries.length,
+    playback.paused,
+  ]);
   if (model === undefined) {
     return undefined;
   }
