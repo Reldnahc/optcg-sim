@@ -21,6 +21,12 @@ import {
   isSupportedLifeCountTotalCondition,
 } from "./life-count.js";
 import {
+  evaluateHandCount,
+  evaluateHandCountDifference,
+  isSupportedHandCountCondition,
+  isSupportedHandCountDifferenceCondition,
+} from "./hand-count.js";
+import {
   evaluateHasCardInZone,
   isSupportedLeaderZoneFilter,
 } from "./leader-zone.js";
@@ -698,14 +704,9 @@ const evaluateCondition = (
     case "leaderColorCount":
       return evaluateLeaderColorCount(state, entry, condition);
     case "handCount":
-      return evaluateCountCondition(
-        state,
-        entry,
-        condition.player,
-        condition.value,
-        condition.op,
-        (playerId) => state.players[playerId]?.hand.length ?? 0,
-      );
+      return evaluateHandCount(state, entry, condition);
+    case "handCountDifference":
+      return evaluateHandCountDifference(state, entry, condition);
     case "deckCount":
       return evaluateCountCondition(
         state,
@@ -890,7 +891,6 @@ export const isSupportedQueuedEffectConditionShape = (
     case "sourcePlayedThisTurn":
       return true;
     case "leaderColorCount":
-    case "handCount":
     case "deckCount":
     case "lifeCount":
     case "turnCount":
@@ -899,6 +899,10 @@ export const isSupportedQueuedEffectConditionShape = (
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
       );
+    case "handCount":
+      return isSupportedHandCountCondition(condition);
+    case "handCountDifference":
+      return isSupportedHandCountDifferenceCondition(condition);
     case "lifeCountDifference":
       return isSupportedLifeCountDifferenceCondition(condition);
     case "lifeCountTotal":

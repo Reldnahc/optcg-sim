@@ -3,6 +3,32 @@ import type { ConditionParseResult, ConditionParser } from "../types.js";
 export const parseHandCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const difference =
+    /^the number of cards in your hand is at least (?<value>[1-9]\d*) less than the number in your opponent's hand$/iu.exec(
+      input.text,
+    );
+  const differenceValue = difference?.groups?.["value"];
+  if (differenceValue !== undefined) {
+    return {
+      condition: {
+        type: "handCountDifference",
+        minuend: { player: "opponent" },
+        subtrahend: { player: "self" },
+        op: "gte",
+        value: Number.parseInt(differenceValue, 10),
+      },
+      evidence: [
+        "condition:handCountDifference",
+        "player:opponent",
+        "player:self",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:handCountDifference",
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^(?<subject>you|your opponent) (?<verb>have|has) (?<count>[1-9]\d*) or (?<direction>more|less) cards in (?<owner>your|their) hand$/i.exec(
       input.text,

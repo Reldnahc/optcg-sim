@@ -41,3 +41,28 @@ it("parses self and opponent hand-count thresholds as the same reusable conditio
     rest: "",
   });
 });
+
+it("parses hand-count differences as reusable player count operands", () => {
+  expect(
+    parseHandCountCondition({
+      text: "the number of cards in your hand is at least 3 less than the number in your opponent's hand",
+    }),
+  ).toEqual({
+    condition: {
+      type: "handCountDifference",
+      minuend: { player: "opponent" },
+      subtrahend: { player: "self" },
+      op: "gte",
+      value: 3,
+    },
+    evidence: [
+      "condition:handCountDifference",
+      "player:opponent",
+      "player:self",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "valueOffset:handCountDifference",
+    ],
+    rest: "",
+  });
+});
