@@ -71,7 +71,8 @@ export const isSupportedTrashFromHandInsteadEffect = (
   effect.chooser === "self" &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.count) &&
-  effect.count > 0;
+  effect.count > 0 &&
+  effect.min === undefined;
 
 export const isSupportedReturnDonInsteadEffect = (
   effect: ReplacementInstead,

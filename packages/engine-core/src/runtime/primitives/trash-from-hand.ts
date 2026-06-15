@@ -165,6 +165,10 @@ const validateSupportedTrashFromHandEffect = (
   if (!Number.isInteger(effect.count) || effect.count <= 0) {
     return { ok: false, reason: "invalid-count" };
   }
+  const minimum = effect.min ?? effect.count;
+  if (!Number.isInteger(minimum) || minimum < 0 || minimum > effect.count) {
+    return { ok: false, reason: "invalid-count" };
+  }
 
   const playerId = resolvePlayerId(state, entry, effect.player);
   const chooserId = resolvePlayerId(state, entry, effect.chooser);
@@ -175,7 +179,7 @@ const validateSupportedTrashFromHandEffect = (
     return { ok: false, reason: "unsupported-chooser-ref" };
   }
   const player = state.players[playerId];
-  if (player === undefined || player.hand.length < effect.count) {
+  if (player === undefined || player.hand.length < minimum) {
     return { ok: false, reason: "insufficient-hand-cards" };
   }
   return { chooserId, ok: true, playerId };
@@ -197,7 +201,11 @@ const hasSupportedTrashFromHandEffectEnvelope = (
   effect.effect.chooser === effect.effect.player &&
   effect.effect.filter === undefined &&
   Number.isInteger(effect.effect.count) &&
-  effect.effect.count > 0;
+  effect.effect.count > 0 &&
+  (effect.effect.min === undefined ||
+    (Number.isInteger(effect.effect.min) &&
+      effect.effect.min >= 0 &&
+      effect.effect.min <= effect.effect.count));
 
 export const isSupportedQueuedTrashFromHandEffect = (
   effect: EffectDefinition["effects"][number],
@@ -244,6 +252,7 @@ export const createSupportedTrashFromHandChoiceDecision = (
     type: "private",
     playerId: supported.chooserId,
   } as const;
+  const minimum = effect.min ?? effect.count;
   const pendingDecision: SelectCardsDecision = {
     id: decisionIdForEntry(entry),
     type: "selectCards",
@@ -256,9 +265,9 @@ export const createSupportedTrashFromHandChoiceDecision = (
       chooser: effect.chooser,
       player: effect.player,
       zone: "hand",
-      min: effect.count,
+      min: minimum,
       max: effect.count,
-      allowFewerIfUnavailable: false,
+      allowFewerIfUnavailable: minimum < effect.count,
       visibility: "privateToChooser",
     },
     candidates: player.hand.map((card) => ({
@@ -312,9 +321,13 @@ const isTrashFromHandDecision = (decision: SelectCardsDecision): boolean =>
   decision.request.zone === "hand" &&
   decision.request.set === undefined &&
   decision.request.filter === undefined &&
-  decision.request.min === decision.request.max &&
-  decision.request.min > 0 &&
-  !decision.request.allowFewerIfUnavailable &&
+  decision.request.min >= 0 &&
+  decision.request.min <= decision.request.max &&
+  decision.request.max > 0 &&
+  ((decision.request.min === decision.request.max &&
+    !decision.request.allowFewerIfUnavailable) ||
+    (decision.request.min < decision.request.max &&
+      decision.request.allowFewerIfUnavailable)) &&
   decision.request.visibility === "privateToChooser" &&
   decision.visibility.type === "private" &&
   decision.visibility.playerId === decision.playerId;
@@ -417,7 +430,15 @@ export const applySupportedTrashFromHandChoiceResponse = (
   if (!Array.isArray(responseCards) || !responseCards.every(isCardRef)) {
     return fail("Response cards must be CardRef values.");
   }
-  if (responseCards.length !== decision.request.min) {
+  const minimum =
+    decision.request.allowFewerIfUnavailable &&
+    decision.candidates.length < decision.request.min
+      ? decision.candidates.length
+      : decision.request.min;
+  if (
+    responseCards.length < minimum ||
+    responseCards.length > decision.request.max
+  ) {
     return fail("Selected card count must match trashFromHand count.");
   }
   if (hasDuplicateInstanceIds(responseCards)) {

@@ -759,6 +759,7 @@ export type Effect =
       type: "trashFromHand";
       player: PlayerRef;
       count: number;
+      min?: number;
       filter?: CardFilter;
       chooser: PlayerRef;
     }

@@ -28,6 +28,27 @@ export const trashFromHandPrimitive: PrimitivePatternDefinition<InstructionParse
         }),
       },
       {
+        id: "trash-up-to-n-cards-from-your-hand",
+        pattern: /^trash up to (?<count>[1-9]\d*) cards? from your hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "trashFromHand",
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            min: 0,
+            player: "self",
+            chooser: "self",
+          },
+          evidence: [
+            "instruction:trashFromHand",
+            "cardinality:upTo",
+            "count:positiveInteger",
+            "player:self",
+            "chooser:self",
+          ],
+          rest: "",
+        }),
+      },
+      {
         id: "trash-n-cards-from-your-opponents-hand",
         pattern:
           /^trash (?<count>[1-9]\d*) cards? from your opponent's hand\.?$/i,

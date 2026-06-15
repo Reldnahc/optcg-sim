@@ -258,6 +258,48 @@ test("valid trashFromHand response moves selected hand cards to public trash and
   );
 });
 
+test("up-to trashFromHand allows choosing fewer than the maximum hand cards", () => {
+  const { result: decisionResult } = createTrashDecision({
+    type: "trashFromHand",
+    player: "self",
+    chooser: "self",
+    count: 2,
+    min: 0,
+  });
+  const decision = must(
+    decisionResult.state.pendingDecision,
+    "pending decision",
+  );
+  const beforeP1 = must(decisionResult.state.players[p1], "p1 before");
+  const selected = [handRef(must(beforeP1.hand[0], "selected hand card"))];
+
+  assert.equal(decision.type, "selectCards");
+  assert.deepEqual(decision.request, {
+    timing: "onResolution",
+    chooser: "self",
+    player: "self",
+    zone: "hand",
+    min: 0,
+    max: 2,
+    allowFewerIfUnavailable: true,
+    visibility: "privateToChooser",
+  });
+
+  const result = respondWithCards(decisionResult.state, selected);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(
+    afterP1.trash.slice(0, 1).map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    afterP1.hand.map((card) => card.instanceId),
+    beforeP1.hand.slice(1).map((card) => card.instanceId),
+  );
+});
+
 test("trashFromHandUntilCount delegates excess hand cards to the hand-trash decision", () => {
   const { state } = trashFromHandQueueState({
     type: "trashFromHandUntilCount",

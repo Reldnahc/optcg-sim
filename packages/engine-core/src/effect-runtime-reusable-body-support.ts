@@ -40,7 +40,11 @@ export const isSupportedTrashFromHandBody = (
   effect.chooser === effect.player &&
   effect.filter === undefined &&
   Number.isInteger(effect.count) &&
-  effect.count > 0;
+  effect.count > 0 &&
+  (effect.min === undefined ||
+    (Number.isInteger(effect.min) &&
+      effect.min >= 0 &&
+      effect.min <= effect.count));
 
 const isSupportedDamageBody = (
   effect: Effect,

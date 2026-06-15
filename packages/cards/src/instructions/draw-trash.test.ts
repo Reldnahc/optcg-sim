@@ -42,6 +42,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
           id: "trash-n-cards-from-your-hand",
         },
         {
+          id: "trash-up-to-n-cards-from-your-hand",
+        },
+        {
           id: "trash-n-cards-from-your-opponents-hand",
         },
         {
@@ -112,6 +115,30 @@ describe("draw and trash-from-hand instruction parsers", () => {
       },
       evidence: [
         "instruction:trashFromHand",
+        "count:positiveInteger",
+        "player:self",
+        "chooser:self",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses up-to trash-from-hand as a reusable hand-trash body with a minimum", () => {
+    expect(
+      parseTrashFromHandInstruction({
+        text: "Trash up to 2 cards from your hand.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "trashFromHand",
+        count: 2,
+        min: 0,
+        player: "self",
+        chooser: "self",
+      },
+      evidence: [
+        "instruction:trashFromHand",
+        "cardinality:upTo",
         "count:positiveInteger",
         "player:self",
         "chooser:self",
