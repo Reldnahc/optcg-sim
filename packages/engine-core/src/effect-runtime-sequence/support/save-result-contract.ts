@@ -1,4 +1,8 @@
-import type { Effect, SavedFieldObjectReferenceFamily } from "@optcg/types";
+import type {
+  Effect,
+  SavedFieldObjectReferenceFamily,
+  SequenceSaveResultKind,
+} from "@optcg/types";
 
 import {
   savedSelectedCardsKindForSelectCardsSegment,
@@ -103,6 +107,93 @@ const addCapabilities = (
     state,
   );
 
+const selectedCardsKindToSaveResultKind = (
+  kind: SavedSelectedCardsKind,
+): SequenceSaveResultKind => `selectedCards:${kind}`;
+
+const inferredSaveResultKindsForSegment = (
+  segment: SequenceSegment,
+): readonly SequenceSaveResultKind[] | null => {
+  const kinds: SequenceSaveResultKind[] = [];
+  const saveResultAs = segment.saveResultAs;
+  if (saveResultAs !== undefined) {
+    const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
+      segment.effect,
+    );
+    if (
+      selectedCardsKind !== undefined &&
+      segment.effect.type === "selectCards"
+    ) {
+      kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
+    } else if (segment.effect.type === "selectTargets") {
+      kinds.push("selectedTargets");
+      const selectedTargetsCardsKind =
+        savedSelectedCardsKindForSelectTargetsSegment(segment.effect);
+      if (selectedTargetsCardsKind !== undefined) {
+        kinds.push(selectedCardsKindToSaveResultKind(selectedTargetsCardsKind));
+      }
+    } else if (segment.effect.type === "selectAllTargets") {
+      kinds.push("selectedTargets");
+    } else if (segment.effect.type === "payCost") {
+      kinds.push("paidCost");
+    } else if (
+      segment.effect.type === "draw" ||
+      segment.effect.type === "playSelected"
+    ) {
+      kinds.push("producedObjects");
+    } else if (
+      segment.effect.type !== "revealTop" &&
+      segment.effect.type !== "selectFromSet" &&
+      segment.effect.type !== "chooseNumber" &&
+      segment.effect.type !== "drawUpTo"
+    ) {
+      return null;
+    }
+  }
+  if (segment.effect.type === "revealTop") {
+    kinds.push("selectedCards:set");
+  }
+  if (segment.effect.type === "selectFromSet") {
+    kinds.push("selectedCards:set");
+  }
+  if (segment.effect.type === "chooseNumber") {
+    kinds.push("chosenNumber");
+  }
+  if (
+    segment.effect.type === "drawUpTo" &&
+    saveAsFromEffect(segment.effect) !== undefined
+  ) {
+    kinds.push("chosenNumber");
+  }
+  if (segment.effect.type === "forEachSavedTarget") {
+    kinds.push("selectedTargets");
+  }
+  return kinds;
+};
+
+const sameSaveResultKindSet = (
+  actual: readonly SequenceSaveResultKind[],
+  expected: readonly SequenceSaveResultKind[],
+): boolean => {
+  const actualSet = new Set(actual);
+  const expectedSet = new Set(expected);
+  return (
+    actualSet.size === expectedSet.size &&
+    [...actualSet].every((kind) => expectedSet.has(kind))
+  );
+};
+
+const hasMatchingExplicitSaveResultKinds = (
+  segment: SequenceSegment,
+): boolean => {
+  const explicit = segment.saveResultKinds;
+  if (explicit === undefined) {
+    return true;
+  }
+  const inferred = inferredSaveResultKindsForSegment(segment);
+  return inferred !== null && sameSaveResultKindSet(explicit, inferred);
+};
+
 const saveAsFromEffect = (effect: Effect): string | undefined => {
   if ("saveAs" in effect && typeof effect.saveAs === "string") {
     return effect.saveAs;
@@ -183,6 +274,9 @@ export const recordProducer = (
   state: StaticSavedResultState,
   segment: SequenceSegment,
 ): StaticSavedResultState | null => {
+  if (!hasMatchingExplicitSaveResultKinds(segment)) {
+    return null;
+  }
   const saveResultState = recordSaveResultAsProducer(state, segment);
   if (saveResultState === null) {
     return null;

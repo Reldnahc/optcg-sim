@@ -355,6 +355,16 @@ export interface EffectOption {
   effect: Effect;
 }
 
+export type SequenceSaveResultKind =
+  | "selectedCards:hand"
+  | "selectedCards:trash"
+  | "selectedCards:don"
+  | "selectedCards:set"
+  | "selectedTargets"
+  | "paidCost"
+  | "producedObjects"
+  | "chosenNumber";
+
 export interface SequencedEffect {
   id?: string;
   effect: Effect | PayCostEffect;
@@ -366,6 +376,7 @@ export interface SequencedEffect {
     | "ifYouDo"
     | "ifPossible";
   saveResultAs?: string;
+  saveResultKinds?: readonly SequenceSaveResultKind[];
   optional?: boolean;
   presentation?: EffectTextPresentationRef;
 }

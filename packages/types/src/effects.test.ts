@@ -28,6 +28,7 @@ import type {
   SequenceSavedResultReference,
   SequenceSavedResultReferenceMap,
   SequenceSegmentResult,
+  SequenceSaveResultKind,
   SelectionId,
   SelectionSetId,
   SequencedEffect,
@@ -221,6 +222,37 @@ test("effect blocks and sequence segments can carry presentation refs", () => {
   };
 
   expect(block.presentation?.spanIds).toContain("span:entry");
+});
+
+test("sequence segments can declare explicit save-result metadata", () => {
+  const kinds: readonly SequenceSaveResultKind[] = [
+    "selectedCards:hand",
+    "selectedCards:trash",
+    "selectedCards:don",
+    "selectedCards:set",
+    "selectedTargets",
+    "paidCost",
+    "producedObjects",
+    "chosenNumber",
+  ];
+  const segment: SequencedEffect = {
+    connector: "always",
+    saveResultAs: "handSelection:metadata",
+    saveResultKinds: ["selectedCards:hand"],
+    effect: {
+      type: "selectCards",
+      player: "self",
+      zone: "hand",
+      chooser: "self",
+      visibility: "chooserOnly",
+      min: 0,
+      max: 1,
+      saveAs: "handSelection:metadata" as SelectionId,
+    },
+  };
+
+  expect(kinds).toContain("chosenNumber");
+  expect(segment.saveResultKinds).toEqual(["selectedCards:hand"]);
 });
 
 test("replacement effect contract supports reviewed would-be-KOd self draw shape", () => {
