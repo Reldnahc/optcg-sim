@@ -138,6 +138,13 @@ export const materializeEffectDefinition = (
   if (lines.length === 0) {
     return { runtimeSupported: true, diagnostics, parserCertificate };
   }
+  if (
+    parsedLineCount === lines.length &&
+    blocks.length === 0 &&
+    parserCertificate.complete
+  ) {
+    return { runtimeSupported: true, diagnostics, parserCertificate };
+  }
   const runtimeSupported =
     parserCertificate.complete &&
     parsedLineCount === lines.length &&
