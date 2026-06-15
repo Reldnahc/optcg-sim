@@ -23,7 +23,7 @@ import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
-import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
+import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 
@@ -190,7 +190,7 @@ const hasUnsupportedBlockDecisionState = (
   }
   if (
     targetView.protectedFrom.length > 0 &&
-    !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
+    !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom)
   ) {
     return true;
   }

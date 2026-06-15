@@ -23,7 +23,7 @@ import {
   isSupportedRestProtection,
 } from "./field-removal-protection-shape.js";
 export {
-  hasOnlyFieldRemovalProtections,
+  hasOnlyBattleIrrelevantProtections,
   isSupportedFieldRemovalProtection,
   malformedFieldRemovalProtectionMessage,
 } from "./field-removal-protection-shape.js";

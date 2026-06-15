@@ -60,7 +60,7 @@ import {
   detectSupportedFieldRemovalReplacementCandidate,
   pauseFieldRemovalReplacementProcess,
 } from "../replacement/field-removal-process.js";
-import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
+import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getLifeDamageDecision,
@@ -283,7 +283,7 @@ export const resolveSupportedVanillaBattle = (
   }
   if (
     targetView.protectedFrom.length > 0 &&
-    !hasOnlyFieldRemovalProtections(targetView.protectedFrom)
+    !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom)
   ) {
     return unsupportedBattleResolution(
       state,

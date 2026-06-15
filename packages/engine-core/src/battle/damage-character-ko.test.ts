@@ -20,6 +20,7 @@ import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   effectDefinition,
   passCounterStep,
+  protectTargetFromOpponentEffectKO,
   setupAttackState,
 } from "./test-fixtures.js";
 
@@ -269,6 +270,55 @@ test("battle K.O. still removes a Character protected from opponent effect remov
       )
       .map((event) => event.type),
     ["damageDealt", "cardKOd", "cardMoved"],
+  );
+});
+
+test("battle K.O. still removes a Character protected only from opponent effect K.O.", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  protectTargetFromOpponentEffectKO(state, target);
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  const result = passCounterStep(opened.state, p2);
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    must(result.state.players[p2], "p2").characters.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(result.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === target.instanceId,
+    ),
+    true,
   );
 });
 

@@ -8,7 +8,7 @@ import {
 } from "./support.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
+import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 
 export const getUnsupportedDamageStepContinuationReason = (
   state: GameState,
@@ -63,7 +63,7 @@ export const getUnsupportedDamageStepContinuationReason = (
       battle.damageCount !== 2 &&
       attackerView.keywords.includes("doubleAttack")) ||
     (targetView.protectedFrom.length > 0 &&
-      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
+      !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom))
   ) {
     return "Battle requires unsupported keyword or protection handling.";
   }

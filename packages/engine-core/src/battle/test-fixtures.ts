@@ -10,6 +10,7 @@ import type {
   GameState,
   Keyword,
   PlayerId,
+  Protection,
 } from "@optcg/types";
 
 import { applyAction } from "../index.js";
@@ -343,6 +344,48 @@ export const continuousKeywordEffectRecord = (
     record.condition = options.condition;
   }
   return record;
+};
+
+const opponentEffectKoProtection = (): Protection => ({
+  process: "ko",
+  sourceKind: "cardEffect",
+  sourceControllerRelation: "opponentControlled",
+});
+
+export const protectTargetFromOpponentEffectKO = (
+  state: ReturnType<typeof setupAttackState>,
+  target: CardInstance,
+): void => {
+  state.continuousEffects = [
+    ...state.continuousEffects,
+    {
+      id: `opponent-effect-ko-protection:${String(target.instanceId)}`,
+      source: cardRef(target, target.controller),
+      sourceSnapshot: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        ownerId: target.owner,
+        controllerId: target.controller,
+        zone: target.zone,
+        category: "character",
+        colors: ["red"],
+        power: 3000,
+        keywords: [],
+      },
+      controller: target.controller,
+      modifier: {
+        layer: "protection",
+        target: { type: "self" },
+        operation: {
+          type: "protection",
+          protection: opponentEffectKoProtection(),
+        },
+      },
+      duration: { type: "whileSourceOnField" },
+      createdBy: { type: "ruleProcess", name: "battle-protection-test" },
+      createdAtStateSeq: state.seq,
+    },
+  ];
 };
 
 export const addTrashMarker = (

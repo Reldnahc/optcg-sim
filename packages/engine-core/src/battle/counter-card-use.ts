@@ -46,7 +46,7 @@ import {
 import { computeView } from "../view/compute-view.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { hasOnlyFieldRemovalProtections } from "../replacement/field-removal-protection.js";
+import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
@@ -107,7 +107,7 @@ export const getLegalCharacterCounterActions = (
     attackerView?.currentPower === undefined ||
     targetView?.currentPower === undefined ||
     (targetView.protectedFrom.length > 0 &&
-      !hasOnlyFieldRemovalProtections(targetView.protectedFrom))
+      !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom))
   ) {
     return [];
   }
