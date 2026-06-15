@@ -2,11 +2,20 @@ import { expect, test } from "vitest";
 
 import type {
   ActiveEffectTextPresentation,
+  EffectSpotlightHistoryEntry,
   EffectTextSourceMap,
   EffectTextSpan,
   EffectTextTargetLink,
 } from "./effect-presentation.js";
-import type { CardId, CardRef, InstanceId, PlayerId } from "./index.js";
+import type {
+  CardId,
+  CardRef,
+  EffectId,
+  EngineEventId,
+  InstanceId,
+  PlayerId,
+  QueueEntryId,
+} from "./index.js";
 
 test("effect presentation source map describes exact original text ranges", () => {
   const span: EffectTextSpan = {
@@ -51,4 +60,31 @@ test("active presentation links public targets to exact span ids", () => {
   };
 
   expect(active.targetLinks?.[0]?.cards[0]?.instanceId).toBe("target-1");
+});
+
+test("allows structured spotlight timeline entries without parsing display keys", () => {
+  const active: ActiveEffectTextPresentation = {
+    source: {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    },
+    textKind: "effect",
+    activeSpanIds: ["span:search:selection"],
+  };
+
+  const entry: EffectSpotlightHistoryEntry = {
+    id: "resolved:event:1:span:search:selection",
+    key: "event:1:span:search:selection",
+    semanticKey: "p1|source-1|OP00-001|effect|span:search:selection",
+    mode: "resolved",
+    status: "resolved",
+    active,
+    resolvedEventId: "event:1" as EngineEventId,
+    queueEntryId: "queue-entry:1" as QueueEntryId,
+    effectBlockId: "effect:block:1" as EffectId,
+  };
+
+  expect(entry.pendingDecisionId).toBeUndefined();
+  expect(entry.semanticKey).toContain("span:search:selection");
 });

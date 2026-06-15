@@ -1,4 +1,10 @@
 import type { CardRef } from "./card-metadata.js";
+import type {
+  DecisionId,
+  EffectId,
+  EngineEventId,
+  QueueEntryId,
+} from "./primitives.js";
 
 export type EffectTextDocumentKind = "effect" | "trigger";
 
@@ -55,10 +61,19 @@ export interface ActiveEffectTextPresentation {
   readonly targetLinks?: readonly EffectTextTargetLink[];
 }
 
+export type EffectSpotlightHistoryEntryStatus = "pending" | "resolved";
+
 export interface EffectSpotlightHistoryEntry {
+  readonly id: string;
   readonly key: string;
+  readonly semanticKey: string;
   readonly mode: "live" | "resolved";
+  readonly status: EffectSpotlightHistoryEntryStatus;
   readonly active: ActiveEffectTextPresentation;
+  readonly pendingDecisionId?: DecisionId;
+  readonly resolvedEventId?: EngineEventId;
+  readonly queueEntryId?: QueueEntryId;
+  readonly effectBlockId?: EffectId;
 }
 
 export interface EffectSpotlightHistory {

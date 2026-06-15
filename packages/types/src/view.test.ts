@@ -146,13 +146,18 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
     effectSpotlightHistory: {
       entries: [
         {
+          id: "resolved:event-spotlight-1:span:body:draw",
           key: "event-spotlight-1",
+          semanticKey:
+            "player-a|instance-source|OP01-source|effect|span:body:draw",
           mode: "resolved",
+          status: "resolved",
           active: {
             source: cardRef("source", playerA),
             textKind: "effect",
             activeSpanIds: ["span:body:draw"],
           },
+          resolvedEventId: "event-spotlight-1" as EngineEventId,
         },
       ],
       presentKey: "event-spotlight-1",
