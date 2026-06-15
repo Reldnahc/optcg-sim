@@ -259,6 +259,9 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  implicitEventReactionExpressionParser({
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   conditionalCostedBodyExpressionParser,
   singleInstructionExpressionParser,
   generalExpressionParser,

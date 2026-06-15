@@ -54,6 +54,7 @@ export function costedEffectExpressionParser(options: {
         ...body.evidence,
       ],
       rest: "",
+      ...(body.blockPatch === undefined ? {} : { blockPatch: body.blockPatch }),
       ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
