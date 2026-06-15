@@ -38,3 +38,51 @@ it("parses opponent battle power debuff under counter timing without timing-spec
     ]),
   );
 });
+
+it("parses typed friendly Character power gain excluding this Character as target filter data", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [Activate: Main] [Once Per Turn] Up to 1 of your {Animal} type Characters other than this Character gains +1000 power during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "choose",
+          request: {
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              typesAny: ["Animal"],
+              excludeSelf: true,
+            },
+          },
+        },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "cardinality:upTo",
+      "target:yourCharacters",
+      "filter:type",
+      "filter:category:character",
+      "filter:excludeSelf",
+      "instruction:modifyPower",
+      "modifier:positivePower",
+      "duration:thisTurn",
+    ]),
+  );
+});

@@ -460,11 +460,12 @@ export function parseYourCharactersTarget(
     if (predicateText === undefined || predicateText.length === 0) {
       return undefined;
     }
+    const restText = typedMatch.groups?.["rest"]?.trim() ?? "";
     const predicates = parseCardFilterPredicates(
-      { text: `${predicateText} Characters` },
+      { text: `${predicateText} Characters ${restText}`.trim() },
       { powerSemantics: "current" },
     );
-    if (predicates === undefined || predicates.rest.length > 0) {
+    if (predicates === undefined) {
       return undefined;
     }
     return {
@@ -488,7 +489,7 @@ export function parseYourCharactersTarget(
         "filter:category:character",
         ...predicates.evidence,
       ],
-      rest: normalizeTargetRest(typedMatch.groups?.["rest"] ?? ""),
+      rest: normalizeTargetRest(predicates.rest),
     };
   }
 
