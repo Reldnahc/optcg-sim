@@ -13,6 +13,7 @@ import type {
 } from "@optcg/types";
 
 import type { ClientPlayerSnapshot } from "../transport.js";
+import type { MatchClientState } from "../controller.js";
 import { createMatchClientDecisionModel } from "./use-match-client-decision-model.js";
 
 const p1 = "p1" as PlayerId;
@@ -98,6 +99,48 @@ const playerSnapshot = (): ClientPlayerSnapshot => ({
     },
     { index: 2, type: "respondToDecision", label: "Rest this card" },
   ],
+});
+
+const matchClientState = (
+  snapshot: ClientPlayerSnapshot,
+): MatchClientState => ({
+  matchId: "match-1" as MatchId,
+  seat: { matchId: "match-1" as MatchId, playerId: p1 },
+  snapshot: {
+    matchId: "match-1" as MatchId,
+    stateSeq: 1,
+    actionSeq: 1,
+    players: { [p1]: snapshot },
+  },
+  cards: {
+    players: {
+      [p1]: {
+        cards: {
+          [snapshot.view.self.leader.cardId]: {
+            cardId: snapshot.view.self.leader.cardId,
+            name: "Leader",
+            category: "leader",
+          },
+          [snapshot.view.opponent.leader.cardId]: {
+            cardId: snapshot.view.opponent.leader.cardId,
+            name: "Opponent Leader",
+            category: "leader",
+          },
+          ...Object.fromEntries(
+            snapshot.view.opponent.characters.map((character) => [
+              character.cardId,
+              {
+                cardId: character.cardId,
+                name: "Opponent Character",
+                category: "character",
+                power: 7000,
+              },
+            ]),
+          ),
+        },
+      },
+    },
+  },
 });
 
 describe("match client decision model", () => {
@@ -206,5 +249,63 @@ describe("match client decision model", () => {
     });
 
     assert.deepEqual(model.pendingChoiceInstanceIds, ["opponent-character"]);
+  });
+
+  test("visible selectTargets decisions use board-click target selection", () => {
+    const snapshot = playerSnapshot();
+    const opponentCharacter = card(
+      "opponent-character",
+      "OP01-003",
+      "characterArea",
+      p2,
+    );
+    snapshot.view.opponent.characters = [opponentCharacter];
+    snapshot.view.pendingDecision = {
+      id: "decision:selectTargets:rested-reaction" as DecisionId,
+      type: "selectTargets",
+      playerId: p1,
+      prompt: "Choose target.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      presentation: { title: "Choose target", instruction: "Choose target." },
+      min: 0,
+      max: 1,
+      candidates: [
+        {
+          card: {
+            instanceId: opponentCharacter.instanceId,
+            cardId: opponentCharacter.cardId,
+            playerId: p2,
+            zone: opponentCharacter.zone,
+          },
+        },
+      ],
+    };
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Choose no target",
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Choose target",
+      },
+    ];
+
+    const model = createMatchClientDecisionModel({
+      clientState: matchClientState(snapshot),
+      playerSnapshot: snapshot,
+      pendingDecision: snapshot.view.pendingDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: [],
+      decisionDraft: undefined,
+    });
+
+    assert.equal(model.pendingDecisionInteractionMode, "zoneClick");
+    assert.deepEqual(model.pendingChoiceInstanceIds, ["opponent-character"]);
+    assert.equal(model.decisionModal, undefined);
   });
 });
