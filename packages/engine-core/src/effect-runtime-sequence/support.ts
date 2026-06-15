@@ -8,6 +8,7 @@ import type {
   SelectTargetsEffect,
   SelectCardsEffect,
   Trigger,
+  Target,
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
@@ -57,8 +58,6 @@ import {
   isSupportedSelectFromSetSegment,
   isSupportedSequenceSelectCardsSegment,
   isSupportedMoveSelectedSegment,
-  savedSelectedCardsKindForSelectTargetsSegment,
-  savedSelectedCardsKindForSelectCardsSegment,
   type AttachSelectedDonEffect,
   type ChooseNumberEffect,
   type MoveSelectedEffect,
@@ -69,6 +68,18 @@ import {
   type SavedSelectedCardsKind,
   type SelectFromSetEffect,
 } from "./support/selection.js";
+import {
+  canConstrainByOwner,
+  canConsumeNumber,
+  canConsumeSavedFieldObject,
+  canConsumeSelectedCards,
+  canConsumeTransientSet,
+  cloneStaticSavedResultState,
+  emptyStaticSavedResultState,
+  recordProducer,
+  type SavedReferenceCapability,
+  type StaticSavedResultState,
+} from "./support/save-result-contract.js";
 import {
   isSupportedActivateSegment,
   isSupportedBounceSegment,
@@ -167,76 +178,111 @@ export interface SequenceSupportOptions {
 
 interface SequenceSupportState {
   hasPendingDecisionSegment: boolean;
-  savedSelectedCards: Map<string, SavedSelectedCardsKind>;
-  savedSelectedCardMaxCounts: Map<string, number>;
-  savedSelectionSets: Set<string>;
-  savedNumbers: Set<string>;
-  savedSelectedTargets: Set<string>;
+  savedResults: StaticSavedResultState;
 }
 
 const emptySequenceSupportState = (
   options: SequenceSupportOptions = {},
-): SequenceSupportState => ({
-  hasPendingDecisionSegment: false,
-  savedSelectedCards: new Map(),
-  savedSelectedCardMaxCounts: new Map(),
-  savedSelectionSets: new Set(),
-  savedNumbers: new Set(),
-  savedSelectedTargets: new Set(options.initialSavedSelectedTargets ?? []),
-});
+): SequenceSupportState => {
+  const initial: Record<string, readonly SavedReferenceCapability[]> = {
+    "trigger:cardPlayed": [{ kind: "producedObjects" }],
+  };
+  for (const selection of options.initialSavedSelectedTargets ?? []) {
+    initial[selection] = [{ kind: "selectedTargets" }];
+  }
+
+  return {
+    hasPendingDecisionSegment: false,
+    savedResults: emptyStaticSavedResultState(initial),
+  };
+};
 
 const cloneSequenceSupportState = (
   state: SequenceSupportState,
 ): SequenceSupportState => ({
   hasPendingDecisionSegment: state.hasPendingDecisionSegment,
-  savedSelectedCards: new Map(state.savedSelectedCards),
-  savedSelectedCardMaxCounts: new Map(state.savedSelectedCardMaxCounts),
-  savedSelectionSets: new Set(state.savedSelectionSets),
-  savedNumbers: new Set(state.savedNumbers),
-  savedSelectedTargets: new Set(state.savedSelectedTargets),
+  savedResults: cloneStaticSavedResultState(state.savedResults),
 });
 
-const savedSelectedCardsKind = (
-  state: SequenceSupportState,
-  selection: unknown,
-): SavedSelectedCardsKind | undefined =>
-  state.savedSelectedCards.get(String(selection));
+const selectedCardKinds: readonly SavedSelectedCardsKind[] = [
+  "hand",
+  "trash",
+  "don",
+  "set",
+];
 
-const savedSelectedCardsMaxCount = (
+const recordSupportedProducer = (
   state: SequenceSupportState,
-  selection: unknown,
-): number | undefined =>
-  state.savedSelectedCardMaxCounts.get(String(selection));
-
-const hasSavedSelectionSet = (
-  state: SequenceSupportState,
-  selectionSet: unknown,
-): boolean => state.savedSelectionSets.has(String(selectionSet));
+  segment: SequenceEffect["effects"][number],
+): boolean => {
+  const savedResults = recordProducer(state.savedResults, segment);
+  if (savedResults === null) {
+    return false;
+  }
+  state.savedResults = savedResults;
+  return true;
+};
 
 const hasSavedSelectedCardSet = (
   state: SequenceSupportState,
   selectionSet: unknown,
 ): boolean =>
-  hasSavedSelectionSet(state, selectionSet) ||
-  state.savedSelectedCards.has(String(selectionSet));
+  canConsumeTransientSet(state.savedResults, selectionSet) ||
+  canConsumeSelectedCards(state.savedResults, selectionSet, selectedCardKinds);
 
 const hasSavedNumber = (
   state: SequenceSupportState,
   selection: unknown,
-): boolean => state.savedNumbers.has(String(selection));
+): boolean => canConsumeNumber(state.savedResults, selection);
 
 const hasSavedSelectedTargets = (
   state: SequenceSupportState,
   selection: unknown,
-): boolean => state.savedSelectedTargets.has(String(selection));
+): boolean =>
+  canConsumeSavedFieldObject(
+    state.savedResults,
+    "selectedTargets",
+    String(selection),
+  );
 
 const hasSavedOwnerConstraintReference = (
   state: SequenceSupportState,
   effect: SelectTargetsEffect,
 ): boolean =>
   effect.ownerConstraint === undefined ||
-  hasSavedSelectedCardSet(state, effect.ownerConstraint.selection) ||
-  hasSavedSelectedTargets(state, effect.ownerConstraint.selection);
+  canConstrainByOwner(state.savedResults, effect.ownerConstraint.selection);
+
+const canConsumeSavedFieldObjectTarget = (
+  state: SequenceSupportState,
+  target: Target,
+): boolean =>
+  target.type !== "savedFieldObject" ||
+  canConsumeSavedFieldObject(
+    state.savedResults,
+    target.binding.family,
+    target.binding.saveResultAs,
+  );
+
+const isSupportedMoveSelectedWithSavedResults = (
+  state: SequenceSupportState,
+  effect: MoveSelectedEffect,
+): boolean =>
+  (isSupportedMoveSelectedSegment(effect, "trash") &&
+    canConsumeSelectedCards(state.savedResults, effect.selection, ["trash"])) ||
+  (isSupportedMoveSelectedSegment(
+    effect,
+    "hand",
+    effect.to === "life" ? 1 : undefined,
+  ) &&
+    canConsumeSelectedCards(
+      state.savedResults,
+      effect.selection,
+      ["hand"],
+      effect.to === "life" ? { max: 1 } : {},
+    )) ||
+  (isSupportedMoveSelectedSegment(effect, "set", undefined, true) &&
+    canConsumeTransientSet(state.savedResults, effect.from) &&
+    canConsumeSelectedCards(state.savedResults, effect.selection, ["set"]));
 
 const isSupportedSelectAllTargetsRequest = (
   request: SelectAllTargetsEffect["request"],
@@ -400,49 +446,49 @@ const isSupportedSequenceBlockWithState = (
         if (segment.optional === true) {
           supportState.hasPendingDecisionSegment = true;
         }
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedDrawUpToSegment(segment.effect)) {
         if (segment.optional === true) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedTrashFromHandSegment(segment.effect)) {
         if (index === 0 && !allowInitialTrashFromHand) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedTrashFromHandUntilCountSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedMoveCardsSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedDamageSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedReturnDonSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedReorderLifeSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedPlaceTopLifeCardSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedSetLifeFaceUpSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "sequence") {
         if (segment.saveResultAs !== undefined) {
@@ -459,23 +505,21 @@ const isSupportedSequenceBlockWithState = (
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedPayCostSegment(segment.effect)) {
         if (segment.optional === true) {
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedChooseNumberSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
-        supportState.savedNumbers.add(String(segment.effect.saveAs));
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedRevealTopSegment(segment.effect)) {
-        supportState.savedSelectionSets.add(String(segment.effect.saveAs));
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (
         isSupportedSelectFromSetSegment(segment.effect, (selection) =>
@@ -486,24 +530,19 @@ const isSupportedSequenceBlockWithState = (
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        supportState.savedSelectedCards.set(
-          String(segment.effect.saveAs),
-          "set",
-        );
-        supportState.savedSelectedCardMaxCounts.set(
-          String(segment.effect.saveAs),
-          segment.effect.max,
-        );
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedRevealSelectedSegment(segment.effect)) {
-        return (
-          savedSelectedCardsKind(supportState, segment.effect.selection) !==
-          undefined
+        return canConsumeSelectedCards(
+          supportState.savedResults,
+          segment.effect.selection,
+          selectedCardKinds,
         );
       }
       if (isSupportedPlaceSetRemainderSegment(segment.effect)) {
-        if (!hasSavedSelectionSet(supportState, segment.effect.set)) {
+        if (
+          !canConsumeTransientSet(supportState.savedResults, segment.effect.set)
+        ) {
           return false;
         }
         if (
@@ -514,45 +553,53 @@ const isSupportedSequenceBlockWithState = (
           return false;
         }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "delayed") {
         return isSupportedDelayedSegment(segment.effect, options);
       }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
-        const kind = savedSelectedCardsKindForSelectCardsSegment(
-          segment.effect,
-        );
-        if (kind === undefined) {
-          return false;
-        }
-        supportState.savedSelectedCards.set(
-          String(segment.effect.saveAs),
-          kind,
-        );
-        supportState.savedSelectedCardMaxCounts.set(
-          String(segment.effect.saveAs),
-          segment.effect.max,
-        );
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "moveSelected") {
-        return isSupportedMoveSelectedSegment(
-          segment.effect,
-          savedSelectedCardsKind(supportState, segment.effect.selection),
-          savedSelectedCardsMaxCount(supportState, segment.effect.selection),
-          hasSavedSelectionSet(supportState, segment.effect.from),
+        return (
+          isSupportedMoveSelectedWithSavedResults(
+            supportState,
+            segment.effect,
+          ) && recordSupportedProducer(supportState, segment)
         );
       }
       if (segment.effect.type === "attachSelectedDon") {
-        return isSupportedAttachSelectedDonSegment(
-          segment.effect,
-          savedSelectedCardsKind(supportState, segment.effect.selection),
+        return (
+          isSupportedAttachSelectedDonSegment(segment.effect, "don") &&
+          canConsumeSelectedCards(
+            supportState.savedResults,
+            segment.effect.selection,
+            ["don"],
+          ) &&
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) &&
+          recordSupportedProducer(supportState, segment)
         );
       }
       if (isSupportedTrashSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
+      }
+      if (isSupportedSavedTargetContinuousSegment(segment.effect)) {
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       if (
         isSupportedSequenceContinuousSegment(
@@ -566,42 +613,24 @@ const isSupportedSequenceBlockWithState = (
         ) {
           supportState.hasPendingDecisionSegment = true;
         }
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "selectTargets") {
         const request = segment.effect.request;
-        const selectedCardsKind = savedSelectedCardsKindForSelectTargetsSegment(
-          segment.effect,
-        );
         if (
           !isSupportedSequenceTargetRequest(request) ||
           !hasSavedOwnerConstraintReference(supportState, segment.effect)
         ) {
           return false;
         }
-        if (segment.saveResultAs !== undefined) {
-          supportState.savedSelectedTargets.add(segment.saveResultAs);
-        }
-        if (
-          segment.saveResultAs !== undefined &&
-          selectedCardsKind !== undefined
-        ) {
-          supportState.savedSelectedCards.set(
-            segment.saveResultAs,
-            selectedCardsKind,
-          );
-        }
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "selectAllTargets") {
         if (!isSupportedSelectAllTargetsRequest(segment.effect.request)) {
           return false;
         }
-        if (segment.saveResultAs !== undefined) {
-          supportState.savedSelectedTargets.add(segment.saveResultAs);
-        }
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedRestSegment(segment.effect)) {
         if (
@@ -610,22 +639,41 @@ const isSupportedSequenceBlockWithState = (
         ) {
           supportState.hasPendingDecisionSegment = true;
         }
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedActivateSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedChangeAttackTargetSegment(segment.effect)) {
-        return true;
-      }
-      if (isSupportedSavedTargetContinuousSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedSwapBasePowerSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(supportState, segment.effect.left) &&
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.right,
+          ) &&
+          recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedConditionalContinuousSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (
         isSupportedConditionalSegment(
@@ -635,57 +683,76 @@ const isSupportedSequenceBlockWithState = (
         )
       ) {
         supportState.hasPendingDecisionSegment = true;
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "forEachSavedTarget") {
         if (!hasSavedSelectedTargets(supportState, segment.effect.selection)) {
           return false;
         }
-        return isSupportedForEachSavedTargetSegment(
-          segment.effect,
-          entry.sourcePresencePolicy,
-          options,
+        return (
+          isSupportedForEachSavedTargetSegment(
+            segment.effect,
+            entry.sourcePresencePolicy,
+            options,
+          ) && recordSupportedProducer(supportState, segment)
         );
       }
       if (segment.effect.type === "choice") {
         supportState.hasPendingDecisionSegment = true;
-        return isSupportedChoiceEffect(segment.effect, (effect) =>
-          isSupportedSequenceBlockWithState(
-            entry,
-            { ...flattenedBlock, effect },
-            { ...options, allowInitialTrashFromHand: true },
-            cloneSequenceSupportState(supportState),
-          ),
+        return (
+          isSupportedChoiceEffect(segment.effect, (effect) =>
+            isSupportedSequenceBlockWithState(
+              entry,
+              { ...flattenedBlock, effect },
+              { ...options, allowInitialTrashFromHand: true },
+              cloneSequenceSupportState(supportState),
+            ),
+          ) && recordSupportedProducer(supportState, segment)
         );
       }
       if (segment.effect.type === "playSelected") {
-        const kind = savedSelectedCardsKind(
-          supportState,
-          segment.effect.selection,
-        );
         return (
           segment.effect.ignoreCost === true &&
           (segment.effect.enterRested === undefined ||
             typeof segment.effect.enterRested === "boolean") &&
-          (kind === "hand" || kind === "trash" || kind === "set")
+          canConsumeSelectedCards(
+            supportState.savedResults,
+            segment.effect.selection,
+            ["hand", "trash", "set"],
+          ) &&
+          recordSupportedProducer(supportState, segment)
         );
       }
       if (segment.effect.type === "activateSelectedEvent") {
         return (
           segment.effect.ignoreCost &&
           segment.effect.trigger.type === "main" &&
-          savedSelectedCardsKind(supportState, segment.effect.selection) ===
-            "hand"
+          canConsumeSelectedCards(
+            supportState.savedResults,
+            segment.effect.selection,
+            ["hand"],
+          ) &&
+          recordSupportedProducer(supportState, segment)
         );
       }
       if (isSupportedPlaySourceSegment(segment.effect)) {
-        return true;
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedKoSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedBounceSegment(segment.effect)) {
-        return true;
+        return (
+          canConsumeSavedFieldObjectTarget(
+            supportState,
+            segment.effect.target,
+          ) && recordSupportedProducer(supportState, segment)
+        );
       }
       return false;
     },
