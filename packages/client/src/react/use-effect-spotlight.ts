@@ -120,7 +120,6 @@ export const consumeSpotlightSourceSignatures = (
 
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,
-  consumedSignatures = new Set<string>(),
   previous,
   sources,
 }: {
@@ -132,11 +131,7 @@ export const appendSpotlightPlaybackSources = ({
   const queuedKeys = new Set(previous.entries.map((source) => source.key));
   let entries: EffectSpotlightActiveSourceInput[] | undefined;
   for (const source of sources) {
-    if (
-      !consumedKeys.has(source.key) &&
-      !sourceSignaturesConsumed(consumedSignatures, source) &&
-      !queuedKeys.has(source.key)
-    ) {
+    if (!consumedKeys.has(source.key) && !queuedKeys.has(source.key)) {
       entries ??= [...previous.entries];
       entries.push(source);
       queuedKeys.add(source.key);

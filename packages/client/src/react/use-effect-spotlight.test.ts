@@ -84,6 +84,29 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
+  it("appends repeated effects when a new event key has an already-seen card span signature", () => {
+    const consumedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(consumedSignatures, [
+      source("event:first", "span:first"),
+    ]);
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      consumedSignatures,
+      previous: {
+        entries: [source("event:first", "span:first")],
+        cursorIndex: 0,
+        paused: false,
+      },
+      sources: [source("event:second", "span:first")],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+    ]);
+  });
+
   it("rewinds to the previous entry and pauses playback", () => {
     const next = advanceSpotlightPlayback({
       command: "rewind",
