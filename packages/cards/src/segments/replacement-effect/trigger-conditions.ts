@@ -75,15 +75,18 @@ export function parseOpponentKoReplacement(
   }
 
   const match =
-    /^If (?<target>.+?) would be K\.O\.'d(?: by your opponent(?<effectOnly>'s effects?))?,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would be K\.O\.'d(?: by (?:(?<anyEffect>an effect)|your opponent(?<opponentEffectOnly>'s effects?)))?,\s*(?<body>.+)$/i.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];
-  const effectOnlyText = match?.groups?.["effectOnly"];
+  const anyEffectText = match?.groups?.["anyEffect"];
+  const opponentEffectOnlyText = match?.groups?.["opponentEffectOnly"];
   const bodyText = match?.groups?.["body"];
   if (targetText === undefined || bodyText === undefined) {
     return undefined;
   }
+  const hasCardEffectSource =
+    anyEffectText !== undefined || opponentEffectOnlyText !== undefined;
 
   const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
   const target = parseYourFieldReplacementTarget({
@@ -104,10 +107,11 @@ export function parseOpponentKoReplacement(
   return {
     when: {
       type: "wouldBeKOd",
-      ...(effectOnlyText === undefined && !/by your opponent/i.test(text)
+      ...(anyEffectText !== undefined ||
+      (opponentEffectOnlyText === undefined && !/by your opponent/i.test(text))
         ? { sourceControllerRelation: "any" as const }
         : {}),
-      ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
+      ...(hasCardEffectSource ? { sourceKind: "cardEffect" as const } : {}),
       target: target.target,
     },
     instead: instead.effect,
@@ -116,9 +120,9 @@ export function parseOpponentKoReplacement(
       ...(/by your opponent/i.test(text)
         ? (["replacementSource:opponent"] as const)
         : []),
-      ...(effectOnlyText === undefined
-        ? []
-        : ["replacementSource:cardEffect" as const]),
+      ...(hasCardEffectSource
+        ? (["replacementSource:cardEffect"] as const)
+        : []),
       ...target.evidence,
       ...instead.evidence,
     ],
