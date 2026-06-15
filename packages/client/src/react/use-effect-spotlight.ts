@@ -138,11 +138,13 @@ const releaseSpotlightSourceSignatures = (
 
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,
+  initialCursorKey,
   suppressedResolvedSignatures,
   previous,
   sources,
 }: {
   readonly consumedKeys: ReadonlySet<string>;
+  readonly initialCursorKey?: string | undefined;
   readonly suppressedResolvedSignatures?: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
@@ -168,11 +170,17 @@ export const appendSpotlightPlaybackSources = ({
   if (entries === undefined) {
     return previous;
   }
+  const initialCursorIndex =
+    previous.entries.length === 0 && initialCursorKey !== undefined
+      ? entries.findIndex((source) => source.key === initialCursorKey)
+      : -1;
   return {
     entries,
     cursorIndex:
       previous.cursorIndex === undefined
-        ? previous.entries.length
+        ? initialCursorIndex >= 0
+          ? initialCursorIndex
+          : previous.entries.length
         : previous.cursorIndex,
     paused: previous.paused,
   };
@@ -366,6 +374,8 @@ export interface UseEffectSpotlightInput {
   readonly activeKey?: string | undefined;
   readonly activeMode?: "live" | "resolved" | undefined;
   readonly activeSources?: readonly EffectSpotlightActiveSourceInput[];
+  readonly consumeInitialResolvedSources?: boolean | undefined;
+  readonly initialCursorKey?: string | undefined;
   readonly pendingDecisionId: DecisionId | string | undefined;
   readonly minimumDwellMs?: number | undefined;
   readonly graceMs?: number | undefined;
@@ -376,13 +386,16 @@ export const useEffectSpotlight = ({
   activeKey,
   activeMode = "live",
   activeSources,
+  consumeInitialResolvedSources = true,
   graceMs = 800,
+  initialCursorKey,
   minimumDwellMs = 2_000,
   pendingDecisionId,
 }: UseEffectSpotlightInput): UseEffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
   const suppressedResolvedSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
+  const initializedPlaybackSources = useRef(false);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [playback, setPlayback] = useState<EffectSpotlightPlaybackState>({
     entries: [],
@@ -412,6 +425,7 @@ export const useEffectSpotlight = ({
       setControlsVisible(true);
     }
     if (
+      consumeInitialResolvedSources &&
       !initializedConsumedResolvedKeys.current &&
       activeSources !== undefined
     ) {
@@ -421,15 +435,26 @@ export const useEffectSpotlight = ({
         normalizedSources,
       );
     }
+    const isInitialPlaybackBatch =
+      !initializedPlaybackSources.current && normalizedSources.length > 0;
     setPlayback((previous) =>
       appendSpotlightPlaybackSources({
         consumedKeys: consumedResolvedKeys.current,
+        initialCursorKey: isInitialPlaybackBatch ? initialCursorKey : undefined,
         suppressedResolvedSignatures: suppressedResolvedSignatures.current,
         previous,
         sources: normalizedSources,
       }),
     );
-  }, [activeSources, normalizedSources]);
+    if (isInitialPlaybackBatch) {
+      initializedPlaybackSources.current = true;
+    }
+  }, [
+    activeSources,
+    consumeInitialResolvedSources,
+    initialCursorKey,
+    normalizedSources,
+  ]);
   const effectiveActive = currentSource?.active;
   const effectiveActiveKey = currentSource?.key;
   const effectiveActiveMode = currentSource?.mode ?? activeMode;

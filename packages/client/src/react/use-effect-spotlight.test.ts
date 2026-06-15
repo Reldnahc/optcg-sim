@@ -83,6 +83,29 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
+  it("starts server-projected history at the present source on initial load", () => {
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      initialCursorKey: "event:second",
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+      },
+      sources: [
+        source("event:first", "span:first"),
+        source("event:second", "span:second"),
+      ],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+    ]);
+    expect(next.cursorIndex).toBe(1);
+    expect(next.paused).toBe(false);
+  });
+
   it("appends repeated effects when a new event key reuses a card span signature", () => {
     const next = appendSpotlightPlaybackSources({
       consumedKeys: new Set<string>(),
