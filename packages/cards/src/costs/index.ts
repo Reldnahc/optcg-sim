@@ -1,6 +1,8 @@
 export { parseOptionalChooseOneTrashCost } from "./optional-choose-one-trash.js";
 export {
+  mandatoryActivationCostParsers,
   optionalActivationCostParsers,
+  type MandatoryActivationCostParseResult,
   type OptionalActivationCostParseResult,
 } from "./activation.js";
 export { parseAttachDonCost } from "./attach-don.js";

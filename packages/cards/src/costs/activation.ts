@@ -7,6 +7,14 @@ import {
   type OptionalChooseOneTrashCostParseResult,
 } from "./optional-choose-one-trash.js";
 import {
+  parseFieldToLifeCost,
+  type FieldToLifeCostParseResult,
+} from "./field-to-life.js";
+import {
+  parseReturnDonCost,
+  type CostParseResult as ReturnDonCostParseResult,
+} from "./return-don.js";
+import {
   parseOptionalCostSequence,
   type OptionalCostSequenceParseResult,
 } from "./sequence.js";
@@ -21,6 +29,13 @@ export type OptionalActivationCostParseResult =
 
 export const optionalActivationCostParsers: readonly CostParser<OptionalActivationCostParseResult>[] =
   [parseOptionalCostSequenceFromOptionalText, parseOptionalChooseOneTrashCost];
+
+export type MandatoryActivationCostParseResult =
+  | ReturnDonCostParseResult
+  | FieldToLifeCostParseResult;
+
+export const mandatoryActivationCostParsers: readonly CostParser<MandatoryActivationCostParseResult>[] =
+  [parseReturnDonCost, parseFieldToLifeCost];
 
 function parseOptionalCostSequenceFromOptionalText(
   input: ParseInput,

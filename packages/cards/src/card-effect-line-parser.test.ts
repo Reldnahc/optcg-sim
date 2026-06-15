@@ -255,7 +255,7 @@ describe("card effect line parser", () => {
           type: "sequence",
           effects: [
             {
-              id: "cost:return-don",
+              id: "cost:returnDon",
               connector: "always",
               effect: {
                 type: "payCost",

@@ -1,8 +1,10 @@
 import type { Cardinality, Target } from "@optcg/types";
 
 import type { ParseInput } from "../../types.js";
+import { parseAllFieldTarget } from "../all-field-targets.js";
 import {
   parseOpponentCharactersTarget,
+  parseOpponentFieldTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
 } from "./opponent.js";
 import { parseThisCharacterTarget } from "../this-character.js";
@@ -68,6 +70,12 @@ export const opponentNegativePowerTargetParsers =
       parseOpponentLeaderOrCharacterCardsTarget,
       parseOpponentCharactersPowerTarget,
     ] as const;
+
+export const allFieldTargetParsers = (): readonly FieldTargetParser[] =>
+  [parseAllFieldTarget] as const;
+
+export const opponentFieldTargetParsers = (): readonly FieldTargetParser[] =>
+  [parseOpponentFieldTarget] as const;
 
 function parseOpponentCharactersPowerTarget(
   input: ParseInput,

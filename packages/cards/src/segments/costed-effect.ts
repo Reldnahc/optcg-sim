@@ -1,4 +1,7 @@
-import { parseFieldToLifeCost, parseReturnDonCost } from "../costs/index.js";
+import {
+  mandatoryActivationCostParsers,
+  parseCostFromSet,
+} from "../costs/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type {
   ExpressionParseResult,
@@ -15,7 +18,7 @@ export function costedEffectExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const cost = parseReturnDonCost(input) ?? parseFieldToLifeCost(input);
+    const cost = parseCostFromSet(input, mandatoryActivationCostParsers);
     if (cost === undefined) {
       return undefined;
     }

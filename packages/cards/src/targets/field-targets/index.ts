@@ -11,8 +11,10 @@ export {
   yourNamedCardsTargetPrimitive,
 } from "./primitives.js";
 export {
+  allFieldTargetParsers,
   directPowerGainTargetParsers,
   opponentNegativePowerTargetParsers,
+  opponentFieldTargetParsers,
   parseTargetFromSet,
   selectedPowerGainTargetParsers,
   yourFieldEffectTargetParsers,

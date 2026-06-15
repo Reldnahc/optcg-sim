@@ -2,10 +2,12 @@ import type { Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import {
-  parseAllFieldTarget,
-  parseOpponentFieldTarget,
+  allFieldTargetParsers,
+  opponentFieldTargetParsers,
+  parseTargetFromSet,
 } from "../targets/index.js";
 import { chosenCharacterTarget } from "../targets/chosen-character.js";
+import type { FieldTargetParseResult } from "../targets/field-targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const koTargetSelectionId = "selected:ko-target";
@@ -104,9 +106,13 @@ export const parseKoInstruction: InstructionParser = (input) => {
     };
   }
 
-  const allTarget = parseAllFieldTarget({ text: actionRest });
+  const allTarget = parseTargetFromSet(
+    { text: actionRest },
+    allFieldTargetParsers(),
+  );
   if (
     allTarget !== undefined &&
+    allTarget.target !== undefined &&
     (allTarget.rest.length === 0 || allTarget.rest === ".")
   ) {
     return {
@@ -124,7 +130,10 @@ export const parseKoInstruction: InstructionParser = (input) => {
   const totalStatTarget = parseTotalStatLimitedKoTarget(cardinality.rest);
   const target =
     totalStatTarget?.target ??
-    parseOpponentFieldTarget({ text: cardinality.rest });
+    parseTargetFromSet(
+      { text: cardinality.rest },
+      opponentFieldTargetParsers(),
+    );
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
@@ -161,7 +170,7 @@ function parseTotalStatLimitedKoTarget(text: string):
           { type: "selectTargets" }
         >["request"]["selectionConstraints"]
       >;
-      readonly target: NonNullable<ReturnType<typeof parseOpponentFieldTarget>>;
+      readonly target: FieldTargetParseResult;
     }
   | undefined {
   const match =
@@ -181,7 +190,10 @@ function parseTotalStatLimitedKoTarget(text: string):
     return undefined;
   }
 
-  const target = parseOpponentFieldTarget({ text: targetText });
+  const target = parseTargetFromSet(
+    { text: targetText },
+    opponentFieldTargetParsers(),
+  );
   if (target === undefined || target.rest.length > 0) {
     return undefined;
   }
@@ -242,7 +254,10 @@ function parseKoOrRest(actionRest: string): ReturnType<InstructionParser> {
   if (cardinality === undefined) {
     return undefined;
   }
-  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentFieldTargetParsers(),
+  );
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
@@ -332,7 +347,10 @@ function parseKoOrReturnToOwnerHand(
   if (cardinality === undefined) {
     return undefined;
   }
-  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentFieldTargetParsers(),
+  );
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
@@ -460,7 +478,10 @@ function parseKoTargetPart(
   if (cardinality === undefined) {
     return undefined;
   }
-  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentFieldTargetParsers(),
+  );
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
