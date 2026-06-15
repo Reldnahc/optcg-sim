@@ -24,6 +24,7 @@ describe("match visual settings store", () => {
       "confirmAttachDon",
       "confirmEndTurn",
       "quickPayActivateMainCosts",
+      "reduceDeckStackRendering",
       "reducedMotion",
       "soundVolume",
       "windowColor",
@@ -73,6 +74,7 @@ describe("match visual settings store", () => {
     saveMatchVisualSetting(storage, "confirmAttachDon", false);
     saveMatchVisualSetting(storage, "confirmEndTurn", true);
     saveMatchVisualSetting(storage, "quickPayActivateMainCosts", true);
+    saveMatchVisualSetting(storage, "reduceDeckStackRendering", true);
     saveMatchVisualSetting(storage, "reducedMotion", true);
     saveMatchVisualSetting(storage, "soundVolume", 42);
     saveMatchVisualSetting(storage, "windowColor", "  #223344  ");
@@ -93,6 +95,7 @@ describe("match visual settings store", () => {
       confirmAttachDon: false,
       confirmEndTurn: true,
       quickPayActivateMainCosts: true,
+      reduceDeckStackRendering: true,
       reducedMotion: true,
       soundVolume: 42,
       windowColor: "#223344",

@@ -525,6 +525,7 @@ export const MatchApp = ({
           board={displayBoard}
           clientState={clientState}
           presentationEvents={playerSnapshot?.view.events ?? []}
+          reduceDeckStackRendering={visualSettings.reduceDeckStackRendering}
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
           effectSpotlightActive={effectSpotlight?.active}
           effectSpotlightCard={effectSpotlightCard}

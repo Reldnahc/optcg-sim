@@ -59,6 +59,7 @@ describe("settings window", () => {
     assert.match(markup, /class="[^"]*settings-color-swatch/u);
     assert.match(markup, /pattern="#\[0-9a-fA-F\]\{6\}"/u);
     assert.match(markup, /Sound volume/u);
+    assert.match(markup, /Reduce deck stack rendering/u);
     assert.match(markup, /Reduced motion/u);
     assert.match(markup, /type="range"/u);
     assert.match(markup, /min="0"/u);
@@ -109,7 +110,7 @@ describe("settings window", () => {
 
     assert.match(
       markup,
-      /<section class="settings-section" aria-label="Gameplay"><h3>Gameplay<\/h3>.*Quick pay Activate: Main costs.*Confirm attach DON.*Confirm end turn.*<\/section>.*<section class="settings-section" aria-label="Personalization"><h3>Personalization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>.*<section class="settings-section" aria-label="Sound"><h3>Sound<\/h3>.*Sound volume.*<\/section>.*<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduced motion.*<\/section>/u,
+      /<section class="settings-section" aria-label="Gameplay"><h3>Gameplay<\/h3>.*Quick pay Activate: Main costs.*Confirm attach DON.*Confirm end turn.*<\/section>.*<section class="settings-section" aria-label="Personalization"><h3>Personalization<\/h3>.*Background image.*Windows.*Playmat.*Zone guide visibility.*Zone background visibility.*<\/section>.*<section class="settings-section" aria-label="Sound"><h3>Sound<\/h3>.*Sound volume.*<\/section>.*<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduce deck stack rendering.*Reduced motion.*<\/section>/u,
     );
     assert.match(
       markup,
@@ -121,7 +122,7 @@ describe("settings window", () => {
     );
     assert.match(
       markup,
-      /<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduced motion.*<\/section>/u,
+      /<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduce deck stack rendering.*Reduced motion.*<\/section>/u,
     );
     assert.doesNotMatch(markup, /Customization/u);
   });
@@ -252,6 +253,7 @@ describe("settings window", () => {
     assert.match(settingsStore, /optcg:client:zone-background-visibility/u);
     assert.match(settingsStore, /optcg:client:confirm-end-turn/u);
     assert.match(settingsStore, /optcg:client:quick-pay-activate-main-costs/u);
+    assert.match(settingsStore, /optcg:client:reduce-deck-stack-rendering/u);
     assert.match(settingsStore, /optcg:client:confirm-attach-don/u);
     assert.match(settingsStore, /optcg:client:reduced-motion/u);
     assert.match(settingsStore, /optcg:client:sound-volume/u);
@@ -291,6 +293,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /settings-color-swatch/u);
     assert.doesNotMatch(settingsWindow, /type="color"/u);
     assert.match(settingsWindow, /setSoundVolume/u);
+    assert.match(settingsWindow, /setReduceDeckStackRendering/u);
     assert.match(settingsWindow, /setReducedMotion/u);
     assert.match(mainSource, /styles\/settings-window\.css/u);
     assert.match(appShellStyles, /background-size:\s*cover;/u);
@@ -444,6 +447,7 @@ describe("settings window", () => {
     ]);
 
     assert.match(matchApp, /visualSettings\.reducedMotion/u);
+    assert.match(matchApp, /visualSettings\.reduceDeckStackRendering/u);
     assert.match(matchApp, /is-reduced-motion/u);
     assert.match(appShellStyles, /\.match-app\.is-reduced-motion\s+\*/u);
     assert.match(appShellStyles, /animation:\s*none\s*!important;/u);

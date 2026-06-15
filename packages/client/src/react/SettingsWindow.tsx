@@ -151,6 +151,7 @@ export const SettingsContent = (): React.JSX.Element => {
     confirmAttachDon,
     confirmEndTurn,
     quickPayActivateMainCosts,
+    reduceDeckStackRendering,
     reducedMotion,
     soundVolume,
     windowColor,
@@ -168,6 +169,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setConfirmAttachDon,
     setConfirmEndTurn,
     setQuickPayActivateMainCosts,
+    setReduceDeckStackRendering,
     setReducedMotion,
     setSoundVolume,
     setWindowColor,
@@ -434,6 +436,16 @@ export const SettingsContent = (): React.JSX.Element => {
         </label>
       </SettingsSection>
       <SettingsSection title="Video">
+        <label className="settings-checkbox-field">
+          <input
+            type="checkbox"
+            checked={reduceDeckStackRendering}
+            onChange={(event) => {
+              setReduceDeckStackRendering(event.currentTarget.checked);
+            }}
+          />
+          <span>Reduce deck stack rendering</span>
+        </label>
         <label className="settings-checkbox-field">
           <input
             type="checkbox"

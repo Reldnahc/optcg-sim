@@ -110,7 +110,7 @@ describe("collection modal", () => {
     );
   });
 
-  test("stack zones can display a true count larger than rendered hidden cards", () => {
+  test("stack zones render every hidden card while displaying the true count", () => {
     const hiddenCards = Array.from({ length: 37 }, (_, index) =>
       hiddenCard(`hidden-${String(index)}`),
     );
@@ -125,10 +125,11 @@ describe("collection modal", () => {
 
     assert.match(markup, /aria-label="Deck count: 37"/u);
     assert.match(markup, />37</u);
-    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 1);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 37);
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 37);
   });
 
-  test("stack zones render a representative card layer with stack styling", async () => {
+  test("stack zones render full card layers with stack styling", async () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
         label: "Deck",
@@ -141,10 +142,11 @@ describe("collection modal", () => {
     );
     const zoneStyles = await readFile(zoneStylesPath, "utf8");
 
-    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 1);
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 4);
     assert.match(markup, /--stack-card-offset:0px/u);
-    assert.match(markup, /z-index:1/u);
-    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 1);
+    assert.match(markup, /--stack-card-offset:3px/u);
+    assert.match(markup, /z-index:4/u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 4);
     assert.match(markup, /card-face card-back card-back-main-deck/u);
     assert.match(
       zoneStyles,
@@ -165,6 +167,10 @@ describe("collection modal", () => {
     assert.match(
       zoneStyles,
       /\.stack-card-layer\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*display:\s*grid;[^}]*place-items:\s*center;[^}]*transform:\s*translateY\(calc\(-1 \* var\(--stack-card-offset\)\)\);/u,
+    );
+    assert.match(
+      zoneStyles,
+      /\.stack-card-layer\s*\{[^}]*contain:\s*layout style;/u,
     );
     assert.doesNotMatch(
       zoneStyles,

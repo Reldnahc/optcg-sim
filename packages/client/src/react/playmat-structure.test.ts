@@ -448,7 +448,7 @@ describe("playmat structure", () => {
     );
   });
 
-  test("deck and DON deck render one hidden card stack placeholder without collection modals", async () => {
+  test("deck and DON deck render full hidden card stacks without collection modals", async () => {
     const boardLayout = await readFile(
       join(sourceDirectory, "BoardLayout.tsx"),
       "utf8",
@@ -468,8 +468,16 @@ describe("playmat structure", () => {
     assert.match(opponentDeckZone, /label="Deck"/u);
     assert.match(opponentDeckZone, /board\.opponent\.deckCount/u);
     assert.match(opponentDeckZone, /"hidden-deck-opponent"/u);
-    assert.match(opponentDeckZone, /"hidden-deck-opponent",\s+1\)/u);
     assert.match(
+      opponentDeckZone,
+      /reduceDeckStackRendering \? 1 : undefined/u,
+    );
+    assert.doesNotMatch(opponentDeckZone, /"hidden-deck-opponent",\s+1\)/u);
+    assert.match(
+      boardLayout,
+      /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount,[\s\S]*"hidden-don-deck-opponent"[\s\S]*\)/u,
+    );
+    assert.doesNotMatch(
       boardLayout,
       /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount,[\s\S]*"hidden-don-deck-opponent",[\s\S]*1[,)]/u,
     );
@@ -484,8 +492,12 @@ describe("playmat structure", () => {
     assert.match(playerDeckZone, /label="Deck"/u);
     assert.match(playerDeckZone, /board\.self\.deckCount/u);
     assert.match(playerDeckZone, /"hidden-deck-self"/u);
-    assert.match(playerDeckZone, /"hidden-deck-self",\s+1\)/u);
+    assert.doesNotMatch(playerDeckZone, /"hidden-deck-self",\s+1\)/u);
     assert.match(
+      boardLayout,
+      /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount,[\s\S]*"hidden-don-deck-self"[\s\S]*\)/u,
+    );
+    assert.doesNotMatch(
       boardLayout,
       /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount,[\s\S]*"hidden-don-deck-self",[\s\S]*1[,)]/u,
     );

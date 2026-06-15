@@ -235,6 +235,12 @@ export const matchVisualSettingDefinitions = {
     storageKey: "optcg:client:quick-pay-activate-main-costs",
     defaultValue: defaultMatchVisualSettingsValues.quickPayActivateMainCosts,
   }),
+  reduceDeckStackRendering: booleanSetting({
+    id: "reduceDeckStackRendering",
+    groupId: "video",
+    storageKey: "optcg:client:reduce-deck-stack-rendering",
+    defaultValue: defaultMatchVisualSettingsValues.reduceDeckStackRendering,
+  }),
   reducedMotion: booleanSetting({
     id: "reducedMotion",
     groupId: "video",
@@ -300,6 +306,7 @@ export const matchVisualSettingIds = [
   "confirmAttachDon",
   "confirmEndTurn",
   "quickPayActivateMainCosts",
+  "reduceDeckStackRendering",
   "reducedMotion",
   "soundVolume",
   "windowColor",
@@ -350,6 +357,7 @@ export function loadMatchVisualSetting(
     | "confirmAttachDon"
     | "confirmEndTurn"
     | "quickPayActivateMainCosts"
+    | "reduceDeckStackRendering"
     | "reducedMotion",
 ): boolean;
 export function loadMatchVisualSetting(
@@ -429,6 +437,11 @@ export function loadMatchVisualSetting(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
       );
+    case "reduceDeckStackRendering":
+      return loadWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.reduceDeckStackRendering,
+      );
     case "reducedMotion":
       return loadWithDefinition(
         storage,
@@ -487,6 +500,10 @@ export const loadMatchVisualSettings = (
     storage,
     "quickPayActivateMainCosts",
   ),
+  reduceDeckStackRendering: loadMatchVisualSetting(
+    storage,
+    "reduceDeckStackRendering",
+  ),
   reducedMotion: loadMatchVisualSetting(storage, "reducedMotion"),
   soundVolume: loadMatchVisualSetting(storage, "soundVolume"),
   windowColor: loadMatchVisualSetting(storage, "windowColor"),
@@ -543,6 +560,7 @@ export function saveMatchVisualSetting(
     | "confirmAttachDon"
     | "confirmEndTurn"
     | "quickPayActivateMainCosts"
+    | "reduceDeckStackRendering"
     | "reducedMotion",
   value: boolean,
 ): boolean;
@@ -635,6 +653,12 @@ export function saveMatchVisualSetting(
       return saveWithDefinition(
         storage,
         matchVisualSettingDefinitions.quickPayActivateMainCosts,
+        value === true,
+      );
+    case "reduceDeckStackRendering":
+      return saveWithDefinition(
+        storage,
+        matchVisualSettingDefinitions.reduceDeckStackRendering,
         value === true,
       );
     case "reducedMotion":

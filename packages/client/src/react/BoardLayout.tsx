@@ -39,6 +39,7 @@ export interface BoardLayoutProps {
   onBackgroundClick: () => void;
   presentationEvents?: readonly EngineEvent[] | undefined;
   soundEnabled?: boolean | undefined;
+  reduceDeckStackRendering?: boolean | undefined;
 }
 
 const hiddenCards = (
@@ -259,6 +260,7 @@ export const BoardLayout = ({
   onBackgroundClick,
   presentationEvents = [],
   soundEnabled = true,
+  reduceDeckStackRendering = false,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
   const boardShellRef = useRef<HTMLElement | null>(null);
@@ -365,7 +367,11 @@ export const BoardLayout = ({
             label="Deck"
             cards={
               board.opponent.deckCards ??
-              hiddenCards(board.opponent.deckCount, "hidden-deck-opponent", 1)
+              hiddenCards(
+                board.opponent.deckCount,
+                "hidden-deck-opponent",
+                reduceDeckStackRendering ? 1 : undefined,
+              )
             }
             presentationZoneKey="opponent:deck"
             size="small"
@@ -382,7 +388,7 @@ export const BoardLayout = ({
               hiddenCards(
                 board.opponent.donDeckCount,
                 "hidden-don-deck-opponent",
-                1,
+                reduceDeckStackRendering ? 1 : undefined,
               )
             }
             presentationZoneKey="opponent:donDeck"
@@ -560,7 +566,11 @@ export const BoardLayout = ({
             label="Deck"
             cards={
               board.self.deckCards ??
-              hiddenCards(board.self.deckCount, "hidden-deck-self", 1)
+              hiddenCards(
+                board.self.deckCount,
+                "hidden-deck-self",
+                reduceDeckStackRendering ? 1 : undefined,
+              )
             }
             presentationZoneKey="self:deck"
             size="small"
@@ -574,7 +584,11 @@ export const BoardLayout = ({
             label="DON!! Deck"
             cards={
               board.self.donDeckCards ??
-              hiddenCards(board.self.donDeckCount, "hidden-don-deck-self", 1)
+              hiddenCards(
+                board.self.donDeckCount,
+                "hidden-don-deck-self",
+                reduceDeckStackRendering ? 1 : undefined,
+              )
             }
             presentationZoneKey="self:donDeck"
             size="small"

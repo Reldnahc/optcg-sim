@@ -18,7 +18,7 @@ const hiddenCard = (index: number): ClientCardModel => ({
 });
 
 describe("Zone", () => {
-  test("stack zones render one representative card while preserving the full count", () => {
+  test("stack zones render the full stack while preserving the full count", () => {
     const cards = Array.from({ length: 50 }, (_, index) => hiddenCard(index));
     const markup = renderToStaticMarkup(
       createElement(Zone, {
@@ -29,8 +29,10 @@ describe("Zone", () => {
       }),
     );
 
-    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 1);
-    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 1);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 50);
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 50);
     assert.match(markup, /aria-label="Deck count: 50"/u);
+    assert.match(markup, /--stack-card-offset:49px/u);
+    assert.match(markup, /z-index:50/u);
   });
 });

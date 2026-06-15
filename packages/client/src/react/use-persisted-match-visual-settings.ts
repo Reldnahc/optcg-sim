@@ -98,6 +98,14 @@ export const usePersistedMatchVisualSettings = (): MatchVisualSettings => {
       );
       setSettings((current) => ({ ...current, quickPayActivateMainCosts }));
     },
+    setReduceDeckStackRendering: (enabled) => {
+      const reduceDeckStackRendering = saveMatchVisualSetting(
+        browserPersistentStorage(),
+        "reduceDeckStackRendering",
+        enabled,
+      );
+      setSettings((current) => ({ ...current, reduceDeckStackRendering }));
+    },
     setReducedMotion: (enabled) => {
       const reducedMotion = saveMatchVisualSetting(
         browserPersistentStorage(),

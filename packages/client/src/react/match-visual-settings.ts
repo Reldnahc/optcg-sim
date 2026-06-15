@@ -13,6 +13,7 @@ export interface MatchVisualSettingsValues {
   readonly confirmAttachDon: boolean;
   readonly confirmEndTurn: boolean;
   readonly quickPayActivateMainCosts: boolean;
+  readonly reduceDeckStackRendering: boolean;
   readonly reducedMotion: boolean;
   readonly soundVolume: number;
   readonly windowColor: string;
@@ -42,6 +43,7 @@ export interface MatchVisualSettings extends MatchVisualSettingsValues {
   readonly setConfirmAttachDon: (enabled: boolean) => void;
   readonly setConfirmEndTurn: (enabled: boolean) => void;
   readonly setQuickPayActivateMainCosts: (enabled: boolean) => void;
+  readonly setReduceDeckStackRendering: (enabled: boolean) => void;
   readonly setReducedMotion: (enabled: boolean) => void;
   readonly setSoundVolume: (value: number) => void;
   readonly setWindowColor: (value: string) => void;
@@ -63,6 +65,7 @@ export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
   confirmAttachDon: true,
   confirmEndTurn: false,
   quickPayActivateMainCosts: false,
+  reduceDeckStackRendering: false,
   reducedMotion: false,
   soundVolume: 70,
   windowColor: "#0d0d0e",
@@ -85,6 +88,7 @@ export const noopMatchVisualSettings: MatchVisualSettings = {
   setConfirmAttachDon: () => undefined,
   setConfirmEndTurn: () => undefined,
   setQuickPayActivateMainCosts: () => undefined,
+  setReduceDeckStackRendering: () => undefined,
   setReducedMotion: () => undefined,
   setSoundVolume: () => undefined,
   setWindowColor: () => undefined,
