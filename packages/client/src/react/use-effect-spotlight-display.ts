@@ -41,6 +41,14 @@ export interface EffectSpotlightDisplayInput {
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
 
+const liveEntryMatchesPendingDecision = (
+  entry: EffectSpotlightPlaybackEntry,
+  pendingDecisionId: DecisionId | string | undefined,
+): boolean =>
+  pendingDecisionId !== undefined &&
+  entry.mode === "live" &&
+  entry.key.startsWith(`decision:${String(pendingDecisionId)}|`);
+
 const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
   spanIds.join("\n");
 
@@ -127,7 +135,9 @@ export const effectSpotlightDisplayForEntry = ({
     active: entry.active,
     activeKey: entry.key,
     activeMode: entry.mode,
-    pendingDecisionId: entry.mode === "live" ? pendingDecisionId : undefined,
+    pendingDecisionId: liveEntryMatchesPendingDecision(entry, pendingDecisionId)
+      ? pendingDecisionId
+      : undefined,
   });
 };
 

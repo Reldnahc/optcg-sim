@@ -301,7 +301,11 @@ describe("effect spotlight model", () => {
       state: {
         entries: [
           source("event:first", "span:first"),
-          source("decision:pending", "span:pending", "live"),
+          source(
+            "decision:decision-1|source-1||span:pending",
+            "span:pending",
+            "live",
+          ),
         ],
         cursorIndex: 0,
         paused: true,
@@ -310,7 +314,7 @@ describe("effect spotlight model", () => {
 
     expect(next.entries.map((entry) => entry.key)).toEqual([
       "event:first",
-      "decision:pending",
+      "decision:decision-1|source-1||span:pending",
     ]);
     expect(next.cursorIndex).toBe(1);
     expect(next.paused).toBe(false);
@@ -450,13 +454,104 @@ describe("effect spotlight model", () => {
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      entry: source("decision:pending", "span:pending", "live"),
+      entry: source(
+        "decision:decision-1|source-1||span:pending",
+        "span:pending",
+        "live",
+      ),
       pendingDecisionId: "decision-1",
     });
 
-    expect(display?.activeKey).toBe("decision:pending");
+    expect(display?.activeKey).toBe(
+      "decision:decision-1|source-1||span:pending",
+    );
     expect(display?.activeMode).toBe("live");
     expect(display?.pinned).toBe(true);
+  });
+
+  it("does not pin a stale live search selection after the pending decision advances", () => {
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: source(
+        "decision:decision:selectCards:search|source-1||span:search:selection",
+        "span:search:selection",
+        "live",
+      ),
+      pendingDecisionId: "decision:orderCards:search",
+    });
+
+    expect(display?.activeKey).toBe(
+      "decision:decision:selectCards:search|source-1||span:search:selection",
+    );
+    expect(display?.activeMode).toBe("live");
+    expect(display?.pinned).toBe(false);
+    expect(display?.visibleUntilMs).toBe(3_000);
+  });
+
+  it("advances from stale live search selection to the resolved remainder after dwell", () => {
+    const liveSelection = source(
+      "decision:decision:selectCards:search|source-1||span:search:selection",
+      "span:search:selection",
+      "live",
+    );
+    const suppressedResolvedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
+      liveSelection,
+    ]);
+    const playback = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      suppressedResolvedSignatures,
+      previous: {
+        entries: [liveSelection],
+        cursorIndex: 0,
+        paused: false,
+      },
+      sources: [
+        source(
+          "event:resolved-search:span:search:selection",
+          "span:search:selection",
+        ),
+        source(
+          "event:resolved-search:span:search:remaining",
+          "span:search:remaining",
+        ),
+      ],
+    });
+    const staleDisplay = effectSpotlightModelForPlayback({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback,
+      fallbackMode: "live",
+      pendingDecisionId: "decision:orderCards:search",
+    });
+    const advancedPlayback = advanceSpotlightPlayback({
+      command: "autoAdvance",
+      state: playback,
+    });
+    const advancedDisplay = effectSpotlightModelForPlayback({
+      nowMs: 3_000,
+      previous: staleDisplay,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback: advancedPlayback,
+      fallbackMode: "live",
+      pendingDecisionId: "decision:orderCards:search",
+    });
+
+    expect(playback.entries.map((entry) => entry.key)).toEqual([
+      "decision:decision:selectCards:search|source-1||span:search:selection",
+      "event:resolved-search:span:search:remaining",
+    ]);
+    expect(staleDisplay?.pinned).toBe(false);
+    expect(advancedPlayback.cursorIndex).toBe(1);
+    expect(advancedDisplay?.activeKey).toBe(
+      "event:resolved-search:span:search:remaining",
+    );
   });
 
   it("uses resolved cursor entries with dwell timing without pinning", () => {
@@ -481,7 +576,11 @@ describe("effect spotlight model", () => {
       state: {
         entries: [
           source("event:first", "span:first"),
-          source("decision:pending", "span:pending", "live"),
+          source(
+            "decision:decision-1|source-1||span:pending",
+            "span:pending",
+            "live",
+          ),
         ],
         cursorIndex: 0,
         paused: true,
@@ -498,7 +597,9 @@ describe("effect spotlight model", () => {
       pendingDecisionId: "decision-1",
     });
 
-    expect(display?.activeKey).toBe("decision:pending");
+    expect(display?.activeKey).toBe(
+      "decision:decision-1|source-1||span:pending",
+    );
     expect(display?.activeMode).toBe("live");
     expect(display?.pinned).toBe(true);
   });
