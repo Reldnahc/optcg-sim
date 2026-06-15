@@ -76,6 +76,11 @@ const buildStateFilteredDonCount = (
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const directMoreThan = parseDirectMoreThanDonFieldComparison(input.text);
+  if (directMoreThan !== undefined) {
+    return directMoreThan;
+  }
+
   const relativeMatch =
     /^the number of DON!! cards on your field is at least (?<value>[1-9]\d*) less than the number on your opponent's field$/i.exec(
       input.text,
@@ -233,3 +238,58 @@ export const parseDonFieldCountCondition: ConditionParser = (
     rest: "",
   };
 };
+
+function parseDirectMoreThanDonFieldComparison(
+  text: string,
+): ConditionParseResult | undefined {
+  const match =
+    /^(?<left>you|your opponent) (?:have|has) more DON!! cards on (?<fieldOwner>your|their) field than (?<right>you|your opponent)$/iu.exec(
+      text,
+    );
+  const left = parseDonComparisonPlayer(match?.groups?.["left"]);
+  const right = parseDonComparisonPlayer(match?.groups?.["right"]);
+  const fieldOwner = match?.groups?.["fieldOwner"]?.toLowerCase();
+  if (
+    left === undefined ||
+    right === undefined ||
+    left === right ||
+    fieldOwner !== (left === "self" ? "your" : "their")
+  ) {
+    return undefined;
+  }
+
+  return {
+    condition: {
+      type: "fieldCountDifference",
+      minuend: {
+        player: left,
+        filter: { categories: ["don"] },
+      },
+      subtrahend: {
+        player: right,
+        filter: { categories: ["don"] },
+      },
+      op: "gte",
+      value: 1,
+    },
+    evidence: [
+      "condition:fieldCountDifference",
+      left === "opponent" ? "player:opponent" : "player:self",
+      right === "opponent" ? "player:opponent" : "player:self",
+      "filter:category:don",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "valueOffset:fieldCountDifference",
+    ],
+    rest: "",
+  };
+}
+
+function parseDonComparisonPlayer(
+  text: string | undefined,
+): "self" | "opponent" | undefined {
+  if (text === undefined) {
+    return undefined;
+  }
+  return text.toLowerCase() === "your opponent" ? "opponent" : "self";
+}

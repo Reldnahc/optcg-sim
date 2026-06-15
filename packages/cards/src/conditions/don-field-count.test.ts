@@ -301,4 +301,36 @@ describe("DON field count condition parser", () => {
       rest: "",
     });
   });
+
+  it("parses opponent-more-than-self DON field comparisons", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "your opponent has more DON!! cards on their field than you",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["don"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["don"] },
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "filter:category:don",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:fieldCountDifference",
+      ],
+      rest: "",
+    });
+  });
 });
