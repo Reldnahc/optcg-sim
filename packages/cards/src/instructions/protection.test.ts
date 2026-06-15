@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
+  parseExplicitProtectionInstruction,
   parseProtectionInstruction,
   protectionInstructionPrimitive,
 } from "./protection.js";
@@ -349,6 +350,43 @@ describe("continuous protection instruction parser", () => {
         "filter:power",
         "protectionProcess:ko",
         "protectionSource:opponentEffects",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
+
+  it("parses none-of-your typed K.O. protection with an explicit field-effect duration", () => {
+    const result = parseExplicitProtectionInstruction({
+      text: "None of your {ODYSSEY} or {Straw Hat Crew} type Characters can be K.O.'d by effects until the end of your opponent's next turn.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            typesAny: ["ODYSSEY", "Straw Hat Crew"],
+          },
+        },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "eitherController",
+        duration: { type: "untilEndOfNextTurn", player: "opponent" },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "cardinality:all",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "protectionProcess:ko",
+        "protectionSource:effects",
         "duration:opponentNextEndPhase",
       ]),
     );

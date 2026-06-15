@@ -1,7 +1,6 @@
 import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
-  selfNextTurnStartOnlyDurationParsers,
 } from "../../durations/index.js";
 import {
   type ProtectionProcess,
@@ -186,7 +185,7 @@ export const parseExplicitProtectionInstruction: InstructionParser = (
   }
   const duration = parseDurationFromSet(
     { text: source.rest },
-    selfNextTurnStartOnlyDurationParsers,
+    fieldEffectDurationParsers,
   );
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
