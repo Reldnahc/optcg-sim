@@ -82,8 +82,7 @@ export const expandMoveCardsCostRoutes = (
     cost.from.zone === "hand" &&
     cost.from.position === undefined &&
     cost.to.zone === "deck" &&
-    cost.to.position === "top" &&
-    cost.count === 1
+    (cost.to.position === "top" || cost.to.position === "bottom")
   ) {
     return [
       {
@@ -182,7 +181,7 @@ export const selectableMoveCardsCostIds = (
     option.from.zone === "hand" &&
     option.from.position === undefined &&
     option.to.zone === "deck" &&
-    option.to.position === "top"
+    (option.to.position === "top" || option.to.position === "bottom")
   ) {
     return player.hand
       .filter((card) =>

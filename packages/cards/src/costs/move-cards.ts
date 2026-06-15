@@ -146,9 +146,8 @@ export const parseMoveCardsCost = (
     return { cost, evidence, rest: "" };
   }
 
-  const handToDeckTopMatch =
-    /^card from your hand at the top of your deck$/i.exec(cardinality.rest);
-  if (handToDeckTopMatch === null) {
+  const handToDeck = parseHandToDeckCostRoute(cardinality.rest);
+  if (handToDeck === undefined) {
     return undefined;
   }
   const cost: Extract<OptionalCost, { type: "moveCards" }> = {
@@ -156,7 +155,7 @@ export const parseMoveCardsCost = (
     count: cardinality.count,
     chooser: "self",
     from: { player: "self", zone: "hand" },
-    to: { player: "self", zone: "deck", position: "top" },
+    to: { player: "self", zone: "deck", position: handToDeck.position },
     order: "chooserChoice",
     optional: true,
   };
@@ -166,12 +165,35 @@ export const parseMoveCardsCost = (
     "player:self",
     "zone:hand",
     "destination:deck",
-    "position:top",
+    handToDeck.evidence,
     "order:anyOrder",
   ];
 
   return { cost, evidence, rest: "" };
 };
+
+function parseHandToDeckCostRoute(
+  text: string,
+):
+  | {
+      readonly position: "top" | "bottom";
+      readonly evidence: PrimitiveEvidence;
+    }
+  | undefined {
+  const match =
+    /^cards? from your hand at the (?<position>top|bottom) of your deck(?: in any order)?$/i.exec(
+      text,
+    );
+  const position = match?.groups?.["position"];
+  if (position !== "top" && position !== "bottom") {
+    return undefined;
+  }
+
+  return {
+    position,
+    evidence: position === "top" ? "position:top" : "position:bottom",
+  };
+}
 
 const parseDeckTopToTrashCost = (
   input: ParseInput,

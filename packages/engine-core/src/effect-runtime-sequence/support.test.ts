@@ -378,6 +378,63 @@ test("sequence support accepts conditional bodies with continuous target decisio
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts hand-to-deck-bottom move-card costs inside cost sequences", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-hand-bottom-cost" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "moveCards",
+              optional: true,
+              count: 2,
+              chooser: "self",
+              from: { player: "self", zone: "hand" },
+              to: { player: "self", zone: "deck", position: "bottom" },
+              order: "chooserChoice",
+            },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          saveResultAs: "paidCost",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "restSelf",
+              optional: true,
+            },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "hasCardInZone",
+              player: "self",
+              zone: "leaderArea",
+              filter: { categories: ["leader"], typesAny: ["Cross Guild"] },
+            },
+            then: { type: "draw", player: "self", count: 2 },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts conditional else bodies through the same child sequence support", () => {
   const effectBlock: EffectDefinition["effects"][number] = {
     id: "sequence-support-test-effect" as EffectDefinition["effects"][number]["id"],

@@ -163,9 +163,9 @@ const isSupportedMoveCardsCostRoute = (
     cost.from.zone === "hand" &&
     cost.from.position === undefined &&
     cost.to.zone === "deck" &&
-    cost.to.position === "top"
+    (cost.to.position === "top" || cost.to.position === "bottom")
   ) {
-    return cost.count === 1;
+    return true;
   }
   if (
     (cost.from.zone === "characterArea" || cost.from.zone === "stageArea") &&
