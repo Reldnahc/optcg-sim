@@ -5,12 +5,12 @@ import {
   parseDurationFromSet,
 } from "../../durations/index.js";
 import type { ModifierParser } from "../../modifiers/index.js";
+import { negativeModifierSignPattern } from "../../modifiers/signs.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import type { ContinuousInstructionContext } from "../continuous-field-effects.js";
 
-const costReductionPrefix = String.raw`(?:-|\u2212|\u00e2\u02c6\u2019)`;
 const negativeCostModifierPattern = new RegExp(
-  String.raw`^${costReductionPrefix}(?<value>[1-9]\d*) cost\b\s*(?<rest>.*)$`,
+  String.raw`^${negativeModifierSignPattern}(?<value>[1-9]\d*) cost\b\s*(?<rest>.*)$`,
   "iu",
 );
 

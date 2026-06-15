@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTargetedModifyCostInstruction } from "./modify-cost.js";
+import {
+  parseFieldCostReductionInstruction,
+  parseTargetedModifyCostInstruction,
+} from "./modify-cost/index.js";
 
 describe("modify cost instruction parser", () => {
   it("parses targeted positive cost modifiers over your Characters", () => {
@@ -66,6 +69,40 @@ describe("modify cost instruction parser", () => {
         "player:self",
         "filter:category:character",
         "modifier:positiveCost",
+        "count:positiveInteger",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses targeted cost reductions with printed en-dash modifiers", () => {
+    expect(
+      parseFieldCostReductionInstruction(
+        {
+          text: "Give up to 1 of your opponent's Characters –2 cost during this turn.",
+        },
+        {
+          condition: undefined,
+          requireExplicitDuration: true,
+        },
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        value: -2,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyCost",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "modifier:costReduction",
         "count:positiveInteger",
         "duration:thisTurn",
       ],

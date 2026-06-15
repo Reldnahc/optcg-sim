@@ -1,4 +1,5 @@
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
+import { negativeModifierSignPattern } from "./signs.js";
 
 export interface PowerModifierParseResult {
   readonly value: number;
@@ -35,12 +36,15 @@ export function parsePositivePowerModifier(
   };
 }
 
+const negativePowerModifierPattern = new RegExp(
+  String.raw`^${negativeModifierSignPattern}(?<value>[1-9]\d*) power\b\s*(?<rest>.*)$`,
+  "iu",
+);
+
 export function parseNegativePowerModifier(
   input: ParseInput,
 ): PowerModifierParseResult | undefined {
-  const match = /^[−-](?<value>[1-9]\d*) power\b\s*(?<rest>.*)$/iu.exec(
-    input.text,
-  );
+  const match = negativePowerModifierPattern.exec(input.text);
   const valueText = match?.groups?.["value"];
   const restText = match?.groups?.["rest"];
   if (valueText === undefined) {

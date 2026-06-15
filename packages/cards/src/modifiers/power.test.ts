@@ -42,6 +42,19 @@ describe("power modifier parser", () => {
       });
     },
   );
+
+  it("parses en-dash negative power modifiers", () => {
+    expect(
+      parseNegativePowerModifier({
+        text: "–1000 power during this turn.",
+      }),
+    ).toEqual({
+      value: -1000,
+      evidence: ["modifier:negativePower"],
+      rest: "during this turn.",
+    });
+  });
+
   it("parses signed power modifiers through a semantic modifier group", () => {
     expect(
       parseModifierFromSet(

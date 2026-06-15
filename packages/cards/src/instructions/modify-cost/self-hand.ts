@@ -1,8 +1,8 @@
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
+import { negativeModifierSignPattern } from "../../modifiers/signs.js";
 
-const costReductionPrefix = String.raw`(?:-|\u2212|\u00e2\u02c6\u2019)`;
 const selfHandCostReductionPattern = new RegExp(
-  String.raw`^give this card in your hand\s+${costReductionPrefix}(?<value>[1-9]\d*) cost\.?$`,
+  String.raw`^give this card in your hand\s+${negativeModifierSignPattern}(?<value>[1-9]\d*) cost\.?$`,
   "iu",
 );
 
