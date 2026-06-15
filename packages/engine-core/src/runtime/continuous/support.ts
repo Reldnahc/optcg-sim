@@ -61,6 +61,15 @@ const supportedPlayRestrictionFilterKeys = new Set<keyof CardFilter>([
   "typesIncludeAny",
 ]);
 
+const supportedPlayEntryStateFilterKeys = new Set<keyof CardFilter>([
+  "baseCost",
+  "categories",
+  "cost",
+  "names",
+  "typesAny",
+  "typesIncludeAny",
+]);
+
 const supportedDerivedKeywords = new Set<Keyword>([
   "blocker",
   "banish",
@@ -220,6 +229,21 @@ const isSupportedPlayRestrictionFilter = (
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 
+const isSupportedPlayEntryStateFilter = (
+  filter: CardFilter | undefined,
+): boolean =>
+  filter !== undefined &&
+  Object.keys(filter).every((key) =>
+    supportedPlayEntryStateFilterKeys.has(key as keyof CardFilter),
+  ) &&
+  (filter.categories === undefined || filter.categories.length > 0) &&
+  (filter.names === undefined || isNonEmptyStringArray(filter.names)) &&
+  (filter.typesAny === undefined || isNonEmptyStringArray(filter.typesAny)) &&
+  (filter.typesIncludeAny === undefined ||
+    isNonEmptyStringArray(filter.typesIncludeAny)) &&
+  hasSupportedNumericFilter(filter.baseCost) &&
+  hasSupportedNumericFilter(filter.cost);
+
 const isSupportedModifierValue = (
   value: number | DynamicNumberValue,
 ): boolean =>
@@ -337,6 +361,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "preventDraw" &&
     effect.type !== "preventDonActivation" &&
     effect.type !== "preventPlay" &&
+    effect.type !== "enterRested" &&
     effect.type !== "preventPlayByEffects" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "giveProtection" &&
@@ -413,6 +438,12 @@ export const isSupportedContinuousQueueEffect = (
     return (
       effect.player === "self" &&
       isSupportedPlayRestrictionFilter(effect.filter)
+    );
+  }
+  if (effect.type === "enterRested") {
+    return (
+      (effect.player === "self" || effect.player === "opponent") &&
+      isSupportedPlayEntryStateFilter(effect.filter)
     );
   }
   if (

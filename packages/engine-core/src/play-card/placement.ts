@@ -23,6 +23,7 @@ import { getCharacterOverflowDecisionId } from "./legal-actions.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import {
   consumeMatchingPlayCostModifiers,
+  shouldCardEnterPlayRested,
   type SupportedPlayMetadata,
 } from "./support.js";
 
@@ -207,6 +208,12 @@ export const placePlayedCardResult = (params: {
     resolvePlayCardEffectRuntime,
     incrementActionSeq = true,
   } = params;
+  const effectiveEnterRested = shouldCardEnterPlayRested(
+    state,
+    playerId,
+    sourceCard,
+    enterRested === true,
+  );
   if (
     supported.category === "character" &&
     selectedOverflowCharacterIndex === undefined &&
@@ -227,7 +234,7 @@ export const placePlayedCardResult = (params: {
         : { causedBy: characterOverflowCausedBy }),
       ...(runtimePlaySelectedEnterRested === undefined
         ? {}
-        : { runtimePlaySelectedEnterRested }),
+        : { runtimePlaySelectedEnterRested: effectiveEnterRested }),
       ...(runtimePlaySourceOverflow === undefined
         ? {}
         : { runtimePlaySourceOverflow }),
@@ -443,7 +450,7 @@ export const placePlayedCardResult = (params: {
     playerId,
     category: supported.category,
     characterIndex: nextCharacters.length,
-    ...(enterRested === undefined ? {} : { enterRested }),
+    enterRested: effectiveEnterRested,
   });
   const nextPlayer =
     supported.category === "character"

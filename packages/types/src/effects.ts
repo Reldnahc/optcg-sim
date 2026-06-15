@@ -618,6 +618,12 @@ export type Effect =
       duration: Duration;
     }
   | {
+      type: "enterRested";
+      player: PlayerRef;
+      filter: CardFilter;
+      duration: Duration;
+    }
+  | {
       type: "preventPlayByEffects";
       target: Target;
       duration: Duration;

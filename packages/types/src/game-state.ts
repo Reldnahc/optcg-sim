@@ -197,7 +197,8 @@ export type ModifierLayer =
   | "attackPermission"
   | "restriction"
   | "protection"
-  | "donPhasePlacement";
+  | "donPhasePlacement"
+  | "playEntryState";
 
 export type ModifierOperation =
   | { type: "setBasePower"; value: number }
@@ -230,7 +231,8 @@ export type ModifierOperation =
       type: "redirectDonPhasePlacement";
       count: number;
       player: PlayerRef;
-    };
+    }
+  | { type: "enterRested"; filter?: CardFilter };
 
 export interface Modifier {
   layer: ModifierLayer;

@@ -264,6 +264,28 @@ const effectPlayRestrictionAppliesToCard = (
   return cardMatchesHandFilter(state, card, target.filter);
 };
 
+const playEntryStateAppliesToCard = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  if (effect.modifier.layer !== "playEntryState") return false;
+  if (effect.modifier.operation.type !== "enterRested") return false;
+  if (!costModifierDurationIsActive(state, effect)) return false;
+  if (!costModifierConditionPasses(state, effect)) return false;
+  const target = effect.modifier.target;
+  if (target.type !== "player") return false;
+  if (card.controller !== playerId) return false;
+  if (target.player === "self" && card.controller !== effect.controller) {
+    return false;
+  }
+  if (target.player === "opponent" && card.controller === effect.controller) {
+    return false;
+  }
+  return cardMatchesHandFilter(state, card, effect.modifier.operation.filter);
+};
+
 const hasOnlySupportedRelevantEffects = (
   effects: readonly EffectDefinition["effects"][number][],
   predicate: (effect: EffectDefinition["effects"][number]) => boolean,
@@ -484,6 +506,21 @@ export const isEffectPlayBlockedByRestriction = (
     ...deriveImplementedDslHandContinuousEffects(state),
   ].some((effect) =>
     effectPlayRestrictionAppliesToCard(state, playerId, card, effect),
+  );
+
+export const shouldCardEnterPlayRested = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+  explicitEnterRested: boolean,
+): boolean =>
+  explicitEnterRested ||
+  [
+    ...state.continuousEffects,
+    ...deriveImplementedDslPermanentContinuousEffects(state),
+    ...deriveImplementedDslHandContinuousEffects(state),
+  ].some((effect) =>
+    playEntryStateAppliesToCard(state, playerId, card, effect),
   );
 
 export const getPlayableHandCards = (

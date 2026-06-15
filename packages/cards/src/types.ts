@@ -155,6 +155,7 @@ export type PrimitiveEvidence =
   | "instruction:giveProtection"
   | "instruction:giveKeyword"
   | "instruction:giveAttribute"
+  | "instruction:enterRested"
   | "instruction:synthetic:A"
   | "instruction:synthetic:B"
   | "instructionSupport:planned"

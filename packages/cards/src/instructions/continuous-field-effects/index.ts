@@ -7,6 +7,7 @@ export {
 export { parseHandCounterSetInstruction } from "./counter.js";
 export { parseDonPhasePlacementInstruction } from "./don-phase-placement.js";
 export { parseContinuousInvalidateEffectsInstruction } from "./invalidation.js";
+export { parsePlayEntryStateInstruction } from "./play-entry-state.js";
 export {
   parseTargetedKeywordAndAttributeGrantInstruction,
   parseTargetedKeywordGrantInstruction,

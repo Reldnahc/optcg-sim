@@ -275,6 +275,18 @@ export const effectToDerivedModifier = (
             : { type: "restriction", restriction: effect.type },
     };
   }
+  if (effect.type === "enterRested") {
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported entry-state shape"),
+      );
+    }
+    return {
+      layer: "playEntryState",
+      target: { type: "player", player: effect.player },
+      operation: { type: "enterRested", filter: effect.filter },
+    };
+  }
   if (effect.type !== "giveProtection") {
     return null;
   }

@@ -155,6 +155,13 @@ const mapEffectToModifier = (
       operation: { type: "restriction", restriction: "cannotPlay" },
     };
   }
+  if (effect.type === "enterRested") {
+    return {
+      layer: "playEntryState",
+      target,
+      operation: { type: "enterRested", filter: effect.filter },
+    };
+  }
   if (effect.type === "preventPlayByEffects") {
     return {
       layer: "restriction",
@@ -387,6 +394,17 @@ export const createContinuousRecordsForResolvedEffect = (
         player: effect.player,
         filter: effect.filter,
       },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
+  if (effect.type === "enterRested") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      { type: "player", player: effect.player },
       0,
       context,
     );

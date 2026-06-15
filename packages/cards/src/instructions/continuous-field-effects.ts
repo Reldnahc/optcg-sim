@@ -5,6 +5,7 @@ export {
   parseDonPhasePlacementInstruction,
   parseHandCounterSetInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,
+  parsePlayEntryStateInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,
