@@ -116,16 +116,17 @@ const inferredSaveResultKindsForSegment = (
 ): readonly SequenceSaveResultKind[] | null => {
   const kinds: SequenceSaveResultKind[] = [];
   const saveResultAs = segment.saveResultAs;
-  if (saveResultAs !== undefined) {
+  if (segment.effect.type === "selectCards") {
     const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
       segment.effect,
     );
-    if (
-      selectedCardsKind !== undefined &&
-      segment.effect.type === "selectCards"
-    ) {
+    if (selectedCardsKind !== undefined) {
       kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
-    } else if (segment.effect.type === "selectTargets") {
+    } else {
+      return null;
+    }
+  } else if (saveResultAs !== undefined) {
+    if (segment.effect.type === "selectTargets") {
       kinds.push("selectedTargets");
       const selectedTargetsCardsKind =
         savedSelectedCardsKindForSelectTargetsSegment(segment.effect);
@@ -141,6 +142,11 @@ const inferredSaveResultKindsForSegment = (
       segment.effect.type === "playSelected"
     ) {
       kinds.push("producedObjects");
+    } else if (
+      segment.effect.type === "trashFromHand" ||
+      segment.effect.type === "trashFromHandUntilCount"
+    ) {
+      kinds.push("selectedCards:hand");
     } else if (
       segment.effect.type !== "revealTop" &&
       segment.effect.type !== "selectFromSet" &&
@@ -205,23 +211,22 @@ const recordSaveResultAsProducer = (
   state: StaticSavedResultState,
   segment: SequenceSegment,
 ): StaticSavedResultState | null => {
+  if (segment.effect.type === "selectCards") {
+    const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
+      segment.effect,
+    );
+    return selectedCardsKind === undefined
+      ? null
+      : addCapability(state, segment.effect.saveAs, {
+          kind: "selectedCards",
+          cardKind: selectedCardsKind,
+          max: segment.effect.max,
+        });
+  }
+
   const saveResultAs = segment.saveResultAs;
   if (saveResultAs === undefined) {
     return state;
-  }
-
-  const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
-    segment.effect,
-  );
-  if (
-    selectedCardsKind !== undefined &&
-    segment.effect.type === "selectCards"
-  ) {
-    return addCapability(state, saveResultAs, {
-      kind: "selectedCards",
-      cardKind: selectedCardsKind,
-      max: segment.effect.max,
-    });
   }
 
   if (segment.effect.type === "selectTargets") {
@@ -257,6 +262,19 @@ const recordSaveResultAsProducer = (
     return addCapability(state, saveResultAs, {
       kind: "producedObjects",
     });
+  }
+  if (
+    segment.effect.type === "trashFromHand" ||
+    segment.effect.type === "trashFromHandUntilCount"
+  ) {
+    const capability: SelectedCardsCapability = {
+      kind: "selectedCards",
+      cardKind: "hand",
+      ...(segment.effect.type === "trashFromHand"
+        ? { max: segment.effect.count }
+        : {}),
+    };
+    return addCapability(state, saveResultAs, capability);
   }
   if (
     segment.effect.type === "revealTop" ||

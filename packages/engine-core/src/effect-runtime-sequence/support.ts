@@ -504,7 +504,10 @@ const isSupportedSequenceBlockWithState = (
         if (!supported) {
           return false;
         }
-        supportState.hasPendingDecisionSegment = true;
+        supportState.hasPendingDecisionSegment =
+          supportState.hasPendingDecisionSegment ||
+          nestedState.hasPendingDecisionSegment;
+        supportState.savedResults = nestedState.savedResults;
         return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedPayCostSegment(segment.effect)) {

@@ -120,14 +120,33 @@ const sequenceQueueState = (
   return { state, definition };
 };
 
+const saveAllOpponentCharactersAsSavedTarget = () =>
+  ({
+    id: "save-target",
+    connector: "always",
+    saveResultAs: "savedTarget",
+    effect: {
+      type: "selectAllTargets",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zone: "characterArea",
+        filter: { categories: ["character"] },
+        visibility: "public",
+      },
+    },
+  }) satisfies Extract<Effect, { type: "sequence" }>["effects"][number];
+
 const drawUpToThenKoSavedFieldObjectSequence = (
   family: "selectedTargets" | "producedObjects" = "selectedTargets",
 ): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
+    saveAllOpponentCharactersAsSavedTarget(),
     {
       id: "draw-up-to",
-      connector: "always",
+      connector: "then",
       effect: { type: "drawUpTo", player: "self", count: 1 },
     },
     {
@@ -777,9 +796,10 @@ test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectInd
   const sourceSegmentMismatch = {
     type: "sequence",
     effects: [
+      saveAllOpponentCharactersAsSavedTarget(),
       {
         id: "draw-up-to",
-        connector: "always" as const,
+        connector: "then" as const,
         effect: {
           type: "drawUpTo" as const,
           player: "self" as const,
@@ -844,9 +864,10 @@ test("sequence resume fail-closes sourceSegmentId mismatch and invalid objectInd
   const invalidObjectIndex = {
     type: "sequence",
     effects: [
+      saveAllOpponentCharactersAsSavedTarget(),
       {
         id: "draw-up-to",
-        connector: "always",
+        connector: "then",
         effect: { type: "drawUpTo", player: "self", count: 1 },
       },
       {

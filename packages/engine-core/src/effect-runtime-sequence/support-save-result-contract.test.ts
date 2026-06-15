@@ -585,6 +585,66 @@ test("selectedCards matrix accepts trash selection moved to hand", () => {
   ]);
 });
 
+test("selectedCards matrix accepts selectCards saveAs without segment saveResultAs", () => {
+  const selection = "saved-result:effect-save-as-trash" as SelectionId;
+
+  assertSupported([
+    {
+      connector: "always",
+      effect: {
+        type: "selectCards",
+        player: "self",
+        zone: "trash",
+        chooser: "self",
+        visibility: "bothPlayers",
+        min: 0,
+        max: 1,
+        saveAs: selection,
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection,
+        from: "trash",
+        to: "hand",
+      },
+    },
+  ]);
+});
+
+test("selectedCards matrix accepts trashFromHand saveResultAs as hand selection", () => {
+  const selection = "saved-result:trashed-hand-card" as SelectionId;
+
+  assertSupported([
+    {
+      connector: "always",
+      effect: { type: "draw", player: "self", count: 0 },
+    },
+    {
+      connector: "then",
+      saveResultAs: selection,
+      effect: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection,
+        from: "hand",
+        to: "deck",
+        position: "bottom",
+      },
+    },
+  ]);
+});
+
 test("selectedCards matrix accepts set selection moved to hand", () => {
   const set = "saved-result:set-to-hand" as SelectionSetId;
   const selection = "saved-result:set-to-hand-selection" as SelectionId;
@@ -952,6 +1012,66 @@ test("selectedTargets matrix accepts selectAllTargets feeding forEachSavedTarget
           type: "rest",
           target: savedCharacterTarget(current, "forEachSavedTarget"),
         },
+      },
+    },
+  ]);
+});
+
+test("selectedTargets matrix carries nested sequence producers to later siblings", () => {
+  const selection = "saved-result:nested-target" as SelectionId;
+
+  assertSupported([
+    {
+      connector: "always",
+      effect: {
+        type: "sequence",
+        effects: [selectCharacterTarget(selection)],
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "rest",
+        target: savedCharacterTarget(selection),
+      },
+    },
+  ]);
+});
+
+test("selectedTargets matrix carries double-nested sequence producers to outer nested siblings", () => {
+  const selection = "saved-result:double-nested-target" as SelectionId;
+
+  assertSupported([
+    {
+      connector: "always",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                selectCharacterTarget(selection),
+                {
+                  connector: "then",
+                  effect: {
+                    type: "rest",
+                    target: savedCharacterTarget(selection),
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "cannotBecomeActive",
+              target: savedCharacterTarget(selection),
+              duration: { type: "untilStartOfNextTurn", player: "opponent" },
+            },
+          },
+        ],
       },
     },
   ]);

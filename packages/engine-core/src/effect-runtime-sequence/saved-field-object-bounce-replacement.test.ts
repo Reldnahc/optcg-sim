@@ -120,8 +120,24 @@ const drawUpToThenKoSavedFieldObjectSequence = (): Extract<
   type: "sequence",
   effects: [
     {
-      id: "draw-up-to",
+      id: "save-target",
       connector: "always",
+      saveResultAs: "savedTarget",
+      effect: {
+        type: "selectAllTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "opponent",
+          zone: "characterArea",
+          filter: { categories: ["character"] },
+          visibility: "public",
+        },
+      },
+    },
+    {
+      id: "draw-up-to",
+      connector: "then",
       effect: { type: "drawUpTo", player: "self", count: 1 },
     },
     {
