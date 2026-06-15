@@ -112,13 +112,27 @@ export const useEffectSpotlight = ({
               active,
               key: activeKey ?? activePresentationKey(active),
               mode: activeMode,
+              ...(activeMode === "live" && pendingDecisionId !== undefined
+                ? { pendingDecisionId }
+                : {}),
             },
           ]),
-    [active, activeKey, activeMode, activeSources],
+    [active, activeKey, activeMode, activeSources, pendingDecisionId],
   );
   const [model, setModel] = useState<EffectSpotlightState>();
   const cursorIndex = playback.cursorIndex;
   const currentSource = currentSpotlightPlaybackEntry(playback);
+  const previousCursorEntryKey = useRef<string | undefined>(undefined);
+  const cursorVersion = useRef(0);
+  const cursorEntryKey =
+    currentSource === undefined || cursorIndex === undefined
+      ? undefined
+      : String(cursorIndex);
+  if (previousCursorEntryKey.current !== cursorEntryKey) {
+    previousCursorEntryKey.current = cursorEntryKey;
+    cursorVersion.current += 1;
+  }
+  const currentCursorVersion = cursorVersion.current;
 
   useEffect(() => {
     if (normalizedSources.length > 0) {
@@ -169,10 +183,17 @@ export const useEffectSpotlight = ({
         minimumDwellMs,
         graceMs,
         entry: currentSource,
+        cursorVersion: currentCursorVersion,
         pendingDecisionId,
       }),
     );
-  }, [currentSource, graceMs, minimumDwellMs, pendingDecisionId]);
+  }, [
+    currentCursorVersion,
+    currentSource,
+    graceMs,
+    minimumDwellMs,
+    pendingDecisionId,
+  ]);
 
   useEffect(() => {
     if (

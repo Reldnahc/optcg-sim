@@ -19,6 +19,7 @@ export interface EffectSpotlightState {
   readonly shownAtMs: number;
   readonly visibleUntilMs: number;
   readonly pinned: boolean;
+  readonly cursorVersion?: number | undefined;
 }
 
 export interface EffectSpotlightModelInput {
@@ -29,6 +30,7 @@ export interface EffectSpotlightModelInput {
   readonly active: ActiveEffectTextPresentation | undefined;
   readonly activeKey?: string | undefined;
   readonly activeMode?: "live" | "resolved" | undefined;
+  readonly cursorVersion?: number | undefined;
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
 
@@ -38,6 +40,8 @@ export interface EffectSpotlightDisplayInput {
   readonly minimumDwellMs: number;
   readonly graceMs: number;
   readonly entry: EffectSpotlightPlaybackEntry | undefined;
+  readonly cursorVersion?: number | undefined;
+  readonly previousCursorVersion?: number | undefined;
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
 
@@ -47,7 +51,8 @@ const liveEntryMatchesPendingDecision = (
 ): boolean =>
   pendingDecisionId !== undefined &&
   entry.mode === "live" &&
-  entry.key.startsWith(`decision:${String(pendingDecisionId)}|`);
+  entry.pendingDecisionId !== undefined &&
+  String(entry.pendingDecisionId) === String(pendingDecisionId);
 
 const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
   spanIds.join("\n");
@@ -65,6 +70,7 @@ export const effectSpotlightModel = ({
   active,
   activeKey,
   activeMode = "live",
+  cursorVersion,
   graceMs,
   minimumDwellMs,
   nowMs,
@@ -90,6 +96,7 @@ export const effectSpotlightModel = ({
         activeMode,
         activeSpanIds: active.activeSpanIds,
         pinned: pendingDecisionId !== undefined,
+        ...(cursorVersion === undefined ? {} : { cursorVersion }),
       };
     }
     return {
@@ -101,6 +108,7 @@ export const effectSpotlightModel = ({
       shownAtMs: nowMs,
       visibleUntilMs: nowMs + minimumDwellMs,
       pinned: pendingDecisionId !== undefined,
+      ...(cursorVersion === undefined ? {} : { cursorVersion }),
     };
   }
   if (previous === undefined) {
@@ -122,19 +130,29 @@ export const effectSpotlightDisplayForEntry = ({
   nowMs,
   pendingDecisionId,
   previous,
+  cursorVersion,
+  previousCursorVersion,
 }: EffectSpotlightDisplayInput): EffectSpotlightState | undefined => {
   if (entry === undefined) {
     return undefined;
   }
 
+  const resolvedPreviousCursorVersion =
+    previousCursorVersion ?? previous?.cursorVersion;
+  const sameCursorEntry =
+    cursorVersion === undefined ||
+    resolvedPreviousCursorVersion === undefined ||
+    cursorVersion === resolvedPreviousCursorVersion;
+
   return effectSpotlightModel({
     nowMs,
-    previous,
+    previous: sameCursorEntry ? previous : undefined,
     minimumDwellMs,
     graceMs,
     active: entry.active,
     activeKey: entry.key,
     activeMode: entry.mode,
+    cursorVersion,
     pendingDecisionId: liveEntryMatchesPendingDecision(entry, pendingDecisionId)
       ? pendingDecisionId
       : undefined,

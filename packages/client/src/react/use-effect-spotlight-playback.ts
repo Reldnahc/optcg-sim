@@ -14,7 +14,7 @@ export interface EffectSpotlightActiveSourceInput {
   readonly semanticKey?: string;
   readonly mode: EffectSpotlightSourceMode;
   readonly status?: "pending" | "resolved";
-  readonly pendingDecisionId?: DecisionId;
+  readonly pendingDecisionId?: DecisionId | string;
 }
 
 export type EffectSpotlightPlaybackEntry = EffectSpotlightActiveSourceInput;
@@ -183,7 +183,7 @@ export const advanceSpotlightPlayback = ({
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
     const pendingIndex = state.entries.findIndex(
-      (entry) => entry.status === "pending",
+      (entry) => entry.pendingDecisionId !== undefined,
     );
     return {
       ...state,

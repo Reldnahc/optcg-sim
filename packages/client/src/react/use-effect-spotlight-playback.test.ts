@@ -114,6 +114,23 @@ describe("effect spotlight playback", () => {
     expect(next.fastForwarded).toBe(true);
   });
 
+  it("fast-forward ignores live entries that are not pending decisions", () => {
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("active|source-1||span:active", "span:active", "live"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+        fastForwarded: false,
+      },
+    });
+
+    expect(next.cursorIndex).toBeUndefined();
+  });
+
   it("rewind after fast-forward to empty lands on the latest historical entry", () => {
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",

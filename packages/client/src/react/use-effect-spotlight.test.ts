@@ -38,6 +38,9 @@ const source = (
   semanticKey: `p1|source-1|OP00-001|effect|${spanId}`,
   mode,
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
+  ...(mode === "live" && key.startsWith("decision:") && key.includes("|")
+    ? { pendingDecisionId: key.slice("decision:".length, key.indexOf("|")) }
+    : {}),
 });
 
 describe("effect spotlight model", () => {
