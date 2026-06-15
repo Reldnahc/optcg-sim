@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  CardRef,
   ContinuousEffectRecord,
   EffectQueueEntry,
   GameState,
@@ -8,6 +9,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
+import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "./continuous.js";
 
@@ -97,6 +99,40 @@ export const isCardRefLive = (
   );
 };
 
+const liveCardForRef = (
+  state: GameState,
+  ref: CardRef,
+): CardInstance | null => {
+  const player = state.players[ref.playerId];
+  if (player === undefined) return null;
+  if (
+    player.leader.instanceId === ref.instanceId &&
+    player.leader.cardId === ref.cardId
+  ) {
+    return player.leader;
+  }
+  if (
+    player.stage?.instanceId === ref.instanceId &&
+    player.stage.cardId === ref.cardId
+  ) {
+    return player.stage;
+  }
+  return (
+    player.characters.find(
+      (card) =>
+        card.instanceId === ref.instanceId && card.cardId === ref.cardId,
+    ) ?? null
+  );
+};
+
+const sourceEffectsAreInvalidated = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const source = liveCardForRef(state, effect.source);
+  return source !== null && isCardEffectInvalidated(state, source);
+};
+
 export const durationIsActive = (
   state: GameState,
   effect: ContinuousEffectRecord,
@@ -126,6 +162,8 @@ export const durationIsActive = (
 export const allContinuousEffects = (
   state: GameState,
 ): readonly ContinuousEffectRecord[] => [
-  ...state.continuousEffects,
+  ...state.continuousEffects.filter(
+    (effect) => !sourceEffectsAreInvalidated(state, effect),
+  ),
   ...deriveImplementedDslPermanentContinuousEffects(state),
 ];

@@ -8,6 +8,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
+import { isCardEffectInvalidated } from "../effect-invalidation.js";
 import {
   applyAction,
   createActiveState,
@@ -34,6 +35,8 @@ const setupSequenceDefinition = (
   const supportCard = resolvedCard({
     cardId: source.cardId,
     category: "character",
+    cost: 4,
+    power: 5000,
     support: {
       status: "implemented-dsl",
       effectDefinitionId,
@@ -63,6 +66,17 @@ const setupSequenceDefinition = (
 const sequenceQueueState = (effect: Effect): GameState => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  state.cardManifest.cards[p1State.leader.cardId] = resolvedCard({
+    cardId: p1State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
   const source = withCardInZone({
     state,
     playerId: p1,
@@ -173,6 +187,173 @@ test("selectTargets saved reference can feed effect invalidation sequence child"
       (effect) =>
         effect.modifier.layer === "effectInvalidation" &&
         effect.modifier.operation.type === "invalidateEffects",
+    ),
+    true,
+  );
+});
+
+const invalidateThenKoSequence = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "select-invalidate-target",
+      connector: "always",
+      saveResultAs: "selected:invalidate-effects-target",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"] },
+        },
+      },
+    },
+    {
+      id: "invalidate-selected-target",
+      connector: "then",
+      effect: {
+        type: "invalidateEffects",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:invalidate-effects-target",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+        duration: { type: "thisTurn" },
+      },
+    },
+    {
+      id: "select-ko-target",
+      connector: "then",
+      saveResultAs: "selected:ko-target",
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          zone: "characterArea",
+          player: "opponent",
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["character"], cost: { max: 5 } },
+        },
+      },
+    },
+    {
+      id: "ko-selected-target",
+      connector: "then",
+      effect: {
+        type: "ko",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:ko-target",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+    },
+  ],
+});
+
+test("trigger sequence keeps effect invalidation when a later K.O. target resolves", () => {
+  const state = sequenceQueueState(invalidateThenKoSequence());
+  const p2State = must(state.players[p2], "p2");
+  const invalidatedTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "invalidation target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const koTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "K.O. target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  state.cardManifest.cards[invalidatedTarget.cardId] = resolvedCard({
+    cardId: invalidatedTarget.cardId,
+    category: "character",
+    cost: 6,
+    power: 6000,
+  });
+  state.cardManifest.cards[koTarget.cardId] = resolvedCard({
+    cardId: koTarget.cardId,
+    category: "character",
+    cost: 5,
+    power: 5000,
+  });
+
+  const pausedForInvalidation = processEffectRuntime(state);
+  const invalidationDecision = must(
+    pausedForInvalidation.state.pendingDecision,
+    "invalidation target selection",
+  );
+  assert.equal(invalidationDecision.type, "selectTargets");
+
+  const pausedForKo = applyAction(pausedForInvalidation.state, {
+    type: "respondToDecision",
+    decisionId: invalidationDecision.id,
+    response: {
+      type: "targets",
+      targets: [
+        {
+          instanceId: invalidatedTarget.instanceId,
+          cardId: invalidatedTarget.cardId,
+          playerId: p2,
+          zone: invalidatedTarget.zone,
+        },
+      ],
+    },
+  });
+  assert.equal(pausedForKo.errors, undefined);
+  const koDecision = must(pausedForKo.state.pendingDecision, "K.O. selection");
+  assert.equal(koDecision.type, "selectTargets");
+
+  const resolved = applyAction(pausedForKo.state, {
+    type: "respondToDecision",
+    decisionId: koDecision.id,
+    response: {
+      type: "targets",
+      targets: [
+        {
+          instanceId: koTarget.instanceId,
+          cardId: koTarget.cardId,
+          playerId: p2,
+          zone: koTarget.zone,
+        },
+      ],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    isCardEffectInvalidated(resolved.state, invalidatedTarget),
+    true,
+  );
+  assert.equal(
+    must(resolved.state.players[p2], "resolved p2").trash.some(
+      (card) => card.instanceId === koTarget.instanceId,
     ),
     true,
   );

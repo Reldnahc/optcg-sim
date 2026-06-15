@@ -319,6 +319,69 @@ test("applies permanent self +1000 powerAdd continuous modifier only to source c
   assert.deepEqual(state.eventJournal, eventJournalBefore);
 });
 
+test("ignores stored continuous modifiers from a card whose effects are negated", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  p1State.characters = [withCharacter(p1, toCardId("char-vanilla"), 0)];
+  const source = must(p1State.characters[0], "source character");
+
+  state.continuousEffects = [
+    continuousPowerEffectRecord(state, {
+      id: "source-self-power",
+      source,
+      duration: { type: "thisTurn" },
+    }),
+    {
+      id: "continuous:invalidate-source-effects",
+      source: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        playerId: p2,
+        zone: p2State.leader.zone,
+      },
+      sourceSnapshot: {
+        instanceId: p2State.leader.instanceId,
+        cardId: p2State.leader.cardId,
+        ownerId: p2,
+        controllerId: p2,
+        zone: p2State.leader.zone,
+        category: "leader",
+        colors: ["blue"],
+        power: 5000,
+        keywords: [],
+      },
+      controller: p2,
+      modifier: {
+        layer: "effectInvalidation",
+        target: {
+          type: "exactCard",
+          card: {
+            instanceId: source.instanceId,
+            cardId: source.cardId,
+            playerId: p1,
+            zone: source.zone,
+          },
+          binding: {
+            family: "selectedTargets",
+            saveResultAs: "selected:invalidate-effects-target",
+          },
+          createdAtStateSeq: state.seq,
+        },
+        operation: { type: "invalidateEffects" },
+      },
+      duration: { type: "thisTurn" },
+      createdBy: { type: "ruleProcess", name: "compute-view-test" },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+
+  const view = computeView(state);
+
+  assert.equal(view.cards[source.instanceId]?.basePower, 3000);
+  assert.equal(view.cards[source.instanceId]?.currentPower, 3000);
+});
+
 test("basePowerSet changes computed base before powerAdd without mutating manifest power", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
