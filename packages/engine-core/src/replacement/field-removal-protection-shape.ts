@@ -95,16 +95,6 @@ export const isSupportedRestProtection = (
   );
 };
 
-export const hasOnlyBattleIrrelevantProtections = (
-  protections: readonly Protection[],
-): boolean =>
-  protections.every(
-    (protection) =>
-      protection.process === "fieldRemoval" ||
-      protection.process === "rest" ||
-      (protection.process === "ko" && protection.sourceKind === "cardEffect"),
-  );
-
 export const malformedFieldRemovalProtectionMessage = (
   effect: ContinuousEffectRecord,
 ): string =>

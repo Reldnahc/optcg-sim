@@ -6,9 +6,8 @@ import {
   isSupportedCounterStepTarget,
   sameCardRef,
 } from "./support.js";
-import { computeView } from "../view/compute-view.js";
+import { getSupportedBattleCombatView } from "./capabilities.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 
 export const getUnsupportedDamageStepContinuationReason = (
   state: GameState,
@@ -27,11 +26,6 @@ export const getUnsupportedDamageStepContinuationReason = (
   ) {
     return "Battle requires unsupported trigger or replacement processing.";
   }
-  const attacker = reifyCardRef(state, battle.attacker);
-  const target = reifyCardRef(state, battle.currentTarget);
-  if (attacker === null || target === null) {
-    return "Battle participants are stale or invalid.";
-  }
   if (battle.blocker !== undefined) {
     const blocker = reifyCardRef(state, battle.blocker);
     if (
@@ -43,27 +37,13 @@ export const getUnsupportedDamageStepContinuationReason = (
     }
   }
 
-  let view: ReturnType<typeof computeView>;
-  try {
-    view = computeView(state);
-  } catch {
-    return "Battle requires unsupported combat metadata.";
-  }
-
-  const attackerView = view.cards[attacker.card.instanceId];
-  const targetView = view.cards[target.card.instanceId];
+  const combat = getSupportedBattleCombatView(state, battle);
+  if ("reason" in combat) return combat.reason;
+  const { attackerView, target, targetView } = combat;
   if (
-    attackerView?.currentPower === undefined ||
-    targetView?.currentPower === undefined
-  ) {
-    return "Battle requires unsupported derived power metadata.";
-  }
-  if (
-    (target.isLeader &&
-      battle.damageCount !== 2 &&
-      attackerView.keywords.includes("doubleAttack")) ||
-    (targetView.protectedFrom.length > 0 &&
-      !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom))
+    target.isLeader &&
+    battle.damageCount !== 2 &&
+    attackerView.keywords.includes("doubleAttack")
   ) {
     return "Battle requires unsupported keyword or protection handling.";
   }

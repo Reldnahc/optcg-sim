@@ -20,10 +20,10 @@ import {
 import { reifyCardRef, toCardRef } from "../actions/state.js";
 import { sameCardRef } from "./support.js";
 import { hasUnsupportedCounterWindow } from "./counter-actions.js";
+import { getSupportedBattleCombatViewOrNull } from "./capabilities.js";
 import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
-import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 
 type BattleResolver = (state: GameState) => EngineResult;
 
@@ -169,32 +169,7 @@ const hasUnsupportedBlockDecisionState = (
   if (hasUnsupportedCounterWindow(state, defenderId)) {
     return true;
   }
-  let view: ReturnType<typeof computeView>;
-  try {
-    view = computeView(state);
-  } catch {
-    return true;
-  }
-  const attacker = reifyCardRef(state, battle.attacker);
-  const target = reifyCardRef(state, battle.currentTarget);
-  if (attacker === null || target === null) {
-    return true;
-  }
-  const attackerView = view.cards[attacker.card.instanceId];
-  const targetView = view.cards[target.card.instanceId];
-  if (
-    attackerView?.currentPower === undefined ||
-    targetView?.currentPower === undefined
-  ) {
-    return true;
-  }
-  if (
-    targetView.protectedFrom.length > 0 &&
-    !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom)
-  ) {
-    return true;
-  }
-  return false;
+  return getSupportedBattleCombatViewOrNull(state, battle) === null;
 };
 
 const isLegalBlockerSelection = (

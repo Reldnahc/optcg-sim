@@ -42,7 +42,7 @@ import {
   createCounterStepPassDecision,
   getUnsupportedCounterWindowReason,
 } from "./counter-actions.js";
-import { computeView } from "../view/compute-view.js";
+import { getSupportedBattleCombatView } from "./capabilities.js";
 import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,
@@ -60,7 +60,6 @@ import {
   detectSupportedFieldRemovalReplacementCandidate,
   pauseFieldRemovalReplacementProcess,
 } from "../replacement/field-removal-process.js";
-import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getLifeDamageDecision,
@@ -241,27 +240,11 @@ export const resolveSupportedVanillaBattle = (
   const combatMetadataState = baseCombatMetadataState;
   const combatState =
     withDamageDeferredEffectQueueMetadataHidden(combatMetadataState);
-  let view: ReturnType<typeof computeView>;
-  try {
-    view = computeView(combatState);
-  } catch {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported combat metadata.",
-    );
+  const combat = getSupportedBattleCombatView(combatState, battle);
+  if ("reason" in combat) {
+    return unsupportedBattleResolution(state, combat.reason);
   }
-
-  const attackerView = view.cards[attacker.card.instanceId];
-  const targetView = view.cards[target.card.instanceId];
-  if (
-    attackerView?.currentPower === undefined ||
-    targetView?.currentPower === undefined
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported derived power metadata.",
-    );
-  }
+  const { attackerView, targetView } = combat;
   const attackerHasBanish = attackerView.keywords.includes("banish");
   const battleDamageCount = battle.damageCount;
   if (battleDamageCount !== 1 && battleDamageCount !== 2) {
@@ -281,16 +264,6 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported keyword or protection handling.",
     );
   }
-  if (
-    targetView.protectedFrom.length > 0 &&
-    !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom)
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported keyword or protection handling.",
-    );
-  }
-
   let nextState: GameState = {
     ...resolutionState,
     seq: toStateSeq(resolutionState.seq + 1),

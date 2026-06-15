@@ -43,10 +43,12 @@ import {
   isSupportedCounterStepTarget,
   sameCardRef,
 } from "./support.js";
-import { computeView } from "../view/compute-view.js";
+import {
+  getSupportedBattleCombatView,
+  getSupportedBattleCombatViewOrNull,
+} from "./capabilities.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { hasOnlyBattleIrrelevantProtections } from "../replacement/field-removal-protection.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
@@ -95,20 +97,7 @@ export const getLegalCharacterCounterActions = (
       return [];
     }
   }
-  let view: ReturnType<typeof computeView>;
-  try {
-    view = computeView(state);
-  } catch {
-    return [];
-  }
-  const attackerView = view.cards[attacker.card.instanceId];
-  const targetView = view.cards[target.card.instanceId];
-  if (
-    attackerView?.currentPower === undefined ||
-    targetView?.currentPower === undefined ||
-    (targetView.protectedFrom.length > 0 &&
-      !hasOnlyBattleIrrelevantProtections(targetView.protectedFrom))
-  ) {
+  if (getSupportedBattleCombatViewOrNull(state, battle) === null) {
     return [];
   }
   return defender.hand.flatMap((card) => {
@@ -224,10 +213,9 @@ export const applyUseCounter = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  try {
-    computeView(state);
-  } catch {
-    return illegalAction(state, "Battle requires unsupported combat metadata.");
+  const combat = getSupportedBattleCombatView(state, battle);
+  if ("reason" in combat) {
+    return illegalAction(state, combat.reason);
   }
   if (!isSupportedCounterStepTarget(battle, target)) {
     return illegalAction(
