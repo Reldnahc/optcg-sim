@@ -4,6 +4,7 @@ export {
   type OptionalActivationCostParseResult,
 } from "./activation.js";
 export { parseAttachDonCost } from "./attach-don.js";
+export { parseFieldToLifeCost } from "./field-to-life.js";
 export { parseReturnDonCost } from "./return-don.js";
 export { parseRestDonCost } from "./rest-don.js";
 export { parseRevealFromHandCost } from "./reveal-from-hand.js";

@@ -7,6 +7,7 @@ import {
   type SequenceCostPrimitive,
 } from "./rest-don.js";
 import { parseAttachDonCost } from "./attach-don.js";
+import { parseFieldToLifeSequenceCost } from "./field-to-life.js";
 import { parseTurnLifeFaceUpCost } from "./turn-life-face-up.js";
 import { parseMoveCardsCost } from "./move-cards.js";
 import { parseModifyPowerCost } from "./modify-power.js";
@@ -27,6 +28,7 @@ const costParsers = [
   parseAttachDonCost,
   parseRestDonCost,
   parseMoveCardsCost,
+  parseFieldToLifeSequenceCost,
   parseModifyPowerCost,
   parseRevealFromHandCost,
   parseTurnLifeFaceUpCost,
@@ -174,6 +176,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       };
     case "moveCards":
       return { ...cost, optional: true };
+    case "moveFieldToLife":
+      return { ...cost, optional: true };
     case "modifyPower":
       return { ...cost, optional: true };
   }
@@ -275,6 +279,16 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         to: cost.to,
         order: cost.order,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+      };
+    case "moveFieldToLife":
+      return {
+        type: "moveFieldToLife",
+        count: cost.count,
+        chooser: cost.chooser,
+        player: cost.player,
+        ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        position: cost.position,
+        ...(cost.faceUp === undefined ? {} : { faceUp: cost.faceUp }),
       };
     case "modifyPower":
       return {

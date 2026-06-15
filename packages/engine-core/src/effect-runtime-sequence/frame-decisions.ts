@@ -11,6 +11,7 @@ import type {
   LegalAction,
   OptionalCost,
   OptionalPayCostDecision,
+  PaymentOption,
   PayCostDecision,
   PlayerId,
 } from "@optcg/types";
@@ -46,6 +47,10 @@ import {
   type SetLifeFaceUpPaymentOption,
   type TurnLifeFaceUpPaymentOption,
 } from "./life-cost-options.js";
+import {
+  moveFieldToLifeCandidateCards,
+  moveFieldToLifePaymentOptions,
+} from "../runtime/costs/move-field-to-life.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import { costDecisionPlayerId } from "./cost-decision-player.js";
 
@@ -581,6 +586,25 @@ export const getSequencePayCostLegalActions = (
       );
       continue;
     }
+    if (option.type === "moveFieldToLife") {
+      const selectableCardIds = moveFieldToLifeCandidateCards(
+        state,
+        playerId,
+        option,
+      ).map((card) => card.instanceId);
+      legalPayments.push(
+        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
+          type: "respondToDecision" as const,
+          decisionId: decision.id,
+          response: {
+            type: "payment" as const,
+            optionId: option.id,
+            selectedCardInstanceIds: combo,
+          },
+        })),
+      );
+      continue;
+    }
     if (option.type === "turnLifeFaceUp" || option.type === "setLifeFaceUp") {
       if (canSetLifeFaceUp(player, option)) {
         legalPayments.push({
@@ -665,50 +689,8 @@ export const getSequenceOptionalPayCostOptions = (
   state: GameState,
   entry: EffectQueueEntry,
   cost: OptionalCost,
-): Array<
-  Extract<
-    OptionalPayCostDecision["paymentOptions"][number],
-    {
-      type:
-        | "restSelf"
-        | "trashSelf"
-        | "restDon"
-        | "attachDon"
-        | "returnDon"
-        | "restFromField"
-        | "trashFromHand"
-        | "revealFromHand"
-        | "trashFromField"
-        | "koFromField"
-        | "moveCards"
-        | "turnLifeFaceUp"
-        | "setLifeFaceUp"
-        | "modifyPower";
-    }
-  >
-> => {
-  const paymentOptions: Array<
-    Extract<
-      OptionalPayCostDecision["paymentOptions"][number],
-      {
-        type:
-          | "restSelf"
-          | "trashSelf"
-          | "restDon"
-          | "attachDon"
-          | "returnDon"
-          | "trashFromHand"
-          | "revealFromHand"
-          | "restFromField"
-          | "trashFromField"
-          | "koFromField"
-          | "moveCards"
-          | "turnLifeFaceUp"
-          | "setLifeFaceUp"
-          | "modifyPower";
-      }
-    >
-  > = [];
+): PaymentOption[] => {
+  const paymentOptions: PaymentOption[] = [];
   const paymentPlayerId = costDecisionPlayerId(state, entry, cost);
   const currentPlayer = state.players[paymentPlayerId];
 
@@ -865,6 +847,19 @@ export const getSequenceOptionalPayCostOptions = (
             ? {}
             : { sourceInstanceId: route.sourceInstanceId }),
         });
+      }
+    }
+    return paymentOptions;
+  }
+  if (cost.type === "moveFieldToLife") {
+    for (const option of moveFieldToLifePaymentOptions(cost)) {
+      if (
+        Number.isInteger(option.count) &&
+        option.count > 0 &&
+        moveFieldToLifeCandidateCards(state, paymentPlayerId, option).length >=
+          option.count
+      ) {
+        paymentOptions.push(option);
       }
     }
     return paymentOptions;

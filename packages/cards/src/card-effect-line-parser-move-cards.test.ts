@@ -3,6 +3,58 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect line parser move-cards costs", () => {
+  it("parses field-to-Life placement as a reusable cost before opponent hand trash", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Place 1 of your opponent's Characters with a cost of 3 or less at the top or bottom of your opponent's Life cards face-up: Your opponent trashes 1 card from their hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveFieldToLife",
+                  count: 1,
+                  chooser: "self",
+                  player: "opponent",
+                  filter: { categories: ["character"], cost: { max: 3 } },
+                  position: "topOrBottom",
+                  faceUp: true,
+                  optional: true,
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "trashFromHand",
+                player: "opponent",
+                chooser: "opponent",
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:costedEffect",
+        "cost:moveFieldToLife",
+        "target:opponentCharacters",
+        "destination:life",
+        "instruction:trashFromHand",
+        "player:opponent",
+      ]),
+    );
+  });
+
   it("parses Life and deck movement as reusable moveCards primitives", () => {
     const result = parseCardEffectLine(
       "[Main] If your Leader has the {Straw Hat Crew} type, trash 1 card from the top of your Life cards. Then, add up to 1 card from the top of your deck to the top of your Life cards and trash 1 card from your hand.",

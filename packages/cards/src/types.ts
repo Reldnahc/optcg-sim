@@ -176,6 +176,7 @@ export type PrimitiveEvidence =
   | "cost:trashFromHand"
   | "cost:revealFromHand"
   | "cost:moveCards"
+  | "cost:moveFieldToLife"
   | "cost:modifyPower"
   | "cost:returnToOwnerHand"
   | "composition:costSequence"

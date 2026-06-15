@@ -21,6 +21,7 @@ type CardCostPaymentOption = Extract<
       | "trashFromHand"
       | "trashFromField"
       | "moveCards"
+      | "moveFieldToLife"
       | "returnDon"
       | "revealFromHand";
   }
@@ -108,11 +109,13 @@ const cardCostOperation = (
     | "trashFromHand"
     | "trashFromField"
     | "moveCards"
+    | "moveFieldToLife"
     | "returnDon"
     | "revealFromHand",
 ): "trash" | "moveCards" | "returnDon" | "reveal" => {
   switch (optionType) {
     case "moveCards":
+    case "moveFieldToLife":
       return "moveCards";
     case "returnDon":
       return "returnDon";
@@ -136,6 +139,8 @@ const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
         return "Choose card to place on top of deck";
       }
       return "Choose cards from trash";
+    case "moveFieldToLife":
+      return "Choose Character to place into Life";
     case "returnDon":
       return "Choose DON!! to return";
     case "revealFromHand":
@@ -151,6 +156,7 @@ const isCardCostPaymentOption = (
   option?.type === "trashFromHand" ||
   option?.type === "trashFromField" ||
   option?.type === "moveCards" ||
+  option?.type === "moveFieldToLife" ||
   option?.type === "returnDon" ||
   option?.type === "revealFromHand";
 

@@ -107,6 +107,15 @@ export type PaymentOption =
       filter?: CardFilter;
       sourceInstanceId?: InstanceId;
     }
+  | {
+      id: string;
+      type: "moveFieldToLife";
+      count: number;
+      player: "opponent" | "anyPlayer";
+      filter?: CardFilter;
+      position: "top" | "bottom";
+      faceUp?: boolean;
+    }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
   | { id: string; type: "custom"; action: string };
 

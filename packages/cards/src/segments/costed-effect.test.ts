@@ -14,7 +14,7 @@ describe("costed effect expression parser", () => {
         type: "sequence",
         effects: [
           {
-            id: "cost:return-don",
+            id: "cost:returnDon",
             connector: "always",
             effect: {
               type: "payCost",

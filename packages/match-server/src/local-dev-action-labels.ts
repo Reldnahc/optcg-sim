@@ -155,6 +155,12 @@ const paymentOptionLabel = (
       return `Move ${countLabel(selectedCardsCount || option.count, "card", "cards")} from ${zoneLabel(
         option.from.zone,
       )} to ${zoneLabel(option.to.zone)}`;
+    case "moveFieldToLife":
+      return `Place ${countLabel(
+        selectedCardsCount || option.count,
+        "card",
+        "cards",
+      )} at ${lifePositionLabel(option.position)}`;
     case "discard":
       return `Discard ${countLabel(option.count, "card", "cards")}`;
     case "custom":

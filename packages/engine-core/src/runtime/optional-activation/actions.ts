@@ -38,6 +38,7 @@ import {
   applyMoveCardsPayment,
   isSupportedMoveCardsPaymentRoute,
 } from "../../effect-runtime-move-cards-payment.js";
+import { applyMoveFieldToLifePaymentResponse } from "../costs/move-field-to-life.js";
 import { restFieldObjects } from "../../effect-runtime-sequence/saved-field-object.js";
 import {
   processEffectRuntimeAfterOptionalActivationAccept,
@@ -143,6 +144,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "returnDon" &&
         decision.cost.type !== "attachDon" &&
         decision.cost.type !== "moveCards" &&
+        decision.cost.type !== "moveFieldToLife" &&
         decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "setLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
@@ -225,6 +227,13 @@ export const applyOptionalActivationDecisionResponse = (
               typeof action.response.selectedCardInstanceIds
             >;
           }
+        | {
+            playerId: PlayerId;
+            optionId: "moveFieldToLife";
+            selectedCardInstanceIds: NonNullable<
+              typeof action.response.selectedCardInstanceIds
+            >;
+          }
         | LifeVisibilityCostPaidPayload
         | {
             playerId: PlayerId;
@@ -286,6 +295,22 @@ export const applyOptionalActivationDecisionResponse = (
           optionId: "moveCards",
           selectedCardInstanceIds: selected,
         };
+      } else if (selectedOption.type === "moveFieldToLife") {
+        const paid = applyMoveFieldToLifePaymentResponse({
+          chooserId: decision.playerId,
+          decisionId: decision.id,
+          events,
+          option: selectedOption,
+          response: paymentResponse,
+          state,
+        });
+        if (!paid.ok) {
+          return toEngineResult(state, [], invalidDecision(paid.message));
+        }
+        nextPlayers = paid.state.players;
+        nextPlayer = paid.state.players[decision.playerId] ?? nextPlayer;
+        paidCostSelectedCards = paid.selectedCardRefs;
+        costPaidPayload = paid.costPaidPayload;
       } else if (selectedOption.type === "attachDon") {
         const paid = applyAttachDonCostPayment({
           decisionId: decision.id,

@@ -85,6 +85,16 @@ export type Cost =
       optional?: boolean;
     }
   | {
+      type: "moveFieldToLife";
+      count: number;
+      chooser: "self";
+      player: "opponent" | "anyPlayer";
+      filter?: CardFilter;
+      position: "top" | "bottom" | "topOrBottom";
+      faceUp?: boolean;
+      optional?: boolean;
+    }
+  | {
       type: "modifyPower";
       target: Target;
       requiredState?: "active" | "rested";
@@ -146,6 +156,17 @@ export type OptionalMoveCardsCost = {
   to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
   order: "chooserChoice";
   filter?: CardFilter;
+  optional: true;
+};
+
+export type OptionalMoveFieldToLifeCost = {
+  type: "moveFieldToLife";
+  count: number;
+  chooser: "self";
+  player: "opponent" | "anyPlayer";
+  filter?: CardFilter;
+  position: "top" | "bottom" | "topOrBottom";
+  faceUp?: boolean;
   optional: true;
 };
 
@@ -226,5 +247,6 @@ export type OptionalCost =
   | OptionalTrashFromHandCost
   | OptionalRevealFromHandCost
   | OptionalMoveCardsCost
+  | OptionalMoveFieldToLifeCost
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };

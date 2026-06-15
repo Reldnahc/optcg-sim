@@ -49,7 +49,10 @@ describe("field-to-Life instruction parser", () => {
           },
         ],
       },
-      evidence: [
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
         "instruction:moveSelected",
         "cardinality:upTo",
         "count:positiveInteger",
@@ -66,9 +69,51 @@ describe("field-to-Life instruction parser", () => {
         "composition:chooseOne",
         "destination:faceUp",
         "composition:selectThenApply",
-      ],
+      ]),
+    );
+  });
+
+  it("parses exact opponent Character placement to explicit opponent Life wording", () => {
+    const result = parsePlaceAtOwnerLifeInstruction({
+      text: "Place 1 of your opponent's Characters with a cost of 3 or less at the top or bottom of your opponent's Life cards face-up.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:field-to-life",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                filter: { categories: ["character"], cost: { max: 3 } },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "choice",
+              chooser: "self",
+            },
+          },
+        ],
+      },
       rest: "",
     });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "cardinality:exact",
+        "chooser:self",
+        "target:opponentCharacters",
+        "destination:life",
+        "destination:faceUp",
+      ]),
+    );
   });
 
   it("parses add-to-owner-Life face-down wording through the same field movement primitive", () => {

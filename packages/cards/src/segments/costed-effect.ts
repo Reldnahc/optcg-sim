@@ -1,4 +1,4 @@
-import { parseReturnDonCost } from "../costs/index.js";
+import { parseFieldToLifeCost, parseReturnDonCost } from "../costs/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type {
   ExpressionParseResult,
@@ -15,18 +15,21 @@ export function costedEffectExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const cost = parseReturnDonCost(input);
+    const cost = parseReturnDonCost(input) ?? parseFieldToLifeCost(input);
     if (cost === undefined) {
       return undefined;
     }
 
-    const body = parseCostedBody(cost.rest, options, cost.restSource);
+    const costRestSource = "restSource" in cost ? cost.restSource : undefined;
+    const costPresentationSpans =
+      "presentationSpans" in cost ? cost.presentationSpans : undefined;
+    const body = parseCostedBody(cost.rest, options, costRestSource);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
 
     const presentationSpans = [
-      ...(cost.presentationSpans ?? []),
+      ...(costPresentationSpans ?? []),
       ...(body.presentationSpans ?? []),
     ];
     return {
@@ -34,7 +37,7 @@ export function costedEffectExpressionParser(options: {
         type: "sequence",
         effects: [
           {
-            id: "cost:return-don",
+            id: `cost:${cost.cost.type}`,
             connector: "always",
             effect: {
               type: "payCost",

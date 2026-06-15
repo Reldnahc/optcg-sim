@@ -83,6 +83,14 @@ export const isSupportedPayCostSegment = (
       isSupportedSequenceContinuousDuration(cost.duration)
     );
   }
+  if (cost.type === "moveFieldToLife") {
+    return (
+      Number.isInteger(cost.count) &&
+      cost.count > 0 &&
+      (cost.faceUp === undefined || typeof cost.faceUp === "boolean") &&
+      isSupportedHandSelectionCardFilter(cost.filter)
+    );
+  }
   return (
     (cost.type === "restDon" ||
       cost.type === "restFromField" ||

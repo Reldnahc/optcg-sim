@@ -1,6 +1,9 @@
 import type { Effect, SelectionId, Target } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseOpponentCharactersTarget } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
@@ -143,7 +146,20 @@ const normalizePosition = (text: string): "top" | "bottom" | "topOrBottom" =>
       ? "top"
       : "bottom";
 
-export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
+export type FieldToLifePlacementParts = {
+  readonly player: "opponent" | "anyPlayer";
+  readonly count: number;
+  readonly min: number;
+  readonly max: number;
+  readonly filter: CharacterFilter;
+  readonly position: "top" | "bottom" | "topOrBottom";
+  readonly faceUp?: boolean;
+  readonly evidence: readonly PrimitiveEvidence[];
+};
+
+export const parseFieldToLifePlacementParts = (
+  input: Pick<Parameters<InstructionParser>[0], "text">,
+): FieldToLifePlacementParts | undefined => {
   const match = parseFieldToLifeWording(input.text);
   if (match === null) {
     return undefined;
@@ -155,11 +171,16 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
   }
 
   const cardinality = parseUpToCardinality({ text: selectionText });
-  if (cardinality === undefined) {
+  const exactCardinality =
+    cardinality === undefined
+      ? parseExactCardinality({ text: selectionText })
+      : undefined;
+  const parsedCardinality = cardinality ?? exactCardinality;
+  if (parsedCardinality === undefined) {
     return undefined;
   }
 
-  const target = parseFieldToLifeTarget(cardinality.rest);
+  const target = parseFieldToLifeTarget(parsedCardinality.rest);
   if (target === undefined || target.rest.length > 0) {
     return undefined;
   }
@@ -167,19 +188,28 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
   const position = normalizePosition(positionText);
   const faceText = match.groups?.["face"]?.trim().toLowerCase();
   const faceUp = faceText === "face-up";
+  const count =
+    "count" in parsedCardinality
+      ? parsedCardinality.count
+      : parsedCardinality.cardinality.max;
+  const min =
+    "count" in parsedCardinality
+      ? parsedCardinality.count
+      : parsedCardinality.cardinality.min;
+  const max =
+    "count" in parsedCardinality
+      ? parsedCardinality.count
+      : parsedCardinality.cardinality.max;
   return {
-    effect: selectThenPlaceAtOwnerLife(
-      target.player,
-      cardinality.cardinality.min,
-      cardinality.cardinality.max,
-      target.filter,
-      position,
-      faceUp,
-    ),
+    player: target.player,
+    count,
+    min,
+    max,
+    filter: target.filter,
+    position,
+    ...(faceText === undefined ? {} : { faceUp }),
     evidence: [
-      "instruction:moveSelected",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
+      ...parsedCardinality.evidence,
       ...target.evidence,
       "destination:life",
       ...(position === "topOrBottom"
@@ -196,6 +226,29 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
         : faceText === "face-down"
           ? (["destination:faceDown"] as const)
           : []),
+    ],
+  };
+};
+
+export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
+  const parts = parseFieldToLifePlacementParts(input);
+  if (parts === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: selectThenPlaceAtOwnerLife(
+      parts.player,
+      parts.min,
+      parts.max,
+      parts.filter,
+      parts.position,
+      parts.faceUp === true,
+    ),
+    evidence: [
+      "instruction:moveSelected",
+      ...parts.evidence,
+      parts.min === 0 ? "chooser:self:upTo" : "chooser:self",
       "composition:selectThenApply",
     ],
     rest: "",
@@ -203,9 +256,9 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
 };
 
 const parseFieldToLifeWording = (text: string): RegExpExecArray | null =>
-  /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:their|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+  /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
     text,
   ) ??
-  /^add\s+(?<selection>.+?)\s+to the (?<position>top|bottom|top or bottom) of (?:their|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+  /^add\s+(?<selection>.+?)\s+to the (?<position>top|bottom|top or bottom) of (?:their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
     text,
   );
