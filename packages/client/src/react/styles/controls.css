@@ -31,6 +31,7 @@
   --control-grab-dot-width: var(--card-outline-thin);
   --control-grab-dot-height: calc(var(--control-dock-tab-height) * 0.5);
   position: absolute;
+  z-index: 2;
   top: var(--control-rail-gap);
   right: var(--control-rail-gap);
   bottom: var(--control-rail-gap);

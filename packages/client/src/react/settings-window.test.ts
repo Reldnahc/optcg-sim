@@ -359,10 +359,10 @@ describe("settings window", () => {
   });
 
   test("background layer does not override control rail or floating window positioning", async () => {
-    const appShellStyles = await readFile(
-      join(sourceDirectory, "styles", "app-shell.css"),
-      "utf8",
-    );
+    const [appShellStyles, controlsStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "controls.css"), "utf8"),
+    ]);
 
     assert.doesNotMatch(appShellStyles, /\.match-app\s*>\s*:not/u);
     assert.doesNotMatch(
@@ -373,6 +373,7 @@ describe("settings window", () => {
       appShellStyles,
       /\.match-app\s*>\s*:where\(\.board-shell,\s*\.loading-panel\)\s*\{[^}]*z-index:\s*1;/u,
     );
+    assert.match(controlsStyles, /\.control-rail\s*\{[^}]*z-index:\s*2;/u);
   });
 
   test("match app applies custom window and playmat color variables", async () => {
