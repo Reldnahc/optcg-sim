@@ -20,6 +20,7 @@ import type {
 
 import { getLegalActions } from "../actions.js";
 import { toCardRef, zonesEqual } from "../actions/state.js";
+import { effectSpotlightHistoryFromPlayerViewState } from "./effect-spotlight-history.js";
 import {
   isEventVisibleToPlayer,
   isVisibleToPlayer,
@@ -727,6 +728,14 @@ export const filterStateForPlayer = (
         visibleCards: visibleDecisionCards,
       })
     : undefined;
+  const events = state.eventJournal
+    .filter((event) => isEventVisibleToPlayer(event, playerId))
+    .map((event) => toPlayerEventForView(state, event));
+  const effectSpotlightHistory = effectSpotlightHistoryFromPlayerViewState({
+    activeEffectText,
+    events,
+    pendingDecisionId: pendingDecision?.id,
+  });
   // Keep computeView validation fail-closed for unsupported board-power metadata.
   const computedStatsByInstance = computedBoardCardStatsByInstance(state);
   const revealPrivateZones = isTerminalState(state);
@@ -755,6 +764,7 @@ export const filterStateForPlayer = (
       ? {}
       : { activeEffectSources: [activeEffectSource] }),
     ...(activeEffectText === undefined ? {} : { activeEffectText }),
+    ...(effectSpotlightHistory === undefined ? {} : { effectSpotlightHistory }),
     legalActions:
       options.includeLegalActions === false
         ? []
@@ -766,9 +776,7 @@ export const filterStateForPlayer = (
               ),
           ]),
     revealedCards: toPublicRevealRecord(state, playerId),
-    events: state.eventJournal
-      .filter((event) => isEventVisibleToPlayer(event, playerId))
-      .map((event) => toPlayerEventForView(state, event)),
+    events,
     timers: toPublicTimerState(state),
   };
 };
