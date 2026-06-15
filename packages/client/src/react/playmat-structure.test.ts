@@ -448,7 +448,7 @@ describe("playmat structure", () => {
     );
   });
 
-  test("deck and DON deck render as hidden card stacks without collection modals", async () => {
+  test("deck and DON deck render one hidden card stack placeholder without collection modals", async () => {
     const boardLayout = await readFile(
       join(sourceDirectory, "BoardLayout.tsx"),
       "utf8",
@@ -468,10 +468,10 @@ describe("playmat structure", () => {
     assert.match(opponentDeckZone, /label="Deck"/u);
     assert.match(opponentDeckZone, /board\.opponent\.deckCount/u);
     assert.match(opponentDeckZone, /"hidden-deck-opponent"/u);
-    assert.equal(opponentDeckZone.includes(",\n              10,"), false);
+    assert.match(opponentDeckZone, /"hidden-deck-opponent",\s+1\)/u);
     assert.match(
       boardLayout,
-      /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount/u,
+      /className="playmat-zone opponent-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.opponent\.donDeckCount,[\s\S]*"hidden-don-deck-opponent",[\s\S]*1[,)]/u,
     );
     const playerDeckStart = boardLayout.indexOf(
       'className="playmat-zone player-deck"',
@@ -484,10 +484,10 @@ describe("playmat structure", () => {
     assert.match(playerDeckZone, /label="Deck"/u);
     assert.match(playerDeckZone, /board\.self\.deckCount/u);
     assert.match(playerDeckZone, /"hidden-deck-self"/u);
-    assert.equal(playerDeckZone.includes(", 10"), false);
+    assert.match(playerDeckZone, /"hidden-deck-self",\s+1\)/u);
     assert.match(
       boardLayout,
-      /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount/u,
+      /className="playmat-zone player-don-deck"[\s\S]*label="DON!! Deck"[\s\S]*hiddenCards\([\s\S]*board\.self\.donDeckCount,[\s\S]*"hidden-don-deck-self",[\s\S]*1[,)]/u,
     );
     assert.equal(boardLayout.includes("const stack = "), false);
     assert.equal(boardLayout.includes("stack-label"), false);

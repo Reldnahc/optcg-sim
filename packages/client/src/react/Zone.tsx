@@ -55,7 +55,7 @@ export const Zone = ({
   onViewCollection,
 }: ZoneProps): React.JSX.Element => {
   const visibleCards =
-    displayMode === "stack" && stackCount === undefined && cards.length > 0
+    displayMode === "stack" && cards.length > 0
       ? [cards[0] as ClientCardModel]
       : cards;
   const zoneRef = useRef<HTMLElement | null>(null);

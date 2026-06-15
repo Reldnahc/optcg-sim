@@ -365,7 +365,7 @@ export const BoardLayout = ({
             label="Deck"
             cards={
               board.opponent.deckCards ??
-              hiddenCards(board.opponent.deckCount, "hidden-deck-opponent")
+              hiddenCards(board.opponent.deckCount, "hidden-deck-opponent", 1)
             }
             presentationZoneKey="opponent:deck"
             size="small"
@@ -382,7 +382,7 @@ export const BoardLayout = ({
               hiddenCards(
                 board.opponent.donDeckCount,
                 "hidden-don-deck-opponent",
-                10,
+                1,
               )
             }
             presentationZoneKey="opponent:donDeck"
@@ -560,7 +560,7 @@ export const BoardLayout = ({
             label="Deck"
             cards={
               board.self.deckCards ??
-              hiddenCards(board.self.deckCount, "hidden-deck-self")
+              hiddenCards(board.self.deckCount, "hidden-deck-self", 1)
             }
             presentationZoneKey="self:deck"
             size="small"
@@ -574,7 +574,7 @@ export const BoardLayout = ({
             label="DON!! Deck"
             cards={
               board.self.donDeckCards ??
-              hiddenCards(board.self.donDeckCount, "hidden-don-deck-self", 10)
+              hiddenCards(board.self.donDeckCount, "hidden-don-deck-self", 1)
             }
             presentationZoneKey="self:donDeck"
             size="small"
