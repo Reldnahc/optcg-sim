@@ -727,11 +727,25 @@ export const applyResolvedQuantityDrawSegment = (
     afterPlayer.hand,
     entry.controllerId,
   );
+  const saveAs =
+    "saveAs" in segment.effect && typeof segment.effect.saveAs === "string"
+      ? segment.effect.saveAs
+      : undefined;
   const saveResultAs = segment.saveResultAs;
+  const savedNumberReferences =
+    saveAs === undefined
+      ? ledgers.savedReferences
+      : {
+          ...ledgers.savedReferences,
+          [saveAs]: {
+            kind: "chosenNumber" as const,
+            value: quantity,
+          },
+        };
   const savedReferences =
     saveResultAs === undefined
-      ? ledgers.savedReferences
-      : saveReference(ledgers.savedReferences, segment, {
+      ? savedNumberReferences
+      : saveReference(savedNumberReferences, segment, {
           kind: "producedObjects",
           objects: toSavedProducedObjects(
             {
