@@ -152,7 +152,7 @@ describe("effect spotlight model", () => {
     expect([...suppressedResolvedSignatures]).toEqual([]);
   });
 
-  it("suppresses resolved search spans after the search was already shown live", () => {
+  it("queues unresolved search follow-up spans after the search selection was shown live", () => {
     const suppressedResolvedSignatures = new Set<string>();
     consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
       source("decision:search-selection", "span:search:selection", "live"),
@@ -182,6 +182,7 @@ describe("effect spotlight model", () => {
 
     expect(next.entries.map((entry) => entry.key)).toEqual([
       "decision:search-selection",
+      "event:resolved-search:span:search:remaining",
     ]);
     expect([...suppressedResolvedSignatures]).toEqual([]);
   });
@@ -712,7 +713,7 @@ describe("effect spotlight model", () => {
     ]);
   });
 
-  it("does not queue resolved search spans after the search was already displayed live", () => {
+  it("queues unresolved search follow-up spans after the search selection was displayed live", () => {
     const baseSource = {
       instanceId: "source-1" as InstanceId,
       cardId: "OP00-001" as CardId,
@@ -755,7 +756,9 @@ describe("effect spotlight model", () => {
       ],
     });
 
-    expect(queued.map((source) => source.key)).toEqual([]);
+    expect(queued.map((source) => source.key)).toEqual([
+      "event:resolved-search:span:search:remaining",
+    ]);
   });
 
   it("keeps resolved multi-span sources when only part of the source was displayed live", () => {
