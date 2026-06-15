@@ -2,7 +2,8 @@ import type { ConnectorParser } from "../types.js";
 import { splitSourceByDelimiter } from "../source-slices.js";
 
 export const parseThenConnector: ConnectorParser = (input) => {
-  const thenPattern = /\s+Then,\s+|,\s+then\s+/u;
+  const thenPattern =
+    /\s+Then,\s+(?!place the rest\b)|,\s+then\s+(?!place the rest\b)/iu;
   const split =
     input.source === undefined
       ? undefined

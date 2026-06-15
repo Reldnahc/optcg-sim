@@ -428,6 +428,28 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses rest-to-top-or-bottom remainder policy without an explicit order phrase", () => {
+    expect(
+      parseRestToTopOrBottomAnyOrder({
+        text: "Then, place the rest at the top or bottom of your deck.",
+      }),
+    ).toEqual({
+      evidence: [
+        "remaining:rest",
+        "remaining:bottomDeck",
+        "position:top",
+        "position:bottom",
+        "order:anyOrder",
+      ],
+      remainingCards: {
+        destination: "deck",
+        position: "topOrBottom",
+        order: "ownerChoice",
+      },
+      rest: "",
+    });
+  });
+
   it("leaves trailing body text after rest-to-top-or-bottom remainder policy", () => {
     expect(
       parseRestToTopOrBottomAnyOrder({

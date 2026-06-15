@@ -60,6 +60,7 @@ import {
   returnToOwnerHandCostedEffectExpressionParser,
   revealedHandPlayExpressionParser,
   revealTopConditionalExpressionParser,
+  revealTopPlayExpressionParser,
   revealTopPlayRestedExpressionParser,
   sameNumberHandTrashDeckTrashSegmentParser,
   searchRevealExpressionParser,
@@ -166,6 +167,19 @@ function generalExpressionParser(input: ParseInput) {
             : { presentationSpans: parsed.presentationSpans }),
         };
       },
+      (segmentInput) => {
+        const parsed = revealTopPlayExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+          ...(parsed.presentationSpans === undefined
+            ? {}
+            : { presentationSpans: parsed.presentationSpans }),
+        };
+      },
       instructionExpressionSegmentParser({
         connectors: [parseAndConnector],
         instructions: instructionParsers,
@@ -228,6 +242,7 @@ const costedExpressions = [
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
   lookPlayFromTopExpressionParser,
+  revealTopPlayExpressionParser,
   revealTopConditionalExpressionParser({
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -294,6 +309,7 @@ export const defaultRegistry = {
       conditions: conditionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        revealTopPlayExpressionParser,
         revealTopConditionalExpressionParser({
           instructions: instructionParsers,
           expressions: [
@@ -370,6 +386,7 @@ export const defaultRegistry = {
     implicitEventReactionExpressionParser({
       expressions: [
         lookPlayFromTopExpressionParser,
+        revealTopPlayExpressionParser,
         conditionalBlockExpressionParser({
           conditions: conditionParsers,
           connectors: [parseThenConnector, parseAndConnector],
@@ -402,6 +419,7 @@ export const defaultRegistry = {
       instructions: instructionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        revealTopPlayExpressionParser,
         revealTopConditionalExpressionParser({
           instructions: instructionParsers,
           expressions: [
@@ -461,6 +479,7 @@ export const defaultRegistry = {
     selectedPowerContinuationExpressionParser,
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
+    revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
       expressions: [singleInstructionExpressionParser, generalExpressionParser],

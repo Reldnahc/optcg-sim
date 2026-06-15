@@ -44,7 +44,7 @@ export function parseRestToTopOrBottomAnyOrder(
   input: ParseInput,
 ): RestBottomParseResult | undefined {
   const match =
-    /^Then, place the rest at the top or bottom of (?:your|the) deck in any order(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
+    /^Then, place the rest at the top or bottom of (?:your|the) deck(?: in any order)?(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
       input.text,
     );
   if (match === null) {
