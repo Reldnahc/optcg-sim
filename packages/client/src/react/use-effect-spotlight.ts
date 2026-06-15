@@ -234,7 +234,7 @@ export const advanceSpotlightPlayback = ({
   readonly state: EffectSpotlightPlaybackState;
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
-    return { entries: [], cursorIndex: undefined, paused: false };
+    return { ...state, cursorIndex: undefined, paused: false };
   }
   if (command === "pause") {
     return { ...state, paused: true };
@@ -580,7 +580,8 @@ export const useEffectSpotlight = ({
   const presentIndex = playback.entries.length - 1;
   const controls = {
     paused: playback.paused,
-    canRewind: cursorIndex !== undefined && cursorIndex > 0,
+    canRewind:
+      cursorIndex === undefined ? playback.entries.length > 0 : cursorIndex > 0,
     canStepForward:
       cursorIndex !== undefined &&
       presentIndex >= 0 &&
