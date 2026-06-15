@@ -270,7 +270,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight\s*\{[^}]*pointer-events:\s*auto;/u,
+      /\.effect-spotlight\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*pointer-events:\s*none;/u,
     );
     assert.match(
       effectSpotlightStyles,
@@ -290,6 +290,18 @@ describe("playmat structure", () => {
     assert.match(
       effectSpotlightStyles,
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-controls\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100%\s*\+\s*10px\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-control\s*\{[^}]*min-width:\s*42px;[^}]*min-height:\s*38px;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-control__icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*18%;/u);

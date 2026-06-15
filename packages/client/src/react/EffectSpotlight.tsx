@@ -24,7 +24,54 @@ interface SpotlightText {
   readonly sourceMap: EffectTextSourceMap | undefined;
 }
 
+type SpotlightControlIconName = "catchUp" | "next" | "pause" | "play" | "previous";
+
+interface SpotlightControlButtonInput {
+  readonly label: string;
+  readonly icon: SpotlightControlIconName;
+  readonly disabled?: boolean | undefined;
+  readonly onClick: () => void;
+}
+
 const parentheticalReminderPattern = /\s*\([^)]*\)/gu;
+
+const SpotlightControlIcon = ({
+  icon,
+}: {
+  readonly icon: SpotlightControlIconName;
+}): React.JSX.Element => {
+  const paths = (() => {
+    switch (icon) {
+      case "catchUp":
+        return [
+          "M4 5v14l7-7z",
+          "M11 5v14l7-7z",
+          "M19 5h2v14h-2z",
+        ];
+      case "next":
+        return ["M6 5v14l9-7z", "M16 5h2v14h-2z"];
+      case "pause":
+        return ["M7 5h4v14H7z", "M13 5h4v14h-4z"];
+      case "play":
+        return ["M8 5v14l10-7z"];
+      case "previous":
+        return ["M6 5h2v14H6z", "M18 5v14l-9-7z"];
+    }
+  })();
+
+  return (
+    <svg
+      className="effect-spotlight-control__icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {paths.map((path) => (
+        <path key={path} d={path} />
+      ))}
+    </svg>
+  );
+};
 
 const spotlightTextWithoutReminders = (
   text: string,
@@ -124,6 +171,23 @@ export const EffectSpotlight = ({
       event.stopPropagation();
       handler();
     };
+  const controlButton = ({
+    disabled = false,
+    icon,
+    label,
+    onClick,
+  }: SpotlightControlButtonInput): React.JSX.Element => (
+    <button
+      type="button"
+      className="effect-spotlight-control"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={controlClick(onClick)}
+    >
+      <SpotlightControlIcon icon={icon} />
+    </button>
+  );
   return (
     <aside
       className="effect-spotlight"
@@ -180,41 +244,28 @@ export const EffectSpotlight = ({
           className="effect-spotlight-controls"
           aria-label="Spotlight controls"
         >
-          <button
-            type="button"
-            className="effect-spotlight-control"
-            aria-label="Previous spotlight"
-            disabled={!controls.canRewind}
-            onClick={controlClick(controls.rewind)}
-          >
-            Left
-          </button>
-          <button
-            type="button"
-            className="effect-spotlight-control"
-            aria-label={controls.paused ? "Play spotlight" : "Pause spotlight"}
-            onClick={controlClick(controls.togglePaused)}
-          >
-            {controls.paused ? "Play" : "Pause"}
-          </button>
-          {controls.canStepForward ? (
-            <button
-              type="button"
-              className="effect-spotlight-control"
-              aria-label="Next spotlight"
-              onClick={controlClick(controls.stepForward)}
-            >
-              Right
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="effect-spotlight-control"
-            aria-label="Catch up spotlight"
-            onClick={controlClick(controls.catchUp)}
-          >
-            Fast forward
-          </button>
+          {controlButton({
+            label: "Previous spotlight",
+            icon: "previous",
+            disabled: !controls.canRewind,
+            onClick: controls.rewind,
+          })}
+          {controlButton({
+            label: controls.paused ? "Play spotlight" : "Pause spotlight",
+            icon: controls.paused ? "play" : "pause",
+            onClick: controls.togglePaused,
+          })}
+          {controlButton({
+            label: "Next spotlight",
+            icon: "next",
+            disabled: !controls.canStepForward,
+            onClick: controls.stepForward,
+          })}
+          {controlButton({
+            label: "Catch up spotlight",
+            icon: "catchUp",
+            onClick: controls.catchUp,
+          })}
         </div>
       )}
     </aside>

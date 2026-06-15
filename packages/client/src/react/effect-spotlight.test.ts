@@ -233,7 +233,7 @@ describe("EffectSpotlight", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         card: card(),
-        controls: controls(),
+        controls: controls({ canStepForward: false }),
         active: {
           source: {
             instanceId: "source-1" as InstanceId,
@@ -251,8 +251,19 @@ describe("EffectSpotlight", () => {
     );
     expect(html).toContain('aria-label="Previous spotlight"');
     expect(html).toContain('aria-label="Pause spotlight"');
+    expect(html).toContain('aria-label="Next spotlight"');
     expect(html).toContain('aria-label="Catch up spotlight"');
-    expect(html).not.toContain('aria-label="Next spotlight"');
+    expect(html).toMatch(/aria-label="Next spotlight"[^>]*disabled=""/u);
+    expect(
+      html.match(/<svg class="effect-spotlight-control__icon"/gu),
+    ).toHaveLength(4);
+    expect(html).not.toContain(">Left<");
+    expect(html).not.toContain(">Pause<");
+    expect(html).not.toContain(">Right<");
+    expect(html).not.toContain(">Fast forward<");
+    expect(html).not.toContain("|&lt;");
+    expect(html).not.toContain("&gt;|");
+    expect(html).not.toContain("&gt;&gt;|");
   });
 
   it("renders play and next controls when paused behind present", () => {
