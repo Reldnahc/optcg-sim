@@ -482,6 +482,9 @@ export const MatchApp = ({
   const backgroundImageEnabled = visualSettings.backgroundImageUrl.length > 0;
   const matchAppStyle = {
     "--match-background-color": visualSettings.backgroundColor,
+    "--match-background-image": backgroundImageEnabled
+      ? `url(${JSON.stringify(visualSettings.backgroundImageUrl)})`
+      : "none",
     "--match-background-size": backgroundStyle.size,
     "--match-background-repeat": backgroundStyle.repeat,
     "--match-background-position": backgroundStyle.position,
@@ -502,18 +505,12 @@ export const MatchApp = ({
       | "--match-playmat-color-rgb"
       | "--match-playmat-opacity"
       | "--match-background-color"
+      | "--match-background-image"
       | "--match-background-size"
       | "--match-background-repeat"
       | "--match-background-position",
       string
     >;
-  const matchBackgroundImageStyle = backgroundImageEnabled
-    ? ({
-        backgroundImage: `url(${JSON.stringify(
-          visualSettings.backgroundImageUrl,
-        )})`,
-      } satisfies CSSProperties)
-    : undefined;
   const matchAppClassName = [
     "match-app",
     visualSettings.reducedMotion ? "is-reduced-motion" : "",
@@ -524,10 +521,6 @@ export const MatchApp = ({
   return (
     <MatchVisualSettingsProvider value={visualSettings}>
       <main className={matchAppClassName} style={matchAppStyle}>
-        <div
-          className="match-app-background-image"
-          style={matchBackgroundImageStyle}
-        />
         <MatchBoardSurface
           board={displayBoard}
           clientState={clientState}

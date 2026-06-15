@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import type { PlayerId } from "@optcg/types";
 
@@ -59,10 +59,21 @@ export interface MatchAppSessionModel {
   visibleGlobalActions: ReturnType<MatchClientUi["globalActions"]>;
 }
 
+const emptyGlobalActions: ReturnType<MatchClientUi["globalActions"]> = [];
+
 export const useMatchAppSession = (
   client: MatchClientUi,
 ): MatchAppSessionModel => {
   const { board, clientState, decisionModal } = client.state;
+  const {
+    chooseFirstPlayer,
+    confirmDecision,
+    globalActions: getGlobalActions,
+    setDecisionOptionValue,
+    submitDecisionActionOptionValue,
+    submitDecisionOptionValue,
+    submitDecisionQuantityValue,
+  } = client;
   const matchState = isMatchClientState(clientState) ? clientState : undefined;
   const firstPlayerSetupState = isFirstPlayerSetupClientState(clientState)
     ? clientState
@@ -70,27 +81,37 @@ export const useMatchAppSession = (
   const lobbyState = isLobbyClientState(clientState) ? clientState : undefined;
   const firstPlayerChoiceModal = useFirstPlayerChoiceModal(
     firstPlayerSetupState,
-    client.chooseFirstPlayer,
+    chooseFirstPlayer,
   );
   const visibleDecisionModal = firstPlayerChoiceModal.model ?? decisionModal;
   const setVisibleDecisionOption =
-    firstPlayerChoiceModal.onOption ?? client.setDecisionOptionValue;
+    firstPlayerChoiceModal.onOption ?? setDecisionOptionValue;
+  const submitVisibleDecisionOptionFallback = useCallback(
+    (option: string): void => {
+      void submitDecisionOptionValue(option);
+    },
+    [submitDecisionOptionValue],
+  );
   const submitVisibleDecisionOption =
     firstPlayerChoiceModal.onSubmitOption ??
-    ((option: string) => {
-      void client.submitDecisionOptionValue(option);
-    });
-  const submitVisibleDecisionActionOption = (actionIndex: number): void => {
-    void client.submitDecisionActionOptionValue(actionIndex);
-  };
-  const submitVisibleDecisionQuantity = (quantity: number): void => {
-    void client.submitDecisionQuantityValue(quantity);
-  };
+    submitVisibleDecisionOptionFallback;
+  const submitVisibleDecisionActionOption = useCallback(
+    (actionIndex: number): void => {
+      void submitDecisionActionOptionValue(actionIndex);
+    },
+    [submitDecisionActionOptionValue],
+  );
+  const submitVisibleDecisionQuantity = useCallback(
+    (quantity: number): void => {
+      void submitDecisionQuantityValue(quantity);
+    },
+    [submitDecisionQuantityValue],
+  );
+  const confirmVisibleDecisionFallback = useCallback((): void => {
+    void confirmDecision();
+  }, [confirmDecision]);
   const confirmVisibleDecision =
-    firstPlayerChoiceModal.onConfirm ??
-    (() => {
-      void client.confirmDecision();
-    });
+    firstPlayerChoiceModal.onConfirm ?? confirmVisibleDecisionFallback;
   const scopedMatchState = matchState ?? firstPlayerSetupState;
   const matchScope =
     scopedMatchState === undefined && lobbyState === undefined
@@ -106,23 +127,34 @@ export const useMatchAppSession = (
     currentPlayerId === undefined || matchState === undefined
       ? undefined
       : matchState.snapshot.players[currentPlayerId];
-  const globalActions =
-    decisionModal === undefined ? client.globalActions() : [];
+  const globalActions = useMemo(
+    () =>
+      decisionModal === undefined ? getGlobalActions() : emptyGlobalActions,
+    [decisionModal, getGlobalActions],
+  );
   const concedeAction = useMemo(
-    () => client.globalActions().find((action) => action.type === "concede"),
-    [client],
+    () => getGlobalActions().find((action) => action.type === "concede"),
+    [getGlobalActions],
   );
-  const visibleGlobalActions = globalActions.filter(
-    (action) => action.type !== "concede",
+  const visibleGlobalActions = useMemo(
+    () => globalActions.filter((action) => action.type !== "concede"),
+    [globalActions],
   );
-  const rollbackStatus = rollbackStatusForPlayer(
-    matchState?.snapshot,
-    currentPlayerId,
+  const rollbackStatus = useMemo(
+    () => rollbackStatusForPlayer(matchState?.snapshot, currentPlayerId),
+    [currentPlayerId, matchState?.snapshot],
   );
-  const cardDisplay = (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
-    cardDisplayFromCatalog(matchState?.cards, card);
-  const cardModel = (card: Parameters<typeof cardModelFromCatalog>[1]) =>
-    cardModelFromCatalog(matchState?.cards, card);
+  const cardCatalog = matchState?.cards;
+  const cardDisplay = useCallback(
+    (card: Parameters<typeof cardDisplayFromCatalog>[1]) =>
+      cardDisplayFromCatalog(cardCatalog, card),
+    [cardCatalog],
+  );
+  const cardModel = useCallback(
+    (card: Parameters<typeof cardModelFromCatalog>[1]) =>
+      cardModelFromCatalog(cardCatalog, card),
+    [cardCatalog],
+  );
   const actionLogEntries = useMemo(
     () =>
       playerSnapshot === undefined || matchState === undefined

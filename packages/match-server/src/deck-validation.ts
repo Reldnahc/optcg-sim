@@ -59,6 +59,10 @@ export type AppliedDeckRule =
       readonly type: "excludeEventCostGte";
       readonly sourceCardId: CardId;
       readonly cost: number;
+    }
+  | {
+      readonly type: "anyCopiesOfThisCard";
+      readonly sourceCardId: CardId;
     };
 
 export interface DeckValidationError {
@@ -249,8 +253,10 @@ const runDeckValidation = (
     }
   }
 
-  const constructionRules =
-    leader === undefined ? [] : extractDeckConstructionRules(leader);
+  const constructionRules = extractSubmittedDeckConstructionRules(
+    input,
+    leader,
+  );
   const requiredDonDeckSize =
     constructionRules.find((rule) => rule.type === "donDeckSize")?.count ??
     defaultDonDeckSize;
@@ -285,6 +291,12 @@ const runDeckValidation = (
     }
   }
 
+  const anyCopyCardIds = new Set(
+    constructionRules.flatMap((rule) =>
+      rule.type === "anyCopiesOfThisCard" ? [rule.sourceCardId] : [],
+    ),
+  );
+
   for (const entry of input.mainDeck.decoded.main) {
     const resolved = input.cards[entry.cardId];
     if (resolved === undefined) {
@@ -308,6 +320,7 @@ const runDeckValidation = (
     }
     if (
       legality?.max_copies !== undefined &&
+      !anyCopyCardIds.has(entry.cardId) &&
       entry.count > legality.max_copies
     ) {
       errors.push({
@@ -429,6 +442,29 @@ const isSimulatorPlayableCard = (card: ResolvedCard): boolean =>
   card.support.status === "implemented-custom" ||
   card.support.status === "vanilla-confirmed";
 
+const extractSubmittedDeckConstructionRules = (
+  input: DeckValidationInput,
+  leader: ResolvedCard | undefined,
+): readonly AppliedDeckRule[] => {
+  const seenCardIds = new Set<CardId>();
+  const cards = [
+    ...(leader === undefined ? [] : [leader]),
+    ...input.mainDeck.decoded.main.flatMap((entry) => {
+      const resolved = input.cards[entry.cardId];
+      return resolved === undefined ? [] : [resolved];
+    }),
+  ];
+  const rules: AppliedDeckRule[] = [];
+  for (const card of cards) {
+    if (seenCardIds.has(card.cardId)) {
+      continue;
+    }
+    seenCardIds.add(card.cardId);
+    rules.push(...extractDeckConstructionRules(card));
+  }
+  return rules;
+};
+
 const extractDeckConstructionRules = (
   card: ResolvedCard,
 ): readonly AppliedDeckRule[] => {
@@ -468,6 +504,14 @@ const extractDeckConstructionRulesFromLine = (
     if (Number.isSafeInteger(cost) && cost >= 0) {
       return [{ type: "excludeEventCostGte", sourceCardId: card.cardId, cost }];
     }
+  }
+
+  if (
+    /^Under the rules of this game, you may have any number of this card in your deck\.$/u.test(
+      line,
+    )
+  ) {
+    return [{ type: "anyCopiesOfThisCard", sourceCardId: card.cardId }];
   }
 
   return [];
