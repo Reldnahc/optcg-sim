@@ -30,7 +30,7 @@ const supportedSourceControllerRelations = new Set([
 
 const supportedTargetScopes = new Set(["thisCard", "anyFieldCard"]);
 
-const isSupportedSourceCardFilter = (
+export const isSupportedProtectionSourceCardFilter = (
   filter: CardFilter | undefined,
 ): boolean => {
   if (filter === undefined) return true;
@@ -71,7 +71,7 @@ export const isSupportedFieldRemovalProtection = (
     exclusions["controllerCost"] === "excluded" &&
     exclusions["controllerOwnedEffect"] === "excluded" &&
     exclusions["ambiguousCustomRemoval"] === "failClosed" &&
-    isSupportedSourceCardFilter(protection.sourceCardFilter)
+    isSupportedProtectionSourceCardFilter(protection.sourceCardFilter)
   );
 };
 
@@ -91,7 +91,7 @@ export const isSupportedRestProtection = (
         categories.every((category) =>
           supportedRestSourceCategories.has(category),
         ))) &&
-    isSupportedSourceCardFilter(protection.sourceCardFilter)
+    isSupportedProtectionSourceCardFilter(protection.sourceCardFilter)
   );
 };
 

@@ -7,10 +7,9 @@ import type {
 } from "@optcg/types";
 
 import {
-  isSupportedFieldRemovalProtection,
-  isSupportedRestProtection,
-  malformedFieldRemovalProtectionMessage,
-} from "../../replacement/field-removal-protection-shape.js";
+  getUnsupportedProtectionReason,
+  unsupportedProtectionMessage,
+} from "../../replacement/protection-capabilities.js";
 import {
   isDonPhasePlacementEffect,
   toSupportedDonPhasePlacementModifier,
@@ -287,23 +286,16 @@ export const effectToDerivedModifier = (
       unsupportedDerivedMessage("unsupported protection shape"),
     );
   }
-  if (effect.protection.process === "fieldRemoval") {
-    if (!isSupportedFieldRemovalProtection(effect.protection)) {
-      throw new TypeError(
-        malformedFieldRemovalProtectionMessage({
-          id: "implemented-dsl:malformed-protection",
-        } as ContinuousEffectRecord),
-      );
-    }
-    return {
-      layer: "protection",
-      target: effect.target,
-      operation: { type: "protection", protection: effect.protection },
-    };
-  }
-  if (!isSupportedRestProtection(effect.protection)) {
+  const unsupportedProtectionReason = getUnsupportedProtectionReason(
+    effect.protection,
+  );
+  if (unsupportedProtectionReason !== undefined) {
     throw new TypeError(
-      unsupportedDerivedMessage("unsupported protection shape"),
+      unsupportedProtectionMessage(unsupportedProtectionReason, {
+        fallbackMessage: unsupportedDerivedMessage(
+          "unsupported protection shape",
+        ),
+      }),
     );
   }
   return {

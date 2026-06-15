@@ -1,5 +1,4 @@
 import type {
-  CardFilter,
   CardInstance,
   CardCategory,
   CardId,
@@ -19,13 +18,15 @@ import {
 } from "../effect-runtime-conditions.js";
 import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
 import {
-  isSupportedFieldRemovalProtection,
-  isSupportedRestProtection,
-} from "./field-removal-protection-shape.js";
+  isFieldRemovalProtectionModifier,
+  isProtectionModifier,
+  isSupportedProtectionSourceCardFilter,
+  isSupportedProtection,
+} from "./protection-capabilities.js";
 export {
   isSupportedFieldRemovalProtection,
   malformedFieldRemovalProtectionMessage,
-} from "./field-removal-protection-shape.js";
+} from "./protection-capabilities.js";
 
 export type FieldRemovalProtectionFailureReason =
   | "missing-source-controller"
@@ -52,18 +53,6 @@ export type RestProtectionAttempt = {
   sourceCardCategory?: CardCategory;
 };
 
-type ProtectionOperation = Extract<
-  ContinuousEffectRecord["modifier"]["operation"],
-  { type: "protection" }
->;
-
-type FieldRemovalProtectionEffect = ContinuousEffectRecord & {
-  modifier: ContinuousEffectRecord["modifier"] & {
-    layer: "protection";
-    operation: ProtectionOperation;
-  };
-};
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -79,19 +68,6 @@ const isSupportedFieldRemovalClassification = (
   value: unknown,
 ): value is ProtectionFieldRemovalClassification =>
   typeof value === "string" && supportedFieldRemovalClassifications.has(value);
-
-export const isFieldRemovalProtectionModifier = (
-  effect: ContinuousEffectRecord,
-): effect is FieldRemovalProtectionEffect =>
-  effect.modifier.layer === "protection" &&
-  effect.modifier.operation.type === "protection" &&
-  effect.modifier.operation.protection.process === "fieldRemoval";
-
-const isProtectionModifier = (
-  effect: ContinuousEffectRecord,
-): effect is FieldRemovalProtectionEffect =>
-  effect.modifier.layer === "protection" &&
-  effect.modifier.operation.type === "protection";
 
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
@@ -152,18 +128,7 @@ export const isSupportedFieldRemovalProtectionModifier = (
   isFieldRemovalProtectionModifier(effect) &&
   isSupportedDuration(effect.duration) &&
   effect.modifier.target.type === "self" &&
-  isSupportedFieldRemovalProtection(effect.modifier.operation.protection);
-
-const isSupportedKoProtection = (protection: Protection): boolean =>
-  protection.process === "ko" &&
-  (protection.sourceKind === "cardEffect" ||
-    protection.sourceKind === "battle") &&
-  (protection.sourceControllerRelation === undefined ||
-    protection.sourceControllerRelation === "opponentControlled" ||
-    protection.sourceControllerRelation === "selfControlled" ||
-    protection.sourceControllerRelation === "eitherController") &&
-  (protection.sourceCardFilter === undefined ||
-    isSupportedSourceCardFilter(protection.sourceCardFilter));
+  isSupportedProtection(effect.modifier.operation.protection);
 
 export const isSupportedProtectionModifier = (
   effect: ContinuousEffectRecord,
@@ -171,9 +136,7 @@ export const isSupportedProtectionModifier = (
   isProtectionModifier(effect) &&
   isSupportedDuration(effect.duration) &&
   effect.modifier.target.type === "self" &&
-  (isSupportedFieldRemovalProtection(effect.modifier.operation.protection) ||
-    isSupportedKoProtection(effect.modifier.operation.protection) ||
-    isSupportedRestProtection(effect.modifier.operation.protection));
+  isSupportedProtection(effect.modifier.operation.protection);
 
 const toConditionQueueEntry = (
   effect: ContinuousEffectRecord,
@@ -346,7 +309,7 @@ const sourceCardFilterMatchesProtection = (
   if (filter === undefined) {
     return true;
   }
-  if (!isSupportedSourceCardFilter(filter)) {
+  if (!isSupportedProtectionSourceCardFilter(filter)) {
     return false;
   }
   if (attempt.sourceCardId === undefined) {
@@ -355,17 +318,6 @@ const sourceCardFilterMatchesProtection = (
   return cardMatchesSearchFilter(
     state.cardManifest.cards[attempt.sourceCardId],
     filter,
-  );
-};
-
-const isSupportedSourceCardFilter = (filter: CardFilter): boolean => {
-  const keys = Object.keys(filter) as (keyof CardFilter)[];
-  return keys.every(
-    (key) =>
-      key === "attributesAny" ||
-      key === "attributesNotAny" ||
-      key === "categories" ||
-      key === "power",
   );
 };
 
