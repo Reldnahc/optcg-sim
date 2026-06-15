@@ -348,6 +348,38 @@ export const parseFieldCardCountCondition: ConditionParser = (
     };
   }
 
+  const notExactSelfPresence =
+    /^you (?:don't|do not) have (?<count>[1-9]\d*)\s+(?<predicate>.+)$/i.exec(
+      input.text,
+    );
+  const notExactSelfCountText = notExactSelfPresence?.groups?.["count"];
+  const notExactSelfPredicate = notExactSelfPresence?.groups?.["predicate"];
+  if (
+    notExactSelfCountText !== undefined &&
+    notExactSelfPredicate !== undefined
+  ) {
+    const predicates = parseFieldPredicates(notExactSelfPredicate);
+    if (predicates === undefined || predicates.rest.trim().length > 0) {
+      return undefined;
+    }
+
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: predicates.filter,
+        op: "lt",
+        value: Number.parseInt(notExactSelfCountText, 10),
+      },
+      evidence: fieldCountEvidence(
+        "self",
+        ["condition:comparator:lt", "condition:threshold:positiveInteger"],
+        predicates.evidence,
+      ),
+      rest: "",
+    };
+  }
+
   const selfAbsence = /^you (?:don't|do not) have\s+(?<predicate>.+)$/i.exec(
     input.text,
   );

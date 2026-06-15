@@ -100,6 +100,7 @@ export type PrimitiveEvidence =
   | "condition:fieldCountDifference"
   | "condition:fieldStatTotal"
   | "condition:comparator:eq"
+  | "condition:comparator:lt"
   | "condition:comparator:lte"
   | "condition:comparator:gte"
   | "condition:threshold:positiveInteger"

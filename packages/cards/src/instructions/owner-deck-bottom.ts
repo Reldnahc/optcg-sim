@@ -201,6 +201,23 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     return undefined;
   }
 
+  if (/^this Character$/iu.test(selectionText)) {
+    return {
+      effect: {
+        type: "bounce",
+        destination: "deckBottom",
+        target: { type: "self" },
+      },
+      evidence: [
+        "instruction:bounce",
+        "target:thisCharacter",
+        "destination:deck",
+        "position:bottom",
+      ],
+      rest: "",
+    };
+  }
+
   const cardinality = parseUpToCardinality({ text: selectionText });
   if (cardinality === undefined) {
     return undefined;

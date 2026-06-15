@@ -14,7 +14,7 @@ import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
-  target: Extract<Target, { type: "savedFieldObject" }>;
+  target: Extract<Target, { type: "savedFieldObject" } | { type: "self" }>;
   destination: "deckBottom" | "hand" | "lifeTop" | "lifeBottom";
 };
 type SegmentLedgers = {
@@ -47,9 +47,8 @@ export const applyBounceSequenceSegment = (params: {
       state: GameState;
     }
   | { ok: false } => {
-  const selected =
-    params.ledgers.savedReferences[params.effect.target.binding.saveResultAs];
-  if (selected?.kind !== "selectedTargets") {
+  const selectedTargets = resolveBounceTargets(params);
+  if (selectedTargets === undefined) {
     return { ok: false };
   }
   const classification =
@@ -84,8 +83,7 @@ export const applyBounceSequenceSegment = (params: {
   const changedStateBeforePause =
     params.ledgers.segmentResults[resultKey]?.changedState ?? false;
   const processTargets: CardRef[] = [];
-  for (const selectedTarget of selected.targets) {
-    const target = selectedTarget.object;
+  for (const target of selectedTargets) {
     if (attemptedTargetIds.has(target.instanceId)) {
       continue;
     }
@@ -180,4 +178,22 @@ export const applyBounceSequenceSegment = (params: {
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };
+};
+
+const resolveBounceTargets = (params: {
+  effect: BounceEffect;
+  entry: EffectQueueEntry;
+  ledgers: SegmentLedgers;
+}): CardRef[] | undefined => {
+  if (params.effect.target.type === "self") {
+    return [params.entry.source];
+  }
+
+  const selected =
+    params.ledgers.savedReferences[params.effect.target.binding.saveResultAs];
+  if (selected?.kind !== "selectedTargets") {
+    return undefined;
+  }
+
+  return selected.targets.map((target) => target.object);
 };

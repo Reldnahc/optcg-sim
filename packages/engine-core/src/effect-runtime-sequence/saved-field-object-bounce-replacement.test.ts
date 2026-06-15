@@ -113,6 +113,23 @@ const selectTargetsThenBounceSavedSelectedTargetSequence = (
   ],
 });
 
+const bounceSelfToOwnerDeckBottomSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      effect: {
+        type: "bounce",
+        destination: "deckBottom",
+        target: { type: "self" },
+      },
+    },
+  ],
+});
+
 const drawUpToThenKoSavedFieldObjectSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -764,6 +781,28 @@ test("saved-field-object deck-bottom bounce moves through field-removal process"
   assert.equal(
     resolved.events.some((event) => event.type === "cardMoved"),
     true,
+  );
+});
+
+test("self deck-bottom bounce moves the effect source through field-removal process", () => {
+  const { state } = sequenceQueueState(bounceSelfToOwnerDeckBottomSequence());
+  const source = must(
+    must(state.players[p1], "p1 before").characters[0],
+    "source character",
+  );
+
+  const result = processEffectRuntime(state);
+  const player = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    player.characters.some((card) => card.instanceId === source.instanceId),
+    false,
+  );
+  assert.equal(
+    must(player.deck.at(-1), "bottom deck card").instanceId,
+    source.instanceId,
   );
 });
 

@@ -209,6 +209,36 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses not having an exact matching Character count as less-than field-count data", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you do not have 5 Characters with a cost of 5 or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          cost: { min: 5 },
+        },
+        op: "lt",
+        value: 5,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:lt",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses typed Character presence excluding this card as reusable filter data", () => {
     expect(
       parseFieldCardCountCondition({
