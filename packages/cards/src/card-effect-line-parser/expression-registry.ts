@@ -53,6 +53,7 @@ import {
   optionalActionEffectSegmentParser,
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
+  playFromDeckExpressionParser,
   playStageFromDeckExpressionParser,
   playedObjectDelayedDeckBottomExpressionParser,
   playedObjectKeywordGrantExpressionParser,
@@ -242,6 +243,7 @@ const costedExpressions = [
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
   lookPlayFromTopExpressionParser,
+  playFromDeckExpressionParser,
   revealTopPlayExpressionParser,
   revealTopConditionalExpressionParser({
     instructions: instructionParsers,
@@ -309,6 +311,7 @@ export const defaultRegistry = {
       conditions: conditionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        playFromDeckExpressionParser,
         revealTopPlayExpressionParser,
         revealTopConditionalExpressionParser({
           instructions: instructionParsers,
@@ -386,6 +389,7 @@ export const defaultRegistry = {
     implicitEventReactionExpressionParser({
       expressions: [
         lookPlayFromTopExpressionParser,
+        playFromDeckExpressionParser,
         revealTopPlayExpressionParser,
         conditionalBlockExpressionParser({
           conditions: conditionParsers,
@@ -419,6 +423,7 @@ export const defaultRegistry = {
       instructions: instructionParsers,
       expressions: [
         lookPlayFromTopExpressionParser,
+        playFromDeckExpressionParser,
         revealTopPlayExpressionParser,
         revealTopConditionalExpressionParser({
           instructions: instructionParsers,
@@ -464,6 +469,7 @@ export const defaultRegistry = {
       instructions: instructionParsers,
       expressions: costedExpressions,
     }),
+    playFromDeckExpressionParser,
     playStageFromDeckExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedAttackRetargetExpressionParser,
@@ -479,6 +485,7 @@ export const defaultRegistry = {
     selectedPowerContinuationExpressionParser,
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
+    playFromDeckExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,

@@ -45,6 +45,7 @@ const eventLabels: Record<EngineEvent["type"], string> = {
   cardTrashed: "Card trashed",
   cardKOd: "Card K.O.'d",
   cardReturned: "Card returned",
+  deckShuffled: "Deck shuffled",
   donAttached: "DON!! attached",
   donReturned: "DON!! returned",
   costPaid: "Cost paid",

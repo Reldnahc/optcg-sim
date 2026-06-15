@@ -21,6 +21,7 @@ export {
   playedObjectDelayedDeckBottomExpressionParser,
   playedObjectKeywordGrantExpressionParser,
 } from "./played-object-keyword-grant.js";
+export { playFromDeckExpressionParser } from "./play-from-deck.js";
 export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {
   activatedReactionExpressionParser,

@@ -35,6 +35,7 @@ import {
   applyMoveCardsSegment,
   applyNoOpReturnDonSegment,
   applyRevealTopSequenceSegment,
+  applyShuffleDeckSegment,
   previousSegmentCompleted,
   shouldAttemptSegment,
 } from "../segments.js";
@@ -379,6 +380,26 @@ export const continueNoDecisionSegments = (
       nextState = revealed.state;
       nextLedgers = revealed.ledgers;
       events.push(...revealed.events);
+      continue;
+    }
+    if (segment.effect.type === "shuffleDeck") {
+      const shuffled = applyShuffleDeckSegment(
+        nextState,
+        entry,
+        segment as SupportedSequenceSegment & {
+          effect: Extract<Effect, { type: "shuffleDeck" }>;
+        },
+        index,
+        nextLedgers,
+        emptySegmentResult,
+        ledgerKey,
+      );
+      if (!shuffled.ok) {
+        return { ok: false };
+      }
+      nextState = shuffled.state;
+      nextLedgers = shuffled.ledgers;
+      events.push(...shuffled.events);
       continue;
     }
     const lifeState = applyLifeStateNoDecisionSegment({

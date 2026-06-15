@@ -149,6 +149,7 @@ export type PrimitiveEvidence =
   | "instruction:selectFromSet"
   | "instruction:revealSelected"
   | "instruction:placeSetRemainder"
+  | "instruction:shuffleDeck"
   | "instruction:returnToOwnerHand"
   | "instruction:trash"
   | "instruction:ko"

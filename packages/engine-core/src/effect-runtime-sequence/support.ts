@@ -34,6 +34,7 @@ import {
   isSupportedReorderLifeSegment,
   isSupportedReturnDonSegment,
   isSupportedSetLifeFaceUpSegment,
+  isSupportedShuffleDeckSegment,
   isSupportedTrashFromHandSegment,
   isSupportedTrashFromHandUntilCountSegment,
   type DamageEffect,
@@ -45,6 +46,7 @@ import {
   type ReorderLifeEffect,
   type ReturnDonEffect,
   type SetLifeFaceUpEffect,
+  type ShuffleDeckEffect,
   type TrashFromHandEffect,
   type TrashFromHandUntilCountEffect,
 } from "./support/basic.js";
@@ -127,6 +129,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DamageEffect
     | MoveCardsEffect
     | ReturnDonEffect
+    | ShuffleDeckEffect
     | ReorderLifeEffect
     | PlaceTopLifeCardEffect
     | SetLifeFaceUpEffect
@@ -206,6 +209,7 @@ const cloneSequenceSupportState = (
 
 const selectedCardKinds: readonly SavedSelectedCardsKind[] = [
   "hand",
+  "deck",
   "trash",
   "don",
   "set",
@@ -494,6 +498,9 @@ const isSupportedSequenceBlockWithState = (
       if (isSupportedReturnDonSegment(segment.effect)) {
         return recordSupportedProducer(supportState, segment);
       }
+      if (isSupportedShuffleDeckSegment(segment.effect)) {
+        return recordSupportedProducer(supportState, segment);
+      }
       if (isSupportedReorderLifeSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return recordSupportedProducer(supportState, segment);
@@ -741,7 +748,7 @@ const isSupportedSequenceBlockWithState = (
           canConsumeSelectedCards(
             supportState.savedResults,
             segment.effect.selection,
-            ["hand", "trash", "set"],
+            ["hand", "deck", "trash", "set"],
           ) &&
           recordSupportedProducer(supportState, segment)
         );

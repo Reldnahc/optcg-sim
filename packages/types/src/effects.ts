@@ -378,6 +378,7 @@ export interface EffectOption {
 
 export type SequenceSaveResultKind =
   | "selectedCards:hand"
+  | "selectedCards:deck"
   | "selectedCards:trash"
   | "selectedCards:don"
   | "selectedCards:set"

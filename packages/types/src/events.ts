@@ -40,6 +40,7 @@ export type EngineEventType =
   | "cardTrashed"
   | "cardKOd"
   | "cardReturned"
+  | "deckShuffled"
   | "donAttached"
   | "donReturned"
   | "costPaid"

@@ -20,7 +20,7 @@ import {
   type PreMulliganSetupGameState,
 } from "./initial-state.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { advanceRngUint32 } from "../state/rng.js";
+import { shuffleDeterministic } from "../state/shuffle.js";
 
 const OPENING_HAND_SIZE = 5;
 
@@ -74,27 +74,6 @@ const withIndexedZone = (
   zone: { zone, playerId: card.owner, slot, index },
 });
 
-const shuffleCardsDeterministic = (
-  cards: CardInstance[],
-  rng: RngState,
-): { cards: CardInstance[]; rng: RngState } => {
-  const shuffled = [...cards];
-  let nextRng = rng;
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const draw = advanceRngUint32(nextRng);
-    nextRng = draw.nextRng;
-    const swapIndex = draw.value % (index + 1);
-    const left = shuffled[index];
-    const right = shuffled[swapIndex];
-    if (left === undefined || right === undefined) {
-      throw new TypeError("Deterministic shuffle index out of bounds.");
-    }
-    shuffled[index] = right;
-    shuffled[swapIndex] = left;
-  }
-  return { cards: shuffled, rng: nextRng };
-};
-
 const redrawOpeningHand = (
   player: PlayerState,
   rng: RngState,
@@ -107,11 +86,11 @@ const redrawOpeningHand = (
       withIndexedZone(card, "deck", "deck", player.deck.length + index),
     ),
   ];
-  const shuffled = shuffleCardsDeterministic(returnedToDeck, rng);
-  const hand = shuffled.cards
+  const shuffled = shuffleDeterministic(returnedToDeck, rng);
+  const hand = shuffled.items
     .slice(0, OPENING_HAND_SIZE)
     .map((card, index) => withIndexedZone(card, "hand", "hand", index));
-  const afterHandDeck = shuffled.cards.slice(OPENING_HAND_SIZE);
+  const afterHandDeck = shuffled.items.slice(OPENING_HAND_SIZE);
   const deck = afterHandDeck.map((card, index) =>
     withIndexedZone(card, "deck", "deck", index),
   );

@@ -12,7 +12,8 @@ import type {
 } from "@optcg/types";
 
 import { assertGameStateInvariants } from "../state/invariants.js";
-import { advanceRngUint32, initializeRng } from "../state/rng.js";
+import { initializeRng } from "../state/rng.js";
+import { shuffleDeterministic } from "../state/shuffle.js";
 import {
   collectStartOfGamePlans,
   createStartOfGameSetupDecision,
@@ -84,27 +85,6 @@ const toEngineErrorReason = (error: EngineError): string =>
   "reason" in error && typeof error.reason === "string"
     ? error.reason
     : error.type;
-
-const shuffleCardsDeterministic = (
-  cards: CardInstance[],
-  rng: RngState,
-): { cards: CardInstance[]; rng: RngState } => {
-  const shuffled = [...cards];
-  let nextRng = rng;
-  for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const draw = advanceRngUint32(nextRng);
-    nextRng = draw.nextRng;
-    const j = draw.value % (i + 1);
-    const left = shuffled[i];
-    const right = shuffled[j];
-    if (left === undefined || right === undefined) {
-      throw new TypeError("Deterministic shuffle index out of bounds.");
-    }
-    shuffled[i] = right;
-    shuffled[j] = left;
-  }
-  return { cards: shuffled, rng: nextRng };
-};
 
 export const setupLifeFromDeck = (
   playerId: PlayerId,
@@ -182,12 +162,12 @@ const finalizePlayerSetup = (params: {
   shuffleDecks: boolean;
 }): { player: PlayerState; rng: RngState } => {
   const shuffledDeck = params.shuffleDecks
-    ? shuffleCardsDeterministic(params.player.deck, params.rng)
-    : { cards: params.player.deck, rng: params.rng };
-  const openingHand = shuffledDeck.cards
+    ? shuffleDeterministic(params.player.deck, params.rng)
+    : { items: params.player.deck, rng: params.rng };
+  const openingHand = shuffledDeck.items
     .slice(0, OPENING_HAND_SIZE)
     .map((card, index) => withIndexedZone(card, "hand", "hand", index));
-  const afterHandDeck = shuffledDeck.cards.slice(OPENING_HAND_SIZE);
+  const afterHandDeck = shuffledDeck.items.slice(OPENING_HAND_SIZE);
   return {
     player: {
       ...params.player,

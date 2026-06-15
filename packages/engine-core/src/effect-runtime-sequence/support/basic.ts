@@ -28,6 +28,7 @@ export type PlaceTopDeckCardsEffect = Extract<
   Effect,
   { type: "placeTopDeckCards" }
 >;
+export type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
 
 export const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
@@ -108,3 +109,9 @@ export const isSupportedPlaceTopDeckCardsSegment = (
 ): effect is PlaceTopDeckCardsEffect =>
   effect.type === "placeTopDeckCards" &&
   isSupportedPlaceTopDeckCardsEffect(effect);
+
+export const isSupportedShuffleDeckSegment = (
+  effect: SequenceSegmentEffect,
+): effect is ShuffleDeckEffect =>
+  effect.type === "shuffleDeck" &&
+  (effect.player === "self" || effect.player === "opponent");

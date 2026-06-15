@@ -15,6 +15,7 @@ import type {
 
 import { toCardRef } from "../actions/state.js";
 import { appendEvent, toStateSeq } from "../action-results.js";
+import { shuffleDeterministic } from "../state/shuffle.js";
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
@@ -31,6 +32,7 @@ type DrawEffect = Extract<Effect, { type: "draw" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
+type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
 
 const revealTopVisibility = (
   visibility: RevealTopEffect["visibility"],
@@ -51,6 +53,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveCardsEffect
     | ReturnDonEffect
     | RevealTopEffect
+    | ShuffleDeckEffect
     | Extract<Effect, { type: "trashFromHand" }>
     | Extract<SequenceEffect["effects"][number]["effect"], { type: "payCost" }>
     | Extract<Effect, { type: "selectCards" }>;
@@ -446,6 +449,95 @@ export const applyRevealTopSequenceSegment = (
     emptySegmentResult,
     segmentKey,
   );
+
+export const applyShuffleDeckSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: ShuffleDeckEffect },
+  index: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const playerId = resolvePlayerId(state, entry, segment.effect.player);
+  if (playerId === undefined) {
+    return { ok: false };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return { ok: false };
+  }
+
+  const shuffled = shuffleDeterministic(player.deck, state.rng);
+  const deck = shuffled.items.map((card, deckIndex) => ({
+    ...card,
+    zone: {
+      zone: "deck" as const,
+      playerId,
+      slot: "deck" as const,
+      index: deckIndex,
+    },
+  }));
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    rng: shuffled.rng,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        deck,
+      },
+    },
+  };
+  const events: EngineEvent[] = [];
+  appendEvent(
+    nextState,
+    events,
+    "deckShuffled",
+    { playerId, count: deck.length },
+    { type: "public" },
+  );
+  const event = events[0];
+  if (event !== undefined) {
+    event.causedBy = {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    };
+  }
+
+  return {
+    events,
+    ledgers: {
+      ...ledgers,
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: true,
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...nextState,
+      eventJournal: [...state.eventJournal, ...events],
+    },
+  };
+};
 
 export const resolvingEntryFor = (
   entry: EffectQueueEntry,

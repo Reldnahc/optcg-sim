@@ -25,7 +25,7 @@ export type PlaceSetRemainderEffect = Extract<
   Effect,
   { type: "placeSetRemainder" }
 >;
-export type SavedSelectedCardsKind = "hand" | "trash" | "don" | "set";
+export type SavedSelectedCardsKind = "hand" | "deck" | "trash" | "don" | "set";
 
 const zoneNames = new Set<string>([
   "hand",
@@ -63,6 +63,14 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
     (effect.visibility === "chooserOnly" || effect.visibility === "bothPlayers")
   ) {
     return "hand";
+  }
+  if (
+    effect.zone === "deck" &&
+    effect.player === effect.chooser &&
+    effect.player === "self" &&
+    effect.visibility === "chooserOnly"
+  ) {
+    return "deck";
   }
   if (
     effect.zone === "trash" &&
