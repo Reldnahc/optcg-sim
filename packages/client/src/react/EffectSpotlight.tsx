@@ -2,9 +2,11 @@ import type {
   ActiveEffectTextPresentation,
   EffectTextSourceMap,
 } from "@optcg/types";
+import type { MouseEvent } from "react";
 
 import type { ClientCardModel } from "../view-model.js";
 import { TriggerBlock } from "optcg-card-rules";
+import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
 
 import {
   EffectRulesText,
@@ -14,6 +16,7 @@ import {
 export interface EffectSpotlightProps {
   readonly card: ClientCardModel | undefined;
   readonly active: ActiveEffectTextPresentation | undefined;
+  readonly controls?: EffectSpotlightControls | undefined;
 }
 
 interface SpotlightText {
@@ -84,6 +87,7 @@ const spotlightTextWithoutReminders = (
 export const EffectSpotlight = ({
   active,
   card,
+  controls,
 }: EffectSpotlightProps): React.JSX.Element | null => {
   if (card === undefined || active === undefined) {
     return null;
@@ -105,6 +109,12 @@ export const EffectSpotlight = ({
           card.triggerText,
           card.triggerTextSourceMap,
         );
+  const controlClick =
+    (handler: () => void) =>
+    (event: MouseEvent<HTMLButtonElement>): void => {
+      event.stopPropagation();
+      handler();
+    };
   return (
     <aside className="effect-spotlight" aria-label={`Resolving ${card.name}`}>
       <div className="effect-spotlight-card">
@@ -142,6 +152,48 @@ export const EffectSpotlight = ({
           )}
         </div>
       </div>
+      {controls === undefined ? null : (
+        <div
+          className="effect-spotlight-controls"
+          aria-label="Spotlight controls"
+        >
+          <button
+            type="button"
+            className="effect-spotlight-control"
+            aria-label="Previous spotlight"
+            disabled={!controls.canRewind}
+            onClick={controlClick(controls.rewind)}
+          >
+            Left
+          </button>
+          <button
+            type="button"
+            className="effect-spotlight-control"
+            aria-label={controls.paused ? "Play spotlight" : "Pause spotlight"}
+            onClick={controlClick(controls.togglePaused)}
+          >
+            {controls.paused ? "Play" : "Pause"}
+          </button>
+          {controls.canStepForward ? (
+            <button
+              type="button"
+              className="effect-spotlight-control"
+              aria-label="Next spotlight"
+              onClick={controlClick(controls.stepForward)}
+            >
+              Right
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="effect-spotlight-control"
+            aria-label="Catch up spotlight"
+            onClick={controlClick(controls.catchUp)}
+          >
+            Fast forward
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

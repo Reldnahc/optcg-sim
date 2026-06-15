@@ -529,6 +529,7 @@ export const MatchApp = ({
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
           effectSpotlightActive={effectSpotlight?.active}
           effectSpotlightCard={effectSpotlightCard}
+          effectSpotlightControls={effectSpotlight?.controls}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}

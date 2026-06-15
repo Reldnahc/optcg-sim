@@ -37,6 +37,31 @@
     0 0 28px rgba(67, 180, 255, 0.28);
 }
 
+.effect-spotlight-controls {
+  pointer-events: auto;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.effect-spotlight-control {
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: #f8fbff;
+  background: rgba(16, 22, 28, 0.86);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.effect-spotlight-control:disabled {
+  opacity: 0.38;
+}
+
 .effect-spotlight-card__art,
 .effect-spotlight-card__placeholder {
   display: block;

@@ -241,6 +241,11 @@ describe("playmat structure", () => {
       matchApp,
       /effectSpotlightActive=\{effectSpotlight\?\.active\}/u,
     );
+    assert.match(
+      matchApp,
+      /effectSpotlightControls=\{effectSpotlight\?\.controls\}/u,
+    );
+    assert.match(boardLayout, /controls=\{effectSpotlightControls\}/u);
     assert.equal(matchApp.includes("<EffectSpotlight"), false);
     assert.match(
       effectSpotlightStyles,

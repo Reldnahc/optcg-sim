@@ -6,6 +6,7 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
+import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
 
 const card = (): ClientCardModel => ({
   instanceId: "source-1" as InstanceId,
@@ -69,6 +70,19 @@ const multilineCard = (effectText: string): ClientCardModel => ({
       },
     ],
   },
+});
+
+const controls = (
+  overrides: Partial<EffectSpotlightControls> = {},
+): EffectSpotlightControls => ({
+  paused: false,
+  canRewind: true,
+  canStepForward: false,
+  rewind: () => undefined,
+  togglePaused: () => undefined,
+  stepForward: () => undefined,
+  catchUp: () => undefined,
+  ...overrides,
 });
 
 describe("EffectSpotlight", () => {
@@ -213,5 +227,53 @@ describe("EffectSpotlight", () => {
 
     expect(withSourceNewline).toContain("<br/>");
     expect(sameLineThen).not.toContain("<br/>");
+  });
+
+  it("renders playback controls under the spotlight card", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: card(),
+        controls: controls(),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(html).toMatch(
+      /effect-spotlight-card[\s\S]*effect-spotlight-controls/u,
+    );
+    expect(html).toContain('aria-label="Previous spotlight"');
+    expect(html).toContain('aria-label="Pause spotlight"');
+    expect(html).toContain('aria-label="Catch up spotlight"');
+    expect(html).not.toContain('aria-label="Next spotlight"');
+  });
+
+  it("renders play and next controls when paused behind present", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: card(),
+        controls: controls({ paused: true, canStepForward: true }),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(html).toContain('aria-label="Play spotlight"');
+    expect(html).toContain('aria-label="Next spotlight"');
+    expect(html).not.toContain('aria-label="Pause spotlight"');
   });
 });

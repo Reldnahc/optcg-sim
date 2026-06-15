@@ -8,12 +8,31 @@ import type {
 } from "@optcg/types";
 
 import {
+  advanceSpotlightPlayback,
+  appendSpotlightPlaybackSources,
   consumeResolvedSpotlightSourceKeys,
   consumeSpotlightSourceSignatures,
   effectSpotlightModel,
   queuedResolvedSpotlightSources,
   shouldDisplayLiveSpotlightSource,
 } from "./use-effect-spotlight.js";
+
+const source = (
+  key: string,
+  spanId: EffectTextSpanId,
+  mode: "live" | "resolved" = "resolved",
+) => ({
+  active: {
+    source: {
+      instanceId: "source-1" as InstanceId,
+      cardId: "OP00-001" as CardId,
+      playerId: "p1" as PlayerId,
+    },
+    activeSpanIds: [spanId],
+  },
+  key,
+  mode,
+});
 
 describe("effect spotlight model", () => {
   it("pins while a pending decision has active effect text", () => {
@@ -35,6 +54,115 @@ describe("effect spotlight model", () => {
 
     expect(model?.pinned).toBe(true);
     expect(model?.visibleUntilMs).toBeGreaterThan(1_000);
+  });
+
+  it("retains every unseen source in arrival order without consuming the active cursor", () => {
+    const previous = {
+      entries: [source("event:first", "span:first")],
+      cursorIndex: 0,
+      paused: false,
+    };
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      consumedSignatures: new Set<string>(),
+      previous,
+      sources: [
+        source("event:first", "span:first"),
+        source("event:second", "span:second"),
+        source("decision:third", "span:third", "live"),
+      ],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+      "decision:third",
+    ]);
+    expect(next.cursorIndex).toBe(0);
+    expect(next.paused).toBe(false);
+  });
+
+  it("rewinds to the previous entry and pauses playback", () => {
+    const next = advanceSpotlightPlayback({
+      command: "rewind",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 1,
+        paused: false,
+      },
+    });
+
+    expect(next.cursorIndex).toBe(0);
+    expect(next.paused).toBe(true);
+  });
+
+  it("does not auto-advance while paused and resumes after play", () => {
+    const paused = advanceSpotlightPlayback({
+      command: "autoAdvance",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+    });
+    const resumed = advanceSpotlightPlayback({
+      command: "play",
+      state: paused,
+    });
+    const advanced = advanceSpotlightPlayback({
+      command: "autoAdvance",
+      state: resumed,
+    });
+
+    expect(paused.cursorIndex).toBe(0);
+    expect(resumed.paused).toBe(false);
+    expect(advanced.cursorIndex).toBe(1);
+  });
+
+  it("steps forward only when the cursor is behind the present entry", () => {
+    const behind = advanceSpotlightPlayback({
+      command: "stepForward",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+    });
+    const atPresent = advanceSpotlightPlayback({
+      command: "stepForward",
+      state: behind,
+    });
+
+    expect(behind.cursorIndex).toBe(1);
+    expect(atPresent.cursorIndex).toBe(1);
+  });
+
+  it("fast-forwards by clearing visible backlog and resuming playback", () => {
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+    });
+
+    expect(next.entries).toEqual([]);
+    expect(next.cursorIndex).toBeUndefined();
+    expect(next.paused).toBe(false);
   });
 
   it("keeps minimum dwell after a fast decision resolves", () => {

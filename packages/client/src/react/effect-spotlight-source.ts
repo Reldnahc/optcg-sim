@@ -292,15 +292,9 @@ export const activeEffectTextSourcesForSpotlight = ({
     return activeSource === undefined ? [] : [activeSource];
   }
   if (activeEffectText !== undefined) {
-    const splitResolvedSources = newestSplitResolvedSourcesForActive({
-      activeEffectText,
-      events,
-    });
-    return splitResolvedSources.length === 0
-      ? activeSource === undefined
-        ? []
-        : [activeSource]
-      : splitResolvedSources;
+    return resolvedSources.length === 0 && activeSource !== undefined
+      ? [activeSource]
+      : resolvedSources;
   }
   return resolvedSources;
 };

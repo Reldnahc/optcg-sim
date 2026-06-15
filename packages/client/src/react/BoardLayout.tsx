@@ -7,6 +7,7 @@ import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
 import { useEffect, useRef, useState } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
+import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
 import { CardMovementOverlay } from "./presentation-effects/CardMovementOverlay.js";
@@ -19,6 +20,7 @@ export interface BoardLayoutProps {
   decisionPrompt?: string | undefined;
   effectSpotlightActive?: ActiveEffectTextPresentation | undefined;
   effectSpotlightCard?: ClientCardModel | undefined;
+  effectSpotlightControls?: EffectSpotlightControls | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
@@ -246,6 +248,7 @@ export const BoardLayout = ({
   decisionPrompt,
   effectSpotlightActive,
   effectSpotlightCard,
+  effectSpotlightControls,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
@@ -296,6 +299,7 @@ export const BoardLayout = ({
         <EffectSpotlight
           card={effectSpotlightCard}
           active={effectSpotlightActive}
+          controls={effectSpotlightControls}
         />
         {decisionPrompt === undefined ? null : (
           <div className="decision-status-prompt" role="status">

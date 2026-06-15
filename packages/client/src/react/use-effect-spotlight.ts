@@ -17,6 +17,34 @@ export interface EffectSpotlightState {
   readonly pinned: boolean;
 }
 
+export interface EffectSpotlightPlaybackState {
+  readonly entries: readonly EffectSpotlightActiveSourceInput[];
+  readonly cursorIndex: number | undefined;
+  readonly paused: boolean;
+}
+
+export type EffectSpotlightPlaybackCommand =
+  | "autoAdvance"
+  | "catchUp"
+  | "pause"
+  | "play"
+  | "rewind"
+  | "stepForward";
+
+export interface EffectSpotlightControls {
+  readonly paused: boolean;
+  readonly canRewind: boolean;
+  readonly canStepForward: boolean;
+  readonly rewind: () => void;
+  readonly togglePaused: () => void;
+  readonly stepForward: () => void;
+  readonly catchUp: () => void;
+}
+
+export interface UseEffectSpotlightState extends EffectSpotlightState {
+  readonly controls: EffectSpotlightControls;
+}
+
 export interface EffectSpotlightModelInput {
   readonly nowMs: number;
   readonly previous: EffectSpotlightState | undefined;
@@ -88,6 +116,86 @@ export const consumeSpotlightSourceSignatures = (
       consumedSignatures.add(signature);
     }
   }
+};
+
+export const appendSpotlightPlaybackSources = ({
+  consumedKeys,
+  consumedSignatures = new Set<string>(),
+  previous,
+  sources,
+}: {
+  readonly consumedKeys: ReadonlySet<string>;
+  readonly consumedSignatures?: ReadonlySet<string>;
+  readonly previous: EffectSpotlightPlaybackState;
+  readonly sources: readonly EffectSpotlightActiveSourceInput[];
+}): EffectSpotlightPlaybackState => {
+  const queuedKeys = new Set(previous.entries.map((source) => source.key));
+  let entries: EffectSpotlightActiveSourceInput[] | undefined;
+  for (const source of sources) {
+    if (
+      !consumedKeys.has(source.key) &&
+      !sourceSignaturesConsumed(consumedSignatures, source) &&
+      !queuedKeys.has(source.key)
+    ) {
+      entries ??= [...previous.entries];
+      entries.push(source);
+      queuedKeys.add(source.key);
+    }
+  }
+  if (entries === undefined) {
+    return previous;
+  }
+  return {
+    entries,
+    cursorIndex:
+      previous.cursorIndex === undefined
+        ? previous.entries.length
+        : previous.cursorIndex,
+    paused: previous.paused,
+  };
+};
+
+export const advanceSpotlightPlayback = ({
+  command,
+  state,
+}: {
+  readonly command: EffectSpotlightPlaybackCommand;
+  readonly state: EffectSpotlightPlaybackState;
+}): EffectSpotlightPlaybackState => {
+  if (command === "catchUp") {
+    return { entries: [], cursorIndex: undefined, paused: false };
+  }
+  if (command === "pause") {
+    return { ...state, paused: true };
+  }
+  if (command === "play") {
+    return { ...state, paused: false };
+  }
+  if (state.entries.length === 0) {
+    return { ...state, cursorIndex: undefined };
+  }
+  const presentIndex = state.entries.length - 1;
+  const cursorIndex = state.cursorIndex ?? presentIndex;
+  if (command === "rewind") {
+    return {
+      ...state,
+      cursorIndex: Math.max(0, cursorIndex - 1),
+      paused: true,
+    };
+  }
+  if (command === "stepForward") {
+    return {
+      ...state,
+      cursorIndex: Math.min(presentIndex, cursorIndex + 1),
+    };
+  }
+  if (state.paused) {
+    return state;
+  }
+  if (cursorIndex < presentIndex) {
+    return { ...state, cursorIndex: cursorIndex + 1 };
+  }
+  return { entries: [], cursorIndex: undefined, paused: false };
 };
 
 export const queuedResolvedSpotlightSources = ({
@@ -214,13 +322,15 @@ export const useEffectSpotlight = ({
   graceMs = 800,
   minimumDwellMs = 2_000,
   pendingDecisionId,
-}: UseEffectSpotlightInput): EffectSpotlightState | undefined => {
+}: UseEffectSpotlightInput): UseEffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
   const consumedSourceSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
-  const [resolvedQueue, setResolvedQueue] = useState<
-    EffectSpotlightActiveSourceInput[]
-  >([]);
+  const [playback, setPlayback] = useState<EffectSpotlightPlaybackState>({
+    entries: [],
+    cursorIndex: undefined,
+    paused: false,
+  });
   const normalizedSources = useMemo(
     (): readonly EffectSpotlightActiveSourceInput[] =>
       activeSources ??
@@ -235,17 +345,10 @@ export const useEffectSpotlight = ({
           ]),
     [active, activeKey, activeMode, activeSources],
   );
-  const liveSource = normalizedSources.find((source) => source.mode === "live");
   const [model, setModel] = useState<EffectSpotlightState>();
-  const currentResolvedKey =
-    model?.activeMode === "resolved" ? model.activeKey : "";
-  const pendingResolvedSources = queuedResolvedSpotlightSources({
-    consumedKeys: consumedResolvedKeys.current,
-    consumedSignatures: consumedSourceSignatures.current,
-    currentKey: currentResolvedKey,
-    previousQueue: resolvedQueue,
-    sources: normalizedSources,
-  });
+  const cursorIndex = playback.cursorIndex;
+  const currentSource =
+    cursorIndex === undefined ? undefined : playback.entries[cursorIndex];
   useEffect(() => {
     if (
       !initializedConsumedResolvedKeys.current &&
@@ -257,28 +360,18 @@ export const useEffectSpotlight = ({
         normalizedSources,
       );
     }
-    setResolvedQueue((previous) => {
-      const next = queuedResolvedSpotlightSources({
+    setPlayback((previous) =>
+      appendSpotlightPlaybackSources({
         consumedKeys: consumedResolvedKeys.current,
         consumedSignatures: consumedSourceSignatures.current,
-        currentKey: currentResolvedKey,
-        previousQueue: previous,
+        previous,
         sources: normalizedSources,
-      });
-      return next === previous ? previous : [...next];
-    });
-  }, [currentResolvedKey, normalizedSources]);
-  const liveSourceCanDisplay = shouldDisplayLiveSpotlightSource({
-    liveSourceExists: liveSource !== undefined,
-    model,
-    pendingResolvedSourceCount: pendingResolvedSources.length,
-    resolvedQueueLength: resolvedQueue.length,
-  });
-  const effectiveActive = liveSourceCanDisplay ? liveSource?.active : undefined;
-  const effectiveActiveKey = liveSourceCanDisplay ? liveSource?.key : undefined;
-  const effectiveActiveMode = liveSourceCanDisplay
-    ? (liveSource?.mode ?? activeMode)
-    : activeMode;
+      }),
+    );
+  }, [activeSources, normalizedSources]);
+  const effectiveActive = currentSource?.active;
+  const effectiveActiveKey = currentSource?.key;
+  const effectiveActiveMode = currentSource?.mode ?? activeMode;
   useEffect(() => {
     if (
       effectiveActive !== undefined &&
@@ -298,7 +391,8 @@ export const useEffectSpotlight = ({
         active: effectiveActive,
         activeKey: effectiveActiveKey,
         activeMode: effectiveActiveMode,
-        pendingDecisionId,
+        pendingDecisionId:
+          effectiveActiveMode === "live" ? pendingDecisionId : undefined,
       }),
     );
   }, [
@@ -311,43 +405,27 @@ export const useEffectSpotlight = ({
   ]);
   useEffect(() => {
     if (
-      liveSourceCanDisplay ||
-      model !== undefined ||
-      resolvedQueue.length === 0
-    ) {
-      return;
-    }
-    const next = resolvedQueue[0];
-    if (next === undefined) {
-      return;
-    }
-    setResolvedQueue((previous) => previous.slice(1));
-    setModel(
-      effectSpotlightModel({
-        nowMs: Date.now(),
-        previous: undefined,
-        minimumDwellMs,
-        graceMs,
-        active: next.active,
-        activeKey: next.key,
-        activeMode: "resolved",
-        pendingDecisionId: undefined,
-      }),
-    );
-  }, [graceMs, liveSourceCanDisplay, minimumDwellMs, model, resolvedQueue]);
-  useEffect(() => {
-    if (
       model === undefined ||
       model.pinned ||
-      (effectiveActive !== undefined && effectiveActiveMode === "live")
+      playback.paused ||
+      currentSource === undefined
     ) {
       return;
     }
     const delayMs = Math.max(0, model.visibleUntilMs - Date.now());
     const timeout = window.setTimeout(() => {
-      if (model.activeMode === "resolved") {
+      if (currentSource.mode === "resolved") {
         consumedResolvedKeys.current.add(model.activeKey);
       }
+      consumeSpotlightSourceSignatures(consumedSourceSignatures.current, [
+        currentSource,
+      ]);
+      setPlayback((previous) =>
+        advanceSpotlightPlayback({
+          command: "autoAdvance",
+          state: previous,
+        }),
+      );
       setModel((previous) =>
         previous?.activeKey === model.activeKey ? undefined : previous,
       );
@@ -355,6 +433,58 @@ export const useEffectSpotlight = ({
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [effectiveActive, effectiveActiveMode, model]);
-  return model;
+  }, [currentSource, model, playback.paused]);
+  if (model === undefined) {
+    return undefined;
+  }
+  const presentIndex = playback.entries.length - 1;
+  return {
+    ...model,
+    controls: {
+      paused: playback.paused,
+      canRewind: cursorIndex !== undefined && cursorIndex > 0,
+      canStepForward:
+        cursorIndex !== undefined &&
+        presentIndex >= 0 &&
+        cursorIndex < presentIndex,
+      rewind: () => {
+        setPlayback((previous) =>
+          advanceSpotlightPlayback({ command: "rewind", state: previous }),
+        );
+      },
+      togglePaused: () => {
+        setPlayback((previous) =>
+          advanceSpotlightPlayback({
+            command: previous.paused ? "play" : "pause",
+            state: previous,
+          }),
+        );
+      },
+      stepForward: () => {
+        setPlayback((previous) =>
+          advanceSpotlightPlayback({
+            command: "stepForward",
+            state: previous,
+          }),
+        );
+      },
+      catchUp: () => {
+        setPlayback((previous) => {
+          consumeResolvedSpotlightSourceKeys(
+            consumedResolvedKeys.current,
+            previous.entries,
+          );
+          consumeSpotlightSourceSignatures(
+            consumedSourceSignatures.current,
+            previous.entries,
+          );
+          return advanceSpotlightPlayback({
+            command: "catchUp",
+            state: previous,
+          });
+        });
+        setModel(undefined);
+      },
+    },
+  };
 };

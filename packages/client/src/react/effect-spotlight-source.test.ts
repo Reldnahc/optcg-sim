@@ -22,6 +22,12 @@ const source = {
   playerId: "p1" as PlayerId,
 };
 
+const otherSource = {
+  instanceId: "source-2" as InstanceId,
+  cardId: "OP00-002" as CardId,
+  playerId: "p1" as PlayerId,
+};
+
 const event = (
   overrides: Partial<EngineEvent> & Pick<EngineEvent, "type" | "seq">,
 ): EngineEvent => ({
@@ -313,6 +319,50 @@ describe("activeEffectTextForSpotlight", () => {
     expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
       ["span:search:selection"],
       ["span:search:remaining"],
+    ]);
+  });
+
+  it("keeps earlier resolved spotlights while an active effect exposes split resolved spans", () => {
+    const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:search:selection", "span:search:remaining"],
+    };
+    const earlier = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source: otherSource,
+          textKind: "effect",
+          activeSpanIds: ["span:other"],
+        },
+      },
+    });
+    const split = event({
+      type: "effectResolved",
+      seq: 2,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:search:selection", "span:search:remaining"],
+        },
+      },
+    });
+
+    expect(
+      activeEffectTextSourcesForSpotlight({
+        activeEffectText,
+        pendingDecision: undefined,
+        events: [earlier, split],
+      }).map((candidate) => candidate.key),
+    ).toEqual([
+      String(earlier.id),
+      `${String(split.id)}:span:search:selection`,
+      `${String(split.id)}:span:search:remaining`,
     ]);
   });
 
