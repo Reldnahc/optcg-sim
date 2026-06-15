@@ -12,10 +12,12 @@ import {
   appendSpotlightPlaybackSources,
   consumeResolvedSpotlightSourceKeys,
   consumeSpotlightSourceSignatures,
+  effectSpotlightDisplayForEntry,
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
   queuedResolvedSpotlightSources,
   shouldDisplayLiveSpotlightSource,
+  type EffectSpotlightState,
 } from "./use-effect-spotlight.js";
 
 const source = (
@@ -415,6 +417,61 @@ describe("effect spotlight model", () => {
 
     expect(display?.activeKey).toBe("event:second");
     expect(display?.activeSpanIds).toEqual(["span:second"]);
+  });
+
+  it("hides display immediately when there is no playback cursor entry", () => {
+    const previous: EffectSpotlightState = {
+      active: source("event:first", "span:first").active,
+      activeKey: "event:first",
+      activeMode: "resolved",
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:first"],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: false,
+    };
+
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_100,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: undefined,
+      pendingDecisionId: undefined,
+    });
+
+    expect(display).toBeUndefined();
+  });
+
+  it("pins a live cursor entry while a pending decision is active", () => {
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: source("decision:pending", "span:pending", "live"),
+      pendingDecisionId: "decision-1",
+    });
+
+    expect(display?.activeKey).toBe("decision:pending");
+    expect(display?.activeMode).toBe("live");
+    expect(display?.pinned).toBe(true);
+  });
+
+  it("uses resolved cursor entries with dwell timing without pinning", () => {
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: source("event:resolved", "span:resolved"),
+      pendingDecisionId: "decision-1",
+    });
+
+    expect(display?.activeKey).toBe("event:resolved");
+    expect(display?.activeMode).toBe("resolved");
+    expect(display?.pinned).toBe(false);
+    expect(display?.visibleUntilMs).toBe(3_000);
   });
 
   it("keeps minimum dwell after a fast decision resolves", () => {
