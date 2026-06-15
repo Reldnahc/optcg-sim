@@ -70,6 +70,7 @@ it("parses activate-main turn-count DON ramp and rested-DON attach compositional
                 {
                   connector: "always",
                   saveResultAs: "donSelection:attach",
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -85,6 +86,7 @@ it("parses activate-main turn-count DON ramp and rested-DON attach compositional
                 {
                   connector: "ifYouDo",
                   saveResultAs: "targetSelection:attach-don",
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectTargets",
                     request: {
@@ -490,6 +492,7 @@ it("parses opponent rested-DON cost and owner-relative DON attachment body separ
               type: "sequence",
               effects: [
                 {
+                  saveResultKinds: ["selectedTargets", "selectedCards:don"],
                   effect: {
                     type: "selectTargets",
                     request: {
@@ -503,6 +506,7 @@ it("parses opponent rested-DON cost and owner-relative DON attachment body separ
                   },
                 },
                 {
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectTargets",
                     request: {
@@ -692,6 +696,7 @@ it("parses on-play top-deck top-or-bottom placement before rested-DON attachment
                   id: "select:rested-don",
                   connector: "always",
                   saveResultAs: "donSelection:attach",
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -708,6 +713,7 @@ it("parses on-play top-deck top-or-bottom placement before rested-DON attachment
                   id: "select:don-attach-target",
                   connector: "ifYouDo",
                   saveResultAs: "targetSelection:attach-don",
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectTargets",
                     request: {
@@ -821,6 +827,7 @@ it("parses reveal-from-hand cost into rested-DON distribution to Leader and all 
                   id: "select:distributed-don-attach-targets",
                   connector: "always",
                   saveResultAs: "targetSelection:distributed-attach-don",
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectAllTargets",
                     request: {

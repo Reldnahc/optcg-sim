@@ -40,6 +40,7 @@ it("parses activate-main hand-to-deck-top cost into rested-DON leader-or-charact
                 {
                   connector: "always",
                   saveResultAs: "donSelection:attach",
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -55,6 +56,7 @@ it("parses activate-main hand-to-deck-top cost into rested-DON leader-or-charact
                 {
                   connector: "ifYouDo",
                   saveResultAs: "targetSelection:attach-don",
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectTargets",
                     request: {
@@ -153,6 +155,7 @@ it("parses activate-main trash-to-deck-bottom cost into rested-DON attachment", 
               type: "sequence",
               effects: [
                 {
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -162,6 +165,7 @@ it("parses activate-main trash-to-deck-bottom cost into rested-DON attachment", 
                   },
                 },
                 {
+                  saveResultKinds: ["selectedTargets"],
                   effect: {
                     type: "selectTargets",
                     request: {

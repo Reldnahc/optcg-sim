@@ -137,12 +137,17 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
               : "select:don-to-attach",
           connector: "always",
           saveResultAs: donAttachSelection,
+          saveResultKinds:
+            source.player === "self"
+              ? ["selectedCards:don"]
+              : ["selectedTargets", "selectedCards:don"],
           effect: sourceSelection,
         },
         {
           id: "select:don-attach-target",
           connector: "ifYouDo",
           saveResultAs: donAttachTarget,
+          saveResultKinds: ["selectedTargets"],
           effect: {
             type: "selectTargets",
             ...(target.targetOwner === "selectedDonOwner"
@@ -375,6 +380,7 @@ const parseTargetDistributedRestedDonInstruction: InstructionParser = (
           id: "select:distributed-don-attach-targets",
           connector: "always",
           saveResultAs: distributedDonAttachTarget,
+          saveResultKinds: ["selectedTargets"],
           effect: {
             type: "selectTargets",
             request: {
@@ -404,6 +410,7 @@ const parseTargetDistributedRestedDonInstruction: InstructionParser = (
                   id: "select:rested-don",
                   connector: "always",
                   saveResultAs: donAttachSelection,
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -500,6 +507,7 @@ const parseAllTargetDistributedRestedDonInstruction: InstructionParser = (
           id: "select:distributed-don-attach-targets",
           connector: "always",
           saveResultAs: distributedDonAttachTarget,
+          saveResultKinds: ["selectedTargets"],
           effect: {
             type: "selectAllTargets",
             request: {
@@ -526,6 +534,7 @@ const parseAllTargetDistributedRestedDonInstruction: InstructionParser = (
                   id: "select:rested-don",
                   connector: "always",
                   saveResultAs: donAttachSelection,
+                  saveResultKinds: ["selectedCards:don"],
                   effect: {
                     type: "selectCards",
                     zone: "costArea",
@@ -603,6 +612,7 @@ const parseAttachRestedDonToTarget = (
           id: "select:rested-don",
           connector: "always",
           saveResultAs: donAttachSelection,
+          saveResultKinds: ["selectedCards:don"],
           effect: {
             type: "selectCards",
             zone: "costArea",
@@ -619,6 +629,7 @@ const parseAttachRestedDonToTarget = (
           id: "select:don-attach-target",
           connector: "ifYouDo",
           saveResultAs: donAttachTarget,
+          saveResultKinds: ["selectedTargets"],
           effect: {
             type: "selectTargets",
             request: {

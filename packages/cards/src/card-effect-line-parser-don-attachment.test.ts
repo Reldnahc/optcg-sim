@@ -14,6 +14,7 @@ it("parses rested DON attachment to the selected DON owner's Leader or Character
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -27,6 +28,7 @@ it("parses rested DON attachment to the selected DON owner's Leader or Character
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               ownerConstraint: {
@@ -81,6 +83,7 @@ it("parses owner-relative DON attachment bodies through the same selection shape
         effects: [
           {
             id: "select:don-to-attach",
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -92,6 +95,7 @@ it("parses owner-relative DON attachment bodies through the same selection shape
           },
           {
             id: "select:don-attach-target",
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               ownerConstraint: {
@@ -123,6 +127,7 @@ it("parses owner-relative DON attachment bodies through the same selection shape
         effects: [
           {
             id: "select:don-to-attach",
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -134,6 +139,7 @@ it("parses owner-relative DON attachment bodies through the same selection shape
           },
           {
             id: "select:don-attach-target",
+            saveResultKinds: ["selectedTargets"],
           },
           {
             id: "attach:selected-don",
@@ -161,6 +167,7 @@ it("parses opponent rested DON attachment to opponent Characters", () => {
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -173,6 +180,7 @@ it("parses opponent rested DON attachment to opponent Characters", () => {
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               request: {
@@ -218,6 +226,7 @@ it("parses rested DON attachment to a named self Leader target", () => {
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedCards:don"],
             effect: {
               type: "selectCards",
               zone: "costArea",
@@ -226,6 +235,7 @@ it("parses rested DON attachment to a named self Leader target", () => {
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               request: {
@@ -275,6 +285,7 @@ it("parses opponent cost-area DON attachment without requiring a rested source",
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -287,6 +298,7 @@ it("parses opponent cost-area DON attachment without requiring a rested source",
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               request: {
@@ -331,6 +343,7 @@ it("parses rested DON attachment to type-including Leader or Character targets",
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedCards:don"],
             effect: {
               type: "selectCards",
               zone: "costArea",
@@ -341,6 +354,7 @@ it("parses rested DON attachment to type-including Leader or Character targets",
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               request: {
@@ -398,6 +412,7 @@ it("parses rested DON attachment to another type-including Leader or Character t
         type: "sequence",
         effects: [
           {
+            saveResultKinds: ["selectedCards:don"],
             effect: {
               type: "selectCards",
               max: 2,
@@ -405,6 +420,7 @@ it("parses rested DON attachment to another type-including Leader or Character t
             },
           },
           {
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               request: {

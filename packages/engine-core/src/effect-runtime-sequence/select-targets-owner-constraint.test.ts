@@ -151,6 +151,7 @@ const parsedCostedOwnerRelativeDonSequence = (): Extract<
             id: "select:don-to-attach",
             connector: "always",
             saveResultAs: "donSelection:attach",
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
             effect: {
               type: "selectTargets",
               request: {
@@ -170,6 +171,7 @@ const parsedCostedOwnerRelativeDonSequence = (): Extract<
             id: "select:don-attach-target",
             connector: "ifYouDo",
             saveResultAs: "targetSelection:attach-don",
+            saveResultKinds: ["selectedTargets"],
             effect: {
               type: "selectTargets",
               ownerConstraint: {
