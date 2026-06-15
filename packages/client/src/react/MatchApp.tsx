@@ -492,13 +492,6 @@ export const MatchApp = ({
     "--zone-guide-border-alpha": zoneGuideBorderAlpha.toFixed(3),
     "--zone-guide-background-alpha": zoneGuideBackgroundAlpha.toFixed(3),
     "--zone-guide-label-alpha": zoneGuideLabelAlpha.toFixed(3),
-    ...(backgroundImageEnabled
-      ? {
-          backgroundImage: `url(${JSON.stringify(
-            visualSettings.backgroundImageUrl,
-          )})`,
-        }
-      : {}),
   } as CSSProperties &
     Record<
       | "--zone-guide-background-alpha"
@@ -514,6 +507,13 @@ export const MatchApp = ({
       | "--match-background-position",
       string
     >;
+  const matchBackgroundImageStyle = backgroundImageEnabled
+    ? ({
+        backgroundImage: `url(${JSON.stringify(
+          visualSettings.backgroundImageUrl,
+        )})`,
+      } satisfies CSSProperties)
+    : undefined;
   const matchAppClassName = [
     "match-app",
     visualSettings.reducedMotion ? "is-reduced-motion" : "",
@@ -524,6 +524,10 @@ export const MatchApp = ({
   return (
     <MatchVisualSettingsProvider value={visualSettings}>
       <main className={matchAppClassName} style={matchAppStyle}>
+        <div
+          className="match-app-background-image"
+          style={matchBackgroundImageStyle}
+        />
         <MatchBoardSurface
           board={displayBoard}
           clientState={clientState}
