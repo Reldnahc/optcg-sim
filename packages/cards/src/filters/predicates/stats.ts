@@ -20,9 +20,21 @@ export const parsePowerPredicate: PredicateParser = (
         }power ${powerOfThresholdMatch.groups?.["direction"] ?? ""} ${
           powerOfThresholdMatch.groups?.["thresholdRest"] ?? ""
         }`.trim();
+  const thresholdBeforeStatMatch =
+    /^(?<value>0|[1-9]\d*) (?<direction>or more|or less) (?<base>base )?power\b\s*(?<thresholdRest>.*)$/i.exec(
+      normalizedPowerOfThreshold,
+    );
+  const normalizedThresholdBeforeStat =
+    thresholdBeforeStatMatch === null
+      ? normalizedPowerOfThreshold
+      : `${thresholdBeforeStatMatch.groups?.["value"] ?? ""} ${
+          thresholdBeforeStatMatch.groups?.["base"] ?? ""
+        }power ${thresholdBeforeStatMatch.groups?.["direction"] ?? ""} ${
+          thresholdBeforeStatMatch.groups?.["thresholdRest"] ?? ""
+        }`.trim();
   const thresholdMatch =
     /^(?<value>0|[1-9]\d*) (?<base>base )?power (?<direction>or more|or less)\b\s*(?<thresholdRest>.*)$/i.exec(
-      normalizedPowerOfThreshold,
+      normalizedThresholdBeforeStat,
     );
   const thresholdValueText = thresholdMatch?.groups?.["value"];
   const isBasePower = thresholdMatch?.groups?.["base"] !== undefined;
