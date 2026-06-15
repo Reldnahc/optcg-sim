@@ -513,6 +513,11 @@ function parseOptionalFollowupEffects(text: string):
       readonly followupPowerModifier?: number;
     }
   | undefined {
+  const savedTargetKo = parseThatCharacterCostConditionalKo(text);
+  if (savedTargetKo !== undefined) {
+    return savedTargetKo;
+  }
+
   const powerModifier = parseOptionalThatCardPowerModifier(text);
   if (powerModifier !== undefined) {
     return {
@@ -554,6 +559,71 @@ function parseOptionalFollowupEffects(text: string):
         type: "cannotAttack",
         target: selectedInvalidateEffectsTarget(["characterArea"]),
         duration: duration.duration,
+      },
+    ],
+  };
+}
+
+function parseThatCharacterCostConditionalKo(text: string):
+  | {
+      readonly duration: Extract<
+        Effect,
+        { type: "invalidateEffects" }
+      >["duration"];
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly followupEffects: readonly Effect[];
+    }
+  | undefined {
+  const match =
+    /^(?<duration>.+?)\.\s+Then,\s+if that Character has a cost of (?<value>[1-9]\d*) (?<comparison>or less|or more),\s*K\.O\. it\.?$/iu.exec(
+      text,
+    );
+  const durationText = match?.groups?.["duration"];
+  const valueText = match?.groups?.["value"];
+  const comparisonText = match?.groups?.["comparison"];
+  if (
+    durationText === undefined ||
+    valueText === undefined ||
+    comparisonText === undefined
+  ) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  const target = selectedInvalidateEffectsTarget(["characterArea"]);
+  const op = comparisonText.toLowerCase() === "or less" ? "lte" : "gte";
+  return {
+    duration: duration.duration,
+    evidence: [
+      ...duration.evidence,
+      "condition:cardStatComparison",
+      "condition:stat:cost",
+      op === "lte" ? "condition:comparator:lte" : "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "composition:savedTargetCondition",
+      "instruction:ko",
+    ],
+    followupEffects: [
+      {
+        type: "conditional",
+        if: {
+          type: "cardStatComparison",
+          target,
+          stat: "cost",
+          op,
+          value: Number.parseInt(valueText, 10),
+        },
+        then: {
+          type: "ko",
+          target,
+        },
       },
     ],
   };
