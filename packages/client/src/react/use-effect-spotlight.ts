@@ -90,6 +90,17 @@ const activePresentationKey = (active: ActiveEffectTextPresentation): string =>
     spanKey(active.activeSpanIds),
   ].join("|");
 
+const searchSpanPrefix = "span:search:";
+
+const spotlightSourceSignatureBase = (
+  source: EffectSpotlightActiveSourceInput,
+): readonly string[] => [
+  String(source.active.source.playerId),
+  String(source.active.source.instanceId),
+  String(source.active.source.cardId),
+  source.active.textKind ?? "",
+];
+
 const spotlightSourceSignatures = (
   source: EffectSpotlightActiveSourceInput,
 ): readonly string[] => {
@@ -98,23 +109,34 @@ const spotlightSourceSignatures = (
       ? [""]
       : source.active.activeSpanIds;
   return spanIds.map((spanId) =>
-    [
-      String(source.active.source.playerId),
-      String(source.active.source.instanceId),
-      String(source.active.source.cardId),
-      source.active.textKind ?? "",
-      spanId,
-    ].join("|"),
+    [...spotlightSourceSignatureBase(source), spanId].join("|"),
   );
 };
+
+const spotlightSourceSearchGroupSignature = (
+  source: EffectSpotlightActiveSourceInput,
+): string | undefined =>
+  source.active.activeSpanIds.some((spanId) =>
+    spanId.startsWith(searchSpanPrefix),
+  )
+    ? [...spotlightSourceSignatureBase(source), "search"].join("|")
+    : undefined;
 
 const sourceSignaturesConsumed = (
   consumedSignatures: ReadonlySet<string>,
   source: EffectSpotlightActiveSourceInput,
-): boolean =>
-  spotlightSourceSignatures(source).every((signature) =>
+): boolean => {
+  const searchGroupSignature = spotlightSourceSearchGroupSignature(source);
+  if (
+    searchGroupSignature !== undefined &&
+    consumedSignatures.has(searchGroupSignature)
+  ) {
+    return true;
+  }
+  return spotlightSourceSignatures(source).every((signature) =>
     consumedSignatures.has(signature),
   );
+};
 
 export const consumeSpotlightSourceSignatures = (
   consumedSignatures: Set<string>,
@@ -124,10 +146,14 @@ export const consumeSpotlightSourceSignatures = (
     for (const signature of spotlightSourceSignatures(source)) {
       consumedSignatures.add(signature);
     }
+    const searchGroupSignature = spotlightSourceSearchGroupSignature(source);
+    if (searchGroupSignature !== undefined) {
+      consumedSignatures.add(searchGroupSignature);
+    }
   }
 };
 
-const releaseSpotlightSourceSignatures = (
+const releaseSpotlightSourceExactSignatures = (
   consumedSignatures: Set<string>,
   source: EffectSpotlightActiveSourceInput,
 ): void => {
@@ -150,6 +176,7 @@ export const appendSpotlightPlaybackSources = ({
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
   const queuedKeys = new Set(previous.entries.map((source) => source.key));
+  const searchGroupSignaturesToRelease = new Set<string>();
   let entries: EffectSpotlightActiveSourceInput[] | undefined;
   for (const source of sources) {
     if (consumedKeys.has(source.key) || queuedKeys.has(source.key)) {
@@ -160,12 +187,25 @@ export const appendSpotlightPlaybackSources = ({
       suppressedResolvedSignatures !== undefined &&
       sourceSignaturesConsumed(suppressedResolvedSignatures, source)
     ) {
-      releaseSpotlightSourceSignatures(suppressedResolvedSignatures, source);
+      releaseSpotlightSourceExactSignatures(
+        suppressedResolvedSignatures,
+        source,
+      );
+      const searchGroupSignature = spotlightSourceSearchGroupSignature(source);
+      if (
+        searchGroupSignature !== undefined &&
+        suppressedResolvedSignatures.has(searchGroupSignature)
+      ) {
+        searchGroupSignaturesToRelease.add(searchGroupSignature);
+      }
       continue;
     }
     entries ??= [...previous.entries];
     entries.push(source);
     queuedKeys.add(source.key);
+  }
+  for (const signature of searchGroupSignaturesToRelease) {
+    suppressedResolvedSignatures?.delete(signature);
   }
   if (entries === undefined) {
     return previous;

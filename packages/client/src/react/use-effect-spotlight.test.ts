@@ -150,6 +150,40 @@ describe("effect spotlight model", () => {
     expect([...suppressedResolvedSignatures]).toEqual([]);
   });
 
+  it("suppresses resolved search spans after the search was already shown live", () => {
+    const suppressedResolvedSignatures = new Set<string>();
+    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
+      source("decision:search-selection", "span:search:selection", "live"),
+    ]);
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      suppressedResolvedSignatures,
+      previous: {
+        entries: [
+          source("decision:search-selection", "span:search:selection", "live"),
+        ],
+        cursorIndex: 0,
+        paused: false,
+      },
+      sources: [
+        source(
+          "event:resolved-search:span:search:selection",
+          "span:search:selection",
+        ),
+        source(
+          "event:resolved-search:span:search:remaining",
+          "span:search:remaining",
+        ),
+      ],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "decision:search-selection",
+    ]);
+    expect([...suppressedResolvedSignatures]).toEqual([]);
+  });
+
   it("keeps the cursor on a reviewed past entry when new sources arrive", () => {
     const next = appendSpotlightPlaybackSources({
       consumedKeys: new Set<string>(),
@@ -454,7 +488,7 @@ describe("effect spotlight model", () => {
     ]);
   });
 
-  it("does not queue resolved spans that were already displayed live", () => {
+  it("does not queue resolved search spans after the search was already displayed live", () => {
     const baseSource = {
       instanceId: "source-1" as InstanceId,
       cardId: "OP00-001" as CardId,
@@ -497,9 +531,7 @@ describe("effect spotlight model", () => {
       ],
     });
 
-    expect(queued.map((source) => source.key)).toEqual([
-      "event:resolved-search:span:search:remaining",
-    ]);
+    expect(queued.map((source) => source.key)).toEqual([]);
   });
 
   it("keeps resolved multi-span sources when only part of the source was displayed live", () => {
