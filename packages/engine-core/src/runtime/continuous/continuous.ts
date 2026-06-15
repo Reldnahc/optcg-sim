@@ -523,6 +523,31 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
+  if (target.type === "attacker") {
+    const attacker = state.battle?.attacker;
+    if (attacker === undefined) {
+      return null;
+    }
+    const attackerCard = reifyCardRef(state, attacker);
+    if (attackerCard === null) {
+      return null;
+    }
+    const attackerRef: CardRef = {
+      instanceId: attackerCard.card.instanceId,
+      cardId: attackerCard.card.cardId,
+      playerId: attackerCard.playerId,
+      zone: attackerCard.card.zone,
+    };
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      toExactCardTarget(entry, attackerRef, state, 0),
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
   if (target.type === "all" && effectValueUsesAffectedCard(effect)) {
     return createAffectedCardRecordsForAllTarget(
       state,

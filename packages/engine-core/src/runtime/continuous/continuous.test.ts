@@ -6,10 +6,12 @@ import type {
   CardInstance,
   EffectDefinition,
   EffectDslFieldRemovalProtection,
+  EffectQueueEntry,
 } from "@optcg/types";
 
 import { computeView } from "../../view/compute-view.js";
 import {
+  createContinuousRecordsForResolvedEffect,
   deriveImplementedDslHandContinuousEffects,
   deriveImplementedDslPermanentContinuousEffects,
   isSupportedPermanentContinuousEffectBlock,
@@ -269,6 +271,65 @@ test("preventBlockerActivation on current attacker disables defender blockers", 
   assert.deepEqual(withRestriction.cards[attacker.instanceId]?.restrictions, [
     "no-blocker",
   ]);
+});
+
+test("preventBlockerActivation can resolve the current attacker as a continuous target", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  setMainTurnAfterFirstTurn(state);
+  p1State.characters = [withCharacter(p1, toCardId("char-rush"), 0)];
+  p2State.characters = [withCharacter(p2, toCardId("char-blocker"), 0)];
+  const attacker = must(p1State.characters[0], "attacker");
+  state.battle = {
+    attacker: battleRef(attacker),
+    originalTarget: battleRef(p2State.leader),
+    currentTarget: battleRef(p2State.leader),
+    step: "block",
+    damageCount: 1,
+  };
+  const sourceRecord = continuousPowerEffectRecord(state, { source: attacker });
+  const entry: EffectQueueEntry = {
+    id: "queue:attacker-blocker-restriction" as EffectQueueEntry["id"],
+    state: "resolving",
+    timingWindowId:
+      "window:attacker-blocker-restriction" as EffectQueueEntry["timingWindowId"],
+    generation: 0,
+    controllerId: p1,
+    source: sourceRecord.source,
+    sourceSnapshot: sourceRecord.sourceSnapshot,
+    effectBlockId:
+      "effect:attacker-blocker-restriction" as EffectQueueEntry["effectBlockId"],
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 0,
+    queuedAtStateSeq: state.seq,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: {
+      type: "effect",
+      queueEntryId: "source" as EffectQueueEntry["id"],
+      effectId: "source-effect" as EffectQueueEntry["effectBlockId"],
+    },
+  };
+
+  const effect = {
+    type: "preventBlockerActivation",
+    target: { type: "attacker" },
+    duration: { type: "thisBattle" },
+  } as const;
+
+  assert.equal(isSupportedContinuousQueueEffect(effect), true);
+  const records = createContinuousRecordsForResolvedEffect(
+    state,
+    entry,
+    effect,
+  );
+
+  assert.ok(records !== null);
+  assert.equal(records.length, 1);
+  const record = must(records[0], "record");
+  assert.equal(record.modifier.target.type, "exactCard");
+  assert.equal(record.modifier.target.card.instanceId, attacker.instanceId);
+  assert.equal(record.modifier.target.card.zone?.zone, "characterArea");
 });
 
 test("continuous support accepts all rested character filters for refresh restrictions", () => {

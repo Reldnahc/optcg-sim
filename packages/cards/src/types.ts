@@ -299,6 +299,7 @@ export type PrimitiveEvidence =
   | "target:opponentCharacters"
   | "target:opponentCharacter"
   | "target:anyCharacters"
+  | "target:attacker"
   | "target:opponentCharactersOrDonCards"
   | "target:opponentCards"
   | "target:opponentDonCards"

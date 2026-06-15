@@ -11,6 +11,7 @@ import {
   parseUpToCardinality,
 } from "../../cardinality/index.js";
 import {
+  battleDurationParsers,
   parseDurationFromSet,
   thisTurnOnlyDurationParsers,
 } from "../../durations/index.js";
@@ -141,6 +142,12 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
 function parseOpponentCannotActivateBlocker(
   input: ParseInput,
 ): InstructionParseResult | undefined {
+  const currentAttackerBattleRestriction =
+    parseCurrentAttackerBlockerRestriction(input.text);
+  if (currentAttackerBattleRestriction !== undefined) {
+    return currentAttackerBattleRestriction;
+  }
+
   const paidCostAttack = parsePaidCostAttackBlockerRestriction(input.text);
   if (paidCostAttack !== undefined) {
     return paidCostAttack;
@@ -286,6 +293,43 @@ function parseAllOpponentCharactersCannotBlock(
       "instruction:cannotBlock",
       ...cardinalityEvidence,
       ...target.evidence,
+      ...duration.evidence,
+      "activation:blocker",
+    ],
+    rest: "",
+  };
+}
+
+function parseCurrentAttackerBlockerRestriction(
+  text: string,
+): InstructionParseResult | undefined {
+  const durationText =
+    /^Your opponent cannot activate \[Blocker\]\s+(?<duration>during this battle\.?)$/iu.exec(
+      text,
+    )?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    battleDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  return {
+    effect: {
+      type: "preventBlockerActivation",
+      target: { type: "attacker" },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:preventBlockerActivation",
+      "target:attacker",
       ...duration.evidence,
       "activation:blocker",
     ],

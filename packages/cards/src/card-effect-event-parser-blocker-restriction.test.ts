@@ -3,6 +3,61 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect event parser blocker restrictions", () => {
+  it("parses battle-long opponent Blocker activation restriction as a reusable body primitive", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] [When Attacking] Your opponent cannot activate [Blocker] during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        effect: {
+          type: "preventBlockerActivation",
+          target: { type: "attacker" },
+          duration: { type: "thisBattle" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "marker:attachedDon",
+        "instruction:preventBlockerActivation",
+        "target:attacker",
+        "duration:thisBattle",
+        "activation:blocker",
+      ]),
+    );
+  });
+
+  it("parses the same battle-long Blocker activation restriction under Counter timing", () => {
+    const result = parseCardEffectLine(
+      "[Counter] Your opponent cannot activate [Blocker] during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        effect: {
+          type: "preventBlockerActivation",
+          target: { type: "attacker" },
+          duration: { type: "thisBattle" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventCounter",
+        "instruction:preventBlockerActivation",
+        "target:attacker",
+        "duration:thisBattle",
+        "activation:blocker",
+      ]),
+    );
+  });
+
   it("parses costed Activate Main opponent Character Blocker activation restriction", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] [Once Per Turn] DON!! −1: Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
