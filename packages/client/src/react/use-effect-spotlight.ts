@@ -70,6 +70,22 @@ export type UseEffectSpotlightState =
   | UseEffectSpotlightActiveState
   | UseEffectSpotlightControlsState;
 
+export const shouldAutoAdvanceSpotlightPlayback = ({
+  currentSource,
+  model,
+  paused,
+}: {
+  readonly currentSource: EffectSpotlightActiveSourceInput | undefined;
+  readonly model: EffectSpotlightState | undefined;
+  readonly paused: boolean;
+}): boolean =>
+  model !== undefined &&
+  currentSource !== undefined &&
+  !model.pinned &&
+  !paused &&
+  model.activeKey === currentSource.key &&
+  model.activeMode === currentSource.mode;
+
 export interface UseEffectSpotlightInput {
   readonly active: ActiveEffectTextPresentation | undefined;
   readonly activeKey?: string | undefined;
@@ -204,9 +220,12 @@ export const useEffectSpotlight = ({
   useEffect(() => {
     if (
       model === undefined ||
-      model.pinned ||
-      playback.paused ||
-      currentSource === undefined
+      currentSource === undefined ||
+      !shouldAutoAdvanceSpotlightPlayback({
+        currentSource,
+        model,
+        paused: playback.paused,
+      })
     ) {
       return;
     }
