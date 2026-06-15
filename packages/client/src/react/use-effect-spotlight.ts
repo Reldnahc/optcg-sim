@@ -246,13 +246,17 @@ export const advanceSpotlightPlayback = ({
     return { ...state, cursorIndex: undefined };
   }
   const presentIndex = state.entries.length - 1;
-  const cursorIndex = state.cursorIndex ?? presentIndex;
+  const cursorIndex = state.cursorIndex;
   if (command === "rewind") {
     return {
       ...state,
-      cursorIndex: Math.max(0, cursorIndex - 1),
+      cursorIndex:
+        cursorIndex === undefined ? presentIndex : Math.max(0, cursorIndex - 1),
       paused: true,
     };
+  }
+  if (cursorIndex === undefined) {
+    return state;
   }
   if (command === "stepForward") {
     return {
@@ -265,6 +269,9 @@ export const advanceSpotlightPlayback = ({
   }
   if (cursorIndex < presentIndex) {
     return { ...state, cursorIndex: cursorIndex + 1 };
+  }
+  if (state.entries[cursorIndex]?.mode === "resolved") {
+    return { ...state, cursorIndex: undefined };
   }
   return state;
 };
@@ -552,11 +559,9 @@ export const useEffectSpotlight = ({
           state: previous,
         }),
       );
-      if (canAutoStep) {
-        setModel((previous) =>
-          previous?.activeKey === model.activeKey ? undefined : previous,
-        );
-      }
+      setModel((previous) =>
+        previous?.activeKey === model.activeKey ? undefined : previous,
+      );
     }, delayMs);
     return () => {
       window.clearTimeout(timeout);

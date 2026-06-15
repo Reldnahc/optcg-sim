@@ -292,7 +292,7 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
-  it("rewinds from fast-forwarded history without requiring a refresh", () => {
+  it("rewinds from fast-forwarded history to the present entry", () => {
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",
       state: {
@@ -313,11 +313,11 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
-    expect(rewound.cursorIndex).toBe(0);
+    expect(rewound.cursorIndex).toBe(1);
     expect(rewound.paused).toBe(true);
   });
 
-  it("keeps the present spotlight available when automatic playback catches up", () => {
+  it("hides the final resolved spotlight when automatic playback catches up", () => {
     const current = {
       entries: [source("event:first", "span:first")],
       cursorIndex: 0,
@@ -329,7 +329,9 @@ describe("effect spotlight model", () => {
       state: current,
     });
 
-    expect(next).toBe(current);
+    expect(next.entries.map((entry) => entry.key)).toEqual(["event:first"]);
+    expect(next.cursorIndex).toBeUndefined();
+    expect(next.paused).toBe(false);
   });
 
   it("derives displayed spotlight directly from the playback cursor", () => {
