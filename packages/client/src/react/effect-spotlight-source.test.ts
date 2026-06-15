@@ -45,7 +45,7 @@ const activeEffectTextForSpotlight = (input: {
 }): ActiveEffectTextPresentation | undefined =>
   activeEffectTextSourceForSpotlight(input)?.active;
 
-describe("activeEffectTextForSpotlight", () => {
+describe("legacy activeEffectTextForSpotlight fallback", () => {
   it("uses active view text before resolved event presentation", () => {
     const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
       source,
@@ -110,6 +110,44 @@ describe("activeEffectTextForSpotlight", () => {
         events: [],
       }),
     ).toEqual(pendingActiveEffectText);
+  });
+
+  it("returns structured pending decision fallback sources", () => {
+    const pendingActiveEffectText: NonNullable<
+      PlayerView["pendingDecision"]
+    >["presentation"]["activeEffectText"] = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:cost:optional"],
+    };
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: {
+          id: "decision:payCost:1" as DecisionId,
+          type: "chooseQuantity",
+          playerId: "p1" as PlayerId,
+          prompt: "Pay cost?",
+          causedBy: { type: "ruleProcess", name: "cost" },
+          presentation: {
+            title: "Pay cost",
+            instruction: "Pay cost?",
+            activeEffectText: pendingActiveEffectText,
+          },
+          mode: "upTo",
+          min: 0,
+          max: 1,
+        },
+        events: [],
+      }),
+    ).toMatchObject({
+      id: "decision:decision:payCost:1|source-1|effect|span:cost:optional",
+      key: "decision:decision:payCost:1|source-1|effect|span:cost:optional",
+      semanticKey: "p1|source-1|OP00-001|effect|span:cost:optional",
+      status: "pending",
+      pendingDecisionId: "decision:payCost:1",
+    });
   });
 
   it("falls back to the newest resolved effect presentation", () => {
@@ -184,8 +222,11 @@ describe("activeEffectTextForSpotlight", () => {
           textKind: "effect",
           activeSpanIds: ["span:first"],
         },
+        id: String(first.id),
         key: String(first.id),
+        semanticKey: "p1|source-1|OP00-001|effect|span:first",
         mode: "resolved",
+        status: "resolved",
       },
       {
         active: {
@@ -193,8 +234,11 @@ describe("activeEffectTextForSpotlight", () => {
           textKind: "effect",
           activeSpanIds: ["span:second"],
         },
+        id: String(second.id),
         key: String(second.id),
+        semanticKey: "p1|source-1|OP00-001|effect|span:second",
         mode: "resolved",
+        status: "resolved",
       },
     ]);
   });
@@ -445,8 +489,11 @@ describe("activeEffectTextForSpotlight", () => {
         textKind: "effect",
         activeSpanIds: ["span:new"],
       },
+      id: String(resolved.id),
       key: String(resolved.id),
+      semanticKey: "p1|source-1|OP00-001|effect|span:new",
       mode: "resolved",
+      status: "resolved",
     });
   });
 
@@ -476,8 +523,11 @@ describe("activeEffectTextForSpotlight", () => {
         textKind: "effect",
         activeSpanIds: ["span:replacement"],
       },
+      id: String(replacement.id),
       key: String(replacement.id),
+      semanticKey: "p1|source-1|OP00-001|effect|span:replacement",
       mode: "resolved",
+      status: "resolved",
     });
   });
 
@@ -509,8 +559,11 @@ describe("activeEffectTextForSpotlight", () => {
         textKind: "effect",
         activeSpanIds: [],
       },
+      id: String(played.id),
       key: String(played.id),
+      semanticKey: "p1|played-1|OP00-002|effect|",
       mode: "resolved",
+      status: "resolved",
     });
   });
 

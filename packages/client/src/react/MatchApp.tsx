@@ -337,6 +337,9 @@ export const MatchApp = ({
     consumeInitialResolvedSources: effectSpotlightHistory === undefined,
     initialCursorKey: effectSpotlightHistory?.presentKey,
     pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
+    sourceKind: effectSpotlightHistory === undefined
+      ? "legacyFallback"
+      : "serverTimeline",
   });
   const effectSpotlightActive = effectSpotlight?.active;
   const effectSpotlightCard =

@@ -11,6 +11,7 @@ import {
   currentSpotlightPlaybackEntry,
   type EffectSpotlightActiveSourceInput,
   type EffectSpotlightPlaybackState,
+  type EffectSpotlightSourceKind,
 } from "./use-effect-spotlight-playback.js";
 import {
   effectSpotlightDisplayForEntry,
@@ -22,6 +23,7 @@ export type {
   EffectSpotlightPlaybackCommand,
   EffectSpotlightPlaybackEntry,
   EffectSpotlightPlaybackState,
+  EffectSpotlightSourceKind,
   EffectSpotlightSourceMode,
 } from "./use-effect-spotlight-playback.js";
 export {
@@ -78,6 +80,7 @@ export interface UseEffectSpotlightInput {
   readonly pendingDecisionId: DecisionId | string | undefined;
   readonly minimumDwellMs?: number | undefined;
   readonly graceMs?: number | undefined;
+  readonly sourceKind?: EffectSpotlightSourceKind | undefined;
 }
 
 export const useEffectSpotlight = ({
@@ -90,6 +93,7 @@ export const useEffectSpotlight = ({
   initialCursorKey,
   minimumDwellMs = 2_000,
   pendingDecisionId,
+  sourceKind,
 }: UseEffectSpotlightInput): UseEffectSpotlightState | undefined => {
   const consumedResolvedKeys = useRef(new Set<string>());
   const suppressedResolvedSignatures = useRef(new Set<string>());
@@ -158,6 +162,7 @@ export const useEffectSpotlight = ({
         suppressedResolvedSignatures: suppressedResolvedSignatures.current,
         previous,
         sources: normalizedSources,
+        sourceKind,
       }),
     );
     if (isInitialPlaybackBatch) {
@@ -168,6 +173,7 @@ export const useEffectSpotlight = ({
     consumeInitialResolvedSources,
     initialCursorKey,
     normalizedSources,
+    sourceKind,
   ]);
 
   useEffect(() => {

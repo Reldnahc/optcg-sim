@@ -253,6 +253,10 @@ describe("playmat structure", () => {
       matchApp,
       /initialCursorKey: effectSpotlightHistory\?\.presentKey/u,
     );
+    assert.match(
+      matchApp,
+      /sourceKind: effectSpotlightHistory === undefined\s+\? "legacyFallback"\s+:\s+"serverTimeline"/u,
+    );
     assert.match(matchApp, /effectSpotlightActive=\{effectSpotlightActive\}/u);
     assert.match(
       matchApp,

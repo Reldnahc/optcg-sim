@@ -1,17 +1,15 @@
 import type {
   ActiveEffectTextPresentation,
   CardId,
+  DecisionId,
   EngineEvent,
+  EffectSpotlightHistoryEntry,
   InstanceId,
   PlayerView,
   PlayerId,
 } from "@optcg/types";
 
-export interface EffectSpotlightActiveSource {
-  readonly active: ActiveEffectTextPresentation;
-  readonly key: string;
-  readonly mode: "live" | "resolved";
-}
+export type EffectSpotlightActiveSource = EffectSpotlightHistoryEntry;
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -72,21 +70,23 @@ const resolvedSpotlightSourcesForEvent = (
   const splitSpanIds = splitResolvedSpanIds(presentation.activeSpanIds);
   if (splitSpanIds.length === 0) {
     return [
-      {
+      structuredFallbackSource({
         active: presentation,
         key: String(event.id),
         mode: "resolved",
-      },
+      }),
     ];
   }
-  return splitSpanIds.map((spanId) => ({
-    active: {
-      ...presentation,
-      activeSpanIds: [spanId],
-    },
-    key: `${String(event.id)}:${spanId}`,
-    mode: "resolved" as const,
-  }));
+  return splitSpanIds.map((spanId) =>
+    structuredFallbackSource({
+      active: {
+        ...presentation,
+        activeSpanIds: [spanId],
+      },
+      key: `${String(event.id)}:${spanId}`,
+      mode: "resolved",
+    }),
+  );
 };
 
 const noEffectDecisionResponseTypes = new Set(["paymentDeclined"]);
@@ -163,7 +163,7 @@ const playedCardPresentation = (
   ) {
     return undefined;
   }
-  return {
+  return structuredFallbackSource({
     active: {
       source: {
         playerId: playerId as PlayerId,
@@ -175,7 +175,7 @@ const playedCardPresentation = (
     },
     key: String(event.id),
     mode: "resolved",
-  };
+  });
 };
 
 const liveKey = (
@@ -188,6 +188,35 @@ const liveKey = (
     active.textKind ?? "",
     active.activeSpanIds.join("\n"),
   ].join("|");
+
+const semanticKeyForActive = (active: ActiveEffectTextPresentation): string =>
+  [
+    String(active.source.playerId),
+    String(active.source.instanceId),
+    String(active.source.cardId),
+    active.textKind ?? "effect",
+    active.activeSpanIds.join("\n"),
+  ].join("|");
+
+const structuredFallbackSource = ({
+  active,
+  key,
+  mode,
+  pendingDecisionId,
+}: {
+  readonly active: ActiveEffectTextPresentation;
+  readonly key: string;
+  readonly mode: "live" | "resolved";
+  readonly pendingDecisionId?: DecisionId | undefined;
+}): EffectSpotlightActiveSource => ({
+  active,
+  id: key,
+  key,
+  semanticKey: semanticKeyForActive(active),
+  mode,
+  status: mode === "live" ? "pending" : "resolved",
+  ...(pendingDecisionId === undefined ? {} : { pendingDecisionId }),
+});
 
 const splitResolvedSourceKeyIndex = (key: string): number =>
   key.indexOf(":span:");
@@ -282,14 +311,15 @@ export const activeEffectTextSourceForSpotlight = ({
   if (pendingDecision?.presentation.activeEffectText !== undefined) {
     const pendingActiveEffectText =
       pendingDecision.presentation.activeEffectText;
-    return {
+    return structuredFallbackSource({
       active: pendingActiveEffectText,
       key: liveKey(
         pendingActiveEffectText,
         `decision:${String(pendingDecision.id)}`,
       ),
       mode: "live",
-    };
+      pendingDecisionId: pendingDecision.id,
+    });
   }
   if (pendingDecision !== undefined) {
     return undefined;
@@ -302,11 +332,11 @@ export const activeEffectTextSourceForSpotlight = ({
     if (splitResolvedSources.length > 0) {
       return splitResolvedSources.at(-1);
     }
-    return {
+    return structuredFallbackSource({
       active: activeEffectText,
       key: liveKey(activeEffectText, "active"),
       mode: "live",
-    };
+    });
   }
   return resolvedEffectTextSourcesForSpotlight(events).at(-1);
 };
