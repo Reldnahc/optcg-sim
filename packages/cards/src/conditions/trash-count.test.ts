@@ -16,6 +16,9 @@ describe("trash count condition parser", () => {
         {
           id: "you-have-n-or-more-events-in-your-trash",
         },
+        {
+          id: "you-have-named-cards-in-your-trash",
+        },
       ],
     });
   });
@@ -61,6 +64,44 @@ describe("trash count condition parser", () => {
         "condition:threshold:positiveInteger",
         "player:self",
         "filter:category:event",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses named trash presence as independent reusable trash count conditions", () => {
+    expect(
+      parseTrashCountCondition({
+        text: "you have [Kuromarimo] and [Chess] in your trash",
+      }),
+    ).toEqual({
+      condition: {
+        type: "and",
+        conditions: [
+          {
+            type: "trashCount",
+            player: "self",
+            filter: { names: ["Kuromarimo"] },
+            op: "gte",
+            value: 1,
+          },
+          {
+            type: "trashCount",
+            player: "self",
+            filter: { names: ["Chess"] },
+            op: "gte",
+            value: 1,
+          },
+        ],
+      },
+      evidence: [
+        "condition:trashCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:name",
+        "filter:name",
+        "composition:conditionAnd",
       ],
       rest: "",
     });

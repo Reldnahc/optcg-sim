@@ -226,6 +226,44 @@ test("trashCount supports reusable category filters for Events", () => {
   );
 });
 
+test("trashCount supports reusable name filters", () => {
+  const state = createActiveState();
+  addTrashCard(state, p1, "character", 0);
+  addTrashCard(state, p1, "character", 1);
+  const player = must(state.players[p1], "p1");
+  const first = must(player.trash[0], "first trash card");
+  const second = must(player.trash[1], "second trash card");
+  state.cardManifest.cards[first.cardId] = {
+    ...must(state.cardManifest.cards[first.cardId], "first metadata"),
+    name: "Kuromarimo",
+  };
+  state.cardManifest.cards[second.cardId] = {
+    ...must(state.cardManifest.cards[second.cardId], "second metadata"),
+    name: "Chess",
+  };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "trashCount",
+      player: "self",
+      filter: { names: ["Kuromarimo"] },
+      op: "gte",
+      value: 1,
+    }),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "trashCount",
+      player: "self",
+      filter: { names: ["Chess"] },
+      op: "gte",
+      value: 2,
+    }),
+    { supported: true, passed: false },
+  );
+});
+
 test("trashCount supports lte and exact equality comparator semantics", () => {
   assert.deepEqual(
     evaluateTrashCount(
