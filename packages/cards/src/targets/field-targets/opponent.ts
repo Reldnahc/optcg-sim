@@ -170,12 +170,24 @@ export function parseOpponentCharactersOrDonCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const match =
-    /^of your opponent's Characters? or DON!! cards?\b\s*(?<rest>.*)$/i.exec(
+    /^of your opponent's (?:(?<charactersFirst>Characters? or DON!! cards?)|(?<donFirst>DON!! cards? or Characters?))\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   if (match === null) {
     return undefined;
   }
+  const predicateText = match.groups?.["rest"]?.trim() ?? "";
+  const predicates =
+    predicateText.length > 0
+      ? parseCardFilterPredicates(
+          { text: predicateText },
+          { powerSemantics: "current" },
+        )
+      : undefined;
+  const predicateRest = predicates?.rest.trim() ?? predicateText;
+  const hasCharacterPredicates =
+    predicates !== undefined &&
+    (predicateRest.length === 0 || predicateRest === ".");
 
   return {
     target: {
@@ -189,7 +201,14 @@ export function parseOpponentCharactersOrDonCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: { categories: ["character", "don"] },
+        filter: hasCharacterPredicates
+          ? {
+              anyOf: [
+                { categories: ["don"] },
+                { ...predicates.filter, categories: ["character"] },
+              ],
+            }
+          : { categories: ["character", "don"] },
       },
     },
     evidence: [
@@ -197,9 +216,15 @@ export function parseOpponentCharactersOrDonCardsTarget(
       "player:opponent",
       "zone:characterArea",
       "zone:costArea",
-      "filter:category:character",
-      "filter:category:don",
+      ...(hasCharacterPredicates
+        ? ([
+            "filter:anyOf",
+            "filter:category:don",
+            "filter:category:character",
+            ...predicates.evidence,
+          ] as const)
+        : (["filter:category:character", "filter:category:don"] as const)),
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
+    rest: predicateRest === "." ? "" : predicateRest,
   };
 }
