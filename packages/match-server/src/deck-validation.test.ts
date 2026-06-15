@@ -298,6 +298,45 @@ describe("deck validation", () => {
     );
   });
 
+  test("allows cards with any-copy deck text to exceed format copy limits", async () => {
+    const result = await validateDeckLoadout(
+      validInput({
+        mainDeck: {
+          source: "deckHash",
+          hash: "any-copy-card",
+          status: "ready",
+          decoded: {
+            leader: { cardId: "LDR-001" as CardId, count: 1 },
+            main: [{ cardId: "CHR-001" as CardId, count: 50 }],
+          },
+          donDeckCount: 10,
+        },
+        cards: {
+          ["LDR-001" as CardId]: card("LDR-001", {
+            category: "leader",
+            life: 5,
+          }),
+          ["CHR-001" as CardId]: card("CHR-001", {
+            effectText:
+              "Under the rules of this game, you may have any number of this card in your deck.",
+            legality: { standard: { status: "legal", max_copies: 4 } },
+          }),
+          ["DON-001" as CardId]: card("DON-001", {
+            category: "don",
+          }),
+        },
+      }),
+    );
+
+    assert.equal(result.valid, true);
+    assert.deepEqual(result.constructionRules, [
+      {
+        sourceCardId: "CHR-001",
+        type: "anyCopiesOfThisCard",
+      },
+    ]);
+  });
+
   test("rejects cards that are not playable by the simulator implementation", async () => {
     const result = await validateDeckLoadout(
       validInput({
