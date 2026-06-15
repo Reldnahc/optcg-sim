@@ -107,6 +107,29 @@ describe("effect spotlight model", () => {
     ]);
   });
 
+  it("keeps the cursor on a reviewed past entry when new sources arrive", () => {
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+      sources: [source("event:third", "span:third")],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+      "event:third",
+    ]);
+    expect(next.cursorIndex).toBe(0);
+    expect(next.paused).toBe(true);
+  });
+
   it("rewinds to the previous entry and pauses playback", () => {
     const next = advanceSpotlightPlayback({
       command: "rewind",

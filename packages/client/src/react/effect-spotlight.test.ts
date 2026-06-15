@@ -276,4 +276,20 @@ describe("EffectSpotlight", () => {
     expect(html).toContain('aria-label="Next spotlight"');
     expect(html).not.toContain('aria-label="Pause spotlight"');
   });
+
+  it("keeps playback controls visible without an active spotlight card", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: undefined,
+        active: undefined,
+        controls: controls(),
+      }),
+    );
+
+    expect(html).toContain("effect-spotlight");
+    expect(html).toContain("effect-spotlight-controls");
+    expect(html).toContain('aria-label="Pause spotlight"');
+    expect(html).toContain('aria-label="Catch up spotlight"');
+    expect(html).not.toContain("effect-spotlight-card");
+  });
 });

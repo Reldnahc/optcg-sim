@@ -239,8 +239,9 @@ describe("playmat structure", () => {
     assert.match(matchApp, /effectSpotlightCard=\{effectSpotlightCard\}/u);
     assert.match(
       matchApp,
-      /effectSpotlightActive=\{effectSpotlight\?\.active\}/u,
+      /const effectSpotlightActive = effectSpotlight\?\.active;/u,
     );
+    assert.match(matchApp, /effectSpotlightActive=\{effectSpotlightActive\}/u);
     assert.match(
       matchApp,
       /effectSpotlightControls=\{effectSpotlight\?\.controls\}/u,

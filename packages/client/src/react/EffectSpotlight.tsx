@@ -89,26 +89,35 @@ export const EffectSpotlight = ({
   card,
   controls,
 }: EffectSpotlightProps): React.JSX.Element | null => {
-  if (card === undefined || active === undefined) {
+  if (controls === undefined && (card === undefined || active === undefined)) {
     return null;
   }
-  const textKind = active.textKind ?? "effect";
-  const text = textKind === "trigger" ? card.triggerText : card.effectText;
+  const textKind = active?.textKind ?? "effect";
+  const text =
+    card === undefined
+      ? undefined
+      : textKind === "trigger"
+        ? card.triggerText
+        : card.effectText;
   const sourceMap =
-    textKind === "trigger"
-      ? card.triggerTextSourceMap
-      : card.effectTextSourceMap;
+    card === undefined
+      ? undefined
+      : textKind === "trigger"
+        ? card.triggerTextSourceMap
+        : card.effectTextSourceMap;
   const spotlightText =
     text === undefined
       ? undefined
       : spotlightTextWithoutReminders(text, sourceMap);
   const triggerSpotlightText =
-    textKind === "trigger" || card.triggerText === undefined
+    card === undefined || textKind === "trigger"
       ? undefined
-      : spotlightTextWithoutReminders(
-          card.triggerText,
-          card.triggerTextSourceMap,
-        );
+      : card.triggerText === undefined
+        ? undefined
+        : spotlightTextWithoutReminders(
+            card.triggerText,
+            card.triggerTextSourceMap,
+          );
   const controlClick =
     (handler: () => void) =>
     (event: MouseEvent<HTMLButtonElement>): void => {
@@ -118,46 +127,54 @@ export const EffectSpotlight = ({
   return (
     <aside
       className="effect-spotlight"
-      aria-label={`Resolving ${card.name}`}
+      aria-label={
+        card === undefined ? "Spotlight playback" : `Resolving ${card.name}`
+      }
       onClick={(event) => {
         event.stopPropagation();
       }}
     >
-      <div className="effect-spotlight-card">
-        {card.imageUrl === undefined ? (
-          <div className="effect-spotlight-card__placeholder">{card.name}</div>
-        ) : (
-          <img
-            className="effect-spotlight-card__art"
-            src={card.imageUrl}
-            alt={card.name}
-          />
-        )}
-        <div className="effect-spotlight-card__rules">
-          <div className="effect-spotlight-card__main-rules">
-            {spotlightText === undefined ? (
-              <div className="effect-spotlight-card__fallback">{card.name}</div>
-            ) : (
-              <EffectRulesText
-                text={spotlightText.text}
-                sourceMap={spotlightText.sourceMap}
-                activeSpanIds={active.activeSpanIds}
-                compact
-                preserveNewlines
-              />
+      {card === undefined || active === undefined ? null : (
+        <div className="effect-spotlight-card">
+          {card.imageUrl === undefined ? (
+            <div className="effect-spotlight-card__placeholder">
+              {card.name}
+            </div>
+          ) : (
+            <img
+              className="effect-spotlight-card__art"
+              src={card.imageUrl}
+              alt={card.name}
+            />
+          )}
+          <div className="effect-spotlight-card__rules">
+            <div className="effect-spotlight-card__main-rules">
+              {spotlightText === undefined ? (
+                <div className="effect-spotlight-card__fallback">
+                  {card.name}
+                </div>
+              ) : (
+                <EffectRulesText
+                  text={spotlightText.text}
+                  sourceMap={spotlightText.sourceMap}
+                  activeSpanIds={active.activeSpanIds}
+                  compact
+                  preserveNewlines
+                />
+              )}
+            </div>
+            {triggerSpotlightText === undefined ? null : (
+              <div className="effect-spotlight-card__trigger-rules">
+                <TriggerBlock
+                  text={triggerSpotlightText.text}
+                  compact
+                  renderSearchLink={renderMainSiteSearchLink}
+                />
+              </div>
             )}
           </div>
-          {triggerSpotlightText === undefined ? null : (
-            <div className="effect-spotlight-card__trigger-rules">
-              <TriggerBlock
-                text={triggerSpotlightText.text}
-                compact
-                renderSearchLink={renderMainSiteSearchLink}
-              />
-            </div>
-          )}
         </div>
-      </div>
+      )}
       {controls === undefined ? null : (
         <div
           className="effect-spotlight-controls"

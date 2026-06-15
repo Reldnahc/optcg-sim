@@ -41,9 +41,18 @@ export interface EffectSpotlightControls {
   readonly catchUp: () => void;
 }
 
-export interface UseEffectSpotlightState extends EffectSpotlightState {
+export interface UseEffectSpotlightActiveState extends EffectSpotlightState {
   readonly controls: EffectSpotlightControls;
 }
+
+export interface UseEffectSpotlightControlsState {
+  readonly active?: undefined;
+  readonly controls: EffectSpotlightControls;
+}
+
+export type UseEffectSpotlightState =
+  | UseEffectSpotlightActiveState
+  | UseEffectSpotlightControlsState;
 
 export interface EffectSpotlightModelInput {
   readonly nowMs: number;
@@ -355,6 +364,7 @@ export const useEffectSpotlight = ({
   const consumedResolvedKeys = useRef(new Set<string>());
   const consumedSourceSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
+  const [controlsVisible, setControlsVisible] = useState(false);
   const [playback, setPlayback] = useState<EffectSpotlightPlaybackState>({
     entries: [],
     cursorIndex: undefined,
@@ -379,6 +389,9 @@ export const useEffectSpotlight = ({
   const currentSource =
     cursorIndex === undefined ? undefined : playback.entries[cursorIndex];
   useEffect(() => {
+    if (normalizedSources.length > 0) {
+      setControlsVisible(true);
+    }
     if (
       !initializedConsumedResolvedKeys.current &&
       activeSources !== undefined
@@ -483,57 +496,58 @@ export const useEffectSpotlight = ({
     fallbackMode: activeMode,
     pendingDecisionId,
   });
-  if (displayModel === undefined) {
-    return undefined;
-  }
   const presentIndex = playback.entries.length - 1;
+  const controls = {
+    paused: playback.paused,
+    canRewind: cursorIndex !== undefined && cursorIndex > 0,
+    canStepForward:
+      cursorIndex !== undefined &&
+      presentIndex >= 0 &&
+      cursorIndex < presentIndex,
+    rewind: () => {
+      setPlayback((previous) =>
+        advanceSpotlightPlayback({ command: "rewind", state: previous }),
+      );
+    },
+    togglePaused: () => {
+      setPlayback((previous) =>
+        advanceSpotlightPlayback({
+          command: previous.paused ? "play" : "pause",
+          state: previous,
+        }),
+      );
+    },
+    stepForward: () => {
+      setPlayback((previous) =>
+        advanceSpotlightPlayback({
+          command: "stepForward",
+          state: previous,
+        }),
+      );
+    },
+    catchUp: () => {
+      setPlayback((previous) => {
+        consumeResolvedSpotlightSourceKeys(
+          consumedResolvedKeys.current,
+          previous.entries,
+        );
+        consumeSpotlightSourceSignatures(
+          consumedSourceSignatures.current,
+          previous.entries,
+        );
+        return advanceSpotlightPlayback({
+          command: "catchUp",
+          state: previous,
+        });
+      });
+      setModel(undefined);
+    },
+  };
+  if (displayModel === undefined) {
+    return controlsVisible ? { controls } : undefined;
+  }
   return {
     ...displayModel,
-    controls: {
-      paused: playback.paused,
-      canRewind: cursorIndex !== undefined && cursorIndex > 0,
-      canStepForward:
-        cursorIndex !== undefined &&
-        presentIndex >= 0 &&
-        cursorIndex < presentIndex,
-      rewind: () => {
-        setPlayback((previous) =>
-          advanceSpotlightPlayback({ command: "rewind", state: previous }),
-        );
-      },
-      togglePaused: () => {
-        setPlayback((previous) =>
-          advanceSpotlightPlayback({
-            command: previous.paused ? "play" : "pause",
-            state: previous,
-          }),
-        );
-      },
-      stepForward: () => {
-        setPlayback((previous) =>
-          advanceSpotlightPlayback({
-            command: "stepForward",
-            state: previous,
-          }),
-        );
-      },
-      catchUp: () => {
-        setPlayback((previous) => {
-          consumeResolvedSpotlightSourceKeys(
-            consumedResolvedKeys.current,
-            previous.entries,
-          );
-          consumeSpotlightSourceSignatures(
-            consumedSourceSignatures.current,
-            previous.entries,
-          );
-          return advanceSpotlightPlayback({
-            command: "catchUp",
-            state: previous,
-          });
-        });
-        setModel(undefined);
-      },
-    },
+    controls,
   };
 };

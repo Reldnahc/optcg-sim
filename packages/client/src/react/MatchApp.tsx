@@ -334,10 +334,11 @@ export const MatchApp = ({
       : { activeSources: activeEffectTextSources }),
     pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
   });
+  const effectSpotlightActive = effectSpotlight?.active;
   const effectSpotlightCard =
-    effectSpotlight === undefined
+    effectSpotlightActive === undefined
       ? undefined
-      : cardModel(effectSpotlight.active.source);
+      : cardModel(effectSpotlightActive.source);
   const {
     combineDropTarget,
     completeInfoGroupDrag,
@@ -527,7 +528,7 @@ export const MatchApp = ({
           presentationEvents={playerSnapshot?.view.events ?? []}
           reduceDeckStackRendering={visualSettings.reduceDeckStackRendering}
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
-          effectSpotlightActive={effectSpotlight?.active}
+          effectSpotlightActive={effectSpotlightActive}
           effectSpotlightCard={effectSpotlightCard}
           effectSpotlightControls={effectSpotlight?.controls}
           selectedCardInstanceId={selectedCardInstanceId}
