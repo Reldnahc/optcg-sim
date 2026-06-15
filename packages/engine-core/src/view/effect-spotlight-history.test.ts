@@ -177,4 +177,30 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
         "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
     });
   });
+
+  it("projects search selection resolved plus search remainder pending in order", () => {
+    const event = resolvedSearchEvent("event:search", [
+      "span:search:selection",
+      "span:search:remaining",
+    ]);
+
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:search:remaining"],
+      },
+      events: [event],
+      pendingDecisionId: "decision:orderCards:search",
+    });
+
+    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
+      [["span:search:selection"], ["span:search:remaining"]],
+    );
+    expect(history?.entries.map((entry) => entry.status)).toEqual([
+      "resolved",
+      "pending",
+    ]);
+    expect(history?.presentKey).toBe(history?.entries.at(-1)?.key);
+  });
 });
