@@ -1077,6 +1077,27 @@ test("selectedTargets matrix carries double-nested sequence producers to outer n
   ]);
 });
 
+test("selectedTargets matrix carries saved targets into conditional branches", () => {
+  const selection = "saved-result:conditional-target" as SelectionId;
+
+  assertSupported([
+    selectCharacterTarget(selection),
+    {
+      connector: "then",
+      effect: {
+        type: "conditional",
+        if: { type: "trashCount", player: "self", op: "gte", value: 10 },
+        then: {
+          type: "modifyPower",
+          target: savedCharacterTarget(selection),
+          value: 2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    },
+  ]);
+});
+
 test("selectedTargets matrix accepts selectedCards owner constraints", () => {
   const ownerSelection = "saved-result:owner-card" as SelectionId;
   const targetSelection = "saved-result:owner-target" as SelectionId;
@@ -1237,6 +1258,46 @@ test("producedObjects matrix accepts playSelected produced object as savedFieldO
       effect: {
         type: "ko",
         target: savedCharacterTarget(playedObject, "producedObjects"),
+      },
+    },
+  ]);
+});
+
+test("producedObjects matrix carries played objects into delayed branches", () => {
+  const selection = "saved-result:delayed-played-selection" as SelectionId;
+  const playedObject = "saved-result:delayed-played-object";
+
+  assertSupported([
+    selectHand(selection),
+    {
+      connector: "then",
+      saveResultAs: playedObject,
+      effect: {
+        type: "playSelected",
+        selection,
+        ignoreCost: true,
+      },
+    },
+    {
+      connector: "ifPreviousSucceeded",
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: {
+          type: "bounce",
+          destination: "deckBottom",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "producedObjects",
+              saveResultAs: playedObject,
+            },
+            zone: "characterArea",
+            player: "self",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+        },
       },
     },
   ]);

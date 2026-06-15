@@ -307,6 +307,7 @@ const isSupportedConditionalSegment = (
   effect: SequenceSegmentEffect,
   sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"],
   options: SequenceSupportOptions,
+  supportState: SequenceSupportState,
 ): effect is ConditionalEffect => {
   if (
     effect.type !== "conditional" ||
@@ -323,7 +324,7 @@ const isSupportedConditionalSegment = (
       if (flattened === null) {
         return false;
       }
-      return isSupportedSequenceBlock(
+      return isSupportedSequenceBlockWithState(
         toSyntheticQueueEntry(sourcePresencePolicy),
         {
           id: "effect:conditional-child" as EffectDefinition["effects"][number]["id"],
@@ -337,6 +338,7 @@ const isSupportedConditionalSegment = (
           allowInitialTrashFromHand: true,
           requirePositiveDrawCount: false,
         },
+        cloneSequenceSupportState(supportState),
       );
     });
 };
@@ -344,8 +346,9 @@ const isSupportedConditionalSegment = (
 const isSupportedDelayedSegment = (
   effect: DelayedEffect,
   options: SequenceSupportOptions,
+  supportState: SequenceSupportState,
 ): boolean =>
-  isSupportedSequenceBlock(
+  isSupportedSequenceBlockWithState(
     toSyntheticQueueEntry("noSourceRequired"),
     {
       id: "effect:delayed-child" as EffectDefinition["effects"][number]["id"],
@@ -355,6 +358,7 @@ const isSupportedDelayedSegment = (
       effect: effect.effect,
     },
     options,
+    cloneSequenceSupportState(supportState),
   );
 
 const isSupportedForEachSavedTargetSegment = (
@@ -559,7 +563,7 @@ const isSupportedSequenceBlockWithState = (
         return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "delayed") {
-        return isSupportedDelayedSegment(segment.effect, options);
+        return isSupportedDelayedSegment(segment.effect, options, supportState);
       }
       if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
@@ -683,6 +687,7 @@ const isSupportedSequenceBlockWithState = (
           segment.effect,
           entry.sourcePresencePolicy,
           options,
+          supportState,
         )
       ) {
         supportState.hasPendingDecisionSegment = true;
