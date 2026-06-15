@@ -19,12 +19,13 @@ describe("tabbed floating window", () => {
           {
             id: "preview",
             title: "Preview",
-            content: createElement("p", undefined, "Preview content"),
+            renderContent: () =>
+              createElement("p", undefined, "Preview content"),
           },
           {
             id: "log",
             title: "Log",
-            content: createElement("p", undefined, "Log content"),
+            renderContent: () => createElement("p", undefined, "Log content"),
           },
         ],
         activeTabId: "log",
@@ -46,6 +47,43 @@ describe("tabbed floating window", () => {
     assert.match(markup, /aria-selected="false"[^>]*>Preview<\/button>/u);
     assert.match(markup, /Log content/u);
     assert.doesNotMatch(markup, /Preview content/u);
+  });
+
+  test("renders only the active tab content lazily", () => {
+    let activeRenderCount = 0;
+    let inactiveRenderCount = 0;
+    const markup = renderToStaticMarkup(
+      createElement(TabbedFloatingWindow, {
+        tabs: [
+          {
+            id: "preview",
+            title: "Preview",
+            renderContent: () => {
+              inactiveRenderCount += 1;
+              return createElement("p", undefined, "inactive preview content");
+            },
+          },
+          {
+            id: "log",
+            title: "Log",
+            renderContent: () => {
+              activeRenderCount += 1;
+              return createElement("p", undefined, "active log content");
+            },
+          },
+        ],
+        activeTabId: "log",
+        minimized: false,
+        onActiveTabChange: () => undefined,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.equal(activeRenderCount, 1);
+    assert.equal(inactiveRenderCount, 0);
+    assert.match(markup, /active log content/u);
+    assert.doesNotMatch(markup, /inactive preview content/u);
   });
 
   test("match app keeps windows independent until explicit drag grouping", async () => {
@@ -150,12 +188,13 @@ describe("tabbed floating window", () => {
           {
             id: "preview",
             title: "Preview",
-            content: createElement("p", undefined, "Preview content"),
+            renderContent: () =>
+              createElement("p", undefined, "Preview content"),
           },
           {
             id: "log",
             title: "Log",
-            content: createElement("p", undefined, "Log content"),
+            renderContent: () => createElement("p", undefined, "Log content"),
           },
         ],
         activeTabId: "preview",

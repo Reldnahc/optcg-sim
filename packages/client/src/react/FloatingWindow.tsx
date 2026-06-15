@@ -108,6 +108,23 @@ const dragRect = (
     minHeight,
   );
 
+const resizeRect = (
+  start: PointerStart,
+  clientX: number,
+  clientY: number,
+  minWidth: number,
+  minHeight: number,
+): WindowRect =>
+  clampRect(
+    {
+      ...start.rect,
+      width: start.rect.width + clientX - start.clientX,
+      height: start.rect.height + clientY - start.clientY,
+    },
+    minWidth,
+    minHeight,
+  );
+
 export const resolveOffscreenDropAction = (
   rect: WindowRect,
   viewport: WindowViewport,
@@ -160,7 +177,10 @@ export const FloatingWindow = ({
   );
   const dragStart = useRef<PointerStart | undefined>(undefined);
   const resizeStart = useRef<PointerStart | undefined>(undefined);
-  const updateRect = useCallback(
+  const previewRect = useCallback((nextRect: WindowRect) => {
+    setRect(nextRect);
+  }, []);
+  const commitRect = useCallback(
     (nextRect: WindowRect) => {
       setRect(nextRect);
       onRectChange?.(nextRect);
@@ -211,7 +231,7 @@ export const FloatingWindow = ({
       effectiveMinWidth,
       effectiveMinHeight,
     );
-    updateRect(nextRect);
+    previewRect(nextRect);
     onDragMove?.(nextRect);
   };
 
@@ -268,9 +288,10 @@ export const FloatingWindow = ({
           onClose?.();
         }
         if (action === undefined) {
-          const resolvedRect = onDragEnd?.(droppedRect);
+          const resolvedRect =
+            onDragEnd === undefined ? droppedRect : onDragEnd(droppedRect);
           if (resolvedRect !== undefined) {
-            updateRect(
+            commitRect(
               clampRectToViewport(
                 resolvedRect,
                 effectiveMinWidth,
@@ -290,8 +311,26 @@ export const FloatingWindow = ({
       onDragEnd,
       onToggleMinimized,
       stopInteraction,
-      updateRect,
+      commitRect,
     ],
+  );
+  const completeResize = useCallback(
+    (pointerId: number, clientX: number, clientY: number) => {
+      const start = resizeStart.current;
+      if (start !== undefined && start.pointerId === pointerId) {
+        commitRect(
+          resizeRect(
+            start,
+            clientX,
+            clientY,
+            effectiveMinWidth,
+            effectiveMinHeight,
+          ),
+        );
+      }
+      stopInteraction(pointerId);
+    },
+    [commitRect, effectiveMinHeight, effectiveMinWidth, stopInteraction],
   );
 
   return (
@@ -389,20 +428,18 @@ export const FloatingWindow = ({
                 ) {
                   return;
                 }
-                updateRect(
-                  clampRect(
-                    {
-                      ...start.rect,
-                      width: start.rect.width + event.clientX - start.clientX,
-                      height: start.rect.height + event.clientY - start.clientY,
-                    },
+                previewRect(
+                  resizeRect(
+                    start,
+                    event.clientX,
+                    event.clientY,
                     effectiveMinWidth,
                     effectiveMinHeight,
                   ),
                 );
               }}
               onPointerUp={(event) => {
-                stopInteraction(event.pointerId);
+                completeResize(event.pointerId, event.clientX, event.clientY);
               }}
               onPointerCancel={(event) => {
                 stopInteraction(event.pointerId);

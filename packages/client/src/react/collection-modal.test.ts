@@ -125,10 +125,10 @@ describe("collection modal", () => {
 
     assert.match(markup, /aria-label="Deck count: 37"/u);
     assert.match(markup, />37</u);
-    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 37);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 1);
   });
 
-  test("stack zones render counted card layers with slight offsets", async () => {
+  test("stack zones render a representative card layer with stack styling", async () => {
     const markup = renderToStaticMarkup(
       createElement(Zone, {
         label: "Deck",
@@ -141,13 +141,10 @@ describe("collection modal", () => {
     );
     const zoneStyles = await readFile(zoneStylesPath, "utf8");
 
-    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 4);
+    assert.equal((markup.match(/stack-card-layer/gu) ?? []).length, 1);
     assert.match(markup, /--stack-card-offset:0px/u);
-    assert.match(markup, /--stack-card-offset:1px/u);
-    assert.match(markup, /--stack-card-offset:2px/u);
-    assert.match(markup, /--stack-card-offset:3px/u);
-    assert.match(markup, /z-index:4/u);
-    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 4);
+    assert.match(markup, /z-index:1/u);
+    assert.equal((markup.match(/card-tile-shell/gu) ?? []).length, 1);
     assert.match(markup, /card-face card-back card-back-main-deck/u);
     assert.match(
       zoneStyles,

@@ -36,6 +36,28 @@ describe("action log window", () => {
     assert.match(markup, /Card played/u);
   });
 
+  test("large action logs render only the newest visible rows", () => {
+    const entries = Array.from({ length: 55 }, (_, index) => ({
+      id: `event:${String(index + 1)}`,
+      seq: index + 1,
+      text: `Event ${String(index + 1)}`,
+    }));
+    const markup = renderToStaticMarkup(
+      createElement(ActionLogWindow, {
+        entries,
+        minimized: false,
+        onToggleMinimized: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+
+    assert.equal((markup.match(/class="action-log-entry"/gu) ?? []).length, 40);
+    assert.match(markup, /Event 1/u);
+    assert.match(markup, /Event 40/u);
+    assert.doesNotMatch(markup, /Event 41/u);
+    assert.match(markup, /Showing 40 of 55 visible actions/u);
+  });
+
   test("renders rollback request controls for rollbackable log rows", () => {
     const markup = renderToStaticMarkup(
       createElement(ActionLogWindow, {

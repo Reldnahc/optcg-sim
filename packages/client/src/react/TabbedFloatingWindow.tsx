@@ -18,7 +18,7 @@ export interface TabDragOutPoint extends WindowPoint {
 export interface FloatingWindowTab {
   id: string;
   title: string;
-  content: ReactNode;
+  renderContent: () => ReactNode;
 }
 
 export interface TabbedFloatingWindowProps {
@@ -227,7 +227,7 @@ export const TabbedFloatingWindow = ({
       }
     >
       <div className="floating-window-tab-panel" role="tabpanel">
-        {activeTab.content}
+        {activeTab.renderContent()}
       </div>
     </FloatingWindow>
   );

@@ -315,6 +315,29 @@ describe("card repository", () => {
     assert.equal(resolved.support.effectDefinitionId, undefined);
   });
 
+  test("resolves recognized deck restriction metadata as playable without generated effects", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP16-042" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP16-042": poneglyphCard(
+        "OP16-042",
+        "Under the rules of this game, you may have any number of this card in your deck.",
+      ),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.support.effectDefinitionId, undefined);
+    assert.equal(resolved.support.tested, true);
+  });
+
   test("ignores fully parenthesized reminder lines when building generated effects", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

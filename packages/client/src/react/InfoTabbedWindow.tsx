@@ -80,7 +80,7 @@ export const InfoTabbedWindow = ({
           {
             id: "preview",
             title: "Preview",
-            content: <CardPreviewContent card={previewCard} />,
+            renderContent: () => <CardPreviewContent card={previewCard} />,
           },
         ];
       case "log":
@@ -89,7 +89,7 @@ export const InfoTabbedWindow = ({
               {
                 id: "log",
                 title: "Log",
-                content: (
+                renderContent: () => (
                   <ActionLogContent
                     entries={entries}
                     onRequestRollback={onRequestRollback}
@@ -105,7 +105,7 @@ export const InfoTabbedWindow = ({
               {
                 id: "settings",
                 title: "Settings",
-                content: <SettingsContent />,
+                renderContent: () => <SettingsContent />,
               },
             ]
           : [];

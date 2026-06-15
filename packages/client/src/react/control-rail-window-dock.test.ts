@@ -65,12 +65,12 @@ describe("control rail window dock", () => {
         {
           id: "action-log",
           title: "Log",
-          content: createElement("p", null, "docked log body"),
+          renderContent: () => createElement("p", null, "docked log body"),
         },
         {
           id: "settings",
           title: "Settings",
-          content: createElement("p", null, "docked settings body"),
+          renderContent: () => createElement("p", null, "docked settings body"),
         },
       ],
       activeDockTabId: "settings",
@@ -82,7 +82,7 @@ describe("control rail window dock", () => {
       dockTabs: readonly {
         id: string;
         title: string;
-        content: React.ReactNode;
+        renderContent: () => React.ReactNode;
       }[];
       activeDockTabId: string;
       onDockTabChange: (id: string) => void;
@@ -129,7 +129,7 @@ describe("control rail window dock", () => {
           {
             id: "action-log",
             title: "Log",
-            content: createElement("p", null, "single docked log"),
+            renderContent: () => createElement("p", null, "single docked log"),
           },
         ],
         activeDockTabId: "action-log",
@@ -156,6 +156,46 @@ describe("control rail window dock", () => {
     assert.match(controlRailSource, /tabDragOutDistance/u);
     assert.match(dragOutSource, /dragOutDockWindow/u);
     assert.match(dragOutSource, /startPoppedOutDrag/u);
+  });
+
+  test("renders only the active dock tab content", () => {
+    let activeRenderCount = 0;
+    let inactiveRenderCount = 0;
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onHome: () => undefined,
+        dockTabs: [
+          {
+            id: "action-log",
+            title: "Log",
+            renderContent: () => {
+              inactiveRenderCount += 1;
+              return createElement("p", null, "inactive log body");
+            },
+          },
+          {
+            id: "settings",
+            title: "Settings",
+            renderContent: () => {
+              activeRenderCount += 1;
+              return createElement("p", null, "active settings body");
+            },
+          },
+        ],
+        activeDockTabId: "settings",
+        onDockTabChange: () => undefined,
+        onDockTabClose: () => undefined,
+      }),
+    );
+
+    assert.equal(activeRenderCount, 1);
+    assert.equal(inactiveRenderCount, 0);
+    assert.match(markup, /active settings body/u);
+    assert.doesNotMatch(markup, /inactive log body/u);
   });
 
   test("docked tabs reorder inside the tab strip before dragging out", async () => {

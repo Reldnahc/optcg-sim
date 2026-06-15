@@ -149,14 +149,14 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: "Preview",
-        content: <CardPreviewContent card={previewCard} />,
+        renderContent: () => <CardPreviewContent card={previewCard} />,
       };
     }
     if (windowKey === actionLogWindowKey && showActionLogWindow) {
       return {
         id: windowKey,
         title: "Log",
-        content: (
+        renderContent: () => (
           <ActionLogContent
             entries={actionLogEntries}
             onRequestRollback={requestRollback}
@@ -169,7 +169,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: "Settings",
-        content: <SettingsContent />,
+        renderContent: () => <SettingsContent />,
       };
     }
     if (windowKey.startsWith("collection:") && displayBoard !== undefined) {
@@ -180,7 +180,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: modal.title,
-        content: (
+        renderContent: () => (
           <CollectionModalContent
             model={modal}
             disabled={actionInFlight}
@@ -199,7 +199,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: revealWindow.model.title,
-        content: <RevealWindowContent model={revealWindow.model} />,
+        renderContent: () => <RevealWindowContent model={revealWindow.model} />,
       };
     }
     return undefined;

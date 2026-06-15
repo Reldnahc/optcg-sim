@@ -132,11 +132,26 @@
   gap: 8px;
   height: 100vh;
   background-color: var(--match-background-color);
+  padding: var(--match-app-padding);
+  overflow: visible;
+  isolation: isolate;
+}
+
+.match-app-background-image {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  contain: paint;
+  pointer-events: none;
   background-position: var(--match-background-position);
   background-repeat: var(--match-background-repeat);
   background-size: var(--match-background-size);
-  padding: var(--match-app-padding);
-  overflow: visible;
+  transform: translateZ(0);
+}
+
+.match-app > :not(.match-app-background-image) {
+  position: relative;
+  z-index: 1;
 }
 
 .match-app.is-reduced-motion *,

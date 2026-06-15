@@ -312,21 +312,49 @@ describe("settings window", () => {
     assert.match(matchApp, /--match-background-size/u);
     assert.match(matchApp, /--match-background-repeat/u);
     assert.match(matchApp, /--match-background-position/u);
+    assert.match(matchApp, /const matchBackgroundImageStyle =/u);
+    assert.match(
+      matchApp,
+      /<div[\s\S]*className="match-app-background-image"[\s\S]*style=\{matchBackgroundImageStyle\}[\s\S]*\/>/u,
+    );
+    const matchAppStyleStart = matchApp.indexOf("const matchAppStyle =");
+    const matchBackgroundImageStyleStart = matchApp.indexOf(
+      "const matchBackgroundImageStyle =",
+    );
+    assert.notEqual(matchAppStyleStart, -1);
+    assert.notEqual(matchBackgroundImageStyleStart, -1);
+    const matchAppStyleSource = matchApp.slice(
+      matchAppStyleStart,
+      matchBackgroundImageStyleStart,
+    );
+    const matchBackgroundImageStyleSource = matchApp.slice(
+      matchBackgroundImageStyleStart,
+      matchApp.indexOf(
+        "  const matchAppClassName",
+        matchBackgroundImageStyleStart,
+      ),
+    );
+    assert.doesNotMatch(matchAppStyleSource, /backgroundImage:/u);
+    assert.match(matchBackgroundImageStyleSource, /backgroundImage:/u);
     assert.match(
       appShellStyles,
       /background-color:\s*var\(--match-background-color\);/u,
     );
     assert.match(
       appShellStyles,
-      /background-position:\s*var\(--match-background-position\);/u,
+      /\.match-app-background-image\s*\{[^}]*background-position:\s*var\(--match-background-position\);/u,
     );
     assert.match(
       appShellStyles,
-      /background-repeat:\s*var\(--match-background-repeat\);/u,
+      /\.match-app-background-image\s*\{[^}]*background-repeat:\s*var\(--match-background-repeat\);/u,
     );
     assert.match(
       appShellStyles,
-      /background-size:\s*var\(--match-background-size\);/u,
+      /\.match-app-background-image\s*\{[^}]*background-size:\s*var\(--match-background-size\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.match-app-background-image\s*\{[^}]*contain:\s*paint;/u,
     );
   });
 

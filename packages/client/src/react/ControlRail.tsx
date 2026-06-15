@@ -18,7 +18,7 @@ import {
 export interface ControlDockTab {
   id: string;
   title: string;
-  content: ReactNode;
+  renderContent: () => ReactNode;
 }
 
 export interface ControlRailProps {
@@ -490,7 +490,7 @@ export const ControlRail = ({
                 </button>
               </div>
               <div className="control-dock-window-body">
-                {activeDockTab.content}
+                {activeDockTab.renderContent()}
               </div>
             </section>
           )}
