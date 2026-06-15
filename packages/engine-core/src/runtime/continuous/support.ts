@@ -251,6 +251,7 @@ const isSupportedModifierValue = (
         Number.isSafeInteger(value.multiplier) &&
         value.multiplier !== 0 &&
         (value.target.type === "self" ||
+          value.target.type === "affectedCard" ||
           value.target.type === "myLeader" ||
           value.target.type === "opponentLeader" ||
           value.target.type === "savedFieldObject"))));

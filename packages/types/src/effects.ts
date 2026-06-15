@@ -251,6 +251,7 @@ export type SnapshotNumberValue = {
 
 export type Target =
   | { type: "self" }
+  | { type: "affectedCard" }
   | { type: "myLeader" }
   | { type: "opponentLeader" }
   | { type: "attacker" }

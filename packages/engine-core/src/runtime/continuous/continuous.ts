@@ -3,6 +3,7 @@ import type {
   CardRef,
   ContinuousEffectRecord,
   Duration,
+  DynamicNumberValue,
   EffectDefinition,
   Effect,
   EffectQueueEntry,
@@ -45,6 +46,7 @@ import {
   effectToDerivedModifier,
   unsupportedDerivedMessage,
 } from "./derived-modifier.js";
+import { cardMatchesAllTargetSpec } from "./target-matching.js";
 
 export { isSupportedContinuousQueueEffect };
 
@@ -255,6 +257,96 @@ const isPublicResolvableFieldObject = (
   );
 };
 
+const fieldCardRefs = (state: GameState): CardRef[] =>
+  Object.values(state.players).flatMap((player) => [
+    {
+      instanceId: player.leader.instanceId,
+      cardId: player.leader.cardId,
+      playerId: player.leader.controller,
+      zone: player.leader.zone,
+    },
+    ...player.characters.map((card) => ({
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: card.controller,
+      zone: card.zone,
+    })),
+    ...(player.stage === undefined
+      ? []
+      : [
+          {
+            instanceId: player.stage.instanceId,
+            cardId: player.stage.cardId,
+            playerId: player.stage.controller,
+            zone: player.stage.zone,
+          },
+        ]),
+    ...player.costArea.map((card) => ({
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      playerId: card.controller,
+      zone: card.zone,
+    })),
+  ]);
+
+const dynamicValueUsesAffectedCard = (
+  value: number | DynamicNumberValue,
+): boolean =>
+  typeof value !== "number" &&
+  value.type === "countAttachedDon" &&
+  value.target.type === "affectedCard";
+
+const effectValueUsesAffectedCard = (effect: ContinuousQueueEffect): boolean =>
+  (effect.type === "modifyPower" || effect.type === "modifyCost") &&
+  dynamicValueUsesAffectedCard(effect.value);
+
+const createAffectedCardRecordsForAllTarget = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: ContinuousQueueEffect,
+  target: Extract<TargetSpec, { type: "all" }>,
+  context?: ContinuousResolutionContext,
+): ContinuousEffectRecord[] | null => {
+  const records: ContinuousEffectRecord[] = [];
+  for (const cardRef of fieldCardRefs(state)) {
+    const player = state.players[cardRef.playerId];
+    const card =
+      player?.leader.instanceId === cardRef.instanceId
+        ? player.leader
+        : (player?.characters.find(
+            (candidate) => candidate.instanceId === cardRef.instanceId,
+          ) ??
+          (player?.stage?.instanceId === cardRef.instanceId
+            ? player.stage
+            : undefined) ??
+          player?.costArea.find(
+            (candidate) => candidate.instanceId === cardRef.instanceId,
+          ));
+    if (card === undefined) {
+      return null;
+    }
+    if (!cardMatchesAllTargetSpec(state, card, entry.controllerId, target)) {
+      continue;
+    }
+    if (!isPublicResolvableFieldObject(state, cardRef)) {
+      return null;
+    }
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      toExactCardTarget(entry, cardRef, state, records.length),
+      records.length,
+      { ...context, affectedCard: cardRef },
+    );
+    if (record === null) {
+      return null;
+    }
+    records.push(record);
+  }
+  return records;
+};
+
 export const createContinuousRecordsForResolvedEffect = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -392,6 +484,15 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
+  if (target.type === "all" && effectValueUsesAffectedCard(effect)) {
+    return createAffectedCardRecordsForAllTarget(
+      state,
+      entry,
+      effect,
+      target,
+      context,
+    );
+  }
   const record = createRecord(state, entry, effect, target, 0, context);
   return record === null ? null : [record];
 };
@@ -437,6 +538,7 @@ const isSupportedPowerEffectValue = (
       Number.isSafeInteger(value.multiplier) &&
       value.multiplier !== 0 &&
       (value.target.type === "self" ||
+        value.target.type === "affectedCard" ||
         value.target.type === "myLeader" ||
         value.target.type === "opponentLeader" ||
         value.target.type === "savedFieldObject")

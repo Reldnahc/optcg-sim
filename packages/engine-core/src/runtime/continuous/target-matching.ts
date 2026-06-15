@@ -4,6 +4,8 @@ import type {
   CardRef,
   ContinuousEffectRecord,
   GameState,
+  PlayerId,
+  TargetSpec,
 } from "@optcg/types";
 
 import { cardMatchesAnyName } from "../../card-name-matching.js";
@@ -200,6 +202,23 @@ const cardMatchesAllFilter = (
   );
 };
 
+export const cardMatchesAllTargetSpec = (
+  state: GameState,
+  card: CardInstance,
+  controller: PlayerId,
+  target: Extract<TargetSpec, { type: "all" }>,
+): boolean => {
+  if (target.zone !== card.zone.zone) return false;
+  if (!cardMatchesAllFilter(state, card, target.filter)) return false;
+  if (target.player === "self") {
+    return card.controller === controller;
+  }
+  if (target.player === "opponent") {
+    return card.controller !== controller;
+  }
+  return false;
+};
+
 const cardMatchesAllTarget = (
   state: GameState,
   card: CardInstance,
@@ -207,15 +226,7 @@ const cardMatchesAllTarget = (
 ): boolean => {
   const target = effect.modifier.target;
   if (target.type !== "all") return false;
-  if (target.zone !== card.zone.zone) return false;
-  if (!cardMatchesAllFilter(state, card, target.filter)) return false;
-  if (target.player === "self") {
-    return card.controller === effect.controller;
-  }
-  if (target.player === "opponent") {
-    return card.controller !== effect.controller;
-  }
-  return false;
+  return cardMatchesAllTargetSpec(state, card, effect.controller, target);
 };
 
 export const cardMatchesContinuousModifierTarget = (

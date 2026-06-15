@@ -111,7 +111,7 @@ it("parses attached-DON condition and dynamic attached-DON power scaling", () =>
         },
         value: {
           type: "countAttachedDon",
-          target: { type: "self" },
+          target: { type: "affectedCard" },
           per: 1,
           multiplier: -1000,
         },
@@ -125,7 +125,7 @@ it("parses attached-DON condition and dynamic attached-DON power scaling", () =>
   expect(dynamic?.evidence).toEqual(
     expect.arrayContaining([
       "value:dynamic:attachedDonCount",
-      "target:thisCharacter",
+      "target:thatCharacter",
     ]),
   );
 });

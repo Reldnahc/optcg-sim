@@ -99,15 +99,23 @@ export function parseAttachedDonScaledDuration(
   if (duration?.duration === undefined || duration.rest.length > 0) {
     return undefined;
   }
+  const target =
+    targetText.toLowerCase() === "that character"
+      ? ({ type: "affectedCard" } as const)
+      : ({ type: "self" } as const);
+  const targetEvidence =
+    target.type === "affectedCard"
+      ? ("target:thatCharacter" as const)
+      : ("target:thisCharacter" as const);
   return {
     duration: duration.duration,
     value: {
       type: "countAttachedDon",
-      target: { type: "self" },
+      target,
       per: 1,
       multiplier,
     },
-    evidence: ["value:dynamic:attachedDonCount", "target:thisCharacter"],
+    evidence: ["value:dynamic:attachedDonCount", targetEvidence],
   };
 }
 

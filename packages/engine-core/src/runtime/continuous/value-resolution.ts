@@ -18,6 +18,7 @@ export type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
   controllerId?: PlayerId;
   source?: CardRef;
+  affectedCard?: CardRef;
 };
 
 const opponentOf = (state: GameState, playerId: PlayerId): PlayerId | null => {
@@ -196,6 +197,9 @@ const cardRefForDynamicTarget = (
   const controllerId = context?.controllerId;
   if (target.type === "self") {
     return context?.source ?? null;
+  }
+  if (target.type === "affectedCard") {
+    return context?.affectedCard ?? null;
   }
   if (controllerId === undefined) {
     return null;

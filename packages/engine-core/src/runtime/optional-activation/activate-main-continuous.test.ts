@@ -216,7 +216,7 @@ test("activate main applies all-target dynamic power from DON attached to source
   );
 });
 
-test("activate main dynamic attached DON power uses DON attached through the normal action", () => {
+test("activate main dynamic attached DON power scales per affected Character", () => {
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -233,13 +233,16 @@ test("activate main dynamic attached DON power uses DON attached through the nor
   const source = must(p1State.characters[0], "p1 source Character");
   p1State.characters[0] = {
     ...source,
+    attachedDon: [must(p1State.costArea[0], "source DON").instanceId],
     turnPlayed: state.turn.globalTurn,
   };
-  const activeDon = must(p1State.costArea[0], "p1 active DON");
-  const opponentCharacterSource = must(p2State.hand[0], "p2 hand card");
+  const opponentCharacterSourceA = must(p2State.hand[0], "p2 first hand card");
+  const opponentCharacterSourceB = must(p2State.hand[1], "p2 second hand card");
+  const opponentDonA = must(p2State.donDeck[0], "p2 first DON");
+  const opponentDonB = must(p2State.donDeck[1], "p2 second DON");
   p2State.characters = [
     {
-      ...opponentCharacterSource,
+      ...opponentCharacterSourceA,
       zone: {
         zone: "characterArea",
         playerId: p2,
@@ -247,12 +250,35 @@ test("activate main dynamic attached DON power uses DON attached through the nor
         index: 0,
       },
       state: "active",
+      attachedDon: [opponentDonA.instanceId, opponentDonB.instanceId],
+    },
+    {
+      ...opponentCharacterSourceB,
+      zone: {
+        zone: "characterArea",
+        playerId: p2,
+        slot: "character",
+        index: 1,
+      },
+      state: "active",
       attachedDon: [],
     },
   ];
-  p2State.hand = reindexZoneCards(p2State.hand.slice(1), "hand", p2, "hand");
-  state.cardManifest.cards[opponentCharacterSource.cardId] = resolvedCard({
-    cardId: opponentCharacterSource.cardId,
+  p2State.donDeck = reindexZoneCards(
+    p2State.donDeck.slice(2),
+    "donDeck",
+    p2,
+    "donDeck",
+  );
+  p2State.hand = reindexZoneCards(p2State.hand.slice(2), "hand", p2, "hand");
+  state.cardManifest.cards[opponentCharacterSourceA.cardId] = resolvedCard({
+    cardId: opponentCharacterSourceA.cardId,
+    category: "character",
+    cost: 2,
+    power: 5000,
+  });
+  state.cardManifest.cards[opponentCharacterSourceB.cardId] = resolvedCard({
+    cardId: opponentCharacterSourceB.cardId,
     category: "character",
     cost: 2,
     power: 5000,
@@ -278,25 +304,14 @@ test("activate main dynamic attached DON power uses DON attached through the nor
     },
     value: {
       type: "countAttachedDon",
-      target: { type: "self" },
+      target: { type: "affectedCard" },
       per: 1,
       multiplier: -1000,
     },
     duration: { type: "thisTurn" },
   };
 
-  const attached = applyAction(state, {
-    type: "attachDon",
-    donInstanceId: activeDon.instanceId,
-    target: {
-      instanceId: source.instanceId,
-      cardId: source.cardId,
-      playerId: p1,
-    },
-  });
-  assert.equal(attached.errors, undefined);
-
-  const result = applyAction(attached.state, {
+  const result = applyAction(state, {
     type: "activateEffect",
     source: {
       instanceId: source.instanceId,
@@ -310,12 +325,21 @@ test("activate main dynamic attached DON power uses DON attached through the nor
   assert.equal(result.errors, undefined);
   const view = computeView(result.state);
   assert.equal(
-    view.cards[opponentCharacterSource.instanceId]?.currentPower,
-    4000,
+    view.cards[opponentCharacterSourceA.instanceId]?.currentPower,
+    3000,
+  );
+  assert.equal(
+    view.cards[opponentCharacterSourceB.instanceId]?.currentPower,
+    5000,
   );
   const playerView = filterStateForPlayer(result.state, p1);
   assert.equal(
     must(playerView.opponent.characters[0], "opponent character").currentPower,
-    4000,
+    3000,
+  );
+  assert.equal(
+    must(playerView.opponent.characters[1], "second opponent character")
+      .currentPower,
+    5000,
   );
 });
