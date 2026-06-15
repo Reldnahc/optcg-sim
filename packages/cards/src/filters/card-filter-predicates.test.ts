@@ -119,6 +119,38 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses shorthand self Life count wording as the same dynamic stat comparison", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters with a cost equal to or less than your number of Life cards",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        statComparisons: [
+          {
+            stat: "cost",
+            op: "lte",
+            value: {
+              type: "countMatchingZoneCards",
+              player: "self",
+              zone: "life",
+              per: 1,
+              multiplier: 1,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "valueSource:lifeCount:self",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses cost compared to total Life count as a reusable dynamic stat comparison", () => {
     expect(
       parseCardFilterPredicates({

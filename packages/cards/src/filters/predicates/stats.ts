@@ -266,16 +266,13 @@ export const parseDynamicLifeCountCostPredicate: PredicateParser = (
   }
 
   const match =
-    /^a cost equal to or less than the number of (?<player>your|your opponent's) Life cards\b\s*(?<rest>.*)$/iu.exec(
+    /^a cost equal to or less than (?:(?:the number of )?(?<player>your|your opponent's)|your number of) Life cards\b\s*(?<rest>.*)$/iu.exec(
       text,
     );
   if (match === null) {
     return undefined;
   }
-  const playerText = match.groups?.["player"]?.toLowerCase();
-  if (playerText === undefined) {
-    return undefined;
-  }
+  const playerText = match.groups?.["player"]?.toLowerCase() ?? "your";
   const player = playerText === "your opponent's" ? "opponent" : "self";
 
   return {
