@@ -271,7 +271,7 @@ describe("effect spotlight model", () => {
     expect(atPresent.cursorIndex).toBe(1);
   });
 
-  it("fast-forwards by hiding the visible backlog without deleting history", () => {
+  it("fast-forwards to the latest entry without deleting history", () => {
     const next = advanceSpotlightPlayback({
       command: "catchUp",
       state: {
@@ -288,11 +288,61 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
-    expect(next.cursorIndex).toBeUndefined();
+    expect(next.cursorIndex).toBe(1);
     expect(next.paused).toBe(false);
   });
 
-  it("rewinds from fast-forwarded history to the present entry", () => {
+  it("fast-forwards to the latest pending decision entry", () => {
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("decision:pending", "span:pending", "live"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "decision:pending",
+    ]);
+    expect(next.cursorIndex).toBe(1);
+    expect(next.paused).toBe(false);
+  });
+
+  it("does not interrupt past review when a live pending decision is appended", () => {
+    const initial = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+      },
+      sources: [
+        source("event:first", "span:first"),
+        source("event:second", "span:second"),
+      ],
+    });
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: { ...initial, cursorIndex: 0, paused: true },
+      sources: [source("decision:pending", "span:pending", "live")],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+      "decision:pending",
+    ]);
+    expect(next.cursorIndex).toBe(0);
+    expect(next.paused).toBe(true);
+  });
+
+  it("rewinds from fast-forwarded history to the previous entry", () => {
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",
       state: {
@@ -313,7 +363,7 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
-    expect(rewound.cursorIndex).toBe(1);
+    expect(rewound.cursorIndex).toBe(0);
     expect(rewound.paused).toBe(true);
   });
 
