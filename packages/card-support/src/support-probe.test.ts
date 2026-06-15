@@ -230,6 +230,22 @@ describe("text-only support probe parser backend", () => {
     );
   });
 
+  it("reports runtime support for conditional permanent battle K.O. protection", async () => {
+    const report = await createSupportProbeReport({
+      text: "If you have a [Buggy] or [Mohji] Character, this Character cannot be K.O.'d in battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Parse: passed");
+    expect(report.lines).toContain("Engine runtime: passed");
+    expect(report.lines).toContain("Primitive runtime: passed");
+    expect(report.lines).toContain(
+      "- parser body:giveProtection spans span:body",
+    );
+    expect(report.lines).toContain("- protectionSource:battle");
+    expect(report.lines).not.toContain("unsupported permanent effect body");
+  });
+
   it("reports engine runtime support for DON return into conditional opponent hand trash", async () => {
     const report = await createSupportProbeReport({
       text: "[On Play] DON!! \u22121 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If your opponent has 7 or more cards in their hand, trash 2 cards from your opponent's hand.",

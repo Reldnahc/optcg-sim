@@ -380,6 +380,7 @@ const countPublicCharactersOnField = (
       return false;
     }
     if (
+      filter.anyOf === undefined &&
       filter.names === undefined &&
       filter.typesAny === undefined &&
       filter.typesIncludeAny === undefined &&

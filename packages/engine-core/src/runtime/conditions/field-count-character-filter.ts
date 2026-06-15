@@ -17,6 +17,7 @@ type NumericFilter =
 export type CharacterFieldCountFilter = Required<
   Pick<CardFilter, "categories">
 > & {
+  anyOf?: CardFilter[];
   state?: "active" | "rested";
   colorsAny?: NonNullable<CardFilter["colorsAny"]>;
   attributesAny?: NonNullable<CardFilter["attributesAny"]>;
@@ -37,12 +38,22 @@ export type CharacterFieldCountFilter = Required<
 export const isSupportedCharacterFieldCountFilter = (
   filter: CardFilter | undefined,
 ): filter is CharacterFieldCountFilter => {
+  return isSupportedCharacterFieldCountFilterShape(filter, {
+    requireCharacterCategory: true,
+  });
+};
+
+const isSupportedCharacterFieldCountFilterShape = (
+  filter: CardFilter | undefined,
+  options: { readonly requireCharacterCategory: boolean },
+): filter is CharacterFieldCountFilter => {
   if (filter === undefined) {
     return false;
   }
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   for (const key of keys) {
     if (
+      key !== "anyOf" &&
       key !== "categories" &&
       key !== "state" &&
       key !== "colorsAny" &&
@@ -63,14 +74,20 @@ export const isSupportedCharacterFieldCountFilter = (
       return false;
     }
   }
-  if (
-    !Array.isArray(filter.categories) ||
-    filter.categories.length !== 1 ||
-    filter.categories[0] !== "character"
-  ) {
+  if (options.requireCharacterCategory && !isCharacterCategoryFilter(filter)) {
+    return false;
+  }
+  if (filter.categories !== undefined && !isCharacterCategoryFilter(filter)) {
     return false;
   }
   return (
+    (filter.anyOf === undefined ||
+      (filter.anyOf.length > 0 &&
+        filter.anyOf.every((child) =>
+          isSupportedCharacterFieldCountFilterShape(child, {
+            requireCharacterCategory: false,
+          }),
+        ))) &&
     isSupportedFieldState(filter.state) &&
     isNonEmptyStringArray(filter.colorsAny) &&
     isNonEmptyStringArray(filter.attributesAny) &&
@@ -103,6 +120,14 @@ export const cardMatchesCharacterFieldCountFilter = (
   if (
     filter.categories !== undefined &&
     !filter.categories.includes(metadata.category)
+  ) {
+    return false;
+  }
+  if (
+    filter.anyOf !== undefined &&
+    !filter.anyOf.some((child) =>
+      cardMatchesCharacterFieldCountFilter(metadata, card, child),
+    )
   ) {
     return false;
   }
@@ -195,6 +220,11 @@ export const cardMatchesCharacterFieldCountFilter = (
 const isSupportedFieldState = (
   value: CardFilter["state"] | undefined,
 ): boolean => value === undefined || value === "active" || value === "rested";
+
+const isCharacterCategoryFilter = (filter: CardFilter): boolean =>
+  Array.isArray(filter.categories) &&
+  filter.categories.length === 1 &&
+  filter.categories[0] === "character";
 
 const isNonEmptyStringArray = (value: unknown): boolean =>
   value === undefined ||

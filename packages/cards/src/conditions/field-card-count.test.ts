@@ -61,6 +61,36 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("shares trailing Character category over named field-count alternatives", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you have a [Buggy] or [Mohji] Character",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          anyOf: [{ names: ["Buggy"] }, { names: ["Mohji"] }],
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:anyOf",
+        "filter:name",
+        "filter:name",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses opponent compared field counts through reusable filters", () => {
     expect(
       parseFieldCardCountCondition({

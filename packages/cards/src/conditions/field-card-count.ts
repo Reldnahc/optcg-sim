@@ -1,3 +1,5 @@
+import type { CardFilter } from "@optcg/types";
+
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseLeadingCountComparison } from "./comparison.js";
 import type {
@@ -11,8 +13,17 @@ const parseFieldPredicates = (text: string) => {
     { text: normalizeFieldPredicateText(text) },
     { powerSemantics: "current" },
   );
+  if (parsed === undefined) {
+    return undefined;
+  }
+  const normalizedFilter = normalizeSharedCharacterAlternatives(parsed.filter);
+  if (normalizedFilter !== parsed.filter) {
+    return {
+      ...parsed,
+      filter: normalizedFilter,
+    };
+  }
   if (
-    parsed === undefined ||
     parsed.filter.categories !== undefined ||
     parsed.filter.currentPower === undefined
   ) {
@@ -30,6 +41,40 @@ const parseFieldPredicates = (text: string) => {
 
 const normalizeFieldPredicateText = (text: string): string =>
   text.replace(/\s+on your field\.?$/iu, "").trim();
+
+const normalizeSharedCharacterAlternatives = (
+  filter: CardFilter,
+): CardFilter => {
+  if (
+    filter.categories !== undefined ||
+    filter.anyOf === undefined ||
+    !filter.anyOf.some(hasOnlyCharacterCategory)
+  ) {
+    return filter;
+  }
+  if (
+    !filter.anyOf.every(
+      (branch) =>
+        branch.categories === undefined || hasOnlyCharacterCategory(branch),
+    )
+  ) {
+    return filter;
+  }
+  return {
+    ...filter,
+    anyOf: filter.anyOf.map(withoutCategories),
+    categories: ["character"],
+  };
+};
+
+const hasOnlyCharacterCategory = (filter: CardFilter): boolean =>
+  filter.categories?.length === 1 && filter.categories[0] === "character";
+
+const withoutCategories = (filter: CardFilter): CardFilter => {
+  const next = { ...filter };
+  delete next.categories;
+  return next;
+};
 
 const fieldCountEvidence = (
   player: "self" | "opponent",
