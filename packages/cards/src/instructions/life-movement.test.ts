@@ -121,4 +121,55 @@ describe("life movement instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses top-or-bottom Life to hand as a reusable choice between moveCards bodies", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "add 1 card from the top or bottom of your Life cards to your hand.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "choice",
+        chooser: "self",
+        min: 1,
+        max: 1,
+        options: [
+          {
+            id: "life-to-hand:top",
+            label: "Top of Life",
+            effect: {
+              type: "moveCards",
+              count: 1,
+              from: { player: "self", zone: "life", position: "top" },
+              to: { player: "self", zone: "hand" },
+              order: "original",
+            },
+          },
+          {
+            id: "life-to-hand:bottom",
+            label: "Bottom of Life",
+            effect: {
+              type: "moveCards",
+              count: 1,
+              from: { player: "self", zone: "life", position: "bottom" },
+              to: { player: "self", zone: "hand" },
+              order: "original",
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:moveCards",
+        "count:positiveInteger",
+        "player:self",
+        "zone:life",
+        "position:top",
+        "position:bottom",
+        "destination:hand",
+        "order:original",
+        "composition:chooseOne",
+      ],
+      rest: "",
+    });
+  });
 });

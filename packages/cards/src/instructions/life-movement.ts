@@ -202,28 +202,29 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
         },
       },
       {
-        id: "add-n-cards-from-life-top-to-hand",
+        id: "add-n-cards-from-life-to-hand",
         pattern:
-          /^add (?<count>[1-9]\d*) cards? from the top of your Life cards to your hand\.?$/i,
-        build: (groups) => ({
-          effect: {
-            type: "moveCards",
-            count: Number.parseInt(groups["count"] ?? "", 10),
-            from: { player: "self", zone: "life", position: "top" },
-            to: { player: "self", zone: "hand" },
-            order: "original",
-          },
-          evidence: [
-            "instruction:moveCards",
-            "count:positiveInteger",
-            "player:self",
-            "zone:life",
-            "position:top",
-            "destination:hand",
-            "order:original",
-          ],
-          rest: "",
-        }),
+          /^add (?<count>[1-9]\d*) cards? from the (?<position>top|bottom|top or bottom) of your Life cards to your hand\.?$/i,
+        build: (groups) => {
+          const position = parseMatchedLifePosition(groups["position"]);
+          const count = Number.parseInt(groups["count"] ?? "", 10);
+          return {
+            effect: lifeToHandBody(count, position),
+            evidence: [
+              "instruction:moveCards",
+              "count:positiveInteger",
+              "player:self",
+              "zone:life",
+              ...lifePositionEvidence(position),
+              "destination:hand",
+              "order:original",
+              ...(position === "topOrBottom"
+                ? (["composition:chooseOne"] as const)
+                : []),
+            ],
+            rest: "",
+          };
+        },
       },
     ],
   };
@@ -236,6 +237,68 @@ export const parseLifeMovementInstruction: InstructionParser = (input) => {
 
   return parsePrimitivePattern(input, lifeMovementPrimitive);
 };
+
+function parseMatchedLifePosition(
+  text: string | undefined,
+): "top" | "bottom" | "topOrBottom" {
+  const normalized = text?.toLowerCase();
+  if (normalized === "top" || normalized === "bottom") {
+    return normalized;
+  }
+  if (normalized === "top or bottom") {
+    return "topOrBottom";
+  }
+  throw new Error("matched Life position group was not recognized");
+}
+
+function lifePositionEvidence(
+  position: "top" | "bottom" | "topOrBottom",
+): readonly PrimitiveEvidence[] {
+  if (position === "topOrBottom") {
+    return ["position:top", "position:bottom"];
+  }
+  return [position === "top" ? "position:top" : "position:bottom"];
+}
+
+function lifeToHandMove(
+  count: number,
+  position: "top" | "bottom",
+): Extract<InstructionParseResult["effect"], { type: "moveCards" }> {
+  return {
+    type: "moveCards",
+    count,
+    from: { player: "self", zone: "life", position },
+    to: { player: "self", zone: "hand" },
+    order: "original",
+  };
+}
+
+function lifeToHandBody(
+  count: number,
+  position: "top" | "bottom" | "topOrBottom",
+): InstructionParseResult["effect"] {
+  if (position !== "topOrBottom") {
+    return lifeToHandMove(count, position);
+  }
+  return {
+    type: "choice",
+    chooser: "self",
+    min: 1,
+    max: 1,
+    options: [
+      {
+        id: "life-to-hand:top",
+        label: "Top of Life",
+        effect: lifeToHandMove(count, "top"),
+      },
+      {
+        id: "life-to-hand:bottom",
+        label: "Bottom of Life",
+        effect: lifeToHandMove(count, "bottom"),
+      },
+    ],
+  };
+}
 
 const parseHandToLifeInstruction: InstructionParser = (input) => {
   const revealMatch =
