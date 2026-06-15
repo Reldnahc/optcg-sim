@@ -474,6 +474,93 @@ describe("effect spotlight model", () => {
     expect(display?.visibleUntilMs).toBe(3_000);
   });
 
+  it("fast-forward displays the latest pending decision spotlight", () => {
+    const playback = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          source("event:first", "span:first"),
+          source("decision:pending", "span:pending", "live"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+    });
+
+    const display = effectSpotlightModelForPlayback({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback,
+      fallbackMode: "live",
+      pendingDecisionId: "decision-1",
+    });
+
+    expect(display?.activeKey).toBe("decision:pending");
+    expect(display?.activeMode).toBe("live");
+    expect(display?.pinned).toBe(true);
+  });
+
+  it("keeps a newer pending decision from interrupting past review display", () => {
+    const display = effectSpotlightModelForPlayback({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback: {
+        entries: [
+          source("event:first", "span:first"),
+          source("decision:pending", "span:pending", "live"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+      },
+      fallbackMode: "live",
+      pendingDecisionId: "decision-1",
+    });
+
+    expect(display?.activeKey).toBe("event:first");
+    expect(display?.activeMode).toBe("resolved");
+    expect(display?.pinned).toBe(false);
+  });
+
+  it("hides display after automatic playback advances past the latest resolved entry", () => {
+    const previous = effectSpotlightModelForPlayback({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback: {
+        entries: [source("event:first", "span:first")],
+        cursorIndex: 0,
+        paused: false,
+      },
+      fallbackMode: "live",
+      pendingDecisionId: undefined,
+    });
+    const playback = advanceSpotlightPlayback({
+      command: "autoAdvance",
+      state: {
+        entries: [source("event:first", "span:first")],
+        cursorIndex: 0,
+        paused: false,
+      },
+    });
+
+    const display = effectSpotlightModelForPlayback({
+      nowMs: 3_000,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback,
+      fallbackMode: "live",
+      pendingDecisionId: undefined,
+    });
+
+    expect(display).toBeUndefined();
+  });
+
   it("keeps minimum dwell after a fast decision resolves", () => {
     const previous = {
       active: {
