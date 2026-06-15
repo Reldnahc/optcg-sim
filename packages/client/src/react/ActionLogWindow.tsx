@@ -31,6 +31,7 @@ export const defaultActionLogWindowRect: WindowRect = {
   width: 360,
   height: 520,
 };
+const renderedActionLogEntryLimit = 40;
 
 const textParts = (
   text: string,
@@ -88,12 +89,19 @@ export const ActionLogContent = ({
   entries,
   onRequestRollback,
   onPreviewCard,
-}: ActionLogContentProps): React.JSX.Element =>
-  entries.length === 0 ? (
+}: ActionLogContentProps): React.JSX.Element => {
+  const renderedEntries = entries.slice(0, renderedActionLogEntryLimit);
+  return entries.length === 0 ? (
     <p className="muted">No visible actions yet.</p>
   ) : (
+    <>
+      {entries.length > renderedEntries.length ? (
+        <p className="muted">
+          Showing {renderedEntries.length} of {entries.length} visible actions
+        </p>
+      ) : null}
     <ol className="action-log-list">
-      {entries.map((entry) => {
+      {renderedEntries.map((entry) => {
         const rollback = entry.rollback;
         const rollbackTitle =
           rollback === undefined
@@ -132,7 +140,9 @@ export const ActionLogContent = ({
         );
       })}
     </ol>
+    </>
   );
+};
 
 export const ActionLogWindow = ({
   entries,
