@@ -65,6 +65,14 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
     return "hand";
   }
   if (
+    effect.zone === "deck" &&
+    effect.player === effect.chooser &&
+    effect.player === "self" &&
+    effect.visibility === "chooserOnly"
+  ) {
+    return "deck";
+  }
+  if (
     effect.zone === "trash" &&
     (effect.player === "self" || effect.player === "opponent") &&
     (effect.chooser === "self" || effect.chooser === "opponent") &&

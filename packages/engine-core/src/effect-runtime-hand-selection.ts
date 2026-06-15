@@ -30,6 +30,7 @@ import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence
 type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 
 const handDecisionIdPrefix = "decision:selectCards:hand-selection:";
+const deckDecisionIdPrefix = "decision:selectCards:deck-selection:";
 const trashDecisionIdPrefix = "decision:selectCards:trash-selection:";
 const costAreaDecisionIdPrefix = "decision:selectCards:cost-area-selection:";
 
@@ -67,6 +68,20 @@ const isSupportedSequenceTrashSelectCardsEffect = (
   effect.min >= 0 &&
   effect.max >= effect.min;
 
+const isSupportedSequenceDeckSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zone === "deck" &&
+  effect.player === effect.chooser &&
+  effect.player === "self" &&
+  effect.visibility === "chooserOnly" &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
 const isSupportedSequenceCostAreaSelectCardsEffect = (
   effect: Effect,
 ): effect is SequenceSelectCardsEffect =>
@@ -86,6 +101,7 @@ export const isSupportedSequenceSelectCardsEffect = (
   effect: Effect,
 ): effect is SequenceSelectCardsEffect =>
   isSupportedSequenceHandSelectCardsEffect(effect) ||
+  isSupportedSequenceDeckSelectCardsEffect(effect) ||
   isSupportedSequenceTrashSelectCardsEffect(effect) ||
   isSupportedSequenceCostAreaSelectCardsEffect(effect);
 
@@ -140,6 +156,13 @@ const isSupportedSelectCardsDecision = (
     decision.request.visibility === "privateToChooser" &&
     decision.visibility.type === "private" &&
     decision.visibility.playerId === decision.playerId) ||
+    (String(decision.id).startsWith(deckDecisionIdPrefix) &&
+      decision.request.zone === "deck" &&
+      decision.request.player === decision.request.chooser &&
+      !decision.request.allowFewerIfUnavailable &&
+      decision.request.visibility === "privateToChooser" &&
+      decision.visibility.type === "private" &&
+      decision.visibility.playerId === decision.playerId) ||
     (String(decision.id).startsWith(trashDecisionIdPrefix) &&
       decision.request.zone === "trash" &&
       isSupportedRelativePlayer(decision.request.player) &&
@@ -203,11 +226,13 @@ const cardsInPlayerZone = (
   }
   return zone === "hand"
     ? player.hand
-    : zone === "trash"
-      ? player.trash
-      : zone === "costArea"
-        ? player.costArea
-        : undefined;
+    : zone === "deck"
+      ? player.deck
+      : zone === "trash"
+        ? player.trash
+        : zone === "costArea"
+          ? player.costArea
+          : undefined;
 };
 
 const currentCandidateRefsForDecision = (
@@ -387,9 +412,11 @@ export const createSupportedHandSelectionChoiceDecision = (
   const cards =
     effect.zone === "hand"
       ? zoneOwner.hand
-      : effect.zone === "trash"
-        ? zoneOwner.trash
-        : zoneOwner.costArea;
+      : effect.zone === "deck"
+        ? zoneOwner.deck
+        : effect.zone === "trash"
+          ? zoneOwner.trash
+          : zoneOwner.costArea;
   const candidateVisibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? { type: "public" as const }
@@ -431,7 +458,9 @@ export const createSupportedHandSelectionChoiceDecision = (
       ? trashDecisionIdPrefix
       : effect.zone === "costArea"
         ? costAreaDecisionIdPrefix
-        : handDecisionIdPrefix;
+        : effect.zone === "deck"
+          ? deckDecisionIdPrefix
+          : handDecisionIdPrefix;
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
