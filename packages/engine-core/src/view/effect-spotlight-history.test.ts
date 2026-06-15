@@ -39,7 +39,7 @@ const resolvedSearchEvent = (
 });
 
 describe("effectSpotlightHistoryFromPlayerViewState", () => {
-  it("does not append duplicate live search remainder when resolved history already contains it", () => {
+  it("projects current search remainder as the live present entry without duplicating it", () => {
     const event = resolvedSearchEvent("event:search", [
       "span:search:selection",
       "span:search:remaining",
@@ -67,8 +67,8 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
           },
         },
         {
-          key: "event:search:span:search:remaining",
-          mode: "resolved",
+          key: "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
+          mode: "live",
           active: {
             source,
             textKind: "effect",
@@ -76,7 +76,8 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
           },
         },
       ],
-      presentKey: "event:search:span:search:remaining",
+      presentKey:
+        "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
     });
   });
 });

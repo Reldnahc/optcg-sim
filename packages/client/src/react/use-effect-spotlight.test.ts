@@ -491,7 +491,7 @@ describe("effect spotlight model", () => {
     expect(display?.visibleUntilMs).toBe(3_000);
   });
 
-  it("advances from stale live search selection to the resolved remainder after dwell", () => {
+  it("advances from stale live search selection to the live remainder after dwell", () => {
     const liveSelection = source(
       "decision:decision:selectCards:search|source-1||span:search:selection",
       "span:search:selection",
@@ -515,8 +515,9 @@ describe("effect spotlight model", () => {
           "span:search:selection",
         ),
         source(
-          "event:resolved-search:span:search:remaining",
+          "decision:decision:orderCards:search|source-1||span:search:remaining",
           "span:search:remaining",
+          "live",
         ),
       ],
     });
@@ -545,13 +546,14 @@ describe("effect spotlight model", () => {
 
     expect(playback.entries.map((entry) => entry.key)).toEqual([
       "decision:decision:selectCards:search|source-1||span:search:selection",
-      "event:resolved-search:span:search:remaining",
+      "decision:decision:orderCards:search|source-1||span:search:remaining",
     ]);
     expect(staleDisplay?.pinned).toBe(false);
     expect(advancedPlayback.cursorIndex).toBe(1);
     expect(advancedDisplay?.activeKey).toBe(
-      "event:resolved-search:span:search:remaining",
+      "decision:decision:orderCards:search|source-1||span:search:remaining",
     );
+    expect(advancedDisplay?.pinned).toBe(true);
   });
 
   it("uses resolved cursor entries with dwell timing without pinning", () => {

@@ -196,27 +196,26 @@ const sameEffectTextPresentation = (
   (left.textKind ?? "effect") === (right.textKind ?? "effect") &&
   spanKey(left.activeSpanIds) === spanKey(right.activeSpanIds);
 
-const hasMatchingResolvedPresentationSinceLastQueue = ({
+const matchingResolvedEntryKeySinceLastQueue = ({
   activeEffectText,
   events,
 }: {
   readonly activeEffectText: ActiveEffectTextPresentation;
   readonly events: readonly EngineEvent[];
-}): boolean => {
+}): string | undefined => {
   for (let index = events.length - 1; index >= 0; index -= 1) {
     const event = events[index];
     if (event === undefined || event.type === "effectQueued") {
-      return false;
+      return undefined;
     }
-    if (
-      resolvedEntriesForEvent(event).some((entry) =>
-        sameEffectTextPresentation(entry.active, activeEffectText),
-      )
-    ) {
-      return true;
+    const matchingEntry = resolvedEntriesForEvent(event).find((entry) =>
+      sameEffectTextPresentation(entry.active, activeEffectText),
+    );
+    if (matchingEntry !== undefined) {
+      return matchingEntry.key;
     }
   }
-  return false;
+  return undefined;
 };
 
 const liveEntryKey = (
@@ -242,9 +241,13 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
   readonly pendingDecisionId?: DecisionId | string | undefined;
 }): EffectSpotlightHistory | undefined => {
   const entries = resolvedSpotlightEntriesForEvents(events);
+  const matchingResolvedEntryKey =
+    activeEffectText === undefined
+      ? undefined
+      : matchingResolvedEntryKeySinceLastQueue({ activeEffectText, events });
   const liveEntry =
     activeEffectText === undefined ||
-    hasMatchingResolvedPresentationSinceLastQueue({ activeEffectText, events })
+    (matchingResolvedEntryKey !== undefined && pendingDecisionId === undefined)
       ? undefined
       : {
           key: liveEntryKey(activeEffectText, pendingDecisionId),
@@ -252,7 +255,12 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
           active: activeEffectText,
         };
   const historyEntries =
-    liveEntry === undefined ? entries : [...entries, liveEntry];
+    liveEntry === undefined
+      ? entries
+      : [
+          ...entries.filter((entry) => entry.key !== matchingResolvedEntryKey),
+          liveEntry,
+        ];
   const presentKey = historyEntries.at(-1)?.key;
   return historyEntries.length === 0 || presentKey === undefined
     ? undefined
