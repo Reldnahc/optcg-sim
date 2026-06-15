@@ -23,10 +23,12 @@ import {
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { moveFieldCardToOwnerDeckBottom } from "../movement/field-to-deck.js";
+import { isCausalityRef } from "./field-removal-targets.js";
 import {
-  isCausalityRef,
-  replacementProcessFromStoredPayload,
-} from "./field-removal-targets.js";
+  findReplacementContinuationPayload,
+  replacementPayloadWithoutPendingKey,
+  replacementProcessFromContinuation,
+} from "./continuation-state.js";
 import { supportedOwnerDeckBottomInstead } from "./instead-effects.js";
 import type { SelectedTargetKoReplacementCandidate } from "./primitives.js";
 import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
@@ -161,38 +163,14 @@ const pendingReplacementOwnerDeckBottomInsteadFromPayload = (
 const pendingReplacementOwnerDeckBottomPayload = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
-): {
-  processId: string;
-  processType: GameState["replacementState"][number]["type"];
-  payload: PendingReplacementOwnerDeckBottomInsteadPayload;
-} | null => {
-  if (decision?.type !== "selectTargets") {
-    return null;
-  }
-  const processState = state.replacementState.find((candidate) => {
-    const payload = candidate.payload;
-    return (
-      typeof payload === "object" &&
-      payload !== null &&
-      "pendingReplacementOwnerDeckBottomInstead" in payload &&
-      pendingReplacementOwnerDeckBottomInsteadFromPayload(payload)
-        ?.decisionId === decision.id
-    );
+) =>
+  findReplacementContinuationPayload({
+    state,
+    decision,
+    decisionType: "selectTargets",
+    pendingKey: "pendingReplacementOwnerDeckBottomInstead",
+    parsePayload: pendingReplacementOwnerDeckBottomInsteadFromPayload,
   });
-  const payload =
-    processState === undefined
-      ? undefined
-      : pendingReplacementOwnerDeckBottomInsteadFromPayload(
-          processState.payload,
-        );
-  return processState === undefined || payload === undefined
-    ? null
-    : {
-        processId: processState.processId,
-        processType: processState.type,
-        payload,
-      };
-};
 
 const ownerDeckBottomDecisionCandidates = (
   state: GameState,
@@ -204,22 +182,6 @@ const ownerDeckBottomDecisionCandidates = (
     { sourceControllerId: decision.playerId },
   );
   return resolved.ok ? resolved.candidates : [];
-};
-
-const replacementPayloadWithoutPending = (
-  state: GameState,
-  processId: string,
-): unknown => {
-  const stored = state.replacementState.find(
-    (candidate) => candidate.processId === processId,
-  );
-  const payload = stored?.payload;
-  if (typeof payload !== "object" || payload === null) {
-    return payload;
-  }
-  const rest = { ...(payload as Record<string, unknown>) };
-  delete rest["pendingReplacementOwnerDeckBottomInstead"];
-  return rest;
 };
 
 const findFieldCardByRef = (
@@ -453,7 +415,11 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
       processId: pending.processId,
       replacementId: pending.payload.replacementId,
       previousPayloadHash: hashCanonicalStateValue(
-        replacementPayloadWithoutPending(state, pending.processId),
+        replacementPayloadWithoutPendingKey({
+          state,
+          processId: pending.processId,
+          pendingKey: "pendingReplacementOwnerDeckBottomInstead",
+        }),
       ),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
       ...(pending.payload.presentation === undefined
@@ -469,16 +435,17 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
       replacementId: pending.payload.replacementId,
     };
   }
-  const completedPayload = replacementPayloadWithoutPending(
+  const completedPayload = replacementPayloadWithoutPendingKey({
     state,
-    pending.processId,
-  );
-  const process = replacementProcessFromStoredPayload({
+    processId: pending.processId,
+    pendingKey: "pendingReplacementOwnerDeckBottomInstead",
+  });
+  const process = replacementProcessFromContinuation({
     causedBy: pending.payload.causedBy,
     payload: completedPayload,
     processId: pending.processId,
     type: pending.processType,
-    usedReplacementIds: [pending.payload.replacementId],
+    usedReplacementId: pending.payload.replacementId,
   });
   const continued =
     process === null

@@ -20,10 +20,12 @@ import { cardMatchesHandSelectionFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { consumeOncePerTurnForKey } from "../rules/once-per-turn.js";
+import { isCausalityRef } from "./field-removal-targets.js";
 import {
-  isCausalityRef,
-  replacementProcessFromStoredPayload,
-} from "./field-removal-targets.js";
+  findReplacementContinuationPayload,
+  replacementPayloadWithoutPendingKey,
+  replacementProcessFromContinuation,
+} from "./continuation-state.js";
 import { activeEffectTextPresentationFromPayloadValue } from "./presentation-payload.js";
 import { removeReplacementProcessState } from "./process-gate.js";
 import { continueUncoveredFieldRemovalTargets } from "./unreplaced-field-removal.js";
@@ -204,52 +206,14 @@ const pendingReplacementTrashFromHandInsteadFromPayload = (
 const pendingReplacementTrashFromHandPayload = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]> | undefined,
-): {
-  processId: string;
-  processType: GameState["replacementState"][number]["type"];
-  payload: PendingReplacementTrashFromHandInsteadPayload;
-} | null => {
-  if (decision?.type !== "selectCards") {
-    return null;
-  }
-  const processState = state.replacementState.find((candidate) => {
-    const payload = candidate.payload;
-    return (
-      typeof payload === "object" &&
-      payload !== null &&
-      "pendingReplacementTrashFromHandInstead" in payload &&
-      pendingReplacementTrashFromHandInsteadFromPayload(payload)?.decisionId ===
-        decision.id
-    );
+) =>
+  findReplacementContinuationPayload({
+    state,
+    decision,
+    decisionType: "selectCards",
+    pendingKey: "pendingReplacementTrashFromHandInstead",
+    parsePayload: pendingReplacementTrashFromHandInsteadFromPayload,
   });
-  const payload =
-    processState === undefined
-      ? undefined
-      : pendingReplacementTrashFromHandInsteadFromPayload(processState.payload);
-  return processState === undefined || payload === undefined
-    ? null
-    : {
-        processId: processState.processId,
-        processType: processState.type,
-        payload,
-      };
-};
-
-const replacementPayloadWithoutPending = (
-  state: GameState,
-  processId: string,
-): unknown => {
-  const stored = state.replacementState.find(
-    (candidate) => candidate.processId === processId,
-  );
-  const payload = stored?.payload;
-  if (typeof payload !== "object" || payload === null) {
-    return payload;
-  }
-  const rest = { ...(payload as Record<string, unknown>) };
-  delete rest["pendingReplacementTrashFromHandInstead"];
-  return rest;
-};
 
 export const isReplacementTrashFromHandDecision = (
   state: GameState,
@@ -409,7 +373,11 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       processId: pending.processId,
       replacementId: pending.payload.replacementId,
       previousPayloadHash: hashCanonicalStateValue(
-        replacementPayloadWithoutPending(state, pending.processId),
+        replacementPayloadWithoutPendingKey({
+          state,
+          processId: pending.processId,
+          pendingKey: "pendingReplacementTrashFromHandInstead",
+        }),
       ),
       transformedPayloadHash: hashCanonicalStateValue(transformedPayload),
       ...(pending.payload.presentation === undefined
@@ -425,20 +393,21 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       replacementId: pending.payload.replacementId,
     };
   }
-  const completedPayload = replacementPayloadWithoutPending(
+  const completedPayload = replacementPayloadWithoutPendingKey({
     state,
-    pending.processId,
-  );
+    processId: pending.processId,
+    pendingKey: "pendingReplacementTrashFromHandInstead",
+  });
   const afterOncePerTurn =
     pending.payload.oncePerTurn === undefined
       ? moved.state
       : consumeOncePerTurnForKey(moved.state, pending.payload.oncePerTurn);
-  const process = replacementProcessFromStoredPayload({
+  const process = replacementProcessFromContinuation({
     causedBy: pending.payload.causedBy,
     payload: completedPayload,
     processId: pending.processId,
     type: pending.processType,
-    usedReplacementIds: [pending.payload.replacementId],
+    usedReplacementId: pending.payload.replacementId,
   });
   const continued =
     process === null
