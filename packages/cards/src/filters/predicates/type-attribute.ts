@@ -262,7 +262,9 @@ export const parseMultiTypePredicate: PredicateParser = (text, current) => {
 };
 
 export const parseTypeOnlyPredicate: PredicateParser = (text, current) => {
-  const match = /^(?<type>\{[^}]+\}) type\b\s*(?<rest>.*)$/i.exec(text);
+  const match = /^(?:the\s+)?(?<type>\{[^}]+\}) type\b\s*(?<rest>.*)$/i.exec(
+    text,
+  );
   const typeName = parseBraceName(match?.groups?.["type"] ?? "");
   if (typeName === undefined) {
     return undefined;
