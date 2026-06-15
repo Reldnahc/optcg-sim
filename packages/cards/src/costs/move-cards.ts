@@ -333,7 +333,9 @@ function parseThisStageToOwnerDeckBottomCostRoute(
 function parseThisCharacterToDeckBottomCostRoute(
   text: string,
 ): true | undefined {
-  return /^this Character at the bottom of your deck$/iu.test(text)
+  return /^this Character at the bottom of (?:your|the owner's) deck$/iu.test(
+    text,
+  )
     ? true
     : undefined;
 }
