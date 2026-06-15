@@ -304,6 +304,40 @@ export const effectSpotlightModel = ({
   return { ...previous, pinned: false, visibleUntilMs };
 };
 
+export const effectSpotlightModelForPlayback = ({
+  fallbackMode,
+  graceMs,
+  minimumDwellMs,
+  nowMs,
+  pendingDecisionId,
+  playback,
+  previous,
+}: {
+  readonly nowMs: number;
+  readonly previous: EffectSpotlightState | undefined;
+  readonly minimumDwellMs: number;
+  readonly graceMs: number;
+  readonly playback: EffectSpotlightPlaybackState;
+  readonly fallbackMode: "live" | "resolved";
+  readonly pendingDecisionId: DecisionId | string | undefined;
+}): EffectSpotlightState | undefined => {
+  const currentSource =
+    playback.cursorIndex === undefined
+      ? undefined
+      : playback.entries[playback.cursorIndex];
+  return effectSpotlightModel({
+    nowMs,
+    previous,
+    minimumDwellMs,
+    graceMs,
+    active: currentSource?.active,
+    activeKey: currentSource?.key,
+    activeMode: currentSource?.mode ?? fallbackMode,
+    pendingDecisionId:
+      currentSource?.mode === "live" ? pendingDecisionId : undefined,
+  });
+};
+
 export interface UseEffectSpotlightInput {
   readonly active: ActiveEffectTextPresentation | undefined;
   readonly activeKey?: string | undefined;
@@ -445,12 +479,21 @@ export const useEffectSpotlight = ({
     playback.entries.length,
     playback.paused,
   ]);
-  if (model === undefined) {
+  const displayModel = effectSpotlightModelForPlayback({
+    nowMs: Date.now(),
+    previous: model,
+    minimumDwellMs,
+    graceMs,
+    playback,
+    fallbackMode: activeMode,
+    pendingDecisionId,
+  });
+  if (displayModel === undefined) {
     return undefined;
   }
   const presentIndex = playback.entries.length - 1;
   return {
-    ...model,
+    ...displayModel,
     controls: {
       paused: playback.paused,
       canRewind: cursorIndex !== undefined && cursorIndex > 0,

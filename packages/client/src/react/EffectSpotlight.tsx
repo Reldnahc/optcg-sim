@@ -116,7 +116,13 @@ export const EffectSpotlight = ({
       handler();
     };
   return (
-    <aside className="effect-spotlight" aria-label={`Resolving ${card.name}`}>
+    <aside
+      className="effect-spotlight"
+      aria-label={`Resolving ${card.name}`}
+      onClick={(event) => {
+        event.stopPropagation();
+      }}
+    >
       <div className="effect-spotlight-card">
         {card.imageUrl === undefined ? (
           <div className="effect-spotlight-card__placeholder">{card.name}</div>

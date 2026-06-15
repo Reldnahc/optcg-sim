@@ -13,6 +13,7 @@ import {
   consumeResolvedSpotlightSourceKeys,
   consumeSpotlightSourceSignatures,
   effectSpotlightModel,
+  effectSpotlightModelForPlayback,
   queuedResolvedSpotlightSources,
   shouldDisplayLiveSpotlightSource,
 } from "./use-effect-spotlight.js";
@@ -178,6 +179,39 @@ describe("effect spotlight model", () => {
     });
 
     expect(next).toBe(current);
+  });
+
+  it("derives displayed spotlight directly from the playback cursor", () => {
+    const previousModel = effectSpotlightModel({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      active: source("event:first", "span:first").active,
+      activeKey: "event:first",
+      activeMode: "resolved",
+      pendingDecisionId: undefined,
+    });
+
+    const display = effectSpotlightModelForPlayback({
+      nowMs: 1_100,
+      previous: previousModel,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      playback: {
+        entries: [
+          source("event:first", "span:first"),
+          source("event:second", "span:second"),
+        ],
+        cursorIndex: 1,
+        paused: false,
+      },
+      fallbackMode: "live",
+      pendingDecisionId: undefined,
+    });
+
+    expect(display?.activeKey).toBe("event:second");
+    expect(display?.activeSpanIds).toEqual(["span:second"]);
   });
 
   it("keeps minimum dwell after a fast decision resolves", () => {

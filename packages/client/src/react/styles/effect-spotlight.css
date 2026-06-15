@@ -12,7 +12,7 @@
   left: 50%;
   z-index: 13;
   width: var(--effect-spotlight-card-width);
-  pointer-events: none;
+  pointer-events: auto;
   transform: translate(-50%, -54%);
 }
 
@@ -30,6 +30,7 @@
   aspect-ratio: 0.7;
   overflow: hidden;
   border-radius: 6px;
+  pointer-events: none;
   background: #615d5b;
   box-shadow:
     0 16px 34px rgba(0, 0, 0, 0.48),

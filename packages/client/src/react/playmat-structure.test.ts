@@ -253,6 +253,14 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight\s*\{[^}]*pointer-events:\s*auto;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card\s*\{[^}]*pointer-events:\s*none;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /--effect-spotlight-card-width:\s*min\(\s*calc\(var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\),\s*calc\(100vw\s*-\s*16px\)\s*\);/u,
     );
     assert.match(
