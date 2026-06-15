@@ -119,17 +119,21 @@ const shouldDeferInitialOncePerTurnUse = (
   return firstSegment.effect.type === "payCost";
 };
 
+const shouldAttemptSequenceFrame = (
+  effectBlock: EffectDefinition["effects"][number] | undefined,
+): effectBlock is EffectDefinition["effects"][number] =>
+  effectBlock !== undefined &&
+  (effectBlock.effect.type === "sequence" ||
+    effectBlock.effect.type === "choice" ||
+    effectBlock.effect.type === "returnDon");
+
 export const createSupportedSequenceFrameDecision = (
   state: GameState,
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
 ): SequenceFrameDecisionResult => {
-  if (
-    effectBlock === undefined ||
-    (effectBlock.effect.type !== "sequence" &&
-      effectBlock.effect.type !== "choice")
-  ) {
+  if (!shouldAttemptSequenceFrame(effectBlock)) {
     return undefined;
   }
   const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
