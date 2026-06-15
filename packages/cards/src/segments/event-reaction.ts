@@ -312,7 +312,7 @@ const parseLifeRemovedOwner = (
 
 const parseDonReturnedPredicate: ReactionPredicateParser = ({ text }) => {
   const returned =
-    /^a DON!! card on (?<field>your|the) field is returned to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
+    /^(?:(?<count>[1-9]\d*) or more DON!! cards on (?<countField>your|the) field are returned|a DON!! card on (?<singleField>your|the) field is returned) to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
       text.trim(),
     );
   if (returned === null) {
@@ -320,20 +320,30 @@ const parseDonReturnedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const byYourEffect = returned.groups?.["byYourEffect"] !== undefined;
+  const countText = returned.groups?.["count"];
+  const trigger: Trigger = {
+    type: "donReturned",
+    player: "self",
+    ...(byYourEffect
+      ? {
+          sourceController: "self" as const,
+          sourceKind: "effect" as const,
+        }
+      : {}),
+  };
   return {
-    trigger: {
-      type: "donReturned",
-      player: "self",
-      ...(byYourEffect
-        ? {
-            sourceController: "self" as const,
-            sourceKind: "effect" as const,
-          }
-        : {}),
-    },
+    trigger:
+      countText === undefined
+        ? trigger
+        : {
+            type: "eventCount",
+            trigger,
+            count: { op: "gte", value: Number.parseInt(countText, 10) },
+          },
     evidence: [
       "trigger:donReturned",
       "player:self",
+      ...(countText === undefined ? [] : (["count:positiveInteger"] as const)),
       ...(byYourEffect ? (["replacementSource:cardEffect"] as const) : []),
     ],
   };

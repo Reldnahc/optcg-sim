@@ -68,14 +68,15 @@ const appendCardRestedEvent = (
 const appendDonReturnedEvent = (
   state: ReturnType<typeof createActiveState>,
   playerId = p1,
+  suffix = "test",
 ): void => {
   state.eventJournal.push({
-    id: toEngineEventId(`event:${String(state.seq)}:1:donReturned`),
+    id: toEngineEventId(`event:${String(state.seq)}:1:donReturned:${suffix}`),
     seq: state.eventJournal.length + 1,
     type: "donReturned",
     payload: {
       playerId,
-      donInstanceId: "don:returned:test",
+      donInstanceId: `don:returned:${suffix}`,
       state: "donDeck",
     },
     visibility: { type: "public" },
@@ -354,6 +355,10 @@ const cardRestedReactionState = () => {
 const setupDonReturnedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
   source: CardInstance,
+  trigger: EffectDefinition["effects"][number]["trigger"] = {
+    type: "donReturned",
+    player: "self",
+  },
 ): EffectDefinition => {
   const effectDefinitionId = "def-don-returned-reaction";
   const supportCard = resolvedCard({
@@ -375,10 +380,7 @@ const setupDonReturnedReactionDefinition = (
         ...baseEffect,
         id: "don-returned-draw" as EffectDefinition["effects"][number]["id"],
         category: "auto",
-        trigger: {
-          type: "donReturned",
-          player: "self",
-        },
+        trigger,
         sourcePresencePolicy: "mustRemainInSameZone",
         effect: { type: "draw", count: 1, player: "self" },
       },
@@ -403,6 +405,27 @@ const donReturnedReactionState = () => {
   });
   setupDonReturnedReactionDefinition(state, source);
   appendDonReturnedEvent(state, p1);
+  return { source, state };
+};
+
+const aggregateDonReturnedReactionState = (returnedCount: number) => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "source"),
+    zone: "characterArea",
+  });
+  setupDonReturnedReactionDefinition(state, source, {
+    type: "eventCount",
+    count: { op: "gte", value: 2 },
+    trigger: { type: "donReturned", player: "self" },
+  });
+  for (let index = 0; index < returnedCount; index += 1) {
+    appendDonReturnedEvent(state, p1, `aggregate:${String(index)}`);
+  }
   return { source, state };
 };
 
@@ -749,6 +772,26 @@ test("event reactions queue for matching self donReturned events", () => {
   assert.equal(entry.triggerEventId, state.eventJournal.at(-1)?.id);
   assert.equal(String(entry.timingWindowId).endsWith(":donReturned"), true);
   assert.equal(entry.effectBlockId, "don-returned-draw");
+});
+
+test("aggregate event reactions queue once after enough matching DON return events", () => {
+  const oneReturned = aggregateDonReturnedReactionState(1);
+
+  const oneResult = processEffectRuntime(oneReturned.state);
+
+  assert.equal(oneResult.errors, undefined);
+  assert.equal(oneResult.state.effectQueue.length, 0);
+
+  const twoReturned = aggregateDonReturnedReactionState(2);
+
+  const twoResult = processEffectRuntime(twoReturned.state);
+
+  assert.equal(twoResult.errors, undefined);
+  assert.equal(twoResult.state.effectQueue.length, 1);
+  const entry = must(twoResult.state.effectQueue[0], "queued entry");
+  assert.equal(entry.source.instanceId, twoReturned.source.instanceId);
+  assert.equal(entry.effectBlockId, "don-returned-draw");
+  assert.equal(String(entry.timingWindowId).endsWith(":donReturned"), true);
 });
 
 test("event reactions queue DON attachment triggers through the canonical matcher", () => {

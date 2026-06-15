@@ -42,6 +42,34 @@ describe("scalable event reaction parser primitives", () => {
         },
       },
     });
+
+    const aggregateReturned = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] When 2 or more DON!! cards on your field are returned to your DON!! deck, add up to 1 DON!! card from your DON!! deck and set it as active, and add up to 1 additional DON!! card and rest it.",
+    );
+
+    expect(aggregateReturned).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "eventCount",
+          count: { op: "gte", value: 2 },
+          trigger: { type: "donReturned", player: "self" },
+        },
+        effect: { type: "sequence" },
+      },
+    });
+    expect(aggregateReturned?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:donReturned",
+        "count:positiveInteger",
+        "instruction:moveCards",
+        "destination:costArea",
+        "state:active",
+        "state:rested",
+      ]),
+    );
   });
 
   it("parses bare Character K.O. reactions as field-removal primitives for either player", () => {

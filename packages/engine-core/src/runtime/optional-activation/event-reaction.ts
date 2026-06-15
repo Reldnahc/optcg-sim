@@ -29,7 +29,10 @@ import {
   zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { activeEffectTextPresentationForEffectBlock } from "../effect-presentation.js";
-import { matchEventTrigger } from "../event-hooks/matcher.js";
+import {
+  isEventTriggerQueueAnchor,
+  matchEventTrigger,
+} from "../event-hooks/matcher.js";
 import { canAdmitOncePerTurnEffect } from "../../rules/once-per-turn.js";
 import { activatedReactionQueueingName } from "./event-reaction-support.js";
 import { isSupportedActivatedReactionEffect as isSupportedActivatedReactionEffectWithEntry } from "./event-reaction-runtime-support.js";
@@ -148,7 +151,10 @@ const activatedReactionEventsForSource = (
     return false;
   });
   return candidateEvents.filter(
-    (event) => matchEventTrigger(state, source, trigger, event).matched,
+    (event) =>
+      matchEventTrigger(state, source, trigger, event, candidateEvents)
+        .matched &&
+      isEventTriggerQueueAnchor(state, source, trigger, event, candidateEvents),
   );
 };
 

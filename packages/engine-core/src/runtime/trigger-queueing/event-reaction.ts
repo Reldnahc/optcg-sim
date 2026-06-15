@@ -22,6 +22,7 @@ import {
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 import {
+  isEventTriggerQueueAnchor,
   matchEventTrigger,
   type EventReactionTriggerType,
 } from "../event-hooks/matcher.js";
@@ -160,7 +161,24 @@ export const createEventReactionTriggerQueueing = (
           return toEngineResult(state, [], [lookup.error]);
         }
         const reactionEffects = lookup.definition.effects.flatMap((effect) => {
-          const match = matchEventTrigger(state, source, effect.trigger, event);
+          const match = matchEventTrigger(
+            state,
+            source,
+            effect.trigger,
+            event,
+            reactionEvents,
+          );
+          if (
+            !isEventTriggerQueueAnchor(
+              state,
+              source,
+              effect.trigger,
+              event,
+              reactionEvents,
+            )
+          ) {
+            return [];
+          }
           const triggerTypesForEvent = match.triggerTypes.filter(
             (triggerType) =>
               isSupportedAutoEventReactionTriggerType(triggerType) &&

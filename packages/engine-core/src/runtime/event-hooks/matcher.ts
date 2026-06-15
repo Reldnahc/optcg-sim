@@ -892,13 +892,55 @@ export const matchEventTrigger = (
   source: CardInstance,
   trigger: Trigger,
   event: EngineEvent,
+  eventContext: readonly EngineEvent[] = [event],
 ): EventTriggerMatch => {
   if (trigger.type === "anyOf") {
     return combineChildMatches(
       trigger.triggers.map((child) =>
-        matchEventTrigger(state, source, child, event),
+        matchEventTrigger(state, source, child, event, eventContext),
       ),
     );
   }
+  if (trigger.type === "eventCount") {
+    const current = matchEventTrigger(state, source, trigger.trigger, event, [
+      event,
+    ]);
+    if (!current.matched) {
+      return noMatch();
+    }
+    const matchingCount = eventContext.filter(
+      (candidate) =>
+        matchEventTrigger(state, source, trigger.trigger, candidate, [
+          candidate,
+        ]).matched,
+    ).length;
+    return matchingCount >= trigger.count.value ? current : noMatch();
+  }
   return matchPrimitiveEventTrigger(state, source, trigger, event);
+};
+
+export const isEventTriggerQueueAnchor = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Trigger,
+  event: EngineEvent,
+  eventContext: readonly EngineEvent[] = [event],
+): boolean => {
+  if (trigger.type === "anyOf") {
+    return trigger.triggers.some(
+      (child) =>
+        matchEventTrigger(state, source, child, event, eventContext).matched &&
+        isEventTriggerQueueAnchor(state, source, child, event, eventContext),
+    );
+  }
+  if (trigger.type === "eventCount") {
+    const firstMatching = eventContext.find(
+      (candidate) =>
+        matchEventTrigger(state, source, trigger.trigger, candidate, [
+          candidate,
+        ]).matched,
+    );
+    return firstMatching?.id === event.id;
+  }
+  return true;
 };

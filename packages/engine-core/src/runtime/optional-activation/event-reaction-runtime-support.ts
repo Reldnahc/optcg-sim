@@ -27,6 +27,9 @@ const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
   if (trigger.type === "anyOf") {
     return trigger.triggers.every(isSupportedActivatedReactionTrigger);
   }
+  if (trigger.type === "eventCount") {
+    return isSupportedActivatedReactionTrigger(trigger.trigger);
+  }
   if (trigger.type === "lifeRemoved") {
     return true;
   }

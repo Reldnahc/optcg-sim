@@ -109,7 +109,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
 const triggerTypes = (trigger: Trigger): readonly AutoRuntimeTriggerType[] =>
   trigger.type === "anyOf"
     ? trigger.triggers.flatMap(triggerTypes)
-    : [trigger.type];
+    : trigger.type === "eventCount"
+      ? triggerTypes(trigger.trigger)
+      : [trigger.type];
 
 export const triggerContainsType = (
   trigger: Trigger,

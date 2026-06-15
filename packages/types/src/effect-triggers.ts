@@ -40,6 +40,12 @@ export type EffectEntryPointFilter = {
 
 export type OpponentActivationKind = "event" | "blocker" | "trigger";
 
+export type EventCountPredicate = {
+  type: "eventCount";
+  trigger: Trigger;
+  count: { op: "gte"; value: number };
+};
+
 export type Trigger =
   | { type: "onPlay" }
   | { type: "whenAttacking" }
@@ -50,6 +56,7 @@ export type Trigger =
   | { type: "endOfOpponentTurn" }
   | { type: "trigger" }
   | { type: "anyOf"; triggers: Trigger[] }
+  | EventCountPredicate
   | { type: "damageDealt"; players: PlayerRef[] }
   | { type: "lifeRemoved"; players: PlayerRef[]; destination?: Zone }
   | {

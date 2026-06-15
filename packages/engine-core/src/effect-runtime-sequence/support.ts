@@ -817,7 +817,9 @@ const sequenceTriggerContainsType = (
     ? trigger.triggers.some((child) =>
         sequenceTriggerContainsType(child, triggerType),
       )
-    : trigger.type === triggerType;
+    : trigger.type === "eventCount"
+      ? sequenceTriggerContainsType(trigger.trigger, triggerType)
+      : trigger.type === triggerType;
 
 export const isSupportedQueuedAutoSequenceForEntryPoint = (
   effect: EffectDefinition["effects"][number],
