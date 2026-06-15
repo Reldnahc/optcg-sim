@@ -148,4 +148,26 @@ describe("floating window", () => {
 
     assert.match(markup, /z-index:14/u);
   });
+
+  test("drag movement previews locally and commits parent rect state at drag end", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "FloatingWindow.tsx"),
+      "utf8",
+    );
+    const dragMoveStart = source.indexOf("const handleDragPointerMove =");
+    const dragUpStart = source.indexOf("const handleDragPointerUp =");
+    const completeDragStart = source.indexOf("const completeDrag =");
+    const returnStart = source.indexOf("  return (", completeDragStart);
+    assert.notEqual(dragMoveStart, -1);
+    assert.notEqual(dragUpStart, -1);
+    assert.notEqual(completeDragStart, -1);
+    assert.notEqual(returnStart, -1);
+    const dragMoveSource = source.slice(dragMoveStart, dragUpStart);
+    const completeDragSource = source.slice(completeDragStart, returnStart);
+
+    assert.match(dragMoveSource, /previewRect\(nextRect\)/u);
+    assert.match(dragMoveSource, /onDragMove\?\.\(nextRect\)/u);
+    assert.doesNotMatch(dragMoveSource, /commitRect/u);
+    assert.match(completeDragSource, /commitRect\(/u);
+  });
 });

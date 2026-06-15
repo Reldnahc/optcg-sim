@@ -155,11 +155,11 @@ export const useInfoWindowOrchestration = ({
   const tryGroupInfoWindow = (
     draggedWindowId: InfoWindowTabId,
     rect: WindowRect,
-  ): void => {
+  ): boolean => {
     const targetWindowId = matchingCombineDropTarget(draggedWindowId, rect);
     setCombineDropTarget(undefined);
     if (targetWindowId === undefined) {
-      return;
+      return false;
     }
     const targetRect =
       groupedInfoWindowIds.includes(targetWindowId) &&
@@ -182,6 +182,7 @@ export const useInfoWindowOrchestration = ({
     setPreviewMinimized(false);
     setActionLogMinimized(false);
     setGroupedInfoWindowIds(nextGroupedInfoWindowIds);
+    return true;
   };
   const dockInfoWindowTabs = (
     draggedWindowIds: readonly InfoWindowTabId[],
@@ -207,8 +208,7 @@ export const useInfoWindowOrchestration = ({
   ): WindowRect | undefined => {
     const dockRect = completeControlDockDrop(rect);
     if (dockRect === undefined) {
-      tryGroupInfoWindow(draggedWindowId, rect);
-      return undefined;
+      return tryGroupInfoWindow(draggedWindowId, rect) ? undefined : rect;
     }
     dockInfoWindowTabs([draggedWindowId], dockRect);
     setCombineDropTarget(undefined);
@@ -217,7 +217,7 @@ export const useInfoWindowOrchestration = ({
   const completeInfoGroupDrag = (rect: WindowRect): WindowRect | undefined => {
     const dockRect = completeControlDockDrop(rect);
     if (dockRect === undefined) {
-      return undefined;
+      return rect;
     }
     dockInfoWindowTabs(groupedInfoWindowIds, dockRect);
     setCombineDropTarget(undefined);

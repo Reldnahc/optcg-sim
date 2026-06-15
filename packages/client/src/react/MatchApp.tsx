@@ -258,7 +258,7 @@ export const MatchApp = ({
   ): WindowRect | undefined => {
     const dockRect = completeControlDockDrop(rect);
     if (dockRect === undefined) {
-      return undefined;
+      return rect;
     }
     dockFloatingWindows({ windowKeys: [windowKey], rect: dockRect });
     setControlDockActiveTabId(windowKey);
