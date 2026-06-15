@@ -219,6 +219,12 @@ function parseEntryPointAlternatives(
   let rest = input.text;
   let restSource = input.source;
   const values: EntryPointParseResult[] = [];
+  let sharedTurnWindow:
+    | {
+        readonly condition: Condition;
+        readonly evidence: readonly PrimitiveEvidence[];
+      }
+    | undefined;
   for (;;) {
     const entryPoint = firstEntryPointParse(parsers, {
       text: rest,
@@ -227,7 +233,9 @@ function parseEntryPointAlternatives(
     if (entryPoint === undefined) {
       return { ok: false, text: rest };
     }
-    values.push(entryPoint);
+    const value = applySharedTurnWindow(entryPoint, sharedTurnWindow);
+    values.push(value);
+    sharedTurnWindow ??= sharedTurnWindowContext(entryPoint);
     const beforeEntryRest = rest;
     rest = entryPoint.rest.trimStart();
     restSource = sourceForRest(restSource, beforeEntryRest, rest);
@@ -243,6 +251,61 @@ function parseEntryPointAlternatives(
     rest = rest.slice(1).trimStart();
     restSource = sourceForRest(restSource, beforeSlashRest, rest);
   }
+}
+
+function applySharedTurnWindow(
+  entryPoint: EntryPointParseResult,
+  shared:
+    | {
+        readonly condition: Condition;
+        readonly evidence: readonly PrimitiveEvidence[];
+      }
+    | undefined,
+): EntryPointParseResult {
+  if (
+    shared === undefined ||
+    entryPoint.evidence.includes("entry:yourTurn") ||
+    entryPoint.evidence.includes("entry:opponentTurn")
+  ) {
+    return entryPoint;
+  }
+
+  const combinedCondition = combineConditions(
+    shared.condition,
+    entryPoint.node.condition,
+  );
+
+  return {
+    ...entryPoint,
+    node: {
+      ...entryPoint.node,
+      ...(combinedCondition === undefined
+        ? {}
+        : { condition: combinedCondition }),
+    },
+    evidence: [...shared.evidence, ...entryPoint.evidence],
+  };
+}
+
+function sharedTurnWindowContext(entryPoint: EntryPointParseResult):
+  | {
+      readonly condition: Condition;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  if (entryPoint.evidence.includes("entry:yourTurn")) {
+    return {
+      condition: { type: "yourTurn" },
+      evidence: ["entry:yourTurn", "condition:yourTurn"],
+    };
+  }
+  if (entryPoint.evidence.includes("entry:opponentTurn")) {
+    return {
+      condition: { type: "opponentTurn" },
+      evidence: ["entry:opponentTurn", "condition:opponentTurn"],
+    };
+  }
+  return undefined;
 }
 
 function firstMetadataLineParse(

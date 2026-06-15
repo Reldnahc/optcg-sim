@@ -54,6 +54,7 @@ export function lookPlayFromTopExpressionParser(
     return {
       effect: createLookedSetPlaySequence({
         count: look.count,
+        enterRested: play.enterRested,
         filter: play.filter,
         max: play.max,
       }),
@@ -175,6 +176,7 @@ function parseLookedSetLifeSelection(input: ParseInput):
 
 function parseLookedSetPlaySelection(input: ParseInput):
   | {
+      readonly enterRested: boolean;
       readonly filter: CardFilter;
       readonly max: number;
       readonly evidence: readonly PrimitiveEvidence[];
@@ -196,15 +198,24 @@ function parseLookedSetPlaySelection(input: ParseInput):
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: filterText });
+  const restedMatch = /^(?<filter>.+?)\s+rested$/iu.exec(filterText);
+  const enterRested = restedMatch !== null;
+  const predicateText = restedMatch?.groups?.["filter"] ?? filterText;
+
+  const predicates = parseCardFilterPredicates({ text: predicateText });
   if (predicates === undefined || predicates.rest.length > 0) {
     return undefined;
   }
 
   return {
+    enterRested,
     filter: predicates.filter,
     max: Number.parseInt(maxText, 10),
-    evidence: ["cardinality:upTo", ...predicates.evidence],
+    evidence: [
+      "cardinality:upTo",
+      ...predicates.evidence,
+      ...(enterRested ? (["state:rested"] as const) : []),
+    ],
     rest: `Then, ${remainingText}`,
   };
 }
@@ -293,10 +304,12 @@ function createLookedSetLifeSequence({
 
 function createLookedSetPlaySequence({
   count,
+  enterRested,
   filter,
   max,
 }: {
   readonly count: number;
+  readonly enterRested: boolean;
   readonly filter: CardFilter;
   readonly max: number;
 }): Extract<Effect, { type: "sequence" }> {
@@ -332,6 +345,7 @@ function createLookedSetPlaySequence({
           type: "playSelected",
           selection: lookedPlaySelection,
           ignoreCost: true,
+          ...(enterRested ? { enterRested: true } : {}),
         },
       },
       {

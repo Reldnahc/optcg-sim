@@ -125,5 +125,5 @@ function isEntryPointPrefix(text: string, entryPointText: string): boolean {
     return true;
   }
   const next = text.at(entryPointText.length);
-  return text.startsWith(entryPointText) && next === " ";
+  return text.startsWith(entryPointText) && (next === " " || next === "/");
 }
