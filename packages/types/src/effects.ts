@@ -164,6 +164,7 @@ export interface TargetRequest {
   zone: Zone;
   player: TargetPlayerRef;
   filter?: CardFilter;
+  selectionConstraints?: TargetSelectionConstraint[];
   min: number;
   max: number;
   allowFewerIfUnavailable: boolean;
@@ -175,6 +176,13 @@ export type TargetPlayerRef = PlayerRef | "anyPlayer";
 export interface MultiZoneTargetRequest extends Omit<TargetRequest, "zone"> {
   zones: Zone[];
 }
+
+export type TargetSelectionConstraint = {
+  type: "totalStat";
+  stat: "baseCost" | "cost" | "basePower" | "currentPower";
+  op: Comparator;
+  value: number;
+};
 
 export interface SelectedTargetsRequest extends TargetRequest {
   zone: SavedFieldObjectZone;

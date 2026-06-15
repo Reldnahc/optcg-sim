@@ -3,6 +3,7 @@ import type {
   MultiZoneTargetRequest,
   Target,
   TargetRequest,
+  TargetSelectionConstraint,
 } from "@optcg/types";
 
 import { isSupportedPublicFieldTargetFilter } from "../support-filters.js";
@@ -132,9 +133,17 @@ export const isSupportedSequenceTargetRequest = (
     request.min >= 0 &&
     request.min <= request.max &&
     request.max <= maxSupportedTargetCount &&
-    isSupportedPublicFieldTargetFilter(request.filter)
+    isSupportedPublicFieldTargetFilter(request.filter) &&
+    isSupportedSelectionConstraints(request.selectionConstraints)
   );
 };
+
+const isSupportedSelectionConstraints = (
+  constraints: readonly TargetSelectionConstraint[] | undefined,
+): boolean =>
+  constraints === undefined ||
+  (constraints.length > 0 &&
+    constraints.every((constraint) => Number.isSafeInteger(constraint.value)));
 
 export const isSupportedAllFieldTrashSegment = (
   effect: SequenceSegmentEffect,

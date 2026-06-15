@@ -101,6 +101,58 @@ describe("K.O. instruction parser", () => {
     });
   });
 
+  it("parses K.O. target selections with a total current-power limit", () => {
+    expect(
+      parseKoInstruction({
+        text: "K.O. up to 2 of your opponent's Characters with a total power of 4000 or less.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:ko-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 2,
+                filter: { categories: ["character"] },
+                selectionConstraints: [
+                  {
+                    type: "totalStat",
+                    stat: "currentPower",
+                    op: "lte",
+                    value: 4000,
+                  },
+                ],
+              },
+            },
+          },
+          { connector: "then", effect: { type: "ko" } },
+        ],
+      },
+      evidence: [
+        "instruction:ko",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "targetConstraint:totalStat",
+        "condition:stat:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses K.O.-or-return as one selected target followed by reusable action choice", () => {
     expect(
       parseKoInstruction({

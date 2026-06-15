@@ -20,6 +20,7 @@ const directFamilyPrefixes: ReadonlySet<SupportEvidenceFamily> = new Set([
   "cost",
   "condition",
   "target",
+  "targetConstraint",
   "filter",
   "cardinality",
   "zone",

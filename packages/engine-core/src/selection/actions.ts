@@ -1,6 +1,7 @@
 import type {
   Action,
   CardRef,
+  CardInstance,
   EngineError,
   EngineEvent,
   EngineResult,
@@ -8,6 +9,7 @@ import type {
   LegalAction,
   SelectTargetsDecision,
   TargetCandidate,
+  TargetSelectionConstraint,
 } from "@optcg/types";
 
 import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
@@ -24,6 +26,7 @@ import { isUnsupportedSelectTargetsDecision } from "../effect-runtime-queue/targ
 import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence/frames.js";
 import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence/select-targets.js";
 import { assertGameStateInvariants } from "../state/invariants.js";
+import { computeView } from "../view/compute-view.js";
 import { resolvePublicTargetCandidatesForRequest } from "./candidates.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -81,6 +84,109 @@ const allTargetsInCandidates = (
   targets.every((target) =>
     candidates.some((candidate) => cardRefMatches(target, candidate.card)),
   );
+
+const compareNumber = (
+  op: TargetSelectionConstraint["op"],
+  left: number,
+  right: number,
+): boolean => {
+  switch (op) {
+    case "eq":
+      return left === right;
+    case "neq":
+      return left !== right;
+    case "gt":
+      return left > right;
+    case "gte":
+      return left >= right;
+    case "lt":
+      return left < right;
+    case "lte":
+      return left <= right;
+  }
+};
+
+const findCardInstanceByRef = (
+  state: GameState,
+  ref: CardRef,
+): CardInstance | undefined => {
+  const player = state.players[ref.playerId];
+  if (player === undefined) {
+    return undefined;
+  }
+  const candidates = [
+    player.leader,
+    ...player.characters,
+    ...(player.stage === undefined ? [] : [player.stage]),
+    ...player.costArea,
+  ];
+  return candidates.find(
+    (candidate) =>
+      candidate.instanceId === ref.instanceId &&
+      candidate.cardId === ref.cardId &&
+      (ref.zone === undefined || zonesEqual(ref.zone, candidate.zone)),
+  );
+};
+
+const targetSelectionStatValue = (
+  state: GameState,
+  card: CardInstance,
+  stat: TargetSelectionConstraint["stat"],
+): number | undefined => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (metadata === undefined) {
+    return undefined;
+  }
+  if (stat === "baseCost") {
+    return metadata.cost;
+  }
+  if (stat === "basePower") {
+    return metadata.power;
+  }
+
+  const view =
+    state.continuousEffects.length === 0
+      ? undefined
+      : computeView(state, {
+          supportStatusPolicy: "ignore",
+          unsupportedCombatKeywordPolicy: "ignore",
+        }).cards[card.instanceId];
+  if (stat === "cost") {
+    return view?.currentCost ?? metadata.cost;
+  }
+  return view?.currentPower ?? metadata.power;
+};
+
+const targetsSatisfySelectionConstraint = (
+  state: GameState,
+  targets: readonly CardRef[],
+  constraint: TargetSelectionConstraint,
+): boolean => {
+  const total = targets.reduce<number | undefined>((sum, target) => {
+    if (sum === undefined) {
+      return undefined;
+    }
+    const card = findCardInstanceByRef(state, target);
+    if (card === undefined) {
+      return undefined;
+    }
+    const value = targetSelectionStatValue(state, card, constraint.stat);
+    return value === undefined ? undefined : sum + value;
+  }, 0);
+
+  return (
+    total !== undefined && compareNumber(constraint.op, total, constraint.value)
+  );
+};
+
+const targetsSatisfySelectionConstraints = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+  targets: readonly CardRef[],
+): boolean =>
+  decision.request.selectionConstraints?.every((constraint) =>
+    targetsSatisfySelectionConstraint(state, targets, constraint),
+  ) ?? true;
 
 const currentCandidatesForDecision = (
   state: GameState,
@@ -163,6 +269,54 @@ const validateTargetsResponse = (
       invalidDecision("Selected targets must be current legal targets."),
     );
   }
+  if (!targetsSatisfySelectionConstraints(state, decision, targets)) {
+    return toEngineResult(
+      state,
+      [],
+      invalidDecision(
+        "Selected targets do not satisfy the selection constraints.",
+      ),
+    );
+  }
+  return undefined;
+};
+
+const findFirstConstraintSatisfyingSelection = (
+  state: GameState,
+  decision: SelectTargetsDecision,
+  candidates: readonly TargetCandidate[],
+  minimum: number,
+): CardRef[] | undefined => {
+  const max = Math.min(decision.request.max, candidates.length);
+  const selected: CardRef[] = [];
+
+  const search = (startIndex: number, size: number): CardRef[] | undefined => {
+    if (selected.length === size) {
+      return targetsSatisfySelectionConstraints(state, decision, selected)
+        ? [...selected]
+        : undefined;
+    }
+    for (let index = startIndex; index < candidates.length; index += 1) {
+      const candidate = candidates[index];
+      if (candidate === undefined) {
+        continue;
+      }
+      selected.push(candidate.card);
+      const result = search(index + 1, size);
+      if (result !== undefined) {
+        return result;
+      }
+      selected.pop();
+    }
+    return undefined;
+  };
+
+  for (let size = minimum; size <= max; size += 1) {
+    const result = search(0, size);
+    if (result !== undefined) {
+      return result;
+    }
+  }
   return undefined;
 };
 
@@ -198,15 +352,23 @@ export const getSelectTargetsLegalActions = (
     return [];
   }
 
+  const selectedTargets = findFirstConstraintSatisfyingSelection(
+    state,
+    decision,
+    currentCandidates,
+    count,
+  );
+  if (selectedTargets === undefined) {
+    return [];
+  }
+
   return [
     {
       type: "respondToDecision",
       decisionId: decision.id,
       response: {
         type: "targets",
-        targets: currentCandidates
-          .slice(0, count)
-          .map((candidate) => candidate.card),
+        targets: selectedTargets,
       },
     },
   ];

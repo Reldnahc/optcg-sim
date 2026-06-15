@@ -121,7 +121,10 @@ export const parseKoInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const target = parseOpponentFieldTarget({ text: cardinality.rest });
+  const totalStatTarget = parseTotalStatLimitedKoTarget(cardinality.rest);
+  const target =
+    totalStatTarget?.target ??
+    parseOpponentFieldTarget({ text: cardinality.rest });
   if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
     return undefined;
   }
@@ -133,6 +136,7 @@ export const parseKoInstruction: InstructionParser = (input) => {
       min: cardinality.cardinality.min,
       max: cardinality.cardinality.max,
       filter: target.filter ?? { categories: ["character"] },
+      selectionConstraints: totalStatTarget?.selectionConstraints,
       zone,
       selectionId: koTargetSelectionId,
     }),
@@ -141,11 +145,91 @@ export const parseKoInstruction: InstructionParser = (input) => {
       ...cardinality.evidence,
       "chooser:self:upTo",
       ...target.evidence,
+      ...(totalStatTarget?.evidence ?? []),
       "composition:selectThenApply",
     ],
     rest: "",
   };
 };
+
+function parseTotalStatLimitedKoTarget(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly selectionConstraints: NonNullable<
+        Extract<
+          Effect,
+          { type: "selectTargets" }
+        >["request"]["selectionConstraints"]
+      >;
+      readonly target: NonNullable<ReturnType<typeof parseOpponentFieldTarget>>;
+    }
+  | undefined {
+  const match =
+    /^(?<target>of your opponent's .+?) with a total (?<stat>power|base power|cost|base cost) of (?<value>[1-9]\d*) (?<comparison>or less|or more)\.?$/iu.exec(
+      text,
+    );
+  const targetText = match?.groups?.["target"];
+  const statText = match?.groups?.["stat"];
+  const valueText = match?.groups?.["value"];
+  const comparisonText = match?.groups?.["comparison"];
+  if (
+    targetText === undefined ||
+    statText === undefined ||
+    valueText === undefined ||
+    comparisonText === undefined
+  ) {
+    return undefined;
+  }
+
+  const target = parseOpponentFieldTarget({ text: targetText });
+  if (target === undefined || target.rest.length > 0) {
+    return undefined;
+  }
+
+  const stat = parseTotalStatText(statText);
+  if (stat === undefined) {
+    return undefined;
+  }
+
+  const op = comparisonText.toLowerCase() === "or less" ? "lte" : "gte";
+  return {
+    target,
+    selectionConstraints: [
+      {
+        type: "totalStat",
+        stat,
+        op,
+        value: Number.parseInt(valueText, 10),
+      },
+    ],
+    evidence: [
+      "targetConstraint:totalStat",
+      totalStatEvidence(stat),
+      op === "lte" ? "condition:comparator:lte" : "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+    ],
+  };
+}
+
+function totalStatEvidence(
+  stat: "baseCost" | "basePower" | "cost" | "currentPower",
+): PrimitiveEvidence {
+  if (stat === "currentPower") return "condition:stat:currentPower";
+  if (stat === "basePower") return "condition:stat:basePower";
+  if (stat === "baseCost") return "condition:stat:baseCost";
+  return "condition:stat:cost";
+}
+
+function parseTotalStatText(
+  text: string,
+): "baseCost" | "basePower" | "cost" | "currentPower" | undefined {
+  const normalized = text.toLowerCase();
+  if (normalized === "power") return "currentPower";
+  if (normalized === "base power") return "basePower";
+  if (normalized === "cost") return "cost";
+  if (normalized === "base cost") return "baseCost";
+  return undefined;
+}
 
 function parseKoOrRest(actionRest: string): ReturnType<InstructionParser> {
   const match = /^or rest (?<target>.+)$/iu.exec(actionRest);
@@ -403,6 +487,10 @@ function selectThenApplyKoEffect(options: {
   readonly min: number;
   readonly max: number;
   readonly filter: TargetFilter;
+  readonly selectionConstraints?: Extract<
+    Effect,
+    { type: "selectTargets" }
+  >["request"]["selectionConstraints"];
   readonly zone: "characterArea" | "stageArea";
   readonly selectionId: string;
 }): Effect {
@@ -425,6 +513,9 @@ function selectThenApplyKoEffect(options: {
             allowFewerIfUnavailable: true,
             visibility: "public",
             filter: options.filter,
+            ...(options.selectionConstraints === undefined
+              ? {}
+              : { selectionConstraints: options.selectionConstraints }),
           },
         },
       },

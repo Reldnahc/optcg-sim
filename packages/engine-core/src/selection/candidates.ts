@@ -10,6 +10,7 @@ import type {
   ResolvedCard,
   CardRef,
   TargetCandidate,
+  TargetSelectionConstraint,
   TargetRequest,
   Zone,
 } from "@optcg/types";
@@ -164,6 +165,16 @@ const isStringArray = (value: unknown): value is string[] =>
 const isSupportedEffectEntryPointFilter = (
   filter: CardFilter["effectEntryPoint"],
 ): boolean => filter === undefined || typeof filter.trigger.type === "string";
+
+const isSupportedSelectionConstraint = (
+  constraint: TargetSelectionConstraint,
+): boolean => Number.isSafeInteger(constraint.value);
+
+const isSupportedSelectionConstraints = (
+  constraints: readonly TargetSelectionConstraint[] | undefined,
+): boolean =>
+  constraints === undefined ||
+  (constraints.length > 0 && constraints.every(isSupportedSelectionConstraint));
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -655,7 +666,10 @@ export const resolvePublicTargetCandidates = (
     return { ok: false, reason: "unsupportedZone" };
   }
 
-  if (!isSupportedFilter(request.filter)) {
+  if (
+    !isSupportedFilter(request.filter) ||
+    !isSupportedSelectionConstraints(request.selectionConstraints)
+  ) {
     return { ok: false, reason: "unsupportedFilter" };
   }
 
