@@ -208,10 +208,10 @@ const hasMatchingResolvedPresentationSinceLastQueue = ({
     if (event === undefined || event.type === "effectQueued") {
       return false;
     }
-    const presentation = presentationForEvent(event);
     if (
-      presentation !== undefined &&
-      sameEffectTextPresentation(presentation, activeEffectText)
+      resolvedEntriesForEvent(event).some((entry) =>
+        sameEffectTextPresentation(entry.active, activeEffectText),
+      )
     ) {
       return true;
     }
