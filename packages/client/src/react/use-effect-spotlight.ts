@@ -100,6 +100,7 @@ export const useEffectSpotlight = ({
     entries: [],
     cursorIndex: undefined,
     paused: false,
+    fastForwarded: false,
   });
   const normalizedSources = useMemo(
     (): readonly EffectSpotlightActiveSourceInput[] =>

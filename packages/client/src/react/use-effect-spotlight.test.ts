@@ -33,8 +33,11 @@ const source = (
     },
     activeSpanIds: [spanId],
   },
+  id: key,
   key,
+  semanticKey: `p1|source-1|OP00-001|effect|${spanId}`,
   mode,
+  status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
 
 describe("effect spotlight model", () => {
@@ -210,23 +213,6 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(true);
   });
 
-  it("rewinds to the previous entry and pauses playback", () => {
-    const next = advanceSpotlightPlayback({
-      command: "rewind",
-      state: {
-        entries: [
-          source("event:first", "span:first"),
-          source("event:second", "span:second"),
-        ],
-        cursorIndex: 1,
-        paused: false,
-      },
-    });
-
-    expect(next.cursorIndex).toBe(0);
-    expect(next.paused).toBe(true);
-  });
-
   it("does not auto-advance while paused and resumes after play", () => {
     const paused = advanceSpotlightPlayback({
       command: "autoAdvance",
@@ -274,7 +260,7 @@ describe("effect spotlight model", () => {
     expect(atPresent.cursorIndex).toBe(1);
   });
 
-  it("fast-forwards to the latest entry without deleting history", () => {
+  it("fast-forward clears resolved playback without deleting history", () => {
     const next = advanceSpotlightPlayback({
       command: "catchUp",
       state: {
@@ -284,6 +270,7 @@ describe("effect spotlight model", () => {
         ],
         cursorIndex: 0,
         paused: true,
+        fastForwarded: false,
       },
     });
 
@@ -291,8 +278,9 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
-    expect(next.cursorIndex).toBe(1);
+    expect(next.cursorIndex).toBeUndefined();
     expect(next.paused).toBe(false);
+    expect(next.fastForwarded).toBe(true);
   });
 
   it("fast-forwards to the latest pending decision entry", () => {
@@ -349,7 +337,7 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(true);
   });
 
-  it("rewinds from fast-forwarded history to the previous entry", () => {
+  it("rewinds from fast-forwarded empty playback to the latest history entry", () => {
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",
       state: {
@@ -359,6 +347,7 @@ describe("effect spotlight model", () => {
         ],
         cursorIndex: 0,
         paused: true,
+        fastForwarded: false,
       },
     });
     const rewound = advanceSpotlightPlayback({
@@ -370,7 +359,7 @@ describe("effect spotlight model", () => {
       "event:first",
       "event:second",
     ]);
-    expect(rewound.cursorIndex).toBe(0);
+    expect(rewound.cursorIndex).toBe(1);
     expect(rewound.paused).toBe(true);
   });
 

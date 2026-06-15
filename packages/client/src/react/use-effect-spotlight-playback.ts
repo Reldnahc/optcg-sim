@@ -1,14 +1,20 @@
 import type {
   ActiveEffectTextPresentation,
+  DecisionId,
   EffectTextSpanId,
 } from "@optcg/types";
 
 export type EffectSpotlightSourceMode = "live" | "resolved";
+export type EffectSpotlightSourceKind = "serverTimeline" | "legacyFallback";
 
 export interface EffectSpotlightActiveSourceInput {
   readonly active: ActiveEffectTextPresentation;
+  readonly id?: string;
   readonly key: string;
+  readonly semanticKey?: string;
   readonly mode: EffectSpotlightSourceMode;
+  readonly status?: "pending" | "resolved";
+  readonly pendingDecisionId?: DecisionId;
 }
 
 export type EffectSpotlightPlaybackEntry = EffectSpotlightActiveSourceInput;
@@ -17,6 +23,7 @@ export interface EffectSpotlightPlaybackState {
   readonly entries: readonly EffectSpotlightPlaybackEntry[];
   readonly cursorIndex: number | undefined;
   readonly paused: boolean;
+  readonly fastForwarded?: boolean;
 }
 
 export type EffectSpotlightPlaybackCommand =
@@ -94,21 +101,35 @@ export const appendSpotlightPlaybackSources = ({
   initialCursorKey,
   suppressedResolvedSignatures,
   previous,
+  sourceKind = "legacyFallback",
   sources,
 }: {
   readonly consumedKeys: ReadonlySet<string>;
   readonly initialCursorKey?: string | undefined;
   readonly suppressedResolvedSignatures?: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
+  readonly sourceKind?: EffectSpotlightSourceKind | undefined;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
   const queuedKeys = new Set(previous.entries.map((source) => source.key));
   let entries: EffectSpotlightPlaybackEntry[] | undefined;
   for (const source of sources) {
+    if (sourceKind === "serverTimeline" && source.semanticKey !== undefined) {
+      const semanticIndex = previous.entries.findIndex(
+        (entry) => entry.semanticKey === source.semanticKey,
+      );
+      if (semanticIndex >= 0) {
+        entries ??= [...previous.entries];
+        entries[semanticIndex] = source;
+        queuedKeys.add(source.key);
+        continue;
+      }
+    }
     if (consumedKeys.has(source.key) || queuedKeys.has(source.key)) {
       continue;
     }
     if (
+      sourceKind !== "serverTimeline" &&
       source.mode === "resolved" &&
       suppressedResolvedSignatures !== undefined &&
       sourceSignaturesConsumed(suppressedResolvedSignatures, source)
@@ -139,6 +160,7 @@ export const appendSpotlightPlaybackSources = ({
           : previous.entries.length
         : previous.cursorIndex,
     paused: previous.paused,
+    fastForwarded: previous.fastForwarded ?? false,
   };
 };
 
@@ -160,11 +182,14 @@ export const advanceSpotlightPlayback = ({
   readonly state: EffectSpotlightPlaybackState;
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
+    const pendingIndex = state.entries.findIndex(
+      (entry) => entry.status === "pending",
+    );
     return {
       ...state,
-      cursorIndex:
-        state.entries.length === 0 ? undefined : state.entries.length - 1,
+      cursorIndex: pendingIndex >= 0 ? pendingIndex : undefined,
       paused: false,
+      fastForwarded: true,
     };
   }
   if (command === "pause") {
@@ -184,6 +209,7 @@ export const advanceSpotlightPlayback = ({
       cursorIndex:
         cursorIndex === undefined ? presentIndex : Math.max(0, cursorIndex - 1),
       paused: true,
+      fastForwarded: false,
     };
   }
   if (cursorIndex === undefined) {
@@ -193,15 +219,16 @@ export const advanceSpotlightPlayback = ({
     return {
       ...state,
       cursorIndex: Math.min(presentIndex, cursorIndex + 1),
+      fastForwarded: false,
     };
   }
   if (state.paused) {
     return state;
   }
   if (cursorIndex < presentIndex) {
-    return { ...state, cursorIndex: cursorIndex + 1 };
+    return { ...state, cursorIndex: cursorIndex + 1, fastForwarded: false };
   }
-  return { ...state, cursorIndex: undefined };
+  return { ...state, cursorIndex: undefined, fastForwarded: false };
 };
 
 export const queuedResolvedSpotlightSources = ({
