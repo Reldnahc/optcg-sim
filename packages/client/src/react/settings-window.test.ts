@@ -312,49 +312,63 @@ describe("settings window", () => {
     assert.match(matchApp, /--match-background-size/u);
     assert.match(matchApp, /--match-background-repeat/u);
     assert.match(matchApp, /--match-background-position/u);
-    assert.match(matchApp, /const matchBackgroundImageStyle =/u);
     assert.match(
       matchApp,
-      /<div[\s\S]*className="match-app-background-image"[\s\S]*style=\{matchBackgroundImageStyle\}[\s\S]*\/>/u,
+      /"--match-background-image":\s*backgroundImageEnabled/u,
     );
+    assert.doesNotMatch(matchApp, /className="match-app-background-image"/u);
     const matchAppStyleStart = matchApp.indexOf("const matchAppStyle =");
-    const matchBackgroundImageStyleStart = matchApp.indexOf(
-      "const matchBackgroundImageStyle =",
+    const matchAppClassNameStart = matchApp.indexOf(
+      "  const matchAppClassName",
     );
     assert.notEqual(matchAppStyleStart, -1);
-    assert.notEqual(matchBackgroundImageStyleStart, -1);
+    assert.notEqual(matchAppClassNameStart, -1);
     const matchAppStyleSource = matchApp.slice(
       matchAppStyleStart,
-      matchBackgroundImageStyleStart,
-    );
-    const matchBackgroundImageStyleSource = matchApp.slice(
-      matchBackgroundImageStyleStart,
-      matchApp.indexOf(
-        "  const matchAppClassName",
-        matchBackgroundImageStyleStart,
-      ),
+      matchAppClassNameStart,
     );
     assert.doesNotMatch(matchAppStyleSource, /backgroundImage:/u);
-    assert.match(matchBackgroundImageStyleSource, /backgroundImage:/u);
+    assert.match(matchAppStyleSource, /url\(/u);
     assert.match(
       appShellStyles,
       /background-color:\s*var\(--match-background-color\);/u,
     );
     assert.match(
       appShellStyles,
-      /\.match-app-background-image\s*\{[^}]*background-position:\s*var\(--match-background-position\);/u,
+      /\.match-app::before\s*\{[^}]*background-image:\s*var\(--match-background-image\);/u,
     );
     assert.match(
       appShellStyles,
-      /\.match-app-background-image\s*\{[^}]*background-repeat:\s*var\(--match-background-repeat\);/u,
+      /\.match-app::before\s*\{[^}]*background-position:\s*var\(--match-background-position\);/u,
     );
     assert.match(
       appShellStyles,
-      /\.match-app-background-image\s*\{[^}]*background-size:\s*var\(--match-background-size\);/u,
+      /\.match-app::before\s*\{[^}]*background-repeat:\s*var\(--match-background-repeat\);/u,
     );
     assert.match(
       appShellStyles,
-      /\.match-app-background-image\s*\{[^}]*contain:\s*paint;/u,
+      /\.match-app::before\s*\{[^}]*background-size:\s*var\(--match-background-size\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.match-app::before\s*\{[^}]*contain:\s*paint;/u,
+    );
+  });
+
+  test("background layer does not override control rail or floating window positioning", async () => {
+    const appShellStyles = await readFile(
+      join(sourceDirectory, "styles", "app-shell.css"),
+      "utf8",
+    );
+
+    assert.doesNotMatch(appShellStyles, /\.match-app\s*>\s*:not/u);
+    assert.doesNotMatch(
+      appShellStyles,
+      /\.match-app\s*>\s*\*\s*\{[^}]*position:/u,
+    );
+    assert.match(
+      appShellStyles,
+      /\.match-app\s*>\s*:where\(\.board-shell,\s*\.loading-panel\)\s*\{[^}]*z-index:\s*1;/u,
     );
   });
 

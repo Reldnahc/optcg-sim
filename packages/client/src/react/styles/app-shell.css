@@ -86,6 +86,7 @@
   );
   --match-surface-page: #101010;
   --match-background-color: var(--match-surface-page);
+  --match-background-image: none;
   --match-background-size: cover;
   --match-background-repeat: no-repeat;
   --match-background-position: center;
@@ -137,19 +138,21 @@
   isolation: isolate;
 }
 
-.match-app-background-image {
+.match-app::before {
+  content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   contain: paint;
   pointer-events: none;
+  background-image: var(--match-background-image);
   background-position: var(--match-background-position);
   background-repeat: var(--match-background-repeat);
   background-size: var(--match-background-size);
   transform: translateZ(0);
 }
 
-.match-app > :not(.match-app-background-image) {
+.match-app > :where(.board-shell, .loading-panel) {
   position: relative;
   z-index: 1;
 }
