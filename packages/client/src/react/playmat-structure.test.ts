@@ -241,6 +241,18 @@ describe("playmat structure", () => {
       matchApp,
       /const effectSpotlightActive = effectSpotlight\?\.active;/u,
     );
+    assert.match(
+      matchApp,
+      /const effectSpotlightHistory = playerSnapshot\?\.view\.effectSpotlightHistory;/u,
+    );
+    assert.match(
+      matchApp,
+      /consumeInitialResolvedSources: effectSpotlightHistory === undefined/u,
+    );
+    assert.match(
+      matchApp,
+      /initialCursorKey: effectSpotlightHistory\?\.presentKey/u,
+    );
     assert.match(matchApp, /effectSpotlightActive=\{effectSpotlightActive\}/u);
     assert.match(
       matchApp,

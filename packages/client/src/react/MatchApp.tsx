@@ -319,19 +319,23 @@ export const MatchApp = ({
   const showPreviewWindow = previewOpen;
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
+  const effectSpotlightHistory = playerSnapshot?.view.effectSpotlightHistory;
   const activeEffectTextSources =
-    playerSnapshot === undefined
+    effectSpotlightHistory?.entries ??
+    (playerSnapshot === undefined
       ? undefined
       : activeEffectTextSourcesForSpotlight({
           activeEffectText: playerSnapshot.view.activeEffectText,
           pendingDecision: playerSnapshot.view.pendingDecision,
           events: playerSnapshot.view.events,
-        });
+        }));
   const effectSpotlight = useEffectSpotlight({
     active: undefined,
     ...(activeEffectTextSources === undefined
       ? {}
       : { activeSources: activeEffectTextSources }),
+    consumeInitialResolvedSources: effectSpotlightHistory === undefined,
+    initialCursorKey: effectSpotlightHistory?.presentKey,
     pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
   });
   const effectSpotlightActive = effectSpotlight?.active;
