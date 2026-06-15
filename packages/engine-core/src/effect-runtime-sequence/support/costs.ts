@@ -184,6 +184,14 @@ const isSupportedMoveCardsCostRoute = (
     return true;
   }
   if (
+    (cost.from.zone === "characterArea" || cost.from.zone === "stageArea") &&
+    cost.from.position === undefined &&
+    cost.to.zone === "hand" &&
+    cost.to.position === undefined
+  ) {
+    return true;
+  }
+  if (
     cost.from.zone === "deck" &&
     cost.from.position === "top" &&
     cost.to.zone === "trash" &&

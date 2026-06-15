@@ -47,3 +47,61 @@ test("move-card cost options expose hand-to-deck-bottom payment routes", () => {
     player.hand.map((card) => card.instanceId),
   );
 });
+
+test("move-card cost options expose source character-to-hand payment routes", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "player");
+  const source = must(player.hand[0], "source");
+  player.hand = player.hand.slice(1);
+  player.characters = [
+    {
+      ...source,
+      controller: p1,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+    },
+  ];
+  const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+    type: "moveCards",
+    count: 1,
+    chooser: "self",
+    from: {
+      player: "self",
+      zone: "characterArea",
+      source: "effectSource",
+    },
+    to: { player: "self", zone: "hand" },
+    order: "chooserChoice",
+    optional: true,
+  };
+
+  const options = expandMoveCardsCostRoutes(cost, source.instanceId);
+
+  assert.deepEqual(options, [
+    {
+      id: "moveCards",
+      type: "moveCards",
+      count: 1,
+      from: {
+        player: "self",
+        zone: "characterArea",
+        source: "effectSource",
+      },
+      to: { player: "self", zone: "hand" },
+      sourceInstanceId: source.instanceId,
+    },
+  ]);
+  assert.deepEqual(
+    selectableMoveCardsCostIds(
+      state,
+      queueDrawForP1().controllerId,
+      player,
+      must(options[0], "option"),
+    ),
+    [source.instanceId],
+  );
+});

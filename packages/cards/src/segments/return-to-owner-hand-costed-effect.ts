@@ -1,4 +1,4 @@
-import type { CardFilter, Effect } from "@optcg/types";
+import type { CardFilter, Effect, OptionalCost } from "@optcg/types";
 
 import {
   parseOptionalCostSequence,
@@ -22,6 +22,16 @@ const costReturnSelectionId = "selected:return-cost-to-owner-hand";
 type CharacterFilter = NonNullable<
   Parameters<typeof selectThenReturnToOwnerHand>[3]
 >;
+type ReturnCostTarget =
+  | {
+      readonly type: "selectedCharacter";
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: CharacterFilter;
+    }
+  | {
+      readonly type: "sourceCharacter";
+      readonly evidence: readonly PrimitiveEvidence[];
+    };
 
 export function returnToOwnerHandCostedEffectExpressionParser(options: {
   readonly conditions: readonly ConditionParser[];
@@ -50,7 +60,7 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
         type: "sequence",
         effects: [
           ...prefixCostSegments(parsed.prefixCost),
-          ...returnCostSegments(parsed.filter, parsed.prefixCost !== undefined),
+          ...returnCostSegments(parsed.target, parsed.prefixCost !== undefined),
           {
             id: "body:after-return-cost",
             connector: "ifPreviousSucceeded",
@@ -67,9 +77,7 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
         "cost:returnToOwnerHand",
         "cardinality:exact",
         "count:positiveInteger",
-        "target:yourCharacters",
-        "player:self",
-        ...parsed.evidence,
+        ...parsed.target.evidence,
         "destination:ownerHand",
         "composition:selectThenApply",
         ...body.evidence,
@@ -85,7 +93,7 @@ function parseCostAndBody(input: ParseInput):
       readonly bodyText: string;
       readonly bodySource?: SourceSlice;
       readonly evidence: readonly PrimitiveEvidence[];
-      readonly filter: CharacterFilter;
+      readonly target: ReturnCostTarget;
       readonly presentationSpans?: ExpressionParseResult["presentationSpans"];
       readonly prefixCost?: OptionalCostSequenceParseResult;
     }
@@ -99,10 +107,12 @@ function parseCostAndBody(input: ParseInput):
   const costText = text.slice(0, separatorIndex).trim();
   const bodyText = text.slice(separatorIndex + 1).trim();
   const costMatch =
-    /^You may\s+(?:(?<prefix>.+?)\s+and\s+)?return 1 of your (?<target>.+) to the owner's hand$/iu.exec(
+    /^You may\s+(?:(?<prefix>.+?)\s+and\s+)?return (?<target>this Character|1 of your .+) to the owner's hand$/iu.exec(
       costText,
     );
-  const targetText = costMatch?.groups?.["target"]?.trim();
+  const targetText = costMatch?.groups?.["target"]
+    ?.trim()
+    .replace(/^1 of your\s+/iu, "");
   const prefixText = costMatch?.groups?.["prefix"]?.trim();
   if (
     targetText === undefined ||
@@ -130,8 +140,6 @@ function parseCostAndBody(input: ParseInput):
     "cost:returnToOwnerHand",
     "cardinality:exact",
     "count:positiveInteger",
-    "target:yourCharacters",
-    "player:self",
     ...parsedTarget.evidence,
     "destination:ownerHand",
   ] satisfies readonly PrimitiveEvidence[];
@@ -161,8 +169,19 @@ function parseCostAndBody(input: ParseInput):
         };
 
   return prefixCost === undefined
-    ? { bodyText, ...parsedTarget, ...sourceSlices }
-    : { bodyText, prefixCost, ...parsedTarget, ...sourceSlices };
+    ? {
+        bodyText,
+        evidence: costEvidence,
+        target: parsedTarget,
+        ...sourceSlices,
+      }
+    : {
+        bodyText,
+        evidence: costEvidence,
+        prefixCost,
+        target: parsedTarget,
+        ...sourceSlices,
+      };
 }
 
 function prefixCostSegments(
@@ -183,11 +202,40 @@ function prefixCostSegments(
       ];
 }
 
-function returnCostSegments(
-  filter: CharacterFilter,
+function sourceCharacterReturnCostSegment(
   hasPrefixCost: boolean,
 ): Extract<Effect, { type: "sequence" }>["effects"] {
-  const effect = selectThenReturnToOwnerHand("self", 0, 1, filter);
+  const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+    type: "moveCards",
+    count: 1,
+    chooser: "self",
+    from: {
+      player: "self",
+      zone: "characterArea",
+      source: "effectSource",
+    },
+    to: { player: "self", zone: "hand" },
+    order: "chooserChoice",
+    optional: true,
+  };
+  return [
+    {
+      id: "cost:return-source-to-owner-hand",
+      connector: hasPrefixCost ? "ifYouDo" : "always",
+      effect: { type: "payCost", cost },
+    },
+  ];
+}
+
+function returnCostSegments(
+  target: ReturnCostTarget,
+  hasPrefixCost: boolean,
+): Extract<Effect, { type: "sequence" }>["effects"] {
+  if (target.type === "sourceCharacter") {
+    return sourceCharacterReturnCostSegment(hasPrefixCost);
+  }
+
+  const effect = selectThenReturnToOwnerHand("self", 0, 1, target.filter);
   if (effect.type !== "sequence") {
     return [];
   }
@@ -219,12 +267,21 @@ function returnCostSegments(
   );
 }
 
-function parseReturnCostTarget(text: string):
-  | {
-      readonly evidence: readonly PrimitiveEvidence[];
-      readonly filter: CharacterFilter;
-    }
-  | undefined {
+function parseReturnCostTarget(text: string): ReturnCostTarget | undefined {
+  if (/^this Character$/iu.test(text)) {
+    return {
+      type: "sourceCharacter",
+      evidence: [
+        "cost:moveCards",
+        "target:thisCharacter",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:characterArea",
+      ],
+    };
+  }
+
   const parsed = parseCardFilterPredicates({ text });
   if (parsed === undefined || parsed.rest.trim().length > 0) {
     return undefined;
@@ -232,7 +289,11 @@ function parseReturnCostTarget(text: string):
   if (!isCharacterFilter(parsed.filter)) {
     return undefined;
   }
-  return { evidence: parsed.evidence, filter: parsed.filter };
+  return {
+    type: "selectedCharacter",
+    evidence: ["target:yourCharacters", "player:self", ...parsed.evidence],
+    filter: parsed.filter,
+  };
 }
 
 function isCharacterFilter(filter: CardFilter): filter is CharacterFilter {

@@ -107,8 +107,8 @@ export const expandMoveCardsCostRoutes = (
   if (
     (cost.from.zone === "characterArea" || cost.from.zone === "stageArea") &&
     cost.from.position === undefined &&
-    cost.to.zone === "deck" &&
-    cost.to.position === "bottom"
+    ((cost.to.zone === "deck" && cost.to.position === "bottom") ||
+      (cost.to.zone === "hand" && cost.to.position === undefined))
   ) {
     return [
       {
@@ -205,8 +205,8 @@ export const selectableMoveCardsCostIds = (
   if (
     option.from.zone === "characterArea" &&
     option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "bottom"
+    ((option.to.zone === "deck" && option.to.position === "bottom") ||
+      (option.to.zone === "hand" && option.to.position === undefined))
   ) {
     if (option.from.source === "effectSource") {
       return option.sourceInstanceId === undefined
@@ -233,8 +233,8 @@ export const selectableMoveCardsCostIds = (
   if (
     option.from.zone === "stageArea" &&
     option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "bottom"
+    ((option.to.zone === "deck" && option.to.position === "bottom") ||
+      (option.to.zone === "hand" && option.to.position === undefined))
   ) {
     if (option.from.source === "effectSource") {
       return player.stage !== undefined &&
