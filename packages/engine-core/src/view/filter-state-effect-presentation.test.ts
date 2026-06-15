@@ -168,13 +168,17 @@ test("player view projects resolved spotlight history from visible effect presen
   assert.deepEqual(view.effectSpotlightHistory, {
     entries: [
       {
+        id: "resolved:event:spotlight-history:resolved:span:body:draw",
         key: "event:spotlight-history:resolved",
+        semanticKey: "p1|history-source-instance|p1-a|effect|span:body:draw",
         mode: "resolved",
+        status: "resolved",
         active: {
           source: publicSource,
           textKind: "effect",
           activeSpanIds: ["span:body:draw"],
         },
+        resolvedEventId: "event:spotlight-history:resolved",
       },
     ],
     presentKey: "event:spotlight-history:resolved",

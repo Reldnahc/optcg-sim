@@ -2,12 +2,14 @@ import type {
   ActiveEffectTextPresentation,
   CardId,
   DecisionId,
+  EffectId,
   EffectSpotlightHistory,
   EffectSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEvent,
   InstanceId,
   PlayerId,
+  QueueEntryId,
 } from "@optcg/types";
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
@@ -64,6 +66,70 @@ const presentationForEvent = (
     : undefined;
 };
 
+const effectEventPayload = (
+  event: EngineEvent,
+): {
+  readonly queueEntryId?: string;
+  readonly effectBlockId?: string;
+} => {
+  if (!isObjectRecord(event.payload)) {
+    return {};
+  }
+  const queueEntryId = event.payload["queueEntryId"];
+  const effectBlockId = event.payload["effectBlockId"];
+  return {
+    ...(typeof queueEntryId === "string" ? { queueEntryId } : {}),
+    ...(typeof effectBlockId === "string" ? { effectBlockId } : {}),
+  };
+};
+
+const semanticKeyForActive = (active: ActiveEffectTextPresentation): string =>
+  [
+    String(active.source.playerId),
+    String(active.source.instanceId),
+    String(active.source.cardId),
+    active.textKind ?? "effect",
+    active.activeSpanIds.join("\n"),
+  ].join("|");
+
+const pendingEntryId = (
+  pendingDecisionId: DecisionId | string,
+  active: ActiveEffectTextPresentation,
+): string =>
+  `pending:${String(pendingDecisionId)}:${semanticKeyForActive(active)}`;
+
+const resolvedEntryId = (
+  event: EngineEvent,
+  active: ActiveEffectTextPresentation,
+): string => `resolved:${String(event.id)}:${active.activeSpanIds.join("\n")}`;
+
+const resolvedEntryForActive = ({
+  active,
+  event,
+  key,
+}: {
+  readonly active: ActiveEffectTextPresentation;
+  readonly event: EngineEvent;
+  readonly key: string;
+}): EffectSpotlightHistoryEntry => {
+  const metadata = effectEventPayload(event);
+  return {
+    id: resolvedEntryId(event, active),
+    key,
+    semanticKey: semanticKeyForActive(active),
+    mode: "resolved",
+    status: "resolved",
+    active,
+    resolvedEventId: event.id,
+    ...(metadata.queueEntryId === undefined
+      ? {}
+      : { queueEntryId: metadata.queueEntryId as QueueEntryId }),
+    ...(metadata.effectBlockId === undefined
+      ? {}
+      : { effectBlockId: metadata.effectBlockId as EffectId }),
+  };
+};
+
 const playedCardEntryForEvent = (
   event: EngineEvent,
 ): EffectSpotlightHistoryEntry | undefined => {
@@ -82,18 +148,23 @@ const playedCardEntryForEvent = (
   ) {
     return undefined;
   }
-  return {
-    key: String(event.id),
-    mode: "resolved",
-    active: {
-      source: {
-        playerId: playerId as PlayerId,
-        instanceId: instanceId as InstanceId,
-        cardId: cardId as CardId,
-      },
-      textKind: "effect",
-      activeSpanIds: [],
+  const active: ActiveEffectTextPresentation = {
+    source: {
+      playerId: playerId as PlayerId,
+      instanceId: instanceId as InstanceId,
+      cardId: cardId as CardId,
     },
+    textKind: "effect",
+    activeSpanIds: [],
+  };
+  return {
+    id: resolvedEntryId(event, active),
+    key: String(event.id),
+    semanticKey: semanticKeyForActive(active),
+    mode: "resolved",
+    status: "resolved",
+    active,
+    resolvedEventId: event.id,
   };
 };
 
@@ -107,21 +178,23 @@ const resolvedEntriesForEvent = (
   const splitSpanIds = splitResolvedSpanIds(presentation.activeSpanIds);
   if (splitSpanIds.length === 0) {
     return [
-      {
-        key: String(event.id),
-        mode: "resolved",
+      resolvedEntryForActive({
         active: presentation,
-      },
+        event,
+        key: String(event.id),
+      }),
     ];
   }
-  return splitSpanIds.map((spanId) => ({
-    key: `${String(event.id)}:${spanId}`,
-    mode: "resolved" as const,
-    active: {
-      ...presentation,
-      activeSpanIds: [spanId],
-    },
-  }));
+  return splitSpanIds.map((spanId) =>
+    resolvedEntryForActive({
+      active: {
+        ...presentation,
+        activeSpanIds: [spanId],
+      },
+      event,
+      key: `${String(event.id)}:${spanId}`,
+    }),
+  );
 };
 
 const noEffectDecisionResponseTypes = new Set(["paymentDeclined"]);
@@ -250,15 +323,26 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
     (matchingResolvedEntryKey !== undefined && pendingDecisionId === undefined)
       ? undefined
       : {
+          id:
+            pendingDecisionId === undefined
+              ? `active:${semanticKeyForActive(activeEffectText)}`
+              : pendingEntryId(pendingDecisionId, activeEffectText),
           key: liveEntryKey(activeEffectText, pendingDecisionId),
+          semanticKey: semanticKeyForActive(activeEffectText),
           mode: "live" as const,
+          status: "pending" as const,
           active: activeEffectText,
+          ...(pendingDecisionId === undefined
+            ? {}
+            : { pendingDecisionId: pendingDecisionId as DecisionId }),
         };
   const historyEntries =
     liveEntry === undefined
       ? entries
       : [
-          ...entries.filter((entry) => entry.key !== matchingResolvedEntryKey),
+          ...entries.filter(
+            (entry) => entry.semanticKey !== liveEntry.semanticKey,
+          ),
           liveEntry,
         ];
   const presentKey = historyEntries.at(-1)?.key;
