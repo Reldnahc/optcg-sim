@@ -8,6 +8,7 @@ import type {
   EffectDefinition,
   GameState,
   HandSelectionId,
+  SelectionId,
 } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
@@ -255,6 +256,83 @@ test("moveCards deck top to trash places moved cards on top of existing trash", 
     assert.equal(card.zone.slot, "trash");
     assert.equal(card.zone.index, index);
   });
+});
+
+test("sequence moveCards deck top to trash resolves count from saved hand-trash selection", () => {
+  const { state, topCards } = deckTopTrashQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: { type: "draw", count: 0, player: "self" },
+      },
+      {
+        connector: "then",
+        saveResultAs: "selected:trash-from-hand",
+        effect: {
+          type: "trashFromHand",
+          count: 2,
+          min: 0,
+          player: "self",
+          chooser: "self",
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "moveCards",
+          count: {
+            type: "selectedCardCount",
+            selection: "selected:trash-from-hand" as SelectionId,
+            multiplier: 1,
+          },
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "trash" },
+          order: "original",
+        },
+      },
+    ],
+  });
+  const player = must(state.players[p1], "p1");
+  const selectedHandCards = player.hand.slice(0, 2);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "hand trash decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+
+  const completed = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: selectedHandCards.map((card) => handRef(card)),
+    },
+  });
+  const completedPlayer = must(completed.state.players[p1], "completed p1");
+
+  assert.equal(completed.errors, undefined);
+  assert.equal(completed.state.pendingDecision, undefined);
+  assert.equal(completed.state.effectQueue.length, 0);
+  assert.deepEqual(
+    completedPlayer.deck.map((card) => card.instanceId),
+    topCards.slice(selectedHandCards.length).map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    completedPlayer.trash
+      .slice(0, selectedHandCards.length)
+      .map((card) => card.instanceId),
+    topCards.slice(0, selectedHandCards.length).map((card) => card.instanceId),
+  );
+  for (const selectedHandCard of selectedHandCards) {
+    assert.equal(
+      completedPlayer.trash.some(
+        (card) => card.instanceId === selectedHandCard.instanceId,
+      ),
+      true,
+    );
+  }
 });
 
 test("moveCards deck top to trash fails closed for unsupported zone movement", () => {

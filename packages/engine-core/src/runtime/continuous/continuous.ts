@@ -560,6 +560,9 @@ const isSupportedPowerEffectValue = (
       value.multiplier !== 0
     );
   }
+  if (value.type !== "countMatchingZoneCards") {
+    return false;
+  }
   return (
     value.player === "self" &&
     Number.isSafeInteger(value.per) &&

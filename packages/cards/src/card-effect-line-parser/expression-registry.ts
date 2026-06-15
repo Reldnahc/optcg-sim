@@ -61,6 +61,7 @@ import {
   revealedHandPlayExpressionParser,
   revealTopConditionalExpressionParser,
   revealTopPlayRestedExpressionParser,
+  sameNumberHandTrashDeckTrashSegmentParser,
   searchRevealExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
   selectedPowerContinuationExpressionParser,
@@ -169,6 +170,7 @@ function generalExpressionParser(input: ParseInput) {
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),
+      sameNumberHandTrashDeckTrashSegmentParser,
       syntheticInstructionSegmentParser(instructionParsers),
     ],
   });

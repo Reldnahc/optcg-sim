@@ -157,6 +157,15 @@ export const resumeSequenceFrameAfterChooseQuantity = (params: {
     pausedSegment.effect.type === "chooseNumber"
       ? pausedSegment.effect.max
       : pausedSegment.effect.count;
+  if (typeof max !== "number") {
+    return {
+      error: params.sequenceRuntimeError(
+        entry.effectBlockId,
+        "unsupported-sequence-shape",
+      ),
+      ok: false,
+    };
+  }
   if (quantity < min || quantity > max) {
     return {
       error: params.sequenceRuntimeError(

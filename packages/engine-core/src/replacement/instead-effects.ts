@@ -369,8 +369,12 @@ export const replacementOptionLabel = (
     )} instead`;
   }
   if (isSupportedLifeTopToHandEffect(instead)) {
-    return `Add ${String(instead.count)} ${plural(
-      instead.count,
+    const count = instead.count;
+    if (typeof count !== "number") {
+      return "Unsupported replacement effect";
+    }
+    return `Add ${String(count)} ${plural(
+      count,
       "card",
       "cards",
     )} from Life to hand instead`;

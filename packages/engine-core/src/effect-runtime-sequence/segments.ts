@@ -75,7 +75,9 @@ export const applyMoveCardsSegment = (
       state: GameState;
     }
   | { ok: false } => {
-  const resolution = executeMoveCardsPrimitive(state, entry, segment.effect);
+  const resolution = executeMoveCardsPrimitive(state, entry, segment.effect, {
+    savedReferences: ledgers.savedReferences,
+  });
   if (resolution.errors !== undefined) {
     return { ok: false };
   }
@@ -257,6 +259,7 @@ export const applyResolvedQuantityMoveCardsSegment = (
   if (
     !Number.isInteger(quantity) ||
     quantity < 0 ||
+    typeof segment.effect.count !== "number" ||
     quantity > segment.effect.count
   ) {
     return { ok: false };

@@ -222,7 +222,11 @@ const canPayReplacementInsteadSegment = (
 ): boolean => {
   if (isSupportedLifeTopToHandEffect(instead)) {
     const player = state.players[source.card.controller];
-    return player !== undefined && player.life.length >= instead.count;
+    return (
+      player !== undefined &&
+      typeof instead.count === "number" &&
+      player.life.length >= instead.count
+    );
   }
   if (isSupportedRestOwnCardsInsteadEffect(instead)) {
     const candidates = resolvePublicTargetCandidatesForRequest(

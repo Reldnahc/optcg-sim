@@ -55,6 +55,7 @@ export type PrimitiveEvidence =
   | "body:trashFromHand"
   | "count:positiveInteger"
   | "count:atLeastOne"
+  | "count:selectedCardCount"
   | "sourcePresence:mustRemain"
   | "sourcePresence:resolveFromDestination"
   | "sourcePresence:resolveFromLastKnownInformation"

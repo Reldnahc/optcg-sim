@@ -219,6 +219,11 @@ export type DynamicNumberValue =
       selection: SelectionId;
     }
   | {
+      type: "selectedCardCount";
+      selection: SelectionId;
+      multiplier: number;
+    }
+  | {
       type: "sumSelectedCardCosts";
       selection: SelectionSetId;
       multiplier: number;
@@ -700,7 +705,7 @@ export type Effect =
     }
   | {
       type: "moveCards";
-      count: number;
+      count: number | DynamicNumberValue;
       min?: number;
       chooser?: PlayerRef;
       from: {

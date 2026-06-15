@@ -1,7 +1,9 @@
 import type {
   CardInstance,
+  DynamicNumberValue,
   Effect,
   EffectDefinition,
+  EffectExecutionFrame,
   EffectQueueEntry,
   EngineError,
   EngineEvent,
@@ -16,12 +18,14 @@ import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
+import { resolveDynamicNumberValue } from "../runtime/continuous/value-resolution.js";
 
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 
 type MoveCardsExecutionFailureReason =
   | "unsupported-effect-shape"
   | "unsupported-player-ref"
+  | "unresolved-move-count"
   | "invalid-move-count";
 
 interface EffectExecutionErrorDetails {
@@ -37,12 +41,33 @@ const moveCardsExecutionError = (
   details: { reason } satisfies EffectExecutionErrorDetails,
 });
 
+const isPositiveIntegerCount = (
+  count: MoveCardsEffect["count"],
+): count is number =>
+  typeof count === "number" && Number.isInteger(count) && count > 0;
+
+const isSelectedCardCount = (
+  count: MoveCardsEffect["count"],
+): count is Extract<DynamicNumberValue, { type: "selectedCardCount" }> =>
+  typeof count !== "number" && count.type === "selectedCardCount";
+
+const isSupportedMoveCount = (count: MoveCardsEffect["count"]): boolean =>
+  isPositiveIntegerCount(count) || isSelectedCardCount(count);
+
+const hasSupportedMinMaxCount = (effect: MoveCardsEffect): boolean =>
+  (effect.min === undefined ||
+    (typeof effect.count === "number" &&
+      Number.isInteger(effect.min) &&
+      effect.min >= 0 &&
+      effect.min <= effect.count)) &&
+  isPositiveIntegerCount(effect.count);
+
 export const isSupportedDeckTopToTrashEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
+  effect.min === undefined &&
+  isSupportedMoveCount(effect.count) &&
   effect.from.player === "self" &&
   effect.from.zone === "deck" &&
   effect.from.position === "top" &&
@@ -54,11 +79,7 @@ export const isSupportedDonDeckToCostAreaEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect & { destinationState: "active" | "rested" } =>
   effect.type === "moveCards" &&
-  (effect.min === undefined ||
-    (Number.isInteger(effect.min) && effect.min >= 0)) &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
-  (effect.min ?? effect.count) <= effect.count &&
+  hasSupportedMinMaxCount(effect) &&
   (effect.from.player === "self" || effect.from.player === "opponent") &&
   (effect.chooser === undefined ||
     effect.chooser === "self" ||
@@ -75,11 +96,7 @@ export const isSupportedLifeTopToHandEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  (effect.min === undefined ||
-    (Number.isInteger(effect.min) && effect.min >= 0)) &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
-  (effect.min ?? effect.count) <= effect.count &&
+  hasSupportedMinMaxCount(effect) &&
   (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
   effect.from.position === "top" &&
@@ -91,8 +108,7 @@ export const isSupportedLifeBottomToHandEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
+  isPositiveIntegerCount(effect.count) &&
   effect.from.player === "self" &&
   effect.from.zone === "life" &&
   effect.from.position === "bottom" &&
@@ -104,11 +120,7 @@ export const isSupportedLifeTopToTrashEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  (effect.min === undefined ||
-    (Number.isInteger(effect.min) && effect.min >= 0)) &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
-  (effect.min ?? effect.count) <= effect.count &&
+  hasSupportedMinMaxCount(effect) &&
   (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
   effect.from.position === "top" &&
@@ -120,11 +132,7 @@ export const isSupportedDeckTopToLifeTopEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  (effect.min === undefined ||
-    (Number.isInteger(effect.min) && effect.min >= 0)) &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
-  (effect.min ?? effect.count) <= effect.count &&
+  hasSupportedMinMaxCount(effect) &&
   effect.from.player === "self" &&
   effect.from.zone === "deck" &&
   effect.from.position === "top" &&
@@ -204,7 +212,10 @@ export const executeMoveCardsPrimitive = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Effect,
-  options: { incrementStateSeq?: boolean } = {},
+  options: {
+    incrementStateSeq?: boolean;
+    savedReferences?: EffectExecutionFrame["savedReferences"];
+  } = {},
 ): EngineResult => {
   if (!isSupportedMoveCardsEffect(effect)) {
     return toEngineResult(
@@ -218,22 +229,45 @@ export const executeMoveCardsPrimitive = (
       ],
     );
   }
-  if (!Number.isInteger(effect.count) || effect.count <= 0) {
+  const resolvedCount = resolveMoveCardsCount(state, entry, effect, options);
+  if (resolvedCount === null) {
+    return toEngineResult(
+      state,
+      [],
+      [moveCardsExecutionError(entry.effectBlockId, "unresolved-move-count")],
+    );
+  }
+  if (!Number.isInteger(resolvedCount) || resolvedCount < 0) {
     return toEngineResult(
       state,
       [],
       [moveCardsExecutionError(entry.effectBlockId, "invalid-move-count")],
     );
   }
+  if (resolvedCount === 0) {
+    return toEngineResult(state, []);
+  }
+  const resolvedEffect: MoveCardsEffect & { count: number } = {
+    ...effect,
+    count: resolvedCount,
+  };
 
-  const fromPlayerId = resolvePlayerId(state, entry, effect.from.player);
-  const resolvedToPlayerId = resolvePlayerId(state, entry, effect.to.player);
+  const fromPlayerId = resolvePlayerId(
+    state,
+    entry,
+    resolvedEffect.from.player,
+  );
+  const resolvedToPlayerId = resolvePlayerId(
+    state,
+    entry,
+    resolvedEffect.to.player,
+  );
   const toPlayerId =
-    effect.to.player === "owner" &&
-    (effect.from.zone === "life" ||
-      effect.from.zone === "deck" ||
-      effect.from.zone === "trash" ||
-      effect.from.zone === "hand")
+    resolvedEffect.to.player === "owner" &&
+    (resolvedEffect.from.zone === "life" ||
+      resolvedEffect.from.zone === "deck" ||
+      resolvedEffect.from.zone === "trash" ||
+      resolvedEffect.from.zone === "hand")
       ? fromPlayerId
       : resolvedToPlayerId;
   if (
@@ -256,57 +290,63 @@ export const executeMoveCardsPrimitive = (
     );
   }
 
-  if (isSupportedDonDeckToCostAreaEffect(effect)) {
+  if (isSupportedDonDeckToCostAreaEffect(resolvedEffect)) {
     return executeDonDeckToCostAreaMove(
       state,
       entry,
-      effect,
+      resolvedEffect,
       fromPlayerId,
       options,
     );
   }
-  if (isSupportedLifeTopToHandEffect(effect)) {
+  if (isSupportedLifeTopToHandEffect(resolvedEffect)) {
     return executeLifeTopToHandMove(
       state,
       entry,
-      effect,
+      resolvedEffect,
       fromPlayerId,
       options,
     );
   }
-  if (isSupportedLifeBottomToHandEffect(effect)) {
-    return executeLifeToHandMove(state, entry, effect, fromPlayerId, options);
+  if (isSupportedLifeBottomToHandEffect(resolvedEffect)) {
+    return executeLifeToHandMove(
+      state,
+      entry,
+      resolvedEffect,
+      fromPlayerId,
+      options,
+    );
   }
-  if (isSupportedLifeTopToTrashEffect(effect)) {
+  if (isSupportedLifeTopToTrashEffect(resolvedEffect)) {
     return executeLifeTopToTrashMove(
       state,
       entry,
-      effect,
+      resolvedEffect,
       fromPlayerId,
       options,
     );
   }
-  if (isSupportedDeckTopToLifeTopEffect(effect)) {
+  if (isSupportedDeckTopToLifeTopEffect(resolvedEffect)) {
     return executeDeckTopToLifeTopMove(
       state,
       entry,
-      effect,
+      resolvedEffect,
       fromPlayerId,
       player,
       options,
     );
   }
-  if (isSupportedDeckTopToTrashEffect(effect)) {
+  if (isSupportedDeckTopToTrashEffect(resolvedEffect)) {
     return executeDeckTopToTrashMove(
       state,
       entry,
-      effect,
+      resolvedEffect,
       fromPlayerId,
       player,
       options,
     );
   }
-  if (isSupportedEffectSourceTrashToHandEffect(effect)) {
+  if (isSupportedEffectSourceTrashToHandEffect(resolvedEffect)) {
     return executeEffectSourceTrashToHandMove(
       state,
       entry,
@@ -321,6 +361,20 @@ export const executeMoveCardsPrimitive = (
     [moveCardsExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
   );
 };
+
+const resolveMoveCardsCount = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: MoveCardsEffect,
+  options: { savedReferences?: EffectExecutionFrame["savedReferences"] },
+): number | null =>
+  resolveDynamicNumberValue(state, effect.count, {
+    controllerId: entry.controllerId,
+    ...(options.savedReferences === undefined
+      ? {}
+      : { savedReferences: options.savedReferences }),
+    source: entry.source,
+  });
 
 const executeEffectSourceTrashToHandMove = (
   state: GameState,
@@ -409,7 +463,7 @@ const executeEffectSourceTrashToHandMove = (
 const executeDeckTopToTrashMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect,
+  effect: MoveCardsEffect & { count: number },
   playerId: PlayerId,
   player: NonNullable<GameState["players"][PlayerId]>,
   options: { incrementStateSeq?: boolean },
@@ -470,7 +524,7 @@ const reindexLife = (
 const executeLifeTopToHandMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect,
+  effect: MoveCardsEffect & { count: number },
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   options: { incrementStateSeq?: boolean },
 ): EngineResult =>
@@ -493,7 +547,7 @@ const remainingLifeAfterPositionMove = (
 const executeLifeToHandMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect,
+  effect: MoveCardsEffect & { count: number },
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   options: { incrementStateSeq?: boolean },
 ): EngineResult => {
@@ -609,7 +663,7 @@ const executeLifeToHandMove = (
 const executeLifeTopToTrashMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect,
+  effect: MoveCardsEffect & { count: number },
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   options: { incrementStateSeq?: boolean },
 ): EngineResult => {
@@ -663,7 +717,7 @@ const executeLifeTopToTrashMove = (
 const executeDeckTopToLifeTopMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect,
+  effect: MoveCardsEffect & { count: number },
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   player: NonNullable<GameState["players"][PlayerId]>,
   options: { incrementStateSeq?: boolean },
@@ -734,7 +788,10 @@ const executeDeckTopToLifeTopMove = (
 const executeDonDeckToCostAreaMove = (
   state: GameState,
   entry: EffectQueueEntry,
-  effect: MoveCardsEffect & { destinationState: "active" | "rested" },
+  effect: MoveCardsEffect & {
+    count: number;
+    destinationState: "active" | "rested";
+  },
   playerId: NonNullable<ReturnType<typeof resolvePlayerId>>,
   options: { incrementStateSeq?: boolean },
 ): EngineResult => {

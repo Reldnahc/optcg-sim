@@ -277,6 +277,7 @@ export const createQueueEntryResolver = (
       const resolvedTrashUntilAsNoop = trashFromHandDecision?.kind === "noop";
       if (
         moveCardsEffect !== undefined &&
+        typeof moveCardsEffect.count === "number" &&
         (moveCardsEffect.min ?? moveCardsEffect.count) < moveCardsEffect.count
       ) {
         const min = moveCardsEffect.min ?? moveCardsEffect.count;

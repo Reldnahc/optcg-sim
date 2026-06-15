@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAndConnector } from "../connectors/index.js";
+import { defaultRegistry } from "../card-effect-line-parser/expression-registry.js";
 import { parseSupportedEntryPoint } from "../entry-points/index.js";
 import { parseExpression } from "../expression-parser.js";
 import { parseOncePerTurnMarker } from "../markers/index.js";
@@ -63,6 +64,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
       matches: [
         {
           id: "trash-n-cards-from-top-of-your-deck",
+        },
+        {
+          id: "trash-same-number-from-top-of-your-deck-as-hand-trash",
         },
       ],
     });
@@ -194,6 +198,36 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(parseTrashFromDeckTopInstruction({ text })).toBeUndefined();
   });
 
+  it("parses deck-top trash count from a saved hand-trash selection", () => {
+    expect(
+      parseTrashFromDeckTopInstruction({
+        text: "Trash the same number of cards from the top of your deck as you did from your hand.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "moveCards",
+        count: {
+          type: "selectedCardCount",
+          selection: "selected:trash-from-hand",
+          multiplier: 1,
+        },
+        from: { player: "self", zone: "deck", position: "top" },
+        to: { player: "self", zone: "trash" },
+        order: "original",
+      },
+      evidence: [
+        "instruction:moveCards",
+        "count:selectedCardCount",
+        "player:self",
+        "zone:deck",
+        "position:top",
+        "destination:trash",
+        "order:original",
+      ],
+      rest: "",
+    });
+  });
+
   it("composes draw and trash through the and connector", () => {
     expect(
       parseExpression("Draw 2 cards and trash 1 card from your hand.", {
@@ -320,5 +354,68 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(result?.evidence).toContain("instruction:moveCards");
     expect(result?.evidence).toContain("zone:deck");
     expect(result?.evidence).toContain("destination:trash");
+  });
+
+  it("composes up-to hand trash into same-number deck-top trash", () => {
+    const result = parseEffectLine(
+      "[Counter] Up to 1 of your Leader or Character cards gains +3000 power during this battle. Then, trash up to 2 cards from your hand. Trash the same number of cards from the top of your deck as you did from your hand.",
+      defaultRegistry,
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                value: 3000,
+                duration: { type: "thisBattle" },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "selected:trash-from-hand",
+                    effect: {
+                      type: "trashFromHand",
+                      count: 2,
+                      min: 0,
+                      player: "self",
+                      chooser: "self",
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "moveCards",
+                      count: {
+                        type: "selectedCardCount",
+                        selection: "selected:trash-from-hand",
+                        multiplier: 1,
+                      },
+                      from: { player: "self", zone: "deck", position: "top" },
+                      to: { player: "self", zone: "trash" },
+                      order: "original",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toContain("instruction:trashFromHand");
+    expect(result?.evidence).toContain("instruction:moveCards");
+    expect(result?.evidence).toContain("count:selectedCardCount");
   });
 });

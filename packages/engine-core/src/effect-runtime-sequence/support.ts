@@ -235,6 +235,18 @@ const hasSavedNumber = (
   selection: unknown,
 ): boolean => canConsumeNumber(state.savedResults, selection);
 
+const canResolveMoveCardsCount = (
+  state: SequenceSupportState,
+  effect: MoveCardsEffect,
+): boolean =>
+  typeof effect.count === "number" ||
+  (effect.count.type === "selectedCardCount" &&
+    canConsumeSelectedCards(
+      state.savedResults,
+      effect.count.selection,
+      selectedCardKinds,
+    ));
+
 const hasSavedSelectedTargets = (
   state: SequenceSupportState,
   selection: unknown,
@@ -471,7 +483,10 @@ const isSupportedSequenceBlockWithState = (
         return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedMoveCardsSegment(segment.effect)) {
-        return recordSupportedProducer(supportState, segment);
+        return (
+          canResolveMoveCardsCount(supportState, segment.effect) &&
+          recordSupportedProducer(supportState, segment)
+        );
       }
       if (isSupportedDamageSegment(segment.effect)) {
         return recordSupportedProducer(supportState, segment);

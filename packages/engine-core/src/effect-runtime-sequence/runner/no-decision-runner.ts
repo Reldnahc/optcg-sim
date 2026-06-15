@@ -218,6 +218,7 @@ export const continueNoDecisionSegments = (
     if (segment.effect.type === "moveCards") {
       if (
         segment.effect.min !== undefined &&
+        typeof segment.effect.count === "number" &&
         segment.effect.min < segment.effect.count
       ) {
         const quantityDecision = createChooseQuantityDecisionForSequenceSegment(
