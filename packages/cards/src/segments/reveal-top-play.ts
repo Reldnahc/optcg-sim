@@ -8,12 +8,12 @@ import type {
 
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseRestToTopOrBottomAnyOrder } from "../search/index.js";
-import { sourceSpan } from "../source-slices.js";
 import type {
   ExpressionParseResult,
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { topDeckSearchPresentationSpans } from "./top-deck-presentation-spans.js";
 
 const revealedPlaySet = "set:reveal-play" as SelectionSetId;
 const revealedPlaySelection = "revealSelection:play" as SelectionId;
@@ -31,7 +31,7 @@ export function revealTopPlayExpressionParser(
     return undefined;
   }
 
-  const evidence = [
+  const selectionEvidence = [
     "expression:sequence",
     "instruction:revealTop",
     "look:topDeck",
@@ -41,9 +41,12 @@ export function revealTopPlayExpressionParser(
     "instruction:selectFromSet",
     ...play.evidence,
     "instruction:playSelected",
+  ] as const;
+  const remainingEvidence = [
     "instruction:placeSetRemainder",
     ...remaining.evidence,
   ] as const;
+  const evidence = [...selectionEvidence, ...remainingEvidence] as const;
 
   return {
     effect: createRevealedSetPlaySequence({
@@ -57,7 +60,8 @@ export function revealTopPlayExpressionParser(
       : {
           presentationSpans: revealPlayPresentationSpans({
             input,
-            evidence,
+            remainingEvidence,
+            selectionEvidence,
           }),
         }),
   };
@@ -157,14 +161,16 @@ function createRevealedSetPlaySequence({
 
 function revealPlayPresentationSpans({
   input,
-  evidence,
+  remainingEvidence,
+  selectionEvidence,
 }: {
   readonly input: ParseInput;
-  readonly evidence: readonly PrimitiveEvidence[];
+  readonly remainingEvidence: readonly PrimitiveEvidence[];
+  readonly selectionEvidence: readonly PrimitiveEvidence[];
 }): readonly EffectTextSpan[] {
-  if (input.source === undefined) {
-    return [];
-  }
-
-  return [sourceSpan("span:revealPlay", "body", input.source, evidence)];
+  return topDeckSearchPresentationSpans({
+    input,
+    remainingEvidence,
+    selectionEvidence,
+  });
 }

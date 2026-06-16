@@ -43,7 +43,7 @@ describe("card effect parser source maps", () => {
     expect(spans.some((span) => span.id === "span:sequence:1:body")).toBe(true);
   });
 
-  it("keeps and-separated effects in one body presentation span", () => {
+  it("emits connector and sequence body spans for and-separated effects", () => {
     const text =
       "[When Attacking] [Once Per Turn] Draw 2 cards and trash 1 card from your hand.";
     const result = parseCardEffectLinesDetailed(text);
@@ -58,14 +58,24 @@ describe("card effect parser source maps", () => {
     }
 
     const spans = parsed.sourceMap?.spans ?? [];
-    expect(spans.find((span) => span.id === "span:body")).toMatchObject({
-      role: "body",
-      text: "Draw 2 cards and trash 1 card from your hand.",
-    });
-    expect(spans.some((span) => span.role === "connector")).toBe(false);
-    expect(spans.some((span) => span.id.startsWith("span:sequence:"))).toBe(
-      false,
+    expect(
+      spans.some((span) => span.role === "connector" && span.text === "and"),
+    ).toBe(true);
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:sequence:0:body",
+          role: "body",
+          text: "Draw 2 cards",
+        }),
+        expect.objectContaining({
+          id: "span:sequence:1:body",
+          role: "body",
+          text: "trash 1 card from your hand.",
+        }),
+      ]),
     );
+    expect(spans.some((span) => span.id === "span:body")).toBe(false);
   });
 
   it("emits separate cost and post-cost body spans", () => {
@@ -281,6 +291,76 @@ describe("card effect parser source maps", () => {
     });
     expect(remaining?.primitiveEvidence).toContain("remaining:bottomDeck");
     expect(spans.some((span) => span.id === "span:body")).toBe(false);
+  });
+
+  it("emits separate body spans for top-deck play selection and remaining cards", () => {
+    const text =
+      "[Counter] Look at 5 cards from the top of your deck and play up to 1 {Animal} type Character card with a cost of 3 or less. Then, place the rest at the bottom of your deck in any order.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const selection = spans.find((span) => span.id === "span:search:selection");
+    const remaining = spans.find((span) => span.id === "span:search:remaining");
+
+    expect(selection).toMatchObject({
+      role: "body",
+      text: "Look at 5 cards from the top of your deck and play up to 1 {Animal} type Character card with a cost of 3 or less.",
+    });
+    expect(selection?.primitiveEvidence).toContain("instruction:revealTop");
+    expect(selection?.primitiveEvidence).toContain("instruction:selectFromSet");
+    expect(selection?.primitiveEvidence).toContain("instruction:playSelected");
+    expect(remaining).toMatchObject({
+      role: "body",
+      text: "Then, place the rest at the bottom of your deck in any order.",
+    });
+    expect(remaining?.primitiveEvidence).toContain(
+      "instruction:placeSetRemainder",
+    );
+    expect(spans.some((span) => span.id === "span:lookPlay")).toBe(false);
+  });
+
+  it("emits separate body spans for reveal-top play selection and remaining cards", () => {
+    const text =
+      '[On Play] Reveal 1 card from the top of your deck and play up to 1 Character card with a type including "Whitebeard Pirates" and a cost of 4 or less. Then, place the rest at the top or bottom of your deck.';
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const selection = spans.find((span) => span.id === "span:search:selection");
+    const remaining = spans.find((span) => span.id === "span:search:remaining");
+
+    expect(selection).toMatchObject({
+      role: "body",
+      text: 'Reveal 1 card from the top of your deck and play up to 1 Character card with a type including "Whitebeard Pirates" and a cost of 4 or less.',
+    });
+    expect(selection?.primitiveEvidence).toContain("instruction:revealTop");
+    expect(selection?.primitiveEvidence).toContain("instruction:selectFromSet");
+    expect(selection?.primitiveEvidence).toContain("instruction:playSelected");
+    expect(remaining).toMatchObject({
+      role: "body",
+      text: "Then, place the rest at the top or bottom of your deck.",
+    });
+    expect(remaining?.primitiveEvidence).toContain(
+      "instruction:placeSetRemainder",
+    );
+    expect(spans.some((span) => span.id === "span:revealPlay")).toBe(false);
   });
 
   it.each([

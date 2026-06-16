@@ -23,13 +23,8 @@ import {
   parsePlayFromHandInstruction,
   parseTrashFromHandInstruction,
 } from "../instructions/index.js";
-import {
-  sourceSpan,
-  splitSourceByDelimiter,
-  type SourceDelimiter,
-  type SourceSlice,
-} from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
+import { topDeckSearchPresentationSpans } from "./top-deck-presentation-spans.js";
 
 const searchLookSet = "set:search-look" as SelectionSetId;
 const searchHandSelection = "searchSelection:hand" as SelectionId;
@@ -60,10 +55,11 @@ export function searchRevealExpressionParser(
     reveal,
     remaining,
   });
+  const selectionEvidence = searchRevealSelectionEvidence({ look, reveal });
   const presentationSpans = searchRevealPresentationSpans({
     input,
     remainingEvidence: remaining.evidence,
-    searchEvidence: decomposedSearch.evidence,
+    selectionEvidence,
   });
 
   if (remaining.rest.length === 0) {
@@ -222,72 +218,34 @@ const createTopDeckSearchSequence = ({
   };
 };
 
-const sourceFromDelimiterThroughSegment = (
-  inputSource: SourceSlice,
-  delimiter: SourceDelimiter,
-  segment: SourceSlice,
-): SourceSlice => {
-  const startOffset = delimiter.start - inputSource.start;
-  const endOffset = segment.end - inputSource.start;
-  const rawText = inputSource.rawText.slice(startOffset, endOffset);
-  return {
-    text: rawText.trim(),
-    rawText,
-    start: delimiter.start,
-    end: segment.end,
-  };
-};
+const searchRevealSelectionEvidence = ({
+  look,
+  reveal,
+}: Pick<ParsedSearchParts, "look" | "reveal">): readonly PrimitiveEvidence[] =>
+  [
+    "expression:sequence",
+    "instruction:revealTop",
+    ...look.evidence,
+    "instruction:selectFromSet",
+    ...reveal.evidence,
+    ...(reveal.revealTo === "bothPlayers"
+      ? (["instruction:revealSelected"] as const)
+      : []),
+    "instruction:moveSelected",
+  ] as const;
 
 const searchRevealPresentationSpans = ({
   input,
   remainingEvidence,
-  searchEvidence,
+  selectionEvidence,
 }: {
   readonly input: ParseInput;
   readonly remainingEvidence: readonly PrimitiveEvidence[];
-  readonly searchEvidence: readonly PrimitiveEvidence[];
+  readonly selectionEvidence: readonly PrimitiveEvidence[];
 }): readonly EffectTextSpan[] => {
-  if (input.source === undefined) {
-    return [];
-  }
-
-  const split = splitSourceByDelimiter(input.source, /\s+Then,\s+/u, "then");
-  const selectionSource = split?.segments[0];
-  const remainingSegment = split?.segments[1];
-  const thenDelimiter = split?.delimiters[0];
-  if (
-    selectionSource === undefined ||
-    remainingSegment === undefined ||
-    thenDelimiter === undefined
-  ) {
-    return [
-      sourceSpan("span:search:selection", "body", input.source, searchEvidence),
-    ];
-  }
-
-  return [
-    sourceSpan(
-      "span:search:selection",
-      "body",
-      selectionSource,
-      searchEvidence,
-    ),
-    {
-      id: "span:search:then",
-      role: "connector",
-      start: thenDelimiter.start,
-      end: thenDelimiter.end,
-      text: thenDelimiter.text,
-    },
-    sourceSpan(
-      "span:search:remaining",
-      "body",
-      sourceFromDelimiterThroughSegment(
-        input.source,
-        thenDelimiter,
-        remainingSegment,
-      ),
-      remainingEvidence,
-    ),
-  ];
+  return topDeckSearchPresentationSpans({
+    input,
+    remainingEvidence: ["instruction:placeSetRemainder", ...remainingEvidence],
+    selectionEvidence,
+  });
 };

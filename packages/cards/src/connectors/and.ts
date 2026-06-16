@@ -24,7 +24,6 @@ export const parseAndConnector: ConnectorParser = (input) => {
     segments,
     ...(split === undefined ? {} : { sourceSegments: split.segments }),
     connectors: segments.map((_, index) => (index === 0 ? "always" : "then")),
-    presentationMode: "joined",
     ...(split === undefined
       ? {}
       : {

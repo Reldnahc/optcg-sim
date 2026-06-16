@@ -14,12 +14,12 @@ import {
   parseSearchSelectionVerb,
   parseTopDeckLook,
 } from "../search/index.js";
-import { sourceSpan } from "../source-slices.js";
 import type {
   ExpressionParseResult,
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { topDeckSearchPresentationSpans } from "./top-deck-presentation-spans.js";
 
 const lookedPlaySet = "set:look-play" as SelectionSetId;
 const lookedPlaySelection = "revealSelection:play" as SelectionId;
@@ -40,16 +40,19 @@ export function lookPlayFromTopExpressionParser(
       return undefined;
     }
 
-    const evidence = [
+    const selectionEvidence = [
       "expression:sequence",
       "instruction:revealTop",
       ...look.evidence,
       "instruction:selectFromSet",
       ...play.evidence,
       "instruction:playSelected",
+    ] as const;
+    const remainingEvidence = [
       "instruction:placeSetRemainder",
       ...remaining.evidence,
     ] as const;
+    const evidence = [...selectionEvidence, ...remainingEvidence] as const;
 
     return {
       effect: createLookedSetPlaySequence({
@@ -65,7 +68,8 @@ export function lookPlayFromTopExpressionParser(
         : {
             presentationSpans: lookPlayPresentationSpans({
               input,
-              evidence,
+              remainingEvidence,
+              selectionEvidence,
             }),
           }),
     };
@@ -81,7 +85,7 @@ export function lookPlayFromTopExpressionParser(
     return undefined;
   }
 
-  const evidence = [
+  const selectionEvidence = [
     "expression:sequence",
     "instruction:revealTop",
     ...look.evidence,
@@ -91,9 +95,12 @@ export function lookPlayFromTopExpressionParser(
       ? (["instruction:revealSelected"] as const)
       : []),
     "instruction:moveSelected",
+  ] as const;
+  const remainingEvidence = [
     "instruction:placeSetRemainder",
     ...remaining.evidence,
   ] as const;
+  const evidence = [...selectionEvidence, ...remainingEvidence] as const;
 
   return {
     effect: createLookedSetLifeSequence({
@@ -113,7 +120,8 @@ export function lookPlayFromTopExpressionParser(
       : {
           presentationSpans: lookPlayPresentationSpans({
             input,
-            evidence,
+            remainingEvidence,
+            selectionEvidence,
           }),
         }),
   };
@@ -365,14 +373,16 @@ function createLookedSetPlaySequence({
 
 function lookPlayPresentationSpans({
   input,
-  evidence,
+  remainingEvidence,
+  selectionEvidence,
 }: {
   readonly input: ParseInput;
-  readonly evidence: readonly PrimitiveEvidence[];
+  readonly remainingEvidence: readonly PrimitiveEvidence[];
+  readonly selectionEvidence: readonly PrimitiveEvidence[];
 }): readonly EffectTextSpan[] {
-  if (input.source === undefined) {
-    return [];
-  }
-
-  return [sourceSpan("span:lookPlay", "body", input.source, evidence)];
+  return topDeckSearchPresentationSpans({
+    input,
+    remainingEvidence,
+    selectionEvidence,
+  });
 }
