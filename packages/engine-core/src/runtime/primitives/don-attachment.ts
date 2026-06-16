@@ -171,9 +171,11 @@ export function applyDonAttachment(
       {
         playerId: params.sourcePlayerId,
         donInstanceId: don.instanceId,
-        targetInstanceId: targetHost.card.instanceId,
+        from: don.zone,
+        ...(params.target.zone === undefined ? {} : { to: params.target.zone }),
+        target: params.target,
       },
-      { type: "replayOnly" },
+      { type: "public" },
     );
     const event = events[events.length - 1];
     if (event !== undefined && params.causedBy !== undefined) {

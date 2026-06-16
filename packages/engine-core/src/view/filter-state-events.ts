@@ -388,6 +388,27 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
       ...pickNumberPayloadFields(payload, ["attackerPower", "defenderPower"]),
     };
   }
+  if (event.type === "donAttached") {
+    return {
+      ...pickStringPayloadFields(payload, ["playerId", "donInstanceId"]),
+      ...pickCardRefPayloadFields(payload, ["target"]),
+      ...(toAllowedZoneRef(payload["from"]) === undefined
+        ? {}
+        : { from: toAllowedZoneRef(payload["from"]) }),
+      ...(toAllowedZoneRef(payload["to"]) === undefined
+        ? {}
+        : { to: toAllowedZoneRef(payload["to"]) }),
+    };
+  }
+  if (event.type === "donReturned") {
+    return {
+      ...pickStringPayloadFields(payload, ["playerId", "donInstanceId"]),
+      ...pickCardRefPayloadFields(payload, ["source"]),
+      ...(toAllowedZoneRef(payload["to"]) === undefined
+        ? {}
+        : { to: toAllowedZoneRef(payload["to"]) }),
+    };
+  }
   if (
     event.type === "cardPlayed" ||
     event.type === "cardTrashed" ||

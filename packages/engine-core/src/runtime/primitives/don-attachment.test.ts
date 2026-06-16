@@ -73,6 +73,34 @@ test("shared DON attachment primitive attaches selected cost-area DON and record
   });
 });
 
+test("DON attachment emits a public presentation-safe event", () => {
+  const state = createActiveState();
+  const don = placeCostDon(state, p1, "active");
+  const target = leaderRef(state, p1);
+
+  const result = applyDonAttachment({
+    sourcePlayerId: p1,
+    sourceState: "active",
+    state,
+    selectedDonInstanceIds: [don.instanceId],
+    target,
+  });
+
+  assert.equal(result.ok, true);
+  const attachedEvent = result.events.find(
+    (event) => event.type === "donAttached",
+  );
+  assert.ok(attachedEvent);
+  assert.deepEqual(attachedEvent.visibility, { type: "public" });
+  assert.deepEqual(attachedEvent.payload, {
+    playerId: p1,
+    donInstanceId: don.instanceId,
+    from: don.zone,
+    to: target.zone,
+    target,
+  });
+});
+
 test("shared DON attachment primitive rejects invalid target-owner constraints without mutation", () => {
   const state = createActiveState();
   const opponentTarget = leaderRef(state, p2);

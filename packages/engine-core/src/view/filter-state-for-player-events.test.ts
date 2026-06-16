@@ -11,6 +11,7 @@ import {
   toEngineEventId,
   toStateSeq,
 } from "../action-test-fixtures.js";
+import { toPlayerEvent } from "./filter-state-events.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 test("preserves safe visible card identity in player event payloads", () => {
@@ -119,6 +120,43 @@ test("preserves safe visible card identity in player event payloads", () => {
   );
   assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
   assert.equal(JSON.stringify(view.events).includes("faceDownCardId"), false);
+});
+
+test("player event filtering preserves public DON attachment presentation payload", () => {
+  const state = createActiveState();
+  const event: EngineEvent = {
+    id: toEngineEventId("event:don-attached"),
+    seq: 1,
+    type: "donAttached",
+    payload: {
+      playerId: p1,
+      donInstanceId: "don-1",
+      from: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      to: { zone: "leaderArea", playerId: p1, slot: "leader" },
+      target: {
+        instanceId: "leader-1",
+        cardId: toCardId("OP00-001"),
+        playerId: p1,
+      },
+      hiddenDebugField: "must not leak",
+    },
+    visibility: { type: "public" },
+    createdAtStateSeq: toStateSeq(state.seq),
+  };
+
+  const filtered = toPlayerEvent(event);
+
+  assert.deepEqual(filtered.payload, {
+    playerId: p1,
+    donInstanceId: "don-1",
+    from: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+    to: { zone: "leaderArea", playerId: p1, slot: "leader" },
+    target: {
+      instanceId: "leader-1",
+      cardId: toCardId("OP00-001"),
+      playerId: p1,
+    },
+  });
 });
 
 test("preserves safe gameplay event details for player logs", () => {
