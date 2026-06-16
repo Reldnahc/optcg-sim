@@ -137,6 +137,17 @@ const pickStringPayloadFields = (
     }),
   );
 
+const pickNumberPayloadFields = (
+  payload: Record<string, unknown>,
+  fields: readonly string[],
+): Record<string, number> =>
+  Object.fromEntries(
+    fields.flatMap((field) => {
+      const value = payload[field];
+      return typeof value === "number" ? [[field, value] as const] : [];
+    }),
+  );
+
 const pickCardIdentityPayloadFields = (
   payload: Record<string, unknown>,
 ): Record<string, string> =>
@@ -308,14 +319,21 @@ const toAllowedPlayerEventPayload = (event: EngineEvent): unknown => {
     return pickCostPaidPayload(payload);
   }
   if (event.type === "attackDeclared") {
-    return pickCardRefPayloadFields(payload, ["attacker", "target"]);
+    return {
+      ...pickCardRefPayloadFields(payload, ["attacker", "target"]),
+      ...pickNumberPayloadFields(payload, ["attackerPower", "defenderPower"]),
+    };
   }
   if (event.type === "blockerActivated") {
-    return pickCardRefPayloadFields(payload, [
-      "blocker",
-      "previousTarget",
-      "currentTarget",
-    ]);
+    return {
+      ...pickCardRefPayloadFields(payload, [
+        "attacker",
+        "blocker",
+        "previousTarget",
+        "currentTarget",
+      ]),
+      ...pickNumberPayloadFields(payload, ["attackerPower", "defenderPower"]),
+    };
   }
   if (
     event.type === "cardPlayed" ||

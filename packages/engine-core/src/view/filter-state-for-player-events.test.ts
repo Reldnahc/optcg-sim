@@ -125,6 +125,7 @@ test("preserves safe gameplay event details for player logs", () => {
   const state = createActiveState();
   const attackerCardId = toCardId("OP13-089");
   const targetCardId = toCardId("OP13-091");
+  const blockerCardId = toCardId("OP13-092");
   const events: EngineEvent[] = [
     {
       id: toEngineEventId("event:phase-started"),
@@ -153,6 +154,8 @@ test("preserves safe gameplay event details for player logs", () => {
           cardId: targetCardId,
           privatePowerSnapshot: 5000,
         },
+        attackerPower: 7000,
+        defenderPower: 5000,
       },
       visibility: { type: "public" },
       createdAtStateSeq: toStateSeq(state.seq),
@@ -167,6 +170,42 @@ test("preserves safe gameplay event details for player logs", () => {
         optionId: "restDon",
         selectedDonInstanceIds: ["don-1", "don-2"],
         selectedCardInstanceIds: ["card-1"],
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+    {
+      id: toEngineEventId("event:blocker-activated"),
+      seq: 4,
+      type: "blockerActivated",
+      actor: p2,
+      payload: {
+        attacker: {
+          playerId: p1,
+          instanceId: "attacker-1",
+          cardId: attackerCardId,
+          privatePowerSnapshot: 7000,
+        },
+        blocker: {
+          playerId: p2,
+          instanceId: "blocker-1",
+          cardId: blockerCardId,
+          privatePowerSnapshot: 3000,
+        },
+        previousTarget: {
+          playerId: p2,
+          instanceId: "target-1",
+          cardId: targetCardId,
+          privatePowerSnapshot: 5000,
+        },
+        currentTarget: {
+          playerId: p2,
+          instanceId: "blocker-1",
+          cardId: blockerCardId,
+          privatePowerSnapshot: 3000,
+        },
+        attackerPower: 7000,
+        defenderPower: 3000,
       },
       visibility: { type: "public" },
       createdAtStateSeq: toStateSeq(state.seq),
@@ -191,12 +230,38 @@ test("preserves safe gameplay event details for player logs", () => {
           instanceId: "target-1",
           cardId: targetCardId,
         },
+        attackerPower: 7000,
+        defenderPower: 5000,
       },
       {
         playerId: p1,
         optionId: "restDon",
         selectedDonCount: 2,
         selectedCardCount: 1,
+      },
+      {
+        attacker: {
+          playerId: p1,
+          instanceId: "attacker-1",
+          cardId: attackerCardId,
+        },
+        blocker: {
+          playerId: p2,
+          instanceId: "blocker-1",
+          cardId: blockerCardId,
+        },
+        previousTarget: {
+          playerId: p2,
+          instanceId: "target-1",
+          cardId: targetCardId,
+        },
+        currentTarget: {
+          playerId: p2,
+          instanceId: "blocker-1",
+          cardId: blockerCardId,
+        },
+        attackerPower: 7000,
+        defenderPower: 3000,
       },
     ],
   );
