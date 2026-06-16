@@ -25,6 +25,7 @@ import { sequenceEffectBlockForEntry } from "../effect-runtime-sequence/segment-
 import {
   effectSpotlightHistoryFromPlayerViewState,
   type CompletedEffectTextSpotlight,
+  type CurrentEffectTextSpotlight,
 } from "./effect-spotlight-history.js";
 import {
   isEventVisibleToPlayer,
@@ -726,6 +727,54 @@ const completedEffectTextsForCurrentFrame = ({
   ];
 };
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const currentEffectResolvedEventIds = ({
+  causedBy,
+  events,
+}: {
+  readonly causedBy: Extract<
+    NonNullable<GameState["pendingDecision"]>["causedBy"],
+    { type: "effect" }
+  >;
+  readonly events: readonly GameState["eventJournal"][number][];
+}): ReadonlySet<GameState["eventJournal"][number]["id"]> | undefined => {
+  const ids = new Set<GameState["eventJournal"][number]["id"]>();
+  for (const event of events) {
+    if (
+      event.type !== "effectResolved" &&
+      event.type !== "replacementApplied"
+    ) {
+      continue;
+    }
+    if (!isObjectRecord(event.payload)) {
+      continue;
+    }
+    if (
+      event.payload["queueEntryId"] === causedBy.queueEntryId &&
+      event.payload["effectBlockId"] === causedBy.effectId
+    ) {
+      ids.add(event.id);
+    }
+  }
+  return ids.size === 0 ? undefined : ids;
+};
+
+const currentEffectTextSpotlight = (
+  state: GameState,
+  events: readonly GameState["eventJournal"][number][],
+): CurrentEffectTextSpotlight | undefined => {
+  const causedBy = state.pendingDecision?.causedBy;
+  return causedBy?.type === "effect"
+    ? {
+        effectBlockId: causedBy.effectId,
+        queueEntryId: causedBy.queueEntryId,
+        resolvedEventIds: currentEffectResolvedEventIds({ causedBy, events }),
+      }
+    : undefined;
+};
+
 export const filterStateForPlayer = (
   state: GameState,
   playerId: PlayerId,
@@ -786,9 +835,12 @@ export const filterStateForPlayer = (
         visibleCards: visibleDecisionCards,
       })
     : undefined;
-  const events = state.eventJournal
-    .filter((event) => isEventVisibleToPlayer(event, playerId))
-    .map((event) => toPlayerEventForView(state, event));
+  const visibleEvents = state.eventJournal.filter((event) =>
+    isEventVisibleToPlayer(event, playerId),
+  );
+  const events = visibleEvents.map((event) =>
+    toPlayerEventForView(state, event),
+  );
   const effectSpotlightHistory = effectSpotlightHistoryFromPlayerViewState({
     activeEffectText,
     completedEffectTexts: completedEffectTextsForCurrentFrame({
@@ -796,6 +848,7 @@ export const filterStateForPlayer = (
       pendingDecisionId: pendingDecision?.id,
       state,
     }),
+    currentEffectText: currentEffectTextSpotlight(state, visibleEvents),
     events,
     pendingDecisionId: pendingDecision?.id,
   });

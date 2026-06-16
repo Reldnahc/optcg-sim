@@ -204,6 +204,9 @@ const completedFrameEntryForActive = ({
   ...(effectBlockId === undefined ? {} : { effectBlockId }),
 });
 
+const isCompletedFrameEntry = (entry: EffectSpotlightHistoryEntry): boolean =>
+  entry.key.startsWith("completed-frame:");
+
 const combatEntryForEvent = (
   event: EngineEvent,
 ): EffectSpotlightHistoryEntry | undefined => {
@@ -455,6 +458,12 @@ export interface CompletedEffectTextSpotlight {
   readonly queueEntryId?: QueueEntryId | undefined;
 }
 
+export interface CurrentEffectTextSpotlight {
+  readonly effectBlockId: EffectId;
+  readonly resolvedEventIds?: ReadonlySet<EngineEvent["id"]> | undefined;
+  readonly queueEntryId: QueueEntryId;
+}
+
 const completedSpotlightEntriesForActiveTexts = (
   completedEffectTexts: readonly CompletedEffectTextSpotlight[],
 ): readonly EffectSpotlightHistoryEntry[] =>
@@ -507,6 +516,38 @@ const matchingResolvedEntryKeySinceLastQueue = ({
   return undefined;
 };
 
+const matchingResolvedEntryKeyForCurrentEffect = ({
+  activeEffectText,
+  currentEffectText,
+  events,
+}: {
+  readonly activeEffectText: ActiveEffectTextPresentation;
+  readonly currentEffectText: CurrentEffectTextSpotlight | undefined;
+  readonly events: readonly EngineEvent[];
+}): string | undefined => {
+  if (currentEffectText === undefined) {
+    return undefined;
+  }
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event === undefined) {
+      continue;
+    }
+    const matchingEntry = resolvedEntriesForEvent(event).find(
+      (entry) =>
+        entry.kind !== "combat" &&
+        (currentEffectText.resolvedEventIds?.has(event.id) === true ||
+          (entry.queueEntryId === currentEffectText.queueEntryId &&
+            entry.effectBlockId === currentEffectText.effectBlockId)) &&
+        sameEffectTextPresentation(entry.active, activeEffectText),
+    );
+    if (matchingEntry !== undefined) {
+      return matchingEntry.key;
+    }
+  }
+  return undefined;
+};
+
 const liveEntryKey = (
   active: ActiveEffectTextPresentation,
   pendingDecisionId: DecisionId | string | undefined,
@@ -523,11 +564,13 @@ const liveEntryKey = (
 export const effectSpotlightHistoryFromPlayerViewState = ({
   activeEffectText,
   completedEffectTexts = [],
+  currentEffectText,
   events,
   pendingDecisionId,
 }: {
   readonly activeEffectText: ActiveEffectTextPresentation | undefined;
   readonly completedEffectTexts?: readonly CompletedEffectTextSpotlight[];
+  readonly currentEffectText?: CurrentEffectTextSpotlight | undefined;
   readonly events: readonly EngineEvent[];
   readonly pendingDecisionId?: DecisionId | string | undefined;
 }): EffectSpotlightHistory | undefined => {
@@ -550,6 +593,15 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
     activeEffectText === undefined
       ? undefined
       : matchingResolvedEntryKeySinceLastQueue({ activeEffectText, events });
+  const liveDuplicateResolvedEntryKey =
+    matchingResolvedEntryKey ??
+    (activeEffectText === undefined
+      ? undefined
+      : matchingResolvedEntryKeyForCurrentEffect({
+          activeEffectText,
+          currentEffectText,
+          events,
+        }));
   const liveEntry =
     activeEffectText === undefined ||
     (matchingResolvedEntryKey !== undefined && pendingDecisionId === undefined)
@@ -572,8 +624,17 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
     liveEntry === undefined
       ? entries
       : [
-          ...entries.filter(
-            (entry) => entry.semanticKey !== liveEntry.semanticKey,
+          ...(liveDuplicateResolvedEntryKey === undefined
+            ? entries
+            : entries.filter(
+                (entry) => entry.key !== liveDuplicateResolvedEntryKey,
+              )
+          ).filter(
+            (entry) =>
+              !(
+                isCompletedFrameEntry(entry) &&
+                entry.semanticKey === liveEntry.semanticKey
+              ),
           ),
           liveEntry,
         ];

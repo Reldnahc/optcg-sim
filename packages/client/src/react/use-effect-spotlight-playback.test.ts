@@ -325,6 +325,32 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBeUndefined();
   });
 
+  it("appends a live pending entry instead of replacing older resolved history with the same semantic key", () => {
+    const oldResolved = source("event:old-resolved", "span:body");
+    const liveRepeat = {
+      ...source("decision:repeat|source-1||span:body", "span:body", "live"),
+      pendingDecisionId: "decision:repeat" as DecisionId,
+    };
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set(["event:old-resolved"]),
+      previous: {
+        entries: [oldResolved],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [oldResolved, liveRepeat],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:old-resolved",
+      "decision:repeat|source-1||span:body",
+    ]);
+    expect(next.cursorIndex).toBe(1);
+  });
+
   it("does not let an initial pending decision skip earlier resolved timeline entries", () => {
     const draw = source("event:draw", "span:sequence:0:body");
     const trash = {

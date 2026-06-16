@@ -476,6 +476,43 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
   });
 
+  it("keeps older resolved history when the same source span is pending again", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:body"],
+      },
+      events: [
+        resolvedSearchEvent("event:first-use", ["span:body"]),
+        effectQueuedEvent("event:second-use-queued"),
+      ],
+      pendingDecisionId: "decision:repeat-effect",
+    });
+
+    expect(
+      history?.entries.map((entry) => ({
+        key: entry.key,
+        mode: entry.mode,
+        activeSpanIds: expectEffectTextEntry(entry).active.activeSpanIds,
+      })),
+    ).toEqual([
+      {
+        key: "event:first-use",
+        mode: "resolved",
+        activeSpanIds: ["span:body"],
+      },
+      {
+        key: "decision:decision:repeat-effect|source-1|effect|span:body",
+        mode: "live",
+        activeSpanIds: ["span:body"],
+      },
+    ]);
+    expect(history?.presentKey).toBe(
+      "decision:decision:repeat-effect|source-1|effect|span:body",
+    );
+  });
+
   it("projects search selection resolved plus search remainder pending in order", () => {
     const event = resolvedSearchEvent("event:search", [
       "span:search:selection",

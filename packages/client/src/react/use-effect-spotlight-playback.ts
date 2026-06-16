@@ -191,13 +191,10 @@ const shouldReplaceServerTimelineEntry = (
   ) {
     return false;
   }
-  return (
-    previous.mode !== next.mode ||
-    (previous.mode === "live" && next.mode === "live") ||
-    (previous.mode === "resolved" &&
-      next.mode === "resolved" &&
-      isCompletedFrameProjection(previous))
-  );
+  if (previous.mode === "live") {
+    return true;
+  }
+  return next.mode === "resolved" && isCompletedFrameProjection(previous);
 };
 
 const serverTimelineSourceKeys = (
