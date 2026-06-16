@@ -128,6 +128,26 @@ test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple s
   });
 });
 
+test("getSupportedPlayMetadata accepts implemented-DSL Character metadata without generated effects", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "metadata-only character");
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+    effectText:
+      "Under the rules of this game, you may have any number of this card in your deck.",
+    support: { status: "implemented-dsl" },
+  });
+
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 1,
+  });
+});
+
 test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple supported On Play blocks", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

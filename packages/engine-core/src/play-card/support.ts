@@ -325,6 +325,21 @@ export const getSupportedPlayMetadata = (
     if (resolved.cost === undefined) {
       return null;
     }
+    if (resolved.support.effectDefinitionId === undefined) {
+      if (
+        !resolved.support.tested ||
+        resolved.support.cardDataVersion !== state.cardManifest.cardDataVersion
+      ) {
+        return null;
+      }
+      if (resolved.category === "character" || resolved.category === "stage") {
+        return {
+          category: resolved.category,
+          printedCost: Math.max(0, resolved.cost),
+        };
+      }
+      return null;
+    }
     const lookup = resolveImplementedDslEffectDefinition(
       resolved,
       state.cardManifest,
