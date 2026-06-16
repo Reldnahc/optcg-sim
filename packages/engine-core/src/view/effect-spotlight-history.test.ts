@@ -107,6 +107,49 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
   });
 
+  it("suppresses played-card spotlight across neutral events before effect queueing", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:played" as EngineEventId,
+          seq: 1,
+          type: "cardPlayed",
+          payload: {
+            playerId: "p1",
+            instanceId: "played-1",
+            cardId: "OP00-002",
+            category: "character",
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+        {
+          id: "event:rule-check" as EngineEventId,
+          seq: 2,
+          type: "ruleProcessingChecked",
+          payload: {},
+          visibility: { type: "public" },
+          createdAtStateSeq: 2 as StateSeq,
+        },
+        {
+          id: "event:effect-queued" as EngineEventId,
+          seq: 3,
+          type: "effectQueued",
+          payload: {
+            queueEntryId: "queue-entry:played",
+            effectId: "effect:played",
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 3 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toBeUndefined();
+  });
+
   it("ignores resolved presentations without active spans", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
       activeEffectText: undefined,
