@@ -33,6 +33,7 @@ export {
   consumeResolvedSpotlightSourceKeys,
   consumeSpotlightSourceSignatures,
   currentSpotlightPlaybackEntry,
+  isCombatSpotlightSource,
   queuedResolvedSpotlightSources,
 } from "./use-effect-spotlight-playback.js";
 export type {
@@ -76,7 +77,14 @@ export const shouldAutoAdvanceSpotlightPlayback = ({
   paused,
 }: {
   readonly currentSource: EffectSpotlightActiveSourceInput | undefined;
-  readonly model: EffectSpotlightState | undefined;
+  readonly model:
+    | Readonly<
+        Pick<EffectSpotlightState, "activeKey" | "activeMode" | "pinned"> &
+          Partial<
+            Omit<EffectSpotlightState, "activeKey" | "activeMode" | "pinned">
+          >
+      >
+    | undefined;
   readonly paused: boolean;
 }): boolean =>
   model !== undefined &&
@@ -153,6 +161,7 @@ export const useEffectSpotlight = ({
         ? []
         : [
             {
+              kind: "effectText" as const,
               active,
               key: activeKey ?? activePresentationKey(active),
               mode: activeMode,

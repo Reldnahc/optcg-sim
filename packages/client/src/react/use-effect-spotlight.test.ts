@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   CardId,
   EffectTextSpanId,
+  EngineEventId,
   InstanceId,
   PlayerId,
 } from "@optcg/types";
@@ -12,6 +13,7 @@ import {
   appendSpotlightPlaybackSources,
   consumeResolvedSpotlightSourceKeys,
   consumeSpotlightSourceSignatures,
+  currentSpotlightPlaybackEntry,
   effectSpotlightDisplayForEntry,
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
@@ -44,21 +46,45 @@ const source = (
     : {}),
 });
 
+const combatSource = {
+  kind: "combat" as const,
+  id: "combat:event:attack",
+  key: "event:attack",
+  semanticKey:
+    "combat|attackDeclared|p1|attacker-1|OP00-003|p2|defender-1|OP00-004|7000|5000",
+  mode: "resolved" as const,
+  status: "resolved" as const,
+  combat: {
+    eventKind: "attackDeclared" as const,
+    attacker: {
+      playerId: "p1" as PlayerId,
+      instanceId: "attacker-1" as InstanceId,
+      cardId: "OP00-003" as CardId,
+    },
+    defender: {
+      playerId: "p2" as PlayerId,
+      instanceId: "defender-1" as InstanceId,
+      cardId: "OP00-004" as CardId,
+    },
+    attackerPower: 7000,
+    defenderPower: 5000,
+  },
+  resolvedEventId: "event:attack" as EngineEventId,
+};
+
 describe("effect spotlight model", () => {
   it("pins while a pending decision has active effect text", () => {
+    const entry = source(
+      "decision-1|source-1||span:body:ko",
+      "span:body:ko",
+      "live",
+    );
     const model = effectSpotlightModel({
       nowMs: 1_000,
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:body:ko"],
-      },
+      entry,
       pendingDecisionId: "decision-1",
     });
 
@@ -113,6 +139,32 @@ describe("effect spotlight model", () => {
     ]);
     expect(next.cursorIndex).toBe(1);
     expect(next.paused).toBe(false);
+  });
+
+  it("keeps combat sources in the same rewindable playback queue", () => {
+    const state = appendSpotlightPlaybackSources({
+      consumedKeys: new Set(),
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [combatSource],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(currentSpotlightPlaybackEntry(state)).toBe(combatSource);
+    const caughtUp = advanceSpotlightPlayback({
+      command: "catchUp",
+      state,
+    });
+    expect(caughtUp.cursorIndex).toBeUndefined();
+    const rewound = advanceSpotlightPlayback({
+      command: "rewind",
+      state: caughtUp,
+    });
+    expect(currentSpotlightPlaybackEntry(rewound)).toBe(combatSource);
   });
 
   it("appends repeated effects when a new event key reuses a card span signature", () => {
@@ -244,8 +296,10 @@ describe("effect spotlight model", () => {
   });
 
   it("preserves current spotlight timing progress when playback resumes", () => {
+    const entry = source("event:first", "span:first");
     const model: EffectSpotlightState = {
-      active: source("event:first", "span:first").active,
+      entry,
+      active: entry.active,
       activeKey: "event:first",
       activeMode: "resolved",
       sourceInstanceId: "source-1",
@@ -455,9 +509,7 @@ describe("effect spotlight model", () => {
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: source("event:first", "span:first").active,
-      activeKey: "event:first",
-      activeMode: "resolved",
+      entry: source("event:first", "span:first"),
       pendingDecisionId: undefined,
     });
 
@@ -483,8 +535,10 @@ describe("effect spotlight model", () => {
   });
 
   it("hides display immediately when there is no playback cursor entry", () => {
+    const entry = source("event:first", "span:first");
     const previous: EffectSpotlightState = {
-      active: source("event:first", "span:first").active,
+      entry,
+      active: entry.active,
       activeKey: "event:first",
       activeMode: "resolved",
       sourceInstanceId: "source-1",
@@ -724,15 +778,14 @@ describe("effect spotlight model", () => {
   });
 
   it("keeps minimum dwell after a fast decision resolves", () => {
+    const previousEntry = source(
+      "decision-1|source-1||span:body:ko",
+      "span:body:ko",
+      "live",
+    );
     const previous = {
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:body:ko" as EffectTextSpanId],
-      },
+      entry: previousEntry,
+      active: previousEntry.active,
       activeKey: "decision-1|source-1||span:body:ko",
       activeMode: "live" as const,
       sourceInstanceId: "source-1",
@@ -746,7 +799,7 @@ describe("effect spotlight model", () => {
       previous,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: undefined,
+      entry: undefined,
       pendingDecisionId: undefined,
     });
 
@@ -754,21 +807,13 @@ describe("effect spotlight model", () => {
   });
 
   it("stores resolved event keys without pinning them", () => {
+    const entry = source("event:resolved:1", "span:body:ko");
     const model = effectSpotlightModel({
       nowMs: 1_000,
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:body:ko"],
-      },
-      activeKey: "event:resolved:1",
-      activeMode: "resolved",
+      entry,
       pendingDecisionId: undefined,
     });
 
@@ -778,15 +823,14 @@ describe("effect spotlight model", () => {
   });
 
   it("switches from pinned cost text to resolved body text after payment", () => {
+    const previousEntry = source(
+      "decision:payCost|source-1||span:cost:optional",
+      "span:cost:optional",
+      "live",
+    );
     const previous = {
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:cost:optional" as EffectTextSpanId],
-      },
+      entry: previousEntry,
+      active: previousEntry.active,
       activeKey: "decision:payCost|source-1||span:cost:optional",
       activeMode: "live" as const,
       sourceInstanceId: "source-1",
@@ -795,22 +839,14 @@ describe("effect spotlight model", () => {
       visibleUntilMs: 3_000,
       pinned: true,
     };
+    const entry = source("event:resolved:body", "span:body");
 
     const model = effectSpotlightModel({
       nowMs: 1_200,
       previous,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:body"],
-      },
-      activeKey: "event:resolved:body",
-      activeMode: "resolved",
+      entry,
       pendingDecisionId: undefined,
     });
 
@@ -961,21 +997,16 @@ describe("effect spotlight model", () => {
   });
 
   it("holds live pending-decision spotlight sources behind active resolved queue work", () => {
+    const entry = source(
+      "event:resolved:already-queued",
+      "span:already-queued",
+    );
     const resolvedModel = effectSpotlightModel({
       nowMs: 1_000,
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      active: {
-        source: {
-          instanceId: "source-1" as InstanceId,
-          cardId: "OP00-001" as CardId,
-          playerId: "p1" as PlayerId,
-        },
-        activeSpanIds: ["span:already-queued"],
-      },
-      activeKey: "event:resolved:already-queued",
-      activeMode: "resolved",
+      entry,
       pendingDecisionId: undefined,
     });
 

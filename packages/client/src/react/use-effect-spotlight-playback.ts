@@ -1,5 +1,6 @@
 import type {
   ActiveEffectTextPresentation,
+  CombatSpotlightPresentation,
   DecisionId,
   EffectTextSpanId,
 } from "@optcg/types";
@@ -7,7 +8,8 @@ import type {
 export type EffectSpotlightSourceMode = "live" | "resolved";
 export type EffectSpotlightSourceKind = "serverTimeline" | "legacyFallback";
 
-export interface EffectSpotlightActiveSourceInput {
+export interface EffectTextSpotlightActiveSourceInput {
+  readonly kind?: "effectText";
   readonly active: ActiveEffectTextPresentation;
   readonly id?: string;
   readonly key: string;
@@ -16,6 +18,21 @@ export interface EffectSpotlightActiveSourceInput {
   readonly status?: "pending" | "resolved";
   readonly pendingDecisionId?: DecisionId | string;
 }
+
+export interface CombatSpotlightActiveSourceInput {
+  readonly kind: "combat";
+  readonly combat: CombatSpotlightPresentation;
+  readonly id?: string;
+  readonly key: string;
+  readonly semanticKey?: string;
+  readonly mode: EffectSpotlightSourceMode;
+  readonly status?: "pending" | "resolved";
+  readonly pendingDecisionId?: DecisionId | string;
+}
+
+export type EffectSpotlightActiveSourceInput =
+  | EffectTextSpotlightActiveSourceInput
+  | CombatSpotlightActiveSourceInput;
 
 export type EffectSpotlightPlaybackEntry = EffectSpotlightActiveSourceInput;
 
@@ -46,8 +63,12 @@ export const activePresentationKey = (
     spanKey(active.activeSpanIds),
   ].join("|");
 
-const spotlightSourceSignatureBase = (
+export const isCombatSpotlightSource = (
   source: EffectSpotlightActiveSourceInput,
+): source is CombatSpotlightActiveSourceInput => source.kind === "combat";
+
+const spotlightSourceSignatureBase = (
+  source: EffectTextSpotlightActiveSourceInput,
 ): readonly string[] => [
   String(source.active.source.playerId),
   String(source.active.source.instanceId),
@@ -55,9 +76,32 @@ const spotlightSourceSignatureBase = (
   source.active.textKind ?? "",
 ];
 
+const combatSpotlightSourceSignature = (
+  source: CombatSpotlightActiveSourceInput,
+): string =>
+  [
+    "combat",
+    source.combat.eventKind,
+    String(source.combat.attacker.playerId),
+    String(source.combat.attacker.instanceId),
+    String(source.combat.attacker.cardId),
+    String(source.combat.defender.playerId),
+    String(source.combat.defender.instanceId),
+    String(source.combat.defender.cardId),
+    source.combat.attackerPower === undefined
+      ? ""
+      : String(source.combat.attackerPower),
+    source.combat.defenderPower === undefined
+      ? ""
+      : String(source.combat.defenderPower),
+  ].join("|");
+
 const spotlightSourceSignatures = (
   source: EffectSpotlightActiveSourceInput,
 ): readonly string[] => {
+  if (isCombatSpotlightSource(source)) {
+    return [combatSpotlightSourceSignature(source)];
+  }
   const spanIds =
     source.active.activeSpanIds.length === 0
       ? [""]

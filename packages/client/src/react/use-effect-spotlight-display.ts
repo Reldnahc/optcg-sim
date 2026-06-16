@@ -1,17 +1,21 @@
 import type {
   ActiveEffectTextPresentation,
+  CombatSpotlightPresentation,
   DecisionId,
   EffectTextSpanId,
 } from "@optcg/types";
 
 import {
   currentSpotlightPlaybackEntry,
+  isCombatSpotlightSource,
   type EffectSpotlightPlaybackEntry,
   type EffectSpotlightPlaybackState,
 } from "./use-effect-spotlight-playback.js";
 
 export interface EffectSpotlightState {
-  readonly active: ActiveEffectTextPresentation;
+  readonly entry: EffectSpotlightPlaybackEntry;
+  readonly active?: ActiveEffectTextPresentation | undefined;
+  readonly combat?: CombatSpotlightPresentation | undefined;
   readonly activeKey: string;
   readonly activeMode: "live" | "resolved";
   readonly sourceInstanceId: string;
@@ -27,9 +31,7 @@ export interface EffectSpotlightModelInput {
   readonly previous: EffectSpotlightState | undefined;
   readonly minimumDwellMs: number;
   readonly graceMs: number;
-  readonly active: ActiveEffectTextPresentation | undefined;
-  readonly activeKey?: string | undefined;
-  readonly activeMode?: "live" | "resolved" | undefined;
+  readonly entry: EffectSpotlightPlaybackEntry | undefined;
   readonly cursorVersion?: number | undefined;
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
@@ -57,54 +59,65 @@ const liveEntryMatchesPendingDecision = (
 const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
   spanIds.join("\n");
 
-const sameActivePresentation = (
+const entrySourceInstanceId = (entry: EffectSpotlightPlaybackEntry): string =>
+  isCombatSpotlightSource(entry)
+    ? String(entry.combat.attacker.instanceId)
+    : String(entry.active.source.instanceId);
+
+const entrySpanIds = (
+  entry: EffectSpotlightPlaybackEntry,
+): readonly EffectTextSpanId[] =>
+  isCombatSpotlightSource(entry) ? [] : entry.active.activeSpanIds;
+
+const sameSpotlightEntry = (
   previous: EffectSpotlightState,
-  active: ActiveEffectTextPresentation,
+  entry: EffectSpotlightPlaybackEntry,
   activeKey: string,
 ): boolean =>
   previous.activeKey === activeKey &&
-  previous.sourceInstanceId === String(active.source.instanceId) &&
-  spanKey(previous.activeSpanIds) === spanKey(active.activeSpanIds);
+  previous.entry.kind === entry.kind &&
+  previous.sourceInstanceId === entrySourceInstanceId(entry) &&
+  spanKey(previous.activeSpanIds) === spanKey(entrySpanIds(entry));
 
 export const effectSpotlightModel = ({
-  active,
-  activeKey,
-  activeMode = "live",
   cursorVersion,
+  entry,
   graceMs,
   minimumDwellMs,
   nowMs,
   pendingDecisionId,
   previous,
 }: EffectSpotlightModelInput): EffectSpotlightState | undefined => {
-  if (active !== undefined) {
-    const nextActiveKey =
-      activeKey ??
-      [
-        String(active.source.instanceId),
-        active.textKind ?? "",
-        spanKey(active.activeSpanIds),
-      ].join("|");
+  if (entry !== undefined) {
+    const nextActiveKey = entry.key;
+    const activeMode = entry.mode;
     if (
       previous !== undefined &&
-      sameActivePresentation(previous, active, nextActiveKey)
+      sameSpotlightEntry(previous, entry, nextActiveKey)
     ) {
       return {
         ...previous,
-        active,
+        entry,
+        ...(isCombatSpotlightSource(entry)
+          ? { combat: entry.combat }
+          : { active: entry.active }),
         activeKey: nextActiveKey,
         activeMode,
-        activeSpanIds: active.activeSpanIds,
+        sourceInstanceId: entrySourceInstanceId(entry),
+        activeSpanIds: entrySpanIds(entry),
         pinned: pendingDecisionId !== undefined,
         ...(cursorVersion === undefined ? {} : { cursorVersion }),
       };
     }
     return {
-      active,
+      entry,
+      ...(isCombatSpotlightSource(entry)
+        ? { combat: entry.combat }
+        : { active: entry.active }),
       activeKey: nextActiveKey,
       activeMode,
-      sourceInstanceId: String(active.source.instanceId),
-      activeSpanIds: active.activeSpanIds,
+      sourceInstanceId: entrySourceInstanceId(entry),
+      activeSpanIds: entrySpanIds(entry),
       shownAtMs: nowMs,
       visibleUntilMs: nowMs + minimumDwellMs,
       pinned: pendingDecisionId !== undefined,
@@ -149,9 +162,7 @@ export const effectSpotlightDisplayForEntry = ({
     previous: sameCursorEntry ? previous : undefined,
     minimumDwellMs,
     graceMs,
-    active: entry.active,
-    activeKey: entry.key,
-    activeMode: entry.mode,
+    entry,
     cursorVersion,
     pendingDecisionId: liveEntryMatchesPendingDecision(entry, pendingDecisionId)
       ? pendingDecisionId
