@@ -109,7 +109,9 @@ describe("presentation event coverage", () => {
     });
 
     assert.equal(movements.length, 1);
-    assert.equal(movements[0].fromZoneKey, "opponent:deck");
-    assert.equal(movements[0].toZoneKey, "opponent:hand");
+    const movement = movements[0];
+    assert.ok(movement);
+    assert.equal(movement.fromZoneKey, "opponent:deck");
+    assert.equal(movement.toZoneKey, "opponent:hand");
   });
 });
