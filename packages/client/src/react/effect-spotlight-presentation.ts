@@ -53,20 +53,24 @@ export const buildEffectSpotlightPresentation = ({
   }
   if (isCombatSpotlightSource(entry)) {
     return {
-      kind: "combat",
-      combat: entry.combat,
-      attackerCard: cardModel(entry.combat.attacker),
-      defenderCard: cardModel(entry.combat.defender),
+      kind: "cardLink",
+      sourceCard: cardModel(entry.combat.attacker),
+      relatedCards: [cardModel(entry.combat.defender)],
+      relationLabel: "attacks",
+      tone: "combat",
+      sourcePower: entry.combat.attackerPower,
+      relatedPowers: [entry.combat.defenderPower],
     };
   }
   const targetCards = targetCardsForEntry(entry);
   if (targetCards.length > 0) {
     return {
-      kind: "targeting",
+      kind: "cardLink",
       active: entry.active,
       sourceCard: cardModel(entry.active.source),
-      targetCards: targetCards.map(cardModel),
-      label: "targets",
+      relatedCards: targetCards.map(cardModel),
+      relationLabel: "targets",
+      tone: "targeting",
     };
   }
   return {

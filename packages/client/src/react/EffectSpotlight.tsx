@@ -1,6 +1,5 @@
 import type {
   ActiveEffectTextPresentation,
-  CombatSpotlightPresentation,
   EffectTextSourceMap,
 } from "@optcg/types";
 import {
@@ -27,17 +26,14 @@ export type EffectSpotlightPresentation =
       readonly card: ClientCardModel;
     }
   | {
-      readonly kind: "targeting";
-      readonly active: ActiveEffectTextPresentation;
+      readonly kind: "cardLink";
+      readonly active?: ActiveEffectTextPresentation | undefined;
       readonly sourceCard: ClientCardModel;
-      readonly targetCards: readonly ClientCardModel[];
-      readonly label: string;
-    }
-  | {
-      readonly kind: "combat";
-      readonly combat: CombatSpotlightPresentation;
-      readonly attackerCard: ClientCardModel;
-      readonly defenderCard: ClientCardModel;
+      readonly relatedCards: readonly ClientCardModel[];
+      readonly relationLabel: string;
+      readonly tone: "combat" | "targeting";
+      readonly sourcePower?: number | undefined;
+      readonly relatedPowers?: readonly (number | undefined)[] | undefined;
     };
 
 export interface EffectSpotlightTimer {
@@ -271,44 +267,33 @@ const SpotlightCardFace = ({
   </div>
 );
 
-const CombatPowerValue = ({
+const LinkedCardPowerValue = ({
   power,
 }: {
   readonly power: number | undefined;
 }): React.JSX.Element | null =>
   power === undefined ? null : (
     <span
-      className={`effect-spotlight-combat-power__value battle-arrow-power-value is-${battlePowerTone(power)}`}
+      className={`effect-spotlight-link-power__value battle-arrow-power-value is-${battlePowerTone(power)}`}
     >
       {power}
     </span>
   );
 
-const combatCardPowerLabel = (
+const linkedCardLabel = (
   card: ClientCardModel,
   power: number | undefined,
 ): string =>
   power === undefined ? card.name : `${card.name} ${String(power)}`;
 
-const combatSpotlightAriaLabel = ({
-  attackerCard,
-  combat,
-  defenderCard,
-}: {
-  readonly attackerCard: ClientCardModel;
-  readonly combat: CombatSpotlightPresentation;
-  readonly defenderCard: ClientCardModel;
-}): string =>
-  `Combat spotlight: ${combatCardPowerLabel(
-    attackerCard,
-    combat.attackerPower,
-  )} attacks ${combatCardPowerLabel(defenderCard, combat.defenderPower)}`;
-
-const targetListLabel = (
-  targetCards: readonly ClientCardModel[],
+const relatedCardsLabel = (
+  relatedCards: readonly ClientCardModel[],
+  relatedPowers: readonly (number | undefined)[] | undefined,
   overflowCount: number,
 ): string => {
-  const visibleNames = targetCards.map((card) => card.name);
+  const visibleNames = relatedCards.map((card, index) =>
+    linkedCardLabel(card, relatedPowers?.[index]),
+  );
   const overflowLabel =
     overflowCount <= 0 ? undefined : `${String(overflowCount)} more`;
   const labels =
@@ -316,10 +301,10 @@ const targetListLabel = (
       ? visibleNames
       : [...visibleNames, overflowLabel];
   if (labels.length === 0) {
-    return "no visible targets";
+    return "no visible related cards";
   }
   if (labels.length === 1) {
-    return labels[0] ?? "no visible targets";
+    return labels[0] ?? "no visible related cards";
   }
   if (labels.length === 2) {
     return `${labels[0] ?? ""} and ${labels[1] ?? ""}`;
@@ -327,22 +312,27 @@ const targetListLabel = (
   return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1) ?? ""}`;
 };
 
-const targetingSpotlightAriaLabel = ({
-  label,
+const cardLinkSpotlightAriaLabel = ({
+  relatedCards,
+  relatedPowers,
+  relationLabel,
   sourceCard,
-  targetCards,
+  sourcePower,
 }: {
-  readonly label: string;
+  readonly relatedCards: readonly ClientCardModel[];
+  readonly relatedPowers: readonly (number | undefined)[] | undefined;
+  readonly relationLabel: string;
   readonly sourceCard: ClientCardModel;
-  readonly targetCards: readonly ClientCardModel[];
-}): string => {
-  const visibleTargetCards = targetCards.slice(0, maxVisibleTargetCards);
-  const overflowCount = Math.max(0, targetCards.length - maxVisibleTargetCards);
-  return `Targeting spotlight: ${sourceCard.name} ${label} ${targetListLabel(
-    visibleTargetCards,
-    overflowCount,
+  readonly sourcePower: number | undefined;
+}): string =>
+  `Linked card spotlight: ${linkedCardLabel(
+    sourceCard,
+    sourcePower,
+  )} ${relationLabel} ${relatedCardsLabel(
+    relatedCards.slice(0, maxVisibleRelatedCards),
+    relatedPowers,
+    Math.max(0, relatedCards.length - maxVisibleRelatedCards),
   )}`;
-};
 
 const SpotlightRulesPanel = ({
   active,
@@ -383,133 +373,105 @@ const SpotlightRulesPanel = ({
   </div>
 );
 
-const CombatSpotlightCard = ({
-  attackerCard,
-  combat,
-  defenderCard,
-  timer,
-  timerNowMs,
-}: {
-  readonly attackerCard: ClientCardModel;
-  readonly combat: CombatSpotlightPresentation;
-  readonly defenderCard: ClientCardModel;
-  readonly timer: EffectSpotlightTimer | undefined;
-  readonly timerNowMs: number;
-}): React.JSX.Element => (
-  <div className="effect-spotlight-card effect-spotlight-card--combat">
-    <div
-      className="effect-spotlight-combat"
-      data-combat-spotlight-kind={combat.eventKind}
-      aria-hidden="true"
-    >
-      <SpotlightCardFace
-        card={attackerCard}
-        className="effect-spotlight-combat-card effect-spotlight-combat-card--attacker"
-      />
-      <div className="effect-spotlight-combat-power" aria-hidden="true">
-        <CombatPowerValue power={combat.attackerPower} />
-        <span className="effect-spotlight-combat-direction">
-          <span className="effect-spotlight-combat-direction__label">
-            attacks
-          </span>
-          <svg
-            className="effect-spotlight-combat-direction__arrow"
-            viewBox="0 0 84 28"
-            focusable="false"
-            aria-hidden="true"
-          >
-            <path d="M4 14h64" />
-            <path d="M56 5l20 9-20 9" />
-          </svg>
-        </span>
-        <CombatPowerValue power={combat.defenderPower} />
-      </div>
-      <SpotlightCardFace
-        card={defenderCard}
-        className="effect-spotlight-combat-card effect-spotlight-combat-card--defender"
-      />
-    </div>
-    <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
-  </div>
-);
+const maxVisibleRelatedCards = 5;
 
-const maxVisibleTargetCards = 5;
-
-const targetSlotClassName = (index: number): string =>
-  `effect-spotlight-targeting-card effect-spotlight-targeting-card--target is-target-slot-${String(
+const relatedSlotClassName = (index: number): string =>
+  `effect-spotlight-link-card effect-spotlight-link-card--related is-related-slot-${String(
     index,
   )}`;
 
-const TargetingSpotlightCard = ({
+const LinkedCardsSpotlightCard = ({
   active,
-  label,
+  relatedCards,
+  relatedPowers,
+  relationLabel,
   sourceCard,
+  sourcePower,
   spotlightText,
-  targetCards,
   timer,
   timerNowMs,
+  tone,
 }: {
-  readonly active: ActiveEffectTextPresentation;
-  readonly label: string;
+  readonly active: ActiveEffectTextPresentation | undefined;
+  readonly relatedCards: readonly ClientCardModel[];
+  readonly relatedPowers: readonly (number | undefined)[] | undefined;
+  readonly relationLabel: string;
   readonly sourceCard: ClientCardModel;
+  readonly sourcePower: number | undefined;
   readonly spotlightText: SpotlightText | undefined;
-  readonly targetCards: readonly ClientCardModel[];
   readonly timer: EffectSpotlightTimer | undefined;
   readonly timerNowMs: number;
+  readonly tone: "combat" | "targeting";
 }): React.JSX.Element => {
-  const visibleTargetCards = targetCards.slice(0, maxVisibleTargetCards);
-  const overflowCount = Math.max(0, targetCards.length - maxVisibleTargetCards);
+  const visibleRelatedCards = relatedCards.slice(0, maxVisibleRelatedCards);
+  const visibleRelatedPowers = relatedPowers?.slice(0, maxVisibleRelatedCards);
+  const overflowCount = Math.max(
+    0,
+    relatedCards.length - maxVisibleRelatedCards,
+  );
+  const singleRelatedPower =
+    visibleRelatedCards.length === 1 ? visibleRelatedPowers?.[0] : undefined;
   return (
-    <div className="effect-spotlight-card effect-spotlight-card--targeting">
-      <div className="effect-spotlight-targeting-frame">
+    <div
+      className="effect-spotlight-card effect-spotlight-card--linked"
+      data-card-link-tone={tone}
+    >
+      <div className="effect-spotlight-link-frame">
         <div
-          className="effect-spotlight-targeting"
-          data-target-count={targetCards.length}
+          className="effect-spotlight-link"
+          data-card-link-tone={tone}
+          data-related-count={relatedCards.length}
           aria-hidden="true"
         >
           <SpotlightCardFace
             card={sourceCard}
-            className="effect-spotlight-targeting-card effect-spotlight-targeting-card--source"
+            className="effect-spotlight-link-card effect-spotlight-link-card--source"
           />
-          <div className="effect-spotlight-targeting-direction">
-            <span className="effect-spotlight-targeting-direction__label">
-              {label}
+          <div className="effect-spotlight-link-relation">
+            <LinkedCardPowerValue power={sourcePower} />
+            <span className="effect-spotlight-link-direction">
+              <span className="effect-spotlight-link-direction__label">
+                {relationLabel}
+              </span>
+              <svg
+                className="effect-spotlight-link-direction__arrow"
+                viewBox="0 0 84 28"
+                focusable="false"
+                aria-hidden="true"
+              >
+                <path d="M4 14h64" />
+                <path d="M56 5l20 9-20 9" />
+              </svg>
             </span>
-            <svg
-              className="effect-spotlight-targeting-direction__arrow"
-              viewBox="0 0 84 28"
-              focusable="false"
-              aria-hidden="true"
-            >
-              <path d="M4 14h64" />
-              <path d="M56 5l20 9-20 9" />
-            </svg>
+            <LinkedCardPowerValue power={singleRelatedPower} />
           </div>
           <div
-            className="effect-spotlight-targeting-targets"
-            data-target-count={targetCards.length}
-            data-visible-target-count={visibleTargetCards.length}
+            className="effect-spotlight-link-related-cards"
+            data-related-count={relatedCards.length}
+            data-visible-related-count={visibleRelatedCards.length}
           >
-            {visibleTargetCards.map((targetCard, index) => (
+            {visibleRelatedCards.map((relatedCard, index) => (
               <SpotlightCardFace
-                key={`${String(targetCard.instanceId)}:${String(index)}`}
-                card={targetCard}
-                className={targetSlotClassName(index)}
+                key={`${String(relatedCard.instanceId)}:${String(index)}`}
+                card={relatedCard}
+                className={relatedSlotClassName(index)}
               />
             ))}
             {overflowCount === 0 ? null : (
-              <div className="effect-spotlight-targeting-overflow">
+              <div className="effect-spotlight-link-overflow">
                 +{String(overflowCount)}
               </div>
             )}
           </div>
         </div>
-        <SpotlightRulesPanel
-          active={active}
-          card={sourceCard}
-          className="effect-spotlight-targeting-rules"
-          spotlightText={spotlightText}
-        />
+        {active === undefined ? null : (
+          <SpotlightRulesPanel
+            active={active}
+            card={sourceCard}
+            className="effect-spotlight-link-rules"
+            spotlightText={spotlightText}
+          />
+        )}
       </div>
       <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
     </div>
@@ -523,13 +485,15 @@ export const EffectSpotlight = ({
 }: EffectSpotlightProps): React.JSX.Element | null => {
   const timerNowMs = useSpotlightTimerNowMs(timer);
   const active =
-    presentation?.kind === "effectText" || presentation?.kind === "targeting"
+    presentation?.kind === "effectText"
       ? presentation.active
-      : undefined;
+      : presentation?.kind === "cardLink"
+        ? presentation.active
+        : undefined;
   const card =
     presentation?.kind === "effectText"
       ? presentation.card
-      : presentation?.kind === "targeting"
+      : presentation?.kind === "cardLink"
         ? presentation.sourceCard
         : undefined;
   if (controls === undefined && presentation === undefined) {
@@ -537,8 +501,7 @@ export const EffectSpotlight = ({
   }
   const spotlightClassName = [
     "effect-spotlight",
-    presentation?.kind === "combat" ? "effect-spotlight--combat" : "",
-    presentation?.kind === "targeting" ? "effect-spotlight--targeting" : "",
+    presentation?.kind === "cardLink" ? "effect-spotlight--linked" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -577,19 +540,15 @@ export const EffectSpotlight = ({
   const ariaLabel =
     presentation === undefined
       ? "Spotlight playback"
-      : presentation.kind === "combat"
-        ? combatSpotlightAriaLabel({
-            attackerCard: presentation.attackerCard,
-            combat: presentation.combat,
-            defenderCard: presentation.defenderCard,
+      : presentation.kind === "cardLink"
+        ? cardLinkSpotlightAriaLabel({
+            relatedCards: presentation.relatedCards,
+            relatedPowers: presentation.relatedPowers,
+            relationLabel: presentation.relationLabel,
+            sourceCard: presentation.sourceCard,
+            sourcePower: presentation.sourcePower,
           })
-        : presentation.kind === "targeting"
-          ? targetingSpotlightAriaLabel({
-              label: presentation.label,
-              sourceCard: presentation.sourceCard,
-              targetCards: presentation.targetCards,
-            })
-          : `Resolving ${presentation.card.name}`;
+        : `Resolving ${presentation.card.name}`;
   const controlButton = ({
     disabled = false,
     icon,
@@ -615,23 +574,18 @@ export const EffectSpotlight = ({
         event.stopPropagation();
       }}
     >
-      {presentation?.kind === "combat" ? (
-        <CombatSpotlightCard
-          attackerCard={presentation.attackerCard}
-          defenderCard={presentation.defenderCard}
-          combat={presentation.combat}
-          timer={timer}
-          timerNowMs={timerNowMs}
-        />
-      ) : presentation?.kind === "targeting" ? (
-        <TargetingSpotlightCard
+      {presentation?.kind === "cardLink" ? (
+        <LinkedCardsSpotlightCard
           active={presentation.active}
-          label={presentation.label}
+          relatedCards={presentation.relatedCards}
+          relatedPowers={presentation.relatedPowers}
+          relationLabel={presentation.relationLabel}
           sourceCard={presentation.sourceCard}
+          sourcePower={presentation.sourcePower}
           spotlightText={spotlightText}
-          targetCards={presentation.targetCards}
           timer={timer}
           timerNowMs={timerNowMs}
+          tone={presentation.tone}
         />
       ) : card === undefined || active === undefined ? null : (
         <div className="effect-spotlight-card">

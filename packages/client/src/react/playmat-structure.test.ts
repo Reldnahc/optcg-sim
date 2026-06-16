@@ -284,11 +284,7 @@ describe("playmat structure", () => {
     assert.equal(matchApp.includes("<EffectSpotlight"), false);
     assert.match(
       effectSpotlightComponent,
-      /presentation\?\.kind === "combat"[\s\S]*"effect-spotlight--combat"/u,
-    );
-    assert.match(
-      effectSpotlightComponent,
-      /presentation\?\.kind === "targeting"[\s\S]*"effect-spotlight--targeting"/u,
+      /presentation\?\.kind === "cardLink"[\s\S]*"effect-spotlight--linked"/u,
     );
     assert.match(
       effectSpotlightStyles,
@@ -320,7 +316,7 @@ describe("playmat structure", () => {
     );
     assert.doesNotMatch(
       effectSpotlightStyles,
-      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*\b(?:width|height)\s*:/u,
+      /\.effect-spotlight--linked\s*\{[^}]*\b(?:width|height)\s*:/u,
     );
     assert.equal(effectSpotlightStyles.includes("calc(100% - 12px)"), false);
     assert.equal(effectSpotlightStyles.includes(" * "), false);
@@ -331,51 +327,43 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
-    );
-    assert.match(
-      effectSpotlightStyles,
-      /\.effect-spotlight-card--combat\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);/u,
-    );
-    assert.match(
-      effectSpotlightStyles,
-      /\.effect-spotlight-card--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);/u,
+      /\.effect-spotlight-card--linked\s*\{[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;[^}]*transform:\s*translate\(-50%,\s*-50%\);[^}]*width:\s*var\(--effect-spotlight-combat-width\);/u,
     );
     assert.doesNotMatch(
       effectSpotlightStyles,
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*max-height\s*:/u,
+      /\.effect-spotlight-card--linked\s*\{[^}]*max-height\s*:/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
+      /\.effect-spotlight-link\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-combat-direction__arrow\s*\{[^}]*stroke:\s*#fff0a7;[^}]*stroke-width:\s*5;/u,
+      /\.effect-spotlight-link\[data-card-link-tone="combat"\]\s+\.effect-spotlight-link-direction__arrow\s*\{[^}]*stroke:\s*#fff0a7;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting-frame\s*\{[^}]*width:\s*100%;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
+      /\.effect-spotlight-link-frame\s*\{[^}]*width:\s*100%;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/u,
+      /\.effect-spotlight-link\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting-rules\s*\{[^}]*box-sizing:\s*border-box;[^}]*width:\s*100%;[^}]*max-height:\s*clamp\(54px,\s*13vh,\s*120px\);[^}]*background:\s*rgba\(246,\s*238,\s*224,\s*0\.92\);/u,
+      /\.effect-spotlight-link-rules\s*\{[^}]*box-sizing:\s*border-box;[^}]*width:\s*100%;[^}]*max-height:\s*clamp\(54px,\s*13vh,\s*120px\);[^}]*background:\s*rgba\(246,\s*238,\s*224,\s*0\.92\);/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s*\{[^}]*padding-right:\s*0;/u,
+      /\.effect-spotlight-link-related-cards\[data-visible-related-count="1"\]\s*\{[^}]*padding-right:\s*0;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s+\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/u,
+      /\.effect-spotlight-link-related-cards\[data-visible-related-count="1"\]\s+\.effect-spotlight-link-card--related\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting-overflow\s*\{[^}]*position:\s*absolute;[^}]*min-width:\s*36px;[^}]*font-weight:\s*950;/u,
+      /\.effect-spotlight-link-overflow\s*\{[^}]*position:\s*absolute;[^}]*min-width:\s*36px;[^}]*font-weight:\s*950;/u,
     );
     assert.match(
       effectSpotlightStyles,

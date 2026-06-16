@@ -357,57 +357,50 @@ describe("EffectSpotlight", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         presentation: {
-          kind: "combat",
-          combat: {
-            eventKind: "blockerActivated",
-            attacker: {
-              instanceId: "attacker-1" as InstanceId,
-              cardId: "OP00-003" as CardId,
-              playerId: "p1" as PlayerId,
-            },
-            defender: {
-              instanceId: "blocker-1" as InstanceId,
-              cardId: "OP00-004" as CardId,
-              playerId: "p2" as PlayerId,
-            },
-            attackerPower: 7000,
-            defenderPower: 3000,
-          },
-          attackerCard: combatCard(
+          kind: "cardLink",
+          sourceCard: combatCard(
             "attacker-1",
             "Attacking Leader",
             "https://example.test/attacker.png",
           ),
-          defenderCard: combatCard(
-            "blocker-1",
-            "Blocking Character",
-            "https://example.test/blocker.png",
-          ),
+          relatedCards: [
+            combatCard(
+              "blocker-1",
+              "Blocking Character",
+              "https://example.test/blocker.png",
+            ),
+          ],
+          relationLabel: "attacks",
+          tone: "combat",
+          sourcePower: 7000,
+          relatedPowers: [3000],
         },
         controls: controls(),
         timer: timer(),
       }),
     );
 
-    expect(html).toContain("effect-spotlight-card--combat");
-    expect(html).toContain("effect-spotlight-combat-card--attacker");
-    expect(html).toContain("effect-spotlight-combat-card--defender");
+    expect(html).toContain("effect-spotlight--linked");
+    expect(html).toContain("effect-spotlight-card--linked");
+    expect(html).toContain('data-card-link-tone="combat"');
+    expect(html).toContain("effect-spotlight-link-card--source");
+    expect(html).toContain("effect-spotlight-link-card--related");
     expect(html).toContain("Attacking Leader");
     expect(html).toContain("Blocking Character");
     expect(html).toContain("7000");
     expect(html).toContain("3000");
     expect(html).toContain("is-power-7000");
     expect(html).toContain("is-weak");
-    expect(html).toContain("effect-spotlight-combat-direction");
+    expect(html).toContain("effect-spotlight-link-direction");
     expect(html).toContain("attacks");
     expect(html).toContain(
-      'aria-label="Combat spotlight: Attacking Leader 7000 attacks Blocking Character 3000"',
+      'aria-label="Linked card spotlight: Attacking Leader 7000 attacks Blocking Character 3000"',
     );
     expect(html).toMatch(
-      /class="effect-spotlight-combat"[^>]*aria-hidden="true"/u,
+      /class="effect-spotlight-link"[^>]*aria-hidden="true"/u,
     );
     expect(html).toMatch(
-      /effect-spotlight-card--combat[\s\S]*effect-spotlight-controls/u,
+      /effect-spotlight-card--linked[\s\S]*effect-spotlight-controls/u,
     );
   });
 
@@ -415,10 +408,10 @@ describe("EffectSpotlight", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         presentation: {
-          kind: "targeting",
+          kind: "cardLink",
           active: active(),
           sourceCard: card(),
-          targetCards: [
+          relatedCards: [
             targetCard(1),
             targetCard(2),
             targetCard(3),
@@ -426,98 +419,94 @@ describe("EffectSpotlight", () => {
             targetCard(5),
             targetCard(6),
           ],
-          label: "targets",
+          relationLabel: "targets",
+          tone: "targeting",
         },
         controls: controls(),
         timer: timer(),
       }),
     );
 
-    expect(html).toContain("effect-spotlight--targeting");
-    expect(html).toContain("effect-spotlight-card--targeting");
-    expect(html).toContain("effect-spotlight-targeting-card--source");
-    expect(html).toContain("effect-spotlight-targeting-targets");
-    expect(html).toContain("effect-spotlight-targeting-rules");
+    expect(html).toContain("effect-spotlight--linked");
+    expect(html).toContain("effect-spotlight-card--linked");
+    expect(html).toContain('data-card-link-tone="targeting"');
+    expect(html).toContain("effect-spotlight-link-card--source");
+    expect(html).toContain("effect-spotlight-link-related-cards");
+    expect(html).toContain("effect-spotlight-link-rules");
     expect(html).toContain("effect-rules-span--active");
     expect(html).toMatch(
-      /effect-spotlight-targeting-rules[\s\S]*On Play[\s\S]*Draw 1 card\./u,
+      /effect-spotlight-link-rules[\s\S]*On Play[\s\S]*Draw 1 card\./u,
     );
-    expect(html).toContain('data-target-count="6"');
+    expect(html).toContain('data-related-count="6"');
     expect(html).toContain("Resolving Card");
     expect(html).toContain("Target 1");
     expect(html).toContain("Target 5");
     expect(html).not.toContain("Target 6");
-    expect(html).toContain("effect-spotlight-targeting-overflow");
+    expect(html).toContain("effect-spotlight-link-overflow");
     expect(html).toContain("+1");
     expect(html).toContain("targets");
     expect(html).toContain(
-      'aria-label="Targeting spotlight: Resolving Card targets Target 1, Target 2, Target 3, Target 4, Target 5, and 1 more"',
+      'aria-label="Linked card spotlight: Resolving Card targets Target 1, Target 2, Target 3, Target 4, Target 5, and 1 more"',
     );
   });
 
-  it("anchors controls to the stable spotlight shell while combat and targeting content can resize", () => {
+  it("anchors controls to the stable spotlight shell while linked-card content can resize", () => {
     const css = effectSpotlightCss();
 
     expect(css).not.toMatch(
-      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*\b(?:width|height)\s*:/su,
+      /\.effect-spotlight--linked\s*\{[^}]*\b(?:width|height)\s*:/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bheight:\s*100%;[^}]*\btransform:\s*translate\(-50%, -50%\);/su,
+      /\.effect-spotlight-card--linked\s*\{[^}]*\bheight:\s*100%;[^}]*\btransform:\s*translate\(-50%, -50%\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-card--combat\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
-    );
-    expect(css).toMatch(
-      /\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
+      /\.effect-spotlight-card--linked\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
     );
     expect(css).not.toMatch(
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bmax-height\s*:/su,
+      /\.effect-spotlight-card--linked\s*\{[^}]*\bmax-height\s*:/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-combat\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
-    );
-    expect(css).toMatch(
-      /\.effect-spotlight-targeting-frame\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+      /\.effect-spotlight-link-frame\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
     );
   });
 
-  it("uses the combat spotlight shell for targeting content", () => {
+  it("uses one linked-card shell for combat and targeting content", () => {
     const css = effectSpotlightCss();
 
     expect(css).not.toMatch(/--effect-spotlight-targeting-width:/su);
     expect(css).toMatch(
-      /\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
+      /\.effect-spotlight-card--linked\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting-frame\s*\{[^}]*\bwidth:\s*100%;[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+      /\.effect-spotlight-link-frame\s*\{[^}]*\bwidth:\s*100%;[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/su,
+      /\.effect-spotlight-link\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 min\(calc\(var\(--card-width\)\s*\+\s*20px\),\s*68%\);/su,
+      /\.effect-spotlight-link-card--related\s*\{[^}]*flex:\s*0 0 min\(calc\(var\(--card-width\)\s*\+\s*20px\),\s*68%\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s*\{[^}]*padding-right:\s*0;/su,
+      /\.effect-spotlight-link-related-cards\[data-visible-related-count="1"\]\s*\{[^}]*padding-right:\s*0;/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s+\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/su,
+      /\.effect-spotlight-link-related-cards\[data-visible-related-count="1"\]\s+\.effect-spotlight-link-card--related\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting-rules\s*\{[^}]*\bwidth:\s*100%;/su,
+      /\.effect-spotlight-link-rules\s*\{[^}]*\bwidth:\s*100%;/su,
     );
   });
 
-  it("styles combat power tone classes for HTML labels", () => {
+  it("styles linked-card power tone classes for HTML labels", () => {
     const css = effectSpotlightCss();
     const toneSelectors = [
-      ".effect-spotlight-combat-power__value.is-weak",
-      ".effect-spotlight-combat-power__value.is-power-5000",
-      ".effect-spotlight-combat-power__value.is-power-6000",
-      ".effect-spotlight-combat-power__value.is-power-7000",
-      ".effect-spotlight-combat-power__value.is-power-8000",
-      ".effect-spotlight-combat-power__value.is-power-9000",
-      ".effect-spotlight-combat-power__value.is-over-10000",
+      ".effect-spotlight-link-power__value.is-weak",
+      ".effect-spotlight-link-power__value.is-power-5000",
+      ".effect-spotlight-link-power__value.is-power-6000",
+      ".effect-spotlight-link-power__value.is-power-7000",
+      ".effect-spotlight-link-power__value.is-power-8000",
+      ".effect-spotlight-link-power__value.is-power-9000",
+      ".effect-spotlight-link-power__value.is-over-10000",
     ];
 
     for (const selector of toneSelectors) {

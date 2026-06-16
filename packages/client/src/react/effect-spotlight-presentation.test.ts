@@ -4,7 +4,10 @@ import type { CardId, CardRef, InstanceId, PlayerId } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { buildEffectSpotlightPresentation } from "./effect-spotlight-presentation.js";
-import type { EffectTextSpotlightActiveSourceInput } from "./use-effect-spotlight-playback.js";
+import type {
+  CombatSpotlightActiveSourceInput,
+  EffectTextSpotlightActiveSourceInput,
+} from "./use-effect-spotlight-playback.js";
 
 const ref = (
   instanceId: string,
@@ -41,7 +44,41 @@ const effectEntry = (
   ...overrides,
 });
 
+const combatEntry = (): CombatSpotlightActiveSourceInput => ({
+  kind: "combat",
+  key: "event:combat",
+  semanticKey: "combat|attack",
+  mode: "resolved",
+  status: "resolved",
+  combat: {
+    eventKind: "attackDeclared",
+    attacker: ref("attacker-1", "OP00-010", "p1"),
+    defender: ref("defender-1", "OP00-020", "p2"),
+    attackerPower: 7000,
+    defenderPower: 5000,
+  },
+});
+
 describe("effect spotlight presentation", () => {
+  it("normalizes combat and targeting spotlights into linked card presentations", () => {
+    const combatPresentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: combatEntry(),
+    });
+
+    expect(combatPresentation?.kind).toBe("cardLink");
+    if (combatPresentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(combatPresentation.sourceCard.name).toBe("Card attacker-1");
+    expect(
+      combatPresentation.relatedCards.map((card) => card.instanceId),
+    ).toEqual(["defender-1"]);
+    expect(combatPresentation.relationLabel).toBe("attacks");
+    expect(combatPresentation.sourcePower).toBe(7000);
+    expect(combatPresentation.relatedPowers).toEqual([5000]);
+  });
+
   it("builds targeting presentation from current active span target links", () => {
     const targetOne = ref("target-1", "OP00-002", "p2");
     const targetTwo = ref("target-2", "OP00-003", "p2");
@@ -68,16 +105,16 @@ describe("effect spotlight presentation", () => {
       }),
     });
 
-    expect(presentation?.kind).toBe("targeting");
-    if (presentation?.kind !== "targeting") {
+    expect(presentation?.kind).toBe("cardLink");
+    if (presentation?.kind !== "cardLink") {
       return;
     }
     expect(presentation.sourceCard.name).toBe("Card source-1");
-    expect(presentation.targetCards.map((card) => card.instanceId)).toEqual([
+    expect(presentation.relatedCards.map((card) => card.instanceId)).toEqual([
       "target-1",
       "target-2",
     ]);
-    expect(presentation.label).toBe("targets");
+    expect(presentation.relationLabel).toBe("targets");
   });
 
   it("keeps effect text presentation when no current target links exist", () => {
