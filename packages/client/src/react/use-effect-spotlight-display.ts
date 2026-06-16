@@ -69,15 +69,62 @@ const entrySpanIds = (
 ): readonly EffectTextSpanId[] =>
   isCombatSpotlightSource(entry) ? [] : entry.active.activeSpanIds;
 
+const sameSpotlightIdentity = (
+  previous: EffectSpotlightState,
+  entry: EffectSpotlightPlaybackEntry,
+  activeKey: string,
+): boolean =>
+  previous.activeKey === activeKey ||
+  (previous.entry.semanticKey !== undefined &&
+    previous.entry.semanticKey === entry.semanticKey);
+
+const entryDetailSignature = (entry: EffectSpotlightPlaybackEntry): string => {
+  if (isCombatSpotlightSource(entry)) {
+    return [
+      entry.combat.eventKind,
+      String(entry.combat.attacker.playerId),
+      String(entry.combat.attacker.instanceId),
+      String(entry.combat.attacker.cardId),
+      String(entry.combat.defender.playerId),
+      String(entry.combat.defender.instanceId),
+      String(entry.combat.defender.cardId),
+      entry.combat.attackerPower === undefined
+        ? ""
+        : String(entry.combat.attackerPower),
+      entry.combat.defenderPower === undefined
+        ? ""
+        : String(entry.combat.defenderPower),
+    ].join("|");
+  }
+  const activeSpanIds = new Set(entry.active.activeSpanIds);
+  return (entry.active.targetLinks ?? [])
+    .filter((link) => activeSpanIds.has(link.spanId) && link.cards.length > 0)
+    .map((link) =>
+      [
+        link.spanId,
+        link.relation,
+        ...link.cards.map((card) =>
+          [
+            String(card.playerId),
+            String(card.instanceId),
+            String(card.cardId),
+          ].join("|"),
+        ),
+      ].join(">"),
+    )
+    .join("\n");
+};
+
 const sameSpotlightEntry = (
   previous: EffectSpotlightState,
   entry: EffectSpotlightPlaybackEntry,
   activeKey: string,
 ): boolean =>
-  previous.activeKey === activeKey &&
+  sameSpotlightIdentity(previous, entry, activeKey) &&
   previous.entry.kind === entry.kind &&
   previous.sourceInstanceId === entrySourceInstanceId(entry) &&
-  spanKey(previous.activeSpanIds) === spanKey(entrySpanIds(entry));
+  spanKey(previous.activeSpanIds) === spanKey(entrySpanIds(entry)) &&
+  entryDetailSignature(previous.entry) === entryDetailSignature(entry);
 
 export const effectSpotlightModel = ({
   cursorVersion,

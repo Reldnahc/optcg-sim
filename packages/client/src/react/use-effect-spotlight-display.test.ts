@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
+  CardRef,
   DecisionId,
   EffectTextSpanId,
   EngineEventId,
@@ -33,6 +34,12 @@ const source = (
   mode,
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
+
+const target: CardRef = {
+  playerId: "p2" as PlayerId,
+  instanceId: "target-1" as InstanceId,
+  cardId: "OP00-002" as CardId,
+};
 
 describe("effect spotlight display", () => {
   it("creates a timed display model for a combat playback entry", () => {
@@ -125,5 +132,125 @@ describe("effect spotlight display", () => {
     });
 
     expect(display?.pinned).toBe(true);
+  });
+
+  it("keeps dwell when a completed-frame projection becomes its final event", () => {
+    const completed = source(
+      "completed-frame:queue:effect:decision:span:search:selection",
+      "span:search:selection",
+    );
+    const finalEvent = source(
+      "event:search:selection",
+      "span:search:selection",
+    );
+    const previous: EffectSpotlightState = {
+      entry: completed,
+      active: completed.active,
+      activeKey: completed.key,
+      activeMode: "resolved",
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:search:selection"],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: false,
+      cursorVersion: 1,
+    };
+
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_500,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: finalEvent,
+      pendingDecisionId: undefined,
+      cursorVersion: 1,
+    });
+
+    expect(display?.activeKey).toBe("event:search:selection");
+    expect(display?.shownAtMs).toBe(1_000);
+    expect(display?.visibleUntilMs).toBe(3_000);
+  });
+
+  it("keeps dwell when a live pending entry becomes its final event", () => {
+    const live = source(
+      "decision:search-select|source-1|effect|span:search:selection",
+      "span:search:selection",
+      "live",
+    );
+    const finalEvent = source(
+      "event:search:selection",
+      "span:search:selection",
+    );
+    const previous: EffectSpotlightState = {
+      entry: live,
+      active: live.active,
+      activeKey: live.key,
+      activeMode: "live",
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:search:selection"],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: true,
+      cursorVersion: 1,
+    };
+
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_500,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: finalEvent,
+      pendingDecisionId: undefined,
+      cursorVersion: 1,
+    });
+
+    expect(display?.activeKey).toBe("event:search:selection");
+    expect(display?.activeMode).toBe("resolved");
+    expect(display?.shownAtMs).toBe(1_000);
+    expect(display?.visibleUntilMs).toBe(3_000);
+    expect(display?.pinned).toBe(false);
+  });
+
+  it("starts fresh dwell when target links are added to the current entry", () => {
+    const untargeted = source("event:targeting", "span:body");
+    const targeted = {
+      ...untargeted,
+      active: {
+        ...untargeted.active,
+        targetLinks: [
+          {
+            spanId: "span:body" as EffectTextSpanId,
+            relation: "selectedTarget" as const,
+            cards: [target],
+          },
+        ],
+      },
+    };
+    const previous: EffectSpotlightState = {
+      entry: untargeted,
+      active: untargeted.active,
+      activeKey: untargeted.key,
+      activeMode: "resolved",
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:body"],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: false,
+      cursorVersion: 1,
+    };
+
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_500,
+      previous,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: targeted,
+      pendingDecisionId: undefined,
+      cursorVersion: 1,
+    });
+
+    expect(display?.shownAtMs).toBe(1_500);
+    expect(display?.visibleUntilMs).toBe(3_500);
+    expect(display?.active?.targetLinks).toEqual(targeted.active.targetLinks);
   });
 });
