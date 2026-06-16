@@ -76,7 +76,7 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
     ).toEqual(activeEffectText);
   });
 
-  it("uses pending decision active text before top-level active text", () => {
+  it("uses pending non-cost decision active text before top-level active text", () => {
     const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
       source,
       textKind: "effect",
@@ -94,26 +94,26 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
       activeEffectTextForSpotlight({
         activeEffectText,
         pendingDecision: {
-          id: "decision:payCost:1" as DecisionId,
-          type: "chooseQuantity",
+          id: "decision:selectTargets:1" as DecisionId,
+          type: "selectTargets",
           playerId: "p1" as PlayerId,
-          prompt: "Pay cost?",
-          causedBy: { type: "ruleProcess", name: "cost" },
+          prompt: "Select target.",
+          causedBy: { type: "ruleProcess", name: "effect" },
           presentation: {
-            title: "Pay cost",
-            instruction: "Pay cost?",
+            title: "Select target",
+            instruction: "Select target.",
             activeEffectText: pendingActiveEffectText,
           },
-          mode: "upTo",
           min: 0,
           max: 1,
+          candidates: [],
         },
         events: [],
       }),
     ).toEqual(pendingActiveEffectText);
   });
 
-  it("returns structured pending decision fallback sources", () => {
+  it("does not spotlight pending pay-cost active text before the cost is paid", () => {
     const pendingActiveEffectText: NonNullable<
       PlayerView["pendingDecision"]
     >["presentation"]["activeEffectText"] = {
@@ -127,7 +127,7 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
         activeEffectText: undefined,
         pendingDecision: {
           id: "decision:payCost:1" as DecisionId,
-          type: "chooseQuantity",
+          type: "payCost",
           playerId: "p1" as PlayerId,
           prompt: "Pay cost?",
           causedBy: { type: "ruleProcess", name: "cost" },
@@ -136,18 +136,47 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
             instruction: "Pay cost?",
             activeEffectText: pendingActiveEffectText,
           },
-          mode: "upTo",
+        },
+        events: [],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("returns structured pending non-cost decision fallback sources", () => {
+    const pendingActiveEffectText: NonNullable<
+      PlayerView["pendingDecision"]
+    >["presentation"]["activeEffectText"] = {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:cost:optional"],
+    };
+
+    expect(
+      activeEffectTextSourceForSpotlight({
+        activeEffectText: undefined,
+        pendingDecision: {
+          id: "decision:selectTargets:1" as DecisionId,
+          type: "selectTargets",
+          playerId: "p1" as PlayerId,
+          prompt: "Select target.",
+          causedBy: { type: "ruleProcess", name: "effect" },
+          presentation: {
+            title: "Select target",
+            instruction: "Select target.",
+            activeEffectText: pendingActiveEffectText,
+          },
           min: 0,
           max: 1,
+          candidates: [],
         },
         events: [],
       }),
     ).toMatchObject({
-      id: "decision:decision:payCost:1|source-1|effect|span:cost:optional",
-      key: "decision:decision:payCost:1|source-1|effect|span:cost:optional",
+      id: "decision:decision:selectTargets:1|source-1|effect|span:cost:optional",
+      key: "decision:decision:selectTargets:1|source-1|effect|span:cost:optional",
       semanticKey: "p1|source-1|OP00-001|effect|span:cost:optional",
       status: "pending",
-      pendingDecisionId: "decision:payCost:1",
+      pendingDecisionId: "decision:selectTargets:1",
     });
   });
 
@@ -355,6 +384,36 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
           source,
           textKind: "effect",
           activeSpanIds: ["span:search:selection", "span:search:remaining"],
+        },
+      },
+    });
+
+    const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:search:selection`,
+      `${String(resolved.id)}:span:search:remaining`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:search:selection"],
+      ["span:search:remaining"],
+    ]);
+  });
+
+  it("does not split search connector spans into queueable spotlight sources", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: [
+            "span:search:selection",
+            "span:search:then",
+            "span:search:remaining",
+          ],
         },
       },
     });

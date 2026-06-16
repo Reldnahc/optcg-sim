@@ -46,12 +46,13 @@ const choiceOptionSpanPattern = /^span:choice:\d+:/u;
 const isResolvedStepSpanId = (
   spanId: ActiveEffectTextPresentation["activeSpanIds"][number],
 ): boolean =>
-  spanId.startsWith(sequenceSpanPrefix) ||
-  spanId.startsWith(searchSpanPrefix) ||
-  spanId.startsWith(costSpanPrefix) ||
-  spanId === bodySpanPrefix ||
-  spanId.startsWith(`${bodySpanPrefix}:`) ||
-  choiceOptionSpanPattern.test(spanId);
+  (spanId.startsWith(sequenceSpanPrefix) ||
+    spanId.startsWith(searchSpanPrefix) ||
+    spanId.startsWith(costSpanPrefix) ||
+    spanId === bodySpanPrefix ||
+    spanId.startsWith(`${bodySpanPrefix}:`) ||
+    choiceOptionSpanPattern.test(spanId)) &&
+  spanId !== "span:search:then";
 
 const splitResolvedSpanIds = (
   activeSpanIds: readonly ActiveEffectTextPresentation["activeSpanIds"][number][],
@@ -319,6 +320,9 @@ export const activeEffectTextSourceForSpotlight = ({
   readonly pendingDecision: PlayerView["pendingDecision"];
   readonly events: readonly EngineEvent[];
 }): EffectSpotlightActiveSource | undefined => {
+  if (pendingDecision?.type === "payCost") {
+    return undefined;
+  }
   if (pendingDecision?.presentation.activeEffectText !== undefined) {
     const pendingActiveEffectText =
       pendingDecision.presentation.activeEffectText;
