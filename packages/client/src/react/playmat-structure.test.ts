@@ -322,7 +322,11 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;/u,
+      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;[^}]*transform:\s*translateY\(clamp\(-14px,\s*-1\.6vh,\s*-7px\)\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-combat-direction__arrow\s*\{[^}]*stroke:\s*#fff0a7;[^}]*stroke-width:\s*5;/u,
     );
     assert.match(
       effectSpotlightStyles,

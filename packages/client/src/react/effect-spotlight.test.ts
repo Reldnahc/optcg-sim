@@ -391,8 +391,10 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("3000");
     expect(html).toContain("is-power-7000");
     expect(html).toContain("is-weak");
+    expect(html).toContain("effect-spotlight-combat-direction");
+    expect(html).toContain("attacks");
     expect(html).toContain(
-      'aria-label="Combat spotlight: Attacking Leader 7000 vs Blocking Character 3000"',
+      'aria-label="Combat spotlight: Attacking Leader 7000 attacks Blocking Character 3000"',
     );
     expect(html).toMatch(
       /class="effect-spotlight-combat"[^>]*aria-hidden="true"/u,

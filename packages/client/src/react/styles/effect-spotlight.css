@@ -437,6 +437,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  transform: translateY(clamp(-14px, -1.6vh, -7px));
 }
 
 .effect-spotlight-combat-card {
@@ -503,8 +504,30 @@
   color: #8f1010;
 }
 
-.effect-spotlight-combat-power__vs {
-  font-size: clamp(12px, 5cqw, 24px);
-  opacity: 0.9;
+.effect-spotlight-combat-direction {
+  display: grid;
+  min-width: 70px;
+  justify-items: center;
+  gap: 2px;
+}
+
+.effect-spotlight-combat-direction__label {
+  color: #fff8da;
+  font-size: clamp(10px, 3cqw, 16px);
+  font-weight: 950;
+  opacity: 0.96;
   text-transform: uppercase;
+}
+
+.effect-spotlight-combat-direction__arrow {
+  width: min(84px, 100%);
+  height: clamp(18px, 5cqw, 30px);
+  overflow: visible;
+  fill: none;
+  stroke: #fff0a7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 5px rgba(255, 216, 92, 0.78))
+    drop-shadow(0 2px 0 rgba(0, 0, 0, 0.75));
 }

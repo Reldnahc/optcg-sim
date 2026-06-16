@@ -295,7 +295,7 @@ const combatSpotlightAriaLabel = ({
   `Combat spotlight: ${combatCardPowerLabel(
     attackerCard,
     combat.attackerPower,
-  )} vs ${combatCardPowerLabel(defenderCard, combat.defenderPower)}`;
+  )} attacks ${combatCardPowerLabel(defenderCard, combat.defenderPower)}`;
 
 const CombatSpotlightCard = ({
   attackerCard,
@@ -322,7 +322,20 @@ const CombatSpotlightCard = ({
       />
       <div className="effect-spotlight-combat-power" aria-hidden="true">
         <CombatPowerValue power={combat.attackerPower} />
-        <span className="effect-spotlight-combat-power__vs">vs</span>
+        <span className="effect-spotlight-combat-direction">
+          <span className="effect-spotlight-combat-direction__label">
+            attacks
+          </span>
+          <svg
+            className="effect-spotlight-combat-direction__arrow"
+            viewBox="0 0 84 28"
+            focusable="false"
+            aria-hidden="true"
+          >
+            <path d="M4 14h64" />
+            <path d="M56 5l20 9-20 9" />
+          </svg>
+        </span>
         <CombatPowerValue power={combat.defenderPower} />
       </div>
       <SpotlightCardFace
