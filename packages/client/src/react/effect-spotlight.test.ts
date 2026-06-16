@@ -41,6 +41,17 @@ const card = (): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const combatCard = (
+  instanceId: string,
+  name: string,
+  imageUrl: string,
+): ClientCardModel => ({
+  ...card(),
+  instanceId: instanceId as InstanceId,
+  name,
+  imageUrl,
+});
+
 const active = (
   overrides: Partial<ActiveEffectTextPresentation> = {},
 ): ActiveEffectTextPresentation => ({
@@ -326,40 +337,53 @@ describe("EffectSpotlight", () => {
     expect(html).not.toContain("effect-spotlight-card");
   });
 
-  it("keeps playback controls visible for combat presentations before combat UI renders", () => {
+  it("renders a two-card combat spotlight with power labels", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         presentation: {
-          kind: "combat" as const,
+          kind: "combat",
           combat: {
-            eventKind: "attackDeclared" as const,
+            eventKind: "blockerActivated",
             attacker: {
               instanceId: "attacker-1" as InstanceId,
-              cardId: "OP00-001" as CardId,
+              cardId: "OP00-003" as CardId,
               playerId: "p1" as PlayerId,
             },
             defender: {
-              instanceId: "defender-1" as InstanceId,
-              cardId: "OP00-002" as CardId,
+              instanceId: "blocker-1" as InstanceId,
+              cardId: "OP00-004" as CardId,
               playerId: "p2" as PlayerId,
             },
+            attackerPower: 7000,
+            defenderPower: 3000,
           },
-          attackerCard: { ...card(), instanceId: "attacker-1" as InstanceId },
-          defenderCard: {
-            ...card(),
-            instanceId: "defender-1" as InstanceId,
-            cardId: "OP00-002" as CardId,
-            name: "Defending Card",
-          },
+          attackerCard: combatCard(
+            "attacker-1",
+            "Attacking Leader",
+            "https://example.test/attacker.png",
+          ),
+          defenderCard: combatCard(
+            "blocker-1",
+            "Blocking Character",
+            "https://example.test/blocker.png",
+          ),
         },
         controls: controls(),
+        timer: timer(),
       }),
     );
 
-    expect(html).toContain("effect-spotlight");
-    expect(html).toContain("effect-spotlight-controls");
-    expect(html).toContain('aria-label="Pause spotlight"');
-    expect(html).not.toContain("effect-spotlight-card");
-    expect(html).not.toContain("Defending Card");
+    expect(html).toContain("effect-spotlight-card--combat");
+    expect(html).toContain("effect-spotlight-combat-card--attacker");
+    expect(html).toContain("effect-spotlight-combat-card--defender");
+    expect(html).toContain("Attacking Leader");
+    expect(html).toContain("Blocking Character");
+    expect(html).toContain("7000");
+    expect(html).toContain("3000");
+    expect(html).toContain("is-power-7000");
+    expect(html).toContain("is-weak");
+    expect(html).toMatch(
+      /effect-spotlight-card--combat[\s\S]*effect-spotlight-controls/u,
+    );
   });
 });

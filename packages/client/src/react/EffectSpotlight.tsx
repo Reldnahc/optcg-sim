@@ -18,6 +18,7 @@ import {
   EffectRulesText,
   renderMainSiteSearchLink,
 } from "./EffectRulesText.js";
+import { battlePowerTone } from "./BattleArrowOverlay.js";
 
 export type EffectSpotlightPresentation =
   | {
@@ -222,6 +223,96 @@ const useSpotlightTimerNowMs = (
   return nowMs;
 };
 
+const SpotlightCardTimer = ({
+  timer,
+  timerNowMs,
+}: {
+  readonly timer: EffectSpotlightTimer | undefined;
+  readonly timerNowMs: number;
+}): React.JSX.Element | null =>
+  timer === undefined ? null : (
+    <div
+      key={timer.animationKey}
+      className={`effect-spotlight-card__timer${
+        timer.paused || timer.pinned ? " is-paused" : ""
+      }`}
+      data-effect-spotlight-timer={timer.animationKey}
+      aria-hidden="true"
+      style={spotlightTimerStyle(timer, timerNowMs)}
+    >
+      <div className="effect-spotlight-card__timer-fill" />
+    </div>
+  );
+
+const SpotlightCardFace = ({
+  card,
+  className,
+}: {
+  readonly card: ClientCardModel;
+  readonly className: string;
+}): React.JSX.Element => (
+  <div className={className}>
+    {card.imageUrl === undefined ? (
+      <div className="effect-spotlight-card__placeholder">{card.name}</div>
+    ) : (
+      <img
+        className="effect-spotlight-card__art"
+        src={card.imageUrl}
+        alt={card.name}
+      />
+    )}
+  </div>
+);
+
+const CombatPowerValue = ({
+  power,
+}: {
+  readonly power: number | undefined;
+}): React.JSX.Element | null =>
+  power === undefined ? null : (
+    <span
+      className={`effect-spotlight-combat-power__value battle-arrow-power-value is-${battlePowerTone(power)}`}
+    >
+      {power}
+    </span>
+  );
+
+const CombatSpotlightCard = ({
+  attackerCard,
+  combat,
+  defenderCard,
+  timer,
+  timerNowMs,
+}: {
+  readonly attackerCard: ClientCardModel;
+  readonly combat: CombatSpotlightPresentation;
+  readonly defenderCard: ClientCardModel;
+  readonly timer: EffectSpotlightTimer | undefined;
+  readonly timerNowMs: number;
+}): React.JSX.Element => (
+  <div className="effect-spotlight-card effect-spotlight-card--combat">
+    <div
+      className="effect-spotlight-combat"
+      data-combat-spotlight-kind={combat.eventKind}
+    >
+      <SpotlightCardFace
+        card={attackerCard}
+        className="effect-spotlight-combat-card effect-spotlight-combat-card--attacker"
+      />
+      <div className="effect-spotlight-combat-power" aria-hidden="true">
+        <CombatPowerValue power={combat.attackerPower} />
+        <span className="effect-spotlight-combat-power__vs">vs</span>
+        <CombatPowerValue power={combat.defenderPower} />
+      </div>
+      <SpotlightCardFace
+        card={defenderCard}
+        className="effect-spotlight-combat-card effect-spotlight-combat-card--defender"
+      />
+    </div>
+    <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
+  </div>
+);
+
 export const EffectSpotlight = ({
   controls,
   presentation,
@@ -232,7 +323,7 @@ export const EffectSpotlight = ({
     presentation?.kind === "effectText" ? presentation.active : undefined;
   const card =
     presentation?.kind === "effectText" ? presentation.card : undefined;
-  if (controls === undefined && (card === undefined || active === undefined)) {
+  if (controls === undefined && presentation === undefined) {
     return null;
   }
   const textKind = active?.textKind ?? "effect";
@@ -267,6 +358,12 @@ export const EffectSpotlight = ({
       event.stopPropagation();
       handler();
     };
+  const ariaLabel =
+    presentation === undefined
+      ? "Spotlight playback"
+      : presentation.kind === "combat"
+        ? "Combat spotlight"
+        : `Resolving ${presentation.card.name}`;
   const controlButton = ({
     disabled = false,
     icon,
@@ -287,14 +384,20 @@ export const EffectSpotlight = ({
   return (
     <aside
       className="effect-spotlight"
-      aria-label={
-        card === undefined ? "Spotlight playback" : `Resolving ${card.name}`
-      }
+      aria-label={ariaLabel}
       onClick={(event) => {
         event.stopPropagation();
       }}
     >
-      {card === undefined || active === undefined ? null : (
+      {presentation?.kind === "combat" ? (
+        <CombatSpotlightCard
+          attackerCard={presentation.attackerCard}
+          defenderCard={presentation.defenderCard}
+          combat={presentation.combat}
+          timer={timer}
+          timerNowMs={timerNowMs}
+        />
+      ) : card === undefined || active === undefined ? null : (
         <div className="effect-spotlight-card">
           {card.imageUrl === undefined ? (
             <div className="effect-spotlight-card__placeholder">
@@ -333,19 +436,7 @@ export const EffectSpotlight = ({
               </div>
             )}
           </div>
-          {timer === undefined ? null : (
-            <div
-              key={timer.animationKey}
-              className={`effect-spotlight-card__timer${
-                timer.paused || timer.pinned ? " is-paused" : ""
-              }`}
-              data-effect-spotlight-timer={timer.animationKey}
-              aria-hidden="true"
-              style={spotlightTimerStyle(timer, timerNowMs)}
-            >
-              <div className="effect-spotlight-card__timer-fill" />
-            </div>
-          )}
+          <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
         </div>
       )}
       {controls === undefined ? null : (

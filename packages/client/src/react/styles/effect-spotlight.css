@@ -403,3 +403,64 @@
     0 0 0 2px rgba(255, 186, 45, 0.38),
     0 1px 4px rgba(85, 49, 0, 0.24);
 }
+
+.effect-spotlight-card--combat {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(
+      circle at 50% 48%,
+      rgba(255, 224, 117, 0.2),
+      transparent 46%
+    ),
+    rgba(16, 20, 25, 0.96);
+}
+
+.effect-spotlight-combat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(58px, 0.34fr) minmax(0, 1fr);
+  gap: clamp(8px, 4cqw, 20px);
+  align-items: center;
+  width: 92%;
+}
+
+.effect-spotlight-combat-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+
+.effect-spotlight-combat-card--attacker {
+  transform: rotate(-3deg);
+}
+
+.effect-spotlight-combat-card--defender {
+  transform: rotate(3deg);
+}
+
+.effect-spotlight-combat-power {
+  display: grid;
+  place-items: center;
+  gap: clamp(2px, 1.5cqw, 8px);
+  color: #f7f1df;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.95),
+    0 0 12px rgba(0, 0, 0, 0.72);
+}
+
+.effect-spotlight-combat-power__value {
+  font-size: clamp(24px, 12cqw, 54px);
+  letter-spacing: 0;
+}
+
+.effect-spotlight-combat-power__vs {
+  font-size: clamp(12px, 5cqw, 24px);
+  opacity: 0.9;
+  text-transform: uppercase;
+}
