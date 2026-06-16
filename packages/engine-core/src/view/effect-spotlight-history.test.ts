@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
+  EffectSpotlightHistoryEntry,
+  EffectTextSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEvent,
   EngineEventId,
@@ -16,6 +18,27 @@ const source = {
   playerId: "p1" as PlayerId,
   instanceId: "source-1" as InstanceId,
   cardId: "OP00-001" as CardId,
+};
+
+const attacker = {
+  playerId: "p1" as PlayerId,
+  instanceId: "attacker-1" as InstanceId,
+  cardId: "OP00-003" as CardId,
+};
+
+const defender = {
+  playerId: "p2" as PlayerId,
+  instanceId: "defender-1" as InstanceId,
+  cardId: "OP00-004" as CardId,
+};
+
+const expectEffectTextEntry = (
+  entry: EffectSpotlightHistoryEntry,
+): EffectTextSpotlightHistoryEntry => {
+  if (entry.kind !== "combat") {
+    return entry;
+  }
+  throw new Error("Expected effect text spotlight history entry.");
 };
 
 const resolvedSearchEvent = (
@@ -107,15 +130,18 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
 
     expect(
-      history?.entries.map((entry) => ({
-        id: entry.id,
-        key: entry.key,
-        semanticKey: entry.semanticKey,
-        status: entry.status,
-        mode: entry.mode,
-        activeSpanIds: entry.active.activeSpanIds,
-        resolvedEventId: entry.resolvedEventId,
-      })),
+      history?.entries.map((entry) => {
+        const effectTextEntry = expectEffectTextEntry(entry);
+        return {
+          id: entry.id,
+          key: entry.key,
+          semanticKey: entry.semanticKey,
+          status: entry.status,
+          mode: entry.mode,
+          activeSpanIds: effectTextEntry.active.activeSpanIds,
+          resolvedEventId: entry.resolvedEventId,
+        };
+      }),
     ).toEqual([
       {
         id: "resolved:event:search:span:search:selection",
@@ -151,9 +177,11 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
       pendingDecisionId: undefined,
     });
 
-    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
-      [["span:choice:0:body"], ["span:choice:1:body"]],
-    );
+    expect(
+      history?.entries.map(
+        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
+      ),
+    ).toEqual([["span:choice:0:body"], ["span:choice:1:body"]]);
     expect(history?.entries.map((entry) => entry.key)).toEqual([
       "event:choice:span:choice:0:body",
       "event:choice:span:choice:1:body",
@@ -172,9 +200,11 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
       pendingDecisionId: undefined,
     });
 
-    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
-      [["span:cost:optional"], ["span:body"]],
-    );
+    expect(
+      history?.entries.map(
+        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
+      ),
+    ).toEqual([["span:cost:optional"], ["span:body"]]);
     expect(history?.entries.map((entry) => entry.key)).toEqual([
       "event:cost-body:span:cost:optional",
       "event:cost-body:span:body",
@@ -198,14 +228,17 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
 
     expect(
-      history?.entries.map((entry) => ({
-        id: entry.id,
-        semanticKey: entry.semanticKey,
-        status: entry.status,
-        mode: entry.mode,
-        pendingDecisionId: entry.pendingDecisionId,
-        activeSpanIds: entry.active.activeSpanIds,
-      })),
+      history?.entries.map((entry) => {
+        const effectTextEntry = expectEffectTextEntry(entry);
+        return {
+          id: entry.id,
+          semanticKey: entry.semanticKey,
+          status: entry.status,
+          mode: entry.mode,
+          pendingDecisionId: effectTextEntry.pendingDecisionId,
+          activeSpanIds: effectTextEntry.active.activeSpanIds,
+        };
+      }),
     ).toEqual([
       {
         id: "resolved:event:search:span:search:selection",
@@ -292,13 +325,144 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
       pendingDecisionId: "decision:orderCards:search",
     });
 
-    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
-      [["span:search:selection"], ["span:search:remaining"]],
-    );
+    expect(
+      history?.entries.map(
+        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
+      ),
+    ).toEqual([["span:search:selection"], ["span:search:remaining"]]);
     expect(history?.entries.map((entry) => entry.status)).toEqual([
       "resolved",
       "pending",
     ]);
     expect(history?.presentKey).toBe(history?.entries.at(-1)?.key);
+  });
+
+  it("projects attack declaration as a combat spotlight entry", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:attack" as EngineEventId,
+          seq: 1,
+          type: "attackDeclared",
+          payload: {
+            attacker,
+            target: defender,
+            attackerPower: 7000,
+            defenderPower: 5000,
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toEqual({
+      entries: [
+        {
+          kind: "combat",
+          id: "combat:event:attack",
+          key: "event:attack",
+          semanticKey:
+            "combat|attackDeclared|p1|attacker-1|OP00-003|p2|defender-1|OP00-004|7000|5000",
+          mode: "resolved",
+          status: "resolved",
+          combat: {
+            eventKind: "attackDeclared",
+            attacker,
+            defender,
+            attackerPower: 7000,
+            defenderPower: 5000,
+          },
+          resolvedEventId: "event:attack",
+        },
+      ],
+      presentKey: "event:attack",
+    });
+  });
+
+  it("projects blocker activation as attacker versus blocker", () => {
+    const blocker = {
+      playerId: "p2" as PlayerId,
+      instanceId: "blocker-1" as InstanceId,
+      cardId: "OP00-005" as CardId,
+    };
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:blocker" as EngineEventId,
+          seq: 1,
+          type: "blockerActivated",
+          payload: {
+            attacker,
+            blocker,
+            previousTarget: defender,
+            currentTarget: blocker,
+            attackerPower: 7000,
+            defenderPower: 3000,
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries[0]).toMatchObject({
+      kind: "combat",
+      key: "event:blocker",
+      combat: {
+        eventKind: "blockerActivated",
+        attacker,
+        defender: blocker,
+        attackerPower: 7000,
+        defenderPower: 3000,
+      },
+    });
+  });
+
+  it("skips malformed combat spotlight payloads", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:bad-attack" as EngineEventId,
+          seq: 1,
+          type: "attackDeclared",
+          payload: { attacker },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toBeUndefined();
+  });
+
+  it("skips non-public combat spotlight events", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:hidden-attack" as EngineEventId,
+          seq: 1,
+          type: "attackDeclared",
+          payload: {
+            attacker,
+            target: defender,
+            attackerPower: 7000,
+            defenderPower: 5000,
+          },
+          visibility: { type: "replayOnly" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toBeUndefined();
   });
 });

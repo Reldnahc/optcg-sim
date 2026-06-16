@@ -1,6 +1,8 @@
 import type {
   ActiveEffectTextPresentation,
   CardId,
+  CardRef,
+  CombatSpotlightPresentation,
   DecisionId,
   EffectId,
   EffectSpotlightHistory,
@@ -14,6 +16,23 @@ import type {
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+
+const isCardRef = (value: unknown): value is CardRef => {
+  if (!isObjectRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value["playerId"] === "string" &&
+    typeof value["instanceId"] === "string" &&
+    typeof value["cardId"] === "string"
+  );
+};
+
+const numberPayloadValue = (
+  payload: Record<string, unknown>,
+  key: string,
+): number | undefined =>
+  typeof payload[key] === "number" ? payload[key] : undefined;
 
 const isActiveEffectTextPresentation = (
   value: unknown,
@@ -100,6 +119,20 @@ const semanticKeyForActive = (active: ActiveEffectTextPresentation): string =>
     active.activeSpanIds.join("\n"),
   ].join("|");
 
+const combatSemanticKey = (combat: CombatSpotlightPresentation): string =>
+  [
+    "combat",
+    combat.eventKind,
+    String(combat.attacker.playerId),
+    String(combat.attacker.instanceId),
+    String(combat.attacker.cardId),
+    String(combat.defender.playerId),
+    String(combat.defender.instanceId),
+    String(combat.defender.cardId),
+    combat.attackerPower === undefined ? "" : String(combat.attackerPower),
+    combat.defenderPower === undefined ? "" : String(combat.defenderPower),
+  ].join("|");
+
 const pendingEntryId = (
   pendingDecisionId: DecisionId | string,
   active: ActiveEffectTextPresentation,
@@ -136,6 +169,70 @@ const resolvedEntryForActive = ({
       ? {}
       : { effectBlockId: metadata.effectBlockId as EffectId }),
   };
+};
+
+const combatEntryForEvent = (
+  event: EngineEvent,
+): EffectSpotlightHistoryEntry | undefined => {
+  if (event.visibility.type !== "public" || !isObjectRecord(event.payload)) {
+    return undefined;
+  }
+
+  if (event.type === "attackDeclared") {
+    const attacker = event.payload["attacker"];
+    const defender = event.payload["target"];
+    if (!isCardRef(attacker) || !isCardRef(defender)) {
+      return undefined;
+    }
+    const attackerPower = numberPayloadValue(event.payload, "attackerPower");
+    const defenderPower = numberPayloadValue(event.payload, "defenderPower");
+    const combat: CombatSpotlightPresentation = {
+      eventKind: "attackDeclared",
+      attacker,
+      defender,
+      ...(attackerPower === undefined ? {} : { attackerPower }),
+      ...(defenderPower === undefined ? {} : { defenderPower }),
+    };
+    return {
+      kind: "combat",
+      id: `combat:${String(event.id)}`,
+      key: String(event.id),
+      semanticKey: combatSemanticKey(combat),
+      mode: "resolved",
+      status: "resolved",
+      combat,
+      resolvedEventId: event.id,
+    };
+  }
+
+  if (event.type === "blockerActivated") {
+    const attacker = event.payload["attacker"];
+    const defender = event.payload["blocker"];
+    if (!isCardRef(attacker) || !isCardRef(defender)) {
+      return undefined;
+    }
+    const attackerPower = numberPayloadValue(event.payload, "attackerPower");
+    const defenderPower = numberPayloadValue(event.payload, "defenderPower");
+    const combat: CombatSpotlightPresentation = {
+      eventKind: "blockerActivated",
+      attacker,
+      defender,
+      ...(attackerPower === undefined ? {} : { attackerPower }),
+      ...(defenderPower === undefined ? {} : { defenderPower }),
+    };
+    return {
+      kind: "combat",
+      id: `combat:${String(event.id)}`,
+      key: String(event.id),
+      semanticKey: combatSemanticKey(combat),
+      mode: "resolved",
+      status: "resolved",
+      combat,
+      resolvedEventId: event.id,
+    };
+  }
+
+  return undefined;
 };
 
 const playedCardEntryForEvent = (
@@ -180,6 +277,11 @@ const playedCardEntryForEvent = (
 const resolvedEntriesForEvent = (
   event: EngineEvent,
 ): readonly EffectSpotlightHistoryEntry[] => {
+  const combatEntry = combatEntryForEvent(event);
+  if (combatEntry !== undefined) {
+    return [combatEntry];
+  }
+
   const presentation = presentationForEvent(event);
   if (presentation === undefined) {
     return [];
@@ -290,8 +392,10 @@ const matchingResolvedEntryKeySinceLastQueue = ({
     if (event === undefined || event.type === "effectQueued") {
       return undefined;
     }
-    const matchingEntry = resolvedEntriesForEvent(event).find((entry) =>
-      sameEffectTextPresentation(entry.active, activeEffectText),
+    const matchingEntry = resolvedEntriesForEvent(event).find(
+      (entry) =>
+        entry.kind !== "combat" &&
+        sameEffectTextPresentation(entry.active, activeEffectText),
     );
     if (matchingEntry !== undefined) {
       return matchingEntry.key;
