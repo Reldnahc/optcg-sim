@@ -193,6 +193,107 @@ const shouldReplaceServerTimelineEntry = (
   );
 };
 
+const serverTimelineSourceKeys = (
+  sources: readonly EffectSpotlightActiveSourceInput[],
+): ReadonlySet<string> => new Set(sources.map((source) => source.key));
+
+const serverTimelineSourceSemanticKeys = (
+  sources: readonly EffectSpotlightActiveSourceInput[],
+): ReadonlySet<string> =>
+  new Set(
+    sources.flatMap((source) =>
+      source.semanticKey === undefined ? [] : [source.semanticKey],
+    ),
+  );
+
+const releaseConsumedKeysOutsideServerTimeline = (
+  consumedKeys: Set<string>,
+  sourceKeys: ReadonlySet<string>,
+): void => {
+  for (const key of consumedKeys) {
+    if (!sourceKeys.has(key)) {
+      consumedKeys.delete(key);
+    }
+  }
+};
+
+const serverTimelineKeepsEntry = ({
+  entry,
+  sourceKeys,
+  sourceSemanticKeys,
+}: {
+  readonly entry: EffectSpotlightPlaybackEntry;
+  readonly sourceKeys: ReadonlySet<string>;
+  readonly sourceSemanticKeys: ReadonlySet<string>;
+}): boolean =>
+  sourceKeys.has(entry.key) ||
+  (entry.mode === "live" &&
+    entry.semanticKey !== undefined &&
+    sourceSemanticKeys.has(entry.semanticKey));
+
+const serverTimelineCursorIndex = ({
+  entries,
+  previousCursorEntry,
+}: {
+  readonly entries: readonly EffectSpotlightPlaybackEntry[];
+  readonly previousCursorEntry: EffectSpotlightPlaybackEntry | undefined;
+}): number | undefined => {
+  if (previousCursorEntry === undefined) {
+    return undefined;
+  }
+  const keyIndex = entries.findIndex(
+    (entry) => entry.key === previousCursorEntry.key,
+  );
+  if (keyIndex >= 0) {
+    return keyIndex;
+  }
+  if (
+    previousCursorEntry.mode !== "live" ||
+    previousCursorEntry.semanticKey === undefined
+  ) {
+    return undefined;
+  }
+  const semanticIndex = entries.findIndex(
+    (entry) => entry.semanticKey === previousCursorEntry.semanticKey,
+  );
+  return semanticIndex >= 0 ? semanticIndex : undefined;
+};
+
+const reconcileServerTimelinePlayback = ({
+  consumedKeys,
+  previous,
+  sources,
+}: {
+  readonly consumedKeys: Set<string>;
+  readonly previous: EffectSpotlightPlaybackState;
+  readonly sources: readonly EffectSpotlightActiveSourceInput[];
+}): EffectSpotlightPlaybackState => {
+  const sourceKeys = serverTimelineSourceKeys(sources);
+  releaseConsumedKeysOutsideServerTimeline(consumedKeys, sourceKeys);
+
+  if (previous.entries.length === 0) {
+    return previous;
+  }
+
+  const sourceSemanticKeys = serverTimelineSourceSemanticKeys(sources);
+  const previousCursorEntry =
+    previous.cursorIndex === undefined
+      ? undefined
+      : previous.entries[previous.cursorIndex];
+  const entries = previous.entries.filter((entry) =>
+    serverTimelineKeepsEntry({ entry, sourceKeys, sourceSemanticKeys }),
+  );
+  if (entries.length === previous.entries.length) {
+    return previous;
+  }
+
+  return {
+    ...previous,
+    entries,
+    cursorIndex: serverTimelineCursorIndex({ entries, previousCursorEntry }),
+  };
+};
+
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,
   initialCursorKey,
@@ -201,31 +302,37 @@ export const appendSpotlightPlaybackSources = ({
   sourceKind = "legacyFallback",
   sources,
 }: {
-  readonly consumedKeys: ReadonlySet<string>;
+  readonly consumedKeys: Set<string>;
   readonly initialCursorKey?: string | undefined;
   readonly suppressedResolvedSignatures?: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
   readonly sourceKind?: EffectSpotlightSourceKind | undefined;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
-  const queuedKeys = new Set(previous.entries.map((source) => source.key));
+  const reconciledPrevious =
+    sourceKind === "serverTimeline"
+      ? reconcileServerTimelinePlayback({ consumedKeys, previous, sources })
+      : previous;
+  const queuedKeys = new Set(
+    reconciledPrevious.entries.map((source) => source.key),
+  );
   let entries: EffectSpotlightPlaybackEntry[] | undefined;
   let firstAppendedIndex: number | undefined;
   let replacementReplayIndex: number | undefined;
   for (const source of sources) {
     if (sourceKind === "serverTimeline" && source.semanticKey !== undefined) {
-      const semanticIndex = previous.entries.findIndex((entry) =>
+      const semanticIndex = reconciledPrevious.entries.findIndex((entry) =>
         shouldReplaceServerTimelineEntry(entry, source),
       );
       if (semanticIndex >= 0) {
-        const previousEntry = previous.entries[semanticIndex];
-        entries ??= [...previous.entries];
+        const previousEntry = reconciledPrevious.entries[semanticIndex];
+        entries ??= [...reconciledPrevious.entries];
         entries[semanticIndex] = source;
         queuedKeys.add(source.key);
         if (
           previousEntry !== undefined &&
-          previous.cursorIndex === undefined &&
-          previous.fastForwarded !== true &&
+          reconciledPrevious.cursorIndex === undefined &&
+          reconciledPrevious.fastForwarded !== true &&
           shouldReplayServerTimelineReplacement(previousEntry, source)
         ) {
           replacementReplayIndex ??= semanticIndex;
@@ -234,18 +341,18 @@ export const appendSpotlightPlaybackSources = ({
       }
     }
     if (sourceKind === "serverTimeline") {
-      const keyIndex = previous.entries.findIndex(
+      const keyIndex = reconciledPrevious.entries.findIndex(
         (entry) => entry.key === source.key,
       );
       if (keyIndex >= 0) {
-        const previousEntry = previous.entries[keyIndex];
-        entries ??= [...previous.entries];
+        const previousEntry = reconciledPrevious.entries[keyIndex];
+        entries ??= [...reconciledPrevious.entries];
         entries[keyIndex] = source;
         queuedKeys.add(source.key);
         if (
           previousEntry !== undefined &&
-          previous.cursorIndex === undefined &&
-          previous.fastForwarded !== true &&
+          reconciledPrevious.cursorIndex === undefined &&
+          reconciledPrevious.fastForwarded !== true &&
           shouldReplayServerTimelineReplacement(previousEntry, source)
         ) {
           replacementReplayIndex ??= keyIndex;
@@ -268,16 +375,16 @@ export const appendSpotlightPlaybackSources = ({
       );
       continue;
     }
-    entries ??= [...previous.entries];
+    entries ??= [...reconciledPrevious.entries];
     firstAppendedIndex ??= entries.length;
     entries.push(source);
     queuedKeys.add(source.key);
   }
   if (entries === undefined) {
-    return previous;
+    return reconciledPrevious;
   }
   const initialCursorIndex =
-    previous.entries.length === 0 && initialCursorKey !== undefined
+    reconciledPrevious.entries.length === 0 && initialCursorKey !== undefined
       ? entries.findIndex((source) => source.key === initialCursorKey)
       : -1;
   const initialCursorEntry =
@@ -291,13 +398,13 @@ export const appendSpotlightPlaybackSources = ({
   return {
     entries,
     cursorIndex:
-      previous.cursorIndex === undefined
+      reconciledPrevious.cursorIndex === undefined
         ? usableInitialCursorIndex >= 0
           ? usableInitialCursorIndex
           : (replacementReplayIndex ?? firstAppendedIndex)
-        : previous.cursorIndex,
-    paused: previous.paused,
-    fastForwarded: previous.fastForwarded ?? false,
+        : reconciledPrevious.cursorIndex,
+    paused: reconciledPrevious.paused,
+    fastForwarded: reconciledPrevious.fastForwarded ?? false,
   };
 };
 

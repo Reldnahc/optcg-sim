@@ -239,6 +239,42 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBeUndefined();
   });
 
+  it("reconciles local playback when rollback removes server timeline entries", () => {
+    const first = source("event:first", "span:first");
+    const rolledBack = source("event:rolled-back", "span:rolled-back");
+    const consumedKeys = new Set(["event:rolled-back"]);
+
+    const reconciled = appendSpotlightPlaybackSources({
+      consumedKeys,
+      previous: {
+        entries: [first, rolledBack],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [first],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(reconciled.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+    ]);
+    expect(consumedKeys.has("event:rolled-back")).toBe(false);
+
+    const replayed = appendSpotlightPlaybackSources({
+      consumedKeys,
+      previous: reconciled,
+      sources: [first, rolledBack],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(replayed.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:rolled-back",
+    ]);
+    expect(replayed.cursorIndex).toBe(1);
+  });
+
   it("does not replay late target links after explicit fast-forward", () => {
     const plainResolved = source("event:resolved", "span:body");
     const targetLinkedResolved = withSelectedTarget(plainResolved);
