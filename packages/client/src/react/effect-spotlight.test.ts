@@ -85,6 +85,23 @@ const controls = (
   ...overrides,
 });
 
+const timer = (
+  overrides: Partial<{
+    readonly shownAtMs: number;
+    readonly visibleUntilMs: number;
+    readonly paused: boolean;
+    readonly pinned: boolean;
+    readonly animationKey: string;
+  }> = {},
+) => ({
+  shownAtMs: 1_000,
+  visibleUntilMs: 3_000,
+  paused: false,
+  pinned: false,
+  animationKey: "spotlight:source-1:1",
+  ...overrides,
+});
+
 describe("EffectSpotlight", () => {
   it("renders the resolving card text with active span highlights", () => {
     const html = renderToStaticMarkup(
@@ -286,6 +303,67 @@ describe("EffectSpotlight", () => {
     expect(html).toContain('aria-label="Play spotlight"');
     expect(html).toContain('aria-label="Next spotlight"');
     expect(html).not.toContain('aria-label="Pause spotlight"');
+  });
+
+  it("renders a draining timer across the bottom of the spotlight card", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: card(),
+        timer: timer(),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(html).toContain(
+      'data-effect-spotlight-timer="spotlight:source-1:1"',
+    );
+    expect(html).toContain("effect-spotlight-card__timer");
+    expect(html).toContain("effect-spotlight-card__timer-fill");
+    expect(html).toContain("--effect-spotlight-timer-duration:2000ms");
+  });
+
+  it("freezes the spotlight timer while playback is paused or pinned", () => {
+    const pausedHtml = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: card(),
+        timer: timer({ paused: true }),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+    const pinnedHtml = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        card: card(),
+        timer: timer({ pinned: true }),
+        active: {
+          source: {
+            instanceId: "source-1" as InstanceId,
+            cardId: "OP00-001" as CardId,
+            playerId: "p1" as PlayerId,
+          },
+          textKind: "effect",
+          activeSpanIds: ["span:body:draw"],
+        },
+      }),
+    );
+
+    expect(pausedHtml).toContain("effect-spotlight-card__timer is-paused");
+    expect(pinnedHtml).toContain("effect-spotlight-card__timer is-paused");
   });
 
   it("keeps playback controls visible without an active spotlight card", () => {

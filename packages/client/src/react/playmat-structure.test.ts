@@ -255,7 +255,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       matchApp,
-      /sourceKind: effectSpotlightHistory === undefined\s+\? "legacyFallback"\s+:\s+"serverTimeline"/u,
+      /sourceKind:\s+effectSpotlightHistory === undefined\s+\? "legacyFallback"\s+:\s+"serverTimeline"/u,
     );
     assert.match(matchApp, /effectSpotlightActive=\{effectSpotlightActive\}/u);
     assert.match(
@@ -302,6 +302,22 @@ describe("playmat structure", () => {
     assert.match(
       effectSpotlightStyles,
       /\.effect-spotlight-control__icon\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__timer\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*0;[^}]*height:\s*4px;[^}]*pointer-events:\s*none;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__timer-fill\s*\{[^}]*background:\s*#ffd84a;[^}]*animation:\s*effect-spotlight-timer-drain\s+var\(--effect-spotlight-timer-duration\)\s+linear\s+forwards;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__timer\.is-paused\s+\.effect-spotlight-card__timer-fill\s*\{[^}]*animation-play-state:\s*paused;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /@keyframes effect-spotlight-timer-drain/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*18%;/u);

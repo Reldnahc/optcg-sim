@@ -337,15 +337,28 @@ export const MatchApp = ({
     consumeInitialResolvedSources: effectSpotlightHistory === undefined,
     initialCursorKey: effectSpotlightHistory?.presentKey,
     pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
-    sourceKind: effectSpotlightHistory === undefined
-      ? "legacyFallback"
-      : "serverTimeline",
+    sourceKind:
+      effectSpotlightHistory === undefined
+        ? "legacyFallback"
+        : "serverTimeline",
   });
   const effectSpotlightActive = effectSpotlight?.active;
   const effectSpotlightCard =
     effectSpotlightActive === undefined
       ? undefined
       : cardModel(effectSpotlightActive.source);
+  const effectSpotlightTimer =
+    effectSpotlight === undefined || effectSpotlight.active === undefined
+      ? undefined
+      : {
+          shownAtMs: effectSpotlight.shownAtMs,
+          visibleUntilMs: effectSpotlight.visibleUntilMs,
+          paused: effectSpotlight.controls.paused,
+          pinned: effectSpotlight.pinned,
+          animationKey: `${effectSpotlight.activeKey}:${String(
+            effectSpotlight.shownAtMs,
+          )}`,
+        };
   const {
     combineDropTarget,
     completeInfoGroupDrag,
@@ -538,6 +551,7 @@ export const MatchApp = ({
           effectSpotlightActive={effectSpotlightActive}
           effectSpotlightCard={effectSpotlightCard}
           effectSpotlightControls={effectSpotlight?.controls}
+          effectSpotlightTimer={effectSpotlightTimer}
           selectedCardInstanceId={selectedCardInstanceId}
           pendingChoiceInstanceIds={pendingChoiceInstanceIds}
           decisionSelectedInstanceIds={decisionSelectedInstanceIds}

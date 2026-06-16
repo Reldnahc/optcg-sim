@@ -6,7 +6,10 @@ import type {
 import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
 import { useEffect, useRef, useState } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
-import { EffectSpotlight } from "./EffectSpotlight.js";
+import {
+  EffectSpotlight,
+  type EffectSpotlightTimer,
+} from "./EffectSpotlight.js";
 import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
@@ -21,6 +24,7 @@ export interface BoardLayoutProps {
   effectSpotlightActive?: ActiveEffectTextPresentation | undefined;
   effectSpotlightCard?: ClientCardModel | undefined;
   effectSpotlightControls?: EffectSpotlightControls | undefined;
+  effectSpotlightTimer?: EffectSpotlightTimer | undefined;
   selectedCardInstanceId?: string | undefined;
   pendingChoiceInstanceIds?: readonly string[] | undefined;
   decisionSelectedInstanceIds?: readonly string[] | undefined;
@@ -249,6 +253,7 @@ export const BoardLayout = ({
   effectSpotlightActive,
   effectSpotlightCard,
   effectSpotlightControls,
+  effectSpotlightTimer,
   selectedCardInstanceId,
   pendingChoiceInstanceIds = [],
   decisionSelectedInstanceIds = [],
@@ -300,6 +305,7 @@ export const BoardLayout = ({
           card={effectSpotlightCard}
           active={effectSpotlightActive}
           controls={effectSpotlightControls}
+          timer={effectSpotlightTimer}
         />
         {decisionPrompt === undefined ? null : (
           <div className="decision-status-prompt" role="status">

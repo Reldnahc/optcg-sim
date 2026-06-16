@@ -2,7 +2,7 @@ import type {
   ActiveEffectTextPresentation,
   EffectTextSourceMap,
 } from "@optcg/types";
-import type { MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 
 import type { ClientCardModel } from "../view-model.js";
 import { TriggerBlock } from "optcg-card-rules";
@@ -16,7 +16,16 @@ import {
 export interface EffectSpotlightProps {
   readonly card: ClientCardModel | undefined;
   readonly active: ActiveEffectTextPresentation | undefined;
+  readonly timer?: EffectSpotlightTimer | undefined;
   readonly controls?: EffectSpotlightControls | undefined;
+}
+
+export interface EffectSpotlightTimer {
+  readonly shownAtMs: number;
+  readonly visibleUntilMs: number;
+  readonly paused: boolean;
+  readonly pinned: boolean;
+  readonly animationKey: string;
 }
 
 interface SpotlightText {
@@ -24,7 +33,12 @@ interface SpotlightText {
   readonly sourceMap: EffectTextSourceMap | undefined;
 }
 
-type SpotlightControlIconName = "catchUp" | "next" | "pause" | "play" | "previous";
+type SpotlightControlIconName =
+  | "catchUp"
+  | "next"
+  | "pause"
+  | "play"
+  | "previous";
 
 interface SpotlightControlButtonInput {
   readonly label: string;
@@ -34,6 +48,8 @@ interface SpotlightControlButtonInput {
 }
 
 const parentheticalReminderPattern = /\s*\([^)]*\)/gu;
+type SpotlightTimerStyle = CSSProperties &
+  Record<"--effect-spotlight-timer-duration", string>;
 
 const SpotlightControlIcon = ({
   icon,
@@ -43,11 +59,7 @@ const SpotlightControlIcon = ({
   const paths = (() => {
     switch (icon) {
       case "catchUp":
-        return [
-          "M4 5v14l7-7z",
-          "M11 5v14l7-7z",
-          "M19 5h2v14h-2z",
-        ];
+        return ["M4 5v14l7-7z", "M11 5v14l7-7z", "M19 5h2v14h-2z"];
       case "next":
         return ["M6 5v14l9-7z", "M16 5h2v14h-2z"];
       case "pause":
@@ -131,10 +143,19 @@ const spotlightTextWithoutReminders = (
   };
 };
 
+const spotlightTimerStyle = (
+  timer: EffectSpotlightTimer,
+): SpotlightTimerStyle => ({
+  "--effect-spotlight-timer-duration": `${String(
+    Math.max(1, timer.visibleUntilMs - timer.shownAtMs),
+  )}ms`,
+});
+
 export const EffectSpotlight = ({
   active,
   card,
   controls,
+  timer,
 }: EffectSpotlightProps): React.JSX.Element | null => {
   if (controls === undefined && (card === undefined || active === undefined)) {
     return null;
@@ -237,6 +258,19 @@ export const EffectSpotlight = ({
               </div>
             )}
           </div>
+          {timer === undefined ? null : (
+            <div
+              key={timer.animationKey}
+              className={`effect-spotlight-card__timer${
+                timer.paused || timer.pinned ? " is-paused" : ""
+              }`}
+              data-effect-spotlight-timer={timer.animationKey}
+              aria-hidden="true"
+              style={spotlightTimerStyle(timer)}
+            >
+              <div className="effect-spotlight-card__timer-fill" />
+            </div>
+          )}
         </div>
       )}
       {controls === undefined ? null : (
