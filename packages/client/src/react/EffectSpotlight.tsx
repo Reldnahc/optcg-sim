@@ -344,6 +344,45 @@ const targetingSpotlightAriaLabel = ({
   )}`;
 };
 
+const SpotlightRulesPanel = ({
+  active,
+  card,
+  className,
+  spotlightText,
+  triggerSpotlightText,
+}: {
+  readonly active: ActiveEffectTextPresentation;
+  readonly card: ClientCardModel;
+  readonly className: string;
+  readonly spotlightText: SpotlightText | undefined;
+  readonly triggerSpotlightText?: SpotlightText | undefined;
+}): React.JSX.Element => (
+  <div className={className}>
+    <div className="effect-spotlight-card__main-rules">
+      {spotlightText === undefined ? (
+        <div className="effect-spotlight-card__fallback">{card.name}</div>
+      ) : (
+        <EffectRulesText
+          text={spotlightText.text}
+          sourceMap={spotlightText.sourceMap}
+          activeSpanIds={active.activeSpanIds}
+          compact
+          preserveNewlines
+        />
+      )}
+    </div>
+    {triggerSpotlightText === undefined ? null : (
+      <div className="effect-spotlight-card__trigger-rules">
+        <TriggerBlock
+          text={triggerSpotlightText.text}
+          compact
+          renderSearchLink={renderMainSiteSearchLink}
+        />
+      </div>
+    )}
+  </div>
+);
+
 const CombatSpotlightCard = ({
   attackerCard,
   combat,
@@ -402,14 +441,18 @@ const targetSlotClassName = (index: number): string =>
   )}`;
 
 const TargetingSpotlightCard = ({
+  active,
   label,
   sourceCard,
+  spotlightText,
   targetCards,
   timer,
   timerNowMs,
 }: {
+  readonly active: ActiveEffectTextPresentation;
   readonly label: string;
   readonly sourceCard: ClientCardModel;
+  readonly spotlightText: SpotlightText | undefined;
   readonly targetCards: readonly ClientCardModel[];
   readonly timer: EffectSpotlightTimer | undefined;
   readonly timerNowMs: number;
@@ -418,47 +461,55 @@ const TargetingSpotlightCard = ({
   const overflowCount = Math.max(0, targetCards.length - maxVisibleTargetCards);
   return (
     <div className="effect-spotlight-card effect-spotlight-card--targeting">
-      <div
-        className="effect-spotlight-targeting"
-        data-target-count={targetCards.length}
-        aria-hidden="true"
-      >
-        <SpotlightCardFace
-          card={sourceCard}
-          className="effect-spotlight-targeting-card effect-spotlight-targeting-card--source"
-        />
-        <div className="effect-spotlight-targeting-direction">
-          <span className="effect-spotlight-targeting-direction__label">
-            {label}
-          </span>
-          <svg
-            className="effect-spotlight-targeting-direction__arrow"
-            viewBox="0 0 84 28"
-            focusable="false"
-            aria-hidden="true"
-          >
-            <path d="M4 14h64" />
-            <path d="M56 5l20 9-20 9" />
-          </svg>
-        </div>
+      <div className="effect-spotlight-targeting-frame">
         <div
-          className="effect-spotlight-targeting-targets"
+          className="effect-spotlight-targeting"
           data-target-count={targetCards.length}
-          data-visible-target-count={visibleTargetCards.length}
+          aria-hidden="true"
         >
-          {visibleTargetCards.map((targetCard, index) => (
-            <SpotlightCardFace
-              key={`${String(targetCard.instanceId)}:${String(index)}`}
-              card={targetCard}
-              className={targetSlotClassName(index)}
-            />
-          ))}
-          {overflowCount === 0 ? null : (
-            <div className="effect-spotlight-targeting-overflow">
-              +{String(overflowCount)}
-            </div>
-          )}
+          <SpotlightCardFace
+            card={sourceCard}
+            className="effect-spotlight-targeting-card effect-spotlight-targeting-card--source"
+          />
+          <div className="effect-spotlight-targeting-direction">
+            <span className="effect-spotlight-targeting-direction__label">
+              {label}
+            </span>
+            <svg
+              className="effect-spotlight-targeting-direction__arrow"
+              viewBox="0 0 84 28"
+              focusable="false"
+              aria-hidden="true"
+            >
+              <path d="M4 14h64" />
+              <path d="M56 5l20 9-20 9" />
+            </svg>
+          </div>
+          <div
+            className="effect-spotlight-targeting-targets"
+            data-target-count={targetCards.length}
+            data-visible-target-count={visibleTargetCards.length}
+          >
+            {visibleTargetCards.map((targetCard, index) => (
+              <SpotlightCardFace
+                key={`${String(targetCard.instanceId)}:${String(index)}`}
+                card={targetCard}
+                className={targetSlotClassName(index)}
+              />
+            ))}
+            {overflowCount === 0 ? null : (
+              <div className="effect-spotlight-targeting-overflow">
+                +{String(overflowCount)}
+              </div>
+            )}
+          </div>
         </div>
+        <SpotlightRulesPanel
+          active={active}
+          card={sourceCard}
+          className="effect-spotlight-targeting-rules"
+          spotlightText={spotlightText}
+        />
       </div>
       <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
     </div>
@@ -472,9 +523,15 @@ export const EffectSpotlight = ({
 }: EffectSpotlightProps): React.JSX.Element | null => {
   const timerNowMs = useSpotlightTimerNowMs(timer);
   const active =
-    presentation?.kind === "effectText" ? presentation.active : undefined;
+    presentation?.kind === "effectText" || presentation?.kind === "targeting"
+      ? presentation.active
+      : undefined;
   const card =
-    presentation?.kind === "effectText" ? presentation.card : undefined;
+    presentation?.kind === "effectText"
+      ? presentation.card
+      : presentation?.kind === "targeting"
+        ? presentation.sourceCard
+        : undefined;
   if (controls === undefined && presentation === undefined) {
     return null;
   }
@@ -568,8 +625,10 @@ export const EffectSpotlight = ({
         />
       ) : presentation?.kind === "targeting" ? (
         <TargetingSpotlightCard
+          active={presentation.active}
           label={presentation.label}
           sourceCard={presentation.sourceCard}
+          spotlightText={spotlightText}
           targetCards={presentation.targetCards}
           timer={timer}
           timerNowMs={timerNowMs}
@@ -587,32 +646,13 @@ export const EffectSpotlight = ({
               alt={card.name}
             />
           )}
-          <div className="effect-spotlight-card__rules">
-            <div className="effect-spotlight-card__main-rules">
-              {spotlightText === undefined ? (
-                <div className="effect-spotlight-card__fallback">
-                  {card.name}
-                </div>
-              ) : (
-                <EffectRulesText
-                  text={spotlightText.text}
-                  sourceMap={spotlightText.sourceMap}
-                  activeSpanIds={active.activeSpanIds}
-                  compact
-                  preserveNewlines
-                />
-              )}
-            </div>
-            {triggerSpotlightText === undefined ? null : (
-              <div className="effect-spotlight-card__trigger-rules">
-                <TriggerBlock
-                  text={triggerSpotlightText.text}
-                  compact
-                  renderSearchLink={renderMainSiteSearchLink}
-                />
-              </div>
-            )}
-          </div>
+          <SpotlightRulesPanel
+            active={active}
+            card={card}
+            className="effect-spotlight-card__rules"
+            spotlightText={spotlightText}
+            triggerSpotlightText={triggerSpotlightText}
+          />
           <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
         </div>
       )}

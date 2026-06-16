@@ -437,6 +437,11 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("effect-spotlight-card--targeting");
     expect(html).toContain("effect-spotlight-targeting-card--source");
     expect(html).toContain("effect-spotlight-targeting-targets");
+    expect(html).toContain("effect-spotlight-targeting-rules");
+    expect(html).toContain("effect-rules-span--active");
+    expect(html).toMatch(
+      /effect-spotlight-targeting-rules[\s\S]*On Play[\s\S]*Draw 1 card\./u,
+    );
     expect(html).toContain('data-target-count="6"');
     expect(html).toContain("Resolving Card");
     expect(html).toContain("Target 1");
@@ -457,7 +462,13 @@ describe("EffectSpotlight", () => {
       /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*\b(?:width|height)\s*:/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);[^}]*\bheight:\s*100%;[^}]*\btransform:\s*translate\(-50%, -50%\);/su,
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bheight:\s*100%;[^}]*\btransform:\s*translate\(-50%, -50%\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-card--combat\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
     );
     expect(css).not.toMatch(
       /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bmax-height\s*:/su,
@@ -466,7 +477,28 @@ describe("EffectSpotlight", () => {
       /\.effect-spotlight-combat\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
     );
     expect(css).toMatch(
-      /\.effect-spotlight-targeting\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+      /\.effect-spotlight-targeting-frame\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+    );
+  });
+
+  it("uses the combat spotlight shell for targeting content", () => {
+    const css = effectSpotlightCss();
+
+    expect(css).not.toMatch(/--effect-spotlight-targeting-width:/su);
+    expect(css).toMatch(
+      /\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting-frame\s*\{[^}]*\bwidth:\s*100%;[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 min\(calc\(var\(--card-width\)\s*\+\s*20px\),\s*68%\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting-rules\s*\{[^}]*\bwidth:\s*100%;/su,
     );
   });
 

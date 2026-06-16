@@ -203,6 +203,7 @@ describe("playmat structure", () => {
       appShellStyles,
       /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+max-content\s+minmax\(0,\s*1fr\);/,
     );
+    assert.match(appShellStyles, /\.board-shell\s*\{[^}]*gap:\s*8px;/);
     assert.match(
       appShellStyles,
       /grid-template-areas:\s*"hand-rail playmat-board \.";/,
@@ -309,6 +310,10 @@ describe("playmat structure", () => {
       effectSpotlightStyles,
       /--effect-spotlight-combat-width:\s*min\(\s*calc\(\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*88px\s*\),\s*calc\(100vw\s*-\s*16px\)\s*\);/u,
     );
+    assert.equal(
+      effectSpotlightStyles.includes("--effect-spotlight-targeting-width:"),
+      false,
+    );
     assert.match(
       effectSpotlightStyles,
       /width:\s*var\(--effect-spotlight-card-width\);/u,
@@ -326,7 +331,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card--combat\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);/u,
     );
     assert.doesNotMatch(
       effectSpotlightStyles,
@@ -342,7 +355,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(70px,\s*0\.42fr\)\s*minmax\(calc\(var\(--card-width\)\s*\+\s*22px\),\s*1\.38fr\);[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
+      /\.effect-spotlight-targeting-frame\s*\{[^}]*width:\s*100%;[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+auto;[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-targeting-rules\s*\{[^}]*box-sizing:\s*border-box;[^}]*width:\s*100%;[^}]*max-height:\s*clamp\(54px,\s*13vh,\s*120px\);[^}]*background:\s*rgba\(246,\s*238,\s*224,\s*0\.92\);/u,
     );
     assert.match(
       effectSpotlightStyles,
