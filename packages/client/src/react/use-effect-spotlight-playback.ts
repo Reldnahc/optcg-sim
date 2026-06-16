@@ -96,6 +96,14 @@ const releaseSpotlightSourceExactSignatures = (
   }
 };
 
+const shouldReplaceServerTimelineEntry = (
+  previous: EffectSpotlightPlaybackEntry,
+  next: EffectSpotlightActiveSourceInput,
+): boolean =>
+  previous.semanticKey !== undefined &&
+  previous.semanticKey === next.semanticKey &&
+  previous.mode !== next.mode;
+
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,
   initialCursorKey,
@@ -115,8 +123,8 @@ export const appendSpotlightPlaybackSources = ({
   let entries: EffectSpotlightPlaybackEntry[] | undefined;
   for (const source of sources) {
     if (sourceKind === "serverTimeline" && source.semanticKey !== undefined) {
-      const semanticIndex = previous.entries.findIndex(
-        (entry) => entry.semanticKey === source.semanticKey,
+      const semanticIndex = previous.entries.findIndex((entry) =>
+        shouldReplaceServerTimelineEntry(entry, source),
       );
       if (semanticIndex >= 0) {
         entries ??= [...previous.entries];
@@ -182,7 +190,7 @@ export const advanceSpotlightPlayback = ({
   readonly state: EffectSpotlightPlaybackState;
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
-    const pendingIndex = state.entries.findIndex(
+    const pendingIndex = state.entries.findLastIndex(
       (entry) => entry.pendingDecisionId !== undefined,
     );
     return {

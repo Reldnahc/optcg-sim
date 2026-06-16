@@ -334,6 +334,49 @@ describe("effect spotlight model", () => {
     expect(next.paused).toBe(false);
   });
 
+  it("keeps repeated server timeline entries with the same semantic key as separate playback entries", () => {
+    const first = source("event:first", "span:body");
+    const second = source("event:second", "span:body");
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [first],
+        cursorIndex: 0,
+        paused: false,
+      },
+      sourceKind: "serverTimeline",
+      sources: [first, second],
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:second",
+    ]);
+    expect(next.cursorIndex).toBe(0);
+  });
+
+  it("fast forwards to the latest pending spotlight entry", () => {
+    const playback = {
+      entries: [
+        source("decision:old|source-1||span:old", "span:old", "live"),
+        source("event:resolved", "span:resolved"),
+        source("decision:latest|source-1||span:latest", "span:latest", "live"),
+      ],
+      cursorIndex: 0,
+      paused: true,
+    };
+
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: playback,
+    });
+
+    expect(next.cursorIndex).toBe(2);
+    expect(next.paused).toBe(false);
+    expect(next.fastForwarded).toBe(true);
+  });
+
   it("does not interrupt past review when a live pending decision is appended", () => {
     const initial = appendSpotlightPlaybackSources({
       consumedKeys: new Set<string>(),
