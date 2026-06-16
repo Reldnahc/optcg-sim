@@ -21,7 +21,10 @@ import {
   resumeSpotlightModelAfterPause,
   shouldDisplayLiveSpotlightSource,
   type EffectSpotlightState,
+  type UseEffectSpotlightState as HookState,
 } from "./use-effect-spotlight.js";
+
+type ControlsOnly = Extract<HookState, { active?: undefined }>;
 
 const source = (
   key: string,
@@ -74,11 +77,7 @@ const combatSource = {
 
 describe("effect spotlight model", () => {
   it("pins while a pending decision has active effect text", () => {
-    const entry = source(
-      "decision-1|source-1||span:body:ko",
-      "span:body:ko",
-      "live",
-    );
+    const entry = source("decision-1", "span:body:ko", "live");
     const model = effectSpotlightModel({
       nowMs: 1_000,
       previous: undefined,
@@ -558,6 +557,8 @@ describe("effect spotlight model", () => {
     });
 
     expect(display).toBeUndefined();
+    const controlsOnlyEntry: ControlsOnly["entry"] = undefined;
+    expect(controlsOnlyEntry).toBeUndefined();
   });
 
   it("pins a live cursor entry while a pending decision is active", () => {

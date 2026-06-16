@@ -64,6 +64,7 @@ export interface UseEffectSpotlightActiveState extends EffectSpotlightState {
 
 export interface UseEffectSpotlightControlsState {
   readonly active?: undefined;
+  readonly entry?: undefined;
   readonly controls: EffectSpotlightControls;
 }
 
