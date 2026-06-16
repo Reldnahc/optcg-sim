@@ -8,8 +8,15 @@ const canonicalModuleFiles = [
   "types/view.ts",
   "types/game-state.ts",
   "types/effects.ts",
+  "types/effect-continuous.ts",
+  "types/effect-costs.ts",
+  "types/effect-definition.ts",
+  "types/effect-policies.ts",
+  "types/effect-protection.ts",
+  "types/effect-triggers.ts",
   "types/decisions.ts",
   "types/runtime.ts",
+  "types/effect-presentation.ts",
   "types/support-certification.ts",
 ];
 
