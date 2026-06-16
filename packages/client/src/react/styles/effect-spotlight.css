@@ -114,7 +114,12 @@
   height: 14px;
   overflow: hidden;
   pointer-events: none;
-  background: transparent;
+  background: radial-gradient(
+    ellipse at center bottom,
+    rgba(255, 231, 128, 0.28),
+    rgba(255, 210, 58, 0.1) 42%,
+    transparent 74%
+  );
 }
 
 .effect-spotlight-card__timer-fill {
@@ -129,14 +134,18 @@
   transform-origin: left center;
   background: linear-gradient(
     90deg,
-    rgba(255, 218, 55, 0.16),
-    rgba(255, 218, 55, 0.86) 18%,
-    rgba(255, 244, 168, 0.98) 48%,
-    rgba(255, 197, 34, 0.82)
+    rgba(255, 218, 75, 0.18),
+    rgba(255, 229, 105, 0.72) 22%,
+    rgba(255, 250, 198, 0.92) 52%,
+    rgba(255, 203, 54, 0.74)
   );
+  box-shadow:
+    inset 0 0 2px rgba(255, 255, 224, 0.72),
+    0 0 6px rgba(255, 226, 84, 0.74),
+    0 0 18px rgba(255, 202, 48, 0.48);
   filter: drop-shadow(0 0 7px rgba(255, 222, 64, 0.95))
     drop-shadow(0 0 16px rgba(255, 200, 35, 0.72));
-  opacity: 0.95;
+  opacity: 0.9;
   transition: transform 50ms linear;
 }
 
@@ -153,6 +162,41 @@
     transparent
   );
   filter: blur(7px);
+}
+
+.effect-spotlight-card__timer-fill::after {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      circle at 11% 48%,
+      rgba(255, 255, 244, 0.94) 0 1px,
+      transparent 2.3px
+    ),
+    radial-gradient(
+      circle at 28% 28%,
+      rgba(255, 239, 143, 0.72) 0 1px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 47% 64%,
+      rgba(255, 255, 231, 0.8) 0 1.2px,
+      transparent 2.6px
+    ),
+    radial-gradient(
+      circle at 66% 38%,
+      rgba(255, 230, 114, 0.68) 0 1px,
+      transparent 2.2px
+    ),
+    radial-gradient(
+      circle at 88% 56%,
+      rgba(255, 255, 240, 0.7) 0 0.8px,
+      transparent 2px
+    );
+  filter: drop-shadow(0 0 3px rgba(255, 240, 130, 0.82));
+  opacity: 0.74;
 }
 
 .effect-spotlight-card__art,

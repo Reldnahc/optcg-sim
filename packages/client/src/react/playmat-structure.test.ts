@@ -309,6 +309,10 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight-card__timer\s*\{[^}]*background:\s*radial-gradient/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /\.effect-spotlight-card__timer-fill\s*\{[^}]*height:\s*6px;[^}]*transform:\s*scaleX\(var\(--effect-spotlight-timer-progress\)\);[^}]*background:\s*linear-gradient/u,
     );
     assert.match(
@@ -318,6 +322,10 @@ describe("playmat structure", () => {
     assert.equal(
       effectSpotlightStyles.includes("effect-spotlight-timer-drain"),
       false,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card__timer-fill::after\s*\{[^}]*background:\s*radial-gradient[^}]*filter:\s*drop-shadow\(0 0 3px rgba\(255,\s*240,\s*130,\s*0\.82\)\)/u,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*18%;/u);
