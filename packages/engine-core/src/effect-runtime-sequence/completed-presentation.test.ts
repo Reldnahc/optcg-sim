@@ -360,3 +360,78 @@ test("completed single-body sequence presentation links selected targets to the 
     ],
   });
 });
+
+test("completed single-body sequence presentation does not project cost targets over body affected cards", () => {
+  const { state, played } = queueingState();
+  setupSequenceDefinition(state, played, drawThenPreventDraw());
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued effect");
+  const costTarget: CardRef = {
+    instanceId: "returned-cost-target" as never,
+    cardId: "returned-cost-target-id" as never,
+    playerId: p1,
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    },
+  };
+  const playedTarget: CardRef = {
+    instanceId: "played-target-link-card" as never,
+    cardId: "played-target-link-card-id" as never,
+    playerId: p1,
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 1,
+    },
+  };
+
+  const result = entryWithCompletedSequencePresentation(
+    {
+      ...queuedEntry,
+      presentation: {
+        source: queuedEntry.source,
+        textKind: "effect" as const,
+        activeSpanIds: ["span:body"] as EffectTextSpanId[],
+      },
+    },
+    {
+      "1": {
+        attempted: true,
+        succeeded: true,
+        changedState: true,
+        selectedCards: [],
+        selectedTargets: [costTarget],
+        paidCost: false,
+        playerDeclined: false,
+      },
+      "3": {
+        attempted: true,
+        succeeded: true,
+        changedState: true,
+        affectedCards: [playedTarget],
+        selectedCards: [],
+        selectedTargets: [],
+        paidCost: false,
+        playerDeclined: false,
+      },
+    },
+  );
+
+  assert.deepEqual(result.presentation, {
+    source: queuedEntry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:body"],
+    targetLinks: [
+      {
+        spanId: "span:body",
+        relation: "affectedCard",
+        cards: [playedTarget],
+      },
+    ],
+  });
+});

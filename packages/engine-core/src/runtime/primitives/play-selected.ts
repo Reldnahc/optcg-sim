@@ -90,11 +90,13 @@ const isRuntimePlaySelectedOverflowDecision = (
 const failedResult = (
   emptySegmentResult: () => SequenceSegmentResult,
   selectedCards: readonly CardRef[],
+  affectedCards: readonly CardRef[] = [],
   changedState = false,
 ): SequenceSegmentResult => ({
   ...emptySegmentResult(),
   attempted: true,
   changedState,
+  affectedCards: [...affectedCards],
   selectedCards: [...selectedCards],
 });
 
@@ -179,6 +181,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
     previousResult !== undefined && previousResult.selectedCards.length > 0
       ? previousResult.selectedCards
       : selectedCards;
+  const priorAffectedCards = previousResult?.affectedCards ?? [];
   if (saved === undefined || saved.kind !== "selectedCards") {
     return {
       events,
@@ -210,6 +213,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
             attempted: true,
             succeeded: true,
             changedState: previousResult?.attempted === true,
+            affectedCards: [...priorAffectedCards],
             selectedCards: [...auditedSelectedCards],
           },
         },
@@ -236,6 +240,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
           [key]: failedResult(
             emptySegmentResult,
             auditedSelectedCards,
+            priorAffectedCards,
             changedState,
           ),
         },
@@ -270,6 +275,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
           [key]: failedResult(
             emptySegmentResult,
             auditedSelectedCards,
+            priorAffectedCards,
             changedState,
           ),
         },
@@ -311,6 +317,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
           [key]: failedResult(
             emptySegmentResult,
             auditedSelectedCards,
+            [...priorAffectedCards, ...producedObjects],
             changedState,
           ),
         },
@@ -374,6 +381,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
         attempted: true,
         succeeded: true,
         changedState,
+        affectedCards: [...priorAffectedCards, ...producedObjects],
         selectedCards: [...auditedSelectedCards],
       },
     },
