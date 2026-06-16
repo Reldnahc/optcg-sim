@@ -39,7 +39,7 @@ const resolvedSearchEvent = (
 });
 
 describe("effectSpotlightHistoryFromPlayerViewState", () => {
-  it("does not create a generic played-card spotlight", () => {
+  it("creates a no-highlight played-card spotlight", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
       activeEffectText: undefined,
       events: [
@@ -60,7 +60,28 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
       pendingDecisionId: undefined,
     });
 
-    expect(history).toBeUndefined();
+    expect(history).toEqual({
+      entries: [
+        {
+          id: "resolved:event:card-played:",
+          key: "event:card-played",
+          semanticKey: "p1|played-1|OP00-002|effect|",
+          mode: "resolved",
+          status: "resolved",
+          active: {
+            source: {
+              playerId: "p1",
+              instanceId: "played-1",
+              cardId: "OP00-002",
+            },
+            textKind: "effect",
+            activeSpanIds: [],
+          },
+          resolvedEventId: "event:card-played",
+        },
+      ],
+      presentKey: "event:card-played",
+    });
   });
 
   it("ignores resolved presentations without active spans", () => {

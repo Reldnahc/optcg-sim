@@ -1,9 +1,12 @@
 import type {
   ActiveEffectTextPresentation,
+  CardId,
   DecisionId,
   EngineEvent,
   EffectSpotlightHistoryEntry,
+  InstanceId,
   PlayerView,
+  PlayerId,
 } from "@optcg/types";
 
 export type EffectSpotlightActiveSource = EffectSpotlightHistoryEntry;
@@ -60,6 +63,10 @@ const splitResolvedSpanIds = (
 const resolvedSpotlightSourcesForEvent = (
   event: EngineEvent,
 ): readonly EffectSpotlightActiveSource[] => {
+  if (event.type === "cardPlayed") {
+    const source = playedCardSourceForEvent(event);
+    return source === undefined ? [] : [source];
+  }
   if (
     (event.type !== "effectResolved" && event.type !== "replacementApplied") ||
     !isObjectRecord(event.payload)
@@ -117,6 +124,7 @@ export const resolvedEffectTextSourcesForSpotlight = (
   events: readonly EngineEvent[],
 ): readonly EffectSpotlightActiveSource[] => {
   const sources: EffectSpotlightActiveSource[] = [];
+  let pendingPlayedCard: EffectSpotlightActiveSource | undefined;
   let skipNextEffectResolved = false;
   for (const event of events) {
     if (isNoEffectDecisionResolvedEvent(event)) {
@@ -128,7 +136,21 @@ export const resolvedEffectTextSourcesForSpotlight = (
       skipNextEffectResolved = false;
       continue;
     }
+    if (event.type === "cardPlayed") {
+      if (pendingPlayedCard !== undefined) {
+        sources.push(pendingPlayedCard);
+      }
+      pendingPlayedCard = playedCardSourceForEvent(event);
+      continue;
+    }
+    if (event.type === "effectQueued") {
+      pendingPlayedCard = undefined;
+      continue;
+    }
     sources.push(...resolvedSpotlightSourcesForEvent(event));
+  }
+  if (pendingPlayedCard !== undefined) {
+    sources.push(pendingPlayedCard);
   }
   return sources;
 };
@@ -172,6 +194,40 @@ const structuredFallbackSource = ({
   status: mode === "live" ? "pending" : "resolved",
   ...(pendingDecisionId === undefined ? {} : { pendingDecisionId }),
 });
+
+const playedCardSourceForEvent = (
+  event: EngineEvent,
+): EffectSpotlightActiveSource | undefined => {
+  if (event.type !== "cardPlayed" || !isObjectRecord(event.payload)) {
+    return undefined;
+  }
+  const playerId = event.payload["playerId"];
+  const instanceId = event.payload["instanceId"];
+  const cardId = event.payload["cardId"];
+  const category = event.payload["category"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    (category !== "character" && category !== "stage")
+  ) {
+    return undefined;
+  }
+
+  return structuredFallbackSource({
+    active: {
+      source: {
+        playerId: playerId as PlayerId,
+        instanceId: instanceId as InstanceId,
+        cardId: cardId as CardId,
+      },
+      textKind: "effect",
+      activeSpanIds: [],
+    },
+    key: String(event.id),
+    mode: "resolved",
+  });
+};
 
 const splitResolvedSourceKeyIndex = (key: string): number =>
   key.indexOf(":span:");

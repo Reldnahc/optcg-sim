@@ -1,11 +1,14 @@
 import type {
   ActiveEffectTextPresentation,
+  CardId,
   DecisionId,
   EffectId,
   EffectSpotlightHistory,
   EffectSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEvent,
+  InstanceId,
+  PlayerId,
   QueueEntryId,
 } from "@optcg/types";
 
@@ -135,6 +138,45 @@ const resolvedEntryForActive = ({
   };
 };
 
+const playedCardEntryForEvent = (
+  event: EngineEvent,
+): EffectSpotlightHistoryEntry | undefined => {
+  if (event.type !== "cardPlayed" || !isObjectRecord(event.payload)) {
+    return undefined;
+  }
+  const playerId = event.payload["playerId"];
+  const instanceId = event.payload["instanceId"];
+  const cardId = event.payload["cardId"];
+  const category = event.payload["category"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string" ||
+    (category !== "character" && category !== "stage")
+  ) {
+    return undefined;
+  }
+
+  const active: ActiveEffectTextPresentation = {
+    source: {
+      playerId: playerId as PlayerId,
+      instanceId: instanceId as InstanceId,
+      cardId: cardId as CardId,
+    },
+    textKind: "effect",
+    activeSpanIds: [],
+  };
+  return {
+    id: resolvedEntryId(event, active),
+    key: String(event.id),
+    semanticKey: semanticKeyForActive(active),
+    mode: "resolved",
+    status: "resolved",
+    active,
+    resolvedEventId: event.id,
+  };
+};
+
 const resolvedEntriesForEvent = (
   event: EngineEvent,
 ): readonly EffectSpotlightHistoryEntry[] => {
@@ -186,6 +228,7 @@ const resolvedSpotlightEntriesForEvents = (
   events: readonly EngineEvent[],
 ): readonly EffectSpotlightHistoryEntry[] => {
   const entries: EffectSpotlightHistoryEntry[] = [];
+  let pendingPlayedCard: EffectSpotlightHistoryEntry | undefined;
   let skipNextEffectResolved = false;
   for (const event of events) {
     if (isNoEffectDecisionResolvedEvent(event)) {
@@ -197,7 +240,21 @@ const resolvedSpotlightEntriesForEvents = (
       skipNextEffectResolved = false;
       continue;
     }
+    if (event.type === "cardPlayed") {
+      if (pendingPlayedCard !== undefined) {
+        entries.push(pendingPlayedCard);
+      }
+      pendingPlayedCard = playedCardEntryForEvent(event);
+      continue;
+    }
+    if (event.type === "effectQueued") {
+      pendingPlayedCard = undefined;
+      continue;
+    }
     entries.push(...resolvedEntriesForEvent(event));
+  }
+  if (pendingPlayedCard !== undefined) {
+    entries.push(pendingPlayedCard);
   }
   return entries;
 };

@@ -587,7 +587,7 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
     });
   });
 
-  it("does not create a no-highlight spotlight for a played character", () => {
+  it("creates a no-highlight spotlight for a played character", () => {
     const played = event({
       type: "cardPlayed",
       seq: 2,
@@ -605,7 +605,22 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
         pendingDecision: undefined,
         events: [played],
       }),
-    ).toBeUndefined();
+    ).toEqual({
+      active: {
+        source: {
+          playerId: "p1",
+          instanceId: "played-1",
+          cardId: "OP00-002",
+        },
+        textKind: "effect",
+        activeSpanIds: [],
+      },
+      id: String(played.id),
+      key: String(played.id),
+      semanticKey: "p1|played-1|OP00-002|effect|",
+      mode: "resolved",
+      status: "resolved",
+    });
   });
 
   it("ignores resolved spotlight presentations without active spans", () => {
