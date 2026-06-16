@@ -303,17 +303,39 @@ export const currentSpotlightPlaybackEntry = (
   return playback.entries[playback.cursorIndex];
 };
 
+const currentPendingDecisionIndex = ({
+  pendingDecisionId,
+  state,
+}: {
+  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly state: EffectSpotlightPlaybackState;
+}): number => {
+  if (pendingDecisionId === undefined) {
+    return -1;
+  }
+  const currentDecisionId = String(pendingDecisionId);
+  return state.entries.findLastIndex(
+    (entry) =>
+      entry.mode === "live" &&
+      entry.pendingDecisionId !== undefined &&
+      String(entry.pendingDecisionId) === currentDecisionId,
+  );
+};
+
 export const advanceSpotlightPlayback = ({
   command,
+  pendingDecisionId,
   state,
 }: {
   readonly command: EffectSpotlightPlaybackCommand;
+  readonly pendingDecisionId?: DecisionId | string | undefined;
   readonly state: EffectSpotlightPlaybackState;
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
-    const pendingIndex = state.entries.findLastIndex(
-      (entry) => entry.pendingDecisionId !== undefined,
-    );
+    const pendingIndex = currentPendingDecisionIndex({
+      pendingDecisionId,
+      state,
+    });
     return {
       ...state,
       cursorIndex: pendingIndex >= 0 ? pendingIndex : undefined,

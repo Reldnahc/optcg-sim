@@ -35,6 +35,14 @@ const source = (
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
 
+const pendingSource = (
+  decisionId: string,
+  spanId: EffectTextSpanId,
+): EffectTextSpotlightActiveSourceInput => ({
+  ...source(`decision:${decisionId}|source-1||${spanId}`, spanId, "live"),
+  pendingDecisionId: decisionId,
+});
+
 const ref = (
   instanceId: string,
   cardId: string,
@@ -287,6 +295,47 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBeUndefined();
   });
 
+  it("fast-forward clears stale pending decision history", () => {
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          pendingSource("decision-old", "span:old"),
+          source("event:resolved", "span:resolved"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+        fastForwarded: false,
+      },
+      pendingDecisionId: "decision-current",
+    });
+
+    expect(next.cursorIndex).toBeUndefined();
+    expect(next.paused).toBe(false);
+    expect(next.fastForwarded).toBe(true);
+  });
+
+  it("fast-forward displays the current pending decision among older pending history", () => {
+    const next = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: {
+        entries: [
+          pendingSource("decision-old", "span:old"),
+          source("event:resolved", "span:resolved"),
+          pendingSource("decision-latest", "span:latest"),
+        ],
+        cursorIndex: 0,
+        paused: true,
+        fastForwarded: false,
+      },
+      pendingDecisionId: "decision-latest",
+    });
+
+    expect(next.cursorIndex).toBe(2);
+    expect(next.paused).toBe(false);
+    expect(next.fastForwarded).toBe(true);
+  });
+
   it("rewind after fast-forward to empty lands on the latest historical entry", () => {
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",
@@ -312,15 +361,10 @@ describe("effect spotlight playback", () => {
 
   it("rewind from a pinned pending present lands on the previous timeline entry", () => {
     const pending = {
-      ...source(
-        "decision:decision-1|source-1||span:pending",
-        "span:pending",
-        "live",
-      ),
+      ...pendingSource("decision-1", "span:pending"),
       id: "pending:decision-1:p1|source-1|OP00-001|effect|span:pending",
       semanticKey: "p1|source-1|OP00-001|effect|span:pending",
       status: "pending" as const,
-      pendingDecisionId: "decision-1" as DecisionId,
     };
     const fastForwarded = advanceSpotlightPlayback({
       command: "catchUp",
@@ -330,6 +374,7 @@ describe("effect spotlight playback", () => {
         paused: true,
         fastForwarded: false,
       },
+      pendingDecisionId: "decision-1",
     });
 
     const rewound = advanceSpotlightPlayback({

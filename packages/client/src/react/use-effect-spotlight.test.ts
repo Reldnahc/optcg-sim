@@ -365,6 +365,7 @@ describe("effect spotlight model", () => {
   it("fast-forwards to the latest pending decision entry", () => {
     const next = advanceSpotlightPlayback({
       command: "catchUp",
+      pendingDecisionId: "decision-1",
       state: {
         entries: [
           source("event:first", "span:first"),
@@ -407,27 +408,6 @@ describe("effect spotlight model", () => {
       "event:second",
     ]);
     expect(next.cursorIndex).toBe(0);
-  });
-
-  it("fast forwards to the latest pending spotlight entry", () => {
-    const playback = {
-      entries: [
-        source("decision:old|source-1||span:old", "span:old", "live"),
-        source("event:resolved", "span:resolved"),
-        source("decision:latest|source-1||span:latest", "span:latest", "live"),
-      ],
-      cursorIndex: 0,
-      paused: true,
-    };
-
-    const next = advanceSpotlightPlayback({
-      command: "catchUp",
-      state: playback,
-    });
-
-    expect(next.cursorIndex).toBe(2);
-    expect(next.paused).toBe(false);
-    expect(next.fastForwarded).toBe(true);
   });
 
   it("does not interrupt past review when a live pending decision is appended", () => {
@@ -688,6 +668,7 @@ describe("effect spotlight model", () => {
   it("fast-forward displays the latest pending decision spotlight", () => {
     const playback = advanceSpotlightPlayback({
       command: "catchUp",
+      pendingDecisionId: "decision-1",
       state: {
         entries: [
           source("event:first", "span:first"),

@@ -335,6 +335,7 @@ export const useEffectSpotlight = ({
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: "catchUp",
+          pendingDecisionId,
           state: previous,
         }),
       );
