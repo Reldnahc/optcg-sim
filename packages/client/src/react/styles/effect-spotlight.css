@@ -456,7 +456,6 @@
 
 .effect-spotlight-combat-power__value {
   font-size: clamp(24px, 12cqw, 54px);
-  letter-spacing: 0;
 }
 
 .effect-spotlight-combat-power__value.is-weak {

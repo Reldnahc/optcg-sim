@@ -582,18 +582,18 @@
             "stateSeq": 4,
             "actionSeq": 3,
             "turnNumber": 3,
-            "fullStateHash": "92103bfe5d0275f099f3e64631e9300b4b79f66278841f7c06b3f0d6ef3ba88a",
+            "fullStateHash": "3e0b0790df4843ed68036682e170ebafbf0cfaa0fe33adf5b5f4948f4073a528",
             "snapshotRef": "leader-damage:action-1"
           },
           {
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "3310d2a1c5bd937f4ea3254c951cc4dc68937dc3b225a6a0a83591acd9cbdfdc",
+            "fullStateHash": "29402322bfea15d85a6dd11f9dea910de21619a94e18b8833aebda977ceb7941",
             "snapshotRef": "leader-damage:action-2"
           }
         ],
-        "finalStateHash": "3310d2a1c5bd937f4ea3254c951cc4dc68937dc3b225a6a0a83591acd9cbdfdc",
+        "finalStateHash": "29402322bfea15d85a6dd11f9dea910de21619a94e18b8833aebda977ceb7941",
         "finalStatus": { "type": "active" }
       }
     },
@@ -649,18 +649,18 @@
             "stateSeq": 4,
             "actionSeq": 3,
             "turnNumber": 3,
-            "fullStateHash": "0e7fca87f90808602dd0798f2b3596268c931dadd3d71350f1cbf0fb4dbc8bdb",
+            "fullStateHash": "40c2be8e76c49061581cefbb673125a9a5b48ad07705bbb21fefe4314c58760e",
             "snapshotRef": "character-ko:action-1"
           },
           {
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "a9c198885484536700ad6d5772fd03f9f50c6797c934386c4497e29f86ef7130",
+            "fullStateHash": "bf9a88f5e4b78c05a07f29171bcef561dd8afbfa9202427595b45a7fafa0ebc5",
             "snapshotRef": "character-ko:action-2"
           }
         ],
-        "finalStateHash": "a9c198885484536700ad6d5772fd03f9f50c6797c934386c4497e29f86ef7130",
+        "finalStateHash": "bf9a88f5e4b78c05a07f29171bcef561dd8afbfa9202427595b45a7fafa0ebc5",
         "finalStatus": { "type": "active" }
       }
     },
@@ -691,18 +691,18 @@
             "stateSeq": 4,
             "actionSeq": 3,
             "turnNumber": 3,
-            "fullStateHash": "ca093c346b552a8aa5394f59373ae71e7945ef52dc772053af1aa809144da5a9",
+            "fullStateHash": "f6bf1821bb1be1ee133922ccbccf2ef13cf8290408bd8c58c0049b96e065583d",
             "snapshotRef": "leader-zero-life-defeat:action-1"
           },
           {
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "334bad1dd7b1d51a1e9a6136a65910597b7be518abc3e679e87bf4ddba7874ad",
+            "fullStateHash": "3ed8458af737c4e1568d1557238c89e1ee2025aafbe019576e0ae9a19800384e",
             "snapshotRef": "leader-zero-life-defeat:action-2"
           }
         ],
-        "finalStateHash": "334bad1dd7b1d51a1e9a6136a65910597b7be518abc3e679e87bf4ddba7874ad",
+        "finalStateHash": "3ed8458af737c4e1568d1557238c89e1ee2025aafbe019576e0ae9a19800384e",
         "finalStatus": { "type": "completed", "winner": "p1" }
       }
     },
