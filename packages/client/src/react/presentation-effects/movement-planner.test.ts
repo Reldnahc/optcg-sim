@@ -180,6 +180,81 @@ describe("presentation movement planner", () => {
     });
   });
 
+  test("uses string zone movement payloads with playerId as aggregate zone anchors", () => {
+    const movements = planCardMovementIntents({
+      previous: snapshot({
+        zones: {
+          "opponent:deck": { zoneKey: "opponent:deck", rect: rect(500, 40) },
+          "opponent:hand": { zoneKey: "opponent:hand", rect: rect(40, 40) },
+        },
+      }),
+      current: snapshot({
+        zones: {
+          "opponent:deck": { zoneKey: "opponent:deck", rect: rect(500, 40) },
+          "opponent:hand": { zoneKey: "opponent:hand", rect: rect(40, 40) },
+        },
+      }),
+      currentPlayerId: p1,
+      events: [
+        event({
+          id: "event:opponent-draw",
+          type: "cardMoved",
+          payload: {
+            from: "deck",
+            to: "hand",
+            playerId: p2,
+            reason: "draw",
+          },
+        }),
+      ],
+    });
+
+    const movement = onlyMovement(movements);
+    assert.equal(movement.instanceId, "event:opponent-draw:hidden");
+    assert.equal(movement.card.category, "hidden");
+    assert.equal(movement.fromZoneKey, "opponent:deck");
+    assert.equal(movement.toZoneKey, "opponent:hand");
+  });
+
+  test("keeps zone-ref card identity movement preferred over aggregate movement", () => {
+    const drawnCard = card("card-visible", { name: "Visible Drawn Card" });
+    const movements = planCardMovementIntents({
+      previous: snapshot({
+        zones: { "self:deck": { zoneKey: "self:deck", rect: rect(500, 300) } },
+      }),
+      current: snapshot({
+        cards: {
+          "card-visible": {
+            card: drawnCard,
+            rect: rect(40, 600),
+            zoneKey: "self:hand",
+          },
+        },
+        zones: { "self:deck": { zoneKey: "self:deck", rect: rect(500, 300) } },
+      }),
+      currentPlayerId: p1,
+      events: [
+        event({
+          id: "event:self-private-draw",
+          type: "cardMoved",
+          payload: {
+            instanceId: "card-visible",
+            cardId: "OP00-001",
+            playerId: p1,
+            from: { zone: "deck", playerId: p1 },
+            to: { zone: "hand", playerId: p1 },
+          },
+        }),
+      ],
+    });
+
+    const movement = onlyMovement(movements);
+    assert.equal(movement.instanceId, "card-visible");
+    assert.equal(movement.card.name, "Visible Drawn Card");
+    assert.equal(movement.fromZoneKey, "self:deck");
+    assert.equal(movement.toZoneKey, "self:hand");
+  });
+
   test("does not plan hidden opponent identity movement without visible card or safe zone endpoint", () => {
     const movements = planCardMovementIntents({
       previous: snapshot({

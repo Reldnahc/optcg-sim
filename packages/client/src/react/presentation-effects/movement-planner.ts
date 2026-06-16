@@ -1,4 +1,10 @@
-import type { EngineEvent, PlayerId, Zone } from "@optcg/types";
+import type {
+  CardId,
+  EngineEvent,
+  InstanceId,
+  PlayerId,
+  Zone,
+} from "@optcg/types";
 
 import type { ClientCardModel } from "../../view-model.js";
 
@@ -101,7 +107,44 @@ const movementEventZone = (
   if (!isRecord(event.payload)) {
     return undefined;
   }
-  return presentationZoneKey(event.payload[field], currentPlayerId);
+  const zoneRefKey = presentationZoneKey(event.payload[field], currentPlayerId);
+  if (zoneRefKey !== undefined) {
+    return zoneRefKey;
+  }
+  const zone = event.payload[field];
+  const playerId = event.payload["playerId"];
+  if (typeof zone !== "string" || typeof playerId !== "string") {
+    return undefined;
+  }
+  const side = sideForPlayer(playerId, currentPlayerId);
+  return side === undefined
+    ? undefined
+    : (`${side}:${zone}` as PresentationZoneKey);
+};
+
+const routeContainsDonZone = (
+  fromZoneKey: PresentationZoneKey,
+  toZoneKey: PresentationZoneKey,
+): boolean =>
+  [fromZoneKey, toZoneKey].some((zoneKey) => {
+    const zone = zoneKey.split(":")[1];
+    return zone === "donDeck" || zone === "costArea";
+  });
+
+const hiddenMovementCard = (
+  event: EngineEvent,
+  fromZoneKey: PresentationZoneKey,
+  toZoneKey: PresentationZoneKey,
+): ClientCardModel => {
+  const isDon = routeContainsDonZone(fromZoneKey, toZoneKey);
+  return {
+    instanceId: `${String(event.id)}:hidden` as InstanceId,
+    cardId: "hidden" as CardId,
+    name: isDon ? "DON!!" : "Hidden card",
+    category: isDon ? "don" : "hidden",
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  };
 };
 
 const movementEventTypes = new Set<EngineEvent["type"]>([
@@ -156,7 +199,32 @@ export const planCardMovementIntents = (input: {
     }
     const fromZoneKey = movementEventZone(event, "from", input.currentPlayerId);
     const toZoneKey = movementEventZone(event, "to", input.currentPlayerId);
-    for (const instanceId of eventCardInstanceIds(event)) {
+    const instanceIds = eventCardInstanceIds(event);
+    if (
+      instanceIds.length === 0 &&
+      fromZoneKey !== undefined &&
+      toZoneKey !== undefined
+    ) {
+      const fromRect =
+        previous.zones[fromZoneKey]?.rect ??
+        input.current.zones[fromZoneKey]?.rect;
+      const toRect = input.current.zones[toZoneKey]?.rect;
+      if (fromRect !== undefined && toRect !== undefined) {
+        const card = hiddenMovementCard(event, fromZoneKey, toZoneKey);
+        movementByInstanceId.set(String(card.instanceId), {
+          id: `${String(event.id)}:${String(card.instanceId)}`,
+          instanceId: String(card.instanceId),
+          card,
+          fromRect,
+          toRect,
+          fromZoneKey,
+          toZoneKey,
+          eventId: String(event.id),
+        });
+      }
+      continue;
+    }
+    for (const instanceId of instanceIds) {
       if (movementByInstanceId.has(instanceId)) {
         continue;
       }
