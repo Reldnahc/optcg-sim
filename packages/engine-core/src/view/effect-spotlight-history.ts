@@ -133,6 +133,17 @@ const combatSemanticKey = (combat: CombatSpotlightPresentation): string =>
     combat.defenderPower === undefined ? "" : String(combat.defenderPower),
   ].join("|");
 
+const sameEffectTextSource = (
+  left: ActiveEffectTextPresentation["source"],
+  right: ActiveEffectTextPresentation["source"],
+): boolean =>
+  left.instanceId === right.instanceId &&
+  left.cardId === right.cardId &&
+  left.playerId === right.playerId;
+
+const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
+  spanIds.join("\n");
+
 const pendingEntryId = (
   pendingDecisionId: DecisionId | string,
   active: ActiveEffectTextPresentation,
@@ -326,8 +337,38 @@ const clearsNoEffectDecisionCandidate = (event: EngineEvent): boolean =>
   event.type !== "effectResolved" &&
   event.type !== "ruleProcessingChecked";
 
+const isEffectTextEntry = (
+  entry: EffectSpotlightHistoryEntry,
+): entry is EffectSpotlightHistoryEntry & {
+  readonly active: ActiveEffectTextPresentation;
+} => entry.kind !== "combat";
+
+const isEffectSpotlightForPlayedCard = (
+  entry: EffectSpotlightHistoryEntry,
+  playedCard: EffectSpotlightHistoryEntry,
+): boolean =>
+  isEffectTextEntry(entry) &&
+  isEffectTextEntry(playedCard) &&
+  entry.active.activeSpanIds.length > 0 &&
+  sameEffectTextSource(entry.active.source, playedCard.active.source);
+
+const hasEffectSpotlightForPlayedCard = (
+  entries: readonly EffectSpotlightHistoryEntry[],
+  playedCard: EffectSpotlightHistoryEntry,
+): boolean =>
+  entries.some((entry) => isEffectSpotlightForPlayedCard(entry, playedCard));
+
+const sourceMatchesPlayedCardEntry = (
+  source: CardRef | undefined,
+  playedCard: EffectSpotlightHistoryEntry,
+): boolean =>
+  source === undefined ||
+  (isEffectTextEntry(playedCard) &&
+    sameEffectTextSource(source, playedCard.active.source));
+
 const resolvedSpotlightEntriesForEvents = (
   events: readonly EngineEvent[],
+  activeEffectText?: ActiveEffectTextPresentation,
 ): readonly EffectSpotlightHistoryEntry[] => {
   const entries: EffectSpotlightHistoryEntry[] = [];
   let pendingPlayedCard: EffectSpotlightHistoryEntry | undefined;
@@ -350,32 +391,40 @@ const resolvedSpotlightEntriesForEvents = (
       continue;
     }
     if (event.type === "effectQueued") {
-      pendingPlayedCard = undefined;
+      if (
+        pendingPlayedCard !== undefined &&
+        sourceMatchesPlayedCardEntry(event.source, pendingPlayedCard)
+      ) {
+        pendingPlayedCard = undefined;
+      }
       continue;
     }
     const resolvedEntries = resolvedEntriesForEvent(event);
     if (pendingPlayedCard !== undefined && resolvedEntries.length > 0) {
-      entries.push(pendingPlayedCard);
+      if (
+        !hasEffectSpotlightForPlayedCard(resolvedEntries, pendingPlayedCard)
+      ) {
+        entries.push(pendingPlayedCard);
+      }
       pendingPlayedCard = undefined;
     }
     entries.push(...resolvedEntries);
   }
   if (pendingPlayedCard !== undefined) {
-    entries.push(pendingPlayedCard);
+    const liveEntrySuppressesPlayedCard =
+      activeEffectText !== undefined &&
+      activeEffectText.activeSpanIds.length > 0 &&
+      isEffectTextEntry(pendingPlayedCard) &&
+      sameEffectTextSource(
+        activeEffectText.source,
+        pendingPlayedCard.active.source,
+      );
+    if (!liveEntrySuppressesPlayedCard) {
+      entries.push(pendingPlayedCard);
+    }
   }
   return entries;
 };
-
-const sameEffectTextSource = (
-  left: ActiveEffectTextPresentation["source"],
-  right: ActiveEffectTextPresentation["source"],
-): boolean =>
-  left.instanceId === right.instanceId &&
-  left.cardId === right.cardId &&
-  left.playerId === right.playerId;
-
-const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
-  spanIds.join("\n");
 
 const sameEffectTextPresentation = (
   left: ActiveEffectTextPresentation,
@@ -431,7 +480,7 @@ export const effectSpotlightHistoryFromPlayerViewState = ({
   readonly events: readonly EngineEvent[];
   readonly pendingDecisionId?: DecisionId | string | undefined;
 }): EffectSpotlightHistory | undefined => {
-  const entries = resolvedSpotlightEntriesForEvents(events);
+  const entries = resolvedSpotlightEntriesForEvents(events, activeEffectText);
   const matchingResolvedEntryKey =
     activeEffectText === undefined
       ? undefined

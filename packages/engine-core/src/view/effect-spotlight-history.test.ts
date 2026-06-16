@@ -32,6 +32,36 @@ const defender = {
   cardId: "OP00-004" as CardId,
 };
 
+const playedSource = {
+  playerId: "p1" as PlayerId,
+  instanceId: "played-1" as InstanceId,
+  cardId: "OP00-002" as CardId,
+};
+
+const cardPlayedEvent = (id: string): EngineEvent => ({
+  id: id as EngineEventId,
+  seq: 1,
+  type: "cardPlayed",
+  payload: {
+    playerId: playedSource.playerId,
+    instanceId: playedSource.instanceId,
+    cardId: playedSource.cardId,
+    category: "character",
+  },
+  visibility: { type: "public" },
+  createdAtStateSeq: 1 as StateSeq,
+});
+
+const effectQueuedEvent = (id: string, eventSource = source): EngineEvent => ({
+  id: id as EngineEventId,
+  seq: 2,
+  type: "effectQueued",
+  source: eventSource,
+  payload: { status: "queued" },
+  visibility: { type: "public" },
+  createdAtStateSeq: 2 as StateSeq,
+});
+
 const expectEffectTextEntry = (
   entry: EffectSpotlightHistoryEntry,
 ): EffectTextSpotlightHistoryEntry => {
@@ -44,15 +74,16 @@ const expectEffectTextEntry = (
 const resolvedSearchEvent = (
   id: string,
   activeSpanIds: readonly EffectTextSpanId[],
+  eventSource = source,
 ): EngineEvent => ({
   id: id as EngineEventId,
   seq: 1,
   type: "effectResolved",
-  source,
+  source: eventSource,
   payload: {
     status: "resolved",
     presentation: {
-      source,
+      source: eventSource,
       textKind: "effect",
       activeSpanIds,
     },
@@ -111,19 +142,7 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
       activeEffectText: undefined,
       events: [
-        {
-          id: "event:played" as EngineEventId,
-          seq: 1,
-          type: "cardPlayed",
-          payload: {
-            playerId: "p1",
-            instanceId: "played-1",
-            cardId: "OP00-002",
-            category: "character",
-          },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
+        cardPlayedEvent("event:played"),
         {
           id: "event:rule-check" as EngineEventId,
           seq: 2,
@@ -132,22 +151,63 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
           visibility: { type: "public" },
           createdAtStateSeq: 2 as StateSeq,
         },
-        {
-          id: "event:effect-queued" as EngineEventId,
-          seq: 3,
-          type: "effectQueued",
-          payload: {
-            queueEntryId: "queue-entry:played",
-            effectId: "effect:played",
-          },
-          visibility: { type: "public" },
-          createdAtStateSeq: 3 as StateSeq,
-        },
+        effectQueuedEvent("event:effect-queued", playedSource),
       ],
       pendingDecisionId: undefined,
     });
 
     expect(history).toBeUndefined();
+  });
+
+  it("does not show a no-highlight played-card spotlight when that card resolves an effect spotlight", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        cardPlayedEvent("event:played"),
+        resolvedSearchEvent("event:effect", ["span:body"], playedSource),
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:effect",
+    ]);
+    expect(
+      history?.entries.map(
+        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
+      ),
+    ).toEqual([["span:body"]]);
+  });
+
+  it("keeps a no-highlight played-card spotlight when a different card queues an effect", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        cardPlayedEvent("event:played"),
+        effectQueuedEvent("event:other-effect-queued", source),
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:played",
+    ]);
+  });
+
+  it("does not show a no-highlight played-card spotlight while that card has a live effect spotlight", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: {
+        source: playedSource,
+        textKind: "effect",
+        activeSpanIds: ["span:body"],
+      },
+      events: [cardPlayedEvent("event:played")],
+      pendingDecisionId: "decision:played-effect",
+    });
+
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "decision:decision:played-effect|played-1|effect|span:body",
+    ]);
   });
 
   it("ignores resolved presentations without active spans", () => {
