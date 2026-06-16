@@ -272,12 +272,20 @@ export const appendSpotlightPlaybackSources = ({
     previous.entries.length === 0 && initialCursorKey !== undefined
       ? entries.findIndex((source) => source.key === initialCursorKey)
       : -1;
+  const initialCursorEntry =
+    initialCursorIndex >= 0 ? entries[initialCursorIndex] : undefined;
+  const usableInitialCursorIndex =
+    initialCursorIndex >= 0 &&
+    (initialCursorEntry?.pendingDecisionId === undefined ||
+      initialCursorIndex === 0)
+      ? initialCursorIndex
+      : -1;
   return {
     entries,
     cursorIndex:
       previous.cursorIndex === undefined
-        ? initialCursorIndex >= 0
-          ? initialCursorIndex
+        ? usableInitialCursorIndex >= 0
+          ? usableInitialCursorIndex
           : (replacementReplayIndex ?? firstAppendedIndex)
         : previous.cursorIndex,
     paused: previous.paused,

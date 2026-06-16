@@ -220,6 +220,37 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBeUndefined();
   });
 
+  it("does not let an initial pending decision skip earlier resolved timeline entries", () => {
+    const draw = source("event:draw", "span:sequence:0:body");
+    const trash = {
+      ...source(
+        "decision:trash|source-1||span:sequence:1:body",
+        "span:sequence:1:body",
+        "live",
+      ),
+      pendingDecisionId: "decision:trash" as DecisionId,
+    };
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      initialCursorKey: trash.key,
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [draw, trash],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:draw",
+      "decision:trash|source-1||span:sequence:1:body",
+    ]);
+    expect(next.cursorIndex).toBe(0);
+  });
+
   it("fast-forward clears to empty when there is no pending timeline entry", () => {
     const next = advanceSpotlightPlayback({
       command: "catchUp",
