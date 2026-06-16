@@ -96,18 +96,40 @@ const selectedTargetsForSegment = (
   key: string,
 ) => segmentResults[key]?.selectedTargets ?? [];
 
+const singleActiveSpanTargetFallback = (
+  presentation: ActiveEffectTextPresentation,
+): readonly EffectTextSpanId[] | undefined =>
+  presentation.activeSpanIds.length === 1
+    ? presentation.activeSpanIds
+    : undefined;
+
+const segmentHasSelectedTargets = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  key: string,
+): boolean => selectedTargetsForSegment(segmentResults, key).length > 0;
+
+const segmentsHaveSelectedTargets = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  segments: readonly (RootChangedSegment | ChoiceOptionChangedSegment)[],
+): boolean =>
+  segments.some((segment) =>
+    segmentHasSelectedTargets(segmentResults, segment.key),
+  );
+
 const presentationWithRootTargetLinks = (
   presentation: ActiveEffectTextPresentation,
   segmentResults: EffectExecutionFrame["segmentResults"],
   segments: readonly RootChangedSegment[],
 ): ActiveEffectTextPresentation =>
   segments.reduce<ActiveEffectTextPresentation>((nextPresentation, segment) => {
-    const spanIds = activeSpanIdsForRootSegment(
-      presentation.activeSpanIds,
-      segment,
-    );
+    const cards = selectedTargetsForSegment(segmentResults, segment.key);
+    const spanIds =
+      activeSpanIdsForRootSegment(presentation.activeSpanIds, segment) ??
+      (cards.length === 0
+        ? undefined
+        : singleActiveSpanTargetFallback(presentation));
     return activeEffectTextPresentationWithTargetLinks({
-      cards: selectedTargetsForSegment(segmentResults, segment.key),
+      cards,
       presentation: nextPresentation,
       relation: "selectedTarget",
       spanIds,
@@ -120,12 +142,17 @@ const presentationWithChoiceOptionTargetLinks = (
   segments: readonly ChoiceOptionChangedSegment[],
 ): ActiveEffectTextPresentation =>
   segments.reduce<ActiveEffectTextPresentation>((nextPresentation, segment) => {
-    const spanIds = activeSpanIdsForChoiceOptionSegment(
-      presentation.activeSpanIds,
-      segment,
-    );
+    const cards = selectedTargetsForSegment(segmentResults, segment.key);
+    const spanIds =
+      activeSpanIdsForChoiceOptionSegment(
+        presentation.activeSpanIds,
+        segment,
+      ) ??
+      (cards.length === 0
+        ? undefined
+        : singleActiveSpanTargetFallback(presentation));
     return activeEffectTextPresentationWithTargetLinks({
-      cards: selectedTargetsForSegment(segmentResults, segment.key),
+      cards,
       presentation: nextPresentation,
       relation: "selectedTarget",
       spanIds,
@@ -151,7 +178,13 @@ export const entryWithCompletedSequencePresentation = (
       : activeSpanIdsForRootSegments(
           entry.presentation.activeSpanIds,
           rootSegments,
-        ));
+        )) ??
+    (segmentsHaveSelectedTargets(
+      segmentResults,
+      choiceOptionSegments.length > 0 ? choiceOptionSegments : rootSegments,
+    )
+      ? singleActiveSpanTargetFallback(entry.presentation)
+      : undefined);
   if (activeSpanIds === undefined) {
     return entry;
   }

@@ -177,6 +177,17 @@ export const appendSpotlightPlaybackSources = ({
         continue;
       }
     }
+    if (sourceKind === "serverTimeline") {
+      const keyIndex = previous.entries.findIndex(
+        (entry) => entry.key === source.key,
+      );
+      if (keyIndex >= 0) {
+        entries ??= [...previous.entries];
+        entries[keyIndex] = source;
+        queuedKeys.add(source.key);
+        continue;
+      }
+    }
     if (consumedKeys.has(source.key) || queuedKeys.has(source.key)) {
       continue;
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type {
+  CardRef,
   CardId,
   DecisionId,
   EffectTextSpanId,
@@ -31,6 +32,16 @@ const source = (
   semanticKey: `p1|source-1|OP00-001|effect|${spanId}`,
   mode,
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
+});
+
+const ref = (
+  instanceId: string,
+  cardId: string,
+  playerId: string = "p1",
+): CardRef => ({
+  instanceId: instanceId as InstanceId,
+  cardId: cardId as CardId,
+  playerId: playerId as PlayerId,
 });
 
 describe("effect spotlight playback", () => {
@@ -92,6 +103,38 @@ describe("effect spotlight playback", () => {
     expect(next.entries.map((entry) => entry.key)).toEqual([
       "event:resolved:span:search:selection",
     ]);
+    expect(next.cursorIndex).toBe(0);
+  });
+
+  it("refreshes a server timeline entry when target links arrive for an existing key", () => {
+    const plainResolved = source("event:resolved", "span:body");
+    const targetLinkedResolved = {
+      ...plainResolved,
+      active: {
+        ...plainResolved.active,
+        targetLinks: [
+          {
+            spanId: "span:body" as EffectTextSpanId,
+            relation: "selectedTarget" as const,
+            cards: [ref("target-1", "OP00-002", "p2")],
+          },
+        ],
+      },
+    };
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [plainResolved],
+        cursorIndex: 0,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [targetLinkedResolved],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries).toEqual([targetLinkedResolved]);
     expect(next.cursorIndex).toBe(0);
   });
 

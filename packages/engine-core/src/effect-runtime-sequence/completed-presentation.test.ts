@@ -306,3 +306,57 @@ test("completed sequence presentation links selected targets to changed segment 
     ],
   });
 });
+
+test("completed single-body sequence presentation links selected targets to the body span", () => {
+  const { state, played } = queueingState();
+  setupSequenceDefinition(state, played, drawThenPreventDraw());
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued effect");
+  const selectedTarget: CardRef = {
+    instanceId: "single-body-target-link-card" as never,
+    cardId: "single-body-target-link-card-id" as never,
+    playerId: p1,
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    },
+  };
+
+  const result = entryWithCompletedSequencePresentation(
+    {
+      ...queuedEntry,
+      presentation: {
+        source: queuedEntry.source,
+        textKind: "effect" as const,
+        activeSpanIds: ["span:body"] as EffectTextSpanId[],
+      },
+    },
+    {
+      "1": {
+        attempted: true,
+        succeeded: true,
+        changedState: true,
+        selectedCards: [],
+        selectedTargets: [selectedTarget],
+        paidCost: false,
+        playerDeclined: false,
+      },
+    },
+  );
+
+  assert.deepEqual(result.presentation, {
+    source: queuedEntry.source,
+    textKind: "effect" as const,
+    activeSpanIds: ["span:body"],
+    targetLinks: [
+      {
+        spanId: "span:body",
+        relation: "selectedTarget",
+        cards: [selectedTarget],
+      },
+    ],
+  });
+});
