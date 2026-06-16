@@ -498,6 +498,12 @@ describe("EffectSpotlight", () => {
       /\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 min\(calc\(var\(--card-width\)\s*\+\s*20px\),\s*68%\);/su,
     );
     expect(css).toMatch(
+      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s*\{[^}]*padding-right:\s*0;/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s+\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/su,
+    );
+    expect(css).toMatch(
       /\.effect-spotlight-targeting-rules\s*\{[^}]*\bwidth:\s*100%;/su,
     );
   });

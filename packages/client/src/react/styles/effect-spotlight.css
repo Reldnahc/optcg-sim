@@ -640,8 +640,15 @@
   margin-left: clamp(-38px, -4cqw, -14px);
 }
 
+.effect-spotlight-targeting-targets[data-visible-target-count="1"] {
+  padding-right: 0;
+}
+
 .effect-spotlight-targeting-targets[data-visible-target-count="1"]
   .effect-spotlight-targeting-card--target {
+  flex: 0 0 100%;
+  width: 100%;
+  max-width: 100%;
   transform: rotate(3deg);
 }
 

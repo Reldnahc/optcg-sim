@@ -367,6 +367,14 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s*\{[^}]*padding-right:\s*0;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-targeting-targets\[data-visible-target-count="1"\]\s+\.effect-spotlight-targeting-card--target\s*\{[^}]*flex:\s*0 0 100%;[^}]*width:\s*100%;[^}]*max-width:\s*100%;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /\.effect-spotlight-targeting-overflow\s*\{[^}]*position:\s*absolute;[^}]*min-width:\s*36px;[^}]*font-weight:\s*950;/u,
     );
     assert.match(
