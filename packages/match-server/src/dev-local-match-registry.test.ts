@@ -9,6 +9,7 @@ import {
   createLocalDevMatchRegistry,
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
+import type { BotStrategy } from "./bot-types.js";
 import type { DevMatchSetup } from "./local-match.js";
 import type { MatchTimerPolicy } from "./match-timers.js";
 import type {
@@ -132,6 +133,62 @@ test("accepted registry actions include snapshots for replay frames", async () =
   if (typeof result === "object") {
     assert.equal(result.accepted, true);
     assert.ok(result.snapshot?.players[playerId] !== undefined);
+  }
+});
+
+test("registry can omit action result snapshots for live socket traffic", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { createDefaultMatch: false, includeActionSnapshots: false },
+  );
+  const matchId = "live-socket-no-action-snapshot" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const ready = registry.chooseFirstPlayer(
+    created.matchId,
+    created.firstPlayerChoice.chooserPlayerId,
+    "goFirst",
+  );
+  if (typeof ready === "string" || ready.snapshot === undefined) {
+    throw new Error(
+      `Unable to start match: ${
+        typeof ready === "string" ? ready : "missing snapshot"
+      }`,
+    );
+  }
+  const actionOwner = Object.entries(ready.snapshot.players).find(
+    ([, player]) => player.actions.length > 0,
+  );
+  const playerId = actionOwner?.[0] as PlayerId | undefined;
+  const actionIndex = actionOwner?.[1].actions[0]?.index;
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Expected a player with a visible action.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: ready.snapshot.stateSeq,
+  };
+
+  const result = await registry.applyEnvelope({
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId: "live-socket-no-snapshot-action",
+    expectedStateSeq: ready.snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  });
+
+  assert.notEqual(result, "matchNotFound");
+  assert.equal(typeof result, "object");
+  if (typeof result === "object") {
+    assert.equal(result.accepted, true);
+    assert.equal(result.snapshot, undefined);
   }
 });
 
@@ -340,4 +397,44 @@ test("bot players schedule delayed actions without blocking match creation", asy
   await waitForBotMicrotasks();
 
   assert.deepEqual(botUpdates, [matchId]);
+});
+
+test("bot players wait for the action delay before building a decision snapshot", async () => {
+  vi.useFakeTimers();
+  const chooseAction = vi.fn<BotStrategy["chooseAction"]>(() => undefined);
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      botActionDelayMs: 1_000,
+      botStrategy: { chooseAction },
+      createDefaultMatch: false,
+    },
+  );
+  const matchId = "bot-snapshot-after-delay" as MatchId;
+  const botPlayerId = premadeSetup.playerOrder[0];
+  const createdPromise = registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: botPlayerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: botPlayerId,
+      },
+      botPlayerIds: [botPlayerId],
+    },
+  );
+  await waitForBotMicrotasks();
+
+  assert.equal(chooseAction.mock.calls.length, 0);
+
+  await vi.advanceTimersByTimeAsync(1_000);
+  await createdPromise;
+  await waitForBotMicrotasks();
+
+  assert.equal(chooseAction.mock.calls.length, 1);
 });

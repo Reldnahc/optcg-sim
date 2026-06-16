@@ -784,6 +784,7 @@ export const createMatchHttpServer = async (
           ? {}
           : { completedMatchRepository };
       })(),
+      includeActionSnapshots: false,
       matchTimerPolicy: resolveMatchTimerPolicy(options),
       onBotActionAccepted(matchId) {
         broadcastMatchState(matchId, registry, socketConnections);

@@ -99,6 +99,14 @@ type LocalDevMatchSession =
   | ActiveLocalDevMatchSession
   | PendingFirstPlayerLocalDevMatchSession;
 
+interface CreateActiveLocalDevMatchSessionOptions {
+  readonly firstPlayerChoice?: FirstPlayerChoiceState;
+  readonly timersEnabled?: boolean;
+  readonly botPlayerIds?: ReadonlySet<PlayerId>;
+  readonly initialTimers?: TimerState;
+  readonly includeActionSnapshots?: boolean;
+}
+
 export interface LocalDevMatchRegistry {
   createMatch: (
     setup?: LocalDevMatchSetup,
@@ -281,22 +289,24 @@ const createActiveLocalDevMatchSession = (
   setup: LocalDevMatchSetup,
   sessionService: MatchSessionService,
   matchTimerPolicy: MatchTimerPolicy,
-  firstPlayerChoice?: FirstPlayerChoiceState,
-  timersEnabled = true,
-  botPlayerIds: ReadonlySet<PlayerId> = new Set(),
-  initialTimers?: TimerState,
+  options: CreateActiveLocalDevMatchSessionOptions = {},
 ): ActiveLocalDevMatchSession => {
+  const timersEnabled = options.timersEnabled ?? true;
+  const botPlayerIds = options.botPlayerIds ?? new Set<PlayerId>();
   const match = createLocalDevMatch(setup);
   if (timersEnabled) {
     initializeLocalDevMatchTimers(match, matchTimerPolicy);
-    if (initialTimers !== undefined) {
-      match.state = { ...match.state, timers: pausedTimerState(initialTimers) };
+    if (options.initialTimers !== undefined) {
+      match.state = {
+        ...match.state,
+        timers: pausedTimerState(options.initialTimers),
+      };
     }
   } else {
     match.state = { ...match.state, timers: { players: {} } };
   }
   const resolvedChoice =
-    firstPlayerChoice ??
+    options.firstPlayerChoice ??
     ({
       source: "game-one-random-chooser",
       chooserPlayerId: setup.firstPlayerId,
@@ -306,6 +316,9 @@ const createActiveLocalDevMatchSession = (
   sessionService.registerLocalDevMatch({
     local: match,
     metadata: devSessionMetadata(setup, resolvedChoice),
+    ...(options.includeActionSnapshots === undefined
+      ? {}
+      : { includeActionSnapshots: options.includeActionSnapshots }),
   });
   return {
     status: "active",
@@ -471,6 +484,7 @@ export const createLocalDevMatchRegistry = async (
     readonly botActionDelayMs?: number;
     readonly createDefaultMatch?: boolean;
     readonly completedMatchRepository?: CompletedMatchRepository;
+    readonly includeActionSnapshots?: boolean;
     readonly matchTimerPolicy?: MatchTimerPolicy;
     readonly onBotActionAccepted?: (matchId: MatchId) => void;
     readonly botStrategy?: BotStrategy;
@@ -484,6 +498,9 @@ export const createLocalDevMatchRegistry = async (
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
   const botStrategy = options.botStrategy ?? defaultBotStrategy;
   const botActionDelayMs = options.botActionDelayMs ?? 1_000;
+  const includeActionSnapshots = options.includeActionSnapshots;
+  const activeSessionSnapshotOptions =
+    includeActionSnapshots === undefined ? {} : { includeActionSnapshots };
   const waitForBotActionDelay = async (): Promise<void> => {
     if (botActionDelayMs <= 0) {
       return;
@@ -512,6 +529,7 @@ export const createLocalDevMatchRegistry = async (
         defaultSetup,
         sessionService,
         matchTimerPolicy,
+        activeSessionSnapshotOptions,
       ),
     );
   }
@@ -600,14 +618,6 @@ export const createLocalDevMatchRegistry = async (
       for (let attempt = 0; attempt < 20; attempt += 1) {
         let acceptedAction = false;
         for (const botPlayerId of session.botPlayerIds) {
-          if (
-            botRequestFromChoice(
-              botPlayerId,
-              getLocalDevSnapshot(session.match),
-            ) === undefined
-          ) {
-            continue;
-          }
           await waitForBotActionDelay();
           const snapshot = getLocalDevSnapshot(session.match);
           const request = botRequestFromChoice(botPlayerId, snapshot);
@@ -674,9 +684,14 @@ export const createLocalDevMatchRegistry = async (
                 },
                 sessionService,
                 matchTimerPolicy,
-                options.firstPlayerChoice,
-                options.timersEnabled,
-                botPlayerIds,
+                {
+                  ...activeSessionSnapshotOptions,
+                  firstPlayerChoice: options.firstPlayerChoice,
+                  ...(options.timersEnabled === undefined
+                    ? {}
+                    : { timersEnabled: options.timersEnabled }),
+                  botPlayerIds,
+                },
               ),
               ...(options.seats === undefined ? {} : { seats: options.seats }),
             };
@@ -730,6 +745,7 @@ export const createLocalDevMatchRegistry = async (
         normalizedSetup,
         sessionService,
         matchTimerPolicy,
+        activeSessionSnapshotOptions,
       );
       sessions.set(matchId, session);
       return buildCreatedResponse(normalizedSetup, session);
@@ -768,10 +784,13 @@ export const createLocalDevMatchRegistry = async (
           resolvedSetup,
           sessionService,
           matchTimerPolicy,
-          resolvedChoice,
-          session.timersEnabled,
-          session.botPlayerIds,
-          session.match.state.timers,
+          {
+            ...activeSessionSnapshotOptions,
+            firstPlayerChoice: resolvedChoice,
+            timersEnabled: session.timersEnabled,
+            botPlayerIds: session.botPlayerIds,
+            initialTimers: session.match.state.timers,
+          },
         ),
         seats: session.seats,
       };
