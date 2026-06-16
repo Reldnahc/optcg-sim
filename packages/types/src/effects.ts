@@ -407,7 +407,6 @@ export interface SequenceSegmentResult {
   attempted: boolean;
   succeeded: boolean;
   changedState: boolean;
-  affectedCards?: CardRef[];
   selectedCards: CardRef[];
   selectedTargets: CardRef[];
   paidCost: boolean;
