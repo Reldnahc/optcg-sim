@@ -180,10 +180,18 @@ const shouldReplayServerTimelineReplacement = (
 const shouldReplaceServerTimelineEntry = (
   previous: EffectSpotlightPlaybackEntry,
   next: EffectSpotlightActiveSourceInput,
-): boolean =>
-  previous.semanticKey !== undefined &&
-  previous.semanticKey === next.semanticKey &&
-  previous.mode !== next.mode;
+): boolean => {
+  if (
+    previous.semanticKey === undefined ||
+    previous.semanticKey !== next.semanticKey
+  ) {
+    return false;
+  }
+  return (
+    previous.mode !== next.mode ||
+    (previous.mode === "live" && next.mode === "live")
+  );
+};
 
 export const appendSpotlightPlaybackSources = ({
   consumedKeys,

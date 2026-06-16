@@ -137,6 +137,37 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBe(0);
   });
 
+  it("replaces a stale live pending entry when another pending decision uses the same span", () => {
+    const payCost = pendingSource("decision:payCost:1", "span:cost:optional");
+    const selectReturnTarget = pendingSource(
+      "decision:selectTargets:2",
+      "span:cost:optional",
+    );
+    const previous = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [payCost],
+      sourceKind: "serverTimeline",
+    });
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous,
+      sources: [selectReturnTarget],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      selectReturnTarget.key,
+    ]);
+    expect(next.cursorIndex).toBe(0);
+  });
+
   it("refreshes a server timeline entry when target links arrive for an existing key", () => {
     const plainResolved = source("event:resolved", "span:body");
     const targetLinkedResolved = {
