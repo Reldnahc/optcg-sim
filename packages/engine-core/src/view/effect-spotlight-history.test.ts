@@ -382,6 +382,47 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
   });
 
+  it("orders played-card spotlight before following combat spotlight", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:played" as EngineEventId,
+          seq: 1,
+          type: "cardPlayed",
+          payload: {
+            playerId: "p1",
+            instanceId: "played-1",
+            cardId: "OP00-002",
+            category: "character",
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+        {
+          id: "event:attack" as EngineEventId,
+          seq: 2,
+          type: "attackDeclared",
+          payload: {
+            attacker,
+            target: defender,
+            attackerPower: 7000,
+            defenderPower: 5000,
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 2 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:played",
+      "event:attack",
+    ]);
+    expect(history?.presentKey).toBe("event:attack");
+  });
+
   it("projects blocker activation as attacker versus blocker", () => {
     const blocker = {
       playerId: "p2" as PlayerId,

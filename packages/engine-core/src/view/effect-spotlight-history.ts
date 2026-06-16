@@ -353,6 +353,10 @@ const resolvedSpotlightEntriesForEvents = (
       pendingPlayedCard = undefined;
       continue;
     }
+    if (pendingPlayedCard !== undefined) {
+      entries.push(pendingPlayedCard);
+      pendingPlayedCard = undefined;
+    }
     entries.push(...resolvedEntriesForEvent(event));
   }
   if (pendingPlayedCard !== undefined) {
