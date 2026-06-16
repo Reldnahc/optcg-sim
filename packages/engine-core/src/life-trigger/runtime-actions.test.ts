@@ -797,20 +797,12 @@ test("activated drawUpTo life trigger keeps reveal no-zone state while paused an
     ),
     true,
   );
-  assert.deepEqual(filterStateForPlayer(paused.state, p2).activeEffectText, {
-    source: {
-      instanceId: opened.lifeInstanceId,
-      cardId,
-      playerId: p2,
-      zone: {
-        zone: "noZone",
-        playerId: p2,
-        slot: "temporary",
-      },
-    },
-    textKind: "trigger",
-    activeSpanIds: [],
-  });
+  const pausedView = filterStateForPlayer(paused.state, p2);
+  assert.equal(pausedView.activeEffectText, undefined);
+  assert.equal(
+    pausedView.pendingDecision?.presentation.activeEffectText,
+    undefined,
+  );
   assert.equal(
     must(paused.state.players[p2], "paused p2").trash.some(
       (card) => card.instanceId === opened.lifeInstanceId,
