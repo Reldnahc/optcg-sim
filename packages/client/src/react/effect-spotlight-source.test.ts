@@ -531,7 +531,7 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
     });
   });
 
-  it("falls back to a no-highlight spotlight for the newest played character", () => {
+  it("does not create a no-highlight spotlight for a played character", () => {
     const played = event({
       type: "cardPlayed",
       seq: 2,
@@ -549,22 +549,26 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
         pendingDecision: undefined,
         events: [played],
       }),
-    ).toEqual({
-      active: {
-        source: {
-          playerId: "p1",
-          instanceId: "played-1",
-          cardId: "OP00-002",
-        },
-        textKind: "effect",
-        activeSpanIds: [],
-      },
-      id: String(played.id),
-      key: String(played.id),
-      semanticKey: "p1|played-1|OP00-002|effect|",
-      mode: "resolved",
-      status: "resolved",
-    });
+    ).toBeUndefined();
+  });
+
+  it("ignores resolved spotlight presentations without active spans", () => {
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "effectResolved",
+          seq: 1,
+          payload: {
+            status: "resolved",
+            presentation: {
+              source,
+              textKind: "effect",
+              activeSpanIds: [],
+            },
+          },
+        }),
+      ]),
+    ).toEqual([]);
   });
 
   it("does not use Event card plays as field-entry spotlights", () => {

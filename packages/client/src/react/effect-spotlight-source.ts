@@ -1,12 +1,9 @@
 import type {
   ActiveEffectTextPresentation,
-  CardId,
   DecisionId,
   EngineEvent,
   EffectSpotlightHistoryEntry,
-  InstanceId,
   PlayerView,
-  PlayerId,
 } from "@optcg/types";
 
 export type EffectSpotlightActiveSource = EffectSpotlightHistoryEntry;
@@ -30,6 +27,7 @@ const isActiveEffectTextPresentation = (
       value["textKind"] === "effect" ||
       value["textKind"] === "trigger") &&
     Array.isArray(activeSpanIds) &&
+    activeSpanIds.length > 0 &&
     activeSpanIds.every(
       (spanId) => typeof spanId === "string" && spanId.startsWith("span:"),
     )
@@ -53,10 +51,6 @@ const splitResolvedSpanIds = (
 const resolvedSpotlightSourcesForEvent = (
   event: EngineEvent,
 ): readonly EffectSpotlightActiveSource[] => {
-  if (event.type === "cardPlayed") {
-    const source = playedCardPresentation(event);
-    return source === undefined ? [] : [source];
-  }
   if (
     (event.type !== "effectResolved" && event.type !== "replacementApplied") ||
     !isObjectRecord(event.payload)
@@ -114,7 +108,6 @@ export const resolvedEffectTextSourcesForSpotlight = (
   events: readonly EngineEvent[],
 ): readonly EffectSpotlightActiveSource[] => {
   const sources: EffectSpotlightActiveSource[] = [];
-  let pendingPlayedCard: EffectSpotlightActiveSource | undefined;
   let skipNextEffectResolved = false;
   for (const event of events) {
     if (isNoEffectDecisionResolvedEvent(event)) {
@@ -122,60 +115,13 @@ export const resolvedEffectTextSourcesForSpotlight = (
     } else if (clearsNoEffectDecisionCandidate(event)) {
       skipNextEffectResolved = false;
     }
-    if (event.type === "cardPlayed") {
-      if (pendingPlayedCard !== undefined) {
-        sources.push(pendingPlayedCard);
-      }
-      pendingPlayedCard = playedCardPresentation(event);
-      continue;
-    }
-    if (event.type === "effectQueued") {
-      pendingPlayedCard = undefined;
-      continue;
-    }
     if (event.type === "effectResolved" && skipNextEffectResolved) {
       skipNextEffectResolved = false;
       continue;
     }
     sources.push(...resolvedSpotlightSourcesForEvent(event));
   }
-  if (pendingPlayedCard !== undefined) {
-    sources.push(pendingPlayedCard);
-  }
   return sources;
-};
-
-const playedCardPresentation = (
-  event: EngineEvent,
-): EffectSpotlightActiveSource | undefined => {
-  if (!isObjectRecord(event.payload)) {
-    return undefined;
-  }
-  const playerId = event.payload["playerId"];
-  const instanceId = event.payload["instanceId"];
-  const cardId = event.payload["cardId"];
-  const category = event.payload["category"];
-  if (
-    typeof playerId !== "string" ||
-    typeof instanceId !== "string" ||
-    typeof cardId !== "string" ||
-    (category !== "character" && category !== "stage")
-  ) {
-    return undefined;
-  }
-  return structuredFallbackSource({
-    active: {
-      source: {
-        playerId: playerId as PlayerId,
-        instanceId: instanceId as InstanceId,
-        cardId: cardId as CardId,
-      },
-      textKind: "effect",
-      activeSpanIds: [],
-    },
-    key: String(event.id),
-    mode: "resolved",
-  });
 };
 
 const liveKey = (

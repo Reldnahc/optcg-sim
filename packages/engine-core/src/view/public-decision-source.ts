@@ -206,32 +206,36 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   if (visible?.entry.presentation === undefined) {
     return undefined;
   }
+  const activeSpanIds =
+    narrowPayCostActiveSpanIds(
+      params.pending,
+      visible.entry.presentation.activeSpanIds,
+    ) ??
+    narrowSearchActiveSpanIds(
+      params.pending,
+      visible.entry.presentation.activeSpanIds,
+    ) ??
+    narrowChoiceActiveSpanIds(
+      params.pending,
+      visible.entry.presentation.activeSpanIds,
+    ) ??
+    narrowChoiceOptionActiveSpanIds(
+      params.state,
+      params.pending,
+      visible.entry.presentation.activeSpanIds,
+    ) ??
+    narrowSequenceActiveSpanIds(
+      params.state,
+      params.pending,
+      visible.entry.presentation.activeSpanIds,
+    ) ??
+    visible.entry.presentation.activeSpanIds;
+  if (activeSpanIds.length === 0) {
+    return undefined;
+  }
   return {
     ...visible.entry.presentation,
-    activeSpanIds:
-      narrowPayCostActiveSpanIds(
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      narrowSearchActiveSpanIds(
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      narrowChoiceActiveSpanIds(
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      narrowChoiceOptionActiveSpanIds(
-        params.state,
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      narrowSequenceActiveSpanIds(
-        params.state,
-        params.pending,
-        visible.entry.presentation.activeSpanIds,
-      ) ??
-      visible.entry.presentation.activeSpanIds,
+    activeSpanIds,
     source: visible.source,
   };
 };

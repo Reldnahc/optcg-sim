@@ -119,6 +119,59 @@ test("player decision projection includes active effect text for visible queued 
   assert.deepEqual(opponentView.activeEffectText, entry.presentation);
 });
 
+test("player decision projection omits queued effect text without active spans", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("empty-span-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
+    cardId: sourceCard.cardId,
+    category: "character",
+  });
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const entry: EffectQueueEntry = {
+    ...queuedEffect(source),
+    presentation: {
+      source,
+      textKind: "effect",
+      activeSpanIds: [],
+    },
+  };
+  state.effectQueue = [entry];
+  state.pendingDecision = {
+    id: toDecisionId("decision:effect-presentation:empty"),
+    type: "chooseQuantity",
+    playerId: p1,
+    prompt: "Choose how many cards to draw.",
+    causedBy: {
+      type: "effect",
+      queueEntryId: entry.id,
+      effectId: entry.effectBlockId,
+    },
+    visibility: { type: "private", playerId: p1 },
+    mode: "upTo",
+    min: 0,
+    max: 1,
+  };
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.activeEffectText, undefined);
+  assert.equal(view.pendingDecision?.presentation.activeEffectText, undefined);
+});
+
 test("player view projects resolved spotlight history from visible effect presentations", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");

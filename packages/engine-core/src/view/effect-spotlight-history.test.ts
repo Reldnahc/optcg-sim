@@ -39,6 +39,40 @@ const resolvedSearchEvent = (
 });
 
 describe("effectSpotlightHistoryFromPlayerViewState", () => {
+  it("does not create a generic played-card spotlight", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:card-played" as EngineEventId,
+          seq: 1,
+          type: "cardPlayed",
+          payload: {
+            playerId: "p1",
+            instanceId: "played-1",
+            cardId: "OP00-002",
+            category: "character",
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toBeUndefined();
+  });
+
+  it("ignores resolved presentations without active spans", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [resolvedSearchEvent("event:empty", [])],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toBeUndefined();
+  });
+
   it("projects structured resolved search timeline entries", () => {
     const event = resolvedSearchEvent("event:search", [
       "span:search:selection",
