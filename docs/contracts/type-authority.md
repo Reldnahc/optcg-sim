@@ -39,6 +39,12 @@ Canonical module to package module mapping is one-to-one by filename:
 - `contracts/types/view.ts` -> `packages/types/src/view.ts`
 - `contracts/types/game-state.ts` -> `packages/types/src/game-state.ts`
 - `contracts/types/effects.ts` -> `packages/types/src/effects.ts`
+- `contracts/types/effect-continuous.ts` -> `packages/types/src/effect-continuous.ts`
+- `contracts/types/effect-costs.ts` -> `packages/types/src/effect-costs.ts`
+- `contracts/types/effect-definition.ts` -> `packages/types/src/effect-definition.ts`
+- `contracts/types/effect-policies.ts` -> `packages/types/src/effect-policies.ts`
+- `contracts/types/effect-protection.ts` -> `packages/types/src/effect-protection.ts`
+- `contracts/types/effect-triggers.ts` -> `packages/types/src/effect-triggers.ts`
 - `contracts/types/decisions.ts` -> `packages/types/src/decisions.ts`
 - `contracts/types/runtime.ts` -> `packages/types/src/runtime.ts`
 - `contracts/types/effect-presentation.ts` -> `packages/types/src/effect-presentation.ts`
@@ -55,6 +61,12 @@ Canonical module to package module mapping is one-to-one by filename:
   - `packages/types/src/view.ts`
   - `packages/types/src/game-state.ts`
   - `packages/types/src/effects.ts`
+  - `packages/types/src/effect-continuous.ts`
+  - `packages/types/src/effect-costs.ts`
+  - `packages/types/src/effect-definition.ts`
+  - `packages/types/src/effect-policies.ts`
+  - `packages/types/src/effect-protection.ts`
+  - `packages/types/src/effect-triggers.ts`
   - `packages/types/src/decisions.ts`
   - `packages/types/src/runtime.ts`
   - `packages/types/src/effect-presentation.ts`

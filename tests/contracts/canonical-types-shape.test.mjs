@@ -17,6 +17,12 @@ const canonicalModuleFiles = [
   "types/view.ts",
   "types/game-state.ts",
   "types/effects.ts",
+  "types/effect-continuous.ts",
+  "types/effect-costs.ts",
+  "types/effect-definition.ts",
+  "types/effect-policies.ts",
+  "types/effect-protection.ts",
+  "types/effect-triggers.ts",
   "types/decisions.ts",
   "types/runtime.ts",
   "types/effect-presentation.ts",
@@ -232,7 +238,7 @@ test("TYP-009B canonical saved field-object references and exact-card target bin
 
   assert.match(
     canonicalTypes,
-    /export type SavedFieldObjectReferenceFamily\s*=\s*[\s\S]*"selectedTargets"[\s\S]*\|\s*"producedObjects";/m,
+    /export type SavedFieldObjectReferenceFamily\s*=\s*[\s\S]*"selectedTargets"[\s\S]*\|\s*"producedObjects"[\s\S]*\|\s*"paidCost";/m,
   );
   assert.match(
     canonicalTypes,
@@ -269,7 +275,7 @@ test("TYP-010 canonical selectedTargets producer contracts stay explicit and non
   );
   assert.match(
     canonicalTypes,
-    /export interface SelectAllTargetsEffect\s*{[\s\S]*?\btype:\s*"selectAllTargets";[\s\S]*?\brequest:\s*Omit<[\s\S]*?SelectedTargetsRequest,[\s\S]*?"min"\s*\|\s*"max"\s*\|\s*"allowFewerIfUnavailable"[\s\S]*?>;[\s\S]*?}/m,
+    /export interface SelectAllTargetsEffect\s*{[\s\S]*?\btype:\s*"selectAllTargets";[\s\S]*?\brequest:\s*[\s\S]*Omit<[\s\S]*?SelectedTargetsRequest,[\s\S]*?"min"\s*\|\s*"max"\s*\|\s*"allowFewerIfUnavailable"[\s\S]*?>[\s\S]*Omit<[\s\S]*?MultiZoneTargetRequest,[\s\S]*?"min"\s*\|\s*"max"\s*\|\s*"allowFewerIfUnavailable"[\s\S]*?>;[\s\S]*?}/m,
   );
   assert.match(
     canonicalTypes,

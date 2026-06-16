@@ -227,6 +227,36 @@ async function makeFixtureRepo() {
   );
   await writeFixtureFile(
     tempRoot,
+    "contracts/types/effect-continuous.ts",
+    "export interface EffectContinuousRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
+    "contracts/types/effect-costs.ts",
+    "export interface EffectCostRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
+    "contracts/types/effect-definition.ts",
+    "export interface EffectDefinitionRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
+    "contracts/types/effect-policies.ts",
+    "export interface EffectPolicyRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
+    "contracts/types/effect-protection.ts",
+    "export interface EffectProtectionRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
+    "contracts/types/effect-triggers.ts",
+    "export interface EffectTriggerRow { id: string; }\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
     "contracts/types/events.ts",
     'import type { PrimitiveId } from "./primitives.js";\nexport interface EventRow { id: PrimitiveId; }\n',
   );
