@@ -63,18 +63,42 @@ export interface ActiveEffectTextPresentation {
 
 export type EffectSpotlightHistoryEntryStatus = "pending" | "resolved";
 
-export interface EffectSpotlightHistoryEntry {
+export interface EffectSpotlightHistoryEntryBase {
   readonly id: string;
   readonly key: string;
   readonly semanticKey: string;
   readonly mode: "live" | "resolved";
   readonly status: EffectSpotlightHistoryEntryStatus;
+}
+
+export interface EffectTextSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {
+  readonly kind?: "effectText";
   readonly active: ActiveEffectTextPresentation;
   readonly pendingDecisionId?: DecisionId;
   readonly resolvedEventId?: EngineEventId;
   readonly queueEntryId?: QueueEntryId;
   readonly effectBlockId?: EffectId;
 }
+
+export type CombatSpotlightEventKind = "attackDeclared" | "blockerActivated";
+
+export interface CombatSpotlightPresentation {
+  readonly eventKind: CombatSpotlightEventKind;
+  readonly attacker: CardRef;
+  readonly defender: CardRef;
+  readonly attackerPower?: number;
+  readonly defenderPower?: number;
+}
+
+export interface CombatSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {
+  readonly kind: "combat";
+  readonly combat: CombatSpotlightPresentation;
+  readonly resolvedEventId: EngineEventId;
+}
+
+export type EffectSpotlightHistoryEntry =
+  | EffectTextSpotlightHistoryEntry
+  | CombatSpotlightHistoryEntry;
 
 export interface EffectSpotlightHistory {
   readonly entries: readonly EffectSpotlightHistoryEntry[];

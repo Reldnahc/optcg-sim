@@ -88,3 +88,36 @@ test("allows structured spotlight timeline entries without parsing display keys"
   expect(entry.pendingDecisionId).toBeUndefined();
   expect(entry.semanticKey).toContain("span:search:selection");
 });
+
+test("allows combat spotlight timeline entries without effect text", () => {
+  const attacker: CardRef = {
+    instanceId: "attacker-1" as InstanceId,
+    cardId: "OP00-003" as CardId,
+    playerId: "p1" as PlayerId,
+  };
+  const defender: CardRef = {
+    instanceId: "defender-1" as InstanceId,
+    cardId: "OP00-004" as CardId,
+    playerId: "p2" as PlayerId,
+  };
+
+  const entry: EffectSpotlightHistoryEntry = {
+    kind: "combat",
+    id: "combat:event:1",
+    key: "event:1",
+    semanticKey: "combat|attackDeclared|attacker-1|defender-1|7000|5000",
+    mode: "resolved",
+    status: "resolved",
+    combat: {
+      eventKind: "attackDeclared",
+      attacker,
+      defender,
+      attackerPower: 7000,
+      defenderPower: 5000,
+    },
+    resolvedEventId: "event:1" as EngineEventId,
+  };
+
+  expect(entry.kind).toBe("combat");
+  expect(entry.combat.defenderPower).toBe(5000);
+});
