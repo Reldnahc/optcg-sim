@@ -454,7 +454,7 @@ describe("lobby deck panel", () => {
     assert.match(clientSource, /const refreshAccountLoadouts = useCallback/u);
     assert.match(
       clientSource,
-      /accountClient\s*\.listLoadouts\(\{ includeDeckHashes: localRawDeckSubmissionsAllowed \}\)/u,
+      /accountClient\s*\.listLoadouts\(\{\s*includeDeckHashes: localRawDeckSubmissionsAllowed,\s*includeFolders: true,\s*\}\)/u,
     );
     assert.match(
       clientSource,

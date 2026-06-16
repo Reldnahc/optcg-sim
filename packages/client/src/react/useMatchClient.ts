@@ -221,7 +221,10 @@ export const useMatchClient = ({
     setAccountLoadoutsStatus("loading");
     setAccountLoadoutsError(undefined);
     void accountClient
-      .listLoadouts({ includeDeckHashes: localRawDeckSubmissionsAllowed })
+      .listLoadouts({
+        includeDeckHashes: localRawDeckSubmissionsAllowed,
+        includeFolders: true,
+      })
       .then((loadouts) => {
         if (accountLoadoutsRequestId.current !== requestId) {
           return;

@@ -58,6 +58,7 @@ export interface PoneglyphAccountClient {
 
 export interface ListAccountLoadoutsInput {
   readonly includeDeckHashes?: boolean | undefined;
+  readonly includeFolders?: boolean | undefined;
 }
 
 export interface CreatePoneglyphAccountClientOptions {
@@ -73,6 +74,7 @@ const folderById = (
 const normalizeLibraryDeck = (
   value: DeckCollection,
   foldersById: ReadonlyMap<string, DeckLibraryFolder>,
+  options: { readonly includeDeckHash: boolean },
 ): AccountLoadout => {
   const folder =
     value.folder_id === null ? undefined : foldersById.get(value.folder_id);
@@ -85,7 +87,7 @@ const normalizeLibraryDeck = (
   return {
     id: value.loadout_id,
     name: value.name,
-    deckHash: value.deck_hash,
+    ...(options.includeDeckHash ? { deckHash: value.deck_hash } : {}),
     folderId: value.folder_id,
     folderName: folder?.name ?? null,
     favorite: value.favorite,
@@ -237,14 +239,16 @@ export const createPoneglyphAccountClient = ({
   });
   return {
     async listLoadouts(input = {}) {
-      if (input.includeDeckHashes !== true) {
+      if (input.includeDeckHashes !== true && input.includeFolders !== true) {
         const response = await authClient.listLoadouts();
         return response.data.map(normalizeLoadout);
       }
       const response = await authClient.getDeckLibrary();
       const foldersById = folderById(response.data.folders);
       return playableDeckCollections(response.data.decks).map((deck) =>
-        normalizeLibraryDeck(deck, foldersById),
+        normalizeLibraryDeck(deck, foldersById, {
+          includeDeckHash: input.includeDeckHashes === true,
+        }),
       );
     },
     async createSimHandoff(input) {

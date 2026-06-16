@@ -95,6 +95,83 @@ describe("Poneglyph account client", () => {
     ]);
   });
 
+  test("lists account deck loadout folders without exposing deck hashes", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createPoneglyphAccountClient({
+      baseUrl: "https://auth.example/",
+      fetch(input, init) {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              folders: [
+                {
+                  id: "folder-1",
+                  user_id: "user-1",
+                  name: "Ranked",
+                  sort_order: 0,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-01T00:00:00.000Z",
+                },
+              ],
+              decks: [
+                {
+                  id: "deck-1",
+                  user_id: "user-1",
+                  name: "Enel",
+                  deck_hash: "hidden-deck-hash",
+                  deck: null,
+                  folder_id: "folder-1",
+                  kind: "deck",
+                  leader_card_number: "OP05-098",
+                  leader_variant_index: 2,
+                  leader_copy_count: 1,
+                  preview_card_number: null,
+                  preview_variant_index: null,
+                  max_copies_of_single_card: 4,
+                  main_count: 50,
+                  favorite: true,
+                  loadout_id: "loadout-1",
+                  don_deck_id: "don-1",
+                  playmat_cosmetic_id: null,
+                  don_sleeve_cosmetic_id: null,
+                  deck_sleeve_cosmetic_id: null,
+                  created_at: "2026-06-01T00:00:00.000Z",
+                  updated_at: "2026-06-02T00:00:00.000Z",
+                },
+              ],
+            },
+          }),
+        );
+      },
+    });
+
+    const loadouts = await client.listLoadouts({ includeFolders: true });
+
+    const request = requests[0];
+    if (request === undefined) {
+      throw new Error("Expected a deck library request.");
+    }
+    assert.equal(request.url, "https://auth.example/v1/deck-library");
+    assert.deepEqual(loadouts, [
+      {
+        id: "loadout-1",
+        name: "Enel",
+        folderId: "folder-1",
+        folderName: "Ranked",
+        favorite: true,
+        leaderCardId: "OP05-098",
+        leaderVariantIndex: 2,
+        leaderImageUrl:
+          "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
+        updatedAt: "2026-06-02T00:00:00.000Z",
+      },
+    ]);
+  });
+
   test("creates sim handoff tokens without sending deck contents", async () => {
     const requests: RecordedRequest[] = [];
     const client = createPoneglyphAccountClient({
