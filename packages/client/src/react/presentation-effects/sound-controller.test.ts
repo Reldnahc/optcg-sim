@@ -5,10 +5,19 @@ import { playPresentationSoundIntents } from "./sound-controller.js";
 import type { PresentationSoundCue } from "./sound-planner.js";
 
 const assetUrls: Record<PresentationSoundCue, string> = {
+  attach: "/sounds/move.wav",
+  counter: "/sounds/play.wav",
+  damage: "/sounds/trash.wav",
   draw: "/sounds/draw.wav",
+  ko: "/sounds/trash.wav",
   move: "/sounds/move.wav",
   play: "/sounds/play.wav",
+  rest: "/sounds/move.wav",
+  return: "/sounds/move.wav",
+  reveal: "/sounds/draw.wav",
+  shuffle: "/sounds/move.wav",
   trash: "/sounds/trash.wav",
+  trigger: "/sounds/play.wav",
 };
 
 describe("presentation sound controller", () => {

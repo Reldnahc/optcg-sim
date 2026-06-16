@@ -61,11 +61,20 @@ const context = (): BrowserAudioContext | undefined => {
 const cueFrequency = (cue: PresentationSoundCue): number => {
   switch (cue) {
     case "draw":
+    case "reveal":
       return 660;
     case "play":
+    case "trigger":
+    case "counter":
       return 440;
     case "trash":
+    case "ko":
+    case "damage":
       return 180;
+    case "attach":
+    case "return":
+    case "rest":
+    case "shuffle":
     case "move":
       return 330;
   }

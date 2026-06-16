@@ -1,6 +1,19 @@
 import type { CardMovementIntent } from "./movement-planner.js";
 
-export type PresentationSoundCue = "draw" | "move" | "play" | "trash";
+export type PresentationSoundCue =
+  | "attach"
+  | "counter"
+  | "damage"
+  | "draw"
+  | "ko"
+  | "move"
+  | "play"
+  | "rest"
+  | "return"
+  | "reveal"
+  | "shuffle"
+  | "trash"
+  | "trigger";
 
 export interface PresentationSoundIntent {
   id: string;

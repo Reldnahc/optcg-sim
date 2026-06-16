@@ -4,6 +4,8 @@ import type { RefObject } from "react";
 import type { EngineEvent } from "@optcg/types";
 
 import type { BoardViewModel } from "../../view-model.js";
+import { planPresentationEventIntents } from "./event-presentation-intents.js";
+import { planEventSoundIntents } from "./event-sound-planner.js";
 import {
   planCardMovementIntents,
   type CardMovementIntent,
@@ -55,14 +57,34 @@ export const usePresentationEffects = (input: {
     });
     previousSnapshotRef.current = currentSnapshot;
 
+    const movementSoundIntents = planSoundIntents(plannedMovements);
+    const presentationEventIntents = planPresentationEventIntents({
+      events: newEvents,
+      currentPlayerId: input.board.playerId,
+    });
+    const movementEventIds = new Set(
+      plannedMovements.flatMap((movement) =>
+        movement.eventId === undefined ? [] : [movement.eventId],
+      ),
+    );
+    const eventSoundIntents = planEventSoundIntents({
+      intents: presentationEventIntents,
+      movementEventIds,
+      currentPlayerId: input.board.playerId,
+    });
+    const soundIntents = [...movementSoundIntents, ...eventSoundIntents];
+
+    if (plannedMovements.length > 0) {
+      setMovements(plannedMovements);
+    }
+    if (soundIntents.length > 0) {
+      playPresentationSoundIntents(soundIntents, {
+        enabled: input.soundEnabled ?? true,
+      });
+    }
     if (plannedMovements.length === 0) {
       return;
     }
-
-    setMovements(plannedMovements);
-    playPresentationSoundIntents(planSoundIntents(plannedMovements), {
-      enabled: input.soundEnabled ?? true,
-    });
     if (clearTimerRef.current !== undefined) {
       window.clearTimeout(clearTimerRef.current);
     }
