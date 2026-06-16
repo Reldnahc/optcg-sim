@@ -172,9 +172,7 @@ export const parseMoveCardsCost = (
   return { cost, evidence, rest: "" };
 };
 
-function parseHandToDeckCostRoute(
-  text: string,
-):
+function parseHandToDeckCostRoute(text: string):
   | {
       readonly position: "top" | "bottom";
       readonly evidence: PrimitiveEvidence;

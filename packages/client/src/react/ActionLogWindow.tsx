@@ -100,46 +100,46 @@ export const ActionLogContent = ({
           Showing {renderedEntries.length} of {entries.length} visible actions
         </p>
       ) : null}
-    <ol className="action-log-list">
-      {renderedEntries.map((entry) => {
-        const rollback = entry.rollback;
-        const rollbackTitle =
-          rollback === undefined
-            ? undefined
-            : `Request rollback to ${rollback.label}`;
-        return (
-          <li key={entry.id} className="action-log-entry">
-            <span className="action-log-seq">{entry.seq}</span>
-            <span className="action-log-text">
-              {renderActionLogText(entry, onPreviewCard)}
-            </span>
-            {rollback === undefined ||
-            onRequestRollback === undefined ? null : (
-              <button
-                className="action-log-rollback"
-                type="button"
-                aria-label={rollbackTitle}
-                title={rollbackTitle}
-                onClick={() => {
-                  onRequestRollback(rollback.rollbackPointId);
-                }}
-              >
-                <svg
-                  className="action-log-rollback-icon"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  focusable="false"
+      <ol className="action-log-list">
+        {renderedEntries.map((entry) => {
+          const rollback = entry.rollback;
+          const rollbackTitle =
+            rollback === undefined
+              ? undefined
+              : `Request rollback to ${rollback.label}`;
+          return (
+            <li key={entry.id} className="action-log-entry">
+              <span className="action-log-seq">{entry.seq}</span>
+              <span className="action-log-text">
+                {renderActionLogText(entry, onPreviewCard)}
+              </span>
+              {rollback === undefined ||
+              onRequestRollback === undefined ? null : (
+                <button
+                  className="action-log-rollback"
+                  type="button"
+                  aria-label={rollbackTitle}
+                  title={rollbackTitle}
+                  onClick={() => {
+                    onRequestRollback(rollback.rollbackPointId);
+                  }}
                 >
-                  <path d="M7.5 9.5H3.5V5.5" />
-                  <path d="M3.6 9.5A8.4 8.4 0 1 1 6.1 15.6" />
-                  <path d="M11.8 8.3v4.1l2.8 1.8" />
-                </svg>
-              </button>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+                  <svg
+                    className="action-log-rollback-icon"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="M7.5 9.5H3.5V5.5" />
+                    <path d="M3.6 9.5A8.4 8.4 0 1 1 6.1 15.6" />
+                    <path d="M11.8 8.3v4.1l2.8 1.8" />
+                  </svg>
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
     </>
   );
 };

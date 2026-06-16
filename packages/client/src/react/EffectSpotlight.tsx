@@ -181,8 +181,7 @@ const useSpotlightTimerNowMs = (
       return;
     }
 
-    let intervalId: number | undefined;
-    const update = (): void => {
+    const update = (intervalId?: number): void => {
       const nextNowMs = Date.now();
       setNowMs(nextNowMs);
       if (
@@ -199,7 +198,9 @@ const useSpotlightTimerNowMs = (
       return;
     }
 
-    intervalId = window.setInterval(update, 50);
+    const intervalId = window.setInterval(() => {
+      update(intervalId);
+    }, 50);
     return () => {
       window.clearInterval(intervalId);
     };
