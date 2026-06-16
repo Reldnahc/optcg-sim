@@ -1,4 +1,5 @@
 import type { ExpressionParseResult, ParseInput } from "../../types.js";
+import { sourceSpan } from "../../source-slices.js";
 import {
   parseCombinedKoOrFieldRemovalReplacement,
   parseOpponentFieldRemovalReplacement,
@@ -34,6 +35,13 @@ export function replacementInsteadExpressionParser(
       "composition:replacementInstead",
       ...parsed.evidence,
     ],
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, parsed.evidence),
+          ],
+        }),
     rest: "",
     blockPatch: {
       category: "replacement",

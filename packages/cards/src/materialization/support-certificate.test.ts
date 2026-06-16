@@ -124,6 +124,26 @@ test("materialized effect definitions expose parser support certificates", () =>
   );
 });
 
+test("materialized replacement definitions expose body presentation spans", () => {
+  const materialized = materializeEffectDefinition(
+    "OP01-001" as CardId,
+    [
+      "[Once Per Turn] If your {Red-Haired Pirates} type Character would be K.O.'d, you may trash 1 Character card with 6000 power or more from your hand instead.",
+    ],
+    "source-hash",
+    {
+      effectDefinitionsVersion: "effects-test",
+      rulesVersion: "rules-test",
+    },
+    { evaluateRuntimeSupport: () => ({ supported: true }) },
+  );
+
+  assert.deepEqual(materialized.definition?.effects[0]?.presentation, {
+    textKind: "effect",
+    spanIds: ["span:body"],
+  });
+});
+
 test("materialized return-cost segment presentations use scoped source-map span ids", () => {
   const materialized = materializeEffectDefinition(
     "OP01-001" as CardId,
