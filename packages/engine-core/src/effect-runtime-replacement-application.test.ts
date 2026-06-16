@@ -430,6 +430,13 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
       source: first.targetRef,
       textKind: "effect",
       activeSpanIds: [toEffectTextSpanId("span:replacement")],
+      targetLinks: [
+        {
+          spanId: toEffectTextSpanId("span:replacement"),
+          relation: "affectedCard",
+          cards: [first.targetRef],
+        },
+      ],
     },
   });
   assert.deepEqual(replacementApplied.visibility, { type: "public" });

@@ -78,7 +78,11 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   const usedProcess = markReplacementUsed(process, candidate.id);
   const coveredTargets =
     candidate.coveredTargets ?? fieldRemovalProcessTargets(usedProcess);
-  const presentation = replacementCandidatePresentation(state, candidate);
+  const presentation = replacementCandidatePresentation(
+    state,
+    candidate,
+    coveredTargets,
+  );
   const sequenceWithTrash =
     supportedReplacementSequenceWithTrashFromHandInstead(
       candidate.replacementEffect.instead,
