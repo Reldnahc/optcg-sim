@@ -117,6 +117,49 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     ]);
   });
 
+  it("splits resolved choice option spans into separate timeline entries", () => {
+    const event = resolvedSearchEvent("event:choice", [
+      "span:choice",
+      "span:choice:0:body",
+      "span:choice:1:body",
+    ]);
+
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [event],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
+      [["span:choice:0:body"], ["span:choice:1:body"]],
+    );
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:choice:span:choice:0:body",
+      "event:choice:span:choice:1:body",
+    ]);
+  });
+
+  it("splits resolved cost and body spans into separate timeline entries", () => {
+    const event = resolvedSearchEvent("event:cost-body", [
+      "span:cost:optional",
+      "span:body",
+    ]);
+
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [event],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history?.entries.map((entry) => entry.active.activeSpanIds)).toEqual(
+      [["span:cost:optional"], ["span:body"]],
+    );
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:cost-body:span:cost:optional",
+      "event:cost-body:span:body",
+    ]);
+  });
+
   it("replaces a resolved current pending span with the live pending entry", () => {
     const event = resolvedSearchEvent("event:search", [
       "span:search:selection",

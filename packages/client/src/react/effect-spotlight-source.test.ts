@@ -331,6 +331,62 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
     ]);
   });
 
+  it("splits resolved choice option spans into queueable spotlight sources", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: [
+            "span:choice",
+            "span:choice:0:body",
+            "span:choice:1:body",
+          ],
+        },
+      },
+    });
+
+    const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:choice:0:body`,
+      `${String(resolved.id)}:span:choice:1:body`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:choice:0:body"],
+      ["span:choice:1:body"],
+    ]);
+  });
+
+  it("splits resolved cost and body spans into queueable spotlight sources", () => {
+    const resolved = event({
+      type: "effectResolved",
+      seq: 1,
+      payload: {
+        status: "resolved",
+        presentation: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:cost:optional", "span:body"],
+        },
+      },
+    });
+
+    const sources = resolvedEffectTextSourcesForSpotlight([resolved]);
+
+    expect(sources.map((candidate) => candidate.key)).toEqual([
+      `${String(resolved.id)}:span:cost:optional`,
+      `${String(resolved.id)}:span:body`,
+    ]);
+    expect(sources.map((candidate) => candidate.active.activeSpanIds)).toEqual([
+      ["span:cost:optional"],
+      ["span:body"],
+    ]);
+  });
+
   it("uses resolved search segments instead of the live whole-effect spotlight while an effect is active", () => {
     const activeEffectText: NonNullable<PlayerView["activeEffectText"]> = {
       source,

@@ -36,15 +36,24 @@ const isActiveEffectTextPresentation = (
 
 const sequenceSpanPrefix = "span:sequence:";
 const searchSpanPrefix = "span:search:";
+const costSpanPrefix = "span:cost";
+const bodySpanPrefix = "span:body";
+const choiceOptionSpanPattern = /^span:choice:\d+:/u;
+
+const isResolvedStepSpanId = (
+  spanId: ActiveEffectTextPresentation["activeSpanIds"][number],
+): boolean =>
+  spanId.startsWith(sequenceSpanPrefix) ||
+  spanId.startsWith(searchSpanPrefix) ||
+  spanId.startsWith(costSpanPrefix) ||
+  spanId === bodySpanPrefix ||
+  spanId.startsWith(`${bodySpanPrefix}:`) ||
+  choiceOptionSpanPattern.test(spanId);
 
 const splitResolvedSpanIds = (
   activeSpanIds: readonly ActiveEffectTextPresentation["activeSpanIds"][number][],
 ): readonly ActiveEffectTextPresentation["activeSpanIds"][number][] => {
-  const splitSpanIds = activeSpanIds.filter(
-    (spanId) =>
-      spanId.startsWith(sequenceSpanPrefix) ||
-      spanId.startsWith(searchSpanPrefix),
-  );
+  const splitSpanIds = activeSpanIds.filter(isResolvedStepSpanId);
   return splitSpanIds.length > 1 ? splitSpanIds : [];
 };
 
