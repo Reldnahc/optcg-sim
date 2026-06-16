@@ -53,6 +53,13 @@ const combatCard = (
   imageUrl,
 });
 
+const targetCard = (index: number): ClientCardModel =>
+  combatCard(
+    `target-${String(index)}`,
+    `Target ${String(index)}`,
+    `https://example.test/target-${String(index)}.png`,
+  );
+
 const active = (
   overrides: Partial<ActiveEffectTextPresentation> = {},
 ): ActiveEffectTextPresentation => ({
@@ -401,6 +408,45 @@ describe("EffectSpotlight", () => {
     );
     expect(html).toMatch(
       /effect-spotlight-card--combat[\s\S]*effect-spotlight-controls/u,
+    );
+  });
+
+  it("renders a source-to-target spotlight with fanned target overflow", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        presentation: {
+          kind: "targeting",
+          active: active(),
+          sourceCard: card(),
+          targetCards: [
+            targetCard(1),
+            targetCard(2),
+            targetCard(3),
+            targetCard(4),
+            targetCard(5),
+            targetCard(6),
+          ],
+          label: "targets",
+        },
+        controls: controls(),
+        timer: timer(),
+      }),
+    );
+
+    expect(html).toContain("effect-spotlight--targeting");
+    expect(html).toContain("effect-spotlight-card--targeting");
+    expect(html).toContain("effect-spotlight-targeting-card--source");
+    expect(html).toContain("effect-spotlight-targeting-targets");
+    expect(html).toContain('data-target-count="6"');
+    expect(html).toContain("Resolving Card");
+    expect(html).toContain("Target 1");
+    expect(html).toContain("Target 5");
+    expect(html).not.toContain("Target 6");
+    expect(html).toContain("effect-spotlight-targeting-overflow");
+    expect(html).toContain("+1");
+    expect(html).toContain("targets");
+    expect(html).toContain(
+      'aria-label="Targeting spotlight: Resolving Card targets Target 1, Target 2, Target 3, Target 4, Target 5, and 1 more"',
     );
   });
 

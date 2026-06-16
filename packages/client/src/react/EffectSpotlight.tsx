@@ -27,6 +27,13 @@ export type EffectSpotlightPresentation =
       readonly card: ClientCardModel;
     }
   | {
+      readonly kind: "targeting";
+      readonly active: ActiveEffectTextPresentation;
+      readonly sourceCard: ClientCardModel;
+      readonly targetCards: readonly ClientCardModel[];
+      readonly label: string;
+    }
+  | {
       readonly kind: "combat";
       readonly combat: CombatSpotlightPresentation;
       readonly attackerCard: ClientCardModel;
@@ -297,6 +304,46 @@ const combatSpotlightAriaLabel = ({
     combat.attackerPower,
   )} attacks ${combatCardPowerLabel(defenderCard, combat.defenderPower)}`;
 
+const targetListLabel = (
+  targetCards: readonly ClientCardModel[],
+  overflowCount: number,
+): string => {
+  const visibleNames = targetCards.map((card) => card.name);
+  const overflowLabel =
+    overflowCount <= 0 ? undefined : `${String(overflowCount)} more`;
+  const labels =
+    overflowLabel === undefined
+      ? visibleNames
+      : [...visibleNames, overflowLabel];
+  if (labels.length === 0) {
+    return "no visible targets";
+  }
+  if (labels.length === 1) {
+    return labels[0] ?? "no visible targets";
+  }
+  if (labels.length === 2) {
+    return `${labels[0] ?? ""} and ${labels[1] ?? ""}`;
+  }
+  return `${labels.slice(0, -1).join(", ")}, and ${labels.at(-1) ?? ""}`;
+};
+
+const targetingSpotlightAriaLabel = ({
+  label,
+  sourceCard,
+  targetCards,
+}: {
+  readonly label: string;
+  readonly sourceCard: ClientCardModel;
+  readonly targetCards: readonly ClientCardModel[];
+}): string => {
+  const visibleTargetCards = targetCards.slice(0, maxVisibleTargetCards);
+  const overflowCount = Math.max(0, targetCards.length - maxVisibleTargetCards);
+  return `Targeting spotlight: ${sourceCard.name} ${label} ${targetListLabel(
+    visibleTargetCards,
+    overflowCount,
+  )}`;
+};
+
 const CombatSpotlightCard = ({
   attackerCard,
   combat,
@@ -347,6 +394,77 @@ const CombatSpotlightCard = ({
   </div>
 );
 
+const maxVisibleTargetCards = 5;
+
+const targetSlotClassName = (index: number): string =>
+  `effect-spotlight-targeting-card effect-spotlight-targeting-card--target is-target-slot-${String(
+    index,
+  )}`;
+
+const TargetingSpotlightCard = ({
+  label,
+  sourceCard,
+  targetCards,
+  timer,
+  timerNowMs,
+}: {
+  readonly label: string;
+  readonly sourceCard: ClientCardModel;
+  readonly targetCards: readonly ClientCardModel[];
+  readonly timer: EffectSpotlightTimer | undefined;
+  readonly timerNowMs: number;
+}): React.JSX.Element => {
+  const visibleTargetCards = targetCards.slice(0, maxVisibleTargetCards);
+  const overflowCount = Math.max(0, targetCards.length - maxVisibleTargetCards);
+  return (
+    <div className="effect-spotlight-card effect-spotlight-card--targeting">
+      <div
+        className="effect-spotlight-targeting"
+        data-target-count={targetCards.length}
+        aria-hidden="true"
+      >
+        <SpotlightCardFace
+          card={sourceCard}
+          className="effect-spotlight-targeting-card effect-spotlight-targeting-card--source"
+        />
+        <div className="effect-spotlight-targeting-direction">
+          <span className="effect-spotlight-targeting-direction__label">
+            {label}
+          </span>
+          <svg
+            className="effect-spotlight-targeting-direction__arrow"
+            viewBox="0 0 84 28"
+            focusable="false"
+            aria-hidden="true"
+          >
+            <path d="M4 14h64" />
+            <path d="M56 5l20 9-20 9" />
+          </svg>
+        </div>
+        <div
+          className="effect-spotlight-targeting-targets"
+          data-target-count={targetCards.length}
+          data-visible-target-count={visibleTargetCards.length}
+        >
+          {visibleTargetCards.map((targetCard, index) => (
+            <SpotlightCardFace
+              key={`${String(targetCard.instanceId)}:${String(index)}`}
+              card={targetCard}
+              className={targetSlotClassName(index)}
+            />
+          ))}
+          {overflowCount === 0 ? null : (
+            <div className="effect-spotlight-targeting-overflow">
+              +{String(overflowCount)}
+            </div>
+          )}
+        </div>
+      </div>
+      <SpotlightCardTimer timer={timer} timerNowMs={timerNowMs} />
+    </div>
+  );
+};
+
 export const EffectSpotlight = ({
   controls,
   presentation,
@@ -360,10 +478,13 @@ export const EffectSpotlight = ({
   if (controls === undefined && presentation === undefined) {
     return null;
   }
-  const spotlightClassName =
-    presentation?.kind === "combat"
-      ? "effect-spotlight effect-spotlight--combat"
-      : "effect-spotlight";
+  const spotlightClassName = [
+    "effect-spotlight",
+    presentation?.kind === "combat" ? "effect-spotlight--combat" : "",
+    presentation?.kind === "targeting" ? "effect-spotlight--targeting" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const textKind = active?.textKind ?? "effect";
   const text =
     card === undefined
@@ -405,7 +526,13 @@ export const EffectSpotlight = ({
             combat: presentation.combat,
             defenderCard: presentation.defenderCard,
           })
-        : `Resolving ${presentation.card.name}`;
+        : presentation.kind === "targeting"
+          ? targetingSpotlightAriaLabel({
+              label: presentation.label,
+              sourceCard: presentation.sourceCard,
+              targetCards: presentation.targetCards,
+            })
+          : `Resolving ${presentation.card.name}`;
   const controlButton = ({
     disabled = false,
     icon,
@@ -436,6 +563,14 @@ export const EffectSpotlight = ({
           attackerCard={presentation.attackerCard}
           defenderCard={presentation.defenderCard}
           combat={presentation.combat}
+          timer={timer}
+          timerNowMs={timerNowMs}
+        />
+      ) : presentation?.kind === "targeting" ? (
+        <TargetingSpotlightCard
+          label={presentation.label}
+          sourceCard={presentation.sourceCard}
+          targetCards={presentation.targetCards}
           timer={timer}
           timerNowMs={timerNowMs}
         />

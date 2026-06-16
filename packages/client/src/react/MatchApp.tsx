@@ -29,6 +29,7 @@ import {
 } from "./use-end-turn-confirmation.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
 import { useEffectSpotlight } from "./use-effect-spotlight.js";
+import { buildEffectSpotlightPresentation } from "./effect-spotlight-presentation.js";
 import { activeEffectTextSourcesForSpotlight } from "./effect-spotlight-source.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
@@ -343,21 +344,10 @@ export const MatchApp = ({
         : "serverTimeline",
   });
   const effectSpotlightEntry = effectSpotlight?.entry;
-  const effectSpotlightPresentation =
-    effectSpotlightEntry === undefined
-      ? undefined
-      : effectSpotlightEntry.kind === "combat"
-        ? {
-            kind: "combat" as const,
-            combat: effectSpotlightEntry.combat,
-            attackerCard: cardModel(effectSpotlightEntry.combat.attacker),
-            defenderCard: cardModel(effectSpotlightEntry.combat.defender),
-          }
-        : {
-            kind: "effectText" as const,
-            active: effectSpotlightEntry.active,
-            card: cardModel(effectSpotlightEntry.active.source),
-          };
+  const effectSpotlightPresentation = buildEffectSpotlightPresentation({
+    entry: effectSpotlightEntry,
+    cardModel,
+  });
   const effectSpotlightTimer =
     effectSpotlight === undefined || effectSpotlight.entry === undefined
       ? undefined

@@ -1,0 +1,77 @@
+import type { CardRef } from "@optcg/types";
+
+import type { ClientCardModel } from "../view-model.js";
+import type { EffectSpotlightPresentation } from "./EffectSpotlight.js";
+import {
+  isCombatSpotlightSource,
+  type EffectSpotlightPlaybackEntry,
+} from "./use-effect-spotlight-playback.js";
+
+export interface BuildEffectSpotlightPresentationInput {
+  readonly entry: EffectSpotlightPlaybackEntry | undefined;
+  readonly cardModel: (card: CardRef) => ClientCardModel;
+}
+
+const cardKey = (card: CardRef): string =>
+  [String(card.playerId), String(card.instanceId), String(card.cardId)].join(
+    "|",
+  );
+
+const targetCardsForEntry = (
+  entry: EffectSpotlightPlaybackEntry,
+): readonly CardRef[] => {
+  if (isCombatSpotlightSource(entry)) {
+    return [];
+  }
+  const activeSpanIds = new Set(entry.active.activeSpanIds);
+  const seenTargetKeys = new Set<string>();
+  const targetCards: CardRef[] = [];
+  for (const link of entry.active.targetLinks ?? []) {
+    if (!activeSpanIds.has(link.spanId)) {
+      continue;
+    }
+    for (const card of link.cards) {
+      const key = cardKey(card);
+      if (seenTargetKeys.has(key)) {
+        continue;
+      }
+      seenTargetKeys.add(key);
+      targetCards.push(card);
+    }
+  }
+  return targetCards;
+};
+
+export const buildEffectSpotlightPresentation = ({
+  cardModel,
+  entry,
+}: BuildEffectSpotlightPresentationInput):
+  | EffectSpotlightPresentation
+  | undefined => {
+  if (entry === undefined) {
+    return undefined;
+  }
+  if (isCombatSpotlightSource(entry)) {
+    return {
+      kind: "combat",
+      combat: entry.combat,
+      attackerCard: cardModel(entry.combat.attacker),
+      defenderCard: cardModel(entry.combat.defender),
+    };
+  }
+  const targetCards = targetCardsForEntry(entry);
+  if (targetCards.length > 0) {
+    return {
+      kind: "targeting",
+      active: entry.active,
+      sourceCard: cardModel(entry.active.source),
+      targetCards: targetCards.map(cardModel),
+      label: "targets",
+    };
+  }
+  return {
+    kind: "effectText",
+    active: entry.active,
+    card: cardModel(entry.active.source),
+  };
+};

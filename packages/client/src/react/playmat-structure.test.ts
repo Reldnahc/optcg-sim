@@ -248,7 +248,11 @@ describe("playmat structure", () => {
     );
     assert.match(
       matchApp,
-      /const effectSpotlightPresentation =[\s\S]*effectSpotlightEntry === undefined[\s\S]*effectSpotlightEntry\.kind === "combat"[\s\S]*attackerCard: cardModel\(effectSpotlightEntry\.combat\.attacker\)[\s\S]*defenderCard: cardModel\(effectSpotlightEntry\.combat\.defender\)[\s\S]*kind: "effectText" as const[\s\S]*card: cardModel\(effectSpotlightEntry\.active\.source\)/u,
+      /const effectSpotlightPresentation = buildEffectSpotlightPresentation\(\{[\s\S]*entry: effectSpotlightEntry,[\s\S]*cardModel,[\s\S]*\}\);/u,
+    );
+    assert.match(
+      matchApp,
+      /import \{ buildEffectSpotlightPresentation \} from "\.\/effect-spotlight-presentation\.js";/u,
     );
     assert.match(
       matchApp,
@@ -279,7 +283,11 @@ describe("playmat structure", () => {
     assert.equal(matchApp.includes("<EffectSpotlight"), false);
     assert.match(
       effectSpotlightComponent,
-      /presentation\?\.kind === "combat"[\s\S]*"effect-spotlight effect-spotlight--combat"/u,
+      /presentation\?\.kind === "combat"[\s\S]*"effect-spotlight--combat"/u,
+    );
+    assert.match(
+      effectSpotlightComponent,
+      /presentation\?\.kind === "targeting"[\s\S]*"effect-spotlight--targeting"/u,
     );
     assert.match(
       effectSpotlightStyles,
@@ -307,7 +315,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight--combat\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*min\(calc\(var\(--card-height\)\s*\+\s*44px\),\s*calc\(100vh\s*-\s*128px\)\);[^}]*aspect-ratio:\s*auto;/u,
+      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*min\(calc\(var\(--card-height\)\s*\+\s*44px\),\s*calc\(100vh\s*-\s*128px\)\);[^}]*aspect-ratio:\s*auto;/u,
     );
     assert.equal(effectSpotlightStyles.includes("calc(100% - 12px)"), false);
     assert.equal(effectSpotlightStyles.includes(" * "), false);
@@ -318,7 +326,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card--combat\s*\{[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/u,
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/u,
     );
     assert.match(
       effectSpotlightStyles,
@@ -327,6 +335,14 @@ describe("playmat structure", () => {
     assert.match(
       effectSpotlightStyles,
       /\.effect-spotlight-combat-direction__arrow\s*\{[^}]*stroke:\s*#fff0a7;[^}]*stroke-width:\s*5;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(70px,\s*0\.42fr\)\s*minmax\(calc\(var\(--card-width\)\s*\+\s*22px\),\s*1\.38fr\);[^}]*transform:\s*translateY\(clamp\(-14px,\s*-1\.6vh,\s*-7px\)\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-targeting-overflow\s*\{[^}]*position:\s*absolute;[^}]*min-width:\s*36px;[^}]*font-weight:\s*950;/u,
     );
     assert.match(
       effectSpotlightStyles,
