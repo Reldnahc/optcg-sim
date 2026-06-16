@@ -226,9 +226,15 @@ describe("playmat structure", () => {
   });
 
   test("effect spotlight is hosted in the empty hand rail lane", async () => {
-    const [boardLayout, matchApp, effectSpotlightStyles] = await Promise.all([
+    const [
+      boardLayout,
+      matchApp,
+      effectSpotlightComponent,
+      effectSpotlightStyles,
+    ] = await Promise.all([
       readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "EffectSpotlight.tsx"), "utf8"),
       readFile(join(sourceDirectory, "styles", "effect-spotlight.css"), "utf8"),
     ]);
 
@@ -272,6 +278,10 @@ describe("playmat structure", () => {
     assert.match(boardLayout, /controls=\{effectSpotlightControls\}/u);
     assert.equal(matchApp.includes("<EffectSpotlight"), false);
     assert.match(
+      effectSpotlightComponent,
+      /presentation\?\.kind === "combat"[\s\S]*"effect-spotlight effect-spotlight--combat"/u,
+    );
+    assert.match(
       effectSpotlightStyles,
       /\.effect-spotlight\s*\{[^}]*position:\s*absolute;/u,
     );
@@ -289,7 +299,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
+      /--effect-spotlight-combat-width:\s*min\(\s*calc\(\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*var\(--card-width\)\s*\+\s*88px\s*\),\s*calc\(100vw\s*-\s*16px\)\s*\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
       /width:\s*var\(--effect-spotlight-card-width\);/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight--combat\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*min\(calc\(var\(--card-height\)\s*\+\s*44px\),\s*calc\(100vh\s*-\s*128px\)\);[^}]*aspect-ratio:\s*auto;/u,
     );
     assert.equal(effectSpotlightStyles.includes("calc(100% - 12px)"), false);
     assert.equal(effectSpotlightStyles.includes(" * "), false);
@@ -297,6 +315,14 @@ describe("playmat structure", () => {
     assert.match(
       effectSpotlightStyles,
       /\.effect-spotlight-card\s*\{[^}]*aspect-ratio:\s*0\.7;[^}]*border-radius:\s*6px;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card--combat\s*\{[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/u,
+    );
+    assert.match(
+      effectSpotlightStyles,
+      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;/u,
     );
     assert.match(
       effectSpotlightStyles,

@@ -3,6 +3,13 @@
     calc(var(--card-width) + var(--card-width) + var(--card-width)),
     calc(100vw - 16px)
   );
+  --effect-spotlight-combat-width: min(
+    calc(
+      var(--card-width) + var(--card-width) + var(--card-width) +
+        var(--card-width) + 88px
+    ),
+    calc(100vw - 16px)
+  );
   --effect-spotlight-rules-font-size: clamp(5px, 0.82vh, 15px);
   --effect-spotlight-rules-line-height: 1.24;
   --effect-spotlight-highlight-background: rgba(255, 186, 45, 0.72);
@@ -15,6 +22,12 @@
   aspect-ratio: 0.7;
   pointer-events: none;
   transform: translate(-50%, -54%);
+}
+
+.effect-spotlight--combat {
+  width: var(--effect-spotlight-combat-width);
+  height: min(calc(var(--card-height) + 44px), calc(100vh - 128px));
+  aspect-ratio: auto;
 }
 
 @supports (font-size: 1cqw) {
@@ -407,25 +420,29 @@
 .effect-spotlight-card--combat {
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(
-      circle at 50% 48%,
-      rgba(255, 224, 117, 0.2),
-      transparent 46%
-    ),
-    rgba(16, 20, 25, 0.96);
+  height: 100%;
+  aspect-ratio: auto;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .effect-spotlight-combat {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(58px, 0.34fr) minmax(0, 1fr);
-  gap: clamp(8px, 4cqw, 20px);
+  grid-template-columns:
+    minmax(0, calc(var(--card-width) + 22px)) minmax(76px, 0.62fr)
+    minmax(0, calc(var(--card-width) + 22px));
+  gap: clamp(14px, 4cqw, 32px);
   align-items: center;
-  width: 92%;
+  justify-content: center;
+  width: 100%;
 }
 
 .effect-spotlight-combat-card {
   position: relative;
+  width: 100%;
+  aspect-ratio: 0.7;
   overflow: hidden;
   border-radius: 6px;
   box-shadow:

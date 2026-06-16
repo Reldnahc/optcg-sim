@@ -347,6 +347,10 @@ export const EffectSpotlight = ({
   if (controls === undefined && presentation === undefined) {
     return null;
   }
+  const spotlightClassName =
+    presentation?.kind === "combat"
+      ? "effect-spotlight effect-spotlight--combat"
+      : "effect-spotlight";
   const textKind = active?.textKind ?? "effect";
   const text =
     card === undefined
@@ -408,7 +412,7 @@ export const EffectSpotlight = ({
   );
   return (
     <aside
-      className="effect-spotlight"
+      className={spotlightClassName}
       aria-label={ariaLabel}
       onClick={(event) => {
         event.stopPropagation();
