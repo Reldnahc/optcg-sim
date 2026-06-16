@@ -483,9 +483,15 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
       {
         type: "blockerActivated",
         payload: {
+          attacker: cardRef(
+            must(opened.state.players[p1], "opened p1").leader,
+            p1,
+          ),
           blocker,
           previousTarget: originalTarget,
           currentTarget: blocker,
+          attackerPower: 5000,
+          defenderPower: 3000,
         },
         visibility: { type: "public" },
       },
@@ -794,7 +800,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "d14501837c7f988180cce0f9a768d6d2570ac9d3cc4f6297da6a118d0d91bb25",
+    "3316beafbdeeacc7eb7823c0b262f43cc1c23f0a7045c13ac97cc67ca831cb7d",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

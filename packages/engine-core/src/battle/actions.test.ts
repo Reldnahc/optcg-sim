@@ -519,6 +519,16 @@ test("counter-step pass remains legal even when damage continuation would fail c
   });
 
   assert.equal(opened.errors, undefined);
+  const attackDeclared = must(
+    opened.events.find((event) => event.type === "attackDeclared"),
+    "attackDeclared event",
+  );
+  assert.deepEqual(attackDeclared.payload, {
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+    attackerPower: 5000,
+    defenderPower: 5000,
+  });
   const decision = must(opened.state.pendingDecision, "counter decision");
   const actions = getLegalActions(opened.state, p2);
   assert.equal(

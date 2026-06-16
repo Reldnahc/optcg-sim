@@ -258,14 +258,29 @@ export const applyBlockStepDecisionResponse = (
     }
     const blockerRef = toCardRef(selected.card, selected.playerId);
     const previousTarget = battle.currentTarget;
+    let attackerPower: number | undefined;
+    let defenderPower: number | undefined;
+    try {
+      const computed = computeView(state);
+      attackerPower = computed.cards[battle.attacker.instanceId]?.currentPower;
+      defenderPower = computed.cards[blockerRef.instanceId]?.currentPower;
+    } catch {
+      return illegalAction(
+        state,
+        "Blocker activation is unsupported for current combat metadata.",
+      );
+    }
     appendEvent(
       eventState,
       events,
       "blockerActivated",
       {
+        attacker: battle.attacker,
         blocker: blockerRef,
         previousTarget,
         currentTarget: blockerRef,
+        ...(attackerPower === undefined ? {} : { attackerPower }),
+        ...(defenderPower === undefined ? {} : { defenderPower }),
       },
       { type: "public" },
     );

@@ -304,14 +304,18 @@ const applyDeclareAttackInternal = (
 
   let legalTargets: readonly CardInstance["instanceId"][];
   let attackerHasDoubleAttack = false;
+  let attackPower: number | undefined;
+  let defendPower: number | undefined;
   try {
     const computed = computeView(state, {
       ignoreAttackCosts: options.ignoreAttackCosts === true,
     });
+    const attackerView = computed.cards[attacker.card.instanceId];
+    const targetView = computed.cards[target.card.instanceId];
     attackerHasDoubleAttack =
-      computed.cards[attacker.card.instanceId]?.keywords.includes(
-        "doubleAttack",
-      ) ?? false;
+      attackerView?.keywords.includes("doubleAttack") ?? false;
+    attackPower = attackerView?.currentPower;
+    defendPower = targetView?.currentPower;
     legalTargets = computed.legalAttackTargets[attacker.card.instanceId] ?? [];
   } catch {
     return illegalAction(
@@ -352,6 +356,8 @@ const applyDeclareAttackInternal = (
       {
         attacker: toCardRef(attacker.card, attacker.playerId),
         target: toCardRef(target.card, target.playerId),
+        ...(attackPower === undefined ? {} : { attackerPower: attackPower }),
+        ...(defendPower === undefined ? {} : { defenderPower: defendPower }),
       },
       { type: "public" },
     ),
