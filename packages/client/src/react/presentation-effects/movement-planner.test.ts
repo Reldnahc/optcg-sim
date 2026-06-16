@@ -255,6 +255,38 @@ describe("presentation movement planner", () => {
     assert.equal(movement.toZoneKey, "self:hand");
   });
 
+  test("plans attached DON movement from cost area to host card anchor", () => {
+    const don = card("don-1", { category: "don", name: "DON!!" });
+
+    const movements = planCardMovementIntents({
+      previous: snapshot({
+        cards: {
+          "don-1": {
+            card: don,
+            rect: rect(100, 500, 24, 34),
+            zoneKey: "self:costArea",
+          },
+        },
+      }),
+      current: snapshot({
+        cards: {
+          "don-1": {
+            card: don,
+            rect: rect(300, 420, 24, 34),
+            zoneKey: "self:leaderArea",
+          },
+        },
+      }),
+      events: [],
+      currentPlayerId: p1,
+    });
+
+    const movement = onlyMovement(movements);
+    assert.equal(movement.instanceId, "don-1");
+    assert.equal(movement.fromZoneKey, "self:costArea");
+    assert.equal(movement.toZoneKey, "self:leaderArea");
+  });
+
   test("does not plan hidden opponent identity movement without visible card or safe zone endpoint", () => {
     const movements = planCardMovementIntents({
       previous: snapshot({

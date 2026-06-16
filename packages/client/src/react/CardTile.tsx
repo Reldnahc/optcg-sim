@@ -546,6 +546,7 @@ export const CardTile = ({
             <button
               key={String(donCard.instanceId)}
               className="attached-don-card"
+              data-card-instance-id={String(donCard.instanceId)}
               type="button"
               title={donCard.name}
               onClick={(event) => {

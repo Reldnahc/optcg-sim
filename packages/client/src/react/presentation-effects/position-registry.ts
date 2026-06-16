@@ -4,7 +4,7 @@ import type {
   PresentationZoneKey,
 } from "./movement-planner.js";
 
-const addCard = (
+const addCardWithAttachedDon = (
   cards: Map<string, ClientCardModel>,
   card: ClientCardModel | undefined,
 ): void => {
@@ -12,14 +12,17 @@ const addCard = (
     return;
   }
   cards.set(String(card.instanceId), card);
+  for (const attachedDon of card.attachedDonCards) {
+    cards.set(String(attachedDon.instanceId), attachedDon);
+  }
 };
 
-const addCards = (
+const addCardsWithAttachedDon = (
   cards: Map<string, ClientCardModel>,
   zoneCards: readonly ClientCardModel[],
 ): void => {
   for (const card of zoneCards) {
-    addCard(cards, card);
+    addCardWithAttachedDon(cards, card);
   }
 };
 
@@ -27,19 +30,19 @@ export const boardCardMap = (
   board: BoardViewModel,
 ): Map<string, ClientCardModel> => {
   const cards = new Map<string, ClientCardModel>();
-  addCard(cards, board.self.leader);
-  addCards(cards, board.self.hand);
-  addCards(cards, board.self.characters);
-  addCard(cards, board.self.stage);
-  addCards(cards, board.self.costArea);
-  addCards(cards, board.self.trash);
-  addCards(cards, board.self.lifeCards);
-  addCard(cards, board.opponent.leader);
-  addCards(cards, board.opponent.characters);
-  addCard(cards, board.opponent.stage);
-  addCards(cards, board.opponent.costArea);
-  addCards(cards, board.opponent.trash);
-  addCards(cards, board.opponent.lifeCards);
+  addCardWithAttachedDon(cards, board.self.leader);
+  addCardsWithAttachedDon(cards, board.self.hand);
+  addCardsWithAttachedDon(cards, board.self.characters);
+  addCardWithAttachedDon(cards, board.self.stage);
+  addCardsWithAttachedDon(cards, board.self.costArea);
+  addCardsWithAttachedDon(cards, board.self.trash);
+  addCardsWithAttachedDon(cards, board.self.lifeCards);
+  addCardWithAttachedDon(cards, board.opponent.leader);
+  addCardsWithAttachedDon(cards, board.opponent.characters);
+  addCardWithAttachedDon(cards, board.opponent.stage);
+  addCardsWithAttachedDon(cards, board.opponent.costArea);
+  addCardsWithAttachedDon(cards, board.opponent.trash);
+  addCardsWithAttachedDon(cards, board.opponent.lifeCards);
   return cards;
 };
 

@@ -7,6 +7,7 @@ import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import type { BoardViewModel, ClientCardModel } from "../../view-model.js";
 import { BoardLayout } from "../BoardLayout.js";
+import { boardCardMap } from "./position-registry.js";
 
 const p1 = "p1" as PlayerId;
 
@@ -69,5 +70,44 @@ describe("board presentation anchors", () => {
     assert.match(markup, /data-presentation-zone="self:characterArea"/u);
     assert.match(markup, /data-presentation-zone="opponent:hand"/u);
     assert.match(markup, /data-presentation-zone="opponent:deck"/u);
+  });
+
+  test("renders attached DON as presentation card anchors", () => {
+    const attachedDon = card("attached-don", "don");
+    const currentBoard = board();
+    currentBoard.self.leader = {
+      ...currentBoard.self.leader,
+      attachedDonCount: 1,
+      attachedDonCards: [attachedDon],
+    };
+
+    const markup = renderToStaticMarkup(
+      createElement(BoardLayout, {
+        board: currentBoard,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /data-card-instance-id="attached-don"/u);
+  });
+
+  test("includes attached DON cards in the presentation card map", () => {
+    const attachedDon = card("attached-don", "don");
+    const currentBoard = board();
+    currentBoard.self.characters = [
+      {
+        ...card("character-1", "character"),
+        attachedDonCount: 1,
+        attachedDonCards: [attachedDon],
+      },
+    ];
+
+    const cards = boardCardMap(currentBoard);
+
+    assert.equal(cards.get("attached-don"), attachedDon);
   });
 });
