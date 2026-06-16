@@ -13,12 +13,13 @@ import {
   advanceSpotlightPlayback,
   appendSpotlightPlaybackSources,
 } from "./use-effect-spotlight.js";
+import type { EffectTextSpotlightActiveSourceInput } from "./use-effect-spotlight-playback.js";
 
 const source = (
   key: string,
   spanId: EffectTextSpanId,
   mode: "live" | "resolved" = "resolved",
-) => ({
+): EffectTextSpotlightActiveSourceInput => ({
   active: {
     source: {
       instanceId: "source-1" as InstanceId,
@@ -43,6 +44,28 @@ const ref = (
   cardId: cardId as CardId,
   playerId: playerId as PlayerId,
 });
+
+const withSelectedTarget = (
+  entry: EffectTextSpotlightActiveSourceInput,
+): EffectTextSpotlightActiveSourceInput => {
+  const spanId = entry.active.activeSpanIds[0];
+  if (spanId === undefined) {
+    return entry;
+  }
+  return {
+    ...entry,
+    active: {
+      ...entry.active,
+      targetLinks: [
+        {
+          spanId,
+          relation: "selectedTarget",
+          cards: [ref("target-1", "OP00-002", "p2")],
+        },
+      ],
+    },
+  };
+};
 
 describe("effect spotlight playback", () => {
   it("rewinds to the previous entry and pauses playback", () => {
@@ -136,6 +159,65 @@ describe("effect spotlight playback", () => {
 
     expect(next.entries).toEqual([targetLinkedResolved]);
     expect(next.cursorIndex).toBe(0);
+  });
+
+  it("replays a consumed server timeline entry when target links arrive late", () => {
+    const plainResolved = source("event:resolved", "span:body");
+    const targetLinkedResolved = withSelectedTarget(plainResolved);
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set(["event:resolved"]),
+      previous: {
+        entries: [plainResolved],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [targetLinkedResolved],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries).toEqual([targetLinkedResolved]);
+    expect(next.cursorIndex).toBe(0);
+  });
+
+  it("does not move the cursor for unchanged server timeline refreshes after catch-up", () => {
+    const plainResolved = source("event:resolved", "span:body");
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set(["event:resolved"]),
+      previous: {
+        entries: [plainResolved],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [plainResolved],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries).toEqual([plainResolved]);
+    expect(next.cursorIndex).toBeUndefined();
+  });
+
+  it("does not replay late target links after explicit fast-forward", () => {
+    const plainResolved = source("event:resolved", "span:body");
+    const targetLinkedResolved = withSelectedTarget(plainResolved);
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set(["event:resolved"]),
+      previous: {
+        entries: [plainResolved],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: true,
+      },
+      sources: [targetLinkedResolved],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries).toEqual([targetLinkedResolved]);
+    expect(next.cursorIndex).toBeUndefined();
   });
 
   it("fast-forward clears to empty when there is no pending timeline entry", () => {

@@ -140,6 +140,43 @@ const releaseSpotlightSourceExactSignatures = (
   }
 };
 
+const targetLinkSignature = (
+  source: EffectSpotlightActiveSourceInput,
+): string => {
+  if (isCombatSpotlightSource(source)) {
+    return "";
+  }
+  const activeSpanIds = new Set(source.active.activeSpanIds);
+  return (source.active.targetLinks ?? [])
+    .filter((link) => activeSpanIds.has(link.spanId) && link.cards.length > 0)
+    .map((link) =>
+      [
+        link.spanId,
+        link.relation,
+        ...link.cards.map((card) =>
+          [
+            String(card.playerId),
+            String(card.instanceId),
+            String(card.cardId),
+          ].join("|"),
+        ),
+      ].join(">"),
+    )
+    .join("\n");
+};
+
+const shouldReplayServerTimelineReplacement = (
+  previous: EffectSpotlightPlaybackEntry,
+  next: EffectSpotlightActiveSourceInput,
+): boolean => {
+  const previousTargetSignature = targetLinkSignature(previous);
+  const nextTargetSignature = targetLinkSignature(next);
+  return (
+    nextTargetSignature !== "" &&
+    previousTargetSignature !== nextTargetSignature
+  );
+};
+
 const shouldReplaceServerTimelineEntry = (
   previous: EffectSpotlightPlaybackEntry,
   next: EffectSpotlightActiveSourceInput,
@@ -165,15 +202,26 @@ export const appendSpotlightPlaybackSources = ({
 }): EffectSpotlightPlaybackState => {
   const queuedKeys = new Set(previous.entries.map((source) => source.key));
   let entries: EffectSpotlightPlaybackEntry[] | undefined;
+  let firstAppendedIndex: number | undefined;
+  let replacementReplayIndex: number | undefined;
   for (const source of sources) {
     if (sourceKind === "serverTimeline" && source.semanticKey !== undefined) {
       const semanticIndex = previous.entries.findIndex((entry) =>
         shouldReplaceServerTimelineEntry(entry, source),
       );
       if (semanticIndex >= 0) {
+        const previousEntry = previous.entries[semanticIndex];
         entries ??= [...previous.entries];
         entries[semanticIndex] = source;
         queuedKeys.add(source.key);
+        if (
+          previousEntry !== undefined &&
+          previous.cursorIndex === undefined &&
+          previous.fastForwarded !== true &&
+          shouldReplayServerTimelineReplacement(previousEntry, source)
+        ) {
+          replacementReplayIndex ??= semanticIndex;
+        }
         continue;
       }
     }
@@ -182,9 +230,18 @@ export const appendSpotlightPlaybackSources = ({
         (entry) => entry.key === source.key,
       );
       if (keyIndex >= 0) {
+        const previousEntry = previous.entries[keyIndex];
         entries ??= [...previous.entries];
         entries[keyIndex] = source;
         queuedKeys.add(source.key);
+        if (
+          previousEntry !== undefined &&
+          previous.cursorIndex === undefined &&
+          previous.fastForwarded !== true &&
+          shouldReplayServerTimelineReplacement(previousEntry, source)
+        ) {
+          replacementReplayIndex ??= keyIndex;
+        }
         continue;
       }
     }
@@ -204,6 +261,7 @@ export const appendSpotlightPlaybackSources = ({
       continue;
     }
     entries ??= [...previous.entries];
+    firstAppendedIndex ??= entries.length;
     entries.push(source);
     queuedKeys.add(source.key);
   }
@@ -220,7 +278,7 @@ export const appendSpotlightPlaybackSources = ({
       previous.cursorIndex === undefined
         ? initialCursorIndex >= 0
           ? initialCursorIndex
-          : previous.entries.length
+          : (replacementReplayIndex ?? firstAppendedIndex)
         : previous.cursorIndex,
     paused: previous.paused,
     fastForwarded: previous.fastForwarded ?? false,
