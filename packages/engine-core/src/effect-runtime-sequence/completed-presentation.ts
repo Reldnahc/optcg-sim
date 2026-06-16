@@ -1,4 +1,5 @@
 import type {
+  ActiveEffectTextPresentation,
   EffectExecutionFrame,
   EffectQueueEntry,
   EffectTextSpanId,
@@ -7,6 +8,7 @@ import type {
 import {
   activeSpanIdsForChoiceOptionIndex,
   activeSpanIdsForSequenceIndex,
+  activeEffectTextPresentationWithTargetLinks,
 } from "../runtime/effect-presentation.js";
 
 type RootChangedSegment = {
@@ -89,6 +91,47 @@ const activeSpanIdsForChoiceOptionSegments = (
   return narrowed.length === 0 ? undefined : narrowed;
 };
 
+const selectedTargetsForSegment = (
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  key: string,
+) => segmentResults[key]?.selectedTargets ?? [];
+
+const presentationWithRootTargetLinks = (
+  presentation: ActiveEffectTextPresentation,
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  segments: readonly RootChangedSegment[],
+): ActiveEffectTextPresentation =>
+  segments.reduce<ActiveEffectTextPresentation>((nextPresentation, segment) => {
+    const spanIds = activeSpanIdsForRootSegment(
+      presentation.activeSpanIds,
+      segment,
+    );
+    return activeEffectTextPresentationWithTargetLinks({
+      cards: selectedTargetsForSegment(segmentResults, segment.key),
+      presentation: nextPresentation,
+      relation: "selectedTarget",
+      spanIds,
+    });
+  }, presentation);
+
+const presentationWithChoiceOptionTargetLinks = (
+  presentation: ActiveEffectTextPresentation,
+  segmentResults: EffectExecutionFrame["segmentResults"],
+  segments: readonly ChoiceOptionChangedSegment[],
+): ActiveEffectTextPresentation =>
+  segments.reduce<ActiveEffectTextPresentation>((nextPresentation, segment) => {
+    const spanIds = activeSpanIdsForChoiceOptionSegment(
+      presentation.activeSpanIds,
+      segment,
+    );
+    return activeEffectTextPresentationWithTargetLinks({
+      cards: selectedTargetsForSegment(segmentResults, segment.key),
+      presentation: nextPresentation,
+      relation: "selectedTarget",
+      spanIds,
+    });
+  }, presentation);
+
 export const entryWithCompletedSequencePresentation = (
   entry: EffectQueueEntry,
   segmentResults: EffectExecutionFrame["segmentResults"],
@@ -109,13 +152,27 @@ export const entryWithCompletedSequencePresentation = (
           entry.presentation.activeSpanIds,
           rootSegments,
         ));
-  return activeSpanIds === undefined
-    ? entry
-    : {
-        ...entry,
-        presentation: {
-          ...entry.presentation,
-          activeSpanIds,
-        },
-      };
+  if (activeSpanIds === undefined) {
+    return entry;
+  }
+  const narrowedPresentation: ActiveEffectTextPresentation = {
+    ...entry.presentation,
+    activeSpanIds,
+  };
+  const presentation =
+    choiceOptionSegments.length > 0
+      ? presentationWithChoiceOptionTargetLinks(
+          narrowedPresentation,
+          segmentResults,
+          choiceOptionSegments,
+        )
+      : presentationWithRootTargetLinks(
+          narrowedPresentation,
+          segmentResults,
+          rootSegments,
+        );
+  return {
+    ...entry,
+    presentation,
+  };
 };

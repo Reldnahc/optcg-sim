@@ -302,6 +302,32 @@ test("preserves safe effectResolved presentation for effect text spotlight", () 
           },
           textKind: "effect",
           activeSpanIds: ["span:body"],
+          targetLinks: [
+            {
+              spanId: "span:body",
+              relation: "selectedTarget",
+              cards: [
+                {
+                  instanceId: "target-card-1",
+                  cardId: toCardId("OP13-090"),
+                  playerId: p2,
+                  privatePowerSnapshot: 6000,
+                },
+              ],
+              privateSelectionFrame: "hidden",
+            },
+            {
+              spanId: "not-a-span",
+              relation: "selectedTarget",
+              cards: [
+                {
+                  instanceId: "target-card-2",
+                  cardId: toCardId("OP13-091"),
+                  playerId: p2,
+                },
+              ],
+            },
+          ],
           privateExecutionFrame: "hidden",
         },
       },
@@ -322,6 +348,19 @@ test("preserves safe effectResolved presentation for effect text spotlight", () 
       },
       textKind: "effect",
       activeSpanIds: ["span:body"],
+      targetLinks: [
+        {
+          spanId: "span:body",
+          relation: "selectedTarget",
+          cards: [
+            {
+              instanceId: "target-card-1",
+              cardId: toCardId("OP13-090"),
+              playerId: p2,
+            },
+          ],
+        },
+      ],
     },
   });
   assert.equal(JSON.stringify(view.events).includes("private"), false);

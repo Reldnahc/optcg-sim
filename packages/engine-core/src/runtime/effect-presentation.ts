@@ -5,6 +5,7 @@ import type {
   EffectQueueEntry,
   EffectTextSourceMap,
   EffectTextSpanId,
+  EffectTextTargetLink,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -233,6 +234,107 @@ export const activeEffectTextPresentationForFailedCondition = ({
     source,
     textKind,
     activeSpanIds,
+  };
+};
+
+const cardRefKey = (card: CardRef): string =>
+  [String(card.playerId), String(card.instanceId), String(card.cardId)].join(
+    "|",
+  );
+
+const uniqueCardRefs = (cards: readonly CardRef[]): CardRef[] => {
+  const seen = new Set<string>();
+  const unique: CardRef[] = [];
+  for (const card of cards) {
+    const key = cardRefKey(card);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(card);
+  }
+  return unique;
+};
+
+const mergeTargetLinks = (
+  links: readonly EffectTextTargetLink[],
+): EffectTextTargetLink[] => {
+  const orderedKeys: string[] = [];
+  const grouped = new Map<
+    string,
+    {
+      cards: CardRef[];
+      cardKeys: Set<string>;
+      relation: EffectTextTargetLink["relation"];
+      spanId: EffectTextSpanId;
+    }
+  >();
+  for (const link of links) {
+    const key = `${link.spanId}|${link.relation}`;
+    let group = grouped.get(key);
+    if (group === undefined) {
+      group = {
+        spanId: link.spanId,
+        relation: link.relation,
+        cards: [],
+        cardKeys: new Set<string>(),
+      };
+      grouped.set(key, group);
+      orderedKeys.push(key);
+    }
+    for (const card of link.cards) {
+      const cardKey = cardRefKey(card);
+      if (group.cardKeys.has(cardKey)) {
+        continue;
+      }
+      group.cardKeys.add(cardKey);
+      group.cards.push(card);
+    }
+  }
+  return orderedKeys.flatMap((key) => {
+    const group = grouped.get(key);
+    return group === undefined || group.cards.length === 0
+      ? []
+      : [
+          {
+            spanId: group.spanId,
+            relation: group.relation,
+            cards: group.cards,
+          },
+        ];
+  });
+};
+
+export const activeEffectTextPresentationWithTargetLinks = ({
+  cards,
+  presentation,
+  relation,
+  spanIds = presentation.activeSpanIds,
+}: {
+  readonly cards: readonly CardRef[];
+  readonly presentation: ActiveEffectTextPresentation;
+  readonly relation: EffectTextTargetLink["relation"];
+  readonly spanIds?: readonly EffectTextSpanId[] | undefined;
+}): ActiveEffectTextPresentation => {
+  const activeSpanIds = new Set(presentation.activeSpanIds);
+  const linkSpanIds =
+    uniqueCardRefs(cards).length === 0
+      ? []
+      : spanIds.filter((spanId) => activeSpanIds.has(spanId));
+  if (linkSpanIds.length === 0) {
+    return presentation;
+  }
+  const uniqueCards = uniqueCardRefs(cards);
+  return {
+    ...presentation,
+    targetLinks: mergeTargetLinks([
+      ...(presentation.targetLinks ?? []),
+      ...linkSpanIds.map((spanId) => ({
+        spanId,
+        relation,
+        cards: uniqueCards,
+      })),
+    ]),
   };
 };
 

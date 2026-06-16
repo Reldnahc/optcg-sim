@@ -41,6 +41,7 @@ import {
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
+import { activeEffectTextPresentationWithTargetLinks } from "../runtime/effect-presentation.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import {
   canAdmitOncePerTurnEffect,
@@ -241,6 +242,21 @@ const targetRequestForEffect = (
   }
   return isSelectableTarget(effect.target) ? effect.target.request : undefined;
 };
+
+const entryWithSelectedTargetLinks = (
+  entry: EffectQueueEntry,
+  selectedTargets: readonly CardRef[],
+): EffectQueueEntry =>
+  entry.presentation === undefined
+    ? entry
+    : {
+        ...entry,
+        presentation: activeEffectTextPresentationWithTargetLinks({
+          cards: selectedTargets,
+          presentation: entry.presentation,
+          relation: "selectedTarget",
+        }),
+      };
 
 const targetRequestsEqual = (
   left: TargetRequest | MultiZoneTargetRequest,
@@ -528,14 +544,18 @@ export const createEffectRuntimeQueueTargetDecisions = (
         );
       }
 
+      const resolvedEntry = entryWithSelectedTargetLinks(
+        resolved.entry,
+        selectedTargets,
+      );
       const resolvingEntry: EffectQueueEntry = {
-        ...resolved.entry,
+        ...resolvedEntry,
         state: "resolving",
       };
       const queueRemovedState: GameState = {
         ...nextState,
         effectQueue: nextState.effectQueue.filter(
-          (entry) => entry.id !== resolved.entry.id,
+          (entry) => entry.id !== resolvedEntry.id,
         ),
       };
       if (resolved.effect.type === "rest") {
@@ -545,14 +565,14 @@ export const createEffectRuntimeQueueTargetDecisions = (
           selectedTargets,
           {
             sourceKind: "cardEffect",
-            sourceControllerId: resolved.entry.controllerId,
-            sourceCardCategory: resolved.entry.sourceSnapshot.category,
+            sourceControllerId: resolvedEntry.controllerId,
+            sourceCardCategory: resolvedEntry.sourceSnapshot.category,
           },
           {
             events: allEvents,
             sourceKind: "effect",
-            sourceControllerId: resolved.entry.controllerId,
-            sourceCardId: resolved.entry.source.cardId,
+            sourceControllerId: resolvedEntry.controllerId,
+            sourceCardId: resolvedEntry.source.cardId,
           },
         );
         nextState = rested.changed
@@ -561,7 +581,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         return finalizeSelectedTargetEffectResolution(
           nextState,
           state,
-          resolved.entry,
+          resolvedEntry,
           allEvents,
           [],
         );
@@ -588,7 +608,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         return finalizeSelectedTargetEffectResolution(
           nextState,
           state,
-          resolved.entry,
+          resolvedEntry,
           allEvents,
           [],
         );
@@ -621,7 +641,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           {
             ...primitive.state,
             effectQueue: nextState.effectQueue.map((entry) =>
-              entry.id === resolved.entry.id ? resolvingEntry : entry,
+              entry.id === resolvedEntry.id ? resolvingEntry : entry,
             ),
           },
           primitive.events,
@@ -633,7 +653,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
       return finalizeSelectedTargetEffectResolution(
         nextState,
         state,
-        resolved.entry,
+        resolvedEntry,
         allEvents,
         primitive.events,
       );

@@ -99,6 +99,54 @@ const toAllowedCardRef = (
   return { instanceId, cardId, playerId };
 };
 
+const allowedEffectTextTargetLinkRelations = new Set([
+  "candidateTarget",
+  "selectedTarget",
+  "affectedCard",
+]);
+
+const toAllowedEffectTextTargetLinks = (
+  value: unknown,
+  activeSpanIds: readonly string[],
+): Record<string, unknown>[] | undefined => {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const activeSpanIdSet = new Set(activeSpanIds);
+  const links = value.flatMap((candidate): Record<string, unknown>[] => {
+    const link = asRecord(candidate);
+    if (link === undefined) {
+      return [];
+    }
+    const spanId = link["spanId"];
+    const relation = link["relation"];
+    const cards = link["cards"];
+    if (
+      typeof spanId !== "string" ||
+      !activeSpanIdSet.has(spanId) ||
+      typeof relation !== "string" ||
+      !allowedEffectTextTargetLinkRelations.has(relation) ||
+      !Array.isArray(cards)
+    ) {
+      return [];
+    }
+    const safeCards = cards.flatMap((card) => {
+      const safeCard = toAllowedCardRef(card);
+      return safeCard === undefined ? [] : [safeCard];
+    });
+    return safeCards.length === 0
+      ? []
+      : [
+          {
+            spanId,
+            relation,
+            cards: safeCards,
+          },
+        ];
+  });
+  return links.length === 0 ? undefined : links;
+};
+
 const toAllowedEffectTextPresentation = (
   value: unknown,
 ): Record<string, unknown> | undefined => {
@@ -119,10 +167,15 @@ const toAllowedEffectTextPresentation = (
     return undefined;
   }
   const textKind = presentation["textKind"];
+  const targetLinks = toAllowedEffectTextTargetLinks(
+    presentation["targetLinks"],
+    safeSpanIds,
+  );
   return {
     source,
     ...(textKind === "effect" || textKind === "trigger" ? { textKind } : {}),
     activeSpanIds: safeSpanIds,
+    ...(targetLinks === undefined ? {} : { targetLinks }),
   };
 };
 

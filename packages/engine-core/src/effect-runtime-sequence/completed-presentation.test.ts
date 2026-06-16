@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type {
   CardInstance,
+  CardRef,
   Effect,
   EffectDefinition,
   EffectTextSpanId,
@@ -246,5 +247,62 @@ test("completed choose-one option narrows to the selected option span", () => {
     source: queuedEntry.source,
     textKind: "effect" as const,
     activeSpanIds: ["span:choice:1:body"],
+  });
+});
+
+test("completed sequence presentation links selected targets to changed segment spans", () => {
+  const { state, played } = queueingState();
+  setupSequenceDefinition(state, played, drawThenPreventDraw());
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  const queuedEntry = must(queued.state.effectQueue[0], "queued effect");
+  const selectedTarget: CardRef = {
+    instanceId: "target-link-card" as never,
+    cardId: "target-link-card-id" as never,
+    playerId: p1,
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    },
+  };
+
+  const result = entryWithCompletedSequencePresentation(
+    {
+      ...queuedEntry,
+      presentation: {
+        source: queuedEntry.source,
+        textKind: "effect" as const,
+        activeSpanIds: [
+          "span:sequence:0:body",
+          "span:sequence:1:body",
+        ] as EffectTextSpanId[],
+      },
+    },
+    {
+      "1": {
+        attempted: true,
+        succeeded: true,
+        changedState: true,
+        selectedCards: [],
+        selectedTargets: [selectedTarget],
+        paidCost: false,
+        playerDeclined: false,
+      },
+    },
+  );
+
+  assert.deepEqual(result.presentation, {
+    source: queuedEntry.source,
+    textKind: "effect" as const,
+    activeSpanIds: ["span:sequence:1:body"],
+    targetLinks: [
+      {
+        spanId: "span:sequence:1:body",
+        relation: "selectedTarget",
+        cards: [selectedTarget],
+      },
+    ],
   });
 });

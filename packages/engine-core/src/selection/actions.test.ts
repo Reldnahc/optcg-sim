@@ -486,6 +486,16 @@ test("valid selectTargets response resolves queued KO with stable replay event o
     const { state, targets, queueEntry } = setupSelectTargetsDecision();
     const decision = must(state.pendingDecision, "pending decision");
     const selected = must(targets[1], "target 1");
+    state.effectQueue = [
+      {
+        ...queueEntry,
+        presentation: {
+          source: queueEntry.source,
+          textKind: "effect" as const,
+          activeSpanIds: ["span:body"],
+        },
+      },
+    ];
 
     const result = applyAction(
       state,
@@ -531,6 +541,18 @@ test("valid selectTargets response resolves queued KO with stable replay event o
       effectBlockId: queueEntry.effectBlockId,
       sourcePresencePolicy: queueEntry.sourcePresencePolicy,
       orderingGroup: queueEntry.orderingGroup,
+      presentation: {
+        source: queueEntry.source,
+        textKind: "effect",
+        activeSpanIds: ["span:body"],
+        targetLinks: [
+          {
+            spanId: "span:body",
+            relation: "selectedTarget",
+            cards: [selected],
+          },
+        ],
+      },
       status: "resolved",
     });
     assert.equal(result.state.actionSeq, state.actionSeq + 1);
