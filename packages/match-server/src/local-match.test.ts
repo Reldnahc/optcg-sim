@@ -1,6 +1,12 @@
 import { strict as assert } from "node:assert";
 import { beforeAll, describe, test } from "vitest";
-import type { CardId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  DecisionId,
+  EffectId,
+  PlayerId,
+  QueueEntryId,
+} from "@optcg/types";
 
 import {
   applyLocalDevAction,
@@ -438,6 +444,56 @@ describe("local dev match", () => {
           action.decisionPayment.chooseLabel === "Choose card to trash" &&
           action.decisionPayment.selectedCardInstanceIds.length === 1,
       ),
+    );
+  });
+
+  test("optional activation responses are placed on their source card", () => {
+    const match = createTestMatch();
+    const main = keepBothPlayersAndAdvance(match);
+    const source = mustPlayerSnapshot(main, p1).view.self.leader;
+    match.state.pendingDecision = {
+      id: "decision:chooseOptionalActivation:test" as DecisionId,
+      type: "chooseOptionalActivation",
+      playerId: p1,
+      prompt: "Choose whether to activate this effect.",
+      causedBy: {
+        type: "effect",
+        queueEntryId: "queue-entry:test" as QueueEntryId,
+        effectId: "effect:test" as EffectId,
+      },
+      visibility: { type: "private", playerId: p1 },
+      effectId: "effect:test" as EffectId,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      options: ["activate", "decline"],
+    };
+
+    const actions = mustPlayerSnapshot(getLocalDevSnapshot(match), p1).actions;
+
+    assert.deepEqual(
+      actions
+        .filter((action) => action.type === "respondToDecision")
+        .map((action) => ({
+          label: action.label,
+          placement: action.placement?.instanceId,
+          responseKey: action.responseKey,
+        })),
+      [
+        {
+          label: "Activate effect",
+          placement: source.instanceId,
+          responseKey: "activate",
+        },
+        {
+          label: "Decline effect",
+          placement: source.instanceId,
+          responseKey: "decline",
+        },
+      ],
     );
   });
 

@@ -125,7 +125,8 @@ export const createMatchClientDecisionModel = ({
           .filter(
             (action) =>
               action.type === "respondToDecision" &&
-              action.placement === undefined,
+              (action.placement === undefined ||
+                pendingDecision.type === "chooseOptionalActivation"),
           )
           .map((action) => ({
             index: action.index,

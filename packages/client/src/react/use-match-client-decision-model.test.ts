@@ -4,10 +4,12 @@ import { describe, test } from "vitest";
 import type {
   DecisionId,
   CardId,
+  EffectId,
   InstanceId,
   MatchId,
   PlayerId,
   PlayerView,
+  QueueEntryId,
   StateSeq,
   Zone,
 } from "@optcg/types";
@@ -307,5 +309,83 @@ describe("match client decision model", () => {
     assert.equal(model.pendingDecisionInteractionMode, "zoneClick");
     assert.deepEqual(model.pendingChoiceInstanceIds, ["opponent-character"]);
     assert.equal(model.decisionModal, undefined);
+  });
+
+  test("placed optional activation responses still feed the decision modal", () => {
+    const snapshot = playerSnapshot();
+    const source = snapshot.view.self.leader;
+    snapshot.view.pendingDecision = {
+      id: "decision:chooseOptionalActivation:test" as DecisionId,
+      type: "chooseOptionalActivation",
+      playerId: p1,
+      prompt: "Choose whether to activate this effect.",
+      causedBy: {
+        type: "effect",
+        queueEntryId: "queue-entry:test" as QueueEntryId,
+        effectId: "effect:test" as EffectId,
+      },
+      presentation: {
+        title: "Optional effect",
+        instruction: "Choose whether to activate this effect",
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+          zone: source.zone,
+        },
+        choices: [
+          { responseKey: "activate", label: "Activate effect" },
+          { responseKey: "decline", label: "Decline effect" },
+        ],
+      },
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+    };
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Activate effect",
+        responseKey: "activate",
+        placement: { instanceId: source.instanceId },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Decline effect",
+        responseKey: "decline",
+        placement: { instanceId: source.instanceId },
+      },
+    ];
+
+    const model = createMatchClientDecisionModel({
+      clientState: matchClientState(snapshot),
+      playerSnapshot: snapshot,
+      pendingDecision: snapshot.view.pendingDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: [],
+      decisionDraft: undefined,
+    });
+
+    assert.deepEqual(
+      model.pendingDecisionResponseActions.map((action) => action.responseKey),
+      ["activate", "decline"],
+    );
+    const modal = model.decisionModal;
+    assert.ok(modal);
+    assert.equal(modal.source?.instanceId, source.instanceId);
+    if (modal.kind !== "actionOptions") {
+      assert.fail("Expected actionOptions optional activation modal.");
+    }
+    assert.deepEqual(modal.options, [
+      { actionIndex: 1, label: "Activate effect" },
+      { actionIndex: 2, label: "Decline effect" },
+    ]);
   });
 });

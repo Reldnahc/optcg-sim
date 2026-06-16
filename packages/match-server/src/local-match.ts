@@ -203,7 +203,7 @@ const visibleAction = (
   state: GameState,
   action: LegalAction,
 ): Omit<ExecutableDevAction, "index" | "apply"> => {
-  const placement = actionPlacement(action);
+  const placement = actionPlacement(state, action);
   const attachment = actionAttachment(action);
   const attack = actionAttack(action);
   const counter = actionCounter(action);
@@ -464,6 +464,7 @@ const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
 };
 
 const actionPlacement = (
+  state: GameState,
   action: LegalAction,
 ): CardInstance["instanceId"] | undefined => {
   switch (action.type) {
@@ -480,8 +481,13 @@ const actionPlacement = (
       return action.blocker.instanceId;
     case "concede":
     case "endMainPhase":
-    case "respondToDecision":
       return undefined;
+    case "respondToDecision":
+      return action.response.type === "optionalActivation" &&
+        state.pendingDecision?.type === "chooseOptionalActivation" &&
+        state.pendingDecision.id === action.decisionId
+        ? state.pendingDecision.source.instanceId
+        : undefined;
   }
 };
 
