@@ -64,12 +64,13 @@ const bodySpanPrefix = "span:body";
 const choiceOptionSpanPattern = /^span:choice:\d+:/u;
 
 const isResolvedStepSpanId = (spanId: EffectTextSpanId): boolean =>
-  spanId.startsWith(sequenceSpanPrefix) ||
-  spanId.startsWith(searchSpanPrefix) ||
-  spanId.startsWith(costSpanPrefix) ||
-  spanId === bodySpanPrefix ||
-  spanId.startsWith(`${bodySpanPrefix}:`) ||
-  choiceOptionSpanPattern.test(spanId);
+  (spanId.startsWith(sequenceSpanPrefix) ||
+    spanId.startsWith(searchSpanPrefix) ||
+    spanId.startsWith(costSpanPrefix) ||
+    spanId === bodySpanPrefix ||
+    spanId.startsWith(`${bodySpanPrefix}:`) ||
+    choiceOptionSpanPattern.test(spanId)) &&
+  spanId !== "span:search:then";
 
 const splitResolvedSpanIds = (
   activeSpanIds: readonly EffectTextSpanId[],

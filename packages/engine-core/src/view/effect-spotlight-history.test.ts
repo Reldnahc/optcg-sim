@@ -267,6 +267,70 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     ]);
   });
 
+  it("does not project search connector spans as timeline entries", () => {
+    const event = resolvedSearchEvent("event:search", [
+      "span:search:selection",
+      "span:search:then",
+      "span:search:remaining",
+    ]);
+
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [event],
+      pendingDecisionId: undefined,
+    });
+
+    expect(
+      history?.entries.map(
+        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
+      ),
+    ).toEqual([["span:search:selection"], ["span:search:remaining"]]);
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "event:search:span:search:selection",
+      "event:search:span:search:remaining",
+    ]);
+  });
+
+  it("orders resolved search selection before live search remainder without connector entries", () => {
+    const event = resolvedSearchEvent("event:search", [
+      "span:search:selection",
+      "span:search:then",
+      "span:search:remaining",
+    ]);
+
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:search:remaining"],
+      },
+      events: [event],
+      pendingDecisionId: "decision:orderCards:search",
+    });
+
+    expect(
+      history?.entries.map((entry) => ({
+        key: entry.key,
+        status: entry.status,
+        activeSpanIds: expectEffectTextEntry(entry).active.activeSpanIds,
+      })),
+    ).toEqual([
+      {
+        key: "event:search:span:search:selection",
+        status: "resolved",
+        activeSpanIds: ["span:search:selection"],
+      },
+      {
+        key: "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
+        status: "pending",
+        activeSpanIds: ["span:search:remaining"],
+      },
+    ]);
+    expect(history?.presentKey).toBe(
+      "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
+    );
+  });
+
   it("splits resolved choice option spans into separate timeline entries", () => {
     const event = resolvedSearchEvent("event:choice", [
       "span:choice",
