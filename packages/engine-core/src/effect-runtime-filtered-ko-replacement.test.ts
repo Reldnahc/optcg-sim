@@ -195,6 +195,68 @@ const setupReviewedFilteredKoRestSelfReplacementDefinition = (
   return effectBlock;
 };
 
+const setupReviewedTypedKoTrashFromHandReplacementDefinition = (
+  state: ReturnType<typeof createActiveState>,
+  source: CardInstance,
+): EffectDefinition["effects"][number] => {
+  const support = must(
+    state.cardManifest.cards[source.cardId]?.support,
+    "replacement source support",
+  );
+  const when: Extract<Effect, { type: "replacement" }>["when"] = {
+    type: "wouldBeKOd",
+    sourceControllerRelation: "any",
+    target: {
+      type: "all",
+      zone: "characterArea",
+      player: "self",
+      filter: {
+        categories: ["character"],
+        typesAny: ["Red-Haired Pirates"],
+      },
+    },
+  };
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: toEffectId("replacement:typed-ko-trash-from-hand"),
+    category: "replacement",
+    trigger: { type: "replacement", replacement: when },
+    oncePerTurn: true,
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: {
+      type: "replacement",
+      when,
+      instead: {
+        type: "trashFromHand",
+        player: "self",
+        chooser: "self",
+        count: 1,
+        filter: {
+          categories: ["character"],
+          power: { min: 6000 },
+        },
+      },
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [must(support.effectDefinitionId, "definition id")]: {
+      cardId: source.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effectBlock],
+      metadata: {
+        sourceTextHash: must(support.sourceTextHash, "source text hash"),
+        rulesVersion: must(support.rulesVersion, "rules version"),
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
+        tested: true,
+        reviewedBy: "engine-reviewer",
+        reviewedAt: "2026-06-16T00:00:00.000Z",
+      },
+    },
+  };
+  return effectBlock;
+};
+
 const cardRef = (card: CardInstance, playerId: PlayerId): CardRef => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
@@ -262,6 +324,93 @@ test("does not apply opponent-effect K.O.-only rest-self replacement to battle K
     detectSupportedSelectedTargetKoReplacementCandidate(state, selfProcess),
     { ok: true },
   );
+});
+
+test("detects typed K.O. trash-from-hand replacement for K.O. processes", () => {
+  const { state, entry, target, replacementSource } =
+    setupFilteredKoReplacementState();
+  const p2State = must(state.players[p2], "p2");
+  const costCard: CardInstance = {
+    ...target,
+    cardId: toCardId("red-haired-trash-cost"),
+    instanceId: toInstanceId("red-haired-trash-cost-instance"),
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  p2State.hand = [costCard];
+  state.cardManifest.cards[target.cardId] = {
+    ...must(state.cardManifest.cards[target.cardId], "target metadata"),
+    types: ["Red-Haired Pirates"],
+  };
+  state.cardManifest.cards[costCard.cardId] = resolvedCard({
+    cardId: costCard.cardId,
+    category: "character",
+    power: 6000,
+  });
+  const effectBlock = setupReviewedTypedKoTrashFromHandReplacementDefinition(
+    state,
+    replacementSource,
+  );
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    cardRef(target, p2),
+    0,
+  );
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: true,
+    candidate: {
+      id: `${String(replacementSource.instanceId)}:${String(effectBlock.id)}`,
+      effectBlockId: effectBlock.id,
+      controllerId: p2,
+      oncePerTurn: true,
+      source: cardRef(replacementSource, p2),
+      replacementEffect: effectBlock.effect,
+    },
+  });
+});
+
+test("does not detect typed K.O. trash-from-hand replacement for move-zone processes", () => {
+  const { state, entry, target, replacementSource } =
+    setupFilteredKoReplacementState();
+  const p2State = must(state.players[p2], "p2");
+  const costCard: CardInstance = {
+    ...target,
+    cardId: toCardId("red-haired-trash-cost"),
+    instanceId: toInstanceId("red-haired-trash-cost-instance"),
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  p2State.hand = [costCard];
+  state.cardManifest.cards[target.cardId] = {
+    ...must(state.cardManifest.cards[target.cardId], "target metadata"),
+    types: ["Red-Haired Pirates"],
+  };
+  state.cardManifest.cards[costCard.cardId] = resolvedCard({
+    cardId: costCard.cardId,
+    category: "character",
+    power: 6000,
+  });
+  setupReviewedTypedKoTrashFromHandReplacementDefinition(
+    state,
+    replacementSource,
+  );
+  const process = buildSelectedTargetMoveZoneReplacementProcess({
+    classification: "moveFromFieldToHand",
+    entry,
+    target: cardRef(target, p2),
+    targetIndex: 0,
+  });
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, { ok: true });
 });
 
 test("detects any-of K.O. or opponent-effect removal replacement through composed trigger branches", () => {

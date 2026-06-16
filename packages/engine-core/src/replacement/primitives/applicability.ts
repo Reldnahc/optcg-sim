@@ -11,6 +11,11 @@ import type {
 import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
+import {
+  expandMoveCardsCostRoutes,
+  selectableMoveCardsCostIds,
+} from "../../effect-runtime-sequence/move-card-cost-options.js";
+import { flattenSequenceEffect } from "../../effect-runtime-sequence/support-normalization.js";
 import { createOncePerTurnGate } from "../../rules/once-per-turn.js";
 import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
 import {
@@ -19,14 +24,19 @@ import {
 } from "../../selection/candidates.js";
 import { cardRefsEqual } from "../field-removal-targets.js";
 import {
+  isSupportedDrawInsteadEffect,
   isSupportedKoSelfInsteadEffect,
+  isSupportedLifeVisibilityInsteadEffect,
   isSupportedModifyPowerInsteadEffect,
+  isSupportedReplacementInsteadSequenceEffect,
   isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
   isSupportedReturnDonInsteadEffect,
+  isSupportedReturnSelfToHandInsteadEffect,
   isSupportedTrashFromHandInsteadEffect,
   isSupportedTrashSelfInsteadEffect,
+  supportedReplacementPayCostInstead,
   supportedReplacementSequenceWithTrashFromHandInstead,
   supportedOwnerDeckBottomInstead,
 } from "../instead-effects.js";
@@ -43,17 +53,31 @@ const replacementTriggerForProcess = (
 ): SupportedReplacementEffectBlock["trigger"]["replacement"] | undefined => {
   const trigger = effect.trigger.replacement;
   if (trigger.type !== "anyOf") {
-    return trigger;
+    return replacementTriggerMatchesProcess(process, trigger)
+      ? trigger
+      : undefined;
   }
   return trigger.replacements.find((replacement) => {
-    if (process.type === "ko") {
-      return replacement.type === "wouldBeKOd";
-    }
-    if (process.type === "moveZone") {
-      return replacement.type === "wouldMoveZone";
-    }
-    return false;
+    return replacementTriggerMatchesProcess(process, replacement);
   });
+};
+
+const replacementTriggerMatchesProcess = (
+  process: ReplacementProcess,
+  trigger: SupportedReplacementEffectBlock["trigger"]["replacement"],
+): boolean => {
+  if (trigger.type === "anyOf") {
+    return trigger.replacements.some((replacement) =>
+      replacementTriggerMatchesProcess(process, replacement),
+    );
+  }
+  if (process.type === "ko") {
+    return trigger.type === "wouldBeKOd" || trigger.type === "wouldMoveZone";
+  }
+  if (process.type === "moveZone") {
+    return trigger.type === "wouldMoveZone";
+  }
+  return false;
 };
 
 export const opponentFieldRemovalReplacementCoveredTargets = (
@@ -220,6 +244,21 @@ const canPayReplacementInsteadSegment = (
   source: LocatedReplacementSource,
   instead: SupportedReplacementEffectBlock["effect"]["instead"],
 ): boolean => {
+  const payCost = supportedReplacementPayCostInstead(instead);
+  if (payCost !== undefined) {
+    return canPayReplacementPayCost(state, source, payCost);
+  }
+  if (isSupportedReplacementInsteadSequenceEffect(instead)) {
+    const flattened = flattenSequenceEffect(instead);
+    return (
+      flattened !== null &&
+      flattened.effects.every(
+        (segment) =>
+          segment.effect.type !== "payCost" &&
+          canPayReplacementInsteadSegment(state, source, segment.effect),
+      )
+    );
+  }
   if (isSupportedLifeTopToHandEffect(instead)) {
     const player = state.players[source.card.controller];
     return (
@@ -290,8 +329,29 @@ const canPayReplacementInsteadSegment = (
       source.ref.zone?.zone === "characterArea"
     );
   }
+  if (isSupportedDrawInsteadEffect(instead)) {
+    return state.players[source.card.controller] !== undefined;
+  }
+  if (isSupportedLifeVisibilityInsteadEffect(instead)) {
+    const player = state.players[source.card.controller];
+    if (player === undefined) {
+      return false;
+    }
+    const startIndex =
+      instead.position === "top" ? 0 : player.life.length - instead.count;
+    const selected = player.life.slice(startIndex, startIndex + instead.count);
+    return (
+      startIndex >= 0 &&
+      selected.length === instead.count &&
+      selected.every((lifeCard) => lifeCard.faceUp !== instead.faceUp)
+    );
+  }
   if (isSupportedReplacementTargetLifeInsteadEffect(instead)) {
     return true;
+  }
+  if (isSupportedReturnSelfToHandInsteadEffect(instead)) {
+    const sourceZone = source.ref.zone?.zone;
+    return sourceZone === "characterArea" || sourceZone === "stageArea";
   }
   const ownerDeckBottom = supportedOwnerDeckBottomInstead(instead);
   if (ownerDeckBottom !== undefined) {
@@ -306,6 +366,31 @@ const canPayReplacementInsteadSegment = (
     );
   }
   return false;
+};
+
+const canPayReplacementPayCost = (
+  state: GameState,
+  source: LocatedReplacementSource,
+  payCost: NonNullable<ReturnType<typeof supportedReplacementPayCostInstead>>,
+): boolean => {
+  const player = state.players[source.card.controller];
+  if (player === undefined) {
+    return false;
+  }
+  if (payCost.cost.type !== "moveCards") {
+    return false;
+  }
+  const [paymentOption] = expandMoveCardsCostRoutes(payCost.cost);
+  if (paymentOption === undefined) {
+    return false;
+  }
+  const selectable = selectableMoveCardsCostIds(
+    state,
+    source.card.controller,
+    player,
+    paymentOption,
+  );
+  return selectable !== undefined && selectable.length >= paymentOption.count;
 };
 
 const replacementRestCandidateIsActive = (

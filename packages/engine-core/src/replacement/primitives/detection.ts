@@ -16,11 +16,14 @@ import { replacementSourcesForController } from "./source-lookup.js";
 import {
   isReplacementTriggerEffect,
   isSupportedAnyOfReplacementEffect,
+  isSupportedKoInsteadReplacementEffect,
+  isSupportedKoLifeTopToHandReplacementEffect,
   isSupportedOpponentEffectFieldRemovalReplacementEffect,
   isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect,
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect,
   isSupportedOpponentEffectKoRestSelfReplacementEffect,
   isSupportedOpponentFieldRemovalLifeReplacementEffect,
+  isSupportedOpponentKoTrashFromHandReplacementEffect,
   isSupportedReplacementEffect,
   isSupportedSelfKoDrawReplacementEffect,
   isSupportedSelfKoTrashFromHandReplacementEffect,
@@ -139,6 +142,9 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
         ) {
           continue;
         } else if (
+          isSupportedKoLifeTopToHandReplacementEffect(effect) ||
+          isSupportedKoInsteadReplacementEffect(effect) ||
+          isSupportedOpponentKoTrashFromHandReplacementEffect(effect) ||
           isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
           isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(
             effect,
