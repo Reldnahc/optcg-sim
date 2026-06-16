@@ -1,4 +1,10 @@
-import type { CardFilter, Effect, OptionalCost } from "@optcg/types";
+import type {
+  CardFilter,
+  Effect,
+  EffectTextPresentationRef,
+  EffectTextSpan,
+  OptionalCost,
+} from "@optcg/types";
 
 import {
   parseOptionalCostSequence,
@@ -50,6 +56,16 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
+    const textKind =
+      input.entryPoint?.trigger.type === "trigger" ? "trigger" : "effect";
+    const costPresentation = presentationRefFromSpans(
+      parsed.presentationSpans,
+      textKind,
+    );
+    const bodyPresentation = presentationRefFromSpans(
+      body.presentationSpans,
+      textKind,
+    );
     const presentationSpans = [
       ...(parsed.presentationSpans ?? []),
       ...(body.presentationSpans ?? []),
@@ -59,12 +75,19 @@ export function returnToOwnerHandCostedEffectExpressionParser(options: {
       effect: {
         type: "sequence",
         effects: [
-          ...prefixCostSegments(parsed.prefixCost),
-          ...returnCostSegments(parsed.target, parsed.prefixCost !== undefined),
+          ...prefixCostSegments(parsed.prefixCost, costPresentation),
+          ...returnCostSegments(
+            parsed.target,
+            parsed.prefixCost !== undefined,
+            costPresentation,
+          ),
           {
             id: "body:after-return-cost",
             connector: "ifPreviousSucceeded",
-            effect: body.effect,
+            ...(bodyPresentation === undefined
+              ? {}
+              : { presentation: bodyPresentation }),
+            effect: effectWithPresentation(body.effect, bodyPresentation),
           },
         ],
       },
@@ -186,6 +209,7 @@ function parseCostAndBody(input: ParseInput):
 
 function prefixCostSegments(
   prefixCost: OptionalCostSequenceParseResult | undefined,
+  presentation: EffectTextPresentationRef | undefined,
 ): Extract<Effect, { type: "sequence" }>["effects"] {
   return prefixCost === undefined
     ? []
@@ -194,6 +218,7 @@ function prefixCostSegments(
           id: "cost:return-prefix",
           connector: "always",
           saveResultAs: "paidCost",
+          ...(presentation === undefined ? {} : { presentation }),
           effect: {
             type: "payCost",
             cost: prefixCost.cost,
@@ -204,6 +229,7 @@ function prefixCostSegments(
 
 function sourceCharacterReturnCostSegment(
   hasPrefixCost: boolean,
+  presentation: EffectTextPresentationRef | undefined,
 ): Extract<Effect, { type: "sequence" }>["effects"] {
   const cost: Extract<OptionalCost, { type: "moveCards" }> = {
     type: "moveCards",
@@ -222,6 +248,7 @@ function sourceCharacterReturnCostSegment(
     {
       id: "cost:return-source-to-owner-hand",
       connector: hasPrefixCost ? "ifYouDo" : "always",
+      ...(presentation === undefined ? {} : { presentation }),
       effect: { type: "payCost", cost },
     },
   ];
@@ -230,9 +257,10 @@ function sourceCharacterReturnCostSegment(
 function returnCostSegments(
   target: ReturnCostTarget,
   hasPrefixCost: boolean,
+  presentation: EffectTextPresentationRef | undefined,
 ): Extract<Effect, { type: "sequence" }>["effects"] {
   if (target.type === "sourceCharacter") {
-    return sourceCharacterReturnCostSegment(hasPrefixCost);
+    return sourceCharacterReturnCostSegment(hasPrefixCost, presentation);
   }
 
   const effect = selectThenReturnToOwnerHand("self", 0, 1, target.filter);
@@ -245,11 +273,13 @@ function returnCostSegments(
           ...segment,
           id: "select:return-cost-to-owner-hand",
           connector: hasPrefixCost ? "ifYouDo" : segment.connector,
+          ...(presentation === undefined ? {} : { presentation }),
           saveResultAs: costReturnSelectionId,
         }
       : {
           ...segment,
           connector: "ifPreviousSucceeded",
+          ...(presentation === undefined ? {} : { presentation }),
           effect:
             segment.effect.type === "bounce"
               ? {
@@ -266,6 +296,69 @@ function returnCostSegments(
         },
   );
 }
+
+const presentationRefFromSpans = (
+  spans: readonly EffectTextSpan[] | undefined,
+  textKind: EffectTextPresentationRef["textKind"],
+): EffectTextPresentationRef | undefined => {
+  const spanIds = spans
+    ?.filter((span) => span.role === "body" || span.role === "cost")
+    .map((span) => span.id);
+  return spanIds === undefined || spanIds.length === 0
+    ? undefined
+    : { textKind, spanIds };
+};
+
+const sequenceSpanPrefix = (index: number): string =>
+  `span:sequence:${String(index)}:`;
+
+const presentationForSequenceIndex = (
+  presentation: EffectTextPresentationRef,
+  index: number,
+): EffectTextPresentationRef | undefined => {
+  const prefix = sequenceSpanPrefix(index);
+  const spanIds = presentation.spanIds.filter((spanId) =>
+    spanId.startsWith(prefix),
+  );
+  return spanIds.length === 0
+    ? undefined
+    : { textKind: presentation.textKind, spanIds };
+};
+
+const hasSequenceSpanIds = (presentation: EffectTextPresentationRef): boolean =>
+  presentation.spanIds.some((spanId) => spanId.startsWith("span:sequence:"));
+
+const effectWithPresentation = (
+  effect: Effect,
+  presentation: EffectTextPresentationRef | undefined,
+): Effect => {
+  if (presentation === undefined || effect.type !== "sequence") {
+    return effect;
+  }
+  const usePerSegmentSpans = hasSequenceSpanIds(presentation);
+  return {
+    ...effect,
+    effects: effect.effects.map((segment, index) => {
+      const segmentPresentation = usePerSegmentSpans
+        ? presentationForSequenceIndex(presentation, index)
+        : presentation;
+      return {
+        ...segment,
+        ...(segment.presentation !== undefined ||
+        segmentPresentation === undefined
+          ? {}
+          : { presentation: segmentPresentation }),
+        effect:
+          segment.effect.type === "payCost"
+            ? segment.effect
+            : effectWithPresentation(
+                segment.effect,
+                segmentPresentation ?? presentation,
+              ),
+      };
+    }),
+  };
+};
 
 function parseReturnCostTarget(text: string): ReturnCostTarget | undefined {
   if (/^this Character$/iu.test(text)) {

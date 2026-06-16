@@ -123,3 +123,46 @@ test("materialized effect definitions expose parser support certificates", () =>
     ],
   );
 });
+
+test("materialized return-cost segment presentations use scoped source-map span ids", () => {
+  const materialized = materializeEffectDefinition(
+    "OP01-001" as CardId,
+    [
+      "[Activate: Main] You may rest this Leader and return 1 of your {Dressrosa} type Characters to the owner's hand: Play up to 1 {Dressrosa} type Character card with a cost of 3 from your hand.",
+      "[On Play] Draw 1 card.",
+    ],
+    "source-hash",
+    {
+      effectDefinitionsVersion: "effects-test",
+      rulesVersion: "rules-test",
+    },
+    { evaluateRuntimeSupport: () => ({ supported: true }) },
+  );
+
+  const effect = materialized.definition?.effects[0]?.effect;
+  if (effect?.type !== "sequence") {
+    throw new Error("expected return-cost sequence");
+  }
+  assert.deepEqual(effect.effects[0]?.presentation?.spanIds, [
+    "span:cost:optional:line:1",
+  ]);
+  assert.deepEqual(effect.effects[1]?.presentation?.spanIds, [
+    "span:cost:optional:line:1",
+  ]);
+  assert.deepEqual(effect.effects[2]?.presentation?.spanIds, [
+    "span:cost:optional:line:1",
+  ]);
+  assert.deepEqual(effect.effects[3]?.presentation?.spanIds, [
+    "span:body:line:1",
+  ]);
+  const body = effect.effects[3].effect;
+  if (body.type !== "sequence") {
+    assert.fail("expected body sequence");
+  }
+  assert.deepEqual(body.effects[0]?.presentation?.spanIds, [
+    "span:body:line:1",
+  ]);
+  assert.deepEqual(body.effects[1]?.presentation?.spanIds, [
+    "span:body:line:1",
+  ]);
+});

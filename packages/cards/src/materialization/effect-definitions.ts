@@ -1,5 +1,6 @@
 import type {
   CardId,
+  Effect,
   EffectBlock,
   EffectDefinition,
   EffectTextPresentationRef,
@@ -10,6 +11,7 @@ import type {
 import { parseCardEffectLinesDetailed } from "../card-effect-line-parser.js";
 import {
   presentationSpanScope,
+  scopedPresentationSpanId,
   scopePresentationSpan,
 } from "../presentation-span-ids.js";
 import type { ParsedRuntimeEffectLine } from "../types.js";
@@ -91,12 +93,14 @@ export const materializeEffectDefinition = (
               ),
             };
       const presentation = presentationRefFromSourceMap(sourceMap);
+      const effect = scopeEffectPresentationRefs(value.block.effect, spanScope);
       parsedRuntimeLines.push({
         ...value,
         ...(sourceMap === undefined ? {} : { sourceMap }),
       });
       const block: EffectBlock = {
         ...value.block,
+        effect,
         id:
           runtimeValues.length === 1
             ? (`${String(cardId)}:generated:${String(index + 1)}` as EffectBlock["id"])
@@ -208,4 +212,89 @@ const presentationRefFromSourceMap = (
         textKind: sourceMap.textKind,
         spanIds,
       };
+};
+
+type SequenceSegment = Extract<Effect, { type: "sequence" }>["effects"][number];
+
+const scopePresentationRef = (
+  presentation: EffectTextPresentationRef,
+  scope: string | undefined,
+): EffectTextPresentationRef =>
+  scope === undefined
+    ? presentation
+    : {
+        ...presentation,
+        spanIds: presentation.spanIds.map((spanId) =>
+          scopedPresentationSpanId(spanId, scope),
+        ),
+      };
+
+const scopeSequenceSegmentPresentationRefs = (
+  segment: SequenceSegment,
+  scope: string | undefined,
+): SequenceSegment => {
+  const effect =
+    segment.effect.type === "payCost"
+      ? segment.effect
+      : scopeEffectPresentationRefs(segment.effect, scope);
+  return {
+    ...segment,
+    ...(segment.presentation === undefined
+      ? {}
+      : { presentation: scopePresentationRef(segment.presentation, scope) }),
+    effect,
+  };
+};
+
+const scopeEffectPresentationRefs = (
+  effect: Effect,
+  scope: string | undefined,
+): Effect => {
+  if (scope === undefined) {
+    return effect;
+  }
+  if (effect.type === "sequence") {
+    return {
+      ...effect,
+      effects: effect.effects.map((segment) =>
+        scopeSequenceSegmentPresentationRefs(segment, scope),
+      ),
+    };
+  }
+  if (effect.type === "choice") {
+    return {
+      ...effect,
+      options: effect.options.map((option) => ({
+        ...option,
+        effect: scopeEffectPresentationRefs(option.effect, scope),
+      })),
+    };
+  }
+  if (effect.type === "conditional") {
+    return {
+      ...effect,
+      then: scopeEffectPresentationRefs(effect.then, scope),
+      ...(effect.else === undefined
+        ? {}
+        : { else: scopeEffectPresentationRefs(effect.else, scope) }),
+    };
+  }
+  if (
+    effect.type === "delayed" ||
+    effect.type === "forEachMatch" ||
+    effect.type === "forEachSavedTarget" ||
+    effect.type === "repeat"
+  ) {
+    return {
+      ...effect,
+      effect: scopeEffectPresentationRefs(effect.effect, scope),
+    };
+  }
+  if (effect.type === "replacement") {
+    return {
+      ...effect,
+      instead: scopeEffectPresentationRefs(effect.instead, scope),
+    };
+  }
+  return effect;
 };

@@ -387,6 +387,10 @@ describe("warlords parser primitives", () => {
           effects: [
             {
               connector: "always",
+              presentation: {
+                textKind: "effect",
+                spanIds: ["span:cost:optional"],
+              },
               saveResultAs: "paidCost",
               effect: {
                 type: "payCost",
@@ -395,6 +399,10 @@ describe("warlords parser primitives", () => {
             },
             {
               connector: "ifYouDo",
+              presentation: {
+                textKind: "effect",
+                spanIds: ["span:cost:optional"],
+              },
               saveResultAs: "selected:return-cost-to-owner-hand",
               effect: {
                 type: "selectTargets",
@@ -412,15 +420,27 @@ describe("warlords parser primitives", () => {
             },
             {
               connector: "ifPreviousSucceeded",
+              presentation: {
+                textKind: "effect",
+                spanIds: ["span:cost:optional"],
+              },
               effect: { type: "bounce", destination: "hand" },
             },
             {
               connector: "ifPreviousSucceeded",
+              presentation: {
+                textKind: "effect",
+                spanIds: ["span:body"],
+              },
               effect: {
                 type: "sequence",
                 effects: [
                   {
                     connector: "always",
+                    presentation: {
+                      textKind: "effect",
+                      spanIds: ["span:body"],
+                    },
                     saveResultAs: "handSelection:play-from-hand",
                     effect: {
                       type: "selectCards",
@@ -438,6 +458,10 @@ describe("warlords parser primitives", () => {
                   },
                   {
                     connector: "ifPossible",
+                    presentation: {
+                      textKind: "effect",
+                      spanIds: ["span:body"],
+                    },
                     effect: {
                       type: "playSelected",
                       selection: "handSelection:play-from-hand",

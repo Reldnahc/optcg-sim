@@ -17,6 +17,10 @@ import {
   activeSpanIdsForSearchSelection,
   activeSpanIdsForSequenceIndex,
 } from "../runtime/effect-presentation.js";
+import {
+  segmentPresentationSpanIdsForFrame,
+  sequenceEffectBlockForEntry,
+} from "../effect-runtime-sequence/segment-presentation.js";
 
 export interface VisibleDecisionSourceCard {
   card: CardInstance;
@@ -196,6 +200,24 @@ const narrowChoiceActiveSpanIds = (
   return activeSpanIdsForChoice(activeSpanIds);
 };
 
+const narrowSegmentPresentationActiveSpanIds = (
+  state: GameState,
+  pending: PendingDecision,
+  entry: EffectQueueEntry,
+): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
+  const frame = state.effectExecutionFrames.find(
+    (candidate) =>
+      candidate.pendingDecision.decisionId === pending.id &&
+      (pending.causedBy.type !== "effect" ||
+        candidate.queueEntryId === pending.causedBy.queueEntryId),
+  );
+  if (frame === undefined) {
+    return undefined;
+  }
+  const effectBlock = sequenceEffectBlockForEntry(state, entry);
+  return segmentPresentationSpanIdsForFrame(effectBlock, entry, frame);
+};
+
 export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
   state: GameState;
   pending: PendingDecision;
@@ -223,6 +245,11 @@ export const publicDecisionActiveEffectTextFromEffectQueue = (params: {
       params.state,
       params.pending,
       visible.entry.presentation.activeSpanIds,
+    ) ??
+    narrowSegmentPresentationActiveSpanIds(
+      params.state,
+      params.pending,
+      visible.entry,
     ) ??
     narrowSequenceActiveSpanIds(
       params.state,

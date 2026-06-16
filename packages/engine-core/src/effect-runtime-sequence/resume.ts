@@ -9,6 +9,7 @@ import type {
 
 import { appendEffectResolvedForCompletedSequence } from "./frame-events.js";
 import { entryWithCompletedSequencePresentation } from "./completed-presentation.js";
+import { segmentPresentationSpanIdsForFrame } from "./segment-presentation.js";
 import { removeFrame, replaceQueueEntry } from "./segments.js";
 import {
   activeSpanIdsForSequenceIndex,
@@ -105,9 +106,13 @@ const topLevelSequenceIndexForFrame = (
 const narrowedActiveSpanIdsForCompletedFrame = (
   entry: EffectQueueEntry,
   frame: EffectExecutionFrame,
+  effectBlock: SupportedSequenceBlock,
 ): ActiveEffectTextPresentation["activeSpanIds"] | undefined => {
   const presentation = entry.presentation;
   if (presentation === undefined) {
+    return undefined;
+  }
+  if (segmentPresentationSpanIdsForFrame(effectBlock, entry, frame)) {
     return undefined;
   }
   if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
@@ -128,8 +133,13 @@ const narrowedActiveSpanIdsForCompletedFrame = (
 const entryWithCompletedFramePresentation = (
   entry: EffectQueueEntry,
   frame: EffectExecutionFrame,
+  effectBlock: SupportedSequenceBlock,
 ): EffectQueueEntry => {
-  const activeSpanIds = narrowedActiveSpanIdsForCompletedFrame(entry, frame);
+  const activeSpanIds = narrowedActiveSpanIdsForCompletedFrame(
+    entry,
+    frame,
+    effectBlock,
+  );
   return activeSpanIds === undefined || entry.presentation === undefined
     ? entry
     : {
@@ -261,6 +271,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
   const resumedEntry = entryWithCompletedFramePresentation(
     params.entry,
     params.frame,
+    params.effectBlock,
   );
   const resumedState =
     resumedEntry === params.entry
@@ -329,6 +340,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
     const completedEntry = entryWithCompletedSequencePresentation(
       resumedEntry,
       completed.ledgers.segmentResults,
+      params.effectBlock,
     );
     const finalized = appendEffectResolvedForCompletedSequence(
       completedState,

@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardRef,
   CardInstance,
   Effect,
   EffectDefinition,
   EffectTextSpanId,
   GameState,
+  HandSelectionId,
+  EngineResult,
 } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
@@ -18,6 +21,7 @@ import {
   queueDrawForP1,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
+  toCardId,
   toEffectId,
   toQueueEntryId,
   toSourceSnapshot,
@@ -81,6 +85,120 @@ const optionalTrashCostThenDrawUpTo = (): Extract<
     },
   ],
 });
+
+const returnCostThenPlayFromHand = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => {
+  const costPresentation = {
+    textKind: "effect" as const,
+    spanIds: ["span:cost:optional:line:1"] as EffectTextSpanId[],
+  };
+  const bodyPresentation = {
+    textKind: "effect" as const,
+    spanIds: ["span:body:line:1"] as EffectTextSpanId[],
+  };
+  const playSelection = "handSelection:play-from-hand" as HandSelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        id: "cost:rest-self",
+        connector: "always",
+        presentation: costPresentation,
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: { type: "restSelf", optional: true },
+        },
+      },
+      {
+        id: "select:return-cost-to-owner-hand",
+        connector: "ifYouDo",
+        presentation: costPresentation,
+        saveResultAs: "selected:return-cost-to-owner-hand",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: {
+              categories: ["character"],
+              typesAny: ["Dressrosa"],
+            },
+          },
+        },
+      },
+      {
+        id: "return-cost-to-owner-hand",
+        connector: "ifPreviousSucceeded",
+        presentation: costPresentation,
+        effect: {
+          type: "bounce",
+          destination: "hand",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: "selected:return-cost-to-owner-hand",
+            },
+            zone: "characterArea",
+            player: "self",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+        },
+      },
+      {
+        id: "body:after-return-cost",
+        connector: "ifPreviousSucceeded",
+        presentation: bodyPresentation,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              id: "select-play-from-hand",
+              connector: "always",
+              presentation: bodyPresentation,
+              saveResultAs: playSelection,
+              effect: {
+                type: "selectCards",
+                zone: "hand",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Dressrosa"],
+                  cost: { op: "eq", value: 3 },
+                },
+                saveAs: playSelection,
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              id: "play-selected",
+              connector: "ifPossible",
+              presentation: bodyPresentation,
+              effect: {
+                type: "playSelected",
+                selection: playSelection,
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+};
 
 const reindexHand = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
@@ -195,6 +313,129 @@ const payTrashFromHandWithFirstHandCard = (state: GameState) => {
   });
 };
 
+const payRestSelf = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "payment decision");
+  assert.equal(decision.type, "payCost");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "restSelf",
+    },
+  });
+};
+
+const dressrosaCard = (
+  state: GameState,
+  card: CardInstance,
+  cardId: string,
+  cost: number,
+): CardInstance => {
+  const updated = { ...card, cardId: toCardId(cardId) };
+  state.cardManifest.cards[updated.cardId] = {
+    ...resolvedCard({
+      cardId: updated.cardId,
+      category: "character",
+      cost,
+      power: 1000,
+    }),
+    types: ["Dressrosa"],
+  };
+  return updated;
+};
+
+const createReturnCostPlayState = (): {
+  readonly state: GameState;
+  readonly returnedTarget: CardRef;
+  readonly eligibleHandCard: CardRef;
+} => {
+  const state = createQueuedCostPresentationStateForEffect(
+    returnCostThenPlayFromHand(),
+  );
+  const player = must(state.players[p1], "p1");
+  const returnedCard = dressrosaCard(
+    state,
+    must(player.hand[0], "return target seed"),
+    "return-cost-target",
+    2,
+  );
+  player.hand = reindexHand(player.hand.slice(1));
+  const returnedTargetCard = withCardInZone({
+    state,
+    playerId: p1,
+    card: returnedCard,
+    zone: "characterArea",
+    index: player.characters.length,
+  });
+  const eligibleCard = dressrosaCard(
+    state,
+    must(player.hand[0], "eligible hand card"),
+    "eligible-dressrosa-cost-3",
+    3,
+  );
+  player.hand = reindexHand([eligibleCard, ...player.hand.slice(1)]);
+  return {
+    state,
+    returnedTarget: {
+      instanceId: returnedTargetCard.instanceId,
+      cardId: returnedTargetCard.cardId,
+      playerId: p1,
+      zone: returnedTargetCard.zone,
+    },
+    eligibleHandCard: {
+      instanceId: eligibleCard.instanceId,
+      cardId: eligibleCard.cardId,
+      playerId: p1,
+      zone: eligibleCard.zone,
+    },
+  };
+};
+
+const selectReturnCostTarget = (state: GameState, target: CardRef) => {
+  const decision = must(state.pendingDecision, "return target decision");
+  assert.equal(decision.type, "selectTargets");
+  const candidate = must(
+    decision.candidates.find(
+      (entry) => entry.card.instanceId === target.instanceId,
+    ),
+    "return target candidate",
+  );
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "targets", targets: [candidate.card] },
+  });
+};
+
+const resolvedPresentation = (
+  result: EngineResult,
+): { readonly presentation?: unknown } => {
+  const effectResolved = must(
+    result.events.find((event) => event.type === "effectResolved"),
+    "effectResolved event",
+  );
+  return effectResolved.payload as { readonly presentation?: unknown };
+};
+
+const playedCharacter = (
+  result: EngineResult,
+  instanceId: CardRef["instanceId"],
+): CardRef => {
+  const character = must(
+    must(result.state.players[p1], "p1").characters.find(
+      (card) => card.instanceId === instanceId,
+    ),
+    "played character",
+  );
+  return {
+    instanceId: character.instanceId,
+    cardId: character.cardId,
+    playerId: p1,
+    zone: character.zone,
+  };
+};
+
 test("optional cost presentation highlights the cost while paying and the body after payment", () => {
   const state = createQueuedCostPresentationState();
   const entry = must(state.effectQueue[0], "queued effect");
@@ -233,6 +474,117 @@ test("optional cost presentation highlights the cost while paying and the body a
       activeSpanIds: ["span:body:line:1"],
     },
   );
+});
+
+test("return-to-hand cost spotlight stays on cost before hand play body", () => {
+  const { state, returnedTarget } = createReturnCostPlayState();
+  const entry = must(state.effectQueue[0], "queued effect");
+
+  const paused = processEffectRuntime(state);
+  const rested = payRestSelf(paused.state);
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(rested.errors, undefined);
+  assert.equal(rested.state.pendingDecision?.type, "selectTargets");
+  assert.deepEqual(filterStateForPlayer(rested.state, p1).activeEffectText, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:cost:optional:line:1"],
+  });
+
+  const selectedReturn = selectReturnCostTarget(rested.state, returnedTarget);
+
+  assert.equal(selectedReturn.errors, undefined);
+  assert.equal(selectedReturn.state.pendingDecision?.type, "selectCards");
+  assert.deepEqual(
+    filterStateForPlayer(selectedReturn.state, p1).activeEffectText,
+    {
+      source: entry.source,
+      textKind: "effect",
+      activeSpanIds: ["span:body:line:1"],
+    },
+  );
+});
+
+test("return-to-hand cost presentation links returned and played cards to their own spans", () => {
+  const { state, eligibleHandCard, returnedTarget } =
+    createReturnCostPlayState();
+  const entry = must(state.effectQueue[0], "queued effect");
+
+  const paused = processEffectRuntime(state);
+  const rested = payRestSelf(paused.state);
+  const selectedReturn = selectReturnCostTarget(rested.state, returnedTarget);
+  const handDecision = must(
+    selectedReturn.state.pendingDecision,
+    "hand selection decision",
+  );
+  assert.equal(handDecision.type, "selectCards");
+  const candidate = must(
+    handDecision.candidates.find(
+      (entry) => entry.card.instanceId === eligibleHandCard.instanceId,
+    ),
+    "eligible hand candidate",
+  );
+
+  const selectedPlay = applyAction(selectedReturn.state, {
+    type: "respondToDecision",
+    decisionId: handDecision.id,
+    response: { type: "cards", cards: [candidate.card] },
+  });
+  const played = playedCharacter(selectedPlay, eligibleHandCard.instanceId);
+
+  assert.equal(selectedPlay.errors, undefined);
+  assert.deepEqual(resolvedPresentation(selectedPlay).presentation, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:cost:optional:line:1", "span:body:line:1"],
+    targetLinks: [
+      {
+        spanId: "span:cost:optional:line:1",
+        relation: "selectedTarget",
+        cards: [returnedTarget],
+      },
+      {
+        spanId: "span:body:line:1",
+        relation: "affectedCard",
+        cards: [played],
+      },
+    ],
+  });
+});
+
+test("return-to-hand cost presentation does not project returned cards over declined play body", () => {
+  const { state, returnedTarget } = createReturnCostPlayState();
+  const entry = must(state.effectQueue[0], "queued effect");
+
+  const paused = processEffectRuntime(state);
+  const rested = payRestSelf(paused.state);
+  const selectedReturn = selectReturnCostTarget(rested.state, returnedTarget);
+  const handDecision = must(
+    selectedReturn.state.pendingDecision,
+    "hand selection decision",
+  );
+  assert.equal(handDecision.type, "selectCards");
+
+  const declinedPlay = applyAction(selectedReturn.state, {
+    type: "respondToDecision",
+    decisionId: handDecision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(declinedPlay.errors, undefined);
+  assert.deepEqual(resolvedPresentation(declinedPlay).presentation, {
+    source: entry.source,
+    textKind: "effect",
+    activeSpanIds: ["span:cost:optional:line:1"],
+    targetLinks: [
+      {
+        spanId: "span:cost:optional:line:1",
+        relation: "selectedTarget",
+        cards: [returnedTarget],
+      },
+    ],
+  });
 });
 
 test("optional cost presentation drops the cost while a body decision is pending", () => {
