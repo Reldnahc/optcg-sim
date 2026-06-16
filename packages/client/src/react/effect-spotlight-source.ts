@@ -3,13 +3,13 @@ import type {
   CardId,
   DecisionId,
   EngineEvent,
-  EffectSpotlightHistoryEntry,
+  EffectTextSpotlightHistoryEntry,
   InstanceId,
   PlayerView,
   PlayerId,
 } from "@optcg/types";
 
-export type EffectSpotlightActiveSource = EffectSpotlightHistoryEntry;
+export type EffectSpotlightActiveSource = EffectTextSpotlightHistoryEntry;
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;

@@ -5,6 +5,7 @@ import type {
   CardId,
   DecisionId,
   EngineEvent,
+  EngineEventId,
   InstanceId,
   PlayerId,
   PlayerView,
@@ -241,6 +242,45 @@ describe("legacy activeEffectTextForSpotlight fallback", () => {
         status: "resolved",
       },
     ]);
+  });
+
+  it("ignores combat-shaped presentations in legacy effect text fallback", () => {
+    expect(
+      resolvedEffectTextSourcesForSpotlight([
+        event({
+          type: "effectResolved",
+          seq: 1,
+          payload: {
+            status: "resolved",
+            presentation: {
+              kind: "combat",
+              id: "combat:event:attack",
+              key: "event:attack",
+              semanticKey:
+                "combat|attackDeclared|p1|attacker-1|OP00-003|p2|defender-1|OP00-004|7000|5000",
+              mode: "resolved",
+              status: "resolved",
+              combat: {
+                eventKind: "attackDeclared",
+                attacker: {
+                  playerId: "p1" as PlayerId,
+                  instanceId: "attacker-1" as InstanceId,
+                  cardId: "OP00-003" as CardId,
+                },
+                defender: {
+                  playerId: "p2" as PlayerId,
+                  instanceId: "defender-1" as InstanceId,
+                  cardId: "OP00-004" as CardId,
+                },
+                attackerPower: 7000,
+                defenderPower: 5000,
+              },
+              resolvedEventId: "event:attack" as EngineEventId,
+            },
+          },
+        }),
+      ]),
+    ).toEqual([]);
   });
 
   it("keeps earlier resolved spotlights when another effect queues before the next one resolves", () => {
