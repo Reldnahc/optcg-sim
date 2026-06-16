@@ -97,6 +97,12 @@ const singleInstructionExpressionParser = (input: ParseInput) => {
   };
 };
 
+const basicBodyExpressions = () =>
+  [singleInstructionExpressionParser, generalExpressionParser] as const;
+
+const singleInstructionBodyExpressions = () =>
+  [singleInstructionExpressionParser] as const;
+
 function generalExpressionParser(input: ParseInput) {
   const eventTimedDelayed = eventTimedDelayedSegmentParser({
     connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
@@ -286,85 +292,113 @@ const costedExpressions = [
   generalExpressionParser,
 ] as const;
 
-export const defaultRegistry = {
-  metadataLines: [
-    parseAnyCopiesOfThisCardRuleLine,
-    parseCardCostRestrictionRuleLine,
-    parseDeckOutLossTimingRuleLine,
-    parseDonDeckSizeRuleLine,
-    parseNameAliasesRuleLine,
-  ],
-  entryPoints: [
-    parseRulesStartOfGameEntryPoint,
-    parseTurnWindowedEntryPoint,
-    parseStartOfTurnEntryPoint,
-    parseSupportedEntryPoint,
-    parseRecognizedUnsupportedEntryPoint,
-    parseReplacementEntryPoint,
-    parseActivatedReactionEntryPoint,
-    parseImplicitReactionEntryPoint,
-    parseImplicitPermanentEntryPoint,
-  ],
-  markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
-  expressions: [
+const conditionalCostedBlockExpressions = () =>
+  [
+    returnToOwnerHandCostedEffectExpressionParser({
+      conditions: conditionParsers,
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
+    optionalCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
+  ] as const;
+
+const topLevelChooseOneExpressions = () =>
+  [
+    lookPlayFromTopExpressionParser,
+    playFromDeckExpressionParser,
+    revealTopPlayExpressionParser,
+    revealTopConditionalExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    chosenCostRevealExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    revealedHandPlayExpressionParser,
+    revealTopPlayRestedExpressionParser,
+    searchRevealExpressionParser,
+    playedObjectKeywordGrantExpressionParser({
+      instructions: instructionParsers,
+      expressions: singleInstructionBodyExpressions(),
+    }),
+    playedObjectDelayedDeckBottomExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    opponentOptionalCostExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    singleInstructionExpressionParser,
+    generalExpressionParser,
+  ] as const;
+
+const activatedReactionBodyExpressions = () =>
+  [...conditionalCostedBlockExpressions(), generalExpressionParser] as const;
+
+const implicitEventReactionBodyExpressions = () =>
+  [
+    lookPlayFromTopExpressionParser,
+    playFromDeckExpressionParser,
+    revealTopPlayExpressionParser,
+    conditionalBlockExpressionParser({
+      conditions: conditionParsers,
+      connectors: [parseThenConnector, parseAndConnector],
+      instructions: instructionParsers,
+    }),
+    optionalCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
+    singleInstructionExpressionParser,
+    generalExpressionParser,
+  ] as const;
+
+const conditionalBlockBodyExpressions = () =>
+  [
+    lookPlayFromTopExpressionParser,
+    playFromDeckExpressionParser,
+    revealTopPlayExpressionParser,
+    revealTopConditionalExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    chosenCostRevealExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    revealedHandPlayExpressionParser,
+    searchRevealExpressionParser,
+    playedObjectKeywordGrantExpressionParser({
+      instructions: instructionParsers,
+      expressions: singleInstructionBodyExpressions(),
+    }),
+    playedObjectDelayedDeckBottomExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    selectedOpponentCharactersAttackCostExpressionParser,
+    conditionalAdditionalSelectedPowerContinuationExpressionParser({
+      conditions: conditionParsers,
+    }),
+    selectedPowerContinuationExpressionParser,
+    singleInstructionExpressionParser,
+    generalExpressionParser,
+  ] as const;
+
+const rootExpressionParsers = () =>
+  [
     chooseOneExpressionParser({
       conditions: conditionParsers,
-      expressions: [
-        lookPlayFromTopExpressionParser,
-        playFromDeckExpressionParser,
-        revealTopPlayExpressionParser,
-        revealTopConditionalExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        chosenCostRevealExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        revealedHandPlayExpressionParser,
-        revealTopPlayRestedExpressionParser,
-        searchRevealExpressionParser,
-        playedObjectKeywordGrantExpressionParser({
-          instructions: instructionParsers,
-          expressions: [singleInstructionExpressionParser],
-        }),
-        playedObjectDelayedDeckBottomExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        opponentOptionalCostExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        singleInstructionExpressionParser,
-        generalExpressionParser,
-      ],
+      expressions: topLevelChooseOneExpressions(),
     }),
     conditionalCostedBlockExpressionParser({
       conditions: conditionParsers,
-      expressions: [
-        returnToOwnerHandCostedEffectExpressionParser({
-          conditions: conditionParsers,
-          instructions: instructionParsers,
-          expressions: costedExpressions,
-        }),
-        optionalCostedEffectExpressionParser({
-          instructions: instructionParsers,
-          expressions: costedExpressions,
-        }),
-      ],
+      expressions: conditionalCostedBlockExpressions(),
     }),
     returnToOwnerHandCostedEffectExpressionParser({
       conditions: conditionParsers,
@@ -373,36 +407,10 @@ export const defaultRegistry = {
     }),
     replacementInsteadExpressionParser,
     activatedReactionExpressionParser({
-      expressions: [
-        returnToOwnerHandCostedEffectExpressionParser({
-          conditions: conditionParsers,
-          instructions: instructionParsers,
-          expressions: costedExpressions,
-        }),
-        optionalCostedEffectExpressionParser({
-          instructions: instructionParsers,
-          expressions: costedExpressions,
-        }),
-        generalExpressionParser,
-      ],
+      expressions: activatedReactionBodyExpressions(),
     }),
     implicitEventReactionExpressionParser({
-      expressions: [
-        lookPlayFromTopExpressionParser,
-        playFromDeckExpressionParser,
-        revealTopPlayExpressionParser,
-        conditionalBlockExpressionParser({
-          conditions: conditionParsers,
-          connectors: [parseThenConnector, parseAndConnector],
-          instructions: instructionParsers,
-        }),
-        optionalCostedEffectExpressionParser({
-          instructions: instructionParsers,
-          expressions: costedExpressions,
-        }),
-        singleInstructionExpressionParser,
-        generalExpressionParser,
-      ],
+      expressions: implicitEventReactionBodyExpressions(),
     }),
     applyEachContinuousExpressionParser({
       connectors: [parseAndConnector],
@@ -421,45 +429,7 @@ export const defaultRegistry = {
       conditions: conditionParsers,
       connectors: [parseThenConnector, parseAndConnector],
       instructions: instructionParsers,
-      expressions: [
-        lookPlayFromTopExpressionParser,
-        playFromDeckExpressionParser,
-        revealTopPlayExpressionParser,
-        revealTopConditionalExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        chosenCostRevealExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        revealedHandPlayExpressionParser,
-        searchRevealExpressionParser,
-        playedObjectKeywordGrantExpressionParser({
-          instructions: instructionParsers,
-          expressions: [singleInstructionExpressionParser],
-        }),
-        playedObjectDelayedDeckBottomExpressionParser({
-          instructions: instructionParsers,
-          expressions: [
-            singleInstructionExpressionParser,
-            generalExpressionParser,
-          ],
-        }),
-        selectedOpponentCharactersAttackCostExpressionParser,
-        conditionalAdditionalSelectedPowerContinuationExpressionParser({
-          conditions: conditionParsers,
-        }),
-        selectedPowerContinuationExpressionParser,
-        singleInstructionExpressionParser,
-        generalExpressionParser,
-      ],
+      expressions: conditionalBlockBodyExpressions(),
     }),
     costedEffectExpressionParser({
       instructions: instructionParsers,
@@ -489,28 +459,50 @@ export const defaultRegistry = {
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
-      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+      expressions: basicBodyExpressions(),
     }),
     chosenCostRevealExpressionParser({
       instructions: instructionParsers,
-      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+      expressions: basicBodyExpressions(),
     }),
     revealedHandPlayExpressionParser,
     revealTopPlayRestedExpressionParser,
     searchRevealExpressionParser,
     playedObjectKeywordGrantExpressionParser({
       instructions: instructionParsers,
-      expressions: [singleInstructionExpressionParser],
+      expressions: singleInstructionBodyExpressions(),
     }),
     playedObjectDelayedDeckBottomExpressionParser({
       instructions: instructionParsers,
-      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+      expressions: basicBodyExpressions(),
     }),
     opponentOptionalCostExpressionParser({
       instructions: instructionParsers,
-      expressions: [singleInstructionExpressionParser, generalExpressionParser],
+      expressions: basicBodyExpressions(),
     }),
     singleInstructionExpressionParser,
     generalExpressionParser,
+  ] as const;
+
+export const defaultRegistry = {
+  metadataLines: [
+    parseAnyCopiesOfThisCardRuleLine,
+    parseCardCostRestrictionRuleLine,
+    parseDeckOutLossTimingRuleLine,
+    parseDonDeckSizeRuleLine,
+    parseNameAliasesRuleLine,
   ],
+  entryPoints: [
+    parseRulesStartOfGameEntryPoint,
+    parseTurnWindowedEntryPoint,
+    parseStartOfTurnEntryPoint,
+    parseSupportedEntryPoint,
+    parseRecognizedUnsupportedEntryPoint,
+    parseReplacementEntryPoint,
+    parseActivatedReactionEntryPoint,
+    parseImplicitReactionEntryPoint,
+    parseImplicitPermanentEntryPoint,
+  ],
+  markers: [parseAttachedDonMarker, parseOncePerTurnMarker],
+  expressions: rootExpressionParsers(),
 } satisfies EffectLineParserRegistry;

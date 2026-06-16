@@ -243,6 +243,24 @@ describe("cards package architecture boundaries", () => {
     );
   });
 
+  it("keeps expression registry compatibility in named semantic families", async () => {
+    const files = await readCardsPackageSourceFiles();
+    const registryFile = files.find((file) =>
+      file.path.endsWith("/card-effect-line-parser/expression-registry.ts"),
+    );
+
+    expect(registryFile).toBeDefined();
+    const registryContents = registryFile?.contents ?? "";
+    const defaultRegistryStart = registryContents.indexOf(
+      "export const defaultRegistry =",
+    );
+    expect(defaultRegistryStart).toBeGreaterThanOrEqual(0);
+    const defaultRegistryContents =
+      registryContents.slice(defaultRegistryStart);
+
+    expect(defaultRegistryContents).not.toMatch(/expressions:\s*\[/u);
+  });
+
   it("keeps body parsers on semantic duration groups", async () => {
     const files = await readCardsPackageSourceFiles();
     const bodyFiles = files.filter(
