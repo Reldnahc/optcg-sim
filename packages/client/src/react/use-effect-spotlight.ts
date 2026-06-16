@@ -86,6 +86,29 @@ export const shouldAutoAdvanceSpotlightPlayback = ({
   model.activeKey === currentSource.key &&
   model.activeMode === currentSource.mode;
 
+export const resumeSpotlightModelAfterPause = ({
+  model,
+  pausedAtMs,
+  resumedAtMs,
+}: {
+  readonly model: EffectSpotlightState | undefined;
+  readonly pausedAtMs: number | undefined;
+  readonly resumedAtMs: number;
+}): EffectSpotlightState | undefined => {
+  if (model === undefined || pausedAtMs === undefined) {
+    return model;
+  }
+  const pausedDurationMs = Math.max(0, resumedAtMs - pausedAtMs);
+  if (pausedDurationMs === 0) {
+    return model;
+  }
+  return {
+    ...model,
+    shownAtMs: model.shownAtMs + pausedDurationMs,
+    visibleUntilMs: model.visibleUntilMs + pausedDurationMs,
+  };
+};
+
 export interface UseEffectSpotlightInput {
   readonly active: ActiveEffectTextPresentation | undefined;
   readonly activeKey?: string | undefined;
@@ -115,6 +138,7 @@ export const useEffectSpotlight = ({
   const suppressedResolvedSignatures = useRef(new Set<string>());
   const initializedConsumedResolvedKeys = useRef(false);
   const initializedPlaybackSources = useRef(false);
+  const playbackPausedAtMs = useRef<number | undefined>(undefined);
   const [controlsVisible, setControlsVisible] = useState(false);
   const [playback, setPlayback] = useState<EffectSpotlightPlaybackState>({
     entries: [],
@@ -258,11 +282,26 @@ export const useEffectSpotlight = ({
       presentIndex >= 0 &&
       cursorIndex < presentIndex,
     rewind: () => {
+      playbackPausedAtMs.current = Date.now();
       setPlayback((previous) =>
         advanceSpotlightPlayback({ command: "rewind", state: previous }),
       );
     },
     togglePaused: () => {
+      const nowMs = Date.now();
+      if (playback.paused) {
+        const pausedAtMs = playbackPausedAtMs.current;
+        playbackPausedAtMs.current = undefined;
+        setModel((current) =>
+          resumeSpotlightModelAfterPause({
+            model: current,
+            pausedAtMs,
+            resumedAtMs: nowMs,
+          }),
+        );
+      } else {
+        playbackPausedAtMs.current = nowMs;
+      }
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: previous.paused ? "play" : "pause",
@@ -271,6 +310,9 @@ export const useEffectSpotlight = ({
       );
     },
     stepForward: () => {
+      if (playback.paused) {
+        playbackPausedAtMs.current = Date.now();
+      }
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: "stepForward",
@@ -279,6 +321,7 @@ export const useEffectSpotlight = ({
       );
     },
     catchUp: () => {
+      playbackPausedAtMs.current = undefined;
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: "catchUp",

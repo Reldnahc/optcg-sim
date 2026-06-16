@@ -16,6 +16,7 @@ import {
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
   queuedResolvedSpotlightSources,
+  resumeSpotlightModelAfterPause,
   shouldDisplayLiveSpotlightSource,
   type EffectSpotlightState,
 } from "./use-effect-spotlight.js";
@@ -240,6 +241,28 @@ describe("effect spotlight model", () => {
     expect(paused.cursorIndex).toBe(0);
     expect(resumed.paused).toBe(false);
     expect(advanced.cursorIndex).toBe(1);
+  });
+
+  it("preserves current spotlight timing progress when playback resumes", () => {
+    const model: EffectSpotlightState = {
+      active: source("event:first", "span:first").active,
+      activeKey: "event:first",
+      activeMode: "resolved",
+      sourceInstanceId: "source-1",
+      activeSpanIds: ["span:first"],
+      shownAtMs: 1_000,
+      visibleUntilMs: 3_000,
+      pinned: false,
+    };
+
+    const resumed = resumeSpotlightModelAfterPause({
+      model,
+      pausedAtMs: 1_500,
+      resumedAtMs: 5_000,
+    });
+
+    expect(resumed?.shownAtMs).toBe(4_500);
+    expect(resumed?.visibleUntilMs).toBe(6_500);
   });
 
   it("steps forward only when the cursor is behind the present entry", () => {
