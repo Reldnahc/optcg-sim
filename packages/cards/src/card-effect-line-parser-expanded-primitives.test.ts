@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 
+import type { Effect, PayCostEffect } from "@optcg/types";
+
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect line parser expanded reusable primitive shapes", () => {
   const blockEffect = (result: ReturnType<typeof parseCardEffectLine>) =>
     result !== undefined && "block" in result ? result.block.effect : undefined;
+  type ParsedEffect = Effect | PayCostEffect;
+  const flattenedEffects = (
+    effect: ParsedEffect | undefined,
+  ): ParsedEffect[] => {
+    if (effect === undefined) {
+      return [];
+    }
+    if (effect.type !== "sequence") {
+      return [effect];
+    }
+    return effect.effects.flatMap((segment) =>
+      flattenedEffects(segment.effect),
+    );
+  };
 
   it("parses activate-main conditional Rush:Character grant without permanent relabeling", () => {
     const result = parseCardEffectLine(
@@ -301,6 +317,47 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
         "player:any",
         "filter:category:character",
         "filter:excludeSelf",
+      ]),
+    );
+  });
+
+  it("parses mass K.O. followed by deck-to-life and opponent life-trash movement", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] DON!! \u221210: K.O. all Characters other than this Character. Then, add up to 1 card from the top of your deck to the top of your Life cards and trash up to 1 card from the top of your opponent's Life cards.",
+    );
+
+    expect(blockEffect(result)).toMatchObject({ type: "sequence" });
+    expect(flattenedEffects(blockEffect(result))).toEqual(
+      expect.arrayContaining([
+        {
+          type: "moveCards",
+          min: 0,
+          count: 1,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "life", position: "top" },
+          order: "original",
+        },
+        {
+          type: "moveCards",
+          min: 0,
+          count: 1,
+          from: { player: "opponent", zone: "life", position: "top" },
+          to: { player: "opponent", zone: "trash" },
+          order: "original",
+        },
+      ]),
+    );
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "cost:returnDon",
+        "instruction:ko",
+        "cardinality:all",
+        "player:any",
+        "filter:excludeSelf",
+        "instruction:moveCards",
+        "zone:life",
+        "destination:trash",
       ]),
     );
   });
