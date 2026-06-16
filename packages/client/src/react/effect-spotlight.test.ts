@@ -1,12 +1,16 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
 import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const card = (): ClientCardModel => ({
   instanceId: "source-1" as InstanceId,
@@ -306,6 +310,9 @@ describe("EffectSpotlight", () => {
   });
 
   it("renders a draining timer across the bottom of the spotlight card", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(2_000);
+
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         card: card(),
@@ -327,7 +334,8 @@ describe("EffectSpotlight", () => {
     );
     expect(html).toContain("effect-spotlight-card__timer");
     expect(html).toContain("effect-spotlight-card__timer-fill");
-    expect(html).toContain("--effect-spotlight-timer-duration:2000ms");
+    expect(html).toContain("--effect-spotlight-timer-progress:0.5");
+    expect(html).not.toContain("--effect-spotlight-timer-duration");
   });
 
   it("freezes the spotlight timer while playback is paused or pinned", () => {

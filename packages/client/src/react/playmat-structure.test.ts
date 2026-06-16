@@ -305,19 +305,19 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card__timer\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*0;[^}]*height:\s*4px;[^}]*pointer-events:\s*none;/u,
+      /\.effect-spotlight-card__timer\s*\{[^}]*position:\s*absolute;[^}]*bottom:\s*0;[^}]*height:\s*14px;[^}]*pointer-events:\s*none;/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card__timer-fill\s*\{[^}]*background:\s*#ffd84a;[^}]*animation:\s*effect-spotlight-timer-drain\s+var\(--effect-spotlight-timer-duration\)\s+linear\s+forwards;/u,
+      /\.effect-spotlight-card__timer-fill\s*\{[^}]*height:\s*6px;[^}]*transform:\s*scaleX\(var\(--effect-spotlight-timer-progress\)\);[^}]*background:\s*linear-gradient/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card__timer\.is-paused\s+\.effect-spotlight-card__timer-fill\s*\{[^}]*animation-play-state:\s*paused;/u,
+      /\.effect-spotlight-card__timer-fill\s*\{[^}]*filter:\s*drop-shadow\(0 0 7px rgba\(255,\s*222,\s*64,\s*0\.95\)\)/u,
     );
-    assert.match(
-      effectSpotlightStyles,
-      /@keyframes effect-spotlight-timer-drain/u,
+    assert.equal(
+      effectSpotlightStyles.includes("effect-spotlight-timer-drain"),
+      false,
     );
     assert.match(effectSpotlightStyles, /right:\s*4%;/u);
     assert.match(effectSpotlightStyles, /bottom:\s*18%;/u);

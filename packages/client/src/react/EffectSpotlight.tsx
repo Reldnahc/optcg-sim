@@ -2,7 +2,12 @@ import type {
   ActiveEffectTextPresentation,
   EffectTextSourceMap,
 } from "@optcg/types";
-import type { CSSProperties, MouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 
 import type { ClientCardModel } from "../view-model.js";
 import { TriggerBlock } from "optcg-card-rules";
@@ -49,7 +54,7 @@ interface SpotlightControlButtonInput {
 
 const parentheticalReminderPattern = /\s*\([^)]*\)/gu;
 type SpotlightTimerStyle = CSSProperties &
-  Record<"--effect-spotlight-timer-duration", string>;
+  Record<"--effect-spotlight-timer-progress", string>;
 
 const SpotlightControlIcon = ({
   icon,
@@ -145,11 +150,63 @@ const spotlightTextWithoutReminders = (
 
 const spotlightTimerStyle = (
   timer: EffectSpotlightTimer,
+  nowMs: number,
 ): SpotlightTimerStyle => ({
-  "--effect-spotlight-timer-duration": `${String(
-    Math.max(1, timer.visibleUntilMs - timer.shownAtMs),
-  )}ms`,
+  "--effect-spotlight-timer-progress": String(
+    Number(spotlightTimerProgress(timer, nowMs).toFixed(3)),
+  ),
 });
+
+const spotlightTimerProgress = (
+  timer: EffectSpotlightTimer,
+  nowMs: number,
+): number => {
+  const durationMs = Math.max(1, timer.visibleUntilMs - timer.shownAtMs);
+  const remainingMs = timer.visibleUntilMs - nowMs;
+  return Math.max(0, Math.min(1, remainingMs / durationMs));
+};
+
+const useSpotlightTimerNowMs = (
+  timer: EffectSpotlightTimer | undefined,
+): number => {
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const animationKey = timer?.animationKey;
+  const paused = timer?.paused ?? false;
+  const pinned = timer?.pinned ?? false;
+  const shownAtMs = timer?.shownAtMs;
+  const visibleUntilMs = timer?.visibleUntilMs;
+
+  useEffect(() => {
+    if (animationKey === undefined) {
+      return;
+    }
+
+    let intervalId: number | undefined;
+    const update = (): void => {
+      const nextNowMs = Date.now();
+      setNowMs(nextNowMs);
+      if (
+        visibleUntilMs !== undefined &&
+        intervalId !== undefined &&
+        nextNowMs >= visibleUntilMs
+      ) {
+        window.clearInterval(intervalId);
+      }
+    };
+    update();
+
+    if (paused || pinned) {
+      return;
+    }
+
+    intervalId = window.setInterval(update, 50);
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [animationKey, paused, pinned, shownAtMs, visibleUntilMs]);
+
+  return nowMs;
+};
 
 export const EffectSpotlight = ({
   active,
@@ -157,6 +214,7 @@ export const EffectSpotlight = ({
   controls,
   timer,
 }: EffectSpotlightProps): React.JSX.Element | null => {
+  const timerNowMs = useSpotlightTimerNowMs(timer);
   if (controls === undefined && (card === undefined || active === undefined)) {
     return null;
   }
@@ -266,7 +324,7 @@ export const EffectSpotlight = ({
               }`}
               data-effect-spotlight-timer={timer.animationKey}
               aria-hidden="true"
-              style={spotlightTimerStyle(timer)}
+              style={spotlightTimerStyle(timer, timerNowMs)}
             >
               <div className="effect-spotlight-card__timer-fill" />
             </div>

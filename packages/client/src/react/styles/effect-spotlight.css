@@ -111,37 +111,48 @@
   right: 0;
   bottom: 0;
   left: 0;
-  height: 4px;
+  height: 14px;
   overflow: hidden;
   pointer-events: none;
   background: transparent;
 }
 
 .effect-spotlight-card__timer-fill {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  left: 0;
   width: 100%;
-  height: 100%;
-  transform: scaleX(1);
+  height: 6px;
+  border-radius: 999px;
+  transform: scaleX(var(--effect-spotlight-timer-progress));
   transform-origin: left center;
-  background: #ffd84a;
-  box-shadow:
-    0 0 8px rgba(255, 216, 74, 0.95),
-    0 0 18px rgba(255, 216, 74, 0.72);
-  animation: effect-spotlight-timer-drain var(--effect-spotlight-timer-duration)
-    linear forwards;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 218, 55, 0.16),
+    rgba(255, 218, 55, 0.86) 18%,
+    rgba(255, 244, 168, 0.98) 48%,
+    rgba(255, 197, 34, 0.82)
+  );
+  filter: drop-shadow(0 0 7px rgba(255, 222, 64, 0.95))
+    drop-shadow(0 0 16px rgba(255, 200, 35, 0.72));
+  opacity: 0.95;
+  transition: transform 50ms linear;
 }
 
-.effect-spotlight-card__timer.is-paused .effect-spotlight-card__timer-fill {
-  animation-play-state: paused;
-}
-
-@keyframes effect-spotlight-timer-drain {
-  from {
-    transform: scaleX(1);
-  }
-
-  to {
-    transform: scaleX(0);
-  }
+.effect-spotlight-card__timer-fill::before {
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 230, 90, 0.58) 34%,
+    rgba(255, 246, 176, 0.78) 58%,
+    transparent
+  );
+  filter: blur(7px);
 }
 
 .effect-spotlight-card__art,
