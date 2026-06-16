@@ -277,6 +277,26 @@ const CombatPowerValue = ({
     </span>
   );
 
+const combatCardPowerLabel = (
+  card: ClientCardModel,
+  power: number | undefined,
+): string =>
+  power === undefined ? card.name : `${card.name} ${String(power)}`;
+
+const combatSpotlightAriaLabel = ({
+  attackerCard,
+  combat,
+  defenderCard,
+}: {
+  readonly attackerCard: ClientCardModel;
+  readonly combat: CombatSpotlightPresentation;
+  readonly defenderCard: ClientCardModel;
+}): string =>
+  `Combat spotlight: ${combatCardPowerLabel(
+    attackerCard,
+    combat.attackerPower,
+  )} vs ${combatCardPowerLabel(defenderCard, combat.defenderPower)}`;
+
 const CombatSpotlightCard = ({
   attackerCard,
   combat,
@@ -294,6 +314,7 @@ const CombatSpotlightCard = ({
     <div
       className="effect-spotlight-combat"
       data-combat-spotlight-kind={combat.eventKind}
+      aria-hidden="true"
     >
       <SpotlightCardFace
         card={attackerCard}
@@ -362,7 +383,11 @@ export const EffectSpotlight = ({
     presentation === undefined
       ? "Spotlight playback"
       : presentation.kind === "combat"
-        ? "Combat spotlight"
+        ? combatSpotlightAriaLabel({
+            attackerCard: presentation.attackerCard,
+            combat: presentation.combat,
+            defenderCard: presentation.defenderCard,
+          })
         : `Resolving ${presentation.card.name}`;
   const controlButton = ({
     disabled = false,

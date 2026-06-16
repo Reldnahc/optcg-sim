@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -143,6 +144,14 @@ const timer = (
   animationKey: "spotlight:source-1:1",
   ...overrides,
 });
+
+const effectSpotlightCss = (): string =>
+  readFileSync(new URL("./styles/effect-spotlight.css", import.meta.url), {
+    encoding: "utf8",
+  });
+
+const cssSelectorPattern = (selector: string): string =>
+  selector.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 
 describe("EffectSpotlight", () => {
   it("renders the resolving card text with active span highlights", () => {
@@ -382,8 +391,36 @@ describe("EffectSpotlight", () => {
     expect(html).toContain("3000");
     expect(html).toContain("is-power-7000");
     expect(html).toContain("is-weak");
+    expect(html).toContain(
+      'aria-label="Combat spotlight: Attacking Leader 7000 vs Blocking Character 3000"',
+    );
+    expect(html).toMatch(
+      /class="effect-spotlight-combat"[^>]*aria-hidden="true"/u,
+    );
     expect(html).toMatch(
       /effect-spotlight-card--combat[\s\S]*effect-spotlight-controls/u,
     );
+  });
+
+  it("styles combat power tone classes for HTML labels", () => {
+    const css = effectSpotlightCss();
+    const toneSelectors = [
+      ".effect-spotlight-combat-power__value.is-weak",
+      ".effect-spotlight-combat-power__value.is-power-5000",
+      ".effect-spotlight-combat-power__value.is-power-6000",
+      ".effect-spotlight-combat-power__value.is-power-7000",
+      ".effect-spotlight-combat-power__value.is-power-8000",
+      ".effect-spotlight-combat-power__value.is-power-9000",
+      ".effect-spotlight-combat-power__value.is-over-10000",
+    ];
+
+    for (const selector of toneSelectors) {
+      expect(css).toMatch(
+        new RegExp(
+          `${cssSelectorPattern(selector)}\\s*\\{[^}]*\\bcolor\\s*:`,
+          "u",
+        ),
+      );
+    }
   });
 });

@@ -459,6 +459,34 @@
   letter-spacing: 0;
 }
 
+.effect-spotlight-combat-power__value.is-weak {
+  color: #b9d7ff;
+}
+
+.effect-spotlight-combat-power__value.is-power-5000 {
+  color: #fff27a;
+}
+
+.effect-spotlight-combat-power__value.is-power-6000 {
+  color: #ffd84d;
+}
+
+.effect-spotlight-combat-power__value.is-power-7000 {
+  color: #ffad3d;
+}
+
+.effect-spotlight-combat-power__value.is-power-8000 {
+  color: #ff7b35;
+}
+
+.effect-spotlight-combat-power__value.is-power-9000 {
+  color: #f04432;
+}
+
+.effect-spotlight-combat-power__value.is-over-10000 {
+  color: #8f1010;
+}
+
 .effect-spotlight-combat-power__vs {
   font-size: clamp(12px, 5cqw, 24px);
   opacity: 0.9;
