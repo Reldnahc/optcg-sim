@@ -357,6 +357,7 @@ test("sequence segment result and saved-result reference contracts compile with 
     attempted: true,
     succeeded: true,
     changedState: false,
+    affectedCards: [selectedCard],
     selectedCards: [selectedCard],
     selectedTargets: [selectedCard],
     paidCost: true,
@@ -412,6 +413,7 @@ test("sequence segment result and saved-result reference contracts compile with 
   const savedReference: SequenceSavedResultReference = savedReferenceCandidate;
 
   expect(result.succeeded).toBe(true);
+  expect(result.affectedCards).toEqual([selectedCard]);
   expect(savedReference.kind).toBe("selectedTargets");
 });
 
