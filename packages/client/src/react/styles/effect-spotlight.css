@@ -24,13 +24,6 @@
   transform: translate(-50%, -54%);
 }
 
-.effect-spotlight--combat,
-.effect-spotlight--targeting {
-  width: var(--effect-spotlight-combat-width);
-  height: min(calc(var(--card-height) + 44px), calc(100vh - 128px));
-  aspect-ratio: auto;
-}
-
 @supports (font-size: 1cqw) {
   .effect-spotlight {
     --effect-spotlight-rules-font-size: clamp(5px, 3.4cqw, 15px);
@@ -420,14 +413,19 @@
 
 .effect-spotlight-card--combat,
 .effect-spotlight-card--targeting {
+  inset: auto;
+  top: 50%;
+  left: 50%;
   display: grid;
   place-items: center;
+  width: var(--effect-spotlight-combat-width);
   height: 100%;
   aspect-ratio: auto;
   overflow: visible;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  transform: translate(-50%, -50%);
 }
 
 .effect-spotlight-combat {
@@ -439,7 +437,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  transform: translateY(clamp(-14px, -1.6vh, -7px));
+  transform: translateY(clamp(8px, 1.4vh, 18px));
 }
 
 .effect-spotlight-combat-card {
@@ -543,7 +541,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  transform: translateY(clamp(-14px, -1.6vh, -7px));
+  transform: translateY(clamp(8px, 1.4vh, 18px));
 }
 
 .effect-spotlight-targeting-card {

@@ -313,9 +313,9 @@ describe("playmat structure", () => {
       effectSpotlightStyles,
       /width:\s*var\(--effect-spotlight-card-width\);/u,
     );
-    assert.match(
+    assert.doesNotMatch(
       effectSpotlightStyles,
-      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*min\(calc\(var\(--card-height\)\s*\+\s*44px\),\s*calc\(100vh\s*-\s*128px\)\);[^}]*aspect-ratio:\s*auto;/u,
+      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*\b(?:width|height)\s*:/u,
     );
     assert.equal(effectSpotlightStyles.includes("calc(100% - 12px)"), false);
     assert.equal(effectSpotlightStyles.includes(" * "), false);
@@ -326,11 +326,15 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/u,
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*width:\s*var\(--effect-spotlight-combat-width\);[^}]*height:\s*100%;[^}]*aspect-ratio:\s*auto;[^}]*overflow:\s*visible;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;[^}]*transform:\s*translate\(-50%,\s*-50%\);/u,
+    );
+    assert.doesNotMatch(
+      effectSpotlightStyles,
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*max-height\s*:/u,
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;[^}]*transform:\s*translateY\(clamp\(-14px,\s*-1\.6vh,\s*-7px\)\);/u,
+      /\.effect-spotlight-combat\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(76px,\s*0\.62fr\)\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\);[^}]*gap:\s*clamp\(14px,\s*4cqw,\s*32px\);[^}]*width:\s*100%;[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
     );
     assert.match(
       effectSpotlightStyles,
@@ -338,7 +342,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       effectSpotlightStyles,
-      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(70px,\s*0\.42fr\)\s*minmax\(calc\(var\(--card-width\)\s*\+\s*22px\),\s*1\.38fr\);[^}]*transform:\s*translateY\(clamp\(-14px,\s*-1\.6vh,\s*-7px\)\);/u,
+      /\.effect-spotlight-targeting\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*calc\(var\(--card-width\)\s*\+\s*22px\)\)\s*minmax\(70px,\s*0\.42fr\)\s*minmax\(calc\(var\(--card-width\)\s*\+\s*22px\),\s*1\.38fr\);[^}]*transform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/u,
     );
     assert.match(
       effectSpotlightStyles,

@@ -450,6 +450,26 @@ describe("EffectSpotlight", () => {
     );
   });
 
+  it("anchors controls to the stable spotlight shell while combat and targeting content can resize", () => {
+    const css = effectSpotlightCss();
+
+    expect(css).not.toMatch(
+      /\.effect-spotlight--combat,\s*\.effect-spotlight--targeting\s*\{[^}]*\b(?:width|height)\s*:/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bwidth:\s*var\(--effect-spotlight-combat-width\);[^}]*\bheight:\s*100%;[^}]*\btransform:\s*translate\(-50%, -50%\);/su,
+    );
+    expect(css).not.toMatch(
+      /\.effect-spotlight-card--combat,\s*\.effect-spotlight-card--targeting\s*\{[^}]*\bmax-height\s*:/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-combat\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+    );
+    expect(css).toMatch(
+      /\.effect-spotlight-targeting\s*\{[^}]*\btransform:\s*translateY\(clamp\(8px,\s*1\.4vh,\s*18px\)\);/su,
+    );
+  });
+
   it("styles combat power tone classes for HTML labels", () => {
     const css = effectSpotlightCss();
     const toneSelectors = [
