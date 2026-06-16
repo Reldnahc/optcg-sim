@@ -183,6 +183,27 @@ const resolvedEntryForActive = ({
   };
 };
 
+const completedFrameEntryForActive = ({
+  active,
+  effectBlockId,
+  key,
+  queueEntryId,
+}: {
+  readonly active: ActiveEffectTextPresentation;
+  readonly effectBlockId?: EffectId | undefined;
+  readonly key: string;
+  readonly queueEntryId?: QueueEntryId | undefined;
+}): EffectSpotlightHistoryEntry => ({
+  id: `completed:${key}`,
+  key,
+  semanticKey: semanticKeyForActive(active),
+  mode: "resolved",
+  status: "resolved",
+  active,
+  ...(queueEntryId === undefined ? {} : { queueEntryId }),
+  ...(effectBlockId === undefined ? {} : { effectBlockId }),
+});
+
 const combatEntryForEvent = (
   event: EngineEvent,
 ): EffectSpotlightHistoryEntry | undefined => {
@@ -427,6 +448,33 @@ const resolvedSpotlightEntriesForEvents = (
   return entries;
 };
 
+export interface CompletedEffectTextSpotlight {
+  readonly active: ActiveEffectTextPresentation;
+  readonly effectBlockId?: EffectId | undefined;
+  readonly key: string;
+  readonly queueEntryId?: QueueEntryId | undefined;
+}
+
+const completedSpotlightEntriesForActiveTexts = (
+  completedEffectTexts: readonly CompletedEffectTextSpotlight[],
+): readonly EffectSpotlightHistoryEntry[] =>
+  completedEffectTexts.flatMap((completed) => {
+    const splitSpanIds = splitResolvedSpanIds(completed.active.activeSpanIds);
+    if (splitSpanIds.length === 0) {
+      return [completedFrameEntryForActive(completed)];
+    }
+    return splitSpanIds.map((spanId) =>
+      completedFrameEntryForActive({
+        ...completed,
+        active: {
+          ...completed.active,
+          activeSpanIds: [spanId],
+        },
+        key: `${completed.key}:${spanId}`,
+      }),
+    );
+  });
+
 const sameEffectTextPresentation = (
   left: ActiveEffectTextPresentation,
   right: ActiveEffectTextPresentation,
@@ -474,14 +522,30 @@ const liveEntryKey = (
 
 export const effectSpotlightHistoryFromPlayerViewState = ({
   activeEffectText,
+  completedEffectTexts = [],
   events,
   pendingDecisionId,
 }: {
   readonly activeEffectText: ActiveEffectTextPresentation | undefined;
+  readonly completedEffectTexts?: readonly CompletedEffectTextSpotlight[];
   readonly events: readonly EngineEvent[];
   readonly pendingDecisionId?: DecisionId | string | undefined;
 }): EffectSpotlightHistory | undefined => {
-  const entries = resolvedSpotlightEntriesForEvents(events, activeEffectText);
+  const eventEntries = resolvedSpotlightEntriesForEvents(
+    events,
+    activeEffectText,
+  );
+  const completedEntries =
+    completedSpotlightEntriesForActiveTexts(completedEffectTexts);
+  const eventSemanticKeys = new Set(
+    eventEntries.map((entry) => entry.semanticKey),
+  );
+  const entries = [
+    ...eventEntries,
+    ...completedEntries.filter(
+      (entry) => !eventSemanticKeys.has(entry.semanticKey),
+    ),
+  ];
   const matchingResolvedEntryKey =
     activeEffectText === undefined
       ? undefined

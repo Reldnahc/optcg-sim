@@ -177,6 +177,10 @@ const shouldReplayServerTimelineReplacement = (
   );
 };
 
+const isCompletedFrameProjection = (
+  source: EffectSpotlightActiveSourceInput,
+): boolean => source.key.startsWith("completed-frame:");
+
 const shouldReplaceServerTimelineEntry = (
   previous: EffectSpotlightPlaybackEntry,
   next: EffectSpotlightActiveSourceInput,
@@ -189,7 +193,10 @@ const shouldReplaceServerTimelineEntry = (
   }
   return (
     previous.mode !== next.mode ||
-    (previous.mode === "live" && next.mode === "live")
+    (previous.mode === "live" && next.mode === "live") ||
+    (previous.mode === "resolved" &&
+      next.mode === "resolved" &&
+      isCompletedFrameProjection(previous))
   );
 };
 
@@ -227,6 +234,9 @@ const serverTimelineKeepsEntry = ({
   readonly sourceSemanticKeys: ReadonlySet<string>;
 }): boolean =>
   sourceKeys.has(entry.key) ||
+  (isCompletedFrameProjection(entry) &&
+    entry.semanticKey !== undefined &&
+    sourceSemanticKeys.has(entry.semanticKey)) ||
   (entry.mode === "live" &&
     entry.semanticKey !== undefined &&
     sourceSemanticKeys.has(entry.semanticKey));

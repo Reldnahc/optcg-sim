@@ -20,7 +20,12 @@ import type {
 
 import { getLegalActions } from "../actions.js";
 import { toCardRef, zonesEqual } from "../actions/state.js";
-import { effectSpotlightHistoryFromPlayerViewState } from "./effect-spotlight-history.js";
+import { entryWithCompletedSequencePresentation } from "../effect-runtime-sequence/completed-presentation.js";
+import { sequenceEffectBlockForEntry } from "../effect-runtime-sequence/segment-presentation.js";
+import {
+  effectSpotlightHistoryFromPlayerViewState,
+  type CompletedEffectTextSpotlight,
+} from "./effect-spotlight-history.js";
 import {
   isEventVisibleToPlayer,
   isVisibleToPlayer,
@@ -668,6 +673,59 @@ const toPublicRevealRecord = (
   return [...runtimeRecords, ...setupCandidateRecord];
 };
 
+const completedEffectTextsForCurrentFrame = ({
+  activeEffectText,
+  pendingDecisionId,
+  state,
+}: {
+  readonly activeEffectText: PlayerView["activeEffectText"] | undefined;
+  readonly pendingDecisionId: PublicPendingDecision["id"] | undefined;
+  readonly state: GameState;
+}): readonly CompletedEffectTextSpotlight[] => {
+  if (activeEffectText === undefined || pendingDecisionId === undefined) {
+    return [];
+  }
+  const frame = state.effectExecutionFrames.find(
+    (candidate) => candidate.pendingDecision.decisionId === pendingDecisionId,
+  );
+  if (frame === undefined) {
+    return [];
+  }
+  const entry = state.effectQueue.find(
+    (candidate) =>
+      candidate.id === frame.queueEntryId &&
+      candidate.effectBlockId === frame.effectBlockId,
+  );
+  if (entry === undefined || entry.presentation === undefined) {
+    return [];
+  }
+  const completedEntry = entryWithCompletedSequencePresentation(
+    entry,
+    frame.segmentResults,
+    sequenceEffectBlockForEntry(state, entry),
+  );
+  if (
+    completedEntry === entry ||
+    completedEntry.presentation === undefined ||
+    completedEntry.presentation.activeSpanIds.length === 0
+  ) {
+    return [];
+  }
+  return [
+    {
+      active: completedEntry.presentation,
+      effectBlockId: entry.effectBlockId,
+      key: [
+        "completed-frame",
+        String(frame.queueEntryId),
+        String(frame.effectBlockId),
+        String(frame.pendingDecision.decisionId),
+      ].join(":"),
+      queueEntryId: entry.id,
+    },
+  ];
+};
+
 export const filterStateForPlayer = (
   state: GameState,
   playerId: PlayerId,
@@ -733,6 +791,11 @@ export const filterStateForPlayer = (
     .map((event) => toPlayerEventForView(state, event));
   const effectSpotlightHistory = effectSpotlightHistoryFromPlayerViewState({
     activeEffectText,
+    completedEffectTexts: completedEffectTextsForCurrentFrame({
+      activeEffectText,
+      pendingDecisionId: pendingDecision?.id,
+      state,
+    }),
     events,
     pendingDecisionId: pendingDecision?.id,
   });

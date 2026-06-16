@@ -137,6 +137,36 @@ describe("effect spotlight playback", () => {
     expect(next.cursorIndex).toBe(0);
   });
 
+  it("replaces a completed-frame projection with its final resolved timeline entry", () => {
+    const completedSelection = source(
+      "completed-frame:queue:effect:decision:span:search:selection",
+      "span:search:selection",
+      "resolved",
+    );
+    const resolvedSelection = source(
+      "event:resolved:span:search:selection",
+      "span:search:selection",
+      "resolved",
+    );
+
+    const next = appendSpotlightPlaybackSources({
+      consumedKeys: new Set<string>(),
+      previous: {
+        entries: [completedSelection],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [resolvedSelection],
+      sourceKind: "serverTimeline",
+    });
+
+    expect(next.entries.map((entry) => entry.key)).toEqual([
+      "event:resolved:span:search:selection",
+    ]);
+    expect(next.cursorIndex).toBeUndefined();
+  });
+
   it("replaces a stale live pending entry when another pending decision uses the same span", () => {
     const payCost = pendingSource("decision:payCost:1", "span:cost:optional");
     const selectReturnTarget = pendingSource(
