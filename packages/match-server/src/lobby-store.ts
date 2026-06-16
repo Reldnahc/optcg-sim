@@ -4,6 +4,7 @@ import type { MatchId, PlayerId } from "@optcg/types";
 
 import type { AuthSubject } from "./dev-auth.js";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
+import type { DevDeckVerificationMode } from "./default-dev-manifest.js";
 import type { RedisLike } from "./redis-match-persistence.js";
 import type { FirstPlayerChoiceState } from "./session-types.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
@@ -12,6 +13,7 @@ export interface CustomLobbySeatState {
   readonly playerId: PlayerId;
   subject?: AuthSubject;
   deckSubmission?: ReadyDeckSubmission;
+  deckSubmissionVerificationMode?: DevDeckVerificationMode;
   verifiedHandoff?: VerifiedSimHandoff;
 }
 

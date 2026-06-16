@@ -71,6 +71,7 @@ import {
   defaultMatchTimerTickMs,
   defaultSocketIdleTimeoutMs,
   resolveAllowRawDeckHashSubmissions,
+  resolveRawDeckVerificationMode,
   resolveCompletedMatchRepository,
   resolveReplayRepository,
   resolveMatchTimerPolicy,
@@ -789,7 +790,15 @@ export const createMatchHttpServer = async (
       },
     },
   );
-  const lobbyRegistry = await createCustomLobbyRegistry(registry, options);
+  const allowRawDeckHashSubmissions =
+    resolveAllowRawDeckHashSubmissions(options);
+  const lobbyRegistry = await createCustomLobbyRegistry(registry, {
+    ...options,
+    rawDeckVerificationMode: resolveRawDeckVerificationMode(
+      options,
+      allowRawDeckHashSubmissions,
+    ),
+  });
   const authProvider = createDevAuthProvider();
   const socketIdleTimeoutMs =
     options.socketIdleTimeoutMs ?? defaultSocketIdleTimeoutMs;
@@ -799,8 +808,6 @@ export const createMatchHttpServer = async (
   const matchTimerTickMs = options.matchTimerTickMs ?? defaultMatchTimerTickMs;
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
-  const allowRawDeckHashSubmissions =
-    resolveAllowRawDeckHashSubmissions(options);
   const staticAssetsDirectory = options.staticAssetsDirectory;
   const simHandoffVerifier =
     options.simHandoffVerifier ??

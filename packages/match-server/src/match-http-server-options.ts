@@ -4,6 +4,7 @@ import type {
   DeckHashCodecPort,
   ReadyDeckSubmission,
 } from "./deck-submission.js";
+import type { DevDeckVerificationMode } from "./default-dev-manifest.js";
 import {
   createPremadeDevMatchSetup,
   type CreatePremadeDevMatchSetupOptions,
@@ -31,6 +32,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly botDeckSubmission?: ReadyDeckSubmission;
   readonly allowRawDeckHashSubmissions?: boolean;
+  readonly rawDeckVerificationMode?: DevDeckVerificationMode;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
   readonly replayRepository?: CompletedMatchReplayRepository;
@@ -54,6 +56,13 @@ export const resolveAllowRawDeckHashSubmissions = (
   const simEnv = process.env["PONEGLYPH_SIM_ENV"]?.trim().toLowerCase();
   return simEnv !== "dev" && simEnv !== "prod" && simEnv !== "production";
 };
+
+export const resolveRawDeckVerificationMode = (
+  options: CreateMatchHttpServerOptions,
+  allowRawDeckHashSubmissions = resolveAllowRawDeckHashSubmissions(options),
+): DevDeckVerificationMode =>
+  options.rawDeckVerificationMode ??
+  (allowRawDeckHashSubmissions ? "decodeOnly" : "verify");
 
 export const resolveCompletedMatchRepository = (
   options: CreateMatchHttpServerOptions,

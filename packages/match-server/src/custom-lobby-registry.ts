@@ -6,6 +6,8 @@ import type { MatchId, PlayerId } from "@optcg/types";
 import {
   createDevMatchSetupFromDeckSubmissions,
   defaultDevDeckFormatId,
+  type DevDeckVerificationMode,
+  validateReadyDevDeckSubmissionForSetup,
   validateReadyDevDeckSubmission,
   validateReadyDevDeckSubmissions,
 } from "./default-dev-manifest.js";
@@ -167,6 +169,7 @@ export interface CreateCustomLobbyRegistryOptions extends CreatePremadeDevMatchS
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly lobbyStore?: LobbyStore;
   readonly botDeckSubmission?: ReadyDeckSubmission;
+  readonly rawDeckVerificationMode?: DevDeckVerificationMode;
 }
 
 const devLobbyCreatedAt = "2026-05-04T00:00:00.000Z";
@@ -255,6 +258,7 @@ export const createCustomLobbyRegistry = async (
 ): Promise<CustomLobbyRegistry> => {
   const lobbyStore = await createLobbyStore(options);
   const deckHashCodec = options.deckHashCodec ?? createPoneglyphDeckHashCodec();
+  const rawDeckVerificationMode = options.rawDeckVerificationMode ?? "verify";
   const botDeckSubmission =
     options.botDeckSubmission ?? createDefaultBotDeckSubmission();
   const canExposeLobbyMatchId = (lobby: CustomLobbyState): boolean =>
@@ -309,9 +313,14 @@ export const createCustomLobbyRegistry = async (
   const validateReadySubmission = async (
     submission: ReadyDeckSubmission,
     formatId: string,
+    verificationMode: DevDeckVerificationMode = "verify",
   ): Promise<boolean> => {
     try {
-      await validateReadyDevDeckSubmission({
+      const validate =
+        verificationMode === "decodeOnly"
+          ? validateReadyDevDeckSubmissionForSetup
+          : validateReadyDevDeckSubmission;
+      await validate({
         submission,
         createdAt: devLobbyCreatedAt,
         formatId,
@@ -424,6 +433,10 @@ export const createCustomLobbyRegistry = async (
         firstPlayer: first,
         secondPlayer: second,
         formatId: lobbySettings(lobby).formatId,
+        firstPlayerVerificationMode:
+          lobby.seats["p1"]?.deckSubmissionVerificationMode ?? "verify",
+        secondPlayerVerificationMode:
+          lobby.seats["p2"]?.deckSubmissionVerificationMode ?? "verify",
         ...(options.fetchCard === undefined
           ? {}
           : { fetchCard: options.fetchCard }),
@@ -545,11 +558,13 @@ export const createCustomLobbyRegistry = async (
           !(await validateReadySubmission(
             submission,
             lobbySettings(lobby).formatId,
+            rawDeckVerificationMode,
           ))
         ) {
           return "invalidDeck";
         }
         seat.deckSubmission = submission;
+        seat.deckSubmissionVerificationMode = rawDeckVerificationMode;
         await ensureMatchWhenReady(lobby);
         return {
           ...lobbyResponseForLocalRegistry(lobby),
@@ -593,6 +608,7 @@ export const createCustomLobbyRegistry = async (
           return "seatNotFound";
         }
         seat.deckSubmission = submission;
+        seat.deckSubmissionVerificationMode = "verify";
         seat.verifiedHandoff = handoff;
         await ensureMatchWhenReady(lobby);
         return {

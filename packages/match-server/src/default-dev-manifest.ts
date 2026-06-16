@@ -47,6 +47,8 @@ interface CreateDefaultDevMatchSetupInput {
 export interface CreateDevMatchSetupFromDeckSubmissionsInput extends CreateDefaultDevMatchSetupInput {
   readonly firstPlayer: ReadyDeckSubmission;
   readonly secondPlayer: ReadyDeckSubmission;
+  readonly firstPlayerVerificationMode?: DevDeckVerificationMode;
+  readonly secondPlayerVerificationMode?: DevDeckVerificationMode;
 }
 
 export interface ValidateReadyDevDeckSubmissionInput extends Omit<
@@ -68,6 +70,8 @@ export interface ReadyDeckSubmissionValidationResult {
   readonly valid: boolean;
   readonly error?: string;
 }
+
+export type DevDeckVerificationMode = "verify" | "decodeOnly";
 
 export interface DevDonCounts {
   readonly firstPlayer: number;
@@ -342,6 +346,39 @@ export const validateReadyDevDeckSubmission = async (
   if (result?.valid !== true) {
     throw new Error(result?.error ?? "Dev decklist failed validation.");
   }
+};
+
+export const validateReadyDevDeckSubmissionForSetup = async (
+  input: ValidateReadyDevDeckSubmissionInput,
+): Promise<void> => {
+  const decklist = createDevDecklistFromSubmission(input.submission);
+  const cardManifest = await buildDevManifestFromCardIds(
+    createDevManifestCardIds(decklist),
+    {
+      matchId: "validation-only" as DevMatchSetup["matchId"],
+      firstPlayerId: "p1" as PlayerId,
+      playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+      createdAt: input.createdAt,
+      ...(input.fetchCard === undefined ? {} : { fetchCard: input.fetchCard }),
+      ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+      ...(input.redisUrl === undefined ? {} : { redisUrl: input.redisUrl }),
+      ...(input.redisMode === undefined ? {} : { redisMode: input.redisMode }),
+      ...(input.cardDataCache === undefined
+        ? {}
+        : { cardDataCache: input.cardDataCache }),
+      ...(input.validationCache === undefined
+        ? {}
+        : { validationCache: input.validationCache }),
+    },
+    decklist.donDeckCount,
+  );
+  validateDevDeckSubmissionVariants(decklist, cardManifest);
+  createDevPlayerSetupFromDecklist(
+    "p1" as PlayerId,
+    decklist,
+    cardManifest,
+    createDevDonDeckCardIds(decklist.donDeckCount),
+  );
 };
 
 export const validateReadyDevDeckSubmissions = async (
@@ -761,6 +798,33 @@ const createDevMatchSetupFromDecklists = ({
   };
 };
 
+const prepareDevDecklistForSetup = async ({
+  decklist,
+  cardManifest,
+  input,
+  verificationMode,
+}: {
+  readonly decklist: DevDecklist;
+  readonly cardManifest: Awaited<
+    ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
+  >;
+  readonly input: CreateDefaultDevMatchSetupInput;
+  readonly verificationMode: DevDeckVerificationMode;
+}): Promise<DevDecklist> => {
+  validateDevDeckSubmissionVariants(decklist, cardManifest);
+  if (verificationMode === "decodeOnly") {
+    return decklist;
+  }
+  const validationCache =
+    input.validationCache ?? (await createRequestScopedRedisCache(input));
+  return await validateAndAdaptDevDecklist({
+    decklist,
+    cardManifest,
+    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
+    ...(validationCache === undefined ? {} : { validationCache }),
+  });
+};
+
 export const createDevMatchSetupFromDeckSubmissions = async (
   input: CreateDevMatchSetupFromDeckSubmissionsInput,
 ): Promise<DevMatchSetup> => {
@@ -768,6 +832,9 @@ export const createDevMatchSetupFromDeckSubmissions = async (
     input,
     firstPlayerDecklist: createDevDecklistFromSubmission(input.firstPlayer),
     secondPlayerDecklist: createDevDecklistFromSubmission(input.secondPlayer),
+    firstPlayerVerificationMode: input.firstPlayerVerificationMode ?? "verify",
+    secondPlayerVerificationMode:
+      input.secondPlayerVerificationMode ?? "verify",
   });
 };
 
@@ -775,10 +842,14 @@ const createValidatedDevMatchSetupFromDecklists = async ({
   input,
   firstPlayerDecklist,
   secondPlayerDecklist,
+  firstPlayerVerificationMode,
+  secondPlayerVerificationMode,
 }: {
   readonly input: CreateDefaultDevMatchSetupInput;
   readonly firstPlayerDecklist: DevDecklist;
   readonly secondPlayerDecklist: DevDecklist;
+  readonly firstPlayerVerificationMode: DevDeckVerificationMode;
+  readonly secondPlayerVerificationMode: DevDeckVerificationMode;
 }): Promise<DevMatchSetup> => {
   const devDonCount = Math.max(
     firstPlayerDecklist.donDeckCount,
@@ -789,21 +860,17 @@ const createValidatedDevMatchSetupFromDecklists = async ({
     input,
     devDonCount,
   );
-  const validationCache =
-    input.validationCache ?? (await createRequestScopedRedisCache(input));
-  validateDevDeckSubmissionVariants(firstPlayerDecklist, cardManifest);
-  validateDevDeckSubmissionVariants(secondPlayerDecklist, cardManifest);
-  const adaptedFirstPlayerDecklist = await validateAndAdaptDevDecklist({
+  const adaptedFirstPlayerDecklist = await prepareDevDecklistForSetup({
     decklist: firstPlayerDecklist,
     cardManifest,
-    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
-    ...(validationCache === undefined ? {} : { validationCache }),
+    input,
+    verificationMode: firstPlayerVerificationMode,
   });
-  const adaptedSecondPlayerDecklist = await validateAndAdaptDevDecklist({
+  const adaptedSecondPlayerDecklist = await prepareDevDecklistForSetup({
     decklist: secondPlayerDecklist,
     cardManifest,
-    ...(input.formatId === undefined ? {} : { formatId: input.formatId }),
-    ...(validationCache === undefined ? {} : { validationCache }),
+    input,
+    verificationMode: secondPlayerVerificationMode,
   });
   return createDevMatchSetupFromDecklists({
     input,
@@ -822,5 +889,7 @@ export const createDefaultDevMatchSetup = async (
     input,
     firstPlayerDecklist: createDefaultDevDecklist(firstPlayerDonCount),
     secondPlayerDecklist: createDefaultDevDecklist(secondPlayerDonCount),
+    firstPlayerVerificationMode: "verify",
+    secondPlayerVerificationMode: "verify",
   });
 };

@@ -65,11 +65,17 @@ const createDeckHashMatchHttpServer = async () =>
                   main: [{ card_number: "BAD-001", count: 50 }],
                   don: null,
                 }
-              : {
-                  leader: { card_number: "OP13-079", count: 1 },
-                  main: [{ card_number: "OP13-082", count: 50 }],
-                  don: null,
-                },
+              : hash === "short-deck-hash"
+                ? {
+                    leader: { card_number: "OP13-079", count: 1 },
+                    main: [{ card_number: "OP13-080", count: 49 }],
+                    don: null,
+                  }
+                : {
+                    leader: { card_number: "OP13-079", count: 1 },
+                    main: [{ card_number: "OP13-082", count: 50 }],
+                    don: null,
+                  },
         ),
     },
   });
@@ -959,6 +965,42 @@ describe("dev HTTP lobby deck submissions", () => {
       const lobby = (await lobbyResponse.json()) as CreatedCustomLobbyBody;
       assert.equal(requireLobbySeat(lobby, "p1").deck.status, "missing");
       assert.equal(lobby.matchId, undefined);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("local raw deck submissions skip deck verification through match creation", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createCustomLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+
+      await joinCustomLobby(server, lobbyId, "user:user-p1:session-1");
+      await joinCustomLobby(server, lobbyId, "user:user-p2:session-1");
+      const oneDeck = await submitCustomLobbyDeck(
+        server,
+        lobbyId,
+        "user:user-p1:session-1",
+        "short-deck-hash",
+      );
+      assert.equal(requireLobbySeat(oneDeck, "p1").deck.status, "ready");
+      assert.equal(oneDeck.matchId, undefined);
+
+      const ready = await submitCustomLobbyDeck(
+        server,
+        lobbyId,
+        "user:user-p2:session-1",
+        "p2-hash",
+      );
+
+      assert.equal(requireLobbySeat(ready, "p1").deck.status, "ready");
+      assert.equal(requireLobbySeat(ready, "p2").deck.status, "ready");
+      assert.notEqual(ready.matchId, undefined);
     } finally {
       await server.close();
     }
