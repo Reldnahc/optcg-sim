@@ -2,7 +2,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CardId, InstanceId, PlayerId } from "@optcg/types";
+import type {
+  ActiveEffectTextPresentation,
+  CardId,
+  InstanceId,
+  PlayerId,
+} from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { EffectSpotlight } from "./EffectSpotlight.js";
@@ -34,6 +39,28 @@ const card = (): ClientCardModel => ({
   imageUrl: "https://example.test/card.png",
   attachedDonCount: 0,
   attachedDonCards: [],
+});
+
+const active = (
+  overrides: Partial<ActiveEffectTextPresentation> = {},
+): ActiveEffectTextPresentation => ({
+  source: {
+    instanceId: "source-1" as InstanceId,
+    cardId: "OP00-001" as CardId,
+    playerId: "p1" as PlayerId,
+  },
+  textKind: "effect",
+  activeSpanIds: ["span:body:draw"],
+  ...overrides,
+});
+
+const effectTextPresentation = (
+  model: ClientCardModel,
+  activePresentation: ActiveEffectTextPresentation = active(),
+) => ({
+  kind: "effectText" as const,
+  card: model,
+  active: activePresentation,
 });
 
 const reminderCard = (): ClientCardModel => {
@@ -110,16 +137,7 @@ describe("EffectSpotlight", () => {
   it("renders the resolving card text with active span highlights", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
+        presentation: effectTextPresentation(card()),
       }),
     );
 
@@ -151,16 +169,7 @@ describe("EffectSpotlight", () => {
 
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: model,
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
+        presentation: effectTextPresentation(model),
       }),
     );
 
@@ -178,16 +187,7 @@ describe("EffectSpotlight", () => {
 
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: model,
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
+        presentation: effectTextPresentation(model),
       }),
     );
 
@@ -198,16 +198,10 @@ describe("EffectSpotlight", () => {
   it("omits parenthetical reminder text without losing active span highlights", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: reminderCard(),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:unblockable"],
-        },
+        presentation: effectTextPresentation(
+          reminderCard(),
+          active({ activeSpanIds: ["span:body:unblockable"] }),
+        ),
       }),
     );
 
@@ -219,30 +213,18 @@ describe("EffectSpotlight", () => {
   it("preserves source newlines without breaking same-line Then text", () => {
     const withSourceNewline = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: multilineCard("[On Play] Draw 1 card.\nThen, K.O. 1 Character."),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:multiline"],
-        },
+        presentation: effectTextPresentation(
+          multilineCard("[On Play] Draw 1 card.\nThen, K.O. 1 Character."),
+          active({ activeSpanIds: ["span:body:multiline"] }),
+        ),
       }),
     );
     const sameLineThen = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: multilineCard("[On Play] Draw 1 card. Then, K.O. 1 Character."),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:multiline"],
-        },
+        presentation: effectTextPresentation(
+          multilineCard("[On Play] Draw 1 card. Then, K.O. 1 Character."),
+          active({ activeSpanIds: ["span:body:multiline"] }),
+        ),
       }),
     );
 
@@ -253,17 +235,8 @@ describe("EffectSpotlight", () => {
   it("renders playback controls under the spotlight card", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
+        presentation: effectTextPresentation(card()),
         controls: controls({ canStepForward: false }),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
       }),
     );
 
@@ -290,17 +263,8 @@ describe("EffectSpotlight", () => {
   it("renders play and next controls when paused behind present", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
+        presentation: effectTextPresentation(card()),
         controls: controls({ paused: true, canStepForward: true }),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
       }),
     );
 
@@ -315,17 +279,8 @@ describe("EffectSpotlight", () => {
 
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
+        presentation: effectTextPresentation(card()),
         timer: timer(),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
       }),
     );
 
@@ -341,32 +296,14 @@ describe("EffectSpotlight", () => {
   it("freezes the spotlight timer while playback is paused or pinned", () => {
     const pausedHtml = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
+        presentation: effectTextPresentation(card()),
         timer: timer({ paused: true }),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
       }),
     );
     const pinnedHtml = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: card(),
+        presentation: effectTextPresentation(card()),
         timer: timer({ pinned: true }),
-        active: {
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP00-001" as CardId,
-            playerId: "p1" as PlayerId,
-          },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
       }),
     );
 
@@ -377,8 +314,7 @@ describe("EffectSpotlight", () => {
   it("keeps playback controls visible without an active spotlight card", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
-        card: undefined,
-        active: undefined,
+        presentation: undefined,
         controls: controls(),
       }),
     );
@@ -388,5 +324,42 @@ describe("EffectSpotlight", () => {
     expect(html).toContain('aria-label="Pause spotlight"');
     expect(html).toContain('aria-label="Catch up spotlight"');
     expect(html).not.toContain("effect-spotlight-card");
+  });
+
+  it("keeps playback controls visible for combat presentations before combat UI renders", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        presentation: {
+          kind: "combat" as const,
+          combat: {
+            eventKind: "attackDeclared" as const,
+            attacker: {
+              instanceId: "attacker-1" as InstanceId,
+              cardId: "OP00-001" as CardId,
+              playerId: "p1" as PlayerId,
+            },
+            defender: {
+              instanceId: "defender-1" as InstanceId,
+              cardId: "OP00-002" as CardId,
+              playerId: "p2" as PlayerId,
+            },
+          },
+          attackerCard: { ...card(), instanceId: "attacker-1" as InstanceId },
+          defenderCard: {
+            ...card(),
+            instanceId: "defender-1" as InstanceId,
+            cardId: "OP00-002" as CardId,
+            name: "Defending Card",
+          },
+        },
+        controls: controls(),
+      }),
+    );
+
+    expect(html).toContain("effect-spotlight");
+    expect(html).toContain("effect-spotlight-controls");
+    expect(html).toContain('aria-label="Pause spotlight"');
+    expect(html).not.toContain("effect-spotlight-card");
+    expect(html).not.toContain("Defending Card");
   });
 });

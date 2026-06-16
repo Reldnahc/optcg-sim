@@ -3,11 +3,12 @@ import type {
   ClientActionModel,
   ClientCardModel,
 } from "../view-model.js";
-import type { ActiveEffectTextPresentation, EngineEvent } from "@optcg/types";
+import type { EngineEvent } from "@optcg/types";
 import { useEffect, useRef, useState } from "react";
 import { BattleArrowOverlay } from "./BattleArrowOverlay.js";
 import {
   EffectSpotlight,
+  type EffectSpotlightPresentation,
   type EffectSpotlightTimer,
 } from "./EffectSpotlight.js";
 import type { EffectSpotlightControls } from "./use-effect-spotlight.js";
@@ -21,8 +22,7 @@ import { Zone } from "./Zone.js";
 export interface BoardLayoutProps {
   board: BoardViewModel;
   decisionPrompt?: string | undefined;
-  effectSpotlightActive?: ActiveEffectTextPresentation | undefined;
-  effectSpotlightCard?: ClientCardModel | undefined;
+  effectSpotlightPresentation?: EffectSpotlightPresentation | undefined;
   effectSpotlightControls?: EffectSpotlightControls | undefined;
   effectSpotlightTimer?: EffectSpotlightTimer | undefined;
   selectedCardInstanceId?: string | undefined;
@@ -250,8 +250,7 @@ const TurnStatusBannerHost = ({
 export const BoardLayout = ({
   board,
   decisionPrompt,
-  effectSpotlightActive,
-  effectSpotlightCard,
+  effectSpotlightPresentation,
   effectSpotlightControls,
   effectSpotlightTimer,
   selectedCardInstanceId,
@@ -302,8 +301,7 @@ export const BoardLayout = ({
         {handCount(board.opponentLabel, "opponent", board.opponent.handCount)}
         {handCount(board.selfLabel, "player", board.self.hand.length)}
         <EffectSpotlight
-          card={effectSpotlightCard}
-          active={effectSpotlightActive}
+          presentation={effectSpotlightPresentation}
           controls={effectSpotlightControls}
           timer={effectSpotlightTimer}
         />

@@ -236,10 +236,13 @@ describe("playmat structure", () => {
       boardLayout,
       /<div className="hand-rail">[\s\S]*<EffectSpotlight/u,
     );
-    assert.match(matchApp, /effectSpotlightCard=\{effectSpotlightCard\}/u);
     assert.match(
       matchApp,
-      /const effectSpotlightActive = effectSpotlight\?\.active;/u,
+      /const effectSpotlightEntry = effectSpotlight\?\.entry;/u,
+    );
+    assert.match(
+      matchApp,
+      /const effectSpotlightPresentation =[\s\S]*effectSpotlightEntry === undefined[\s\S]*effectSpotlightEntry\.kind === "combat"[\s\S]*attackerCard: cardModel\(effectSpotlightEntry\.combat\.attacker\)[\s\S]*defenderCard: cardModel\(effectSpotlightEntry\.combat\.defender\)[\s\S]*kind: "effectText" as const[\s\S]*card: cardModel\(effectSpotlightEntry\.active\.source\)/u,
     );
     assert.match(
       matchApp,
@@ -257,11 +260,15 @@ describe("playmat structure", () => {
       matchApp,
       /sourceKind:\s+effectSpotlightHistory === undefined\s+\? "legacyFallback"\s+:\s+"serverTimeline"/u,
     );
-    assert.match(matchApp, /effectSpotlightActive=\{effectSpotlightActive\}/u);
+    assert.match(
+      matchApp,
+      /effectSpotlightPresentation=\{effectSpotlightPresentation\}/u,
+    );
     assert.match(
       matchApp,
       /effectSpotlightControls=\{effectSpotlight\?\.controls\}/u,
     );
+    assert.match(boardLayout, /presentation=\{effectSpotlightPresentation\}/u);
     assert.match(boardLayout, /controls=\{effectSpotlightControls\}/u);
     assert.equal(matchApp.includes("<EffectSpotlight"), false);
     assert.match(

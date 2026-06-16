@@ -342,13 +342,24 @@ export const MatchApp = ({
         ? "legacyFallback"
         : "serverTimeline",
   });
-  const effectSpotlightActive = effectSpotlight?.active;
-  const effectSpotlightCard =
-    effectSpotlightActive === undefined
+  const effectSpotlightEntry = effectSpotlight?.entry;
+  const effectSpotlightPresentation =
+    effectSpotlightEntry === undefined
       ? undefined
-      : cardModel(effectSpotlightActive.source);
+      : effectSpotlightEntry.kind === "combat"
+        ? {
+            kind: "combat" as const,
+            combat: effectSpotlightEntry.combat,
+            attackerCard: cardModel(effectSpotlightEntry.combat.attacker),
+            defenderCard: cardModel(effectSpotlightEntry.combat.defender),
+          }
+        : {
+            kind: "effectText" as const,
+            active: effectSpotlightEntry.active,
+            card: cardModel(effectSpotlightEntry.active.source),
+          };
   const effectSpotlightTimer =
-    effectSpotlight === undefined || effectSpotlight.active === undefined
+    effectSpotlight === undefined || effectSpotlight.entry === undefined
       ? undefined
       : {
           shownAtMs: effectSpotlight.shownAtMs,
@@ -548,8 +559,7 @@ export const MatchApp = ({
           presentationEvents={playerSnapshot?.view.events ?? []}
           reduceDeckStackRendering={visualSettings.reduceDeckStackRendering}
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
-          effectSpotlightActive={effectSpotlightActive}
-          effectSpotlightCard={effectSpotlightCard}
+          effectSpotlightPresentation={effectSpotlightPresentation}
           effectSpotlightControls={effectSpotlight?.controls}
           effectSpotlightTimer={effectSpotlightTimer}
           selectedCardInstanceId={selectedCardInstanceId}

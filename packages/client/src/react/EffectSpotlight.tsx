@@ -1,5 +1,6 @@
 import type {
   ActiveEffectTextPresentation,
+  CombatSpotlightPresentation,
   EffectTextSourceMap,
 } from "@optcg/types";
 import {
@@ -18,12 +19,18 @@ import {
   renderMainSiteSearchLink,
 } from "./EffectRulesText.js";
 
-export interface EffectSpotlightProps {
-  readonly card: ClientCardModel | undefined;
-  readonly active: ActiveEffectTextPresentation | undefined;
-  readonly timer?: EffectSpotlightTimer | undefined;
-  readonly controls?: EffectSpotlightControls | undefined;
-}
+export type EffectSpotlightPresentation =
+  | {
+      readonly kind: "effectText";
+      readonly active: ActiveEffectTextPresentation;
+      readonly card: ClientCardModel;
+    }
+  | {
+      readonly kind: "combat";
+      readonly combat: CombatSpotlightPresentation;
+      readonly attackerCard: ClientCardModel;
+      readonly defenderCard: ClientCardModel;
+    };
 
 export interface EffectSpotlightTimer {
   readonly shownAtMs: number;
@@ -31,6 +38,12 @@ export interface EffectSpotlightTimer {
   readonly paused: boolean;
   readonly pinned: boolean;
   readonly animationKey: string;
+}
+
+export interface EffectSpotlightProps {
+  readonly presentation: EffectSpotlightPresentation | undefined;
+  readonly timer?: EffectSpotlightTimer | undefined;
+  readonly controls?: EffectSpotlightControls | undefined;
 }
 
 interface SpotlightText {
@@ -210,12 +223,15 @@ const useSpotlightTimerNowMs = (
 };
 
 export const EffectSpotlight = ({
-  active,
-  card,
   controls,
+  presentation,
   timer,
 }: EffectSpotlightProps): React.JSX.Element | null => {
   const timerNowMs = useSpotlightTimerNowMs(timer);
+  const active =
+    presentation?.kind === "effectText" ? presentation.active : undefined;
+  const card =
+    presentation?.kind === "effectText" ? presentation.card : undefined;
   if (controls === undefined && (card === undefined || active === undefined)) {
     return null;
   }
