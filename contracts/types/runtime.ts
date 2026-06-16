@@ -20,6 +20,7 @@ import type {
 import type { PendingDecision } from "./decisions.js";
 import type { CausalityRef, EngineEvent, EventVisibility } from "./events.js";
 import type {
+  CardFilter,
   Duration,
   SequenceSavedResultReference,
   SequenceSegmentResult,
@@ -201,6 +202,22 @@ export interface DeferredTriggerBucket {
   releasePolicy: "afterCurrentProcess" | "afterDamageStep" | "nextWindow";
 }
 
+export interface DeckOutLossTimingRuleModifier {
+  type: "deckOutLossTiming";
+  playerId: PlayerId;
+  timing: "endOfTurn";
+}
+
+export type RuleModifier = DeckOutLossTimingRuleModifier;
+
+export interface PendingDeckOutRuleLoss {
+  type: "deckOut";
+  playerId: PlayerId;
+  turn: number;
+}
+
+export type PendingRuleLoss = PendingDeckOutRuleLoss;
+
 export type ProtectionFieldRemovalProcessFamily = "fieldRemoval";
 
 export type ProtectionFieldRemovalClassification =
@@ -254,6 +271,7 @@ export interface SimpleProtection {
   sourceKind?: ProtectionFieldRemovalSourceKind;
   sourceControllerRelation?: ProtectionFieldRemovalSourceControllerRelation;
   sourceCardCategories?: CardCategory[];
+  sourceCardFilter?: CardFilter;
   source?: CardRef;
   duration?: Duration;
 }
@@ -261,6 +279,7 @@ export interface SimpleProtection {
 export interface FieldRemovalProtection {
   process: "fieldRemoval";
   fieldRemoval: ProtectionFieldRemovalMetadata;
+  sourceCardFilter?: CardFilter;
   source?: CardRef;
   duration?: Duration;
 }

@@ -1,7 +1,7 @@
 import type {
   CardId,
   Comparator,
-  EffectId,
+  InstanceId,
   PlayerRef,
   SelectionId,
   SelectionSetId,
@@ -14,83 +14,50 @@ import type {
   CardRef,
   CardCategory,
   CardColor,
-  CardSupportStatus,
   Keyword,
 } from "./card-metadata.js";
 import type { EffectTextPresentationRef } from "./effect-presentation.js";
+import type { OptionalCost } from "./effect-costs.js";
+import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
+import type { EffectEntryPointFilter, Trigger } from "./effect-triggers.js";
+import type { EffectDslProtection } from "./effect-protection.js";
 
-export type FailurePolicy =
-  | "doAsMuchAsPossible"
-  | "requiresAll"
-  | "skipIfNoLegalTarget"
-  | "optionalIfPossible";
+export type { FailurePolicy, SourcePresencePolicy } from "./effect-policies.js";
 
-export type SourcePresencePolicy =
-  | "mustRemainInSameZone"
-  | "resolveFromDestinationZone"
-  | "resolveFromLastKnownInformation"
-  | "noSourceRequired";
+export type {
+  EffectCategory,
+  EffectEntryPointFilter,
+  OpponentActivationKind,
+  Trigger,
+} from "./effect-triggers.js";
 
-export type EffectCategory = "auto" | "activate" | "permanent" | "replacement";
+export type {
+  Cost,
+  OptionalChooseOneTrashCost,
+  OptionalChooseOneTrashCostAlternative,
+  OptionalCost,
+  OptionalMoveCardsCost,
+  OptionalRevealFromHandCost,
+  OptionalSetLifeFaceUpCost,
+  OptionalTrashFromHandCost,
+  OptionalTurnLifeFaceUpCost,
+  ScopedOptionalFieldKOCost,
+  ScopedOptionalFieldTrashCost,
+  SetLifeFaceUpCost,
+  TurnLifeFaceUpCost,
+} from "./effect-costs.js";
 
-export type Trigger =
-  | { type: "onPlay" }
-  | { type: "whenAttacking" }
-  | { type: "onOpponentAttack"; attackerFilter?: CardFilter }
-  | { type: "onBlock" }
-  | { type: "onKO" }
-  | { type: "endOfYourTurn" }
-  | { type: "endOfOpponentTurn" }
-  | { type: "trigger" }
-  | { type: "anyOf"; triggers: Trigger[] }
-  | { type: "damageDealt"; players: PlayerRef[] }
-  | { type: "lifeRemoved"; players: PlayerRef[] }
-  | {
-      type: "fieldRemoved";
-      target?: "self" | "any";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceController?: PlayerRef;
-      sourceKind?: "effect" | "ko" | "any";
-    }
-  | {
-      type: "cardPlayed";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceZone?: Zone;
-      sourceFilter?: CardFilter;
-      anyOf?: Array<{
-        filter?: CardFilter;
-        sourceZone?: Zone;
-        sourceFilter?: CardFilter;
-      }>;
-    }
-  | {
-      type: "cardRested";
-      target?: "self" | "any";
-      player: PlayerRef;
-      filter?: CardFilter;
-      sourceController?: PlayerRef;
-      sourceKind?: "effect" | "any";
-    }
-  | { type: "handTrashedByEffect"; player: PlayerRef }
-  | { type: "opponentActivated"; activations: OpponentActivationKind[] }
-  | { type: "donAttach"; count: number }
-  | { type: "activateMain" }
-  | { type: "main" }
-  | { type: "counter" }
-  | { type: "permanent" }
-  | { type: "replacement"; replacement: ReplacementTrigger }
-  | { type: "startOfGame" }
-  | { type: "startOfYourTurn" }
-  | { type: "startOfOpponentTurn" }
-  | { type: "startOfMainPhase" }
-  | { type: "endOfBattle" }
-  | { type: "custom"; event: string };
+export type {
+  EffectDslFieldRemovalProtection,
+  EffectDslProtection,
+  EffectDslRestProtection,
+} from "./effect-protection.js";
 
 export type Condition =
   | { type: "donCount"; target?: Target; min: number }
   | { type: "attachedDonCount"; target: Target; op: Comparator; value: number }
+  // prettier-ignore
+  | { type: "cardStatComparison"; target: Target; stat: CardStatComparison["stat"]; op: Comparator; value: number | DynamicNumberValue }
   | { type: "yourTurn" }
   | { type: "turnCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "opponentTurn" }
@@ -128,7 +95,23 @@ export type Condition =
       op: Comparator;
       value: number;
     }
+  | {
+      type: "fieldStatTotal";
+      player: PlayerRef;
+      filter: CardFilter;
+      stat: "cost" | "baseCost";
+      op: Comparator;
+      value: number;
+    }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
+  | {
+      type: "handCountDifference";
+      minuend: { player: PlayerRef };
+      subtrahend: { player: PlayerRef };
+      op: Comparator;
+      value: number;
+    }
+  | { type: "deckCount"; player: PlayerRef; op: Comparator; value: number }
   | {
       type: "trashCount";
       player: PlayerRef;
@@ -137,7 +120,7 @@ export type Condition =
       value: number;
     }
   // prettier-ignore
-  | { type: "eventHistory"; event: "cardPlayed"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
+  | { type: "eventHistory"; event: "cardPlayed" | "cardKOd"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
   | {
       type: "leaderColorCount";
       player: PlayerRef;
@@ -161,171 +144,6 @@ export type Condition =
   | { type: "not"; condition: Condition }
   | { type: "custom"; check: string };
 
-export type Cost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef; optional?: boolean }
-  | {
-      type: "restFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional?: boolean;
-    }
-  | {
-      type: "attachDon";
-      count: number;
-      sourceState: "active" | "rested";
-      target: Target;
-      optional?: boolean;
-    }
-  | {
-      type: "returnDon";
-      count: number;
-      chooser?: PlayerRef;
-      sourceState?: "active";
-      optional?: boolean;
-    }
-  | { type: "restSelf"; optional?: boolean }
-  | {
-      type: "turnLifeFaceUp";
-      count: number;
-      player: PlayerRef;
-      position: "top" | "bottom";
-    }
-  // prettier-ignore
-  | { type: "trashFromHand"; count: number; maxCount?: number | "available"; filter?: CardFilter; chooser: PlayerRef }
-  | {
-      type: "revealFromHand";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
-  | {
-      type: "moveCards";
-      count: number;
-      chooser: PlayerRef;
-      from: {
-        player: PlayerRef;
-        zone: Zone;
-        position?: "top" | "bottom" | "topOrBottom";
-      };
-      to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
-      order: "chooserChoice";
-      optional?: boolean;
-    }
-  | {
-      type: "modifyPower";
-      target: Target;
-      requiredState?: "active" | "rested";
-      value: number;
-      duration: Duration;
-      optional?: boolean;
-    }
-  | { type: "trashSelf"; filter?: CardFilter }
-  | {
-      type: "discard";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-    }
-  | { type: "sequence"; costs: Cost[]; optional?: boolean }
-  | { type: "custom"; action: string };
-
-// prettier-ignore
-export type OptionalTrashFromHandCost = { type: "trashFromHand"; count: number; maxCount?: number | "available"; filter?: CardFilter; chooser: PlayerRef; optional: true };
-
-export type OptionalRevealFromHandCost = {
-  type: "revealFromHand";
-  count: number;
-  filter?: CardFilter;
-  chooser: PlayerRef;
-  optional: true;
-};
-
-export type OptionalMoveCardsCost = {
-  type: "moveCards";
-  count: number;
-  chooser: PlayerRef;
-  from: {
-    player: PlayerRef;
-    zone: Zone;
-    position?: "top" | "bottom" | "topOrBottom";
-  };
-  to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
-  order: "chooserChoice";
-  filter?: CardFilter;
-  optional: true;
-};
-
-export type ScopedOptionalFieldTrashCost = {
-  type: "trashFromField";
-  count: number;
-  filter?: CardFilter;
-  chooser: "self";
-  optional: true;
-};
-
-export type OptionalChooseOneTrashCostAlternative =
-  | OptionalTrashFromHandCost
-  | ScopedOptionalFieldTrashCost;
-
-export type OptionalChooseOneTrashCost = {
-  type: "chooseOne";
-  options: [
-    OptionalChooseOneTrashCostAlternative,
-    ...OptionalChooseOneTrashCostAlternative[],
-  ];
-  optional: true;
-};
-
-export type OptionalCost =
-  | { type: "restDon"; count: number; chooser?: PlayerRef; optional: true }
-  | {
-      type: "attachDon";
-      count: number;
-      sourcePlayer?: PlayerRef;
-      sourceState: "active" | "rested";
-      target: Target;
-      optional: true;
-    }
-  | {
-      type: "returnDon";
-      count: number;
-      chooser?: PlayerRef;
-      sourceState?: "active";
-      optional: true;
-    }
-  | { type: "restSelf"; optional: true }
-  | {
-      type: "restFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional: true;
-    }
-  | { type: "trashSelf"; filter?: CardFilter; optional: true }
-  | {
-      type: "modifyPower";
-      target: Target;
-      requiredState?: "active" | "rested";
-      value: number;
-      duration: Duration;
-      optional: true;
-    }
-  | {
-      type: "turnLifeFaceUp";
-      count: number;
-      player: PlayerRef;
-      position: "top" | "bottom";
-      optional: true;
-    }
-  | OptionalTrashFromHandCost
-  | OptionalRevealFromHandCost
-  | OptionalMoveCardsCost
-  | OptionalChooseOneTrashCost
-  | { type: "sequence"; costs: Cost[]; optional: true };
-
-export type EffectBlockCost = Exclude<Cost, OptionalChooseOneTrashCost>;
-
 export type ExactCardinality<N extends number = number> = {
   mode: "exact";
   min: N;
@@ -346,6 +164,7 @@ export interface TargetRequest {
   zone: Zone;
   player: TargetPlayerRef;
   filter?: CardFilter;
+  selectionConstraints?: TargetSelectionConstraint[];
   min: number;
   max: number;
   allowFewerIfUnavailable: boolean;
@@ -357,6 +176,13 @@ export type TargetPlayerRef = PlayerRef | "anyPlayer";
 export interface MultiZoneTargetRequest extends Omit<TargetRequest, "zone"> {
   zones: Zone[];
 }
+
+export type TargetSelectionConstraint = {
+  type: "totalStat";
+  stat: "baseCost" | "cost" | "basePower" | "currentPower";
+  op: Comparator;
+  value: number;
+};
 
 export interface SelectedTargetsRequest extends TargetRequest {
   zone: SavedFieldObjectZone;
@@ -387,9 +213,16 @@ export interface CardSelectionRequest {
   remainingCards?: RemainingCardsPlacement;
 }
 
-export type OpponentActivationKind = "event" | "blocker" | "trigger";
-
 export type DynamicNumberValue =
+  | {
+      type: "savedNumber";
+      selection: SelectionId;
+    }
+  | {
+      type: "selectedCardCount";
+      selection: SelectionId;
+      multiplier: number;
+    }
   | {
       type: "sumSelectedCardCosts";
       selection: SelectionSetId;
@@ -410,8 +243,22 @@ export type DynamicNumberValue =
   | {
       type: "countMatchingZoneCards";
       player: PlayerRef;
-      zone: "trash";
+      zone: "trash" | "life";
       filter?: CardFilter;
+      per: number;
+      multiplier: number;
+    }
+  | {
+      type: "countMatchingZoneCardsAcrossPlayers";
+      players: PlayerRef[];
+      zone: "life";
+      filter?: CardFilter;
+      per: number;
+      multiplier: number;
+    }
+  | {
+      type: "countAttachedDon";
+      target: Target;
       per: number;
       multiplier: number;
     };
@@ -419,17 +266,19 @@ export type DynamicNumberValue =
 export type SnapshotNumberValue = {
   type: "snapshotCardStat";
   target: Target;
-  stat: "currentPower";
+  stat: "currentPower" | "basePower";
 };
 
 export type Target =
   | { type: "self" }
+  | { type: "affectedCard" }
   | { type: "myLeader" }
   | { type: "opponentLeader" }
   | { type: "attacker" }
   | { type: "attackTarget" }
   | { type: "blocker" }
   | { type: "triggerCard" }
+  | { type: "replacementTarget" }
   | { type: "player"; player: PlayerRef }
   | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }
@@ -447,13 +296,19 @@ export interface CardFilter {
   colorsAll?: CardColor[];
   typesAny?: string[];
   typesIncludeAny?: string[];
+  typesNotIncludeAny?: string[];
   typesAll?: string[];
   attributesAny?: Attribute[];
+  attributesNotAny?: Attribute[];
   attributesAll?: Attribute[];
   baseCost?: { op: Comparator; value: number } | { min?: number; max?: number };
   cost?: { op: Comparator; value: number } | { min?: number; max?: number };
   power?: { op: Comparator; value: number } | { min?: number; max?: number };
   currentPower?:
+    | { op: Comparator; value: number }
+    | { min?: number; max?: number };
+  statComparisons?: CardStatComparison[];
+  attachedDon?:
     | { op: Comparator; value: number }
     | { min?: number; max?: number };
   counter?: { op: Comparator; value: number } | { min?: number; max?: number };
@@ -471,6 +326,12 @@ export interface CardFilter {
   custom?: string;
 }
 
+export interface CardStatComparison {
+  stat: "cost" | "baseCost" | "power" | "currentPower" | "attachedDon";
+  op: Comparator;
+  value: DynamicNumberValue;
+}
+
 export type Duration =
   | { type: "thisAction" }
   | { type: "thisBattle" }
@@ -486,6 +347,10 @@ export type Duration =
   | { type: "permanent" };
 
 export type ReplacementTrigger =
+  | {
+      type: "anyOf";
+      replacements: [ReplacementTrigger, ...ReplacementTrigger[]];
+    }
   | {
       type: "wouldBeKOd";
       sourceKind?: "battle" | "cardEffect";
@@ -511,6 +376,17 @@ export interface EffectOption {
   effect: Effect;
 }
 
+export type SequenceSaveResultKind =
+  | "selectedCards:hand"
+  | "selectedCards:deck"
+  | "selectedCards:trash"
+  | "selectedCards:don"
+  | "selectedCards:set"
+  | "selectedTargets"
+  | "paidCost"
+  | "producedObjects"
+  | "chosenNumber";
+
 export interface SequencedEffect {
   id?: string;
   effect: Effect | PayCostEffect;
@@ -518,9 +394,11 @@ export interface SequencedEffect {
     | "always"
     | "then"
     | "ifPreviousSucceeded"
+    | "ifPreviousNotSucceeded"
     | "ifYouDo"
     | "ifPossible";
   saveResultAs?: string;
+  saveResultKinds?: readonly SequenceSaveResultKind[];
   optional?: boolean;
   presentation?: EffectTextPresentationRef;
 }
@@ -560,7 +438,8 @@ export type OptionalCostSegmentResult =
 export type SavedFieldObjectReferenceFamily =
   | "selectedTargets"
   | "forEachSavedTarget"
-  | "producedObjects";
+  | "producedObjects"
+  | "paidCost";
 
 export type SavedFieldObjectZone =
   | "leaderArea"
@@ -621,6 +500,7 @@ export interface SavedPaidCostReference {
   kind: "paidCost";
   paidCost: true;
   selectedCards?: CardRef[];
+  selectedDonInstanceIds?: InstanceId[];
 }
 
 export interface SavedProducedObjectsReference {
@@ -628,11 +508,17 @@ export interface SavedProducedObjectsReference {
   objects: SavedFieldObjectReference[];
 }
 
+export interface SavedNumberReference {
+  kind: "chosenNumber";
+  value: number;
+}
+
 export type SequenceSavedResultReference =
   | SavedSelectedCardsReference
   | SavedSelectedTargetsReference
   | SavedPaidCostReference
-  | SavedProducedObjectsReference;
+  | SavedProducedObjectsReference
+  | SavedNumberReference;
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
@@ -650,15 +536,18 @@ export interface SelectCardsEffect {
 
 export interface SelectTargetsEffect {
   type: "selectTargets";
+  ownerConstraint?: {
+    type: "sameAsSavedReferenceOwner";
+    selection: SelectionId;
+  };
   request: SelectedTargetsRequest | MultiZoneTargetRequest;
 }
 
 export interface SelectAllTargetsEffect {
   type: "selectAllTargets";
-  request: Omit<
-    SelectedTargetsRequest,
-    "min" | "max" | "allowFewerIfUnavailable"
-  >;
+  request:
+    | Omit<SelectedTargetsRequest, "min" | "max" | "allowFewerIfUnavailable">
+    | Omit<MultiZoneTargetRequest, "min" | "max" | "allowFewerIfUnavailable">;
 }
 
 export interface SelectTargetsProducerSegment extends SequencedEffect {
@@ -678,6 +567,7 @@ export type HandSelectCardsEffect = SelectCardsEffect & {
 export interface PlaySelectedEffect {
   type: "playSelected";
   selection: SelectionId;
+  player?: PlayerRef;
   enterRested?: boolean;
   ignoreCost?: boolean;
 }
@@ -705,52 +595,6 @@ export interface PayCostEffect {
   cost: OptionalCost;
 }
 
-export interface EffectDslFieldRemovalProtection {
-  process: "fieldRemoval";
-  fieldRemoval: {
-    processFamily: "fieldRemoval";
-    classification:
-      | "moveFromFieldToTrash"
-      | "moveFromFieldToHand"
-      | "moveFromFieldToDeck"
-      | "moveFromFieldToLife"
-      | "moveFromFieldToOtherZone";
-    sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
-    sourceControllerRelation:
-      | "opponentControlled"
-      | "selfControlled"
-      | "eitherController"
-      | "unknownController";
-    targetScope:
-      | "thisCard"
-      | "controllerFieldCharacter"
-      | "controllerField"
-      | "anyFieldCard";
-    exclusions: {
-      battleKO: "excluded" | "failClosed";
-      ruleProcessTrash: "excluded" | "failClosed";
-      controllerCost: "excluded" | "failClosed";
-      controllerOwnedEffect: "excluded" | "failClosed";
-      ambiguousCustomRemoval: "excluded" | "failClosed";
-    };
-  };
-}
-
-export interface EffectDslRestProtection {
-  process: "rest";
-  sourceKind: "cardEffect" | "ruleProcess" | "battle" | "cost" | "custom";
-  sourceControllerRelation:
-    | "opponentControlled"
-    | "selfControlled"
-    | "eitherController"
-    | "unknownController";
-  sourceCardCategories?: CardCategory[];
-}
-
-export type EffectDslProtection =
-  | EffectDslFieldRemovalProtection
-  | EffectDslRestProtection;
-
 export type AttackTrashCost = { type: "trashFromHand"; count: number };
 
 export type Effect =
@@ -775,6 +619,17 @@ export type Effect =
       duration: Duration;
     }
   | {
+      type: "enterRested";
+      player: PlayerRef;
+      filter: CardFilter;
+      duration: Duration;
+    }
+  | {
+      type: "preventPlayByEffects";
+      target: Target;
+      duration: Duration;
+    }
+  | {
       type: "placeTopDeckCards";
       player: PlayerRef;
       count: number;
@@ -796,8 +651,21 @@ export type Effect =
       viewer: PlayerRef;
     }
   | {
+      type: "placeTopLifeCard";
+      players: PlayerRef[];
+      viewer: PlayerRef;
+      position: "topOrBottom";
+    }
+  | {
       type: "setLifeFaceUp";
       player: PlayerRef;
+      faceUp: boolean;
+    }
+  | {
+      type: "setLifeCardFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
       faceUp: boolean;
     }
   | {
@@ -808,6 +676,14 @@ export type Effect =
       min?: number;
       saveAs: SelectionSetId;
       visibility: Visibility;
+    }
+  | {
+      type: "chooseNumber";
+      chooser: PlayerRef;
+      purpose: "cost" | "number";
+      min: number;
+      max: number;
+      saveAs: SelectionId;
     }
   | {
       type: "selectFromSet";
@@ -836,8 +712,9 @@ export type Effect =
     }
   | {
       type: "moveCards";
-      count: number;
+      count: number | DynamicNumberValue;
       min?: number;
+      chooser?: PlayerRef;
       from: {
         player: PlayerRef;
         zone: Zone;
@@ -894,6 +771,7 @@ export type Effect =
       type: "trashFromHand";
       player: PlayerRef;
       count: number;
+      min?: number;
       filter?: CardFilter;
       chooser: PlayerRef;
     }
@@ -907,6 +785,11 @@ export type Effect =
       type: "modifyPower";
       target: Target;
       value: number | DynamicNumberValue;
+      duration: Duration;
+    }
+  | {
+      type: "allowAttackActiveCharacters";
+      target: Target;
       duration: Duration;
     }
   | { type: "setPowerToZero"; target: Target; duration: Duration }
@@ -939,21 +822,16 @@ export type Effect =
   | { type: "activate"; target: Target }
   | {
       type: "delayed";
-      timing: { type: "endOfTurn"; turn: "current" };
+      timing:
+        | { type: "endOfTurn"; turn: "current" }
+        | {
+            type: "event";
+            trigger: Trigger;
+            expires: { type: "endOfTurn"; turn: "current" };
+          };
       effect: Effect;
     }
-  | {
-      type: "giveKeyword";
-      target: Target;
-      keyword: Keyword;
-      duration: Duration;
-    }
-  | {
-      type: "removeKeyword";
-      target: Target;
-      keyword: Keyword;
-      duration: Duration;
-    }
+  | KeywordOrAttributeContinuousEffect
   | {
       type: "giveProtection";
       target: Target;
@@ -962,6 +840,13 @@ export type Effect =
     }
   | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
+  | {
+      type: "redirectDonPhasePlacement";
+      target: Target;
+      count: number;
+      player: PlayerRef;
+      duration: Duration;
+    }
   | {
       type: "attachSelectedDon";
       selection: SelectionId;
@@ -981,15 +866,35 @@ export type Effect =
   | { type: "damage"; target: "leader"; player: PlayerRef; count: number }
   | { type: "invalidateEffects"; target: Target; duration: Duration }
   | {
+      type: "invalidateEffectEntryPoint";
+      player: PlayerRef;
+      effectEntryPoint: EffectEntryPointFilter;
+      duration: Duration;
+    }
+  | {
       type: "protectFromKO";
       target: Target;
       duration: Duration;
       sourceKind?: "battle" | "cardEffect";
-      sourceControllerRelation?: "eitherController" | "opponentControlled";
+      sourceControllerRelation?:
+        | "eitherController"
+        | "opponentControlled"
+        | "selfControlled";
       sourceCardCategories?: CardCategory[];
+      sourceCardFilter?: CardFilter;
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
+  | {
+      type: "cannotAttackTarget";
+      target: Target;
+      attackTarget: {
+        player: PlayerRef;
+        zone: "leaderArea" | "characterArea";
+        filter?: CardFilter;
+      };
+      duration: Duration;
+    }
   | {
       type: "attackCost";
       target: Target;
@@ -1026,43 +931,20 @@ export type Effect =
       filter: CardFilter;
       effect: Effect;
     }
-  // prettier-ignore
-  | { type: "forEachSavedTarget"; selection: string; saveCurrentAs: string; effect: Effect }
+  | {
+      type: "forEachSavedTarget";
+      selection: string;
+      saveCurrentAs: string;
+      effect: Effect;
+    }
   | { type: "repeat"; count: number; effect: Effect }
   | { type: "activateReferencedEffect"; source: Target; trigger: Trigger }
   | { type: "replacement"; when: ReplacementTrigger; instead: Effect }
   | { type: "custom"; handler: string };
 
-export interface EffectDefinitionMetadata {
-  sourceTextHash: string;
-  rulesVersion: string;
-  effectDefinitionsVersion: string;
-  tested: boolean;
-  reviewer?: string;
-  notes?: string;
-  generatedBy?: "manual" | "rule-parser" | "llm-assisted";
-  reviewedBy?: string;
-  reviewedAt?: string;
-}
-
-export interface EffectBlock {
-  id: EffectId;
-  category: EffectCategory;
-  trigger: Trigger;
-  condition?: Condition;
-  conditionTiming?: "activation" | "resolution" | "both";
-  cost?: EffectBlockCost;
-  optional?: boolean;
-  oncePerTurn?: boolean;
-  failurePolicy?: FailurePolicy;
-  sourcePresencePolicy?: SourcePresencePolicy;
-  presentation?: EffectTextPresentationRef;
-  effect: Effect;
-}
-
-export interface EffectDefinition {
-  cardId: CardId;
-  implementationStatus: CardSupportStatus;
-  effects: EffectBlock[];
-  metadata: EffectDefinitionMetadata;
-}
+export type {
+  EffectBlock,
+  EffectBlockCost,
+  EffectDefinition,
+  EffectDefinitionMetadata,
+} from "./effect-definition.js";

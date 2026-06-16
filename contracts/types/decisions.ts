@@ -1,13 +1,14 @@
 import type {
   DecisionId,
   EffectId,
+  CardId,
   InstanceId,
   PlayerRef,
   PlayerId,
   QueueEntryId,
   Zone,
 } from "./primitives.js";
-import type { CardRef } from "./card-metadata.js";
+import type { CardCategory, CardRef } from "./card-metadata.js";
 import type { CausalityRef, EventVisibility } from "./events.js";
 import type {
   Cardinality,
@@ -45,7 +46,20 @@ export type PaymentOption =
       player: PlayerRef;
       position: "top" | "bottom";
     }
-  | { id: string; type: "restDon"; count: number }
+  | {
+      id: string;
+      type: "setLifeFaceUp";
+      count: number;
+      player: PlayerRef;
+      position: "top" | "bottom";
+      faceUp: boolean;
+    }
+  | {
+      id: string;
+      type: "restDon";
+      count: number;
+      maxCount?: number | "available";
+    }
   | {
       id: string;
       type: "attachDon";
@@ -54,7 +68,13 @@ export type PaymentOption =
       sourceState: "active" | "rested";
       target: Target;
     }
-  | { id: string; type: "returnDon"; count: number; sourceState?: "active" }
+  | {
+      id: string;
+      type: "returnDon";
+      count: number;
+      maxCount?: number | "available";
+      sourceState?: "active";
+    }
   | {
       id: string;
       type: "trashFromHand";
@@ -64,6 +84,7 @@ export type PaymentOption =
     }
   | { id: string; type: "revealFromHand"; count: number; filter?: CardFilter }
   | { id: string; type: "trashFromField"; count: number; filter?: CardFilter }
+  | { id: string; type: "koFromField"; count: number; filter?: CardFilter }
   | {
       id: string;
       type: "modifyPower";
@@ -80,9 +101,20 @@ export type PaymentOption =
         player: PlayerRef;
         zone: Zone;
         position?: "top" | "bottom";
+        source?: "effectSource";
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       filter?: CardFilter;
+      sourceInstanceId?: InstanceId;
+    }
+  | {
+      id: string;
+      type: "moveFieldToLife";
+      count: number;
+      player: "opponent" | "anyPlayer";
+      filter?: CardFilter;
+      position: "top" | "bottom";
+      faceUp?: boolean;
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
   | { id: string; type: "custom"; action: string };
@@ -117,6 +149,7 @@ export type DecisionResponse =
   | { type: "targets"; targets: CardRef[] }
   | { type: "cards"; cards: CardRef[] }
   | { type: "effectOption"; optionId: string }
+  | { type: "effectOptionDeclined" }
   | { type: "lifeTrigger"; choice: "activateTrigger" | "addToHand" }
   | { type: "replacement"; replacementId?: string }
   | { type: "mulligan"; keep: boolean }
@@ -187,6 +220,8 @@ export interface SelectCardsDecision extends BaseDecision {
     };
     trashFromHand?: {
       triggerSource: "effect" | "cost";
+      sourceCardId?: CardId;
+      sourceCategory?: CardCategory;
     };
     attackCost?: {
       attacker: CardRef;
@@ -198,7 +233,10 @@ export interface SelectCardsDecision extends BaseDecision {
 
 export interface ChooseEffectOptionDecision extends BaseDecision {
   type: "chooseEffectOption";
+  min: number;
+  max: number;
   options: EffectOption[];
+  defaultResponse?: { type: "effectOptionDeclined" };
 }
 
 export interface ConfirmLifeTriggerDecision extends BaseDecision {

@@ -14,6 +14,7 @@ export type SupportEvidenceFamily =
   | "condition"
   | "body"
   | "target"
+  | "targetConstraint"
   | "filter"
   | "cardinality"
   | "quantity"

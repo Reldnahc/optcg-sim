@@ -18,16 +18,19 @@ import type {
   CardCategory,
   CardSnapshot,
   CardSupportStatus,
+  Attribute,
   Keyword,
   MatchCardManifest,
   RuntimeVersionSet,
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
+import type { Trigger } from "./effect-triggers.js";
 import type {
   AttackTrashCost,
   CardFilter,
   Condition,
   Duration,
+  EffectEntryPointFilter,
   EffectDefinition,
   SavedFieldObjectTargetBinding,
   SourcePresencePolicy,
@@ -42,11 +45,13 @@ import type {
   EffectExecutionFrame,
   LoopSignature,
   MatchStatus,
+  PendingRuleLoss,
   PlayerState,
   Protection,
   ReplacementProcessState,
   RevealRecord,
   RngState,
+  RuleModifier,
   SetupContinuationState,
   TimerState,
   TransientCardSet,
@@ -92,6 +97,8 @@ export interface GameState {
   effectExecutionFrames: EffectExecutionFrame[];
   deferredTriggers: DeferredTriggerBucket[];
   delayedEffects?: DelayedEffectRecord[];
+  ruleModifiers?: RuleModifier[];
+  pendingRuleLosses?: PendingRuleLoss[];
   continuousEffects: ContinuousEffectRecord[];
   replacementState: ReplacementProcessState[];
   revealedCards: RevealRecord[];
@@ -130,11 +137,18 @@ export interface EffectQueueEntry {
 export type EffectQueueOrigin =
   | { type: "activateMain" }
   | { type: "activatedReaction" }
+  | { type: "startOfYourTurn" }
   | { type: "lifeTrigger" };
 
 export interface DelayedEffectRecord {
   id: string;
-  timing: { type: "endOfTurn"; turn: "current" };
+  timing:
+    | { type: "endOfTurn"; turn: "current" }
+    | {
+        type: "event";
+        trigger: Trigger;
+        expires: { type: "endOfTurn"; turn: "current" };
+      };
   controllerId: PlayerId;
   source: CardRef;
   sourceSnapshot: CardSnapshot;
@@ -179,9 +193,13 @@ export type ModifierLayer =
   | "costAdd"
   | "effectInvalidation"
   | "keywordAdd"
+  | "attributeAdd"
   | "keywordRemove"
+  | "attackPermission"
   | "restriction"
-  | "protection";
+  | "protection"
+  | "donPhasePlacement"
+  | "playEntryState";
 
 export type ModifierOperation =
   | { type: "setBasePower"; value: number }
@@ -190,15 +208,36 @@ export type ModifierOperation =
   | { type: "addPower"; value: number }
   | { type: "addCost"; value: number }
   | { type: "invalidateEffects" }
+  | {
+      type: "invalidateEffectEntryPoint";
+      effectEntryPoint: EffectEntryPointFilter;
+    }
   | { type: "addKeyword"; keyword: Keyword }
+  | { type: "addAttribute"; attribute: Attribute }
   | { type: "removeKeyword"; keyword: Keyword }
+  | { type: "attackPermission"; permission: "attackActiveCharacters" }
   | {
       type: "restriction";
       restriction: string;
       sourceCategories?: CardCategory[];
     }
+  | {
+      type: "targetRestriction";
+      restriction: string;
+      attackTarget: {
+        player: PlayerRef;
+        zone: "leaderArea" | "characterArea";
+        filter?: CardFilter;
+      };
+    }
   | { type: "attackCost"; cost: AttackTrashCost }
-  | { type: "protection"; protection: Protection };
+  | { type: "protection"; protection: Protection }
+  | {
+      type: "redirectDonPhasePlacement";
+      count: number;
+      player: PlayerRef;
+    }
+  | { type: "enterRested"; filter?: CardFilter };
 
 export interface Modifier {
   layer: ModifierLayer;
