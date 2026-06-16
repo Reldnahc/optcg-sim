@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import type { ClientCardModel } from "../../view-model.js";
+import type { PresentationEventIntent } from "./event-presentation-intents.js";
 
 export type PresentationSide = "self" | "opponent";
 export type PresentationZoneKey = `${PresentationSide}:${Zone}`;
@@ -162,6 +163,7 @@ export const planCardMovementIntents = (input: {
   previous: PresentationSnapshot | undefined;
   current: PresentationSnapshot;
   events: readonly EngineEvent[];
+  presentationEventIntents?: readonly PresentationEventIntent[] | undefined;
   currentPlayerId: PlayerId;
 }): CardMovementIntent[] => {
   const previous = input.previous;
@@ -190,6 +192,35 @@ export const planCardMovementIntents = (input: {
       toRect: currentPosition.rect,
       fromZoneKey: previousPosition.zoneKey,
       toZoneKey: currentPosition.zoneKey,
+    });
+  }
+
+  for (const intent of input.presentationEventIntents ?? []) {
+    const route = intent.movementRoute;
+    if (route === undefined || movementByInstanceId.has(route.instanceId)) {
+      continue;
+    }
+    const fromRect = previous.zones[route.fromZoneKey]?.rect;
+    const toRect = input.current.zones[route.toZoneKey]?.rect;
+    if (fromRect === undefined || toRect === undefined) {
+      continue;
+    }
+    movementByInstanceId.set(route.instanceId, {
+      id: `${intent.eventId}:${route.instanceId}`,
+      instanceId: route.instanceId,
+      card: {
+        instanceId: route.instanceId as InstanceId,
+        cardId: "hidden" as CardId,
+        name: route.category === "don" ? "DON!!" : "Hidden card",
+        category: route.category,
+        attachedDonCount: 0,
+        attachedDonCards: [],
+      },
+      fromRect,
+      toRect,
+      fromZoneKey: route.fromZoneKey,
+      toZoneKey: route.toZoneKey,
+      eventId: intent.eventId,
     });
   }
 

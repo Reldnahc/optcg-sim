@@ -4,6 +4,7 @@ import { describe, test } from "vitest";
 import type { CardId, EngineEvent, InstanceId, PlayerId } from "@optcg/types";
 
 import type { ClientCardModel } from "../../view-model.js";
+import { planPresentationEventIntents } from "./event-presentation-intents.js";
 import {
   planCardMovementIntents,
   type CardMovementIntent,
@@ -278,6 +279,56 @@ describe("presentation movement planner", () => {
         },
       }),
       events: [],
+      currentPlayerId: p1,
+    });
+
+    const movement = onlyMovement(movements);
+    assert.equal(movement.instanceId, "don-1");
+    assert.equal(movement.fromZoneKey, "self:costArea");
+    assert.equal(movement.toZoneKey, "self:leaderArea");
+  });
+
+  test("plans DON attachment movement from public DON attachment event when snapshots cannot see attached card", () => {
+    const attachEvent = event({
+      id: "event:attach",
+      type: "donAttached",
+      payload: {
+        playerId: p1,
+        donInstanceId: "don-1",
+        from: { zone: "costArea", playerId: p1 },
+        to: { zone: "leaderArea", playerId: p1 },
+        target: {
+          instanceId: "leader-1",
+          cardId: "OP00-001",
+          playerId: p1,
+        },
+      },
+    });
+
+    const movements = planCardMovementIntents({
+      previous: snapshot({
+        zones: {
+          "self:costArea": { zoneKey: "self:costArea", rect: rect(100, 500) },
+          "self:leaderArea": {
+            zoneKey: "self:leaderArea",
+            rect: rect(300, 420),
+          },
+        },
+      }),
+      current: snapshot({
+        zones: {
+          "self:costArea": { zoneKey: "self:costArea", rect: rect(100, 500) },
+          "self:leaderArea": {
+            zoneKey: "self:leaderArea",
+            rect: rect(300, 420),
+          },
+        },
+      }),
+      events: [attachEvent],
+      presentationEventIntents: planPresentationEventIntents({
+        events: [attachEvent],
+        currentPlayerId: p1,
+      }),
       currentPlayerId: p1,
     });
 

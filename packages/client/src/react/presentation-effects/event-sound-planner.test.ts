@@ -57,4 +57,30 @@ describe("presentation event sound planner", () => {
       [],
     );
   });
+
+  test("plans attach and return sounds from DON events", () => {
+    assert.deepEqual(
+      planEventSoundIntents({
+        intents: planPresentationEventIntents({
+          events: [
+            event("event:attach", "donAttached", {
+              playerId: p1,
+              donInstanceId: "don-1",
+            }),
+            event("event:return", "donReturned", {
+              playerId: p1,
+              donInstanceId: "don-1",
+            }),
+          ],
+          currentPlayerId: p1,
+        }),
+        movementEventIds: new Set(),
+        currentPlayerId: p1,
+      }),
+      [
+        { id: "sound:event:event:attach", cue: "attach" },
+        { id: "sound:event:event:return", cue: "return" },
+      ],
+    );
+  });
 });

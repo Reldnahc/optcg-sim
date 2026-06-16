@@ -49,19 +49,20 @@ export const usePresentationEffects = (input: {
       seenEventIdsRef.current.add(id);
       return true;
     });
+    const presentationEventIntents = planPresentationEventIntents({
+      events: newEvents,
+      currentPlayerId: input.board.playerId,
+    });
     const plannedMovements = planCardMovementIntents({
       previous: previousSnapshotRef.current,
       current: currentSnapshot,
       events: newEvents,
+      presentationEventIntents,
       currentPlayerId: input.board.playerId,
     });
     previousSnapshotRef.current = currentSnapshot;
 
     const movementSoundIntents = planSoundIntents(plannedMovements);
-    const presentationEventIntents = planPresentationEventIntents({
-      events: newEvents,
-      currentPlayerId: input.board.playerId,
-    });
     const movementEventIds = new Set(
       plannedMovements.flatMap((movement) =>
         movement.eventId === undefined ? [] : [movement.eventId],
