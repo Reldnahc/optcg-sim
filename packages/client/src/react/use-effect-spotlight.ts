@@ -107,7 +107,8 @@ export const resumeSpotlightModelAfterPause = ({
   if (model === undefined || pausedAtMs === undefined) {
     return model;
   }
-  const pausedDurationMs = Math.max(0, resumedAtMs - pausedAtMs);
+  const timerPausedAtMs = Math.max(pausedAtMs, model.shownAtMs);
+  const pausedDurationMs = Math.max(0, resumedAtMs - timerPausedAtMs);
   if (pausedDurationMs === 0) {
     return model;
   }
