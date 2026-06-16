@@ -10,6 +10,7 @@ import {
 import {
   parseEffectEntryPointPredicate,
   parseEffectEntryPointPresencePredicate,
+  parseNoBaseEffectPredicate,
 } from "./effect-entry.js";
 import {
   parseCardNameContainsPredicate,
@@ -73,6 +74,7 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseAttachedDonPredicate,
   parseEffectEntryPointPresencePredicate,
   parseEffectEntryPointPredicate,
+  parseNoBaseEffectPredicate,
   parseDynamicDonFieldCostPredicate,
   parseDynamicLifeCountCostPredicate,
   parseCostPredicate,

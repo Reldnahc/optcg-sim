@@ -186,3 +186,161 @@ it("parses branch-specific character filters for temporary keyword grants", () =
     ]),
   );
 });
+
+it("parses On Play absence filters with adjacent cost predicates", () => {
+  const parsed = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] Up to 1 of your Characters without an [On Play] effect and with a cost of 8 or less gains [Rush] during this turn.",
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "giveKeyword",
+        keyword: "rush",
+        duration: { type: "thisTurn" },
+        target: {
+          type: "choose",
+          request: {
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              cost: { max: 8 },
+              effectEntryPoint: {
+                mode: "without",
+                trigger: { type: "onPlay" },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "filter:effectEntryPoint",
+      "filter:effectEntryPoint:without",
+      "filter:cost",
+      "instruction:giveKeyword",
+    ]),
+  );
+});
+
+it("parses no-base-effect as a reusable without On Play filter for play bodies", () => {
+  const parsed = parseCardEffectLine(
+    "[On Play] If your Leader is [Uta], draw 2 cards. Then, play up to 1 Character card with 6000 power or less and no base effect from your hand.",
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], names: ["Uta"] },
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: { type: "draw", count: 2 },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:hand-play",
+                  connector: "always",
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      categories: ["character"],
+                      power: { max: 6000 },
+                      effectEntryPoint: {
+                        mode: "without",
+                        trigger: { type: "onPlay" },
+                      },
+                    },
+                  },
+                },
+                {
+                  id: "play:selected-from-hand",
+                  connector: "ifPossible",
+                  effect: {
+                    type: "playSelected",
+                    selection: "handSelection:play-from-hand",
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "filter:effectEntryPoint",
+      "filter:effectEntryPoint:without",
+      "filter:power",
+      "instruction:playSelected",
+    ]),
+  );
+});
+
+it("parses no-base-effect as a reusable without On Play filter for field keyword grants", () => {
+  const parsed = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] Up to 1 of your Characters with no base effect gains [Rush] during this turn.",
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "giveKeyword",
+        keyword: "rush",
+        duration: { type: "thisTurn" },
+        target: {
+          type: "choose",
+          request: {
+            player: "self",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              effectEntryPoint: {
+                mode: "without",
+                trigger: { type: "onPlay" },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "filter:effectEntryPoint",
+      "filter:effectEntryPoint:without",
+      "instruction:giveKeyword",
+    ]),
+  );
+});

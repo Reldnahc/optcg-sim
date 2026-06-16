@@ -106,5 +106,5 @@ function parseNextPredicate(
 }
 
 function stripLeadingConnector(text: string): string {
-  return text.replace(/^,?\s*(?:with|and)\s+/i, "").trim();
+  return text.replace(/^(?:,?\s*(?:with|and)\s+)+/i, "").trim();
 }

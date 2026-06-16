@@ -384,7 +384,7 @@ export function parseYourCharactersTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const namedCharacterMatch =
-    /^of your \[(?<name>[^\]]+)\] Characters?\b\s*(?<rest>.*)$/i.exec(
+    /^(?:of\s+)?your \[(?<name>[^\]]+)\] Characters?\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   const nameText = namedCharacterMatch?.groups?.["name"]?.trim();
@@ -415,7 +415,9 @@ export function parseYourCharactersTarget(
     };
   }
 
-  const bareMatch = /^of your Characters?\b\s*(?<rest>.*)$/i.exec(input.text);
+  const bareMatch = /^(?:of\s+)?your Characters?\b\s*(?<rest>.*)$/i.exec(
+    input.text,
+  );
   if (bareMatch !== null) {
     const predicateText = bareMatch.groups?.["rest"]?.trim() ?? "";
     const predicates =
@@ -452,7 +454,7 @@ export function parseYourCharactersTarget(
   }
 
   const typedMatch =
-    /^of your\s+(?<predicates>.+?)\s+Characters?\b\s*(?<rest>.*)$/i.exec(
+    /^(?:of\s+)?your\s+(?<predicates>.+?)\s+Characters?\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   if (typedMatch !== null) {
