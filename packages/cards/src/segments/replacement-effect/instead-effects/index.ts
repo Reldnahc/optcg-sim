@@ -13,6 +13,7 @@ import {
 import { parseRestCardsInstead } from "./rest-cards.js";
 import { parseReturnDonInstead } from "./return-don.js";
 import { parseTopLifeToHandInstead } from "./top-life-to-hand.js";
+import { parseTopLifeToTrashInstead } from "./top-life-to-trash.js";
 import { parseTrashToDeckBottomInstead } from "./trash-to-deck-bottom.js";
 import { parseTrashFromHandInstead } from "./trash-from-hand.js";
 
@@ -23,6 +24,7 @@ export type ReplacementInsteadParser = (
 export const replacementInsteadBodyParsers: readonly ReplacementInsteadParser[] =
   [
     parseTopLifeToHandInstead,
+    parseTopLifeToTrashInstead,
     parseLifeVisibilityInstead,
     parseReplacementTargetLifeInstead,
     parseReturnDonInstead,

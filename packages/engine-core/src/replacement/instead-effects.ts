@@ -1,7 +1,10 @@
 import type { Effect, Target } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "../actions/state.js";
-import { isSupportedLifeTopToHandEffect } from "../effect-runtime-move-cards.js";
+import {
+  isSupportedLifeTopToHandEffect,
+  isSupportedLifeTopToTrashEffect,
+} from "../effect-runtime-move-cards.js";
 import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
 import type { SelectedTargetKoReplacementCandidate } from "./primitives.js";
 
@@ -160,6 +163,7 @@ const isSupportedAtomicNoDecisionInsteadEffect = (
   effect: SequenceSegmentEffect,
 ): boolean =>
   (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
+  (effect.type === "moveCards" && isSupportedLifeTopToTrashEffect(effect)) ||
   (effect.type === "setLifeCardFaceUp" &&
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
   (effect.type === "bounce" &&
@@ -343,6 +347,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
 ): boolean =>
   isSupportedLifeTopToHandEffect(effect) ||
+  isSupportedLifeTopToTrashEffect(effect) ||
   isSupportedRestOwnCardsInsteadEffect(effect) ||
   isSupportedRestSelfInsteadEffect(effect) ||
   isSupportedTrashFromHandInsteadEffect(effect) ||
@@ -358,6 +363,16 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
   isSupportedReplacementPayCostInsteadEffect(effect) ||
   isSupportedOwnerDeckBottomInsteadEffect(effect);
+
+const supportedLifeTopToTrashCount = (effect: Effect): number | undefined => {
+  if (
+    !isSupportedLifeTopToTrashEffect(effect) ||
+    typeof effect.count !== "number"
+  ) {
+    return undefined;
+  }
+  return effect.count;
+};
 
 export const replacementOptionLabel = (
   candidate: SelectedTargetKoReplacementCandidate,
@@ -380,6 +395,15 @@ export const replacementOptionLabel = (
       "card",
       "cards",
     )} from Life to hand instead`;
+  }
+  const lifeTrashCount = supportedLifeTopToTrashCount(instead);
+  if (lifeTrashCount !== undefined) {
+    const count = lifeTrashCount;
+    return `Trash ${String(count)} ${plural(
+      count,
+      "card",
+      "cards",
+    )} from Life instead`;
   }
   if (isSupportedLifeVisibilityInsteadEffect(instead)) {
     return `Turn ${String(instead.count)} Life ${plural(

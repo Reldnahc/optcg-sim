@@ -7,7 +7,10 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
-import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
+import {
+  isSupportedLifeTopToHandEffect,
+  isSupportedLifeTopToTrashEffect,
+} from "../../effect-runtime-move-cards.js";
 import {
   isSupportedKoSelfInsteadEffect,
   isSupportedLifeVisibilityInsteadEffect,
@@ -243,6 +246,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   effect: Effect,
 ): boolean =>
   isSupportedLifeTopToHandEffect(effect) ||
+  isSupportedLifeTopToTrashEffect(effect) ||
   isSupportedRestOwnCardsInsteadEffect(effect) ||
   isSupportedRestSelfInsteadEffect(effect) ||
   isSupportedTrashFromHandInsteadEffect(effect) ||
