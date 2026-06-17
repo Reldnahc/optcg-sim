@@ -100,6 +100,34 @@ const fieldCountTotalEvidence = (
   ...filterEvidence,
 ];
 
+const characterCountDifferenceCondition = (
+  value: number,
+): ConditionParseResult => ({
+  condition: {
+    type: "fieldCountDifference",
+    minuend: {
+      player: "opponent",
+      filter: { categories: ["character"] },
+    },
+    subtrahend: {
+      player: "self",
+      filter: { categories: ["character"] },
+    },
+    op: "gte",
+    value,
+  },
+  evidence: [
+    "condition:fieldCountDifference",
+    "player:opponent",
+    "player:self",
+    "filter:category:character",
+    "condition:comparator:gte",
+    "condition:threshold:positiveInteger",
+    "valueOffset:fieldCountDifference",
+  ],
+  rest: "",
+});
+
 const parseComparedFieldPresence = (
   text: string,
   player: "self" | "opponent",
@@ -204,31 +232,13 @@ export const parseFieldCardCountCondition: ConditionParser = (
   const relativeCharacterCountText =
     relativeCharacterCountMatch?.groups?.["value"];
   if (relativeCharacterCountText !== undefined) {
-    return {
-      condition: {
-        type: "fieldCountDifference",
-        minuend: {
-          player: "opponent",
-          filter: { categories: ["character"] },
-        },
-        subtrahend: {
-          player: "self",
-          filter: { categories: ["character"] },
-        },
-        op: "gte",
-        value: Number.parseInt(relativeCharacterCountText, 10),
-      },
-      evidence: [
-        "condition:fieldCountDifference",
-        "player:opponent",
-        "player:self",
-        "filter:category:character",
-        "condition:comparator:gte",
-        "condition:threshold:positiveInteger",
-        "valueOffset:fieldCountDifference",
-      ],
-      rest: "",
-    };
+    return characterCountDifferenceCondition(
+      Number.parseInt(relativeCharacterCountText, 10),
+    );
+  }
+
+  if (/^you have less Characters than your opponent$/i.test(input.text)) {
+    return characterCountDifferenceCondition(1);
   }
 
   const opponentPresence =

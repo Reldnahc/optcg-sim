@@ -332,6 +332,38 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses shorthand Character count differences as a one-card field-count offset", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "you have less Characters than your opponent",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCountDifference",
+        minuend: {
+          player: "opponent",
+          filter: { categories: ["character"] },
+        },
+        subtrahend: {
+          player: "self",
+          filter: { categories: ["character"] },
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCountDifference",
+        "player:opponent",
+        "player:self",
+        "filter:category:character",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "valueOffset:fieldCountDifference",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses total Character cost as reusable field-stat-total data", () => {
     expect(
       parseFieldCardCountCondition({
