@@ -893,7 +893,7 @@ const applyRespondToDecision = (
   const replacementResult = profileActionSpan(
     options,
     "engine:decision:replacement",
-    () => applyChooseReplacementDecisionResponse(state, action),
+    () => applyChooseReplacementDecisionResponse(state, action, options),
   );
   if (replacementResult !== null) {
     if (

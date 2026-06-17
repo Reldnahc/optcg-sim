@@ -254,6 +254,27 @@ test("declining optional chooseReplacement resolves to the unreplaced KO process
   assert.equal(nextP2.trash[0]?.instanceId, target.instanceId);
 });
 
+test("live chooseReplacement response preserves omitted state hash", () => {
+  const { result } = pauseForReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  const declined = applyAction(
+    result.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "replacement" },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.stateHash, "");
+});
+
 test.each([
   {
     name: "wrong player",

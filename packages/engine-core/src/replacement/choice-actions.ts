@@ -11,8 +11,14 @@ import type {
   ReplacementProcessState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
+import { prependEventsToEngineResult } from "../engine-result-events.js";
 import {
   executeAcceptedFieldRemovalReplacementProcess,
   finalizeSelectedTargetEffectResolution,
@@ -158,6 +164,7 @@ export const getChooseReplacementLegalActions = (
 export const applyChooseReplacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "chooseReplacement") {
@@ -168,6 +175,7 @@ export const applyChooseReplacementDecisionResponse = (
       state,
       [],
       invalidDecision("Player does not match current pending decision."),
+      options,
     );
   }
   if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
@@ -175,6 +183,7 @@ export const applyChooseReplacementDecisionResponse = (
       state,
       [],
       invalidDecision("Player does not match current pending decision."),
+      options,
     );
   }
 
@@ -184,6 +193,7 @@ export const applyChooseReplacementDecisionResponse = (
       state,
       [],
       invalidDecision("Response must be an object for chooseReplacement."),
+      options,
     );
   }
   const responseType = (response as { type?: unknown }).type;
@@ -194,6 +204,7 @@ export const applyChooseReplacementDecisionResponse = (
       invalidDecision(
         "Response type must be replacement for chooseReplacement.",
       ),
+      options,
     );
   }
 
@@ -203,6 +214,7 @@ export const applyChooseReplacementDecisionResponse = (
       state,
       [],
       invalidDecision("replacementId must be a string."),
+      options,
     );
   }
   if (replacementId !== undefined) {
@@ -211,6 +223,7 @@ export const applyChooseReplacementDecisionResponse = (
         state,
         [],
         invalidDecision("replacementId must match an available replacement."),
+        options,
       );
     }
   }
@@ -219,6 +232,7 @@ export const applyChooseReplacementDecisionResponse = (
       state,
       [],
       invalidDecision("Mandatory replacement decisions cannot be declined."),
+      options,
     );
   }
 
@@ -232,6 +246,7 @@ export const applyChooseReplacementDecisionResponse = (
       invalidDecision(
         "chooseReplacement decision is stale for current replacement process.",
       ),
+      options,
     );
   }
   const process = replacementProcessFromState(decision, storedProcess);
@@ -242,6 +257,7 @@ export const applyChooseReplacementDecisionResponse = (
       invalidDecision(
         "chooseReplacement decision is stale for current replacement process.",
       ),
+      options,
     );
   }
 
@@ -290,7 +306,7 @@ export const applyChooseReplacementDecisionResponse = (
       replacementId,
     );
     if ("error" in applied) {
-      return toEngineResult(state, [], [applied.error]);
+      return toEngineResult(state, [], [applied.error], options);
     }
     const nextState = {
       ...applied.state,
@@ -300,21 +316,29 @@ export const applyChooseReplacementDecisionResponse = (
       nextState.pendingDecision !== undefined &&
       isReplacementContinuationDecision(nextState, nextState.pendingDecision)
     ) {
-      return toEngineResult(nextState, events);
+      return toEngineResult(nextState, events, undefined, options);
     }
     if (shouldFinalizeBattle) {
-      return finalizeBattleAfterReplacementResolution(state, nextState, events);
+      return prependEventsToEngineResult(
+        finalizeBattleAfterReplacementResolution(state, nextState, events),
+        [],
+        options,
+      );
     }
     return queuedEntry === undefined
-      ? toEngineResult(nextState, events)
+      ? toEngineResult(nextState, events, undefined, options)
       : shouldResumeSequence
-        ? toEngineResult(nextState, events)
-        : finalizeSelectedTargetEffectResolution(
-            nextState,
-            state,
-            queuedEntry,
-            events,
-            events.slice(1),
+        ? toEngineResult(nextState, events, undefined, options)
+        : prependEventsToEngineResult(
+            finalizeSelectedTargetEffectResolution(
+              nextState,
+              state,
+              queuedEntry,
+              events,
+              events.slice(1),
+            ),
+            [],
+            options,
           );
   }
 
@@ -339,7 +363,7 @@ export const applyChooseReplacementDecisionResponse = (
           process,
         );
   if ("error" in unreplaced) {
-    return toEngineResult(state, [], [unreplaced.error]);
+    return toEngineResult(state, [], [unreplaced.error], options);
   }
 
   const nextState: GameState = {
@@ -349,17 +373,25 @@ export const applyChooseReplacementDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   if (shouldFinalizeBattle) {
-    return finalizeBattleAfterReplacementResolution(state, nextState, events);
+    return prependEventsToEngineResult(
+      finalizeBattleAfterReplacementResolution(state, nextState, events),
+      [],
+      options,
+    );
   }
   return queuedEntry === undefined
-    ? toEngineResult(nextState, events)
+    ? toEngineResult(nextState, events, undefined, options)
     : shouldResumeSequence
-      ? toEngineResult(nextState, events)
-      : finalizeSelectedTargetEffectResolution(
-          nextState,
-          state,
-          queuedEntry,
-          events,
-          events.slice(1),
+      ? toEngineResult(nextState, events, undefined, options)
+      : prependEventsToEngineResult(
+          finalizeSelectedTargetEffectResolution(
+            nextState,
+            state,
+            queuedEntry,
+            events,
+            events.slice(1),
+          ),
+          [],
+          options,
         );
 };
