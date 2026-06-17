@@ -965,7 +965,7 @@ export const applyAction = (
       return profileActionSpan(options, "engine:applyAction:useCounter", () =>
         continueRuntimeAndAttackTimingAfterDecision(
           state,
-          applyUseCounter(state, action),
+          applyUseCounter(state, action, options),
           options,
         ),
       );

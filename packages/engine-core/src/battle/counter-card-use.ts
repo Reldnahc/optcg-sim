@@ -18,6 +18,8 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
+  type EngineResultOptions,
   illegalAction,
   toDecisionId,
   toEngineResult,
@@ -49,7 +51,6 @@ import {
 } from "./capabilities.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
 import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
@@ -155,6 +156,7 @@ export const getLegalCharacterCounterActions = (
 export const applyUseCounter = (
   state: GameState,
   action: Extract<Action, { type: "useCounter" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const decision = state.pendingDecision;
   const battle = state.battle;
@@ -327,8 +329,8 @@ export const applyUseCounter = (
       },
       eventJournal: [...state.eventJournal, ...events],
     };
-    assertGameStateInvariants(nextState);
-    return toEngineResult(nextState, events);
+    assertGameStateInvariantsIfEnabled(nextState, options);
+    return toEngineResult(nextState, events, undefined, options);
   }
   if (effectCost !== undefined) {
     return createCounterEventEffectCostDecision({
@@ -336,6 +338,7 @@ export const applyUseCounter = (
       cost: effectCost,
       decisionPlayerId: decision.playerId,
       handCard,
+      options,
       state,
       target: action.target,
     });
@@ -354,6 +357,7 @@ export const applyUseCounter = (
     decisionResolvedId: undefined,
     pendingDecision: state.pendingDecision,
     priorEvents: [],
+    options,
   });
   return counterResult;
 };
@@ -363,6 +367,7 @@ export const createCounterEventEffectCostDecision = (params: {
   cost: Extract<OptionalCost, { type: "trashFromHand" }>;
   decisionPlayerId: PlayerId;
   handCard: CardInstance;
+  options?: EngineResultOptions;
   state: GameState;
   target: CardRef;
 }): EngineResult => {
@@ -423,8 +428,8 @@ export const createCounterEventEffectCostDecision = (params: {
     },
     eventJournal: [...params.state.eventJournal, ...events],
   };
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  assertGameStateInvariantsIfEnabled(nextState, params.options);
+  return toEngineResult(nextState, events, undefined, params.options);
 };
 
 const counterEventTargetRequest = (): SelectTargetsDecision["request"] => ({
@@ -480,6 +485,7 @@ export const applyCounterEventEffectCostDecisionResponse = (params: {
   >;
   defender: NonNullable<GameState["players"][PlayerId]>;
   handCard: CardInstance;
+  options?: EngineResultOptions;
   state: GameState;
   supportedCounterEvent: SupportedCounterEventPower;
 }): EngineResult => {
@@ -493,6 +499,7 @@ export const applyCounterEventEffectCostDecisionResponse = (params: {
     state,
     supportedCounterEvent,
   } = params;
+  const options = params.options ?? {};
   const effectCost = supportedCounterEvent.effectCost;
   if (effectCost === undefined) {
     return illegalAction(state, "Unsupported payCost decision context.");
@@ -514,6 +521,7 @@ export const applyCounterEventEffectCostDecisionResponse = (params: {
           requirePotentialCounterActions: false,
         }) ?? undefined,
       priorEvents: [],
+      options,
     });
   }
   if (action.response.type !== "payment") {
@@ -614,8 +622,13 @@ export const applyCounterEventEffectCostDecisionResponse = (params: {
     pendingDecision: targetDecision,
     eventJournal: [...costState.eventJournal, ...decisionEvents],
   };
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, [...events, ...decisionEvents]);
+  assertGameStateInvariantsIfEnabled(nextState, options);
+  return toEngineResult(
+    nextState,
+    [...events, ...decisionEvents],
+    undefined,
+    options,
+  );
 };
 
 const cardRefsMatch = (left: CardRef, right: CardRef): boolean =>
@@ -633,6 +646,7 @@ export const applyCounterEventTargetDecisionResponse = (params: {
   >;
   defender: NonNullable<GameState["players"][PlayerId]>;
   handCard: CardInstance;
+  options?: EngineResultOptions;
   state: GameState;
 }): EngineResult => {
   const {
@@ -644,6 +658,7 @@ export const applyCounterEventTargetDecisionResponse = (params: {
     handCard,
     state,
   } = params;
+  const options = params.options ?? {};
   if (action.response.type !== "targets") {
     return illegalAction(state, "Unsupported decision response.");
   }
@@ -702,6 +717,7 @@ export const applyCounterEventTargetDecisionResponse = (params: {
         requirePotentialCounterActions: false,
       }) ?? undefined,
     priorEvents: events,
+    options,
   });
 };
 
@@ -719,6 +735,7 @@ export const resolveCounterCardUse = (params: {
   applyCounterPower?: boolean;
   pendingDecision: GameState["pendingDecision"] | undefined;
   priorEvents: readonly EngineEvent[];
+  options?: EngineResultOptions;
 }): EngineResult => {
   const {
     state,
@@ -734,6 +751,7 @@ export const resolveCounterCardUse = (params: {
     applyCounterPower = true,
     pendingDecision,
     priorEvents,
+    options,
   } = params;
   const defender = state.players[decisionPlayerId];
   if (defender === undefined) {
@@ -855,13 +873,19 @@ export const resolveCounterCardUse = (params: {
     if (trailing === null) {
       return illegalAction(state, "Unsupported Counter Event trailing effect.");
     }
-    assertGameStateInvariants(trailing.state);
-    return toEngineResult(trailing.state, [
-      ...priorEvents,
-      ...events,
-      ...trailing.events,
-    ]);
+    assertGameStateInvariantsIfEnabled(trailing.state, options);
+    return toEngineResult(
+      trailing.state,
+      [...priorEvents, ...events, ...trailing.events],
+      undefined,
+      options,
+    );
   }
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, [...priorEvents, ...events]);
+  assertGameStateInvariantsIfEnabled(nextState, options);
+  return toEngineResult(
+    nextState,
+    [...priorEvents, ...events],
+    undefined,
+    options,
+  );
 };

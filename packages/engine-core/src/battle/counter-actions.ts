@@ -9,6 +9,8 @@ import type {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
+  type EngineResultOptions,
   illegalAction,
   toDecisionId,
   toEngineResult,
@@ -30,7 +32,6 @@ import {
   getSupportedCounterEventPowerTargets,
 } from "./counter-event-support.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getUnsupportedCounterWindowReason,
   hasPotentialCharacterCounterActions,
@@ -43,6 +44,7 @@ import {
   getLegalCharacterCounterActions,
   resolveCounterCardUse,
 } from "./counter-card-use.js";
+import { prependEventsToEngineResult } from "../engine-result-events.js";
 
 export { applyUseCounter } from "./counter-card-use.js";
 export {
@@ -198,6 +200,7 @@ export const applyCounterStepDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
   resolveSupportedVanillaBattle: (state: GameState) => EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   const battle = state.battle;
@@ -268,6 +271,7 @@ export const applyCounterStepDecisionResponse = (
         decision,
         defender,
         handCard,
+        options,
         state,
         supportedCounterEvent,
       });
@@ -338,13 +342,11 @@ export const applyCounterStepDecisionResponse = (
         cost: supportedCounterEvent.effectCost,
         decisionPlayerId: decision.playerId,
         handCard,
+        options,
         state: costState,
         target: selectedTarget.target,
       });
-      return toEngineResult(effectCostDecision.state, [
-        ...events,
-        ...effectCostDecision.events,
-      ]);
+      return prependEventsToEngineResult(effectCostDecision, events, options);
     }
     return resolveCounterCardUse({
       state: stagedState,
@@ -364,6 +366,7 @@ export const applyCounterStepDecisionResponse = (
           requirePotentialCounterActions: false,
         }) ?? undefined,
       priorEvents: events,
+      options,
     });
   }
   if (decision.type === "selectTargets") {
@@ -388,6 +391,7 @@ export const applyCounterStepDecisionResponse = (
       decision,
       defender,
       handCard,
+      options,
       state,
     });
   }
@@ -456,11 +460,12 @@ export const applyCounterStepDecisionResponse = (
   if (resolved.errors !== undefined) {
     return resolved;
   }
-  return toEngineResult(resolved.state, [...events, ...resolved.events]);
+  return prependEventsToEngineResult(resolved, events, options);
 };
 
 export const enterCounterStepOrAutoPass = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const battle = state.battle;
   if (battle === undefined) {
@@ -505,6 +510,6 @@ export const enterCounterStepOrAutoPass = (
     pendingDecision: decision,
     eventJournal: [...state.eventJournal, ...events],
   };
-  assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  assertGameStateInvariantsIfEnabled(nextState, options);
+  return toEngineResult(nextState, events, undefined, options);
 };

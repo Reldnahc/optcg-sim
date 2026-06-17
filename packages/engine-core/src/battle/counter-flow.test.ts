@@ -406,6 +406,32 @@ test("Character Counter moves from hand to trash, emits deterministic events, an
   assert.deepEqual(result.events, replay.events);
 });
 
+test("live Character Counter can omit engine result state hash", () => {
+  const { opened, counterCard } = setupOpenedCounterStepPassDecision();
+  const target = must(opened.state.battle, "battle").currentTarget;
+  opened.state.continuousEffects = [
+    continuousEffectRecord(opened.state, "live-use-counter-continuous", {
+      type: "thisBattle",
+    }),
+  ];
+
+  const result = applyAction(
+    opened.state,
+    {
+      type: "useCounter",
+      cardInstanceId: counterCard.instanceId,
+      target,
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("Character Counter power changes Damage Step outcome after pass", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");

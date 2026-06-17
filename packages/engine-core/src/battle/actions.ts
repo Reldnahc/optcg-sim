@@ -838,6 +838,7 @@ export const applyBattleDecisionResponse = (
     state,
     action,
     resolveWithOriginalManifest,
+    options,
   );
   if (counterResponse !== null) {
     return withOriginalManifestResult(counterResponse, state, options);
