@@ -228,6 +228,7 @@ const continueRuntimeAndAttackTimingAfterDecision = (
 ): EngineResult => {
   const continued = continueAttackTimingDecisionResultIfReady(
     continueRuntimeAfterDecisionResult(originalState, result, options),
+    options,
   );
   return continueEndPhaseIfReady(continued, options);
 };
@@ -280,7 +281,7 @@ const continueAfterEffectDecision = (
         result,
         options,
       )
-    : continueAttackTimingDecisionResultIfReady(result);
+    : continueAttackTimingDecisionResultIfReady(result, options);
 
 const isCounterStepPassDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,

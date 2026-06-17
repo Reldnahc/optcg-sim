@@ -22,6 +22,7 @@ type EngineInternalGameState = GameState & {
 import {
   appendEvent,
   createEvent,
+  type EngineResultOptions,
   illegalAction,
   rebaseEvents,
   toEngineResult,
@@ -151,6 +152,7 @@ const withDamageDeferredEffectQueueMetadataHidden = (
 
 export const resolveSupportedVanillaBattle = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   let resolutionState = state;
   if (resolutionState.battle === undefined) {
@@ -202,7 +204,7 @@ export const resolveSupportedVanillaBattle = (
   }
   const events: EngineEvent[] = [];
   if (initialBattle.step !== "counter") {
-    const counterStep = enterCounterStep(state);
+    const counterStep = enterCounterStep(state, options);
     if (counterStep.result !== undefined) {
       return counterStep.result;
     }
@@ -221,6 +223,7 @@ export const resolveSupportedVanillaBattle = (
       state,
       nextState: resolutionState,
       events,
+      options,
     });
   }
 
@@ -283,6 +286,7 @@ export const resolveSupportedVanillaBattle = (
           targetPlayerId: target.playerId,
           attackerHasBanish,
           remainingDamagePoints,
+          options,
         });
         if (point.result !== undefined) {
           return point.result;
@@ -291,7 +295,7 @@ export const resolveSupportedVanillaBattle = (
         if (point.pausedForLifeTrigger) {
           nextState.eventJournal = [...state.eventJournal, ...events];
           assertGameStateInvariants(nextState);
-          return toEngineResult(nextState, events);
+          return toEngineResult(nextState, events, undefined, options);
         }
       }
     } else {
@@ -344,7 +348,7 @@ export const resolveSupportedVanillaBattle = (
         battleKoProcess,
       );
       if (!replacement.ok) {
-        return toEngineResult(state, [], [replacement.error]);
+        return toEngineResult(state, [], [replacement.error], options);
       }
       const replacementCandidates =
         replacement.candidates ??
@@ -357,7 +361,7 @@ export const resolveSupportedVanillaBattle = (
           replacementCandidates,
         );
         assertGameStateInvariants(paused.state);
-        return toEngineResult(paused.state, events);
+        return toEngineResult(paused.state, events, undefined, options);
       }
       const attachedDonIds = new Set(koCard.attachedDon);
       const nextCostArea = defender.costArea.map((card) =>
@@ -414,7 +418,7 @@ export const resolveSupportedVanillaBattle = (
   if (shouldDetectBattleKOTriggers) {
     const queued = queueBattleKOTriggers(nextState, state, events);
     if (!queued.ok) {
-      return toEngineResult(state, [], [queued.error]);
+      return toEngineResult(state, [], [queued.error], options);
     }
     nextState = queued.state;
     if (nextState.effectQueue.length > 0) {
@@ -422,9 +426,14 @@ export const resolveSupportedVanillaBattle = (
         ...nextState,
         eventJournal: [...state.eventJournal, ...events],
       };
-      const resolved = processEffectRuntime(runtimeState);
+      const resolved = processEffectRuntime(runtimeState, options);
       if (resolved.errors !== undefined) {
-        return toEngineResult(state, [], toErrorTuple(resolved.errors));
+        return toEngineResult(
+          state,
+          [],
+          toErrorTuple(resolved.errors),
+          options,
+        );
       }
       const runtimeEvents = rebaseEvents(
         state,
@@ -439,7 +448,12 @@ export const resolveSupportedVanillaBattle = (
     }
   }
 
-  return finalizeSupportedEndOfBattleCleanup({ state, nextState, events });
+  return finalizeSupportedEndOfBattleCleanup({
+    state,
+    nextState,
+    events,
+    options,
+  });
 };
 
 const processLeaderDamagePoint = ({
@@ -451,6 +465,7 @@ const processLeaderDamagePoint = ({
   targetPlayerId,
   attackerHasBanish,
   remainingDamagePoints,
+  options,
 }: {
   state: GameState;
   nextState: GameState;
@@ -460,6 +475,7 @@ const processLeaderDamagePoint = ({
   targetPlayerId: PlayerId;
   attackerHasBanish: boolean;
   remainingDamagePoints: number;
+  options: EngineResultOptions;
 }):
   | { state: GameState; pausedForLifeTrigger: boolean; result?: undefined }
   | { result: EngineResult; state?: undefined } => {
@@ -483,6 +499,7 @@ const processLeaderDamagePoint = ({
         events,
         immediateLosers: [targetPlayerId],
         cleanupEventPosition: "afterRuleProcessing",
+        options,
       }),
     };
   }
@@ -648,6 +665,7 @@ const processLeaderDamagePoint = ({
 
 const enterCounterStep = (
   state: GameState,
+  options: EngineResultOptions,
 ):
   | { state: GameState; events: EngineEvent[]; result?: undefined }
   | { result: EngineResult; state?: undefined; events?: undefined } => {
@@ -703,7 +721,7 @@ const enterCounterStep = (
     eventJournal: [...state.eventJournal, ...events],
   };
   assertGameStateInvariants(nextState);
-  return { result: toEngineResult(nextState, events) };
+  return { result: toEngineResult(nextState, events, undefined, options) };
 };
 
 const finalizeSupportedEndOfBattleCleanup = ({
@@ -712,12 +730,14 @@ const finalizeSupportedEndOfBattleCleanup = ({
   events,
   immediateLosers,
   cleanupEventPosition = "beforeRuleProcessing",
+  options = {},
 }: {
   state: GameState;
   nextState: GameState;
   events: EngineEvent[];
   immediateLosers?: PlayerId[];
   cleanupEventPosition?: "beforeRuleProcessing" | "afterRuleProcessing";
+  options?: EngineResultOptions;
 }): EngineResult => {
   const clearedBattleState = expireBattleDurationStateForCleanup(nextState);
   const createRuleProcessingInput = () =>
@@ -788,44 +808,58 @@ const finalizeSupportedEndOfBattleCleanup = ({
           },
         },
       ],
+      options,
     );
   }
   if (
     releasedState.effectQueue.length > 0 &&
     finalizedState.deferredTriggers.length > 0
   ) {
-    const resolved = processEffectRuntime(releasedState);
+    const resolved = processEffectRuntime(releasedState, options);
     if (resolved.errors !== undefined) {
-      return toEngineResult(state, [], toErrorTuple(resolved.errors));
+      return toEngineResult(state, [], toErrorTuple(resolved.errors), options);
     }
     assertGameStateInvariants(resolved.state);
-    return toEngineResult(resolved.state, [...events, ...resolved.events]);
+    return toEngineResult(
+      resolved.state,
+      [...events, ...resolved.events],
+      undefined,
+      options,
+    );
   }
   if (events.some((event) => event.type === "damageDealt")) {
     const runtime = continueRuntimeUntilIdle(
       state,
-      processEffectRuntime(releasedState),
+      processEffectRuntime(releasedState, options),
+      options,
     );
     if (runtime.errors !== undefined) {
-      return toEngineResult(state, [], toErrorTuple(runtime.errors));
+      return toEngineResult(state, [], toErrorTuple(runtime.errors), options);
     }
     assertGameStateInvariants(runtime.state);
-    return toEngineResult(runtime.state, [...events, ...runtime.events]);
+    return toEngineResult(
+      runtime.state,
+      [...events, ...runtime.events],
+      undefined,
+      options,
+    );
   }
 
   assertGameStateInvariants(releasedState);
-  return toEngineResult(releasedState, events);
+  return toEngineResult(releasedState, events, undefined, options);
 };
 
 export const finalizeBattleAfterReplacementResolution = (
   state: GameState,
   nextState: GameState,
   events: EngineEvent[],
+  options: EngineResultOptions = {},
 ): EngineResult =>
   finalizeSupportedEndOfBattleCleanup({
     state,
     nextState,
     events,
+    options,
   });
 
 registerLifeTriggerDamageContinuationResolver(resolveSupportedVanillaBattle);

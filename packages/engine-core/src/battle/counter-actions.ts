@@ -199,7 +199,10 @@ const canOfferCounterStepPassAction = (state: GameState): boolean => {
 export const applyCounterStepDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
-  resolveSupportedVanillaBattle: (state: GameState) => EngineResult,
+  resolveSupportedVanillaBattle: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult,
   options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
@@ -456,7 +459,7 @@ export const applyCounterStepDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete resumedState.pendingDecision;
-  const resolved = resolveSupportedVanillaBattle(resumedState);
+  const resolved = resolveSupportedVanillaBattle(resumedState, options);
   if (resolved.errors !== undefined) {
     return resolved;
   }

@@ -26,7 +26,10 @@ import { computeView } from "../view/compute-view.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 
-type BattleResolver = (state: GameState) => EngineResult;
+type BattleResolver = (
+  state: GameState,
+  options?: EngineResultOptions,
+) => EngineResult;
 
 const getBlockStepDecisionId = (
   state: GameState,
@@ -311,12 +314,12 @@ export const applyBlockStepDecisionResponse = (
       eventJournal: [...state.eventJournal, ...events],
     };
     delete activatedState.pendingDecision;
-    const resolved = resolveSupportedVanillaBattle(activatedState);
+    const resolved = resolveSupportedVanillaBattle(activatedState, options);
     if (resolved.errors !== undefined) {
       const firstError = resolved.errors[0];
       return firstError === undefined
         ? illegalAction(state, "Battle resolution failed.")
-        : toEngineResult(state, [], [firstError]);
+        : toEngineResult(state, [], [firstError], options);
     }
     return toEngineResult(
       resolved.state,
@@ -333,7 +336,7 @@ export const applyBlockStepDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete resumedState.pendingDecision;
-  const resolved = resolveSupportedVanillaBattle(resumedState);
+  const resolved = resolveSupportedVanillaBattle(resumedState, options);
   if (resolved.errors !== undefined) {
     return resolved;
   }

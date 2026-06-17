@@ -466,7 +466,10 @@ const applyDeclareAttackInternal = (
     return toEngineResult(blockState, blockEvents, undefined, options);
   }
 
-  const resolved = resolveSupportedVanillaBattle(attackTimingResult.state);
+  const resolved = resolveSupportedVanillaBattle(
+    attackTimingResult.state,
+    options,
+  );
   if (resolved.errors !== undefined) {
     const firstError = resolved.errors[0];
     return firstError === undefined
@@ -654,7 +657,7 @@ const resolveSupportedBattleWithAttackTimingMetadata = (
   options: EngineResultOptions = {},
 ): EngineResult =>
   withOriginalManifestResult(
-    resolveSupportedVanillaBattle(state),
+    resolveSupportedVanillaBattle(state, options),
     state,
     options,
   );
@@ -805,6 +808,7 @@ export const applyBattleDecisionResponse = (
         undefined,
         options,
       ),
+      options,
     );
     if (
       runtime.errors !== undefined ||
@@ -856,6 +860,7 @@ export const applyBattleDecisionResponse = (
 
 export const continueAttackTimingBattleIfReady = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   if (
     state.status.type !== "active" ||
@@ -874,8 +879,9 @@ export const continueAttackTimingBattleIfReady = (
     });
     if (decision === null) {
       return withOriginalManifestResult(
-        resolveSupportedVanillaBattle(state),
+        resolveSupportedVanillaBattle(state, options),
         state,
+        options,
       );
     }
     const events: EngineEvent[] = [];
@@ -896,19 +902,23 @@ export const continueAttackTimingBattleIfReady = (
       eventJournal: [...state.eventJournal, ...events],
     };
     assertGameStateInvariants(counterState);
-    return toEngineResult(counterState, events);
+    return toEngineResult(counterState, events, undefined, options);
   }
   if (battle.step === "block" && battle.blocker !== undefined) {
     return withOriginalManifestResult(
-      resolveSupportedVanillaBattle(state),
+      resolveSupportedVanillaBattle(state, options),
       state,
+      options,
     );
   }
   if (battle.step !== "attack") {
     return null;
   }
   if (!battleParticipantsRemainLegal(state)) {
-    return cleanupBattleAfterAttackTiming(state, toEngineResult(state, []));
+    return cleanupBattleAfterAttackTiming(
+      state,
+      toEngineResult(state, [], undefined, options),
+    );
   }
 
   const blockDecision = createBlockStepDeclineDecision(state);
@@ -934,22 +944,24 @@ export const continueAttackTimingBattleIfReady = (
       pendingDecision: blockDecision,
       eventJournal: [...state.eventJournal, ...events],
     };
-    return toEngineResult(blockState, events);
+    return toEngineResult(blockState, events, undefined, options);
   }
 
   return withOriginalManifestResult(
-    resolveSupportedVanillaBattle(state),
+    resolveSupportedVanillaBattle(state, options),
     state,
+    options,
   );
 };
 
 export const continueAttackTimingDecisionResultIfReady = (
   result: EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (result.errors !== undefined || result.state.status.type !== "active") {
     return result;
   }
-  const continued = continueAttackTimingBattleIfReady(result.state);
+  const continued = continueAttackTimingBattleIfReady(result.state, options);
   return continued === null
     ? result
     : { ...continued, events: [...result.events, ...continued.events] };
