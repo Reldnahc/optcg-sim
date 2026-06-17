@@ -10,6 +10,7 @@ import type {
 import {
   appendEffectResolvedEvent,
   createEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
@@ -61,25 +62,28 @@ export interface QueueEntryResolver {
     state: GameState,
     entries: readonly EffectQueueEntry[],
     acceptedOptionalQueueEntryIds?: ReadonlySet<QueueEntryId>,
+    options?: EngineResultOptions,
   ) => EngineResult;
 }
 
 export const createQueueEntryResolver = (
   dependencies: EffectRuntimeQueueResultsDependencies,
 ): QueueEntryResolver => {
-  const unsupportedEffectQueueResult = (state: GameState): EngineResult =>
-    createUnsupportedEffectQueueResult(
-      state,
-      dependencies.createUnsupportedPendingRuntimeWorkError,
-    );
   const queuedEffectResolvers = createQueuedEffectResolvers(dependencies);
 
   const resolveQueueEntriesInOrder = (
     state: GameState,
     entries: readonly EffectQueueEntry[],
     acceptedOptionalQueueEntryIds: ReadonlySet<QueueEntryId> = new Set(),
+    options: EngineResultOptions = {},
   ): EngineResult => {
     const originalState = state;
+    const unsupportedEffectQueueResult = (state: GameState): EngineResult =>
+      createUnsupportedEffectQueueResult(
+        state,
+        dependencies.createUnsupportedPendingRuntimeWorkError,
+        options,
+      );
     let nextState = state;
     const allEvents: EngineEvent[] = [];
     for (const selected of entries) {
@@ -205,12 +209,14 @@ export const createQueueEntryResolver = (
       );
       if (sequenceFrame !== undefined) {
         return sequenceFrame.ok
-          ? toEngineResult(sequenceFrame.state, [
-              ...allEvents,
-              ...sequenceFrame.events,
-            ])
+          ? toEngineResult(
+              sequenceFrame.state,
+              [...allEvents, ...sequenceFrame.events],
+              undefined,
+              options,
+            )
           : sequenceFrame.error !== undefined
-            ? toEngineResult(originalState, [], [sequenceFrame.error])
+            ? toEngineResult(originalState, [], [sequenceFrame.error], options)
             : unsupportedEffectQueueResult(originalState);
       }
       const primitiveBody = resolveQueuedPrimitiveBody(
@@ -242,10 +248,12 @@ export const createQueueEntryResolver = (
           trashFromHandDecision.effect,
         );
         return trashDecision.ok
-          ? toEngineResult(trashDecision.state, [
-              ...allEvents,
-              ...trashDecision.events,
-            ])
+          ? toEngineResult(
+              trashDecision.state,
+              [...allEvents, ...trashDecision.events],
+              undefined,
+              options,
+            )
           : unsupportedEffectQueueResult(originalState);
       }
       let moveCardsEffect =
@@ -459,10 +467,12 @@ export const createQueueEntryResolver = (
                   selectedForBodyResolution,
                 ],
               };
-          return toEngineResult(pendingState, [
-            ...allEvents,
-            ...resolution.events,
-          ]);
+          return toEngineResult(
+            pendingState,
+            [...allEvents, ...resolution.events],
+            undefined,
+            options,
+          );
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);
@@ -574,7 +584,7 @@ export const createQueueEntryResolver = (
       allEvents.push(...cleanup.events);
 
       if (nextState.status.type !== "active") {
-        return toEngineResult(nextState, allEvents);
+        return toEngineResult(nextState, allEvents, undefined, options);
       }
 
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
@@ -591,7 +601,7 @@ export const createQueueEntryResolver = (
       }
     }
 
-    return toEngineResult(nextState, allEvents);
+    return toEngineResult(nextState, allEvents, undefined, options);
   };
 
   return { resolveQueueEntriesInOrder };

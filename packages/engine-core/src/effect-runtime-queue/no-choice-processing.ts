@@ -1,6 +1,6 @@
 import type { EngineResult, GameState, QueueEntryId } from "@optcg/types";
 
-import { toEngineResult } from "../action-results.js";
+import { type EngineResultOptions, toEngineResult } from "../action-results.js";
 import {
   hasExactDamageDeferredQueue,
   isActiveDoubleAttackDamageProcess,
@@ -22,10 +22,12 @@ export interface NoChoiceEffectQueueProcessor {
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
     acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   readonly processEffectRuntimeAfterTriggerOrderChoice: (
     state: GameState,
     orderedIds: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
 }
 
@@ -33,10 +35,14 @@ export const createNoChoiceEffectQueueProcessor = (
   dependencies: EffectRuntimeQueueResultsDependencies,
   queueEntryResolver: QueueEntryResolver,
 ): NoChoiceEffectQueueProcessor => {
-  const unsupportedEffectQueueResult = (state: GameState): EngineResult =>
+  const unsupportedEffectQueueResult = (
+    state: GameState,
+    options: EngineResultOptions,
+  ): EngineResult =>
     createUnsupportedEffectQueueResult(
       state,
       dependencies.createUnsupportedPendingRuntimeWorkError,
+      options,
     );
 
   const queuedEffectResolvers = createQueuedEffectResolvers(dependencies);
@@ -45,9 +51,10 @@ export const createNoChoiceEffectQueueProcessor = (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
     acceptedOptionalQueueEntryIds: readonly QueueEntryId[] = [],
+    options: EngineResultOptions = {},
   ): EngineResult => {
     if (state.pendingDecision !== undefined) {
-      return toEngineResult(state, []);
+      return toEngineResult(state, [], undefined, options);
     }
     if (
       state.deferredTriggers.length > 0 &&
@@ -57,12 +64,12 @@ export const createNoChoiceEffectQueueProcessor = (
         state,
         queuedEffectResolvers.resolveQueuedEffectDefinition,
       )
-        ? toEngineResult(state, [])
-        : unsupportedEffectQueueResult(state);
+        ? toEngineResult(state, [], undefined, options)
+        : unsupportedEffectQueueResult(state, options);
     }
     const ordering = evaluateQueueOrdering(state.effectQueue);
     if (!ordering.ok) {
-      return unsupportedEffectQueueResult(state);
+      return unsupportedEffectQueueResult(state, options);
     }
 
     const earliestChoiceGroup = ordering.earliestChoiceGroup;
@@ -75,12 +82,13 @@ export const createNoChoiceEffectQueueProcessor = (
         acceptedOptionalIds.has(entry.id),
       );
       if (acceptedEntry === undefined) {
-        return unsupportedEffectQueueResult(state);
+        return unsupportedEffectQueueResult(state, options);
       }
       const resolved = queueEntryResolver.resolveQueueEntriesInOrder(
         state,
         [acceptedEntry],
         acceptedOptionalIds,
+        options,
       );
       if (
         resolved.errors !== undefined ||
@@ -88,7 +96,12 @@ export const createNoChoiceEffectQueueProcessor = (
       ) {
         return resolved;
       }
-      const continued = processNoChoiceEffectQueue(resolved.state);
+      const continued = processNoChoiceEffectQueue(
+        resolved.state,
+        undefined,
+        [],
+        options,
+      );
       return {
         ...continued,
         events: [...resolved.events, ...continued.events],
@@ -105,7 +118,7 @@ export const createNoChoiceEffectQueueProcessor = (
             orderedCurrentChoiceGroupIds,
           )
         ) {
-          return unsupportedEffectQueueResult(state);
+          return unsupportedEffectQueueResult(state, options);
         }
         const selectedById = new Map(
           earliestChoiceGroup.entries.map((entry) => [entry.id, entry]),
@@ -122,6 +135,7 @@ export const createNoChoiceEffectQueueProcessor = (
           state,
           selectedEntries,
           acceptedOptionalIds,
+          options,
         );
         if (
           resolved.errors !== undefined ||
@@ -129,7 +143,12 @@ export const createNoChoiceEffectQueueProcessor = (
         ) {
           return resolved;
         }
-        const continued = processNoChoiceEffectQueue(resolved.state);
+        const continued = processNoChoiceEffectQueue(
+          resolved.state,
+          undefined,
+          [],
+          options,
+        );
         return {
           ...continued,
           events: [...resolved.events, ...continued.events],
@@ -145,6 +164,7 @@ export const createNoChoiceEffectQueueProcessor = (
           state,
           [noChoiceBeforeChoice],
           new Set(acceptedOptionalQueueEntryIds),
+          options,
         );
         if (
           resolved.errors !== undefined ||
@@ -152,7 +172,12 @@ export const createNoChoiceEffectQueueProcessor = (
         ) {
           return resolved;
         }
-        const continued = processNoChoiceEffectQueue(resolved.state);
+        const continued = processNoChoiceEffectQueue(
+          resolved.state,
+          undefined,
+          [],
+          options,
+        );
         return {
           ...continued,
           events: [...resolved.events, ...continued.events],
@@ -163,17 +188,18 @@ export const createNoChoiceEffectQueueProcessor = (
 
     const ordered = orderNoChoiceQueueEntries(ordering.groups);
     if (!ordered.ok) {
-      return unsupportedEffectQueueResult(state);
+      return unsupportedEffectQueueResult(state, options);
     }
 
     const firstEntry = ordered.entries[0];
     if (firstEntry === undefined) {
-      return toEngineResult(state, []);
+      return toEngineResult(state, [], undefined, options);
     }
     const resolved = queueEntryResolver.resolveQueueEntriesInOrder(
       state,
       [firstEntry],
       new Set(acceptedOptionalQueueEntryIds),
+      options,
     );
     if (
       resolved.errors !== undefined ||
@@ -181,7 +207,12 @@ export const createNoChoiceEffectQueueProcessor = (
     ) {
       return resolved;
     }
-    const continued = processNoChoiceEffectQueue(resolved.state);
+    const continued = processNoChoiceEffectQueue(
+      resolved.state,
+      undefined,
+      [],
+      options,
+    );
     return {
       ...continued,
       events: [...resolved.events, ...continued.events],
@@ -191,7 +222,8 @@ export const createNoChoiceEffectQueueProcessor = (
   const processEffectRuntimeAfterTriggerOrderChoice = (
     state: GameState,
     orderedIds: readonly QueueEntryId[],
-  ): EngineResult => processNoChoiceEffectQueue(state, orderedIds);
+    options: EngineResultOptions = {},
+  ): EngineResult => processNoChoiceEffectQueue(state, orderedIds, [], options);
 
   return {
     processNoChoiceEffectQueue,

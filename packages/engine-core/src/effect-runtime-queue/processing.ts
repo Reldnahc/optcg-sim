@@ -13,6 +13,7 @@ import type {
   CardRef,
 } from "@optcg/types";
 
+import type { EngineResultOptions } from "../action-results.js";
 import { createEffectRuntimeQueueResults } from "./results.js";
 import type {
   EffectQueuePendingRuntimeWork,
@@ -50,20 +51,24 @@ export interface EffectRuntimeQueueProcessing {
     resolvedEntry: EffectQueueEntry,
     allEvents: EngineEvent[],
     resolutionEvents: readonly EngineEvent[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   continueSelectedTargetEffect: (
     state: GameState,
     decision: SelectTargetsDecision,
     selectedTargets: readonly CardRef[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   processNoChoiceEffectQueue: (
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
     acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   processEffectRuntimeAfterTriggerOrderChoice: (
     state: GameState,
     orderedIds: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   resumePlaySourceOverflowDecision: (
     originalState: GameState,
@@ -82,7 +87,12 @@ export const createEffectRuntimeQueueProcessing = (
   });
 
   return {
-    continueSelectedTargetEffect: (state, decision, selectedTargets) => {
+    continueSelectedTargetEffect: (
+      state,
+      decision,
+      selectedTargets,
+      options = {},
+    ) => {
       const resolved = targetDecisions.continueSelectedTargetEffect(
         state,
         decision,
@@ -97,7 +107,12 @@ export const createEffectRuntimeQueueProcessing = (
       if (resolved.state.pendingDecision !== undefined) {
         return resolved;
       }
-      const continued = queueResults.processNoChoiceEffectQueue(resolved.state);
+      const continued = queueResults.processNoChoiceEffectQueue(
+        resolved.state,
+        undefined,
+        [],
+        options,
+      );
       return {
         ...continued,
         events: [...resolved.events, ...continued.events],
@@ -111,6 +126,7 @@ export const createEffectRuntimeQueueProcessing = (
       resolvedEntry,
       allEvents,
       resolutionEvents,
+      options = {},
     ) => {
       const resolved = targetDecisions.finalizeSelectedTargetEffectResolution(
         state,
@@ -125,7 +141,12 @@ export const createEffectRuntimeQueueProcessing = (
       ) {
         return resolved;
       }
-      const continued = queueResults.processNoChoiceEffectQueue(resolved.state);
+      const continued = queueResults.processNoChoiceEffectQueue(
+        resolved.state,
+        undefined,
+        [],
+        options,
+      );
       return {
         ...continued,
         events: [...resolved.events, ...continued.events],

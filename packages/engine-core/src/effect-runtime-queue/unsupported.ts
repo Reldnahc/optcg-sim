@@ -1,11 +1,12 @@
 import type { EngineResult, GameState } from "@optcg/types";
 
-import { toEngineResult } from "../action-results.js";
+import { type EngineResultOptions, toEngineResult } from "../action-results.js";
 import type { CreateUnsupportedPendingRuntimeWorkError } from "./target-decisions.js";
 
 export const createUnsupportedEffectQueueResult = (
   state: GameState,
   createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError,
+  options: EngineResultOptions = {},
 ): EngineResult =>
   toEngineResult(
     state,
@@ -16,4 +17,5 @@ export const createUnsupportedEffectQueueResult = (
         count: state.effectQueue.length,
       }),
     ],
+    options,
   );

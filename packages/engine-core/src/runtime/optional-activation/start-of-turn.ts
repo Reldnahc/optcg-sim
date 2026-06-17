@@ -332,6 +332,6 @@ export const applyStartOfTurnAction = (
     effectQueue: [...state.effectQueue, entry],
     eventJournal: [...state.eventJournal, ...queuedEvents],
   };
-  const resolved = processEffectRuntime(queuedState);
+  const resolved = processEffectRuntime(queuedState, options);
   return prependEventsToEngineResult(resolved, queuedEvents, options);
 };

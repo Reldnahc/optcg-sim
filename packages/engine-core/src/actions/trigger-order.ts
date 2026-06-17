@@ -217,6 +217,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
   const resumed = processEffectRuntimeAfterTriggerOrderChoice(
     nextState,
     orderedIds,
+    options,
   );
   return prependEventsToEngineResult(resumed, events, options);
 };

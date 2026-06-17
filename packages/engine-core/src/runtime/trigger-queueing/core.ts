@@ -9,6 +9,7 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import type { EngineResultOptions } from "../../action-results.js";
 import { createAttackTriggerQueueing } from "./attack.js";
 import { createKOTriggerQueueing } from "./ko.js";
 import { createMainEventTriggerQueueing } from "./main-event.js";
@@ -152,7 +153,10 @@ export interface EffectRuntimeTriggerQueueingHelpers {
     eventBaseState: GameState,
     events: EngineEvent[],
   ) => QueueBattleKOTriggersResult;
-  queueOnPlayTriggers: (state: GameState) => EngineResult | undefined;
+  queueOnPlayTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
   queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;

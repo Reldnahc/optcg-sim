@@ -956,6 +956,8 @@ export const applyOptionalActivationDecisionResponse = (
     const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
     const resumed = processEffectRuntimeAfterOptionalActivationDecline(
       cleanup.state,
+      undefined,
+      options,
     );
     return prependEventsToEngineResult(
       resumed,
@@ -970,6 +972,7 @@ export const applyOptionalActivationDecisionResponse = (
     orderedCurrentChoiceGroupIds(state, selected) === undefined
       ? undefined
       : [selected.id],
+    options,
   );
   return prependEventsToEngineResult(resumed, events, options);
 };

@@ -7,6 +7,7 @@ import type {
   QueueEntryId,
 } from "@optcg/types";
 
+import type { EngineResultOptions } from "../action-results.js";
 import type {
   CreateUnsupportedPendingRuntimeWorkError,
   EffectRuntimeQueueTargetDecisions,
@@ -36,10 +37,12 @@ export interface EffectRuntimeQueueResults {
     state: GameState,
     orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
     acceptedOptionalQueueEntryIds?: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   processEffectRuntimeAfterTriggerOrderChoice: (
     state: GameState,
     orderedIds: readonly QueueEntryId[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   resumePlaySourceOverflowDecision: (
     originalState: GameState,

@@ -16,7 +16,12 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
   };
 };
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import { reifyCardRef } from "./actions/state.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/processing.js";
 import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
@@ -393,24 +398,38 @@ const toErrorTuple = (
 
 export const processDefenderOpponentAttackTiming = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const queued = queueOnOpponentAttackTriggers(state);
   if (queued === undefined) {
-    return toEngineResult(state, []);
+    return toEngineResult(state, [], undefined, options);
   }
   if (queued.errors !== undefined) {
     return queued;
   }
 
-  const resolved = processNoChoiceEffectQueue(queued.state);
+  const resolved = processNoChoiceEffectQueue(
+    queued.state,
+    undefined,
+    [],
+    options,
+  );
   if (resolved.errors !== undefined) {
-    return toEngineResult(state, [], toErrorTuple(resolved.errors));
+    return toEngineResult(state, [], toErrorTuple(resolved.errors), options);
   }
-  return toEngineResult(resolved.state, [...queued.events, ...resolved.events]);
+  return toEngineResult(
+    resolved.state,
+    [...queued.events, ...resolved.events],
+    undefined,
+    options,
+  );
 };
 
-export const processEffectRuntime = (state: GameState): EngineResult => {
-  const queuedFromOnPlay = queueOnPlayTriggers(state);
+export const processEffectRuntime = (
+  state: GameState,
+  options: EngineResultOptions = {},
+): EngineResult => {
+  const queuedFromOnPlay = queueOnPlayTriggers(state, options);
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
   }
@@ -463,16 +482,23 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   );
   if (resumedSequenceQuantity !== undefined) {
     if (!resumedSequenceQuantity.ok) {
-      return toEngineResult(state, [], [resumedSequenceQuantity.error]);
+      return toEngineResult(
+        state,
+        [],
+        [resumedSequenceQuantity.error],
+        options,
+      );
     }
     return toEngineResult(
       resumedSequenceQuantity.state,
       resumedSequenceQuantity.events,
+      undefined,
+      options,
     );
   }
   if (state.deferredTriggers.length > 0) {
     if (isSupportedDamageDeferredEffectQueueState(state)) {
-      return toEngineResult(state, []);
+      return toEngineResult(state, [], undefined, options);
     }
     return toEngineResult(
       state,
@@ -483,34 +509,46 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
           count: state.deferredTriggers.length,
         }),
       ],
+      options,
     );
   }
   const work = detectPendingRuntimeWork(state);
   if (work === undefined) {
-    return toEngineResult(state, []);
+    return toEngineResult(state, [], undefined, options);
   }
   if (work.kind === "effectQueue") {
-    return processNoChoiceEffectQueue(state);
+    return processNoChoiceEffectQueue(state, undefined, [], options);
   }
-  return toEngineResult(state, [], [unsupportedPendingRuntimeWorkError(work)]);
+  return toEngineResult(
+    state,
+    [],
+    [unsupportedPendingRuntimeWorkError(work)],
+    options,
+  );
 };
 
 export const processEffectRuntimeAfterTriggerOrderChoice = (
   state: GameState,
   orderedIds: readonly QueueEntryId[],
-): EngineResult => processNoChoiceEffectQueue(state, orderedIds);
+  options: EngineResultOptions = {},
+): EngineResult => processNoChoiceEffectQueue(state, orderedIds, [], options);
 
 export const processEffectRuntimeAfterOptionalActivationDecline = (
   state: GameState,
   orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+  options: EngineResultOptions = {},
 ): EngineResult =>
-  processNoChoiceEffectQueue(state, orderedCurrentChoiceGroupIds);
+  processNoChoiceEffectQueue(state, orderedCurrentChoiceGroupIds, [], options);
 
 export const processEffectRuntimeAfterOptionalActivationAccept = (
   state: GameState,
   acceptedQueueEntryId: QueueEntryId,
   orderedCurrentChoiceGroupIds?: readonly QueueEntryId[],
+  options: EngineResultOptions = {},
 ): EngineResult =>
-  processNoChoiceEffectQueue(state, orderedCurrentChoiceGroupIds, [
-    acceptedQueueEntryId,
-  ]);
+  processNoChoiceEffectQueue(
+    state,
+    orderedCurrentChoiceGroupIds,
+    [acceptedQueueEntryId],
+    options,
+  );

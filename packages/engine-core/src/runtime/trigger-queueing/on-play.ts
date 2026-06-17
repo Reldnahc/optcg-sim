@@ -8,7 +8,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import {
   isCardEffectInvalidated,
   isEffectBlockInvalidated,
@@ -50,9 +54,15 @@ export const createOnPlayTriggerQueueing = (
     reason: OnPlayTriggerQueueingFailureReason,
   ) => EngineError,
 ): {
-  queueOnPlayTriggers: (state: GameState) => EngineResult | undefined;
+  queueOnPlayTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
 } => {
-  const queueOnPlayTriggers = (state: GameState): EngineResult | undefined => {
+  const queueOnPlayTriggers = (
+    state: GameState,
+    options: EngineResultOptions = {},
+  ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
     }
@@ -102,6 +112,7 @@ export const createOnPlayTriggerQueueing = (
           state,
           [],
           [onPlayTriggerQueueingError("invalid-card-played-event")],
+          options,
         );
       }
       if (payload.category !== "character" && payload.category !== "stage") {
@@ -123,6 +134,7 @@ export const createOnPlayTriggerQueueing = (
             state,
             [],
             [onPlayTriggerQueueingError("source-presence-failed")],
+            options,
           );
         }
         continue;
@@ -135,6 +147,7 @@ export const createOnPlayTriggerQueueing = (
             state,
             [],
             [onPlayTriggerQueueingError("source-presence-failed")],
+            options,
           );
         }
         continue;
@@ -148,6 +161,7 @@ export const createOnPlayTriggerQueueing = (
           state,
           [],
           [onPlayTriggerQueueingError("missing-card-definition")],
+          options,
         );
       }
       if (resolved.support.status !== "implemented-dsl") {
@@ -159,7 +173,7 @@ export const createOnPlayTriggerQueueing = (
         state.cardManifest,
       );
       if (!lookup.ok) {
-        return toEngineResult(state, [], [lookup.error]);
+        return toEngineResult(state, [], [lookup.error], options);
       }
       const onPlayEffects = lookup.definition.effects.filter(
         (effect) =>
@@ -177,6 +191,7 @@ export const createOnPlayTriggerQueueing = (
           state,
           [],
           [onPlayTriggerQueueingError("unsupported-on-play-definition")],
+          options,
         );
       }
       if (matching.length !== 1) {
@@ -184,6 +199,7 @@ export const createOnPlayTriggerQueueing = (
           state,
           [],
           [onPlayTriggerQueueingError("multiple-on-play-effects")],
+          options,
         );
       }
       for (const effectBlock of matching) {
@@ -239,7 +255,7 @@ export const createOnPlayTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueOnPlayTriggers };

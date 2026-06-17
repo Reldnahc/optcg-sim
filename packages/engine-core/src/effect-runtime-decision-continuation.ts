@@ -42,7 +42,7 @@ export const continueRuntimeUntilIdle = (
     ) {
       return current;
     }
-    const next = processEffectRuntime(current.state);
+    const next = processEffectRuntime(current.state, options);
     if (next.errors !== undefined) {
       return toEngineResult(
         originalState,
