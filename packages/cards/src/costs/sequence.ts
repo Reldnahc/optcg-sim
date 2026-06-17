@@ -307,10 +307,11 @@ function applyInheritedAction(
   text: string,
   inheritedAction: "rest" | undefined,
 ): string {
-  if (
-    inheritedAction === undefined ||
-    /^(?:rest|trash|place|reveal|turn)\b/i.test(text)
-  ) {
+  const startsWithExplicitCostAction =
+    /^(?:K\.O\.|(?:DON!!|add|give|place|rest|return|reveal|trash|turn)\b)/i.test(
+      text,
+    );
+  if (inheritedAction === undefined || startsWithExplicitCostAction) {
     return text;
   }
 

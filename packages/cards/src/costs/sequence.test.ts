@@ -336,6 +336,45 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("does not inherit rest into explicit Life-to-hand add costs", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "rest this Character and add 1 card from the top or bottom of your Life cards to your hand",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "restSelf" },
+          {
+            type: "moveCards",
+            count: 1,
+            chooser: "self",
+            from: { player: "self", zone: "life", position: "topOrBottom" },
+            to: { player: "self", zone: "hand" },
+            order: "chooserChoice",
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCharacter",
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:life",
+        "position:top",
+        "position:bottom",
+        "destination:hand",
+        "order:original",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses reveal-from-hand costs with reusable hand card filters", () => {
     expect(
       parseOptionalCostSequence({
