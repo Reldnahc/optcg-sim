@@ -9,6 +9,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  assertGameStateInvariantsIfEnabled,
   createEvent,
   type EngineResultOptions,
   illegalAction,
@@ -17,7 +18,6 @@ import {
 } from "../action-results.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { applyDonAttachment } from "../runtime/primitives/don-attachment.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import { isMatchActive, targetMatchesCard, toCardRef } from "./state.js";
 
 const getAttachTargets = (state: GameState, playerId: PlayerId): CardRef[] => {
@@ -30,6 +30,12 @@ const getAttachTargets = (state: GameState, playerId: PlayerId): CardRef[] => {
     ...player.characters.map((card) => toCardRef(card, playerId)),
   ];
 };
+
+const profileAttachDonSpan = <T>(
+  options: EngineResultOptions,
+  name: string,
+  fn: () => T,
+): T => options.profileSpan?.(name, fn) ?? fn();
 
 export const getAttachDonLegalActions = (
   state: GameState,
@@ -127,13 +133,18 @@ export const applyAttachDon = (
       "attachDon target must be turn player's leader or character.",
     );
   }
-  const attached = applyDonAttachment({
-    selectedDonInstanceIds: [donor.instanceId],
-    sourcePlayerId: turnPlayerId,
-    sourceState: "active",
-    state,
-    target: exactTarget,
-  });
+  const attached = profileAttachDonSpan(
+    options,
+    "engine:attachDon:applyDonAttachment",
+    () =>
+      applyDonAttachment({
+        selectedDonInstanceIds: [donor.instanceId],
+        sourcePlayerId: turnPlayerId,
+        sourceState: "active",
+        state,
+        target: exactTarget,
+      }),
+  );
   if (!attached.ok) {
     return illegalAction(state, attached.reason);
   }
@@ -145,14 +156,21 @@ export const applyAttachDon = (
     players: attached.players,
   };
   const events: EngineEvent[] = [...attached.events];
-  const nextWithRules = applyRuleProcessingCheckpoint({
-    state: nextState,
-    events,
-    phase: "main",
-    createEvent: (seqOffset, type, payload, visibility) =>
-      createEvent(state, seqOffset, type, payload, visibility),
+  const nextWithRules = profileAttachDonSpan(
+    options,
+    "engine:attachDon:ruleProcessing",
+    () =>
+      applyRuleProcessingCheckpoint({
+        state: nextState,
+        events,
+        phase: "main",
+        createEvent: (seqOffset, type, payload, visibility) =>
+          createEvent(state, seqOffset, type, payload, visibility),
+      }),
+  );
+  profileAttachDonSpan(options, "engine:attachDon:appendEventJournal", () => {
+    nextWithRules.eventJournal = [...state.eventJournal, ...events];
   });
-  nextWithRules.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextWithRules);
+  assertGameStateInvariantsIfEnabled(nextWithRules, options);
   return toEngineResult(nextWithRules, events, undefined, options);
 };

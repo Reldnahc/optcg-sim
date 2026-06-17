@@ -10,6 +10,42 @@ import {
   toCardId,
 } from "../action-test-fixtures.js";
 
+const createCorruptAttachDonState = () => {
+  const state = createActiveState();
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const don = must(p1State.donDeck[0], "don");
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...don,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  const p2State = must(state.players[p2], "p2");
+  const opponentHandCard = must(p2State.hand[0], "opponent hand");
+  p2State.hand[0] = {
+    ...opponentHandCard,
+    zone: { ...opponentHandCard.zone, index: 99 },
+  };
+  return {
+    state,
+    action: {
+      type: "attachDon" as const,
+      donInstanceId: don.instanceId,
+      target: {
+        instanceId: p1State.leader.instanceId,
+        cardId: p1State.leader.cardId,
+        playerId: p1,
+      },
+    },
+  };
+};
+
 test("applyAction attaches active DON!! to own leader/character during main phase", () => {
   const state = createActiveState();
   state.turn.phase = "main";
@@ -180,4 +216,20 @@ test("applyAction rejects illegal attachDon variants", () => {
     },
   });
   assert.equal(malformedTargetZone.errors?.[0]?.type, "illegalAction");
+});
+
+test("live attachDon actions can skip invariant validation", () => {
+  const defaultValidation = createCorruptAttachDonState();
+  assert.throws(() => {
+    applyAttachDon(defaultValidation.state, defaultValidation.action);
+  });
+  const liveValidation = createCorruptAttachDonState();
+
+  const result = applyAttachDon(liveValidation.state, liveValidation.action, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
 });

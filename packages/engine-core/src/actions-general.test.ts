@@ -118,6 +118,9 @@ test("applyAction profiles accepted dispatcher branches and preserves omitted st
   assert.deepEqual(spans.names, [
     "engine:applyAction",
     "engine:applyAction:attachDon",
+    "engine:attachDon:applyDonAttachment",
+    "engine:attachDon:ruleProcessing",
+    "engine:attachDon:appendEventJournal",
   ]);
 });
 
