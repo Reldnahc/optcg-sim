@@ -407,6 +407,38 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
     };
   }
 
+  const opponentCharacter =
+    /^your opponent's (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your effect)?)$/iu.exec(
+      normalized,
+    );
+  const opponentFilterText = opponentCharacter?.groups?.["filter"];
+  const opponentRemovalText = opponentCharacter?.groups?.["removal"];
+  if (
+    opponentFilterText !== undefined &&
+    opponentRemovalText !== undefined &&
+    containsCharacterCategoryText(opponentFilterText)
+  ) {
+    const parsed = parseCharacterFilter(opponentFilterText);
+    const source = parseFieldRemovalSource(opponentRemovalText);
+    if (parsed === undefined || source === undefined) {
+      return undefined;
+    }
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        player: "opponent",
+        filter: parsed.filter,
+        ...source.trigger,
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:opponent",
+        ...parsed.evidence,
+        ...source.evidence,
+      ],
+    };
+  }
+
   const yourCharacter =
     /^(?:one of your|your) (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your opponent's effect(?: or K\.O\.'d)?)?)$/iu.exec(
       normalized,
