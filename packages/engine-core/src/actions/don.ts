@@ -92,22 +92,30 @@ export const applyAttachDon = (
     return illegalAction(state, "Turn player does not exist.");
   }
 
-  const donIndex = player.costArea.findIndex(
-    (card) =>
-      card.instanceId === action.donInstanceId &&
-      card.state === "active" &&
-      card.owner === turnPlayerId &&
-      card.controller === turnPlayerId,
-  );
-  if (donIndex < 0) {
+  const selectedDonInstanceIds =
+    action.selectedDonInstanceIds ??
+    (action.donInstanceId === undefined ? [] : [action.donInstanceId]);
+  if (selectedDonInstanceIds.length === 0) {
     return illegalAction(
       state,
       "attachDon requires an active DON!! in turn player's cost area.",
     );
   }
-  const donor = player.costArea[donIndex];
-  if (donor === undefined) {
-    return illegalAction(state, "attachDon donor not found.");
+  const activeDonIds = new Set(
+    player.costArea
+      .filter(
+        (card) =>
+          card.state === "active" &&
+          card.owner === turnPlayerId &&
+          card.controller === turnPlayerId,
+      )
+      .map((card) => card.instanceId),
+  );
+  if (selectedDonInstanceIds.some((donId) => !activeDonIds.has(donId))) {
+    return illegalAction(
+      state,
+      "attachDon requires an active DON!! in turn player's cost area.",
+    );
   }
 
   const isLeaderTarget =
@@ -138,7 +146,7 @@ export const applyAttachDon = (
     "engine:attachDon:applyDonAttachment",
     () =>
       applyDonAttachment({
-        selectedDonInstanceIds: [donor.instanceId],
+        selectedDonInstanceIds,
         sourcePlayerId: turnPlayerId,
         sourceState: "active",
         state,

@@ -206,6 +206,7 @@ export interface SubmitVisibleActionInput {
   playerId: PlayerId;
   actionIndex: number;
   expectedStateSeq: number;
+  selectedDonInstanceIds?: InstanceId[];
 }
 
 export interface RespondToDecisionInput {

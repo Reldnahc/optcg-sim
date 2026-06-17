@@ -531,6 +531,9 @@ const toPublicLegalAction = (
         effectId: action.effectId,
       };
     case "attachDon": {
+      if (action.donInstanceId === undefined) {
+        return undefined;
+      }
       const don = findSelfCostAreaCardRef(
         state,
         playerId,

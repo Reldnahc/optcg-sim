@@ -2,6 +2,7 @@ import type {
   DecisionId,
   DecisionResponse,
   GameState,
+  InstanceId,
   MatchCardManifest,
   MatchId,
   PlayerId,
@@ -69,6 +70,7 @@ export type SessionActionRequest =
       readonly playerId: PlayerId;
       readonly actionIndex: number;
       readonly expectedStateSeq?: number;
+      readonly selectedDonInstanceIds?: readonly InstanceId[];
     }
   | {
       readonly type: "respondToDecision";

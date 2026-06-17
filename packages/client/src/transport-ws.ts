@@ -285,6 +285,9 @@ export const createDevWebSocketMatchTransport = ({
           playerId: input.playerId,
           actionIndex: input.actionIndex,
           expectedStateSeq: input.expectedStateSeq,
+          ...(input.selectedDonInstanceIds === undefined
+            ? {}
+            : { selectedDonInstanceIds: input.selectedDonInstanceIds }),
         };
         return requestHash(request).then((hash) =>
           sendRequest(

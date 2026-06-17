@@ -316,7 +316,12 @@ export type Action =
       effectId: EffectId;
       costPayment?: PaymentSpec;
     }
-  | { type: "attachDon"; donInstanceId: InstanceId; target: CardRef }
+  | {
+      type: "attachDon";
+      donInstanceId?: InstanceId;
+      selectedDonInstanceIds?: InstanceId[];
+      target: CardRef;
+    }
   | { type: "declareAttack"; attacker: CardRef; target: CardRef }
   | { type: "activateBlocker"; blocker: CardRef }
   | { type: "useCounter"; cardInstanceId: InstanceId; target: CardRef }

@@ -107,6 +107,7 @@ export interface ApplyLocalDevActionInput {
   playerId: PlayerId;
   actionIndex: number;
   expectedStateSeq?: number;
+  selectedDonInstanceIds?: readonly InstanceId[];
   includeSnapshot?: boolean;
 }
 
@@ -125,7 +126,10 @@ export interface ApplyLocalDevActionResult {
 }
 
 type ExecutableDevAction = DevVisibleAction & {
-  apply: (state: GameState) => EngineResult;
+  apply: (
+    state: GameState,
+    input?: Pick<ApplyLocalDevActionInput, "selectedDonInstanceIds">,
+  ) => EngineResult;
   decisionId?: DecisionId;
   response?: DecisionResponse;
 };
@@ -495,6 +499,9 @@ const actionAttachment = (
   action: LegalAction,
 ): DevVisibleAction["attachment"] | undefined => {
   if (action.type === "attachDon") {
+    if (action.donInstanceId === undefined) {
+      return undefined;
+    }
     return {
       donInstanceId: action.donInstanceId,
       targetInstanceId: action.target.instanceId,
@@ -706,8 +713,19 @@ const executableActions = (
       legalActions.map(
         (action): Omit<ExecutableDevAction, "index"> => ({
           ...visibleAction(state, action),
-          apply: (currentState) =>
-            applyAction(currentState, action, liveEngineOptions),
+          apply: (currentState, input) =>
+            applyAction(
+              currentState,
+              action.type === "attachDon" &&
+                input?.selectedDonInstanceIds !== undefined &&
+                input.selectedDonInstanceIds.length > 0
+                ? {
+                    ...action,
+                    selectedDonInstanceIds: [...input.selectedDonInstanceIds],
+                  }
+                : action,
+              liveEngineOptions,
+            ),
         }),
       ),
   );
@@ -861,7 +879,11 @@ export const applyLocalDevAction = (
     cloneGameState(match.state),
   );
   const actionResult = recordActionTimingSpan("actionApply", () =>
-    action.apply(match.state),
+    action.apply(match.state, {
+      ...(input.selectedDonInstanceIds === undefined
+        ? {}
+        : { selectedDonInstanceIds: input.selectedDonInstanceIds }),
+    }),
   );
   const mulliganResult = recordActionTimingSpan(
     "startMulliganAfterSetupIfReady",

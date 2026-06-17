@@ -102,6 +102,46 @@ test("applyAction attaches active DON!! to own leader/character during main phas
   );
 });
 
+test("applyAction attaches multiple selected DON!! to one target as one action", () => {
+  const state = createActiveState();
+  state.turn.phase = "main";
+  const turnPlayer = must(state.players[p1], "p1");
+  const selectedDon = turnPlayer.donDeck.slice(0, 2);
+  assert.equal(selectedDon.length, 2);
+  turnPlayer.donDeck = turnPlayer.donDeck.slice(2).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  turnPlayer.costArea = selectedDon.map((don, index) => ({
+    ...don,
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+    state: "active",
+  }));
+  const selectedDonIds = selectedDon.map((don) => don.instanceId);
+
+  const result = applyAttachDon(state, {
+    type: "attachDon",
+    selectedDonInstanceIds: selectedDonIds,
+    target: {
+      instanceId: turnPlayer.leader.instanceId,
+      cardId: turnPlayer.leader.cardId,
+      playerId: p1,
+    },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    must(result.state.players[p1], "p1").leader.attachedDon,
+    selectedDonIds,
+  );
+  assert.equal(
+    result.events.filter((event) => event.type === "donAttached").length,
+    2,
+  );
+  assert.equal(result.state.seq, state.seq + 1);
+  assert.equal(result.state.actionSeq, state.actionSeq + 1);
+});
+
 test("applyAction rejects illegal attachDon variants", () => {
   const base = createActiveState();
   base.turn.phase = "main";

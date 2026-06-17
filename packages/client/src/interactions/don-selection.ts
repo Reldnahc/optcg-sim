@@ -29,6 +29,29 @@ export const findAttachDonActionIndex = (
       action.attachment.targetInstanceId === (targetInstanceId as InstanceId),
   )?.index;
 
+export const findSelectedDonAttachActionIndex = (
+  actions: readonly ClientVisibleAction[],
+  selectedDonInstanceIds: readonly string[],
+  targetInstanceId: string,
+): number | undefined => {
+  if (selectedDonInstanceIds.length === 0) {
+    return undefined;
+  }
+  if (
+    !selectedDonInstanceIds.every(
+      (donInstanceId) =>
+        findAttachDonActionIndex(actions, donInstanceId, targetInstanceId) !==
+        undefined,
+    )
+  ) {
+    return undefined;
+  }
+  const firstDonInstanceId = selectedDonInstanceIds[0];
+  return firstDonInstanceId === undefined
+    ? undefined
+    : findAttachDonActionIndex(actions, firstDonInstanceId, targetInstanceId);
+};
+
 const hasAttachDonActionForDon = (
   actions: readonly ClientVisibleAction[],
   donInstanceId: string,

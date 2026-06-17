@@ -1,6 +1,7 @@
 import type {
   DecisionId,
   DecisionResponse,
+  InstanceId,
   MatchId,
   PlayerId,
 } from "@optcg/types";
@@ -9,6 +10,7 @@ interface DevActionRequest {
   playerId: PlayerId;
   actionIndex: number;
   expectedStateSeq: number;
+  selectedDonInstanceIds?: readonly InstanceId[];
 }
 
 interface DevDecisionRequest {
@@ -71,10 +73,14 @@ const isDevActionRequest = (value: unknown): value is DevActionRequest => {
   if (!isRecord(value)) {
     return false;
   }
+  const selectedDonInstanceIds = value["selectedDonInstanceIds"];
   return (
     typeof value["playerId"] === "string" &&
     Number.isInteger(value["actionIndex"]) &&
-    Number.isInteger(value["expectedStateSeq"])
+    Number.isInteger(value["expectedStateSeq"]) &&
+    (selectedDonInstanceIds === undefined ||
+      (Array.isArray(selectedDonInstanceIds) &&
+        selectedDonInstanceIds.every((id) => typeof id === "string")))
   );
 };
 

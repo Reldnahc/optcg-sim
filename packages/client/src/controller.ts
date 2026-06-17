@@ -1,6 +1,7 @@
 import type {
   DecisionId,
   DecisionResponse,
+  InstanceId,
   MatchId,
   PlayerId,
 } from "@optcg/types";
@@ -104,6 +105,7 @@ export interface MatchClientController {
   refresh: () => Promise<MatchClientSessionState>;
   submitVisibleAction: (input: {
     actionIndex: number;
+    selectedDonInstanceIds?: InstanceId[];
   }) => Promise<MatchClientState>;
   respondToDecision: (input: {
     decisionId: DecisionId;
@@ -696,6 +698,9 @@ export const createMatchClientController = ({
         playerId: credential.playerId,
         actionIndex: input.actionIndex,
         expectedStateSeq: snapshot.stateSeq,
+        ...(input.selectedDonInstanceIds === undefined
+          ? {}
+          : { selectedDonInstanceIds: input.selectedDonInstanceIds }),
       };
       const result =
         await requireLiveConnection(liveConnection).submitVisibleAction(

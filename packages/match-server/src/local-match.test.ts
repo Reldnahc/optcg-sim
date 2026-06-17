@@ -400,6 +400,54 @@ describe("local dev match", () => {
     );
   });
 
+  test("selected DON attachment applies multiple DON as one server action", () => {
+    const match = createTestMatch();
+    keepBothPlayersAndAdvance(match);
+    const p1State = match.state.players[p1];
+    if (p1State === undefined) {
+      throw new Error("Missing p1 state.");
+    }
+    const stagedDon = p1State.donDeck.splice(0, 2);
+    assert.equal(stagedDon.length, 2);
+    p1State.costArea = stagedDon.map((don, index) => ({
+      ...don,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+      state: "active",
+    }));
+    p1State.donDeck = p1State.donDeck.map((card, index) => ({
+      ...card,
+      zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+    }));
+    const selectedDonInstanceIds = stagedDon.map((card) => card.instanceId);
+    const snapshot = getLocalDevSnapshot(match);
+    const leader = mustPlayerSnapshot(snapshot, p1).view.self.leader;
+    const attachAction = mustPlayerSnapshot(snapshot, p1).actions.find(
+      (action) =>
+        action.type === "attachDon" &&
+        action.attachment?.targetInstanceId === leader.instanceId &&
+        selectedDonInstanceIds.includes(action.attachment.donInstanceId),
+    );
+    if (attachAction === undefined) {
+      throw new Error("Missing attach DON action for selected target.");
+    }
+    const beforeSeq = match.state.seq;
+    const beforeActionSeq = match.state.actionSeq;
+
+    const result = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: attachAction.index,
+      selectedDonInstanceIds,
+    });
+
+    assert.deepEqual(result.errors, []);
+    assert.equal(result.stateSeq, beforeSeq + 1);
+    assert.equal(result.actionSeq, beforeActionSeq + 1);
+    assert.deepEqual(
+      match.state.players[p1]?.leader.attachedDon,
+      selectedDonInstanceIds,
+    );
+  });
+
   test("optional card-cost payment metadata survives dev snapshot projection", () => {
     const match = createTestMatch();
     const main = keepBothPlayersAndAdvance(match);

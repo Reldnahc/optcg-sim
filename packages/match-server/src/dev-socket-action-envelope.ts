@@ -11,6 +11,9 @@ export const clientActionEnvelopeFromSocketPayload = (
           playerId: payload.playerId,
           actionIndex: payload.actionIndex,
           expectedStateSeq: payload.expectedStateSeq,
+          ...(payload.selectedDonInstanceIds === undefined
+            ? {}
+            : { selectedDonInstanceIds: payload.selectedDonInstanceIds }),
         }
       : payload.type === "respondToDecision"
         ? {

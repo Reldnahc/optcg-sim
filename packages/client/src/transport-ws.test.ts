@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { createHash } from "node:crypto";
 import { describe, test } from "vitest";
 
-import type { MatchId, PlayerId } from "@optcg/types";
+import type { InstanceId, MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDevWebSocketLobbyTransport,
@@ -168,6 +168,7 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1" as PlayerId,
       actionIndex: 2,
       expectedStateSeq: 7,
+      selectedDonInstanceIds: ["don-1" as InstanceId, "don-2" as InstanceId],
     });
 
     assert.equal(socket.sent.length, 0);
@@ -181,10 +182,12 @@ describe("dev WebSocket match transport", () => {
       playerId: "p1",
       actionIndex: 2,
       expectedStateSeq: 7,
+      selectedDonInstanceIds: ["don-1", "don-2"],
       requestHash: expectedRequestHash({
         actionIndex: 2,
         expectedStateSeq: 7,
         playerId: "p1",
+        selectedDonInstanceIds: ["don-1", "don-2"],
         type: "submitAction",
       }),
     });

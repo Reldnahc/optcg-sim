@@ -5,7 +5,7 @@ import {
   type SetStateAction,
 } from "react";
 
-import type { DecisionResponse } from "@optcg/types";
+import type { DecisionResponse, InstanceId } from "@optcg/types";
 
 import {
   ATTACH_SELECTED_DON_ACTION_INDEX,
@@ -15,7 +15,7 @@ import {
   createAttackTargetChoice,
   createCounterTargetChoice,
   createDecisionDraft,
-  findAttachDonActionIndex,
+  findSelectedDonAttachActionIndex,
   optionalCardCostGroupForActionIndex,
   shouldPreserveSelectedDonAfterDecisionSubmit,
 } from "../index.js";
@@ -108,23 +108,26 @@ export const useMatchClientActions = ({
       }
       setActionInFlight(true);
       try {
-        for (const donInstanceId of selectedDonInstanceIds) {
-          const current = controller.currentState();
-          const actions =
-            current?.snapshot.players[current.seat.playerId]?.actions ?? [];
-          const actionIndex = findAttachDonActionIndex(
-            actions,
-            donInstanceId,
-            targetInstanceId,
+        const current = controller.currentState();
+        const actions =
+          current?.snapshot.players[current.seat.playerId]?.actions ?? [];
+        const actionIndex = findSelectedDonAttachActionIndex(
+          actions,
+          selectedDonInstanceIds,
+          targetInstanceId,
+        );
+        if (actionIndex === undefined) {
+          throw new Error(
+            `No legal attach action for selected DON!! to ${targetInstanceId}.`,
           );
-          if (actionIndex === undefined) {
-            throw new Error(
-              `No legal attach action for ${donInstanceId} to ${targetInstanceId}.`,
-            );
-          }
-          const result = await controller.submitVisibleAction({ actionIndex });
-          setClientState(result);
         }
+        const result = await controller.submitVisibleAction({
+          actionIndex,
+          selectedDonInstanceIds: selectedDonInstanceIds.map(
+            (id) => id as InstanceId,
+          ),
+        });
+        setClientState(result);
         resetInteractionState();
         setErrors([]);
       } catch (error) {

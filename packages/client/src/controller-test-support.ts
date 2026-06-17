@@ -13,6 +13,10 @@ import type {
   MatchTransport,
 } from "./transport.js";
 
+type SubmittedActionRequest = Parameters<
+  LiveMatchConnection["submitVisibleAction"]
+>[0];
+
 export const accountSessionToken = "user:user-1:session-1";
 export const playerTwoAccountSessionToken = "user:user-2:session-1";
 
@@ -192,6 +196,7 @@ export const createFakeLiveTransport = (options?: {
   cancelRollbackErrors?: string[];
 }): MatchLiveTransport & {
   submittedActions: number[];
+  submittedActionRequests: SubmittedActionRequest[];
   submittedDecisions: DecisionId[];
   requestedRollbacks: string[];
   cancelledRollbacks: number;
@@ -203,6 +208,7 @@ export const createFakeLiveTransport = (options?: {
   emitRematchRequest: (message: MatchRematchRequestMessage) => void;
 } => {
   const submittedActions: number[] = [];
+  const submittedActionRequests: SubmittedActionRequest[] = [];
   const submittedDecisions: DecisionId[] = [];
   const requestedRollbacks: string[] = [];
   let onSetupSync: ((message: MatchSetupSyncMessage) => void) | undefined;
@@ -219,6 +225,7 @@ export const createFakeLiveTransport = (options?: {
     close() {},
     submitVisibleAction(input) {
       submittedActions.push(input.actionIndex);
+      submittedActionRequests.push(input);
       return Promise.resolve({
         snapshot: { stateSeq: 2, players: {} },
         cards: { players: { ["p1" as PlayerId]: { cards: {} } } },
@@ -252,6 +259,7 @@ export const createFakeLiveTransport = (options?: {
   };
   return {
     submittedActions,
+    submittedActionRequests,
     submittedDecisions,
     requestedRollbacks,
     get cancelledRollbacks() {

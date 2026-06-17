@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { DecisionId, MatchId, PlayerId } from "@optcg/types";
+import type { DecisionId, InstanceId, MatchId, PlayerId } from "@optcg/types";
 
 import {
   createClientSessionStore,
@@ -367,6 +367,47 @@ describe("match client controller", () => {
     assert.deepEqual(controller.currentState()?.cards, {
       players: { [p1Id]: { cards: {} } },
     });
+  });
+
+  test("submitted live actions forward selected DON ids", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const p1Id = "p1" as PlayerId;
+    const selectedDonInstanceIds = [
+      "don-1" as InstanceId,
+      "don-2" as InstanceId,
+    ];
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch(p1Id);
+    controller.connectLive({
+      onState() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    emitLoadedMatchState(liveTransport);
+
+    await controller.submitVisibleAction({
+      actionIndex: 4,
+      selectedDonInstanceIds,
+    });
+
+    assert.deepEqual(liveTransport.submittedActionRequests, [
+      {
+        matchId: "match-1",
+        playerId: p1Id,
+        actionIndex: 4,
+        expectedStateSeq: 1,
+        selectedDonInstanceIds,
+      },
+    ]);
   });
 
   test("live state sync ignores older snapshots and catalogs", async () => {
