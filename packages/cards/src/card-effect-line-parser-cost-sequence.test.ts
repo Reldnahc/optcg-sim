@@ -107,6 +107,64 @@ it("parses active leader power reduction as an optional cost before draw", () =>
   });
 });
 
+it("parses active leader power reduction with explicit one-card wording before opponent power reduction", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] You may give your 1 active Leader -5000 power during this turn: Give up to 1 of your opponent's Characters -3000 power during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                requiredState: "active",
+                value: -5000,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "choose",
+                request: {
+                  player: "opponent",
+                  zone: "characterArea",
+                  min: 0,
+                  max: 1,
+                },
+              },
+              value: -3000,
+              duration: { type: "thisTurn" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "composition:optionalCostedEffect",
+      "cost:modifyPower",
+      "target:yourLeader",
+      "state:active",
+      "instruction:modifyPower",
+      "target:opponentCharacters",
+      "duration:thisTurn",
+    ]),
+  );
+});
+
 it("parses filtered own field-card K.O. as an optional cost before an unrelated body", () => {
   expect(
     parseCardEffectLine(

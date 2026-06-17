@@ -10,7 +10,7 @@ export const parseModifyPowerCost = (
   input: ParseInput,
 ): CostParseResult | undefined => {
   const actionMatch =
-    /^give\s+your\s+(?<state>active\s+|rested\s+)?Leader\s+(?<rest>.+)$/iu.exec(
+    /^give\s+your\s+(?:1\s+)?(?<state>active\s+|rested\s+)?Leader\s+(?<rest>.+)$/iu.exec(
       input.text.trim(),
     );
   const rest = actionMatch?.groups?.["rest"];
