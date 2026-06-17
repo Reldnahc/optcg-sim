@@ -1,5 +1,7 @@
 import type {
   Effect,
+  CardFilter,
+  SavedFieldObjectTargetBinding,
   SelectCardsEffect,
   SelectTargetsEffect,
   Target,
@@ -93,8 +95,33 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
 
 export const isSupportedSequenceSelectCardsSegment = (
   effect: SequenceSegmentEffect,
+  canConsumeSavedFieldObject: (
+    binding: SavedFieldObjectTargetBinding,
+  ) => boolean = () => false,
 ): effect is SelectCardsEffect =>
-  savedSelectedCardsKindForSelectCardsSegment(effect) !== undefined;
+  effect.type === "selectCards" &&
+  savedSelectedCardsKindForSelectCardsSegment(effect) !== undefined &&
+  hasSupportedSavedColorRelations(effect.filter, canConsumeSavedFieldObject);
+
+const hasSupportedSavedColorRelations = (
+  filter: CardFilter | undefined,
+  canConsumeSavedFieldObject: (
+    binding: SavedFieldObjectTargetBinding,
+  ) => boolean,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (
+    filter.anyOf?.every((candidate) =>
+      hasSupportedSavedColorRelations(candidate, canConsumeSavedFieldObject),
+    ) === false
+  ) {
+    return false;
+  }
+  const relation = filter.colorRelation;
+  return relation === undefined || canConsumeSavedFieldObject(relation.binding);
+};
 
 export const savedSelectedCardsKindForSelectTargetsSegment = (
   effect: SequenceSegmentEffect,

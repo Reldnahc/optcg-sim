@@ -2,6 +2,7 @@ import type { CardFilter, HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { returnToOwnerHandSelectionId } from "./return-to-owner-hand.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const handPlaySelection = "handSelection:play-from-hand" as HandSelectionId;
@@ -457,7 +458,7 @@ function parsePlayFromHandSource(
   | undefined {
   const sourceText = player === "self" ? "your hand" : "their hand";
   const sourceMatch = new RegExp(
-    `^(?<predicates>.+) from ${sourceText}(?<rested>\\s+rested)?\\.?$`,
+    `^(?<predicates>.+) from ${sourceText}(?<colorRelation>\\s+that is a different color than the returned Character)?(?<rested>\\s+rested)?\\.?$`,
     "iu",
   ).exec(text);
   if (sourceMatch === null) {
@@ -469,11 +470,31 @@ function parsePlayFromHandSource(
   }
 
   const predicates = parseCardFilterPredicates({ text: predicateText });
+  const hasReturnedColorRelation =
+    sourceMatch.groups?.["colorRelation"] !== undefined;
   return predicates === undefined || predicates.rest.length > 0
     ? undefined
     : {
-        filter: predicates.filter,
-        evidence: predicates.evidence,
+        filter: {
+          ...predicates.filter,
+          ...(hasReturnedColorRelation
+            ? {
+                colorRelation: {
+                  type: "differentFromSavedFieldObject" as const,
+                  binding: {
+                    family: "selectedTargets" as const,
+                    saveResultAs: returnToOwnerHandSelectionId,
+                  },
+                },
+              }
+            : {}),
+        },
+        evidence: [
+          ...predicates.evidence,
+          ...(hasReturnedColorRelation
+            ? (["filter:colorRelation"] as const)
+            : []),
+        ],
         enterRested: sourceMatch.groups?.["rested"] !== undefined,
       };
 }

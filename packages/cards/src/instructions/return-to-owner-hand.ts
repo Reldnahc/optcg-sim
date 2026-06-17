@@ -11,7 +11,7 @@ import {
 } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
-const returnSelectionId = "selected:return-to-owner-hand";
+export const returnToOwnerHandSelectionId = "selected:return-to-owner-hand";
 
 export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
   const opponentChosen = parseOpponentChosenReturnToOwnerHand(input.text);
@@ -27,7 +27,7 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const cardinality = parseUpToCardinality({ text: rest });
+  const cardinality = parseReturnCardinality(rest);
   if (cardinality === undefined) {
     return undefined;
   }
@@ -41,8 +41,8 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     return {
       effect: selectThenReturnToOwnerHand(
         "opponent",
-        cardinality.cardinality.min,
-        cardinality.cardinality.max,
+        cardinality.min,
+        cardinality.max,
         opponentTarget.filter ?? { categories: ["character"] },
         category === "stage" ? "stageArea" : "characterArea",
       ),
@@ -67,8 +67,8 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     return {
       effect: selectThenReturnToOwnerHand(
         "self",
-        cardinality.cardinality.min,
-        cardinality.cardinality.max,
+        cardinality.min,
+        cardinality.max,
         selfCharacterTarget.filter ?? { categories: ["character"] },
         "characterArea",
       ),
@@ -94,8 +94,8 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
   return {
     effect: selectThenReturnToOwnerHand(
       "anyPlayer",
-      cardinality.cardinality.min,
-      cardinality.cardinality.max,
+      cardinality.min,
+      cardinality.max,
       predicates.filter,
       predicates.filter.categories?.[0] === "stage"
         ? "stageArea"
@@ -127,7 +127,7 @@ export function selectThenReturnToOwnerHand(
       {
         id: "select:return-to-owner-hand",
         connector: "always",
-        saveResultAs: returnSelectionId,
+        saveResultAs: returnToOwnerHandSelectionId,
         effect: {
           type: "selectTargets",
           request: {
@@ -152,7 +152,7 @@ export function selectThenReturnToOwnerHand(
             type: "savedFieldObject",
             binding: {
               family: "selectedTargets",
-              saveResultAs: returnSelectionId,
+              saveResultAs: returnToOwnerHandSelectionId,
             },
             zone,
             player,

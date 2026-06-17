@@ -9,6 +9,7 @@ import type {
   SelectCardsEffect,
   Trigger,
   Target,
+  SavedFieldObjectTargetBinding,
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
@@ -274,10 +275,16 @@ const canConsumeSavedFieldObjectTarget = (
   target: Target,
 ): boolean =>
   target.type !== "savedFieldObject" ||
+  canConsumeSavedFieldObjectBinding(state, target.binding);
+
+const canConsumeSavedFieldObjectBinding = (
+  state: SequenceSupportState,
+  binding: SavedFieldObjectTargetBinding,
+): boolean =>
   canConsumeSavedFieldObject(
     state.savedResults,
-    target.binding.family,
-    target.binding.saveResultAs,
+    binding.family,
+    binding.saveResultAs,
   );
 
 const isSupportedMoveSelectedWithSavedResults = (
@@ -589,7 +596,11 @@ const isSupportedSequenceBlockWithState = (
       if (segment.effect.type === "delayed") {
         return isSupportedDelayedSegment(segment.effect, options, supportState);
       }
-      if (isSupportedSequenceSelectCardsSegment(segment.effect)) {
+      if (
+        isSupportedSequenceSelectCardsSegment(segment.effect, (binding) =>
+          canConsumeSavedFieldObjectBinding(supportState, binding),
+        )
+      ) {
         supportState.hasPendingDecisionSegment = true;
         return recordSupportedProducer(supportState, segment);
       }

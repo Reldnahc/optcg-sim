@@ -8,6 +8,7 @@ import type {
   PlayerId,
   PlayerState,
   ResolvedCard,
+  SavedFieldObjectTargetBinding,
   SequenceSavedResultReferenceMap,
 } from "@optcg/types";
 
@@ -151,6 +152,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "attributesNotAny",
   "baseCost",
   "categories",
+  "colorRelation",
   "colorsAny",
   "custom",
   "cost",
@@ -173,6 +175,15 @@ const supportedHandSelectionCustomFilters = new Set([
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isSupportedColorRelation = (
+  relation: CardFilter["colorRelation"],
+): boolean =>
+  relation === undefined ||
+  (relation.binding.family === "selectedTargets" &&
+    typeof relation.binding.saveResultAs === "string" &&
+    (relation.binding.objectIndex === undefined ||
+      Number.isSafeInteger(relation.binding.objectIndex)));
 
 const isSupportedNumericFilter = (
   value:
@@ -206,6 +217,7 @@ export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
     (filter.attributesNotAny === undefined ||
       isStringArray(filter.attributesNotAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
+    isSupportedColorRelation(filter.colorRelation) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     isSupportedNumericFilter(filter.cost) &&
     isSupportedNumericFilter(filter.baseCost) &&
@@ -237,6 +249,7 @@ export const isSupportedHandSelectionCardFilter = (
     (filter.attributesNotAny === undefined ||
       isStringArray(filter.attributesNotAny)) &&
     (filter.categories === undefined || isStringArray(filter.categories)) &&
+    isSupportedColorRelation(filter.colorRelation) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
@@ -291,7 +304,46 @@ const numericComparisonMatches = (
   return left <= comparison.value;
 };
 
+const savedFieldObjectCardForBinding = (
+  state: GameState | undefined,
+  binding: SavedFieldObjectTargetBinding,
+  savedReferences: SequenceSavedResultReferenceMap | undefined,
+): ResolvedCard | undefined => {
+  if (state === undefined || binding.family !== "selectedTargets") {
+    return undefined;
+  }
+  const saved = savedReferences?.[binding.saveResultAs];
+  if (saved?.kind !== "selectedTargets") {
+    return undefined;
+  }
+  const object = saved.targets[binding.objectIndex ?? 0]?.object;
+  return object === undefined
+    ? undefined
+    : state.cardManifest.cards[object.cardId];
+};
+
+const cardMatchesColorRelation = (
+  state: GameState | undefined,
+  card: ResolvedCard,
+  relation: CardFilter["colorRelation"],
+  savedReferences: SequenceSavedResultReferenceMap | undefined,
+): boolean => {
+  if (relation === undefined) {
+    return true;
+  }
+  const savedCard = savedFieldObjectCardForBinding(
+    state,
+    relation.binding,
+    savedReferences,
+  );
+  if (savedCard === undefined) {
+    return false;
+  }
+  return !card.colors.some((color) => savedCard.colors.includes(color));
+};
+
 const cardMatchesBaseFilter = (
+  state: GameState | undefined,
   card: ResolvedCard | undefined,
   filter: CardFilter,
   savedReferences?: SequenceSavedResultReferenceMap,
@@ -300,7 +352,7 @@ const cardMatchesBaseFilter = (
   if (
     filter.anyOf !== undefined &&
     !filter.anyOf.some((candidate) =>
-      cardMatchesBaseFilter(card, candidate, savedReferences),
+      cardMatchesBaseFilter(state, card, candidate, savedReferences),
     )
   ) {
     return false;
@@ -314,6 +366,16 @@ const cardMatchesBaseFilter = (
   if (
     filter.colorsAny !== undefined &&
     !filter.colorsAny.some((color) => card.colors.includes(color))
+  ) {
+    return false;
+  }
+  if (
+    !cardMatchesColorRelation(
+      state,
+      card,
+      filter.colorRelation,
+      savedReferences,
+    )
   ) {
     return false;
   }
@@ -459,7 +521,7 @@ const cardMatchesEffectEntryPointFilter = (
 export const cardMatchesSearchFilter = (
   card: ResolvedCard | undefined,
   filter: CardFilter,
-): boolean => cardMatchesBaseFilter(card, filter);
+): boolean => cardMatchesBaseFilter(undefined, card, filter);
 
 export const cardMatchesHandSelectionFilter = (
   state: GameState,
@@ -472,7 +534,7 @@ export const cardMatchesHandSelectionFilter = (
     return true;
   }
   const resolved = state.cardManifest.cards[card.cardId];
-  if (!cardMatchesBaseFilter(resolved, filter, savedReferences)) {
+  if (!cardMatchesBaseFilter(state, resolved, filter, savedReferences)) {
     return false;
   }
   if (

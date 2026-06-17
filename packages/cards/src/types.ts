@@ -214,6 +214,7 @@ export type PrimitiveEvidence =
   | "filter:anyOf"
   | "filter:nameNot"
   | "filter:color"
+  | "filter:colorRelation"
   | "filter:type"
   | "filter:attribute"
   | "filter:negated"

@@ -319,6 +319,10 @@ export interface CardFilter {
   categories?: CardCategory[];
   colorsAny?: CardColor[];
   colorsAll?: CardColor[];
+  colorRelation?: {
+    type: "differentFromSavedFieldObject";
+    binding: SavedFieldObjectTargetBinding;
+  };
   typesAny?: string[];
   typesIncludeAny?: string[];
   typesNotIncludeAny?: string[];

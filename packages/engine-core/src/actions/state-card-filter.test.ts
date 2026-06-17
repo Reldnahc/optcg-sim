@@ -106,3 +106,90 @@ test("hand-selection filters do not treat type-or-attribute alternatives as a ca
     false,
   );
 });
+
+test("hand-selection filters can compare color against a saved returned field object", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const returnedSource = must(player.hand[0], "returned character source");
+  const returned = {
+    ...returnedSource,
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p1,
+      slot: "character" as const,
+      index: 0,
+    },
+  };
+  player.characters = [returned];
+  player.hand = player.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { ...card.zone, index },
+  }));
+  const sameColor = must(player.hand[0], "same color");
+  const differentColor = must(player.hand[1], "different color");
+  state.cardManifest.cards[returned.cardId] = {
+    ...resolvedCard({ cardId: returned.cardId, category: "character" }),
+    colors: ["red"],
+  };
+  state.cardManifest.cards[sameColor.cardId] = {
+    ...resolvedCard({ cardId: sameColor.cardId, category: "character" }),
+    colors: ["red"],
+  };
+  state.cardManifest.cards[differentColor.cardId] = {
+    ...resolvedCard({ cardId: differentColor.cardId, category: "character" }),
+    colors: ["green"],
+  };
+  const filter: CardFilter = {
+    categories: ["character"],
+    colorRelation: {
+      type: "differentFromSavedFieldObject",
+      binding: {
+        family: "selectedTargets",
+        saveResultAs: "selected:return-to-owner-hand",
+      },
+    },
+  };
+  const savedReferences = {
+    "selected:return-to-owner-hand": {
+      kind: "selectedTargets" as const,
+      targets: [
+        {
+          binding: {
+            family: "selectedTargets" as const,
+            saveResultAs: "selected:return-to-owner-hand",
+          },
+          capturedAtStateSeq: state.seq,
+          object: {
+            cardId: returned.cardId,
+            instanceId: returned.instanceId,
+            playerId: p1,
+            zone: returned.zone,
+          },
+          visibility: "public" as const,
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedHandSelectionCardFilter(filter), true);
+  assert.equal(
+    cardMatchesHandSelectionFilter(
+      state,
+      p1,
+      sameColor,
+      filter,
+      savedReferences,
+    ),
+    false,
+  );
+  assert.equal(
+    cardMatchesHandSelectionFilter(
+      state,
+      p1,
+      differentColor,
+      filter,
+      savedReferences,
+    ),
+    true,
+  );
+});

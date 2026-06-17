@@ -122,3 +122,86 @@ it("parses return-to-owner-deck-bottom wording as owner deck-bottom placement", 
     ]),
   );
 });
+
+it("parses returned-character color relation for a following hand play", () => {
+  const result = parseCardEffectLine(
+    "[Main] If your Leader has the {Supernovas} type, return 1 of your Characters to the owner's hand, and play up to 1 Character card with a cost of 2 or less from your hand that is a different color than the returned Character.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      condition: {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: {
+          categories: ["leader"],
+          typesAny: ["Supernovas"],
+        },
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "self",
+                      zone: "characterArea",
+                      min: 1,
+                      max: 1,
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                { effect: { type: "bounce", destination: "hand" } },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      categories: ["character"],
+                      cost: { max: 2 },
+                      colorRelation: {
+                        type: "differentFromSavedFieldObject",
+                        binding: {
+                          family: "selectedTargets",
+                          saveResultAs: "selected:return-to-owner-hand",
+                        },
+                      },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "condition:leaderIdentity",
+      "instruction:returnToOwnerHand",
+      "cardinality:exact",
+      "instruction:playSelected",
+      "filter:colorRelation",
+      "composition:selectThenPlay",
+    ]),
+  );
+});
