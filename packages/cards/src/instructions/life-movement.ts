@@ -22,22 +22,24 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
       {
         id: "add-up-to-n-cards-from-deck-top-to-life-top",
         pattern:
-          /^add up to (?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards(?<faceUp> face-up)?\.?$/i,
+          /^add (?<upTo>up to )?(?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards(?<faceUp> face-up)?\.?$/i,
         build: (groups) => ({
           effect: {
             type: "moveCards",
-            min: 0,
             count: Number.parseInt(groups["count"] ?? "", 10),
             from: { player: "self", zone: "deck", position: "top" },
             to: { player: "self", zone: "life", position: "top" },
             order: "original",
+            ...(groups["upTo"] === undefined ? {} : { min: 0 }),
             ...(groups["faceUp"] === undefined
               ? {}
               : { destinationFaceUp: true }),
           },
           evidence: [
             "instruction:moveCards",
-            "cardinality:upTo",
+            ...(groups["upTo"] === undefined
+              ? []
+              : (["cardinality:upTo"] as const)),
             "count:positiveInteger",
             "player:self",
             "zone:deck",

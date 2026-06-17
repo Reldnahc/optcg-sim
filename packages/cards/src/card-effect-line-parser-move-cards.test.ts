@@ -131,6 +131,95 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses optional self-trash cost into conditional exact deck top to Life and all Character power sequence", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] You may trash this Character: If your Leader is [Shirahoshi], add 1 card from the top of your deck to the top of your Life cards. Then, all of your {Neptunian} type Characters gain +1000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "trashSelf" },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "conditional",
+                      if: {
+                        type: "hasCardInZone",
+                        player: "self",
+                        zone: "leaderArea",
+                        filter: { names: ["Shirahoshi"] },
+                      },
+                      then: {
+                        type: "moveCards",
+                        count: 1,
+                        from: {
+                          player: "self",
+                          zone: "deck",
+                          position: "top",
+                        },
+                        to: {
+                          player: "self",
+                          zone: "life",
+                          position: "top",
+                        },
+                        order: "original",
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "modifyPower",
+                      target: {
+                        type: "all",
+                        player: "self",
+                        zone: "characterArea",
+                        filter: {
+                          categories: ["character"],
+                          typesAny: ["Neptunian"],
+                        },
+                      },
+                      value: 1000,
+                      duration: { type: "thisTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "composition:optionalCostedEffect",
+        "cost:trashSelf",
+        "condition:leaderIdentity",
+        "instruction:moveCards",
+        "instruction:modifyPower",
+        "filter:type",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses revealed hand selection moved to Life face-down as reusable select-then-move primitives", () => {
     const result = parseCardEffectLine(
       "[On Play] Reveal up to 1 {Supernovas} type Character card from your hand and add it to the top of your Life cards face-down.",
