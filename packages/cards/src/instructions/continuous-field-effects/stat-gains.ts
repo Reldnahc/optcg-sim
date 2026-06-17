@@ -6,6 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
+import { parseKeyword } from "../../keywords/index.js";
 import {
   allPowerModifierParsers,
   parseModifierFromSet,
@@ -443,6 +444,23 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
   const durationEvidence: PrimitiveEvidence[] = [];
 
   for (const part of parts) {
+    const keyword = parseKeyword({ text: part });
+    if (keyword !== undefined) {
+      if (keyword.rest.length > 0 && keyword.rest !== ".") {
+        return undefined;
+      }
+      effects.push({
+        type: "giveKeyword",
+        target: { type: "self" },
+        keyword: keyword.keyword,
+        duration: continuousDuration(context.condition),
+      });
+      instructionEvidence.push("instruction:giveKeyword");
+      modifierEvidence.push(...keyword.evidence);
+      durationEvidence.push(continuousDurationEvidence(context.condition));
+      continue;
+    }
+
     const power = parseModifierFromSet({ text: part }, allPowerModifierParsers);
     if (power !== undefined) {
       const parsedDuration = parseStatGainDuration(power.rest, context);
