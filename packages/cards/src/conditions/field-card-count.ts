@@ -89,6 +89,17 @@ const fieldCountEvidence = (
   ...filterEvidence,
 ];
 
+const fieldCountTotalEvidence = (
+  comparison: readonly PrimitiveEvidence[],
+  filterEvidence: readonly PrimitiveEvidence[],
+): readonly PrimitiveEvidence[] => [
+  "condition:fieldCountTotal",
+  ...comparison,
+  "player:self",
+  "player:opponent",
+  ...filterEvidence,
+];
+
 const parseComparedFieldPresence = (
   text: string,
   player: "self" | "opponent",
@@ -123,6 +134,35 @@ const parseComparedFieldPresence = (
 export const parseFieldCardCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const totalComparedPresence = /^there are\s+(?<comparison>.+)$/i.exec(
+    input.text,
+  );
+  const totalComparisonText = totalComparedPresence?.groups?.["comparison"];
+  if (totalComparisonText !== undefined) {
+    const comparison = parseLeadingCountComparison({
+      text: totalComparisonText,
+    });
+    if (comparison !== undefined) {
+      const predicates = parseFieldPredicates(comparison.rest);
+      if (predicates !== undefined && predicates.rest.trim().length === 0) {
+        return {
+          condition: {
+            type: "fieldCountTotal",
+            players: ["self", "opponent"],
+            filter: predicates.filter,
+            op: comparison.op,
+            value: comparison.value,
+          },
+          evidence: fieldCountTotalEvidence(
+            comparison.evidence,
+            predicates.evidence,
+          ),
+          rest: "",
+        };
+      }
+    }
+  }
+
   const totalCharacterCost =
     /^the total cost of your Characters is (?<comparison>[1-9]\d*(?: or more| or less)?)$/i.exec(
       input.text,

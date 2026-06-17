@@ -121,6 +121,37 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses total field counts across both players through reusable filters", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "there are 2 or more Characters with a cost of 8 or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCountTotal",
+        players: ["self", "opponent"],
+        filter: {
+          categories: ["character"],
+          cost: { min: 8 },
+        },
+        op: "gte",
+        value: 2,
+      },
+      evidence: [
+        "condition:fieldCountTotal",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "player:opponent",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses no matching Characters as a reusable zero field-count condition", () => {
     expect(
       parseFieldCardCountCondition({

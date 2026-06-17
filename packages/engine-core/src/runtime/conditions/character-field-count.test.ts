@@ -522,3 +522,61 @@ test("fieldCount condition supports no matching self characters by type and cost
     { supported: true, passed: true },
   );
 });
+
+test("fieldCountTotal condition sums matching characters across both players", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  const opponent = must(state.players[p2], "p2");
+  const selfCharacter = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(self.hand[0], "self character"),
+      cardId: toCardId("self-cost-eight-character"),
+    },
+    zone: "characterArea",
+  });
+  const opponentCharacter = withCardInZone({
+    state,
+    playerId: p2,
+    card: {
+      ...must(opponent.hand[0], "opponent character"),
+      cardId: toCardId("opponent-cost-eight-character"),
+    },
+    zone: "characterArea",
+  });
+  for (const card of [selfCharacter, opponentCharacter]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 8,
+      power: 8000,
+    });
+  }
+
+  const condition: Extract<Condition, { type: "fieldCountTotal" }> = {
+    type: "fieldCountTotal",
+    players: ["self", "opponent"],
+    filter: { categories: ["character"], cost: { min: 8 } },
+    op: "gte",
+    value: 2,
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      { ...condition, value: 3 },
+    ),
+    { supported: true, passed: false },
+  );
+});

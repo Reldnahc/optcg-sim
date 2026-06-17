@@ -84,6 +84,7 @@ export type PrimitiveEvidence =
   | "composition:triggerAnyOf"
   | "condition:synthetic:C"
   | "condition:fieldCount"
+  | "condition:fieldCountTotal"
   | "condition:leaderIdentity"
   | "condition:leaderColorCount"
   | "condition:opponentFieldCount"

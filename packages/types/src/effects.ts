@@ -90,6 +90,13 @@ export type Condition =
       value: number;
     }
   | {
+      type: "fieldCountTotal";
+      players: PlayerRef[];
+      filter?: CardFilter;
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "fieldCountDifference";
       minuend: {
         player: PlayerRef;

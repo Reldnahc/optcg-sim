@@ -466,6 +466,39 @@ const countPublicCardsOnFieldByName = (
   }).length;
 };
 
+const countPublicFieldMatches = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  playerId: PlayerId,
+  filter: CardFilter | undefined,
+): number | undefined => {
+  if (isSupportedDonFieldCountFilter(filter)) {
+    return countPublicDonOnField(state, playerId, filter.state);
+  }
+  if (isSupportedCharacterFieldCountFilter(filter)) {
+    return countPublicCharactersOnField(state, entry, playerId, filter);
+  }
+  if (isSupportedPublicFieldStateCountFilter(filter)) {
+    return countPublicCardsOnFieldByState(state, playerId, filter.state);
+  }
+  if (isSupportedPublicFieldNameCountFilter(filter)) {
+    return countPublicCardsOnFieldByName(
+      state,
+      entry,
+      playerId,
+      filter.names,
+      filter.excludeSelf,
+    );
+  }
+  return undefined;
+};
+
+const isSupportedFieldCountFilter = (filter: CardFilter | undefined): boolean =>
+  isSupportedDonFieldCountFilter(filter) ||
+  isSupportedCharacterFieldCountFilter(filter) ||
+  isSupportedPublicFieldStateCountFilter(filter) ||
+  isSupportedPublicFieldNameCountFilter(filter);
+
 const evaluateEventHistory = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -763,60 +796,38 @@ const evaluateCondition = (
     case "eventHistory":
       return evaluateEventHistory(state, entry, condition);
     case "fieldCount": {
-      if (isSupportedDonFieldCountFilter(condition.filter)) {
-        const stateFilter = condition.filter.state;
-        return evaluateCountCondition(
-          state,
-          entry,
-          condition.player,
-          condition.value,
-          condition.op,
-          (playerId) => countPublicDonOnField(state, playerId, stateFilter),
-        );
+      if (!isSupportedFieldCountFilter(condition.filter)) {
+        return { supported: false };
       }
-      if (isSupportedCharacterFieldCountFilter(condition.filter)) {
-        const filter = condition.filter;
-        return evaluateCountCondition(
-          state,
-          entry,
-          condition.player,
-          condition.value,
-          condition.op,
-          (playerId) =>
-            countPublicCharactersOnField(state, entry, playerId, filter),
-        );
+      return evaluateCountCondition(
+        state,
+        entry,
+        condition.player,
+        condition.value,
+        condition.op,
+        (playerId) =>
+          countPublicFieldMatches(state, entry, playerId, condition.filter) ??
+          0,
+      );
+    }
+    case "fieldCountTotal": {
+      if (!isSupportedFieldCountFilter(condition.filter)) {
+        return { supported: false };
       }
-      if (isSupportedPublicFieldStateCountFilter(condition.filter)) {
-        const stateFilter = condition.filter.state;
-        return evaluateCountCondition(
-          state,
-          entry,
-          condition.player,
-          condition.value,
-          condition.op,
-          (playerId) =>
-            countPublicCardsOnFieldByState(state, playerId, stateFilter),
-        );
+      let total = 0;
+      for (const playerRef of condition.players) {
+        const playerId = resolveConditionPlayer(state, entry, playerRef);
+        if (playerId === undefined) {
+          return { supported: false };
+        }
+        total +=
+          countPublicFieldMatches(state, entry, playerId, condition.filter) ??
+          0;
       }
-      if (isSupportedPublicFieldNameCountFilter(condition.filter)) {
-        const filter = condition.filter;
-        return evaluateCountCondition(
-          state,
-          entry,
-          condition.player,
-          condition.value,
-          condition.op,
-          (playerId) =>
-            countPublicCardsOnFieldByName(
-              state,
-              entry,
-              playerId,
-              filter.names,
-              filter.excludeSelf,
-            ),
-        );
-      }
-      return { supported: false };
+      return {
+        supported: true,
+        passed: compare(condition.op, total, condition.value),
+      };
     }
     case "fieldCountDifference":
       return evaluateFieldCountDifference(state, entry, condition);
@@ -928,13 +939,21 @@ export const isSupportedQueuedEffectConditionShape = (
       );
     case "fieldCount":
       return (
-        (isSupportedDonFieldCountFilter(condition.filter) ||
-          isSupportedCharacterFieldCountFilter(condition.filter) ||
-          isSupportedPublicFieldStateCountFilter(condition.filter) ||
-          isSupportedPublicFieldNameCountFilter(condition.filter)) &&
+        isSupportedFieldCountFilter(condition.filter) &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op) &&
         (condition.player === "self" || condition.player === "opponent")
+      );
+    case "fieldCountTotal":
+      return (
+        isSupportedFieldCountFilter(condition.filter) &&
+        isNonNegativeSafeInteger(condition.value) &&
+        isComparator(condition.op) &&
+        Array.isArray(condition.players) &&
+        condition.players.length > 0 &&
+        condition.players.every(
+          (player) => player === "self" || player === "opponent",
+        )
       );
     case "fieldCountDifference":
       return (
