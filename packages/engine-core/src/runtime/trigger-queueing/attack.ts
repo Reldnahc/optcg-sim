@@ -10,7 +10,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
@@ -149,11 +153,18 @@ export const createAttackTriggerQueueing = (
     reason: OnOpponentAttackTriggerQueueingFailureReason,
   ) => EngineError,
 ): {
-  queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
-  queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
+  queueWhenAttackingTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
+  queueOnOpponentAttackTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
 } => {
   const queueWhenAttackingTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -192,6 +203,7 @@ export const createAttackTriggerQueueing = (
           state,
           [],
           [whenAttackingTriggerQueueingError("invalid-attack-declared-event")],
+          options,
         );
       }
       if (attackerPayload.playerId !== state.turn.turnPlayerId) {
@@ -199,6 +211,7 @@ export const createAttackTriggerQueueing = (
           state,
           [],
           [whenAttackingTriggerQueueingError("invalid-attack-declared-event")],
+          options,
         );
       }
 
@@ -223,6 +236,7 @@ export const createAttackTriggerQueueing = (
           state,
           [],
           [whenAttackingTriggerQueueingError("source-presence-failed")],
+          options,
         );
       }
       const resolved = state.cardManifest.cards[source.cardId];
@@ -231,6 +245,7 @@ export const createAttackTriggerQueueing = (
           state,
           [],
           [whenAttackingTriggerQueueingError("missing-card-definition")],
+          options,
         );
       }
       if (isCardEffectInvalidated(state, source)) {
@@ -245,7 +260,7 @@ export const createAttackTriggerQueueing = (
         state.cardManifest,
       );
       if (!lookup.ok) {
-        return toEngineResult(state, [], [lookup.error]);
+        return toEngineResult(state, [], [lookup.error], options);
       }
       const whenAttackingEffects = lookup.definition.effects.filter((effect) =>
         isAutoRuntimeTriggerCandidate(effect, whenAttackingAutoAdapter),
@@ -265,6 +280,7 @@ export const createAttackTriggerQueueing = (
               "unsupported-when-attacking-definition",
             ),
           ],
+          options,
         );
       }
       for (const effectBlock of matching) {
@@ -314,11 +330,12 @@ export const createAttackTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   const queueOnOpponentAttackTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -333,6 +350,7 @@ export const createAttackTriggerQueueing = (
         state,
         [],
         [onOpponentAttackTriggerQueueingError("invalid-attack-declared-event")],
+        options,
       );
     }
 
@@ -350,6 +368,7 @@ export const createAttackTriggerQueueing = (
         state,
         [],
         [onOpponentAttackTriggerQueueingError("source-presence-failed")],
+        options,
       );
     }
     const defenderSources = [
@@ -399,6 +418,7 @@ export const createAttackTriggerQueueing = (
               "invalid-attack-declared-event",
             ),
           ],
+          options,
         );
       }
       const attackingSource = findCardInstance(
@@ -425,6 +445,7 @@ export const createAttackTriggerQueueing = (
           state,
           [],
           [onOpponentAttackTriggerQueueingError("source-presence-failed")],
+          options,
         );
       }
 
@@ -447,6 +468,7 @@ export const createAttackTriggerQueueing = (
             state,
             [],
             [onOpponentAttackTriggerQueueingError("source-presence-failed")],
+            options,
           );
         }
         const resolved = state.cardManifest.cards[source.cardId];
@@ -455,6 +477,7 @@ export const createAttackTriggerQueueing = (
             state,
             [],
             [onOpponentAttackTriggerQueueingError("missing-card-definition")],
+            options,
           );
         }
         if (isCardEffectInvalidated(state, source)) {
@@ -469,7 +492,7 @@ export const createAttackTriggerQueueing = (
           state.cardManifest,
         );
         if (!lookup.ok) {
-          return toEngineResult(state, [], [lookup.error]);
+          return toEngineResult(state, [], [lookup.error], options);
         }
         const onOpponentAttackEffects: Array<{
           readonly effectBlock: EffectDefinition["effects"][number];
@@ -565,6 +588,7 @@ export const createAttackTriggerQueueing = (
                 "unsupported-on-opponent-attack-definition",
               ),
             ],
+            options,
           );
         }
         if (onOpponentAttackEffects.length === 0) {
@@ -584,6 +608,7 @@ export const createAttackTriggerQueueing = (
                   "unsupported-on-opponent-attack-definition",
                 ),
               ],
+              options,
             );
           }
           const queueId =
@@ -633,7 +658,7 @@ export const createAttackTriggerQueueing = (
       return undefined;
     }
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueWhenAttackingTriggers, queueOnOpponentAttackTriggers };

@@ -14,8 +14,11 @@ import {
 } from "./action-test-fixtures.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 import {
+  attackQueueingState,
+  opponentAttackQueueingState,
   queueingState,
   setupOnPlayDefinition,
+  toStateSeq,
 } from "./runtime/trigger-queueing/test-support.js";
 
 test("live runtime trigger queueing preserves omitted state hash", () => {
@@ -30,6 +33,32 @@ test("live runtime trigger queueing preserves omitted state hash", () => {
     reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
     "def-live-runtime-on-play",
   );
+
+  const result = processEffectRuntime(state, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
+test("live runtime when attacking queueing preserves omitted state hash", () => {
+  const { state } = attackQueueingState();
+
+  const result = processEffectRuntime(state, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
+test("live runtime opponent attack queueing preserves omitted state hash", () => {
+  const { state } = opponentAttackQueueingState();
+  const attackDeclared = must(state.eventJournal.at(-1), "attackDeclared");
+  attackDeclared.createdAtStateSeq = toStateSeq(Number(state.seq) - 1);
 
   const result = processEffectRuntime(state, {
     includeStateHash: false,

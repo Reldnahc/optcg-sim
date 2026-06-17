@@ -400,7 +400,7 @@ export const processDefenderOpponentAttackTiming = (
   state: GameState,
   options: EngineResultOptions = {},
 ): EngineResult => {
-  const queued = queueOnOpponentAttackTriggers(state);
+  const queued = queueOnOpponentAttackTriggers(state, options);
   if (queued === undefined) {
     return toEngineResult(state, [], undefined, options);
   }
@@ -450,12 +450,15 @@ export const processEffectRuntime = (
   if (queuedFromEndOfYourTurn !== undefined) {
     return queuedFromEndOfYourTurn;
   }
-  const queuedFromWhenAttacking = queueWhenAttackingTriggers(state);
+  const queuedFromWhenAttacking = queueWhenAttackingTriggers(state, options);
   if (queuedFromWhenAttacking !== undefined) {
     return queuedFromWhenAttacking;
   }
   if (attackBattleParticipantsRemainPresent(state)) {
-    const queuedFromOnOpponentAttack = queueOnOpponentAttackTriggers(state);
+    const queuedFromOnOpponentAttack = queueOnOpponentAttackTriggers(
+      state,
+      options,
+    );
     if (queuedFromOnOpponentAttack !== undefined) {
       return queuedFromOnOpponentAttack;
     }
