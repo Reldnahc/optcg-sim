@@ -220,7 +220,7 @@ test("hand-selection filters can match card name against saved paid-cost cards",
   const savedReferences = {
     paidCost: {
       kind: "paidCost" as const,
-      paidCost: true,
+      paidCost: true as const,
       selectedCards: [toCardRef(paidCard, p1)],
     },
   };
