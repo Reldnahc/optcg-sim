@@ -11,7 +11,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
@@ -180,10 +184,12 @@ export const createOpponentActivationTriggerQueueing = (
 ): {
   queueOpponentActivationTriggers: (
     state: GameState,
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 } => {
   const queueOpponentActivationTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -218,6 +224,7 @@ export const createOpponentActivationTriggerQueueing = (
               "invalid-opponent-activation-event",
             ),
           ],
+          options,
         );
       }
 
@@ -241,7 +248,7 @@ export const createOpponentActivationTriggerQueueing = (
           state.cardManifest,
         );
         if (!lookup.ok) {
-          return toEngineResult(state, [], [lookup.error]);
+          return toEngineResult(state, [], [lookup.error], options);
         }
         const activationEffects = lookup.definition.effects.filter(
           (effect) =>
@@ -270,6 +277,7 @@ export const createOpponentActivationTriggerQueueing = (
                 "unsupported-opponent-activation-definition",
               ),
             ],
+            options,
           );
         }
         for (const effectBlock of matching) {
@@ -320,7 +328,7 @@ export const createOpponentActivationTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueOpponentActivationTriggers };

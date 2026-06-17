@@ -475,7 +475,10 @@ export const processEffectRuntime = (
   if (queuedFromHandTrash !== undefined) {
     return queuedFromHandTrash;
   }
-  const queuedFromOpponentActivation = queueOpponentActivationTriggers(state);
+  const queuedFromOpponentActivation = queueOpponentActivationTriggers(
+    state,
+    options,
+  );
   if (queuedFromOpponentActivation !== undefined) {
     return queuedFromOpponentActivation;
   }
