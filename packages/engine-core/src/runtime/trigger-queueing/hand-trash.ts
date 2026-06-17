@@ -13,7 +13,11 @@ import type {
   CardId,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { cardMatchesSearchFilter, getOpponentId } from "../../actions/state.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
@@ -160,10 +164,12 @@ export const createHandTrashedByEffectTriggerQueueing = (
 ): {
   queueHandTrashedByEffectTriggers: (
     state: GameState,
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 } => {
   const queueHandTrashedByEffectTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -196,6 +202,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
               "invalid-hand-trashed-by-effect-event",
             ),
           ],
+          options,
         );
       }
 
@@ -218,7 +225,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
           state.cardManifest,
         );
         if (!lookup.ok) {
-          return toEngineResult(state, [], [lookup.error]);
+          return toEngineResult(state, [], [lookup.error], options);
         }
         const handTrashEffects = lookup.definition.effects.filter(
           (effect) =>
@@ -253,6 +260,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
                 "unsupported-hand-trashed-by-effect-definition",
               ),
             ],
+            options,
           );
         }
         for (const effectBlock of matching) {
@@ -303,7 +311,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueHandTrashedByEffectTriggers };

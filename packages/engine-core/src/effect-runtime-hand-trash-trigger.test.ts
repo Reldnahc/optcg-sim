@@ -146,6 +146,19 @@ test("handTrashedByEffect queues and resolves after effect-body hand trash", () 
   });
 });
 
+test("live handTrashedByEffect queueing preserves omitted state hash", () => {
+  const state = setupHandTrashReactionSource();
+  addHandTrashEvent(state, { triggerSource: "effect" });
+
+  const result = processEffectRuntime(state, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("handTrashedByEffect ignores untagged hand trash so costs do not trigger it", () => {
   const state = setupHandTrashReactionSource();
   addHandTrashEvent(state);

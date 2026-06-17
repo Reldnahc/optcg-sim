@@ -471,7 +471,7 @@ export const processEffectRuntime = (
   if (queuedFromDelayedEvent !== undefined) {
     return queuedFromDelayedEvent;
   }
-  const queuedFromHandTrash = queueHandTrashedByEffectTriggers(state);
+  const queuedFromHandTrash = queueHandTrashedByEffectTriggers(state, options);
   if (queuedFromHandTrash !== undefined) {
     return queuedFromHandTrash;
   }
