@@ -269,4 +269,116 @@ describe("card effect line parser owner deck-bottom field movement", () => {
       ]),
     );
   });
+
+  it("parses repeated owner deck-bottom placements under an optional hand-trash cost", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may trash 1 card from your hand: Place up to 1 of your opponent's Characters with 4000 base power or less and up to 1 Character with a base cost of 3 or less at the bottom of the owner's deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "trashFromHand", count: 1 },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          effect: {
+                            type: "selectTargets",
+                            request: {
+                              player: "opponent",
+                              zone: "characterArea",
+                              min: 0,
+                              max: 1,
+                              filter: {
+                                categories: ["character"],
+                                power: { max: 4000 },
+                              },
+                            },
+                          },
+                        },
+                        {
+                          effect: {
+                            type: "bounce",
+                            destination: "deckBottom",
+                            target: {
+                              type: "savedFieldObject",
+                              player: "opponent",
+                              zone: "characterArea",
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          effect: {
+                            type: "selectTargets",
+                            request: {
+                              player: "anyPlayer",
+                              zone: "characterArea",
+                              min: 0,
+                              max: 1,
+                              filter: {
+                                categories: ["character"],
+                                baseCost: { max: 3 },
+                              },
+                            },
+                          },
+                        },
+                        {
+                          effect: {
+                            type: "bounce",
+                            destination: "deckBottom",
+                            target: {
+                              type: "savedFieldObject",
+                              player: "anyPlayer",
+                              zone: "characterArea",
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "cost:trashFromHand",
+        "instruction:moveSelected",
+        "player:opponent",
+        "player:any",
+        "filter:power",
+        "filter:cost",
+        "destination:deck",
+        "position:bottom",
+        "composition:sequence",
+      ]),
+    );
+  });
 });

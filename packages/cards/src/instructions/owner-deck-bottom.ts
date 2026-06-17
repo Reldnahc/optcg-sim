@@ -15,13 +15,17 @@ type CharacterFilter = NonNullable<
 type CardFilter = NonNullable<
   ReturnType<typeof parseCardFilterPredicates>
 >["filter"];
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
-const savedOwnerDeckBottomTarget = (player: "opponent" | "anyPlayer") =>
+const savedOwnerDeckBottomTarget = (
+  player: "opponent" | "anyPlayer",
+  selectionId: string = ownerDeckBottomSelectionId,
+) =>
   ({
     type: "savedFieldObject",
     binding: {
       family: "selectedTargets",
-      saveResultAs: ownerDeckBottomSelectionId,
+      saveResultAs: selectionId,
     },
     zone: "characterArea",
     player,
@@ -34,13 +38,14 @@ const selectThenPlaceAtOwnerDeckBottom = (
   min: number,
   max: number,
   filter: CharacterFilter,
+  selectionId: string = ownerDeckBottomSelectionId,
 ): Effect => ({
   type: "sequence",
   effects: [
     {
-      id: "select:owner-deck-bottom",
+      id: `select:owner-deck-bottom:${selectionId}`,
       connector: "always",
-      saveResultAs: ownerDeckBottomSelectionId,
+      saveResultAs: selectionId,
       effect: {
         type: "selectTargets",
         request: {
@@ -61,7 +66,7 @@ const selectThenPlaceAtOwnerDeckBottom = (
       effect: {
         type: "bounce",
         destination: "deckBottom",
-        target: savedOwnerDeckBottomTarget(player),
+        target: savedOwnerDeckBottomTarget(player, selectionId),
       },
     },
   ],
@@ -247,6 +252,11 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     };
   }
 
+  const repeatedTargets = parseRepeatedOwnerDeckBottomTargets(selectionText);
+  if (repeatedTargets !== undefined) {
+    return repeatedTargets;
+  }
+
   const target = parseOwnerDeckBottomTarget(cardinality.rest);
   if (target === undefined || target.rest.length > 0) {
     return undefined;
@@ -271,6 +281,60 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
       "position:bottom",
       ...orderEvidence,
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
+
+const parseRepeatedOwnerDeckBottomTargets = (
+  selectionText: string,
+): ReturnType<InstructionParser> => {
+  const parts = selectionText
+    .split(/\s+and\s+(?=up to [1-9]\d*\s+)/iu)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length < 2) {
+    return undefined;
+  }
+
+  const effects: SequenceEffect["effects"] = [];
+  const evidence: PrimitiveEvidence[] = [
+    "instruction:moveSelected",
+    "chooser:self:upTo",
+  ];
+
+  for (const [index, part] of parts.entries()) {
+    const cardinality = parseUpToCardinality({ text: part });
+    if (cardinality === undefined) {
+      return undefined;
+    }
+    const target = parseOwnerDeckBottomTarget(cardinality.rest);
+    if (target === undefined || target.rest.length > 0) {
+      return undefined;
+    }
+    const selectionId = `selected:owner-deck-bottom:${String(index)}`;
+    effects.push({
+      id: `owner-deck-bottom:${String(index)}`,
+      connector: index === 0 ? "always" : "then",
+      effect: selectThenPlaceAtOwnerDeckBottom(
+        target.player,
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+        target.filter,
+        selectionId,
+      ),
+    });
+    evidence.push(...cardinality.evidence, ...target.evidence);
+  }
+
+  return {
+    effect: { type: "sequence", effects },
+    evidence: [
+      ...evidence,
+      "destination:deck",
+      "position:bottom",
+      "composition:selectThenApply",
+      "composition:sequence",
     ],
     rest: "",
   };
