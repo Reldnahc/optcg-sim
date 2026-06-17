@@ -23,6 +23,12 @@ export const preventOpponentCharactersAttackPrimitive = {
 
 export const parsePreventOpponentCharactersAttackInstruction: InstructionParser =
   (input) => {
+    const mixedLeaderOrCharacter =
+      parseOpponentRestedLeaderOrCharacterAttackRestriction(input);
+    if (mixedLeaderOrCharacter !== undefined) {
+      return mixedLeaderOrCharacter;
+    }
+
     const cardinality = parseUpToCardinality({ text: input.text });
     if (cardinality === undefined) {
       return undefined;
@@ -89,6 +95,106 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
         ...cardinality.evidence,
         "chooser:self:upTo",
         ...target.evidence,
+        ...duration.evidence,
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  };
+
+const parseOpponentRestedLeaderOrCharacterAttackRestriction: InstructionParser =
+  (input) => {
+    const match =
+      /^Your opponent's rested Leader or (?<characterText>up to [1-9]\d* of your opponent's .+?) cannot attack (?<durationText>.+)$/iu.exec(
+        input.text,
+      );
+    const characterText = match?.groups?.["characterText"];
+    const durationText = match?.groups?.["durationText"];
+    if (characterText === undefined || durationText === undefined) {
+      return undefined;
+    }
+
+    const cardinality = parseUpToCardinality({ text: characterText });
+    if (cardinality === undefined) {
+      return undefined;
+    }
+    const characterTarget = parseOpponentCharactersTarget({
+      text: cardinality.rest,
+    });
+    if (characterTarget === undefined || characterTarget.rest.length > 0) {
+      return undefined;
+    }
+
+    const duration = parseDurationFromSet(
+      { text: durationText },
+      attackRestrictionDurationParsers,
+    );
+    if (
+      duration === undefined ||
+      duration.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:cannot-attack",
+            connector: "always",
+            saveResultAs: thatCharacterSelectionId,
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zones: ["leaderArea", "characterArea"],
+                filter: {
+                  anyOf: [
+                    { categories: ["leader"], state: "rested" },
+                    characterTarget.filter ?? { categories: ["character"] },
+                  ],
+                },
+                min: cardinality.cardinality.min,
+                max: cardinality.cardinality.max,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "cannotAttack",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: thatCharacterSelectionId,
+                },
+                zones: ["leaderArea", "characterArea"],
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+              duration: duration.duration,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:preventActivation",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        "target:opponentLeaderOrCharacters",
+        "player:opponent",
+        "filter:anyOf",
+        "filter:category:leader",
+        "filter:state:rested",
+        ...characterTarget.evidence,
         ...duration.evidence,
         "composition:selectThenApply",
       ],
