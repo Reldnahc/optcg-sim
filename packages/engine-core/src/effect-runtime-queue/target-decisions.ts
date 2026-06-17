@@ -20,6 +20,7 @@ import {
   appendEffectResolvedEvent,
   appendEvent,
   createEvent,
+  type EngineResultOptions,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -80,25 +81,30 @@ export interface EffectRuntimeQueueTargetDecisionDependencies {
   ) => EngineResult | undefined;
 }
 
-export interface SelectTargetsDecisionOptions {
+export interface SelectTargetsDecisionOptions extends EngineResultOptions {
   rollbackState: GameState;
   priorEvents: readonly EngineEvent[];
   errorCount: number;
 }
 
 export interface EffectRuntimeQueueTargetDecisions {
-  failUnsupportedTargetEffectContinuation: (state: GameState) => EngineResult;
+  failUnsupportedTargetEffectContinuation: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult;
   finalizeSelectedTargetEffectResolution: (
     state: GameState,
     eventBaseState: GameState,
     resolvedEntry: EffectQueueEntry,
     allEvents: EngineEvent[],
     resolutionEvents: readonly EngineEvent[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   continueSelectedTargetEffect: (
     state: GameState,
     decision: SelectTargetsDecision,
     selectedTargets: readonly CardRef[],
+    options?: EngineResultOptions,
   ) => EngineResult;
   resolveQueuedTargetRequest: (
     state: GameState,
@@ -333,6 +339,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
 ): EffectRuntimeQueueTargetDecisions => {
   const failUnsupportedTargetEffectContinuation = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult =>
     toEngineResult(
       state,
@@ -343,6 +350,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           count: state.effectQueue.length,
         }),
       ],
+      options,
     );
 
   const resolveQueuedTargetRequest = (
@@ -416,7 +424,10 @@ export const createEffectRuntimeQueueTargetDecisions = (
     };
   };
 
-  const unsupportedContinuationResult = (state: GameState): EngineResult =>
+  const unsupportedContinuationResult = (
+    state: GameState,
+    options: EngineResultOptions,
+  ): EngineResult =>
     toEngineResult(
       state,
       [],
@@ -426,10 +437,18 @@ export const createEffectRuntimeQueueTargetDecisions = (
           count: state.effectQueue.length,
         }),
       ],
+      options,
     );
 
   const finalizeSelectedTargetEffectResolution: EffectRuntimeQueueTargetDecisions["finalizeSelectedTargetEffectResolution"] =
-    (state, eventBaseState, resolvedEntry, allEvents, resolutionEvents) => {
+    (
+      state,
+      eventBaseState,
+      resolvedEntry,
+      allEvents,
+      resolutionEvents,
+      options = {},
+    ) => {
       let nextState: GameState = {
         ...state,
         effectQueue: state.effectQueue.filter(
@@ -498,7 +517,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         allEvents,
       );
       if (!koQueued.ok) {
-        return toEngineResult(state, [], [koQueued.error]);
+        return toEngineResult(state, [], [koQueued.error], options);
       }
       const koQueuedEvents = allEvents.slice(koQueueEventCount);
       nextState =
@@ -522,19 +541,19 @@ export const createEffectRuntimeQueueTargetDecisions = (
         allEvents.push(...triggered.events);
       }
 
-      return toEngineResult(nextState, allEvents);
+      return toEngineResult(nextState, allEvents, undefined, options);
     };
 
   const continueSelectedTargetEffect: EffectRuntimeQueueTargetDecisions["continueSelectedTargetEffect"] =
-    (state, decision, selectedTargets) => {
+    (state, decision, selectedTargets, options = {}) => {
       const resolved = resolveSelectedTargetEffect(state, decision);
       if (!resolved.ok) {
-        return unsupportedContinuationResult(state);
+        return unsupportedContinuationResult(state, options);
       }
       let nextState = state;
       if (resolved.oncePerTurn) {
         if (!canAdmitOncePerTurnEffect(nextState, resolved.entry, resolved)) {
-          return unsupportedContinuationResult(state);
+          return unsupportedContinuationResult(state, options);
         }
         nextState = consumeOncePerTurnForQueueEntry(
           nextState,
@@ -565,7 +584,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           selectedTargets,
         );
         if (records === null) {
-          return unsupportedContinuationResult(state);
+          return unsupportedContinuationResult(state, options);
         }
         nextState = {
           ...queueRemovedState,
@@ -581,6 +600,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           resolvedEntry,
           allEvents,
           [],
+          options,
         );
       }
       const effectForPrimitive =
@@ -605,7 +625,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         selectedTargets,
       );
       if (primitive.errors !== undefined) {
-        return unsupportedContinuationResult(state);
+        return unsupportedContinuationResult(state, options);
       }
       if (primitive.state.pendingDecision?.type === "chooseReplacement") {
         return toEngineResult(
@@ -616,6 +636,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
             ),
           },
           primitive.events,
+          undefined,
+          options,
         );
       }
 
@@ -627,6 +649,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         resolvedEntry,
         allEvents,
         primitive.events,
+        options,
       );
     };
 
@@ -691,7 +714,12 @@ export const createEffectRuntimeQueueTargetDecisions = (
       pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     };
-    return toEngineResult(nextState, [...options.priorEvents, ...events]);
+    return toEngineResult(
+      nextState,
+      [...options.priorEvents, ...events],
+      undefined,
+      options,
+    );
   };
 
   return {

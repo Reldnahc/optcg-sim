@@ -183,6 +183,7 @@ export const createQueueEntryResolver = (
             rollbackState: originalState,
             priorEvents: allEvents,
             errorCount: originalState.effectQueue.length,
+            ...options,
           },
         );
       }

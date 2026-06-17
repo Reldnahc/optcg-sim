@@ -97,6 +97,7 @@ export const createEffectRuntimeQueueProcessing = (
         state,
         decision,
         selectedTargets,
+        options,
       );
       if (
         resolved.errors !== undefined ||
@@ -134,6 +135,7 @@ export const createEffectRuntimeQueueProcessing = (
         resolvedEntry,
         allEvents,
         resolutionEvents,
+        options,
       );
       if (
         resolved.errors !== undefined ||
