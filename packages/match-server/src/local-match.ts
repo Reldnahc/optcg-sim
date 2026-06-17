@@ -695,7 +695,10 @@ const executableActions = (
 ): ExecutableDevAction[] => {
   const legalActions = recordActionTimingSpan(
     "executableActions:getLegalActions",
-    () => getLegalActions(state, playerId),
+    () =>
+      getLegalActions(state, playerId, {
+        profileSpan: recordActionTimingSpan,
+      }),
   );
   const rawActions = recordActionTimingSpan(
     "executableActions:decorateLegalActions",

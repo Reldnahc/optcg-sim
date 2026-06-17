@@ -76,6 +76,29 @@ test("getLegalActions in don phase before start-of-main acceptance exposes conce
   ]);
 });
 
+test("getLegalActions profiles main-phase legal action collectors", () => {
+  const state = makeMainPhaseLegalActionState();
+  const spans = recordSpanNames();
+
+  const actions = getLegalActions(state, p1, {
+    profileSpan: spans.profileSpan,
+  });
+
+  assert.equal(
+    actions.some((action) => action.type === "attachDon"),
+    true,
+  );
+  assert.deepEqual(spans.names, [
+    "engine:getLegalActions:turn",
+    "engine:getLegalActions:startOfTurn",
+    "engine:getLegalActions:activatedReaction",
+    "engine:getLegalActions:attachDon",
+    "engine:getLegalActions:playCard",
+    "engine:getLegalActions:declareAttack",
+    "engine:getLegalActions:activateMain",
+  ]);
+});
+
 test("applyAction profiles accepted dispatcher branches and preserves omitted state hashes", () => {
   const state = makeMainPhaseLegalActionState();
   const action = getLegalActions(state, p1).find(

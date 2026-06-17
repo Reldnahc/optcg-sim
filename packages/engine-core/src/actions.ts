@@ -108,10 +108,8 @@ import {
   getStartOfTurnLegalActions,
 } from "./runtime/optional-activation/start-of-turn.js";
 import { finalizeSetupFromContinuation } from "./setup/initial-state.js";
-import {
-  applyStartOfGameSetupDecisionResponse,
-  isStartOfGameSetupDecision,
-} from "./setup/start-of-game-effects.js";
+import { getSetupStartOfGameLegalActions } from "./setup/start-of-game-legal-actions.js";
+import { applyStartOfGameSetupDecisionResponse } from "./setup/start-of-game-effects.js";
 import {
   applyChooseQuantityDecisionResponse,
   getChooseQuantityLegalActions,
@@ -131,49 +129,63 @@ const returnDonBodyDecisionPrefix = "decision:returnDon:sequence:";
 export interface ApplyActionOptions
   extends EngineResultOptions, EndMainPhaseOptions {}
 
+export interface GetLegalActionsOptions {
+  readonly profileSpan?: <T>(name: string, fn: () => T) => T;
+}
+
+type LegalActionCollector = readonly [
+  name: string,
+  collect: (state: GameState, playerId: PlayerId) => LegalAction[],
+];
+
+const pendingLegalActionCollectors: readonly LegalActionCollector[] = [
+  ["lifeTrigger", getLifeTriggerLegalActions],
+  ["replacementDecision", getReplacementDecisionLegalActions],
+  ["selectTargets", getSelectTargetsLegalActions],
+  ["optionalActivation", getOptionalActivationLegalActions],
+  ["playCard", getPlayCardLegalActions],
+  ["battleDecision", getBattleDecisionLegalActions],
+  ["attackCostDecision", getAttackCostDecisionLegalActions],
+  ["chooseReplacement", getChooseReplacementLegalActions],
+  ["effectOption", getChooseEffectOptionLegalActions],
+  ["chooseQuantity", getChooseQuantityLegalActions],
+  ["trashFromHand", getTrashFromHandDecisionLegalActions],
+  ["handSelection", getHandSelectionDecisionLegalActions],
+  ["sequenceSelectCards", getSequenceSelectCardsChoiceLegalActions],
+  ["setupStartOfGame", getSetupStartOfGameLegalActions],
+];
+
+const mainPhaseLegalActionCollectors: readonly LegalActionCollector[] = [
+  ["turn", getTurnLegalActions],
+  ["startOfTurn", getStartOfTurnLegalActions],
+  ["activatedReaction", getActivatedReactionLegalActions],
+  ["attachDon", getAttachDonLegalActions],
+  ["playCard", getPlayCardLegalActions],
+  ["declareAttack", getDeclareAttackLegalActions],
+  ["activateMain", getActivateMainLegalActions],
+];
+
 const profileActionSpan = <T>(
   options: ApplyActionOptions,
   name: string,
   fn: () => T,
 ): T => options.profileSpan?.(name, fn) ?? fn();
 
-const getSetupStartOfGameLegalActions = (
-  state: GameState,
-  playerId: PlayerId,
-): LegalAction[] => {
-  const pending = state.pendingDecision;
-  if (
-    state.status.type !== "setup" ||
-    pending === undefined ||
-    !isStartOfGameSetupDecision(pending)
-  ) {
-    return [];
-  }
-  const decision = pending;
-  if (decision.playerId !== playerId) return [];
-  return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "cards", cards: [] },
-    },
-    ...decision.candidates.map((candidate) => ({
-      type: "respondToDecision" as const,
-      decisionId: decision.id,
-      response: { type: "cards" as const, cards: [candidate.card] },
-    })),
-  ];
-};
-
 export const getLegalActions = (
   state: GameState,
   playerId: PlayerId,
+  options: GetLegalActionsOptions = {},
 ): LegalAction[] => {
   if (!isMatchActive(state) || state.players[playerId] === undefined) {
     return [];
   }
 
   const actions: LegalAction[] = [{ type: "concede", playerId }];
+  const append = (name: string, fn: () => LegalAction[]): void => {
+    actions.push(
+      ...(options.profileSpan?.(`engine:getLegalActions:${name}`, fn) ?? fn()),
+    );
+  };
   if (
     state.pendingDecision === undefined &&
     detectPendingRuntimeWork(state) !== undefined
@@ -181,43 +193,31 @@ export const getLegalActions = (
     return actions;
   }
   if (state.pendingDecision !== undefined) {
+    const pendingDecision = state.pendingDecision;
     if (
-      state.pendingDecision.type === "chooseTriggerOrder" &&
-      state.pendingDecision.playerId === playerId
+      pendingDecision.type === "chooseTriggerOrder" &&
+      pendingDecision.playerId === playerId
     ) {
-      actions.push({
-        type: "respondToDecision",
-        decisionId: state.pendingDecision.id,
-        response: {
-          type: "orderedIds",
-          ids: state.pendingDecision.triggerIds.slice(0, 1),
+      append("triggerOrder", () => [
+        {
+          type: "respondToDecision",
+          decisionId: pendingDecision.id,
+          response: {
+            type: "orderedIds",
+            ids: pendingDecision.triggerIds.slice(0, 1),
+          },
         },
-      });
+      ]);
     }
-    actions.push(...getLifeTriggerLegalActions(state, playerId));
-    actions.push(...getReplacementDecisionLegalActions(state, playerId));
-    actions.push(...getSelectTargetsLegalActions(state, playerId));
-    actions.push(...getOptionalActivationLegalActions(state, playerId));
-    actions.push(...getPlayCardLegalActions(state, playerId));
-    actions.push(...getBattleDecisionLegalActions(state, playerId));
-    actions.push(...getAttackCostDecisionLegalActions(state, playerId));
-    actions.push(...getChooseReplacementLegalActions(state, playerId));
-    actions.push(...getChooseEffectOptionLegalActions(state, playerId));
-    actions.push(...getChooseQuantityLegalActions(state, playerId));
-    actions.push(...getTrashFromHandDecisionLegalActions(state, playerId));
-    actions.push(...getHandSelectionDecisionLegalActions(state, playerId));
-    actions.push(...getSequenceSelectCardsChoiceLegalActions(state, playerId));
-    actions.push(...getSetupStartOfGameLegalActions(state, playerId));
+    for (const [name, collect] of pendingLegalActionCollectors) {
+      append(name, () => collect(state, playerId));
+    }
     return actions;
   }
 
-  actions.push(...getTurnLegalActions(state, playerId));
-  actions.push(...getStartOfTurnLegalActions(state, playerId));
-  actions.push(...getActivatedReactionLegalActions(state, playerId));
-  actions.push(...getAttachDonLegalActions(state, playerId));
-  actions.push(...getPlayCardLegalActions(state, playerId));
-  actions.push(...getDeclareAttackLegalActions(state, playerId));
-  actions.push(...getActivateMainLegalActions(state, playerId));
+  for (const [name, collect] of mainPhaseLegalActionCollectors) {
+    append(name, () => collect(state, playerId));
+  }
   return actions;
 };
 
