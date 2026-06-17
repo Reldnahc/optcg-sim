@@ -667,7 +667,7 @@ const applyRespondToDecision = (
     const handSelection = profileActionSpan(
       options,
       "engine:decision:handSelection",
-      () => applySupportedHandSelectionChoiceResponse(state, action),
+      () => applySupportedHandSelectionChoiceResponse(state, action, options),
     );
     if (handSelection !== null) {
       return continueRuntimeAndAttackTimingAfterDecision(
@@ -752,7 +752,7 @@ const applyRespondToDecision = (
   const targetSelectionResult = profileActionSpan(
     options,
     "engine:decision:targetSelection",
-    () => applySelectTargetsDecisionResponse(state, action),
+    () => applySelectTargetsDecisionResponse(state, action, options),
   );
   if (targetSelectionResult !== null) {
     return continueAfterEffectDecision(

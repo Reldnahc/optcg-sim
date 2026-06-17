@@ -708,6 +708,42 @@ test("private hand selection decision records selectedCards reference for later 
   assert.equal(JSON.stringify(p2View).includes("handSelection:test"), false);
 });
 
+test("live hand-selection response preserves omitted state hash", () => {
+  const { state } = sequenceQueueState(handSelectionThenPauseSequence());
+  const p1State = must(state.players[p1], "p1");
+  for (const card of p1State.hand) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 1,
+      power: 1000,
+    });
+  }
+  const paused = processEffectRuntime(state);
+  const decision = must(
+    paused.state.pendingDecision,
+    "hand-selection decision",
+  );
+  assert.equal(decision.type, "selectCards");
+  const selected = must(decision.candidates[0], "first candidate").card;
+
+  const resolved = applyAction(
+    paused.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [selected] },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.stateHash, "");
+});
+
 test("public trash selection lets the controller choose opponent trash for owner deck-bottom movement", () => {
   const selection = "trashSelection:owner-deck-bottom" as SelectionId;
   const { state } = sequenceQueueState({

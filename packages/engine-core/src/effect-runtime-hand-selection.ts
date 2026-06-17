@@ -13,6 +13,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -546,6 +547,7 @@ export const getHandSelectionDecisionLegalActions = (
 export const applySupportedHandSelectionChoiceResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (
@@ -562,6 +564,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         "Decision id does not match current hand-selection decision.",
       ),
+      options,
     );
   }
   if (hasMalformedRespondToDecisionPlayerId(action)) {
@@ -569,6 +572,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       state,
       [],
       invalidDecision("Player does not match current hand-selection decision."),
+      options,
     );
   }
   if (getRespondingPlayerId(action, decision.playerId) !== decision.playerId) {
@@ -576,6 +580,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       state,
       [],
       invalidDecision("Player does not match current hand-selection decision."),
+      options,
     );
   }
   if (action.response.type !== "cards") {
@@ -585,6 +590,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         "Response type must be cards for hand-selection choices.",
       ),
+      options,
     );
   }
   const responseCards = (action.response as { cards?: unknown }).cards;
@@ -593,6 +599,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       state,
       [],
       invalidDecision("Response cards must be CardRef values."),
+      options,
     );
   }
   if (
@@ -605,6 +612,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         "Selected card count must be within hand-selection bounds.",
       ),
+      options,
     );
   }
   if (hasDuplicateInstanceIds(responseCards)) {
@@ -612,6 +620,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       state,
       [],
       invalidDecision("Selected cards must not contain duplicates."),
+      options,
     );
   }
   if (!hasCurrentCandidateEnvelope(state, decision)) {
@@ -621,6 +630,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         "hand-selection decision envelope is stale or unsupported.",
       ),
+      options,
     );
   }
   const selectedCards = findCurrentCards(state, decision, responseCards);
@@ -631,6 +641,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       invalidDecision(
         `Selected cards must be active cards in the choosing player's ${String(decision.request.zone)}.`,
       ),
+      options,
     );
   }
   if (
@@ -641,6 +652,7 @@ export const applySupportedHandSelectionChoiceResponse = (
       state,
       [],
       invalidDecision("Selected cards must have different names."),
+      options,
     );
   }
 
@@ -679,7 +691,12 @@ export const applySupportedHandSelectionChoiceResponse = (
     return null;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [...events, ...resumed.events]);
+  return toEngineResult(
+    resumed.state,
+    [...events, ...resumed.events],
+    undefined,
+    options,
+  );
 };

@@ -12,7 +12,13 @@ import type {
   TargetSelectionConstraint,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  assertGameStateInvariantsIfEnabled,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { zonesEqual } from "../actions/state.js";
 import {
   continueSelectedTargetEffect,
@@ -25,7 +31,6 @@ import {
 import { isUnsupportedSelectTargetsDecision } from "../effect-runtime-queue/target-decisions.js";
 import { resumeSequenceFrameAfterSelectTargets } from "../effect-runtime-sequence/frames.js";
 import { isSequenceFrameSelectTargetsDecision } from "../effect-runtime-sequence/select-targets.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import { computeView } from "../view/compute-view.js";
 import { resolvePublicTargetCandidatesForRequest } from "./candidates.js";
 
@@ -220,6 +225,7 @@ const validateTargetsResponse = (
   state: GameState,
   decision: SelectTargetsDecision,
   targets: readonly CardRef[],
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   const currentCandidates = currentCandidatesForDecision(state, decision);
   if (currentCandidates === null) {
@@ -227,6 +233,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected targets must be current legal targets."),
+      options,
     );
   }
   const minimum = minimumRequiredTargetCount(
@@ -239,6 +246,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected targets must not contain duplicates."),
+      options,
     );
   }
   if (targets.length < minimum) {
@@ -246,6 +254,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected target count is below the required minimum."),
+      options,
     );
   }
   if (targets.length > decision.request.max) {
@@ -253,6 +262,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected target count exceeds the allowed maximum."),
+      options,
     );
   }
   if (!allTargetsInCandidates(targets, decision.candidates)) {
@@ -260,6 +270,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected targets must be active target candidates."),
+      options,
     );
   }
   if (!allTargetsInCandidates(targets, currentCandidates)) {
@@ -267,6 +278,7 @@ const validateTargetsResponse = (
       state,
       [],
       invalidDecision("Selected targets must be current legal targets."),
+      options,
     );
   }
   if (!targetsSatisfySelectionConstraints(state, decision, targets)) {
@@ -276,6 +288,7 @@ const validateTargetsResponse = (
       invalidDecision(
         "Selected targets do not satisfy the selection constraints.",
       ),
+      options,
     );
   }
   return undefined;
@@ -377,6 +390,7 @@ export const getSelectTargetsLegalActions = (
 export const applySelectTargetsDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "selectTargets") {
@@ -387,6 +401,7 @@ export const applySelectTargetsDecisionResponse = (
       state,
       [],
       invalidDecision("Response type must be targets for selectTargets."),
+      options,
     );
   }
 
@@ -396,6 +411,7 @@ export const applySelectTargetsDecisionResponse = (
       state,
       [],
       invalidDecision("Response targets must be an array."),
+      options,
     );
   }
   if (!targets.every(isCardRef)) {
@@ -403,9 +419,10 @@ export const applySelectTargetsDecisionResponse = (
       state,
       [],
       invalidDecision("Response targets must be CardRef values."),
+      options,
     );
   }
-  const validation = validateTargetsResponse(state, decision, targets);
+  const validation = validateTargetsResponse(state, decision, targets, options);
   if (validation !== undefined) {
     return validation;
   }
@@ -445,21 +462,33 @@ export const applySelectTargetsDecisionResponse = (
       return null;
     }
     if (!resumed.ok) {
-      return toEngineResult(state, [], [resumed.error]);
+      return toEngineResult(state, [], [resumed.error], options);
     }
-    return toEngineResult(resumed.state, [...events, ...resumed.events]);
+    return toEngineResult(
+      resumed.state,
+      [...events, ...resumed.events],
+      undefined,
+      options,
+    );
   }
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, options);
   const continuation = continueSelectedTargetEffect(
     nextState,
     decision,
     targets,
   );
   if (continuation.errors !== undefined) {
-    return toEngineResult(state, [], toErrorTuple(continuation.errors));
+    return toEngineResult(
+      state,
+      [],
+      toErrorTuple(continuation.errors),
+      options,
+    );
   }
-  return {
-    ...continuation,
-    events: [...events, ...continuation.events],
-  };
+  return toEngineResult(
+    continuation.state,
+    [...events, ...continuation.events],
+    undefined,
+    options,
+  );
 };
