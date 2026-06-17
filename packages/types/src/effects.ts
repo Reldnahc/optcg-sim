@@ -255,6 +255,13 @@ export type DynamicNumberValue =
       multiplier: number;
     }
   | {
+      type: "countMatchingFieldCards";
+      player: PlayerRef;
+      zone: "characterArea";
+      filter: CardFilter;
+      multiplier: number;
+    }
+  | {
       type: "countMatchingZoneCards";
       player: PlayerRef;
       zone: "trash" | "life";
@@ -614,7 +621,7 @@ export interface PayCostEffect {
 export type AttackTrashCost = { type: "trashFromHand"; count: number };
 
 export type Effect =
-  | { type: "draw"; count: number; player: PlayerRef }
+  | { type: "draw"; count: number | DynamicNumberValue; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
   | {
       type: "preventDraw";
@@ -786,7 +793,7 @@ export type Effect =
   | {
       type: "trashFromHand";
       player: PlayerRef;
-      count: number;
+      count: number | DynamicNumberValue;
       min?: number;
       filter?: CardFilter;
       chooser: PlayerRef;

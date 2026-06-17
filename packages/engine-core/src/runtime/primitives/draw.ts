@@ -70,7 +70,11 @@ const executeDrawEffect = (
   effect: Extract<Effect, { type: "draw" }>,
   options: { incrementStateSeq?: boolean } = {},
 ): EngineResult => {
-  if (!Number.isInteger(effect.count) || effect.count < 0) {
+  if (
+    typeof effect.count !== "number" ||
+    !Number.isInteger(effect.count) ||
+    effect.count < 0
+  ) {
     return toEngineResult(
       state,
       [],
@@ -171,6 +175,7 @@ export const isSupportedDrawBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "draw" }> =>
   effect.type === "draw" &&
+  typeof effect.count === "number" &&
   Number.isInteger(effect.count) &&
   effect.count >= 0 &&
   effect.player === "self";

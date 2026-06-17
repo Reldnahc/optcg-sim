@@ -288,6 +288,9 @@ const canPayReplacementInsteadSegment = (
     );
   }
   if (isSupportedTrashFromHandInsteadEffect(instead)) {
+    if (typeof instead.count !== "number") {
+      return false;
+    }
     const player = state.players[source.card.controller];
     if (player === undefined) {
       return false;

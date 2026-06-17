@@ -21,6 +21,7 @@ import {
   executeNoChoiceEffectPrimitive,
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
+import { resolveDynamicNumberValue } from "../runtime/continuous/value-resolution.js";
 import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import {
   applyReturnDonPayment,
@@ -727,10 +728,18 @@ export const applyDrawSegment = (
   if (beforePlayer === undefined) {
     return { ok: false };
   }
+  const count = resolveDynamicNumberValue(state, segment.effect.count, {
+    controllerId: entry.controllerId,
+    savedReferences: ledgers.savedReferences,
+    source: entry.source,
+  });
+  if (count === null) {
+    return { ok: false };
+  }
   const resolution = executeNoChoiceEffectPrimitive(
     state,
     entry,
-    segment.effect,
+    { ...segment.effect, count },
     {
       incrementStateSeq: options.incrementStateSeq,
     },

@@ -458,6 +458,7 @@ const isSupportedSequenceBlockWithState = (
       if (isSupportedDrawSegment(segment.effect)) {
         if (
           requirePositiveDrawCount &&
+          typeof segment.effect.count === "number" &&
           Number.isInteger(segment.effect.count) &&
           segment.effect.count <= 0
         ) {

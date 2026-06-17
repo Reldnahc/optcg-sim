@@ -120,6 +120,29 @@ const countDistinctMatchingFieldNames = (
   return names.size * value.multiplier;
 };
 
+const countMatchingFieldCards = (
+  state: GameState,
+  controllerId: PlayerId,
+  value: Extract<DynamicNumberValue, { type: "countMatchingFieldCards" }>,
+): number | null => {
+  if (
+    (value.player !== "self" && value.player !== "opponent") ||
+    !Number.isSafeInteger(value.multiplier)
+  ) {
+    return null;
+  }
+  const playerId = resolvePlayerRef(state, controllerId, value.player);
+  const player = playerId === null ? undefined : state.players[playerId];
+  if (player === undefined) {
+    return null;
+  }
+  return (
+    player.characters.filter((card) =>
+      cardMatchesBasicFilter(state, card, value.filter),
+    ).length * value.multiplier
+  );
+};
+
 const countMatchingZoneCards = (
   state: GameState,
   controllerId: PlayerId,
@@ -282,6 +305,12 @@ export const resolveDynamicNumberValue = (
     return controllerId === undefined
       ? null
       : countDistinctMatchingFieldNames(state, controllerId, value);
+  }
+  if (value.type === "countMatchingFieldCards") {
+    const controllerId = context?.controllerId;
+    return controllerId === undefined
+      ? null
+      : countMatchingFieldCards(state, controllerId, value);
   }
   if (value.type === "countMatchingZoneCards") {
     const controllerId = context?.controllerId;

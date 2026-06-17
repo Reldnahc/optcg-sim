@@ -267,12 +267,17 @@ const recordSaveResultAsProducer = (
     segment.effect.type === "trashFromHand" ||
     segment.effect.type === "trashFromHandUntilCount"
   ) {
+    const maxCount =
+      segment.effect.type === "trashFromHand"
+        ? segment.effect.count
+        : undefined;
+    if (maxCount !== undefined && typeof maxCount !== "number") {
+      return null;
+    }
     const capability: SelectedCardsCapability = {
       kind: "selectedCards",
       cardKind: "hand",
-      ...(segment.effect.type === "trashFromHand"
-        ? { max: segment.effect.count }
-        : {}),
+      ...(maxCount === undefined ? {} : { max: maxCount }),
     };
     return addCapability(state, saveResultAs, capability);
   }

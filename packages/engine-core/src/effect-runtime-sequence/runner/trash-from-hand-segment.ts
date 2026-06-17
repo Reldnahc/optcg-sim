@@ -1,5 +1,6 @@
 import type { EffectQueueEntry, EngineEvent, GameState } from "@optcg/types";
 
+import { resolveDynamicNumberValue } from "../../runtime/continuous/value-resolution.js";
 import { resolveTrashFromHandUntilCount } from "../../runtime/primitives/trash-from-hand-until.js";
 import { pauseSequenceForPendingDecision } from "./pause.js";
 import { emptySegmentResult } from "./results.js";
@@ -28,10 +29,18 @@ type TrashFromHandUntilCountSegmentResult =
 export const pauseForTrashFromHandSegment = (
   params: HandTrashPauseParams & { effect: TrashFromHandEffect },
 ): SequenceFrameRunResult => {
+  const count = resolveDynamicNumberValue(params.state, params.effect.count, {
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    source: params.entry.source,
+  });
+  if (count === null || count <= 0) {
+    return { ok: false };
+  }
   const decisionResult = params.createTrashDecision(
     params.state,
     params.entry,
-    params.effect,
+    { ...params.effect, count },
   );
   if (!decisionResult.ok) {
     return { ok: false };

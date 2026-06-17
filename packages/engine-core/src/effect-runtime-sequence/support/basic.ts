@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { DynamicNumberValue, Effect } from "@optcg/types";
 
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
@@ -30,13 +30,30 @@ export type PlaceTopDeckCardsEffect = Extract<
 >;
 export type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
 
+const isSupportedFieldCountValue = (
+  count: number | DynamicNumberValue,
+): boolean =>
+  typeof count === "object" &&
+  count.type === "countMatchingFieldCards" &&
+  (count.player === "self" || count.player === "opponent") &&
+  Number.isSafeInteger(count.multiplier) &&
+  count.multiplier >= 0 &&
+  count.filter.categories?.includes("character") === true;
+
+const isSupportedSegmentCount = (
+  count: number | DynamicNumberValue,
+  options: { positive: boolean },
+): boolean =>
+  typeof count === "number"
+    ? Number.isInteger(count) && (options.positive ? count > 0 : count >= 0)
+    : isSupportedFieldCountValue(count);
+
 export const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
 ): effect is DrawEffect =>
   effect.type === "draw" &&
   effect.player === "self" &&
-  Number.isInteger(effect.count) &&
-  effect.count >= 0;
+  isSupportedSegmentCount(effect.count, { positive: false });
 
 export const isSupportedDrawUpToSegment = (
   effect: SequenceSegmentEffect,
@@ -53,10 +70,10 @@ export const isSupportedTrashFromHandSegment = (
   (effect.player === "self" || effect.player === "opponent") &&
   effect.chooser === effect.player &&
   effect.filter === undefined &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0 &&
+  isSupportedSegmentCount(effect.count, { positive: true }) &&
   (effect.min === undefined ||
-    (Number.isInteger(effect.min) &&
+    (typeof effect.count === "number" &&
+      Number.isInteger(effect.min) &&
       effect.min >= 0 &&
       effect.min <= effect.count));
 

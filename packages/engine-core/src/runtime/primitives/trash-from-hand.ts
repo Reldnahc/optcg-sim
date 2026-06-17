@@ -162,7 +162,11 @@ const validateSupportedTrashFromHandEffect = (
   if (effect.filter !== undefined) {
     return { ok: false, reason: "unsupported-filter" };
   }
-  if (!Number.isInteger(effect.count) || effect.count <= 0) {
+  if (
+    typeof effect.count !== "number" ||
+    !Number.isInteger(effect.count) ||
+    effect.count <= 0
+  ) {
     return { ok: false, reason: "invalid-count" };
   }
   const minimum = effect.min ?? effect.count;
@@ -200,6 +204,7 @@ const hasSupportedTrashFromHandEffectEnvelope = (
   (effect.effect.player === "self" || effect.effect.player === "opponent") &&
   effect.effect.chooser === effect.effect.player &&
   effect.effect.filter === undefined &&
+  typeof effect.effect.count === "number" &&
   Number.isInteger(effect.effect.count) &&
   effect.effect.count > 0 &&
   (effect.effect.min === undefined ||
@@ -252,7 +257,11 @@ export const createSupportedTrashFromHandChoiceDecision = (
     type: "private",
     playerId: supported.chooserId,
   } as const;
-  const minimum = effect.min ?? effect.count;
+  const count = effect.count;
+  if (typeof count !== "number") {
+    return failClosed(state, entry, "invalid-count");
+  }
+  const minimum = effect.min ?? count;
   const pendingDecision: SelectCardsDecision = {
     id: decisionIdForEntry(entry),
     type: "selectCards",
@@ -266,8 +275,8 @@ export const createSupportedTrashFromHandChoiceDecision = (
       player: effect.player,
       zone: "hand",
       min: minimum,
-      max: effect.count,
-      allowFewerIfUnavailable: minimum < effect.count,
+      max: count,
+      allowFewerIfUnavailable: minimum < count,
       visibility: "privateToChooser",
     },
     candidates: player.hand.map((card) => ({

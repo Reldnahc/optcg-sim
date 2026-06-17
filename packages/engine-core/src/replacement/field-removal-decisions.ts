@@ -123,6 +123,9 @@ export const createReplacementTrashFromHandDecision = (
   if (player === undefined) {
     return undefined;
   }
+  if (typeof instead.count !== "number") {
+    return undefined;
+  }
   const visibility = {
     type: "private",
     playerId: candidate.controllerId,

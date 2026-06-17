@@ -236,6 +236,7 @@ export type PrimitiveEvidence =
   | "filter:effectEntryPoint:with"
   | "filter:effectEntryPoint:without"
   | "valueSource:donFieldCount:self"
+  | "valueSource:fieldCount"
   | "valueSource:lifeCount:self"
   | "valueSource:lifeCount:opponent"
   | "valueSource:lifeCountTotal"

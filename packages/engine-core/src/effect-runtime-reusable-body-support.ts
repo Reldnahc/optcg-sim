@@ -39,6 +39,7 @@ export const isSupportedTrashFromHandBody = (
   (effect.player === "self" || effect.player === "opponent") &&
   effect.chooser === effect.player &&
   effect.filter === undefined &&
+  typeof effect.count === "number" &&
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
   (effect.min === undefined ||

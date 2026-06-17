@@ -70,6 +70,7 @@ export const isSupportedTrashFromHandInsteadEffect = (
   effect.player === "self" &&
   effect.chooser === "self" &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
+  typeof effect.count === "number" &&
   Number.isInteger(effect.count) &&
   effect.count > 0 &&
   effect.min === undefined;
@@ -117,6 +118,7 @@ export const isSupportedDrawInsteadEffect = (
 ): effect is Extract<ReplacementInstead, { type: "draw" }> =>
   effect.type === "draw" &&
   effect.player === "self" &&
+  typeof effect.count === "number" &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
 
@@ -362,11 +364,11 @@ export const replacementOptionLabel = (
 ): string => {
   const instead = candidate.replacementEffect.instead;
   if (instead.type === "draw") {
-    return `Draw ${String(instead.count)} ${plural(
-      instead.count,
-      "card",
-      "cards",
-    )} instead`;
+    const count = instead.count;
+    if (typeof count !== "number") {
+      return "Unsupported replacement effect";
+    }
+    return `Draw ${String(count)} ${plural(count, "card", "cards")} instead`;
   }
   if (isSupportedLifeTopToHandEffect(instead)) {
     const count = instead.count;
@@ -400,8 +402,12 @@ export const replacementOptionLabel = (
     return "Rest this Character instead";
   }
   if (isSupportedTrashFromHandInsteadEffect(instead)) {
-    return `Trash ${String(instead.count)} ${plural(
-      instead.count,
+    const count = instead.count;
+    if (typeof count !== "number") {
+      return "Unsupported replacement effect";
+    }
+    return `Trash ${String(count)} ${plural(
+      count,
       "card",
       "cards",
     )} from hand instead`;

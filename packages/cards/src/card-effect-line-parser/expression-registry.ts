@@ -43,6 +43,7 @@ import {
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   delayedEndOfTurnSegmentParser,
+  drawForEachFieldTrashSameExpressionParser,
   entryConditionContinuousExpressionParser,
   eventTimedDelayedSegmentParser,
   implicitEventReactionExpressionParser,
@@ -173,6 +174,16 @@ function generalExpressionParser(input: ParseInput) {
         instructions: instructionParsers,
         expressions: [singleInstructionExpressionParser],
       }),
+      (segmentInput) => {
+        const parsed = drawForEachFieldTrashSameExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
       optionalActionEffectSegmentParser({
         instructions: instructionParsers,
         expressions: [singleInstructionExpressionParser],
@@ -305,6 +316,7 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  drawForEachFieldTrashSameExpressionParser,
   implicitEventReactionExpressionParser({
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
@@ -354,6 +366,7 @@ const topLevelChooseOneExpressions = () =>
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
     }),
+    drawForEachFieldTrashSameExpressionParser,
     singleInstructionExpressionParser,
     generalExpressionParser,
   ] as const;
@@ -501,6 +514,7 @@ const rootExpressionParsers = () =>
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
     }),
+    drawForEachFieldTrashSameExpressionParser,
     singleInstructionExpressionParser,
     generalExpressionParser,
   ] as const;
