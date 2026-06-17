@@ -56,3 +56,27 @@ test("countMatchingFieldCards dynamic value counts matching field cards", () => 
     2,
   );
 });
+
+test("countMatchingZoneCards dynamic value applies offset and minimum after counting", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const value: DynamicNumberValue = {
+    type: "countMatchingZoneCards",
+    player: "self",
+    zone: "life",
+    per: 1,
+    multiplier: 1,
+    offset: -1,
+    minimum: 0,
+  };
+
+  assert.equal(
+    resolveDynamicNumberValue(state, value, { controllerId: p1 }),
+    player.life.length - 1,
+  );
+  player.life = player.life.slice(0, 1);
+  assert.equal(
+    resolveDynamicNumberValue(state, value, { controllerId: p1 }),
+    0,
+  );
+});

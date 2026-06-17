@@ -51,6 +51,21 @@ const isSelectedCardCount = (
 ): count is Extract<DynamicNumberValue, { type: "selectedCardCount" }> =>
   typeof count !== "number" && count.type === "selectedCardCount";
 
+const isSupportedZoneCardCount = (
+  count: MoveCardsEffect["count"],
+): count is Extract<DynamicNumberValue, { type: "countMatchingZoneCards" }> =>
+  typeof count !== "number" &&
+  count.type === "countMatchingZoneCards" &&
+  (count.player === "self" || count.player === "opponent") &&
+  count.zone === "life" &&
+  count.filter === undefined &&
+  Number.isSafeInteger(count.per) &&
+  count.per > 0 &&
+  Number.isSafeInteger(count.multiplier) &&
+  count.multiplier !== 0 &&
+  (count.offset === undefined || Number.isSafeInteger(count.offset)) &&
+  (count.minimum === undefined || Number.isSafeInteger(count.minimum));
+
 const isSupportedMoveCount = (count: MoveCardsEffect["count"]): boolean =>
   isPositiveIntegerCount(count) || isSelectedCardCount(count);
 
@@ -120,7 +135,10 @@ export const isSupportedLifeTopToTrashEffect = (
   effect: Effect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" &&
-  hasSupportedMinMaxCount(effect) &&
+  (hasSupportedMinMaxCount(effect) ||
+    (effect.min === undefined &&
+      (isSupportedMoveCount(effect.count) ||
+        isSupportedZoneCardCount(effect.count)))) &&
   (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
   effect.from.position === "top" &&

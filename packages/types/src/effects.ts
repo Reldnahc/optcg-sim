@@ -268,6 +268,8 @@ export type DynamicNumberValue =
       filter?: CardFilter;
       per: number;
       multiplier: number;
+      offset?: number;
+      minimum?: number;
     }
   | {
       type: "countMatchingZoneCardsAcrossPlayers";
@@ -276,6 +278,8 @@ export type DynamicNumberValue =
       filter?: CardFilter;
       per: number;
       multiplier: number;
+      offset?: number;
+      minimum?: number;
     }
   | {
       type: "countAttachedDon";

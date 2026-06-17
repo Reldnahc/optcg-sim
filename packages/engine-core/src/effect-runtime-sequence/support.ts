@@ -244,6 +244,7 @@ const canResolveMoveCardsCount = (
   effect: MoveCardsEffect,
 ): boolean =>
   typeof effect.count === "number" ||
+  effect.count.type === "countMatchingZoneCards" ||
   (effect.count.type === "selectedCardCount" &&
     canConsumeSelectedCards(
       state.savedResults,

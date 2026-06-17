@@ -56,7 +56,8 @@ const evidenceFamily = (evidence: PrimitiveEvidence): SupportEvidenceFamily => {
   if (
     prefix === "value" ||
     prefix === "valueSource" ||
-    prefix === "valueOffset"
+    prefix === "valueOffset" ||
+    prefix === "valueTransform"
   ) {
     return "value";
   }

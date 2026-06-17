@@ -242,6 +242,8 @@ export type PrimitiveEvidence =
   | "valueSource:lifeCountTotal"
   | "valueOffset:fieldCountDifference"
   | "valueOffset:handCountDifference"
+  | "valueTransform:offset"
+  | "valueTransform:minimum"
   | "value:basePower:positiveInteger"
   | "value:basePower:snapshotCurrentPower"
   | "value:basePower:snapshotBasePower"

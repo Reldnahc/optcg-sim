@@ -33,6 +33,22 @@ const opponentLifeTopToTrashEffect = (count: number, min: number): Effect => ({
   order: "original",
 });
 
+const selfLifeTopToTrashUntilOneEffect = (): Effect => ({
+  type: "moveCards",
+  count: {
+    type: "countMatchingZoneCards",
+    player: "self",
+    zone: "life",
+    per: 1,
+    multiplier: 1,
+    offset: -1,
+    minimum: 0,
+  },
+  from: { player: "self", zone: "life", position: "top" },
+  to: { player: "self", zone: "trash" },
+  order: "original",
+});
+
 const setupMoveCardsDefinition = (
   state: GameState,
   source: CardInstance,
@@ -131,5 +147,51 @@ test("up-to opponent life top to trash is movement, not damage or life trigger",
         entry.causedBy.name === "effectRuntime:eventReactionTriggerQueueing",
     ),
     false,
+  );
+});
+
+test("dynamic self life top to trash leaves the threshold life card", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.hand[0], "source");
+  const originalLife = p1State.life.map((life) => life.card);
+  const definition = setupMoveCardsDefinition(
+    state,
+    source,
+    selfLifeTopToTrashUntilOneEffect(),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-self-life-trash-until-one"),
+      timingWindowId: toTimingWindowId("window-self-life-trash-until-one"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "life trash effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "life-trash-until-one-test" },
+    },
+  ];
+
+  const resolved = processEffectRuntime(state);
+  const resultP1 = must(resolved.state.players[p1], "p1 result");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resultP1.life.length, 1);
+  assert.equal(
+    must(resultP1.life[0], "remaining life").card.instanceId,
+    must(originalLife.at(-1), "original bottom life").instanceId,
+  );
+  assert.deepEqual(
+    resultP1.trash
+      .slice(0, originalLife.length - 1)
+      .map((card) => card.instanceId),
+    originalLife.slice(0, -1).map((card) => card.instanceId),
   );
 });

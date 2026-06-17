@@ -1,4 +1,4 @@
-import type { SelectionId } from "@optcg/types";
+import type { DynamicNumberValue, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -123,6 +123,44 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
           ],
           rest: "",
         }),
+      },
+      {
+        id: "trash-life-top-until-self-life-count",
+        pattern:
+          /^trash cards from the top of your Life cards until you have (?<threshold>[1-9]\d*) Life cards?\.?$/i,
+        build: (groups) => {
+          const threshold = Number.parseInt(groups["threshold"] ?? "", 10);
+          const count: DynamicNumberValue = {
+            type: "countMatchingZoneCards",
+            player: "self",
+            zone: "life",
+            per: 1,
+            multiplier: 1,
+            offset: -threshold,
+            minimum: 0,
+          };
+          return {
+            effect: {
+              type: "moveCards",
+              count,
+              from: { player: "self", zone: "life", position: "top" },
+              to: { player: "self", zone: "trash" },
+              order: "original",
+            },
+            evidence: [
+              "instruction:moveCards",
+              "valueSource:lifeCount:self",
+              "valueTransform:offset",
+              "valueTransform:minimum",
+              "player:self",
+              "zone:life",
+              "position:top",
+              "destination:trash",
+              "order:original",
+            ],
+            rest: "",
+          };
+        },
       },
       {
         id: "trash-n-cards-from-opponent-life-top",

@@ -166,7 +166,10 @@ const countMatchingZoneCards = (
   const filter = value.filter;
   if (value.zone === "life") {
     return filter === undefined
-      ? Math.floor(player.life.length / value.per) * value.multiplier
+      ? applyDynamicZoneCountArithmetic(
+          Math.floor(player.life.length / value.per) * value.multiplier,
+          value,
+        )
       : null;
   }
   const matchingCount =
@@ -175,7 +178,10 @@ const countMatchingZoneCards = (
       : player.trash.filter((card) =>
           cardMatchesBasicFilter(state, card, filter),
         ).length;
-  return Math.floor(matchingCount / value.per) * value.multiplier;
+  return applyDynamicZoneCountArithmetic(
+    Math.floor(matchingCount / value.per) * value.multiplier,
+    value,
+  );
 };
 
 const countMatchingZoneCardsAcrossPlayers = (
@@ -209,7 +215,32 @@ const countMatchingZoneCardsAcrossPlayers = (
     count += player.life.length;
   }
 
-  return Math.floor(count / value.per) * value.multiplier;
+  return applyDynamicZoneCountArithmetic(
+    Math.floor(count / value.per) * value.multiplier,
+    value,
+  );
+};
+
+const applyDynamicZoneCountArithmetic = (
+  baseValue: number,
+  value:
+    | Extract<DynamicNumberValue, { type: "countMatchingZoneCards" }>
+    | Extract<
+        DynamicNumberValue,
+        { type: "countMatchingZoneCardsAcrossPlayers" }
+      >,
+): number | null => {
+  const offset = value.offset ?? 0;
+  if (
+    !Number.isSafeInteger(offset) ||
+    (value.minimum !== undefined && !Number.isSafeInteger(value.minimum))
+  ) {
+    return null;
+  }
+  const adjusted = baseValue + offset;
+  return value.minimum === undefined
+    ? adjusted
+    : Math.max(value.minimum, adjusted);
 };
 
 const cardRefForDynamicTarget = (
