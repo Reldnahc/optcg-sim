@@ -1,4 +1,4 @@
-import type { Cardinality, Effect, Target } from "@optcg/types";
+import type { Cardinality, Condition, Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseAllFieldTarget } from "../../targets/index.js";
@@ -24,6 +24,7 @@ export const setBasePowerPrimitive = {
 
 type BasePowerTargetSubject = {
   readonly target: Target;
+  readonly condition?: Condition;
   readonly evidence: readonly PrimitiveEvidence[];
 };
 
@@ -51,6 +52,29 @@ const parseBasePowerSubject = (
     return {
       target: { type: "myLeader" },
       evidence: ["target:yourLeader"],
+    };
+  }
+
+  const typedLeaderMatch =
+    /^your \{(?<type>[^}]+)\} type Leader(?:'s base power)?$/iu.exec(
+      normalizedText,
+    );
+  const leaderType = typedLeaderMatch?.groups?.["type"]?.trim();
+  if (leaderType !== undefined && leaderType.length > 0) {
+    return {
+      target: { type: "myLeader" },
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], typesAny: [leaderType] },
+      },
+      evidence: [
+        "target:yourLeader",
+        "condition:leaderIdentity",
+        "filter:type",
+        "filter:category:leader",
+      ],
     };
   }
 
@@ -146,6 +170,52 @@ function applyCardinality(target: Target, cardinality: Cardinality): Target {
   return target;
 }
 
+function combineConditions(
+  ...conditions: readonly (Condition | undefined)[]
+): Condition | undefined {
+  const present = conditions.filter(
+    (condition): condition is Condition => condition !== undefined,
+  );
+  if (present.length === 0) {
+    return undefined;
+  }
+  if (present.length === 1) {
+    return present[0];
+  }
+  return { type: "and", conditions: present };
+}
+
+function continuousDurationForSubject(
+  subject: BasePowerTargetSubject,
+  contextCondition: Condition | undefined,
+): Extract<Effect, { type: "setBasePower" }>["duration"] {
+  return continuousDuration(
+    combineConditions(contextCondition, subject.condition),
+  );
+}
+
+function continuousDurationEvidenceForSubject(
+  subject: BasePowerTargetSubject,
+  contextCondition: Condition | undefined,
+): readonly PrimitiveEvidence[] {
+  const combinedCondition = combineConditions(
+    contextCondition,
+    subject.condition,
+  );
+  return [
+    continuousDurationEvidence(combinedCondition),
+    ...(contextCondition !== undefined && subject.condition !== undefined
+      ? (["composition:conditionAnd"] as const)
+      : []),
+  ];
+}
+
+function uniqueEvidence(
+  evidence: readonly PrimitiveEvidence[],
+): readonly PrimitiveEvidence[] {
+  return [...new Set(evidence)];
+}
+
 export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   input,
   context,
@@ -186,15 +256,20 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
       return undefined;
     }
   }
-  const duration =
-    explicitDuration?.duration ?? continuousDuration(context.condition);
-  const durationEvidence = explicitDuration?.evidence ?? [
-    continuousDurationEvidence(context.condition),
-  ];
-
   const parsedSubjects = subjects as BasePowerTargetSubject[];
+  if (
+    explicitDuration !== undefined &&
+    parsedSubjects.some((subject) => subject.condition !== undefined)
+  ) {
+    return undefined;
+  }
   const effects = parsedSubjects.map((subject) =>
-    setBasePowerEffect(subject.target, value, duration),
+    setBasePowerEffect(
+      subject.target,
+      value,
+      explicitDuration?.duration ??
+        continuousDurationForSubject(subject, context.condition),
+    ),
   );
   const singleEffect = effects[0];
   if (singleEffect === undefined) {
@@ -217,7 +292,12 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:positiveInteger",
-      ...durationEvidence,
+      ...uniqueEvidence(
+        explicitDuration?.evidence ??
+          parsedSubjects.flatMap((subject) =>
+            continuousDurationEvidenceForSubject(subject, context.condition),
+          ),
+      ),
     ],
     rest: "",
   };
@@ -262,20 +342,25 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
       return undefined;
     }
   }
-  const duration =
-    explicitDuration?.duration ?? continuousDuration(context.condition);
-  const durationEvidence = explicitDuration?.evidence ?? [
-    continuousDurationEvidence(context.condition),
-  ];
-
   const value = {
     type: "snapshotCardStat" as const,
     target: source.target,
     stat: "currentPower" as const,
   };
   const parsedSubjects = subjects as BasePowerTargetSubject[];
+  if (
+    explicitDuration !== undefined &&
+    parsedSubjects.some((subject) => subject.condition !== undefined)
+  ) {
+    return undefined;
+  }
   const effects = parsedSubjects.map((subject) =>
-    setBasePowerEffect(subject.target, value, duration),
+    setBasePowerEffect(
+      subject.target,
+      value,
+      explicitDuration?.duration ??
+        continuousDurationForSubject(subject, context.condition),
+    ),
   );
   const singleEffect = effects[0];
   if (singleEffect === undefined) {
@@ -298,7 +383,12 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:snapshotCurrentPower",
       ...source.evidence,
-      ...durationEvidence,
+      ...uniqueEvidence(
+        explicitDuration?.evidence ??
+          parsedSubjects.flatMap((subject) =>
+            continuousDurationEvidenceForSubject(subject, context.condition),
+          ),
+      ),
     ],
     rest: "",
   };
