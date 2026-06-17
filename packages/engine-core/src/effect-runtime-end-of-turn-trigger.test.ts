@@ -9,7 +9,9 @@ import {
   must,
   p1,
   p2,
+  processEffectRuntime,
   resolvedCard,
+  toEngineEventId,
   toEffectId,
   reviewedOnPlayDrawDefinition,
 } from "./effect-runtime-queue/test-support.js";
@@ -138,4 +140,28 @@ test("end-of-your-turn trigger queues reusable DON activation before turn handof
     (card) => card.instanceId === restedDon.instanceId,
   );
   assert.equal(activated?.state, "active");
+});
+
+test("live end-of-your-turn queueing preserves omitted state hash", () => {
+  const state = createActiveState();
+  state.turn.phase = "end";
+  state.turn.turnPlayerId = p1;
+  setupEndOfTurnDonActivationDefinition(state);
+  state.eventJournal.push({
+    id: toEngineEventId("event:live-end-phase-started"),
+    seq: 1,
+    type: "phaseStarted",
+    payload: { phase: "end", playerId: p1 },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:end-phase" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const result = processEffectRuntime(state, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
 });

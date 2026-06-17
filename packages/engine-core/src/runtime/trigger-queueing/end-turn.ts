@@ -10,7 +10,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
@@ -85,10 +89,14 @@ export const createEndOfTurnTriggerQueueing = (
     reason: EndOfYourTurnTriggerQueueingFailureReason,
   ) => EngineError,
 ): {
-  queueEndOfYourTurnTriggers: (state: GameState) => EngineResult | undefined;
+  queueEndOfYourTurnTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
 } => {
   const queueEndOfYourTurnTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -110,6 +118,7 @@ export const createEndOfTurnTriggerQueueing = (
           state,
           [],
           [endOfYourTurnTriggerQueueingError("invalid-end-phase-event")],
+          options,
         );
       }
       const controllerId = payload.playerId;
@@ -129,7 +138,7 @@ export const createEndOfTurnTriggerQueueing = (
           state.cardManifest,
         );
         if (!lookup.ok) {
-          return toEngineResult(state, [], [lookup.error]);
+          return toEngineResult(state, [], [lookup.error], options);
         }
         const endOfTurnEffects = lookup.definition.effects.filter((effect) =>
           isAutoRuntimeTriggerCandidate(effect, endOfYourTurnAutoAdapter),
@@ -149,6 +158,7 @@ export const createEndOfTurnTriggerQueueing = (
                 "unsupported-end-of-your-turn-definition",
               ),
             ],
+            options,
           );
         }
         for (const effectBlock of matching) {
@@ -202,7 +212,7 @@ export const createEndOfTurnTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueEndOfYourTurnTriggers };

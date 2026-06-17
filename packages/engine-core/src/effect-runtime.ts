@@ -446,7 +446,7 @@ export const processEffectRuntime = (
   if (queuedFromDelayedStartOfMainPhase !== undefined) {
     return queuedFromDelayedStartOfMainPhase;
   }
-  const queuedFromEndOfYourTurn = queueEndOfYourTurnTriggers(state);
+  const queuedFromEndOfYourTurn = queueEndOfYourTurnTriggers(state, options);
   if (queuedFromEndOfYourTurn !== undefined) {
     return queuedFromEndOfYourTurn;
   }
