@@ -13,7 +13,10 @@ import type {
   CardRef,
 } from "@optcg/types";
 
-import type { EngineResultOptions } from "../action-results.js";
+import {
+  type EngineResultOptions,
+  replaceEngineResultEvents,
+} from "../action-results.js";
 import { createEffectRuntimeQueueResults } from "./results.js";
 import type {
   EffectQueuePendingRuntimeWork,
@@ -116,10 +119,11 @@ export const createEffectRuntimeQueueProcessing = (
         [],
         options,
       );
-      return {
-        ...continued,
-        events: [...resolved.events, ...continued.events],
-      };
+      return replaceEngineResultEvents(
+        continued,
+        [...resolved.events, ...continued.events],
+        options,
+      );
     },
     failUnsupportedTargetEffectContinuation:
       targetDecisions.failUnsupportedTargetEffectContinuation,
@@ -151,10 +155,11 @@ export const createEffectRuntimeQueueProcessing = (
         [],
         options,
       );
-      return {
-        ...continued,
-        events: [...resolved.events, ...continued.events],
-      };
+      return replaceEngineResultEvents(
+        continued,
+        [...resolved.events, ...continued.events],
+        options,
+      );
     },
     processNoChoiceEffectQueue: queueResults.processNoChoiceEffectQueue,
     processEffectRuntimeAfterTriggerOrderChoice:

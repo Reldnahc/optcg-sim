@@ -18,6 +18,7 @@ import {
   type EngineResultOptions,
   illegalAction,
   rebaseEvents,
+  replaceEngineResultEvents,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -964,5 +965,9 @@ export const continueAttackTimingDecisionResultIfReady = (
   const continued = continueAttackTimingBattleIfReady(result.state, options);
   return continued === null
     ? result
-    : { ...continued, events: [...result.events, ...continued.events] };
+    : replaceEngineResultEvents(
+        continued,
+        [...result.events, ...continued.events],
+        options,
+      );
 };

@@ -42,13 +42,23 @@ export const toEngineResult = (
   const result: EngineResult = {
     state,
     events,
-    stateHash:
-      options.includeStateHash === false
-        ? ""
-        : profileEngineSpan(options, "engine:toEngineResult:stateHash", () =>
-            hashCanonicalStateValue(state),
-          ),
+    stateHash: "",
   };
+  if (options.includeStateHash !== false) {
+    let cachedStateHash: string | undefined;
+    Object.defineProperty(result, "stateHash", {
+      enumerable: true,
+      configurable: true,
+      get() {
+        cachedStateHash ??= profileEngineSpan(
+          options,
+          "engine:toEngineResult:stateHash",
+          () => hashCanonicalStateValue(state),
+        );
+        return cachedStateHash;
+      },
+    });
+  }
   if (state.pendingDecision !== undefined) {
     result.decisions = [state.pendingDecision];
   }
@@ -57,6 +67,27 @@ export const toEngineResult = (
   }
   return result;
 };
+
+const toErrorTuple = (
+  errors: readonly EngineError[],
+): readonly [EngineError, ...EngineError[]] => {
+  const first = errors[0];
+  return first === undefined
+    ? [{ type: "illegalAction", reason: "Runtime failed without error." }]
+    : [first, ...errors.slice(1)];
+};
+
+export const replaceEngineResultEvents = (
+  result: EngineResult,
+  events: EngineEvent[],
+  options: EngineResultOptions = {},
+): EngineResult =>
+  toEngineResult(
+    result.state,
+    events,
+    result.errors === undefined ? undefined : toErrorTuple(result.errors),
+    options,
+  );
 
 export const assertGameStateInvariantsIfEnabled = (
   state: GameState,

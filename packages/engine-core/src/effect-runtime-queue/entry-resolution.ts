@@ -11,6 +11,7 @@ import {
   appendEffectResolvedEvent,
   createEvent,
   type EngineResultOptions,
+  replaceEngineResultEvents,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
@@ -151,7 +152,11 @@ export const createQueueEntryResolver = (
             selected,
             options,
           );
-          return { ...paused, events: [...allEvents, ...paused.events] };
+          return replaceEngineResultEvents(
+            paused,
+            [...allEvents, ...paused.events],
+            options,
+          );
         }
         queuedEffectForBodyResolution = {
           ...optionalSupportShape,

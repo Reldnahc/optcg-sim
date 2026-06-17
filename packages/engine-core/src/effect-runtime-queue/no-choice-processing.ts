@@ -1,6 +1,10 @@
 import type { EngineResult, GameState, QueueEntryId } from "@optcg/types";
 
-import { type EngineResultOptions, toEngineResult } from "../action-results.js";
+import {
+  type EngineResultOptions,
+  replaceEngineResultEvents,
+  toEngineResult,
+} from "../action-results.js";
 import {
   hasExactDamageDeferredQueue,
   isActiveDoubleAttackDamageProcess,
@@ -102,10 +106,11 @@ export const createNoChoiceEffectQueueProcessor = (
         [],
         options,
       );
-      return {
-        ...continued,
-        events: [...resolved.events, ...continued.events],
-      };
+      return replaceEngineResultEvents(
+        continued,
+        [...resolved.events, ...continued.events],
+        options,
+      );
     }
     if (earliestChoiceGroup !== undefined) {
       if (orderedCurrentChoiceGroupIds !== undefined) {
@@ -149,10 +154,11 @@ export const createNoChoiceEffectQueueProcessor = (
           [],
           options,
         );
-        return {
-          ...continued,
-          events: [...resolved.events, ...continued.events],
-        };
+        return replaceEngineResultEvents(
+          continued,
+          [...resolved.events, ...continued.events],
+          options,
+        );
       }
       const noChoiceBeforeChoice =
         findFirstNoChoiceEffectQueueEntryBeforeChoiceGroup(
@@ -178,10 +184,11 @@ export const createNoChoiceEffectQueueProcessor = (
           [],
           options,
         );
-        return {
-          ...continued,
-          events: [...resolved.events, ...continued.events],
-        };
+        return replaceEngineResultEvents(
+          continued,
+          [...resolved.events, ...continued.events],
+          options,
+        );
       }
       return createChooseTriggerOrderDecision(state, earliestChoiceGroup);
     }
@@ -213,10 +220,11 @@ export const createNoChoiceEffectQueueProcessor = (
       [],
       options,
     );
-    return {
-      ...continued,
-      events: [...resolved.events, ...continued.events],
-    };
+    return replaceEngineResultEvents(
+      continued,
+      [...resolved.events, ...continued.events],
+      options,
+    );
   };
 
   const processEffectRuntimeAfterTriggerOrderChoice = (
