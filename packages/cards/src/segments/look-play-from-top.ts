@@ -7,7 +7,9 @@ import type {
 } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseFieldCardCountCondition } from "../conditions/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseTrashFromHandInstruction } from "../instructions/index.js";
 import {
   parseRestToBottomAnyOrder,
   parseSearchCardFilter,
@@ -19,6 +21,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { parseLeadingConditionalExpression } from "./composed-expression.js";
 import { topDeckSearchPresentationSpans } from "./top-deck-presentation-spans.js";
 
 const lookedPlaySet = "set:look-play" as SelectionSetId;
@@ -36,7 +39,11 @@ export function lookPlayFromTopExpressionParser(
   const play = parseLookedSetPlaySelection({ text: look.rest });
   if (play !== undefined) {
     const remaining = parseRestToBottomAnyOrder({ text: play.rest });
-    if (remaining === undefined || remaining.rest.length > 0) {
+    if (remaining === undefined) {
+      return undefined;
+    }
+    const continuation = parseConditionalTrashContinuation(remaining.rest);
+    if (remaining.rest.length > 0 && continuation === undefined) {
       return undefined;
     }
 
@@ -52,7 +59,11 @@ export function lookPlayFromTopExpressionParser(
       "instruction:placeSetRemainder",
       ...remaining.evidence,
     ] as const;
-    const evidence = [...selectionEvidence, ...remainingEvidence] as const;
+    const evidence = [
+      ...selectionEvidence,
+      ...remainingEvidence,
+      ...(continuation?.evidence ?? []),
+    ] as const;
 
     return {
       effect: createLookedSetPlaySequence({
@@ -60,6 +71,7 @@ export function lookPlayFromTopExpressionParser(
         enterRested: play.enterRested,
         filter: play.filter,
         max: play.max,
+        ...(continuation === undefined ? {} : { continuation }),
       }),
       evidence,
       rest: "",
@@ -312,11 +324,16 @@ function createLookedSetLifeSequence({
 
 function createLookedSetPlaySequence({
   count,
+  continuation,
   enterRested,
   filter,
   max,
 }: {
   readonly count: number;
+  readonly continuation?: {
+    readonly effect: Effect;
+    readonly evidence: readonly PrimitiveEvidence[];
+  };
   readonly enterRested: boolean;
   readonly filter: CardFilter;
   readonly max: number;
@@ -367,6 +384,47 @@ function createLookedSetPlaySequence({
           order: "chooser",
         },
       },
+      ...(continuation === undefined
+        ? []
+        : [
+            {
+              connector: "then" as const,
+              effect: continuation.effect,
+            },
+          ]),
+    ],
+  };
+}
+
+function parseConditionalTrashContinuation(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  if (text.length === 0) {
+    return undefined;
+  }
+  const parsed = parseLeadingConditionalExpression(text, [
+    parseFieldCardCountCondition,
+  ]);
+  if (parsed === undefined) {
+    return undefined;
+  }
+  const then = parseTrashFromHandInstruction({ text: parsed.thenText });
+  if (then === undefined || then.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    effect: {
+      type: "conditional",
+      if: parsed.condition.condition,
+      then: then.effect,
+    },
+    evidence: [
+      "expression:conditional",
+      ...parsed.condition.evidence,
+      ...then.evidence,
     ],
   };
 }

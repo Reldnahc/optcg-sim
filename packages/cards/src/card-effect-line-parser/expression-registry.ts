@@ -234,7 +234,10 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     conditions: conditionParsers,
     connectors: [parseThenConnector, parseAndConnector],
     instructions: [],
-    expressions: [searchRevealExpressionParser],
+    expressions: [
+      searchRevealExpressionParser,
+      lookPlayFromTopExpressionParser,
+    ],
   })(input);
   if (conditionalSearch !== undefined) {
     return {

@@ -169,6 +169,60 @@ describe("card effect line parser Impel Down primitive family", () => {
     );
   });
 
+  it("parses looked-set play with a conditional follow-up after bottoming the rest", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Look at 5 cards from the top of your deck; play up to 1 {Scientist} type Character card with a cost of 5 or less other than [Vegapunk]. Then, place the rest at the bottom of your deck in any order and if your opponent has 2 or less Characters, trash 1 card from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", count: 5 } },
+            {
+              effect: {
+                type: "selectFromSet",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Scientist"],
+                  cost: { max: 5 },
+                  nameNot: ["Vegapunk"],
+                },
+              },
+            },
+            { effect: { type: "playSelected" } },
+            { effect: { type: "placeSetRemainder" } },
+            {
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "fieldCount",
+                  player: "opponent",
+                  filter: { categories: ["character"] },
+                  op: "lte",
+                  value: 2,
+                },
+                then: { type: "trashFromHand" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "instruction:placeSetRemainder",
+        "expression:conditional",
+        "condition:opponentFieldCount",
+        "instruction:trashFromHand",
+      ]),
+    );
+  });
+
   it("parses base power snapshot from opponent leader current power", () => {
     const result = parseCardEffectLine(
       "[DON!! x1] [When Attacking] This Character's base power becomes the same as your opponent's Leader's power during this turn.",
