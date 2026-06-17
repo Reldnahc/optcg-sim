@@ -17,8 +17,10 @@ import {
 import {
   evaluateLifeCountDifference,
   evaluateLifeCountTotal,
+  evaluateLifeVisibilityCount,
   isSupportedLifeCountDifferenceCondition,
   isSupportedLifeCountTotalCondition,
+  isSupportedLifeVisibilityCountCondition,
 } from "./life-count.js";
 import {
   evaluateHandCount,
@@ -725,6 +727,8 @@ const evaluateCondition = (
         condition.op,
         (playerId) => state.players[playerId]?.life.length ?? 0,
       );
+    case "lifeVisibilityCount":
+      return evaluateLifeVisibilityCount(state, entry, condition);
     case "lifeCountDifference":
       return evaluateLifeCountDifference(state, entry, condition);
     case "lifeCountTotal":
@@ -907,6 +911,8 @@ export const isSupportedQueuedEffectConditionShape = (
       return isSupportedLifeCountDifferenceCondition(condition);
     case "lifeCountTotal":
       return isSupportedLifeCountTotalCondition(condition);
+    case "lifeVisibilityCount":
+      return isSupportedLifeVisibilityCountCondition(condition);
     case "trashCount":
       return (
         (condition.filter === undefined ||

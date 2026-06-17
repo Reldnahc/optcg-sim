@@ -12,6 +12,7 @@ export {
   parseLifeCountDifferenceCondition,
   parseLifeCountCondition,
   parseLifeCountTotalCondition,
+  parseLifeVisibilityCountCondition,
 } from "./life-count.js";
 export { parseNoOtherNamedCharactersCondition } from "./no-other-named-characters.js";
 export { parseOnlyMatchingFieldCardsCondition } from "./only-matching-field-cards.js";

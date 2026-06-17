@@ -131,6 +131,44 @@ export const evaluateLifeCountTotal = (
   };
 };
 
+export const evaluateLifeVisibilityCount = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "lifeVisibilityCount" }>,
+): ConditionEvaluationResult => {
+  if (!isSupportedLifeVisibilityCountCondition(condition)) {
+    return { supported: false };
+  }
+  const player = countLifeVisibilityOperand(state, entry, condition);
+  if (!player.supported) {
+    return { supported: false };
+  }
+  return {
+    supported: true,
+    passed: compare(condition.op, player.count, condition.value),
+  };
+};
+
+const countLifeVisibilityOperand = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  operand: { player: PlayerRef; faceUp: boolean },
+): { supported: true; count: number } | { supported: false } => {
+  const playerId = resolveConditionPlayer(state, entry, operand.player);
+  if (playerId === undefined) {
+    return { supported: false };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return { supported: false };
+  }
+  return {
+    supported: true,
+    count: player.life.filter((lifeCard) => lifeCard.faceUp === operand.faceUp)
+      .length,
+  };
+};
+
 export const isSupportedLifeCountDifferenceCondition = (
   condition: Extract<Condition, { type: "lifeCountDifference" }>,
 ): boolean =>
@@ -151,3 +189,10 @@ export const isSupportedLifeCountTotalCondition = (
   condition.players.every(
     (player) => player === "self" || player === "opponent",
   );
+
+export const isSupportedLifeVisibilityCountCondition = (
+  condition: Extract<Condition, { type: "lifeVisibilityCount" }>,
+): boolean =>
+  isNonNegativeSafeInteger(condition.value) &&
+  isComparator(condition.op) &&
+  (condition.player === "self" || condition.player === "opponent");

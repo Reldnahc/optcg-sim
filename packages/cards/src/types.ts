@@ -92,6 +92,7 @@ export type PrimitiveEvidence =
   | "condition:trashCount"
   | "condition:eventHistory"
   | "condition:lifeCount"
+  | "condition:lifeVisibilityCount"
   | "condition:lifeCountDifference"
   | "condition:lifeCountTotal"
   | "condition:donFieldCount"

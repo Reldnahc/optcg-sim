@@ -4,6 +4,7 @@ import {
   lifeCountConditionPrimitive,
   parseLifeCountDifferenceCondition,
   parseLifeCountCondition,
+  parseLifeVisibilityCountCondition,
 } from "./life-count.js";
 
 describe("life count condition parser", () => {
@@ -86,6 +87,31 @@ describe("life count condition parser", () => {
         "condition:lifeCountDifference",
         "player:opponent",
         "player:self",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses face-up Life presence as a reusable Life visibility count condition", () => {
+    expect(
+      parseLifeVisibilityCountCondition({
+        text: "you have a face-up Life card",
+      }),
+    ).toEqual({
+      condition: {
+        type: "lifeVisibilityCount",
+        player: "self",
+        faceUp: true,
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:lifeVisibilityCount",
+        "player:self",
+        "zone:life",
+        "visibility:faceUp",
         "condition:comparator:gte",
         "condition:threshold:positiveInteger",
       ],

@@ -63,6 +63,13 @@ export type Condition =
   | { type: "opponentTurn" }
   | { type: "lifeCount"; player: PlayerRef; op: Comparator; value: number }
   | {
+      type: "lifeVisibilityCount";
+      player: PlayerRef;
+      faceUp: boolean;
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "lifeCountDifference";
       minuend: { player: PlayerRef };
       subtrahend: { player: PlayerRef };

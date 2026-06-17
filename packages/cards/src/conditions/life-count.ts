@@ -73,6 +73,50 @@ export const lifeCountConditionPrimitive: PrimitivePatternDefinition<ConditionPa
 export const parseLifeCountCondition: ConditionParser = (input) =>
   parsePrimitivePattern(input, lifeCountConditionPrimitive);
 
+export const parseLifeVisibilityCountCondition: ConditionParser = (input) => {
+  const match =
+    /^(?<player>you have|your opponent has) (?<article>a|[1-9]\d*) (?<visibility>face-up|face-down) Life cards?$/iu.exec(
+      input.text,
+    );
+  const playerText = match?.groups?.["player"]?.toLowerCase();
+  const articleText = match?.groups?.["article"];
+  const visibilityText = match?.groups?.["visibility"];
+  if (
+    playerText === undefined ||
+    articleText === undefined ||
+    visibilityText === undefined
+  ) {
+    return undefined;
+  }
+
+  const value =
+    articleText.toLowerCase() === "a" ? 1 : Number.parseInt(articleText, 10);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    return undefined;
+  }
+  const player = playerText === "your opponent has" ? "opponent" : "self";
+  const faceUp = visibilityText.toLowerCase() === "face-up";
+
+  return {
+    condition: {
+      type: "lifeVisibilityCount",
+      player,
+      faceUp,
+      op: "gte",
+      value,
+    },
+    evidence: [
+      "condition:lifeVisibilityCount",
+      player === "opponent" ? "player:opponent" : "player:self",
+      "zone:life",
+      faceUp ? "visibility:faceUp" : "visibility:faceDown",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+    ],
+    rest: "",
+  };
+};
+
 export const parseLifeCountDifferenceCondition: ConditionParser = (input) => {
   const equalOrLessMatch =
     /^the number of your Life cards is equal to or less than the number of your opponent's Life cards$/iu.exec(

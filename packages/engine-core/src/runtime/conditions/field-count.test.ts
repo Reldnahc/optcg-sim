@@ -217,6 +217,39 @@ test("lifeCountTotal sums reusable player life-count operands", () => {
   );
 });
 
+test("lifeVisibilityCount counts only matching face-up or face-down Life cards", () => {
+  const state = createActiveState();
+  setLifeCount(state, p1, 3);
+  setLifeCount(state, p2, 2);
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const p1FirstLife = must(p1State.life[0], "p1 life");
+  const p2FirstLife = must(p2State.life[0], "p2 life");
+  p1State.life[0] = { ...p1FirstLife, faceUp: true };
+  p2State.life[0] = { ...p2FirstLife, faceUp: true };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeVisibilityCount",
+      player: "self",
+      faceUp: true,
+      op: "gte",
+      value: 1,
+    }),
+    { supported: true, passed: true },
+  );
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), {
+      type: "lifeVisibilityCount",
+      player: "opponent",
+      faceUp: false,
+      op: "eq",
+      value: 1,
+    }),
+    { supported: true, passed: true },
+  );
+});
+
 test("fieldStatTotal sums matching field Character costs", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1");
