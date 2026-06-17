@@ -9,7 +9,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { evaluateEffectBlockRuntimeSupport } from "../../effect-runtime-admission.js";
 import { isAutoRuntimeTriggerCandidate } from "../../effect-runtime-block-support.js";
 import type {
@@ -92,10 +96,14 @@ export const createMainEventTriggerQueueing = (
     reason: MainEventTriggerQueueingFailureReason,
   ) => EngineError,
 ): {
-  queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
+  queueMainEventTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
 } => {
   const queueMainEventTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -141,6 +149,7 @@ export const createMainEventTriggerQueueing = (
           state,
           [],
           [mainEventTriggerQueueingError("invalid-card-played-event")],
+          options,
         );
       }
       if (payload.category !== "event") {
@@ -169,6 +178,7 @@ export const createMainEventTriggerQueueing = (
           state,
           [],
           [mainEventTriggerQueueingError("source-presence-failed")],
+          options,
         );
       }
 
@@ -177,7 +187,7 @@ export const createMainEventTriggerQueueing = (
         state.cardManifest,
       );
       if (!lookup.ok) {
-        return toEngineResult(state, [], [lookup.error]);
+        return toEngineResult(state, [], [lookup.error], options);
       }
       const mainEffects = lookup.definition.effects.filter((effect) =>
         isAutoRuntimeTriggerCandidate(effect, mainEventAutoAdapter),
@@ -193,6 +203,7 @@ export const createMainEventTriggerQueueing = (
           state,
           [],
           [mainEventTriggerQueueingError("unsupported-main-event-definition")],
+          options,
         );
       }
       if (matching.length !== 1) {
@@ -200,6 +211,7 @@ export const createMainEventTriggerQueueing = (
           state,
           [],
           [mainEventTriggerQueueingError("multiple-main-event-effects")],
+          options,
         );
       }
       for (const effectBlock of matching) {
@@ -254,7 +266,7 @@ export const createMainEventTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueMainEventTriggers };

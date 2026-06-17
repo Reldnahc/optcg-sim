@@ -157,7 +157,10 @@ export interface EffectRuntimeTriggerQueueingHelpers {
     state: GameState,
     options?: EngineResultOptions,
   ) => EngineResult | undefined;
-  queueMainEventTriggers: (state: GameState) => EngineResult | undefined;
+  queueMainEventTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
   queueWhenAttackingTriggers: (state: GameState) => EngineResult | undefined;
   queueOnOpponentAttackTriggers: (state: GameState) => EngineResult | undefined;
   queueHandTrashedByEffectTriggers: (

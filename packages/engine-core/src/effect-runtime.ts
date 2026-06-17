@@ -433,7 +433,7 @@ export const processEffectRuntime = (
   if (queuedFromOnPlay !== undefined) {
     return queuedFromOnPlay;
   }
-  const queuedFromMainEvent = queueMainEventTriggers(state);
+  const queuedFromMainEvent = queueMainEventTriggers(state, options);
   if (queuedFromMainEvent !== undefined) {
     return queuedFromMainEvent;
   }
