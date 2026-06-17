@@ -229,6 +229,15 @@ const matchFieldRemoved = (
   ) {
     return false;
   }
+  const to = zoneRefFromUnknown(payload["to"]);
+  const destination =
+    to?.zone ?? (typeof payload["to"] === "string" ? payload["to"] : undefined);
+  if (
+    trigger.destination !== undefined &&
+    destination !== trigger.destination
+  ) {
+    return false;
+  }
   if (
     trigger.target === "self" &&
     (payload["instanceId"] !== source.instanceId ||

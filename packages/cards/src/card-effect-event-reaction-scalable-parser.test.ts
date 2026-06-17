@@ -338,6 +338,43 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses owner-hand return reactions as destination-filtered field-removal hooks", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] When your opponent's Character is returned to the owner's hand by your effect, look at 3 cards from the top of your deck and place them at the top or bottom of the deck in any order.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "fieldRemoved",
+          player: "opponent",
+          sourceController: "self",
+          sourceKind: "effect",
+          destination: "hand",
+          filter: { categories: ["character"] },
+        },
+        effect: {
+          type: "placeTopDeckCards",
+          count: 3,
+          destination: "topOrBottom",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "player:opponent",
+        "destination:hand",
+        "filter:category:character",
+        "replacementSource:cardEffect",
+        "instruction:placeTopDeckCards",
+      ]),
+    );
+  });
+
   it("parses bare Character K.O. reactions with rested DON attachment to this Leader", () => {
     const result = parseCardEffectLine(
       "[Your Turn] When a Character is K.O.'d, give up to 1 rested DON!! card to this Leader.",

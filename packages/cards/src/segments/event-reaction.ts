@@ -408,7 +408,7 @@ const parseFieldRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const opponentCharacter =
-    /^your opponent's (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your effect)?)$/iu.exec(
+    /^your opponent's (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your effect)?|returned to the owner's hand by your effect)$/iu.exec(
       normalized,
     );
   const opponentFilterText = opponentCharacter?.groups?.["filter"];
@@ -484,7 +484,7 @@ const parseFieldRemovalSource = (
   | {
       readonly trigger: Pick<
         Extract<Trigger, { type: "fieldRemoved" }>,
-        "sourceController" | "sourceKind"
+        "sourceController" | "sourceKind" | "destination"
       >;
       readonly evidence: readonly ExpressionParseResult["evidence"][number][];
     }
@@ -510,6 +510,16 @@ const parseFieldRemovalSource = (
     return {
       trigger: { sourceController: "opponent", sourceKind: "any" },
       evidence: ["replacementSource:opponent"],
+    };
+  }
+  if (text.toLowerCase() === "returned to the owner's hand by your effect") {
+    return {
+      trigger: {
+        sourceController: "self",
+        sourceKind: "effect",
+        destination: "hand",
+      },
+      evidence: ["replacementSource:cardEffect", "destination:hand"],
     };
   }
   return undefined;

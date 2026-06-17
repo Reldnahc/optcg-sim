@@ -241,6 +241,47 @@ test("canonical event matcher matches fieldRemoved public cardMoved events and r
   });
 });
 
+test("canonical event matcher filters fieldRemoved destination", () => {
+  const { source, state, character } = setupEventHookState();
+  const trigger: Trigger = {
+    type: "fieldRemoved",
+    player: "self",
+    sourceController: "self",
+    sourceKind: "effect",
+    destination: "hand",
+    filter: { categories: ["character"] },
+  };
+  const returnedToHand = publicEvent(state, "cardMoved", {
+    from: character.zone,
+    to: { zone: "hand", playerId: character.controller },
+    playerId: character.controller,
+    instanceId: character.instanceId,
+    cardId: character.cardId,
+    reason: "effect",
+    sourceControllerId: source.controller,
+    sourceKind: "effect",
+  });
+  const movedToDeck = publicEvent(state, "cardMoved", {
+    from: character.zone,
+    to: { zone: "deck", playerId: character.controller },
+    playerId: character.controller,
+    instanceId: character.instanceId,
+    cardId: character.cardId,
+    reason: "effect",
+    sourceControllerId: source.controller,
+    sourceKind: "effect",
+  });
+
+  assert.deepEqual(matchEventTrigger(state, source, trigger, returnedToHand), {
+    matched: true,
+    triggerTypes: ["fieldRemoved"],
+  });
+  assert.deepEqual(matchEventTrigger(state, source, trigger, movedToDeck), {
+    matched: false,
+    triggerTypes: [],
+  });
+});
+
 test("canonical event matcher matches cardPlayed sourceZone and source-card filters", () => {
   const { source, state, character } = setupEventHookState();
   const event = publicEvent(state, "cardPlayed", {
