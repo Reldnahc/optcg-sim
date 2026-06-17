@@ -7,11 +7,16 @@ import {
   advanceDrawPhase,
   advanceRefreshPhase,
 } from "./turn/phases.js";
-import { createActiveState, p1, p2 } from "./action-test-fixtures.js";
+import { createActiveState, must, p1, p2 } from "./action-test-fixtures.js";
 import {
   makeMainPhaseLegalActionState,
   toDecisionId,
 } from "./action-dispatcher-test-support.js";
+import {
+  assertCounterStepPassDecision,
+  cardRef,
+  setupAttackState,
+} from "./battle/test-fixtures.js";
 
 const recordSpanNames = (): {
   readonly names: string[];
@@ -126,4 +131,83 @@ test("respondToDecision profiling identifies the resolver that accepted the resp
   assert.equal(result.stateHash, "");
   assert.ok(spans.names.includes("engine:applyAction:respondToDecision"));
   assert.ok(spans.names.includes("engine:decision:chooseQuantity"));
+});
+
+test("respondToDecision routes life-trigger decisions directly to the life-trigger resolver", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const lifeCard = must(p2State.life[0], "top life").card;
+  state.pendingDecision = {
+    id: toDecisionId("decision:profile-life-trigger"),
+    type: "confirmLifeTrigger",
+    playerId: p2,
+    prompt: "Activate life trigger?",
+    causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    visibility: { type: "public" },
+    card: {
+      instanceId: lifeCard.instanceId,
+      cardId: lifeCard.cardId,
+      playerId: p2,
+      zone: lifeCard.zone,
+    },
+    options: ["activateTrigger", "addToHand"],
+  };
+  const spans = recordSpanNames();
+
+  const result = applyAction(
+    state,
+    {
+      type: "respondToDecision",
+      decisionId: state.pendingDecision.id,
+      response: { type: "cards", cards: [] },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+      profileSpan: spans.profileSpan,
+    },
+  );
+
+  assert.notEqual(result.errors, undefined);
+  assert.deepEqual(spans.names, [
+    "engine:applyAction",
+    "engine:applyAction:respondToDecision",
+    "engine:decision:lifeTrigger",
+  ]);
+});
+
+test("respondToDecision routes counter-step decisions directly to the battle resolver", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const decision = assertCounterStepPassDecision(opened.state, p2);
+  const spans = recordSpanNames();
+
+  const result = applyAction(
+    opened.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+      profileSpan: spans.profileSpan,
+    },
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(spans.names, [
+    "engine:applyAction",
+    "engine:applyAction:respondToDecision",
+    "engine:decision:battle",
+  ]);
 });

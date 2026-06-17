@@ -26,6 +26,10 @@ import {
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle/actions.js";
+import {
+  parseCounterPayCostDecisionId,
+  parseCounterTargetDecisionId,
+} from "./battle/counter-event-payment-context.js";
 import { applyAttachDon, getAttachDonLegalActions } from "./actions/don.js";
 import {
   applyPlayCard,
@@ -277,6 +281,90 @@ const continueAfterEffectDecision = (
       )
     : continueAttackTimingDecisionResultIfReady(result);
 
+const isCounterStepPassDecision = (
+  decision: NonNullable<GameState["pendingDecision"]>,
+): boolean =>
+  decision.type === "selectCards" &&
+  String(decision.id).startsWith("decision:counterStep:pass:") &&
+  decision.request.min === 0 &&
+  decision.request.max === 0 &&
+  decision.defaultResponse?.type === "cards" &&
+  decision.defaultResponse.cards.length === 0 &&
+  decision.candidates.length === 0;
+
+const isCounterStepBattleDecision = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]>,
+): boolean =>
+  state.battle?.step === "counter" &&
+  (isCounterStepPassDecision(decision) ||
+    (decision.type === "payCost" &&
+      parseCounterPayCostDecisionId(String(decision.id)) !== null) ||
+    (decision.type === "selectTargets" &&
+      parseCounterTargetDecisionId(String(decision.id)) !== null));
+
+const applyBattleDecisionResponseWithContinuation = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+  options: ApplyActionOptions,
+): EngineResult | null => {
+  const battleResult = profileActionSpan(
+    options,
+    "engine:decision:battle",
+    () => applyBattleDecisionResponse(state, action, options),
+  );
+  if (battleResult === null) {
+    return null;
+  }
+  return battleResult.errors === undefined &&
+    battleResult.state.battle?.step === "counter" &&
+    battleResult.state.pendingDecision === undefined
+    ? continueRuntimeAndAttackTimingAfterDecision(state, battleResult, options)
+    : battleResult;
+};
+
+const applyLifeTriggerDecisionResponseWithContinuation = (
+  state: GameState,
+  action: Extract<Action, { type: "respondToDecision" }>,
+  decision: NonNullable<GameState["pendingDecision"]>,
+  options: ApplyActionOptions,
+): EngineResult | null => {
+  const lifeTriggerResult = profileActionSpan(
+    options,
+    "engine:decision:lifeTrigger",
+    () => applyLifeTriggerDecisionResponse(state, action),
+  );
+  if (lifeTriggerResult === null) {
+    return null;
+  }
+  if (
+    lifeTriggerResult.errors === undefined &&
+    lifeTriggerResult.state.pendingDecision === undefined
+  ) {
+    const resumed = resumeSequenceFrameAfterLifeTriggerDecision(
+      lifeTriggerResult.state,
+      decision.id,
+      lifeTriggerResult.events,
+    );
+    if (resumed !== undefined) {
+      if (!resumed.ok) {
+        return toEngineResult(state, [], [resumed.error], options);
+      }
+      return continueRuntimeAndAttackTimingAfterDecision(
+        state,
+        toEngineResult(
+          resumed.state,
+          [...lifeTriggerResult.events, ...resumed.events],
+          undefined,
+          options,
+        ),
+        options,
+      );
+    }
+  }
+  return lifeTriggerResult;
+};
+
 const applyReturnDonBodyDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -482,6 +570,28 @@ const applyRespondToDecision = (
     );
   }
 
+  if (decision.type === "confirmLifeTrigger") {
+    const lifeTriggerResult = applyLifeTriggerDecisionResponseWithContinuation(
+      state,
+      action,
+      decision,
+      options,
+    );
+    if (lifeTriggerResult !== null) {
+      return lifeTriggerResult;
+    }
+  }
+  if (isCounterStepBattleDecision(state, decision)) {
+    const battleResult = applyBattleDecisionResponseWithContinuation(
+      state,
+      action,
+      options,
+    );
+    if (battleResult !== null) {
+      return battleResult;
+    }
+  }
+
   const playCardResult = profileActionSpan(
     options,
     "engine:decision:playCard",
@@ -575,53 +685,21 @@ const applyRespondToDecision = (
   if (replacementRestTargetResult !== null) {
     return replacementRestTargetResult;
   }
-  const battleResult = profileActionSpan(
+  const battleResult = applyBattleDecisionResponseWithContinuation(
+    state,
+    action,
     options,
-    "engine:decision:battle",
-    () => applyBattleDecisionResponse(state, action, options),
   );
   if (battleResult !== null) {
-    return battleResult.errors === undefined &&
-      battleResult.state.battle?.step === "counter" &&
-      battleResult.state.pendingDecision === undefined
-      ? continueRuntimeAndAttackTimingAfterDecision(
-          state,
-          battleResult,
-          options,
-        )
-      : battleResult;
+    return battleResult;
   }
-  const lifeTriggerResult = profileActionSpan(
+  const lifeTriggerResult = applyLifeTriggerDecisionResponseWithContinuation(
+    state,
+    action,
+    decision,
     options,
-    "engine:decision:lifeTrigger",
-    () => applyLifeTriggerDecisionResponse(state, action),
   );
   if (lifeTriggerResult !== null) {
-    if (
-      lifeTriggerResult.errors === undefined &&
-      lifeTriggerResult.state.pendingDecision === undefined
-    ) {
-      const resumed = resumeSequenceFrameAfterLifeTriggerDecision(
-        lifeTriggerResult.state,
-        decision.id,
-        lifeTriggerResult.events,
-      );
-      if (resumed !== undefined) {
-        if (!resumed.ok) {
-          return toEngineResult(state, [], [resumed.error], options);
-        }
-        return continueRuntimeAndAttackTimingAfterDecision(
-          state,
-          toEngineResult(
-            resumed.state,
-            [...lifeTriggerResult.events, ...resumed.events],
-            undefined,
-            options,
-          ),
-          options,
-        );
-      }
-    }
     return lifeTriggerResult;
   }
   const returnDonBodyResult = profileActionSpan(
