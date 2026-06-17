@@ -2,7 +2,7 @@ import type { InstructionParser } from "../types.js";
 
 export const parseLifeStateInstruction: InstructionParser = (input) => {
   if (
-    /^look at up to 1 card from the top of your or your opponent's Life cards and place it at the top or bottom of the Life cards\.?$/iu.test(
+    /^look at up to 1 card from the top of your or your opponent's Life cards,? and place it at the top or bottom of the Life cards\.?$/iu.test(
       input.text,
     )
   ) {
