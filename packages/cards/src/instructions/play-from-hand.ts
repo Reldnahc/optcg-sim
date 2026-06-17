@@ -469,7 +469,9 @@ function parsePlayFromHandSource(
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const predicates = parseCardFilterPredicates({
+    text: normalizePlayFromHandPredicateText(predicateText, player),
+  });
   const hasReturnedColorRelation =
     sourceMatch.groups?.["colorRelation"] !== undefined;
   return predicates === undefined || predicates.rest.length > 0
@@ -497,4 +499,13 @@ function parsePlayFromHandSource(
         ],
         enterRested: sourceMatch.groups?.["rested"] !== undefined,
       };
+}
+
+function normalizePlayFromHandPredicateText(
+  text: string,
+  player: "self" | "opponent",
+): string {
+  return player === "self"
+    ? text.replace(/^of your\s+/iu, "").trim()
+    : text.replace(/^of their\s+/iu, "").trim();
 }

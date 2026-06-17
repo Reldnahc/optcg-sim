@@ -314,6 +314,68 @@ describe("play from hand instruction parser", () => {
     });
   });
 
+  it("parses play from hand with owner-scoped color/type-or-name alternatives", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "Play up to 1 of your yellow {Straw Hat Crew} type Character cards or [Sanji] with a cost of 5 or less from your hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                anyOf: [
+                  {
+                    colorsAny: ["yellow"],
+                    categories: ["character"],
+                    typesAny: ["Straw Hat Crew"],
+                  },
+                  {
+                    names: ["Sanji"],
+                    cost: { max: 5 },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "zone:hand",
+        "player:self",
+        "chooser:self:upTo",
+        "filter:anyOf",
+        "filter:color",
+        "filter:type",
+        "filter:category:character",
+        "filter:name",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenPlay",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses play from hand with separately quantified OR alternatives", () => {
     expect(
       parsePlayFromHandInstruction({
