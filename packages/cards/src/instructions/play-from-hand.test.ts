@@ -320,4 +320,205 @@ describe("play from hand instruction parser", () => {
       ]),
     );
   });
+
+  it("parses hand-or-trash play with separately quantified OR alternatives", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "Play up to 1 {Revolutionary Army} type Character card with a cost of 6 or less other than [Koala] or up to 1 [Nico Robin] with a cost of 6 or less from your hand or trash.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "choice",
+        options: [
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      anyOf: [
+                        {
+                          categories: ["character"],
+                          typesAny: ["Revolutionary Army"],
+                          cost: { max: 6 },
+                          nameNot: ["Koala"],
+                        },
+                        {
+                          names: ["Nico Robin"],
+                          cost: { max: 6 },
+                        },
+                      ],
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "trash",
+                    filter: {
+                      anyOf: [
+                        {
+                          categories: ["character"],
+                          typesAny: ["Revolutionary Army"],
+                          cost: { max: 6 },
+                          nameNot: ["Koala"],
+                        },
+                        {
+                          names: ["Nico Robin"],
+                          cost: { max: 6 },
+                        },
+                      ],
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "zone:hand",
+        "zone:trash",
+        "filter:anyOf",
+        "filter:type",
+        "filter:name",
+        "filter:nameNot",
+        "composition:chooseOne",
+      ]),
+    );
+  });
+
+  it("parses repeated hand-or-trash plays with independent quantified filters", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "play up to 1 {Thriller Bark Pirates} type Character card with a cost of 6 or less and up to 1 {Thriller Bark Pirates} type Character card with a cost of 4 or less from your hand or trash.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "choice",
+              options: [
+                {
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      {
+                        effect: {
+                          type: "selectCards",
+                          zone: "hand",
+                          filter: {
+                            categories: ["character"],
+                            typesAny: ["Thriller Bark Pirates"],
+                            cost: { max: 6 },
+                          },
+                        },
+                      },
+                      { effect: { type: "playSelected" } },
+                    ],
+                  },
+                },
+                {
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      {
+                        effect: {
+                          type: "selectCards",
+                          zone: "trash",
+                          filter: {
+                            categories: ["character"],
+                            typesAny: ["Thriller Bark Pirates"],
+                            cost: { max: 6 },
+                          },
+                        },
+                      },
+                      { effect: { type: "playSelected" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "choice",
+              options: [
+                {
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      {
+                        effect: {
+                          type: "selectCards",
+                          zone: "hand",
+                          filter: {
+                            categories: ["character"],
+                            typesAny: ["Thriller Bark Pirates"],
+                            cost: { max: 4 },
+                          },
+                        },
+                      },
+                      { effect: { type: "playSelected" } },
+                    ],
+                  },
+                },
+                {
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      {
+                        effect: {
+                          type: "selectCards",
+                          zone: "trash",
+                          filter: {
+                            categories: ["character"],
+                            typesAny: ["Thriller Bark Pirates"],
+                            cost: { max: 4 },
+                          },
+                        },
+                      },
+                      { effect: { type: "playSelected" } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "expression:sequence",
+        "zone:hand",
+        "zone:trash",
+        "filter:type",
+        "filter:cost",
+        "composition:chooseOne",
+      ]),
+    );
+  });
 });

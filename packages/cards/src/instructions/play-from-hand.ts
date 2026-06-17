@@ -2,13 +2,21 @@ import type { CardFilter, HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const handPlaySelection = "handSelection:play-from-hand" as HandSelectionId;
 const handOrTrashHandSelection =
   "handSelection:play-from-hand-or-trash:hand" as HandSelectionId;
 const handOrTrashTrashSelection =
   "trashSelection:play-from-hand-or-trash:trash" as SelectionId;
+
+interface QuantifiedPlayFilter {
+  readonly cardinality: NonNullable<
+    ReturnType<typeof parseUpToCardinality>
+  >["cardinality"];
+  readonly filter: CardFilter;
+  readonly evidence: readonly PrimitiveEvidence[];
+}
 
 export const parsePlayFromHandInstruction: InstructionParser = (input) => {
   const handOrTrash = parsePlayFromHandOrTrashInstruction(input);
@@ -186,14 +194,9 @@ const parsePlayFromHandOrTrashInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const cardinality = parseUpToCardinality({ text: afterPlay });
-  if (cardinality === undefined) {
-    return undefined;
-  }
-
   const sourceMatch =
-    /^(?<predicates>.+) from your hand or trash(?<rested>\s+rested)?\.?$/i.exec(
-      cardinality.rest,
+    /^(?<parts>.+) from your hand or trash(?<rested>\s+rested)?\.?$/i.exec(
+      afterPlay,
     );
   if (sourceMatch === null) {
     return undefined;
@@ -202,60 +205,77 @@ const parsePlayFromHandOrTrashInstruction: InstructionParser = (input) => {
   if (groups === undefined) {
     return undefined;
   }
-  const predicateText = groups["predicates"];
-  if (predicateText === undefined) {
+  const partsText = groups["parts"];
+  if (partsText === undefined) {
     return undefined;
   }
-
-  const predicates = parseCardFilterPredicates({ text: predicateText });
-  if (predicates === undefined || predicates.rest.length > 0) {
+  const parts = parseQuantifiedPlayFilters(partsText);
+  if (parts === undefined) {
     return undefined;
   }
   const enterRested = groups["rested"] !== undefined;
 
-  return {
-    effect: {
-      type: "choice",
-      chooser: "self",
-      min: 0,
-      max: 1,
-      options: [
-        {
-          id: "choice:play-from-hand",
-          label: "Play from hand.",
-          effect: playSelectedFromZone({
-            selection: handOrTrashHandSelection,
-            zone: "hand",
-            visibility: "chooserOnly",
-            filter: predicates.filter,
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
+  if (parts.connector === "and") {
+    return {
+      effect: {
+        type: "sequence",
+        effects: parts.parts.map((part, index) => ({
+          connector: index === 0 ? ("always" as const) : ("then" as const),
+          effect: buildHandOrTrashChoice({
+            cardinality: part.cardinality,
+            filter: part.filter,
             enterRested,
-          }),
-        },
-        {
-          id: "choice:play-from-trash",
-          label: "Play from trash.",
-          effect: playSelectedFromZone({
-            selection: handOrTrashTrashSelection,
-            zone: "trash",
-            visibility: "bothPlayers",
-            filter: predicates.filter,
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
-            enterRested,
-          }),
-        },
+            selectionSuffix: String(index),
+          }).effect,
+        })),
+      },
+      evidence: [
+        "instruction:playSelected",
+        "expression:sequence",
+        "zone:hand",
+        "zone:trash",
+        "player:self",
+        "chooser:self:upTo",
+        ...parts.parts.flatMap((part) => part.evidence),
+        ...(enterRested ? ["state:rested" as const] : []),
+        "composition:selectThenPlay",
+        "composition:chooseOne",
       ],
-    },
+      rest: "",
+    };
+  }
+
+  const [part] = parts.parts;
+  if (part === undefined) {
+    return undefined;
+  }
+  const filter =
+    parts.connector === "or"
+      ? { anyOf: parts.parts.map((entry) => entry.filter) }
+      : part.filter;
+  const cardinality = part.cardinality;
+  if (
+    parts.connector === "or" &&
+    !parts.parts.every(
+      (entry) =>
+        entry.cardinality.min === cardinality.min &&
+        entry.cardinality.max === cardinality.max,
+    )
+  ) {
+    return undefined;
+  }
+  const choice = buildHandOrTrashChoice({ cardinality, filter, enterRested });
+
+  return {
+    effect: choice.effect,
     evidence: [
       "instruction:playSelected",
-      ...cardinality.evidence,
+      ...(parts.connector === "or" ? (["filter:anyOf"] as const) : []),
+      ...parts.parts.flatMap((entry) => entry.evidence),
       "zone:hand",
       "zone:trash",
       "player:self",
       "chooser:self:upTo",
-      ...predicates.evidence,
       ...(enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
       "composition:chooseOne",
@@ -263,6 +283,113 @@ const parsePlayFromHandOrTrashInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseQuantifiedPlayFilters(text: string):
+  | {
+      readonly connector: "single" | "or" | "and";
+      readonly parts: readonly QuantifiedPlayFilter[];
+    }
+  | undefined {
+  const hasOr = /\s+or\s+(?=up to [1-9]\d*\s+)/iu.test(text);
+  const hasAnd = /\s+and\s+(?=up to [1-9]\d*\s+)/iu.test(text);
+  if (hasOr && hasAnd) {
+    return undefined;
+  }
+  const connector = hasOr ? "or" : hasAnd ? "and" : "single";
+  const pieces =
+    connector === "single"
+      ? [text]
+      : text.split(
+          connector === "or"
+            ? /\s+or\s+(?=up to [1-9]\d*\s+)/iu
+            : /\s+and\s+(?=up to [1-9]\d*\s+)/iu,
+        );
+  const parts = pieces.map((piece) => parseQuantifiedPlayFilter(piece.trim()));
+  if (parts.some((part) => part === undefined)) {
+    return undefined;
+  }
+  return {
+    connector,
+    parts: parts.filter(
+      (part): part is QuantifiedPlayFilter => part !== undefined,
+    ),
+  };
+}
+
+function parseQuantifiedPlayFilter(
+  text: string,
+): QuantifiedPlayFilter | undefined {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates({ text: cardinality.rest });
+  if (predicates === undefined || predicates.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    cardinality: cardinality.cardinality,
+    filter: predicates.filter,
+    evidence: [...cardinality.evidence, ...predicates.evidence],
+  };
+}
+
+function buildHandOrTrashChoice({
+  cardinality,
+  filter,
+  enterRested,
+  selectionSuffix,
+}: {
+  readonly cardinality: { readonly min: number; readonly max: number };
+  readonly filter: CardFilter;
+  readonly enterRested: boolean;
+  readonly selectionSuffix?: string;
+}) {
+  const handSelection =
+    selectionSuffix === undefined
+      ? handOrTrashHandSelection
+      : (`${handOrTrashHandSelection}:${selectionSuffix}` as HandSelectionId);
+  const trashSelection =
+    selectionSuffix === undefined
+      ? handOrTrashTrashSelection
+      : (`${handOrTrashTrashSelection}:${selectionSuffix}` as SelectionId);
+  return {
+    effect: {
+      type: "choice" as const,
+      chooser: "self" as const,
+      min: 0,
+      max: 1,
+      options: [
+        {
+          id: `choice:play-from-hand${selectionSuffix === undefined ? "" : `:${selectionSuffix}`}`,
+          label: "Play from hand.",
+          effect: playSelectedFromZone({
+            selection: handSelection,
+            zone: "hand",
+            visibility: "chooserOnly",
+            filter,
+            min: cardinality.min,
+            max: cardinality.max,
+            enterRested,
+          }),
+        },
+        {
+          id: `choice:play-from-trash${selectionSuffix === undefined ? "" : `:${selectionSuffix}`}`,
+          label: "Play from trash.",
+          effect: playSelectedFromZone({
+            selection: trashSelection,
+            zone: "trash",
+            visibility: "bothPlayers",
+            filter,
+            min: cardinality.min,
+            max: cardinality.max,
+            enterRested,
+          }),
+        },
+      ],
+    },
+  };
+}
 
 function playSelectedFromZone({
   selection,
