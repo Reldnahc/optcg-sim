@@ -107,7 +107,7 @@ test("can create active matches without game timers", async () => {
   assert.ok(match !== undefined);
   assert.deepEqual(match.state.timers.players, {});
   assert.deepEqual(
-    registry.advanceTimers({
+    await registry.advanceTimers({
       elapsedMs: 1_000,
       connectedPlayerIds: () => new Set(),
       matchIds: [matchId],
@@ -751,7 +751,7 @@ test("first-player choice drains the chooser game timer before the engine starts
   const chooser = created.firstPlayerChoice.chooserPlayerId;
 
   assert.deepEqual(
-    registry.advanceTimers({
+    await registry.advanceTimers({
       elapsedMs: 250,
       connectedPlayerIds: () =>
         new Set([premadeSetup.playerOrder[0], premadeSetup.playerOrder[1]]),
@@ -793,7 +793,7 @@ test("first-player choice timeout concedes the chooser", async () => {
   }
 
   assert.deepEqual(
-    registry.advanceTimers({
+    await registry.advanceTimers({
       elapsedMs: 1_000,
       connectedPlayerIds: () =>
         new Set([premadeSetup.playerOrder[0], premadeSetup.playerOrder[1]]),
@@ -845,7 +845,7 @@ test("bot players are exempt from disconnect timers", async () => {
   );
 
   assert.deepEqual(
-    registry.advanceTimers({
+    await registry.advanceTimers({
       elapsedMs: 100,
       connectedPlayerIds: () => new Set([premadeSetup.playerOrder[0]]),
       matchIds: [matchId],

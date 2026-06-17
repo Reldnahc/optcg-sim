@@ -2,16 +2,12 @@ import { randomUUID } from "node:crypto";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
-import {
-  buildLocalCompletedMatchRecord,
-  type CompletedMatchSeatContext,
-} from "./local-completed-match-record.js";
+import { buildLocalCompletedMatchRecord } from "./local-completed-match-record.js";
 import { createDevUserSessionToken, type AuthContext } from "./dev-auth.js";
 import { subjectsMatch, subjectsOwnSameAccount } from "./dev-auth.js";
 import {
   getLocalDevSnapshot,
   setLocalDevMatchPlayerLabels,
-  type LocalDevMatch,
 } from "./local-match.js";
 import {
   advanceLocalDevMatchTimers,
@@ -27,7 +23,6 @@ import {
 import type {
   ClientActionEnvelope,
   FirstPlayerChoiceState,
-  FirstPlayerChoiceValue,
   MatchPersistence,
   SessionActionRequest,
   SessionActionResult,
@@ -44,110 +39,20 @@ import {
   type LocalDevMatchSetup,
 } from "./dev-local-match-session-factory.js";
 import { recoverPersistedLocalDevMatchSessions } from "./dev-local-match-recovery.js";
+import type {
+  CreatedDevMatchResponse,
+  LocalDevMatchRegistry,
+  LocalDevMatchSeat,
+  TimerAdvanceBroadcast,
+} from "./dev-local-match-registry-types.js";
 
-export interface CreatedDevMatchResponse {
-  matchId: MatchId;
-  seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
-  firstPlayerChoice: {
-    chooserPlayerId: PlayerId;
-    choices: readonly FirstPlayerChoiceValue[];
-    resolvedFirstPlayerId?: PlayerId;
-  };
-  snapshot?: ReturnType<typeof getLocalDevSnapshot>;
-}
-
-export interface ClaimedDevSeatResponse {
-  matchId: MatchId;
-  seat: { playerId: PlayerId; sessionToken: string };
-  firstPlayerChoice?: CreatedDevMatchResponse["firstPlayerChoice"];
-}
-
-export interface LocalDevMatchSeat extends CompletedMatchSeatContext {
-  matchId: MatchId;
-}
-
-export interface TimerAdvanceBroadcast {
-  matchId: MatchId;
-  sync: "state" | "timers";
-}
-
-export interface LocalDevMatchRegistry {
-  createMatch: (
-    setup?: LocalDevMatchSetup,
-    options?: {
-      firstPlayerChoice?: FirstPlayerChoiceState;
-      seats?: Record<string, LocalDevMatchSeat>;
-      timersEnabled?: boolean;
-      botPlayerIds?: readonly PlayerId[];
-    },
-  ) => Promise<CreatedDevMatchResponse>;
-  createRematchSeed: (
-    sourceMatchId: MatchId,
-    playerId: PlayerId,
-    auth: AuthContext | undefined,
-  ) =>
-    | {
-        firstPlayerChoice: FirstPlayerChoiceState;
-        playerOrder: readonly PlayerId[];
-        seats: Record<string, Omit<LocalDevMatchSeat, "matchId">>;
-        botPlayerIds: readonly PlayerId[];
-      }
-    | "matchNotFound"
-    | "unauthenticated"
-    | "forbidden"
-    | "sourceNotCompleted"
-    | "noPreviousLoser";
-  resetMatch: (
-    matchId: MatchId,
-    setup?: LocalDevMatchSetup,
-  ) => Promise<CreatedDevMatchResponse>;
-  claimSeat: (
-    matchId: MatchId,
-    playerId: PlayerId,
-    auth: AuthContext | undefined,
-  ) => Promise<
-    | ClaimedDevSeatResponse
-    | "matchNotFound"
-    | "seatNotFound"
-    | "unauthenticated"
-    | "claimed"
-  >;
-  claimSeatForAuth: (
-    matchId: MatchId,
-    auth: AuthContext | undefined,
-  ) => Promise<
-    | ClaimedDevSeatResponse
-    | "matchNotFound"
-    | "seatNotFound"
-    | "unauthenticated"
-  >;
-  getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
-  chooseFirstPlayer: (
-    matchId: MatchId,
-    playerId: PlayerId,
-    choice: FirstPlayerChoiceValue,
-  ) => Promise<
-    CreatedDevMatchResponse | "matchNotFound" | "alreadyStarted" | "notChooser"
-  >;
-  getFirstPlayerChoice: (
-    matchId: MatchId,
-  ) => CreatedDevMatchResponse["firstPlayerChoice"] | undefined;
-  virtualConnectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
-  applyEnvelope: (
-    envelope: ClientActionEnvelope,
-  ) => Promise<SessionActionResult | "matchNotFound">;
-  advanceTimers: (input: {
-    readonly elapsedMs: number;
-    readonly connectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
-    readonly matchIds?: readonly MatchId[];
-  }) => readonly TimerAdvanceBroadcast[];
-  authorizeSeat: (
-    auth: AuthContext | undefined,
-    matchId: MatchId,
-    playerId: PlayerId,
-  ) => "authorized" | "unauthenticated" | "forbidden";
-  defaultMatchId: MatchId;
-}
+export type {
+  ClaimedDevSeatResponse,
+  CreatedDevMatchResponse,
+  LocalDevMatchRegistry,
+  LocalDevMatchSeat,
+  TimerAdvanceBroadcast,
+} from "./dev-local-match-registry-types.js";
 
 const firstPlayerChoiceResponse = (
   firstPlayerChoice: FirstPlayerChoiceState,
@@ -381,6 +286,42 @@ export const createLocalDevMatchRegistry = async (
       await saveSessionCheckpoint(matchId);
     }
   };
+  const inactiveSessionActionResult = (
+    envelope: ClientActionEnvelope,
+  ): SessionActionResult => ({
+    type: "actionResult",
+    matchId: envelope.matchId,
+    clientActionId: envelope.clientActionId,
+    accepted: false,
+    stateSeq: envelope.expectedStateSeq,
+    reason: "illegalAction",
+    errors: ["First-player setup is not resolved."],
+  });
+  const applyEnvelopeMutation = async (
+    envelope: ClientActionEnvelope,
+  ): Promise<
+    | {
+        readonly result: SessionActionResult;
+        readonly session?: ActiveLocalDevMatchSession;
+      }
+    | { readonly result: "matchNotFound" }
+  > =>
+    runMatchMutation(envelope.matchId, async () => {
+      const session = sessions.get(envelope.matchId);
+      if (session === undefined) {
+        return { result: "matchNotFound" as const };
+      }
+      if (session.status !== "active") {
+        return { result: inactiveSessionActionResult(envelope) };
+      }
+      await waitForPendingCheckpoint(envelope.matchId);
+      const result = sessionService.applyEnvelope(envelope);
+      if (result.accepted) {
+        await sessionService.flushPersistence(envelope.matchId);
+        scheduleCompletedMatchPersistence(session);
+      }
+      return { result, session };
+    });
   const restoreSeatSubject = (
     seat: LocalDevMatchSeat,
     subject: LocalDevMatchSeat["subject"],
@@ -578,29 +519,39 @@ export const createLocalDevMatchRegistry = async (
         let acceptedAction = false;
         for (const botPlayerId of session.botPlayerIds) {
           await waitForBotActionDelay();
-          const snapshot = getLocalDevSnapshot(session.match);
-          const request = botRequestFromChoice(botPlayerId, snapshot);
-          if (request === undefined) {
-            continue;
-          }
-          const result = sessionService.applyEnvelope({
-            protocolVersion: "dev",
-            matchId,
-            playerId: botPlayerId,
-            clientActionId: `bot:${randomUUID()}`,
-            expectedStateSeq: snapshot.stateSeq,
-            ...(request.type !== "respondToDecision"
-              ? {}
-              : { expectedDecisionId: request.decisionId }),
-            requestHash: requestHash(request),
-            request,
+          const applied = await runMatchMutation(matchId, async () => {
+            if (sessions.get(matchId) !== session) {
+              return false;
+            }
+            await waitForPendingCheckpoint(matchId);
+            const snapshot = getLocalDevSnapshot(session.match);
+            const request = botRequestFromChoice(botPlayerId, snapshot);
+            if (request === undefined) {
+              return false;
+            }
+            const result = sessionService.applyEnvelope({
+              protocolVersion: "dev",
+              matchId,
+              playerId: botPlayerId,
+              clientActionId: `bot:${randomUUID()}`,
+              expectedStateSeq: snapshot.stateSeq,
+              ...(request.type !== "respondToDecision"
+                ? {}
+                : { expectedDecisionId: request.decisionId }),
+              requestHash: requestHash(request),
+              request,
+            });
+            if (!result.accepted) {
+              return false;
+            }
+            await sessionService.flushPersistence(matchId);
+            scheduleCompletedMatchPersistence(session);
+            return true;
           });
-          if (!result.accepted) {
+          if (!applied) {
             continue;
           }
-          await sessionService.flushPersistence(matchId);
           acceptedAction = true;
-          scheduleCompletedMatchPersistence(session);
           options.onBotActionAccepted?.(matchId);
         }
         if (!acceptedAction) {
@@ -624,10 +575,9 @@ export const createLocalDevMatchRegistry = async (
         (await createTemplateSetup(
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
-      const botPlayerIds = new Set(options?.botPlayerIds ?? []);
-      const rollbackState = captureSessionRollbackState(actualSetup.matchId);
-      const session =
-        options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
+      const createSession = (): LocalDevMatchSession => {
+        const botPlayerIds = new Set(options?.botPlayerIds ?? []);
+        return options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
           ? createPendingLocalDevMatchSession(
               actualSetup,
               matchTimerPolicy,
@@ -661,18 +611,49 @@ export const createLocalDevMatchRegistry = async (
                 },
               ),
             };
-      sessions.set(actualSetup.matchId, session);
-      if (session.status === "active") {
-        try {
-          await saveSessionCheckpoint(actualSetup.matchId);
-        } catch (error: unknown) {
-          restoreSessionRollbackState(actualSetup.matchId, rollbackState);
-          throw error;
+      };
+      const persistCreatedSession = async (
+        rollbackState: ReturnType<typeof captureSessionRollbackState>,
+        session: LocalDevMatchSession,
+      ): Promise<CreatedDevMatchResponse> => {
+        sessions.set(actualSetup.matchId, session);
+        if (session.status === "active") {
+          try {
+            await saveSessionCheckpoint(actualSetup.matchId);
+          } catch (error: unknown) {
+            restoreSessionRollbackState(actualSetup.matchId, rollbackState);
+            throw error;
+          }
+          syncActiveSessionPlayerLabels(session);
+          scheduleBotActions(session);
         }
-        syncActiveSessionPlayerLabels(session);
-        scheduleBotActions(session);
+        return buildCreatedResponse(actualSetup, session);
+      };
+      if (
+        !sessions.has(actualSetup.matchId) &&
+        !matchMutationQueues.has(actualSetup.matchId)
+      ) {
+        const rollbackState = captureSessionRollbackState(actualSetup.matchId);
+        const session = createSession();
+        sessions.set(actualSetup.matchId, session);
+        if (session.status === "active") {
+          try {
+            await saveSessionCheckpoint(actualSetup.matchId);
+          } catch (error: unknown) {
+            restoreSessionRollbackState(actualSetup.matchId, rollbackState);
+            throw error;
+          }
+          syncActiveSessionPlayerLabels(session);
+          scheduleBotActions(session);
+        }
+        return buildCreatedResponse(actualSetup, session);
       }
-      return buildCreatedResponse(actualSetup, session);
+      return runMatchMutation(actualSetup.matchId, async () =>
+        persistCreatedSession(
+          captureSessionRollbackState(actualSetup.matchId),
+          createSession(),
+        ),
+      );
     },
     createRematchSeed(sourceMatchId, playerId, auth) {
       const sourceSession = sessions.get(sourceMatchId);
@@ -930,60 +911,56 @@ export const createLocalDevMatchRegistry = async (
       return sessions.get(matchId)?.botPlayerIds ?? new Set();
     },
     async applyEnvelope(envelope) {
-      const session = sessions.get(envelope.matchId);
-      if (session === undefined) {
-        return "matchNotFound" as const;
+      const applied = await applyEnvelopeMutation(envelope);
+      if (applied.result === "matchNotFound") {
+        return applied.result;
       }
-      if (session.status !== "active") {
-        return {
-          type: "actionResult" as const,
-          matchId: envelope.matchId,
-          clientActionId: envelope.clientActionId,
-          accepted: false as const,
-          stateSeq: envelope.expectedStateSeq,
-          reason: "illegalAction" as const,
-          errors: ["First-player setup is not resolved."],
-        };
+      if (applied.result.accepted && applied.session !== undefined) {
+        scheduleBotActions(applied.session);
       }
-      await waitForPendingCheckpoint(envelope.matchId);
-      const result = sessionService.applyEnvelope(envelope);
-      if (result.accepted) {
-        await sessionService.flushPersistence(envelope.matchId);
-        scheduleCompletedMatchPersistence(session);
-        scheduleBotActions(session);
-      }
-      return result;
+      return applied.result;
     },
-    advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
+    async advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
       const allowedMatchIds =
         matchIds === undefined ? undefined : new Set(matchIds);
-      const changedMatches: TimerAdvanceBroadcast[] = [];
-      for (const [matchId, session] of sessions) {
-        if (
-          !session.timersEnabled ||
-          (allowedMatchIds !== undefined && !allowedMatchIds.has(matchId))
-        ) {
-          continue;
-        }
-        const result = advanceLocalDevMatchTimers(session.match, {
-          elapsedMs,
-          connectedPlayerIds: connectedPlayerIdsWithBots(
-            connectedPlayerIds(matchId),
-            session.botPlayerIds,
-          ),
-          policy: matchTimerPolicy,
-        });
-        if (result.expiries.length > 0) {
-          applyLocalDevMatchTimerExpiries(session.match, result.expiries);
-        }
-        if (result.changed || result.expiries.length > 0) {
-          changedMatches.push({
+      const candidateMatchIds = [...sessions.keys()].filter((matchId) =>
+        allowedMatchIds === undefined ? true : allowedMatchIds.has(matchId),
+      );
+      const changedMatches = await Promise.all(
+        candidateMatchIds.map((matchId) =>
+          runMatchMutation(
             matchId,
-            sync: result.expiries.length > 0 ? "state" : "timers",
-          });
-        }
-      }
-      return changedMatches;
+            async (): Promise<TimerAdvanceBroadcast | undefined> => {
+              const session = sessions.get(matchId);
+              if (session === undefined || !session.timersEnabled) {
+                return undefined;
+              }
+              const result = advanceLocalDevMatchTimers(session.match, {
+                elapsedMs,
+                connectedPlayerIds: connectedPlayerIdsWithBots(
+                  connectedPlayerIds(matchId),
+                  session.botPlayerIds,
+                ),
+                policy: matchTimerPolicy,
+              });
+              if (result.expiries.length > 0) {
+                applyLocalDevMatchTimerExpiries(session.match, result.expiries);
+                await saveActiveSessionCheckpoint(matchId, session);
+              }
+              if (!result.changed && result.expiries.length === 0) {
+                return undefined;
+              }
+              return {
+                matchId,
+                sync: result.expiries.length > 0 ? "state" : "timers",
+              };
+            },
+          ),
+        ),
+      );
+      return changedMatches.filter(
+        (changed): changed is TimerAdvanceBroadcast => changed !== undefined,
+      );
     },
     authorizeSeat(auth, matchId, playerId) {
       if (auth === undefined) {

@@ -10,14 +10,14 @@ interface MatchSocketConnection {
   readonly socket: Pick<Duplex, "destroyed" | "writableEnded">;
 }
 
-export const advanceMatchTimersAndBroadcast = (
+export const advanceMatchTimersAndBroadcast = async (
   registry: LocalDevMatchRegistry,
   connections: Set<MatchSocketConnection>,
   elapsedMs: number,
   broadcast: (matchId: MatchId, sync: "state" | "timers") => void,
   matchIds?: readonly MatchId[],
-): void => {
-  const changedMatches = registry.advanceTimers({
+): Promise<void> => {
+  const changedMatches = await registry.advanceTimers({
     elapsedMs,
     connectedPlayerIds: (matchId) =>
       connectedPlayerIdsForMatch(matchId, connections),

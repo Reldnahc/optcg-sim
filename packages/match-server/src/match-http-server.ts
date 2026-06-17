@@ -673,7 +673,7 @@ const handleWebSocketUpgrade = async (
   connections.add(connection);
   startConnectionHeartbeat(connection, "heartbeat");
   resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
-  registry.advanceTimers({
+  await registry.advanceTimers({
     elapsedMs: 0,
     connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
     matchIds: [matchId],
@@ -681,12 +681,15 @@ const handleWebSocketUpgrade = async (
   registerConnectionLifecycle(connection, () => {
     connections.delete(connection);
     lobbyRegistry.cancelRematchConsensusForMatch(matchId);
-    registry.advanceTimers({
-      elapsedMs: 0,
-      connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
-      matchIds: [matchId],
-    });
-    broadcastMatchState(matchId, registry, connections);
+    void registry
+      .advanceTimers({
+        elapsedMs: 0,
+        connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
+        matchIds: [matchId],
+      })
+      .then(() => {
+        broadcastMatchState(matchId, registry, connections);
+      });
   });
   if (match === undefined) {
     sendSocketJson(
@@ -847,7 +850,7 @@ export const createMatchHttpServer = async (
     const now = Date.now();
     const elapsedMs = Math.max(0, now - lastMatchTimerTickMs);
     lastMatchTimerTickMs = now;
-    advanceMatchTimersAndBroadcast(
+    void advanceMatchTimersAndBroadcast(
       registry,
       socketConnections,
       elapsedMs,
