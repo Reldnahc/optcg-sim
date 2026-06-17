@@ -214,6 +214,88 @@ it("parses opponent rested DON attachment to opponent Characters", () => {
   );
 });
 
+it("parses currently-given DON attachment as attached-DON source selection", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] You may rest this Stage: Give up to 1 of your currently given DON!! cards to 1 of your {Straw Hat Crew} type Characters.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "paidCost",
+            effect: {
+              type: "payCost",
+              cost: { type: "restSelf", optional: true },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  saveResultKinds: ["selectedTargets", "selectedCards:don"],
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "self",
+                      zone: "costArea",
+                      filter: { categories: ["don"], state: "attached" },
+                    },
+                  },
+                },
+                {
+                  saveResultKinds: ["selectedTargets"],
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "self",
+                      zone: "characterArea",
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Straw Hat Crew"],
+                      },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "attachSelectedDon",
+                    target: {
+                      type: "savedFieldObject",
+                      player: "self",
+                      zone: "characterArea",
+                      filter: {
+                        categories: ["character"],
+                        typesAny: ["Straw Hat Crew"],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "cost:restSelf",
+      "instruction:attachDon",
+      "zone:costArea",
+      "filter:state:attached",
+      "filter:type",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses rested DON attachment to a named self Leader target", () => {
   const result = parseCardEffectLine(
     "[On Play] Give up to 2 rested DON!! cards to your [Trafalgar Law] Leader.",

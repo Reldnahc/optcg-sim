@@ -47,7 +47,7 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
 type DonAttachSource = {
   readonly evidence: readonly PrimitiveEvidence[];
   readonly player: "self" | "opponent" | "anyPlayer";
-  readonly sourceState?: "rested";
+  readonly sourceState?: "rested" | "attached";
   readonly targetOwner?: "selectedDonOwner";
 };
 
@@ -68,7 +68,7 @@ type DonAttachTarget = {
 
 const parseDonAttachmentInstruction: InstructionParser = (input) => {
   const match =
-    /^give (?<quantity>up to [1-9]\d*) (?:(?<opponentSource>of your opponent's) )?(?<rested>rested )?DON!! cards?(?: from (?<sourceZone>your opponent's|your|its owner's) cost area)? to (?<target>.+)$/iu.exec(
+    /^give (?<quantity>up to [1-9]\d*) (?:(?:(?<opponentSource>of your opponent's)|of your currently given) )?(?<rested>rested )?DON!! cards?(?: from (?<sourceZone>your opponent's|your|its owner's) cost area)? to (?<target>.+)$/iu.exec(
       input.text,
     );
   const quantityText = match?.groups?.["quantity"];
@@ -81,6 +81,7 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
     rested: match?.groups?.["rested"],
     sourceZone: match?.groups?.["sourceZone"],
     targetText,
+    currentlyGiven: input.text.includes("of your currently given DON!!"),
   });
   if (source === undefined) {
     return undefined;
@@ -98,33 +99,34 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
     source.sourceState === undefined
       ? { categories: ["don"] }
       : { categories: ["don"], state: source.sourceState };
-  const sourceSelection =
-    source.player === "self"
-      ? {
-          type: "selectCards" as const,
+  const usePrivateSelfCostAreaSelection =
+    source.player === "self" && source.sourceState !== "attached";
+  const sourceSelection = usePrivateSelfCostAreaSelection
+    ? {
+        type: "selectCards" as const,
+        zone: "costArea" as const,
+        player: source.player,
+        chooser: "self" as const,
+        min: quantity.cardinality.min,
+        max: quantity.cardinality.max,
+        filter: sourceFilter,
+        saveAs: donAttachSelection,
+        visibility: "bothPlayers" as const,
+      }
+    : {
+        type: "selectTargets" as const,
+        request: {
+          timing: "onResolution" as const,
+          chooser: "self" as const,
           zone: "costArea" as const,
           player: source.player,
-          chooser: "self" as const,
+          filter: sourceFilter,
           min: quantity.cardinality.min,
           max: quantity.cardinality.max,
-          filter: sourceFilter,
-          saveAs: donAttachSelection,
-          visibility: "bothPlayers" as const,
-        }
-      : {
-          type: "selectTargets" as const,
-          request: {
-            timing: "onResolution" as const,
-            chooser: "self" as const,
-            zone: "costArea" as const,
-            player: source.player,
-            filter: sourceFilter,
-            min: quantity.cardinality.min,
-            max: quantity.cardinality.max,
-            allowFewerIfUnavailable: true,
-            visibility: "public" as const,
-          },
-        };
+          allowFewerIfUnavailable: true,
+          visibility: "public" as const,
+        },
+      };
 
   return {
     effect: {
@@ -137,10 +139,9 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
               : "select:don-to-attach",
           connector: "always",
           saveResultAs: donAttachSelection,
-          saveResultKinds:
-            source.player === "self"
-              ? ["selectedCards:don"]
-              : ["selectedTargets", "selectedCards:don"],
+          saveResultKinds: usePrivateSelfCostAreaSelection
+            ? ["selectedCards:don"]
+            : ["selectedTargets", "selectedCards:don"],
           effect: sourceSelection,
         },
         {
@@ -189,7 +190,8 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
               visibility: "publicOnly",
               onFailure: "failClosed",
             },
-            ...(source.sourceState === undefined
+            ...(source.sourceState === undefined ||
+            source.sourceState === "attached"
               ? {}
               : { sourceState: source.sourceState }),
             ...(target.targetOwner === undefined
@@ -210,7 +212,9 @@ const parseDonAttachmentInstruction: InstructionParser = (input) => {
         : "instruction:selectTargets",
       ...(source.sourceState === undefined
         ? []
-        : (["filter:state:rested"] as const)),
+        : source.sourceState === "attached"
+          ? (["filter:state:attached"] as const)
+          : (["filter:state:rested"] as const)),
       ...(source.player === "opponent"
         ? (["player:opponent"] as const)
         : source.player === "self"
@@ -232,6 +236,7 @@ const parseDonAttachSource = (input: {
   readonly rested: string | undefined;
   readonly sourceZone: string | undefined;
   readonly targetText: string;
+  readonly currentlyGiven: boolean;
 }): DonAttachSource | undefined => {
   const sourceZone = input.sourceZone?.toLowerCase();
   const ownerRelative =
@@ -241,7 +246,11 @@ const parseDonAttachSource = (input: {
     : input.opponentSource !== undefined || sourceZone === "your opponent's"
       ? "opponent"
       : "self";
-  const sourceState = input.rested === undefined ? undefined : "rested";
+  const sourceState = input.currentlyGiven
+    ? "attached"
+    : input.rested === undefined
+      ? undefined
+      : "rested";
   if (sourceState === undefined && sourceZone === undefined) {
     return undefined;
   }
