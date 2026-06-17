@@ -41,10 +41,11 @@ export function revealTopConditionalExpressionParser(options: {
       return undefined;
     }
 
-    const body = parseConditionalBody(bodyText, options);
-    if (body === undefined || body.rest.length > 0) {
+    const bodyWithCleanup = parseConditionalBodyWithCleanup(bodyText, options);
+    if (bodyWithCleanup === undefined || bodyWithCleanup.body.rest.length > 0) {
       return undefined;
     }
+    const body = bodyWithCleanup.body;
 
     const sourceEvidence: readonly PrimitiveEvidence[] =
       sourceZone === "life" ? ["zone:life"] : ["look:topDeck", "zone:deck"];
@@ -58,10 +59,16 @@ export function revealTopConditionalExpressionParser(options: {
       ...predicates.evidence,
       "connector:ifPreviousSucceeded",
       ...body.evidence,
+      ...bodyWithCleanup.cleanupEvidence,
     ] as const;
 
     return {
-      effect: revealSelectThenBody(predicates.filter, body.effect, sourceZone),
+      effect: revealSelectThenBody(
+        predicates.filter,
+        body.effect,
+        sourceZone,
+        bodyWithCleanup.cleanupEffect,
+      ),
       evidence,
       rest: "",
       ...(input.source === undefined
@@ -84,7 +91,7 @@ function parseRevealTopCondition(text: string):
   | undefined {
   const sourcePattern = String.raw`(?<source>deck|Life cards)`;
   const hasMatch = new RegExp(
-    String.raw`^Reveal 1 card from the top of your ${sourcePattern}\. If (?:the revealed card|that card) has (?<predicate>.+), (?<body>[\s\S]+)$`,
+    String.raw`^Reveal 1 card from the top of your ${sourcePattern}\. If (?:the revealed card|that card) has (?<predicate>.+?), (?<body>[\s\S]+)$`,
     "iu",
   ).exec(text);
   const hasPredicate = hasMatch?.groups?.["predicate"]?.trim();
@@ -269,41 +276,115 @@ function parseConditionalBody(
   );
 }
 
+function parseConditionalBodyWithCleanup(
+  text: string,
+  options: {
+    readonly instructions: readonly InstructionParser[];
+    readonly expressions?: readonly ((
+      input: ParseInput,
+    ) => ExpressionParseResult | undefined)[];
+  },
+):
+  | {
+      readonly body: ExpressionParseResult;
+      readonly cleanupEffect?: ExpressionParseResult["effect"];
+      readonly cleanupEvidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const cleanup = parseRevealedCardBottomCleanup(text);
+  const bodyText = cleanup?.bodyText ?? text;
+  const body = parseConditionalBody(bodyText, options);
+  if (body === undefined) {
+    return undefined;
+  }
+  return {
+    body,
+    ...(cleanup === undefined ? {} : { cleanupEffect: cleanup.effect }),
+    cleanupEvidence: cleanup?.evidence ?? [],
+  };
+}
+
+function parseRevealedCardBottomCleanup(text: string):
+  | {
+      readonly bodyText: string;
+      readonly effect: ExpressionParseResult["effect"];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match =
+    /^(?<body>[\s\S]+?)\.\s+Then,\s+place\s+(?:the revealed card|that card)\s+at the bottom of your deck\.?$/iu.exec(
+      text,
+    );
+  const bodyText = match?.groups?.["body"]?.trim();
+  if (bodyText === undefined || bodyText.length === 0) {
+    return undefined;
+  }
+  return {
+    bodyText,
+    effect: {
+      type: "placeSetRemainder",
+      set: revealedTopSet,
+      owner: "self",
+      destination: "deck",
+      position: "bottom",
+      order: "original",
+    },
+    evidence: [
+      "connector:then",
+      "instruction:placeSetRemainder",
+      "destination:deck",
+      "position:bottom",
+      "order:original",
+    ],
+  };
+}
+
 function revealSelectThenBody(
   filter: CardFilter,
   body: ExpressionParseResult["effect"],
   sourceZone: RevealTopSourceZone,
+  cleanupEffect?: ExpressionParseResult["effect"],
 ): ExpressionParseResult["effect"] {
+  const effects: Extract<
+    ExpressionParseResult["effect"],
+    { type: "sequence" }
+  >["effects"] = [
+    {
+      connector: "always",
+      effect: {
+        type: "revealTop",
+        player: "self",
+        ...(sourceZone === "deck" ? {} : { zone: sourceZone }),
+        count: 1,
+        saveAs: revealedTopSet,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "selectFromSet",
+        set: revealedTopSet,
+        chooser: "self",
+        min: 0,
+        max: 1,
+        filter,
+        saveAs: revealedTopSelection,
+      },
+    },
+    {
+      connector: "ifPreviousSucceeded",
+      effect: body,
+    },
+  ];
+  if (cleanupEffect !== undefined) {
+    effects.push({
+      connector: "then",
+      effect: cleanupEffect,
+    });
+  }
   return {
     type: "sequence",
-    effects: [
-      {
-        connector: "always",
-        effect: {
-          type: "revealTop",
-          player: "self",
-          ...(sourceZone === "deck" ? {} : { zone: sourceZone }),
-          count: 1,
-          saveAs: revealedTopSet,
-          visibility: "bothPlayers",
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "selectFromSet",
-          set: revealedTopSet,
-          chooser: "self",
-          min: 0,
-          max: 1,
-          filter,
-          saveAs: revealedTopSelection,
-        },
-      },
-      {
-        connector: "ifPreviousSucceeded",
-        effect: body,
-      },
-    ],
+    effects,
   };
 }

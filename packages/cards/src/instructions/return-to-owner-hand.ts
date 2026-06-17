@@ -5,7 +5,10 @@ import {
   parseUpToCardinality,
 } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
-import { parseOpponentFieldTarget } from "../targets/index.js";
+import {
+  parseOpponentFieldTarget,
+  parseYourCharactersTarget,
+} from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const returnSelectionId = "selected:return-to-owner-hand";
@@ -47,6 +50,32 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
         "instruction:returnToOwnerHand",
         ...cardinality.evidence,
         ...opponentTarget.evidence,
+        "destination:ownerHand",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
+  const selfCharacterTarget = parseYourCharactersTarget({
+    text: cardinality.rest,
+  });
+  if (
+    selfCharacterTarget !== undefined &&
+    (selfCharacterTarget.rest.length === 0 || selfCharacterTarget.rest === ".")
+  ) {
+    return {
+      effect: selectThenReturnToOwnerHand(
+        "self",
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+        selfCharacterTarget.filter ?? { categories: ["character"] },
+        "characterArea",
+      ),
+      evidence: [
+        "instruction:returnToOwnerHand",
+        ...cardinality.evidence,
+        ...selfCharacterTarget.evidence,
         "destination:ownerHand",
         "composition:selectThenApply",
       ],

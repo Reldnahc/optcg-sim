@@ -194,6 +194,89 @@ it("parses revealed-card type-includes condition with composed draw and trash bo
   );
 });
 
+it("parses revealed-card conditional body followed by revealed-card bottom cleanup", () => {
+  const result = parseCardEffectLine(
+    "[Counter] Reveal 1 card from the top of your deck. If the revealed card has a cost of 4 or more, return up to 1 of your Characters to the owner's hand. Then, place the revealed card at the bottom of your deck.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "counter" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "revealTop",
+              player: "self",
+              count: 1,
+              visibility: "bothPlayers",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "selectFromSet",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: { cost: { min: 4 } },
+            },
+          },
+          {
+            connector: "ifPreviousSucceeded",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      chooser: "self",
+                      player: "self",
+                      zone: "characterArea",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: { type: "bounce", destination: "hand" },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "placeSetRemainder",
+              owner: "self",
+              destination: "deck",
+              position: "bottom",
+              order: "original",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventCounter",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "filter:cost",
+      "instruction:returnToOwnerHand",
+      "instruction:placeSetRemainder",
+      "destination:deck",
+      "position:bottom",
+    ]),
+  );
+});
+
 it("parses reveal-top play with produced-character keyword continuation", () => {
   const result = parseCardEffectLine(
     `[Main] If your Leader's type includes "Whitebeard Pirates", reveal 1 card from the top of your deck. If that card is a Character card with a type including "Whitebeard Pirates" and a cost of 9 or less, you may play that card. If you do, that Character gains [Rush] during this turn.`,
