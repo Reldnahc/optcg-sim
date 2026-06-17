@@ -13,6 +13,7 @@ import type {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
   createEvent,
   type EngineResultOptions,
   illegalAction,
@@ -183,6 +184,7 @@ const createAttackCostDecision = (
   attacker: { card: CardInstance; playerId: PlayerId },
   target: { card: CardInstance; playerId: PlayerId },
   count: number,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const player = state.players[attacker.playerId];
   if (player === undefined || player.hand.length < count) {
@@ -245,17 +247,20 @@ const createAttackCostDecision = (
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
+    undefined,
+    options,
   );
 };
 
-type DeclareAttackOptions = {
+type DeclareAttackOptions = EngineResultOptions & {
   readonly ignoreAttackCosts?: boolean;
 };
 
 export const applyDeclareAttack = (
   state: GameState,
   action: Extract<Action, { type: "declareAttack" }>,
-): EngineResult => applyDeclareAttackInternal(state, action);
+  options: EngineResultOptions = {},
+): EngineResult => applyDeclareAttackInternal(state, action, options);
 
 const applyDeclareAttackInternal = (
   state: GameState,
@@ -333,7 +338,13 @@ const applyDeclareAttackInternal = (
   if (options.ignoreAttackCosts !== true) {
     const attackTrashCost = attackTrashCostCountForCard(state, attacker.card);
     if (attackTrashCost > 0) {
-      return createAttackCostDecision(state, attacker, target, attackTrashCost);
+      return createAttackCostDecision(
+        state,
+        attacker,
+        target,
+        attackTrashCost,
+        options,
+      );
     }
   }
   if (detectPendingRuntimeWork(state) !== undefined) {
@@ -395,8 +406,13 @@ const applyDeclareAttackInternal = (
       createEvent(state, seqOffset, type, payload, visibility),
   });
   declaredState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(declaredState);
-  const declaredResult = toEngineResult(declaredState, events);
+  assertGameStateInvariantsIfEnabled(declaredState, options);
+  const declaredResult = toEngineResult(
+    declaredState,
+    events,
+    undefined,
+    options,
+  );
   if (declaredResult.errors !== undefined) {
     return declaredResult;
   }
@@ -407,6 +423,7 @@ const applyDeclareAttackInternal = (
     state,
     declaredResult.state,
     events,
+    options,
   );
   if (attackTimingResult.errors !== undefined) {
     return attackTimingResult;
@@ -418,7 +435,7 @@ const applyDeclareAttackInternal = (
     return attackTimingResult;
   }
   if (!battleParticipantsRemainLegal(attackTimingResult.state)) {
-    return cleanupBattleAfterAttackTiming(state, attackTimingResult);
+    return cleanupBattleAfterAttackTiming(state, attackTimingResult, options);
   }
 
   const blockDecision = createBlockStepDeclineDecision(
@@ -446,7 +463,7 @@ const applyDeclareAttackInternal = (
       pendingDecision: blockDecision,
       eventJournal: [...state.eventJournal, ...blockEvents],
     };
-    return toEngineResult(blockState, blockEvents);
+    return toEngineResult(blockState, blockEvents, undefined, options);
   }
 
   const resolved = resolveSupportedVanillaBattle(attackTimingResult.state);
@@ -454,7 +471,7 @@ const applyDeclareAttackInternal = (
     const firstError = resolved.errors[0];
     return firstError === undefined
       ? illegalAction(state, "Battle resolution failed.")
-      : toEngineResult(state, [], [firstError]);
+      : toEngineResult(state, [], [firstError], options);
   }
   const resolutionEvents = rebaseEvents(
     state,
@@ -472,10 +489,12 @@ const applyDeclareAttackInternal = (
       ...resolutionEvents,
     ],
   };
-  return toEngineResult(finalState, [
-    ...attackTimingResult.events,
-    ...resolutionEvents,
-  ]);
+  return toEngineResult(
+    finalState,
+    [...attackTimingResult.events, ...resolutionEvents],
+    undefined,
+    options,
+  );
 };
 
 const toErrorTuple = (
@@ -498,8 +517,9 @@ const resolveAttackTimingEffects = (
   originalState: GameState,
   declaredState: GameState,
   declaredEvents: EngineEvent[],
+  options: EngineResultOptions = {},
 ): EngineResult => {
-  let current = toEngineResult(declaredState, []);
+  let current = toEngineResult(declaredState, [], undefined, options);
   const rawRuntimeEvents: EngineEvent[] = [];
   for (let stepCount = 0; stepCount < 20; stepCount += 1) {
     if (
@@ -511,17 +531,26 @@ const resolveAttackTimingEffects = (
     }
     const next = processEffectRuntime(current.state);
     if (next.errors !== undefined) {
-      return toEngineResult(originalState, [], toErrorTuple(next.errors));
+      return toEngineResult(
+        originalState,
+        [],
+        toErrorTuple(next.errors),
+        options,
+      );
     }
     if (next.events.length === 0) {
-      if (next.stateHash !== current.stateHash) {
-        current = toEngineResult(next.state, []);
+      const stateChanged =
+        options.includeStateHash === false
+          ? next.state !== current.state
+          : next.stateHash !== current.stateHash;
+      if (stateChanged) {
+        current = toEngineResult(next.state, [], undefined, options);
         continue;
       }
       break;
     }
     rawRuntimeEvents.push(...next.events);
-    current = toEngineResult(next.state, []);
+    current = toEngineResult(next.state, [], undefined, options);
   }
   if (
     current.errors === undefined &&
@@ -538,6 +567,7 @@ const resolveAttackTimingEffects = (
           reason: "Attack timing runtime continuation did not settle.",
         },
       ],
+      options,
     );
   }
 
@@ -553,8 +583,8 @@ const resolveAttackTimingEffects = (
     cardManifest: originalState.cardManifest,
     eventJournal: [...originalState.eventJournal, ...events],
   };
-  assertGameStateInvariants(stateWithJournal);
-  return toEngineResult(stateWithJournal, events);
+  assertGameStateInvariantsIfEnabled(stateWithJournal, options);
+  return toEngineResult(stateWithJournal, events, undefined, options);
 };
 
 const battleParticipantsRemainLegal = (state: GameState): boolean => {
@@ -571,6 +601,7 @@ const battleParticipantsRemainLegal = (state: GameState): boolean => {
 const cleanupBattleAfterAttackTiming = (
   originalState: GameState,
   attackTimingResult: EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const events = [...attackTimingResult.events];
   appendEvent(
@@ -595,8 +626,8 @@ const cleanupBattleAfterAttackTiming = (
     cardManifest: originalState.cardManifest,
     eventJournal: [...originalState.eventJournal, ...events],
   };
-  assertGameStateInvariants(stateWithJournal);
-  return toEngineResult(stateWithJournal, events);
+  assertGameStateInvariantsIfEnabled(stateWithJournal, options);
+  return toEngineResult(stateWithJournal, events, undefined, options);
 };
 
 const withOriginalManifestResult = (
@@ -649,13 +680,19 @@ export const getBattleDecisionLegalActions = (
 export const applyAttackCostDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || !isAttackCostDecision(decision)) {
     return null;
   }
   const fail = (reason: string): EngineResult =>
-    toEngineResult(state, [], [{ type: "invalidDecisionResponse", reason }]);
+    toEngineResult(
+      state,
+      [],
+      [{ type: "invalidDecisionResponse", reason }],
+      options,
+    );
   if (decision.id !== action.decisionId) {
     return fail("Decision id does not match current attack cost decision.");
   }
@@ -739,12 +776,14 @@ export const applyAttackCostDecisionResponse = (
       attacker: runtime.attacker,
       target: runtime.target,
     },
-    { ignoreAttackCosts: true },
+    { ...options, ignoreAttackCosts: true },
   );
-  return {
-    ...attack,
-    events: [...events, ...attack.events],
-  };
+  return toEngineResult(
+    attack.state,
+    [...events, ...attack.events],
+    attack.errors === undefined ? undefined : toErrorTuple(attack.errors),
+    options,
+  );
 };
 
 export const applyBattleDecisionResponse = (

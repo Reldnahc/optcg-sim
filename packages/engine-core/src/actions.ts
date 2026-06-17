@@ -658,7 +658,7 @@ const applyRespondToDecision = (
   const attackCost = profileActionSpan(
     options,
     "engine:decision:attackCost",
-    () => applyAttackCostDecisionResponse(state, action),
+    () => applyAttackCostDecisionResponse(state, action, options),
   );
   if (attackCost !== null) {
     return attackCost;
@@ -1001,7 +1001,7 @@ export const applyAction = (
       return profileActionSpan(
         options,
         "engine:applyAction:declareAttack",
-        () => applyDeclareAttack(state, action),
+        () => applyDeclareAttack(state, action, options),
       );
     if (action.type === "activateEffect")
       return profileActionSpan(

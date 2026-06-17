@@ -640,6 +640,40 @@ test("attack trash cost opens a hand selection before attack timing resolves", (
   );
 });
 
+test("live attack cost response preserves omitted state hash", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  installAttackTrashCostRestriction(state, cardRef(attacker, p1));
+
+  const selectedCards = p1State.hand
+    .slice(0, 2)
+    .map((card) => cardRef(card, p1));
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(attacker, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  const decision = must(opened.state.pendingDecision, "attack cost decision");
+
+  const paid = applyAction(
+    opened.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: selectedCards },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.stateHash, "");
+});
+
 test("banish combined with doubleAttack trashes two leader damage life cards", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
