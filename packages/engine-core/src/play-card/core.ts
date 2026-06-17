@@ -532,7 +532,7 @@ export const applyRuntimeActivateSelectedEvent = (params: {
         createEvent(state, seqOffset, type, payload, visibility),
     });
     nextState.eventJournal = [...state.eventJournal, ...events];
-    assertGameStateInvariants(nextState);
+    assertGameStateInvariantsIfEnabled(nextState);
     return toEngineResult(nextState, events);
   }
 
