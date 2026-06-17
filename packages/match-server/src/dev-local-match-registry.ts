@@ -105,30 +105,30 @@ export interface LocalDevMatchRegistry {
     matchId: MatchId,
     playerId: PlayerId,
     auth: AuthContext | undefined,
-  ) =>
+  ) => Promise<
     | ClaimedDevSeatResponse
     | "matchNotFound"
     | "seatNotFound"
     | "unauthenticated"
-    | "claimed";
+    | "claimed"
+  >;
   claimSeatForAuth: (
     matchId: MatchId,
     auth: AuthContext | undefined,
-  ) =>
+  ) => Promise<
     | ClaimedDevSeatResponse
     | "matchNotFound"
     | "seatNotFound"
-    | "unauthenticated";
+    | "unauthenticated"
+  >;
   getMatch: (matchId: MatchId) => LocalDevMatch | undefined;
   chooseFirstPlayer: (
     matchId: MatchId,
     playerId: PlayerId,
     choice: FirstPlayerChoiceValue,
-  ) =>
-    | CreatedDevMatchResponse
-    | "matchNotFound"
-    | "alreadyStarted"
-    | "notChooser";
+  ) => Promise<
+    CreatedDevMatchResponse | "matchNotFound" | "alreadyStarted" | "notChooser"
+  >;
   getFirstPlayerChoice: (
     matchId: MatchId,
   ) => CreatedDevMatchResponse["firstPlayerChoice"] | undefined;
@@ -334,6 +334,14 @@ export const createLocalDevMatchRegistry = async (
   };
   const waitForPendingCheckpoint = async (matchId: MatchId): Promise<void> => {
     await pendingCheckpointWrites.get(matchId);
+  };
+  const saveActiveSessionCheckpoint = async (
+    matchId: MatchId,
+    session: LocalDevMatchSession,
+  ): Promise<void> => {
+    if (session.status === "active") {
+      await saveSessionCheckpoint(matchId);
+    }
   };
   const waitForBotActionDelay = async (): Promise<void> => {
     if (botActionDelayMs <= 0) {
@@ -648,7 +656,7 @@ export const createLocalDevMatchRegistry = async (
       await saveSessionCheckpoint(matchId);
       return buildCreatedResponse(normalizedSetup, session);
     },
-    chooseFirstPlayer(matchId, playerId, choice) {
+    async chooseFirstPlayer(matchId, playerId, choice) {
       const session = sessions.get(matchId);
       if (session === undefined) {
         return "matchNotFound";
@@ -697,12 +705,11 @@ export const createLocalDevMatchRegistry = async (
       };
       syncActiveSessionPlayerLabels(sessionWithSeats);
       sessions.set(matchId, sessionWithSeats);
-      void saveSessionCheckpoint(matchId).then(() =>
-        runBotActions(sessionWithSeats),
-      );
+      await saveSessionCheckpoint(matchId);
+      scheduleBotActions(sessionWithSeats);
       return buildCreatedResponse(resolvedSetup, sessionWithSeats);
     },
-    claimSeat(matchId, playerId, auth) {
+    async claimSeat(matchId, playerId, auth) {
       const session = sessions.get(matchId);
       if (session === undefined) {
         return "matchNotFound";
@@ -718,6 +725,7 @@ export const createLocalDevMatchRegistry = async (
         if (subjectsMatch(seat.subject, auth.subject)) {
           refreshSeatSubject(seat, auth.subject);
           syncActiveSessionPlayerLabels(session);
+          await saveActiveSessionCheckpoint(matchId, session);
           return {
             matchId,
             seat: {
@@ -749,6 +757,7 @@ export const createLocalDevMatchRegistry = async (
       );
       seat.subject = auth.subject;
       syncActiveSessionPlayerLabels(session);
+      await saveActiveSessionCheckpoint(matchId, session);
       return {
         matchId,
         seat: { playerId, sessionToken },
@@ -761,7 +770,7 @@ export const createLocalDevMatchRegistry = async (
             }),
       };
     },
-    claimSeatForAuth(matchId, auth) {
+    async claimSeatForAuth(matchId, auth) {
       const session = sessions.get(matchId);
       if (session === undefined) {
         return "matchNotFound";
@@ -780,6 +789,7 @@ export const createLocalDevMatchRegistry = async (
       refreshSeatSubject(seat, auth.subject);
       const refreshedSubject = auth.subject;
       syncActiveSessionPlayerLabels(session);
+      await saveActiveSessionCheckpoint(matchId, session);
       return {
         matchId,
         seat: {

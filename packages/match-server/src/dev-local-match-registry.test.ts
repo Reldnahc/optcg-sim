@@ -9,6 +9,7 @@ import {
   createLocalDevMatchRegistry,
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
+import type { AuthContext } from "./dev-auth.js";
 import { getLocalDevSnapshot } from "./local-match.js";
 import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type { BotStrategy } from "./bot-types.js";
@@ -16,6 +17,8 @@ import type { DevMatchSetup } from "./local-match.js";
 import type { MatchTimerPolicy } from "./match-timers.js";
 import type {
   ClientActionEnvelope,
+  MatchPersistence,
+  MatchPersistenceSnapshot,
   SessionActionRequest,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
@@ -59,11 +62,11 @@ const deferredVoid = (): {
   };
 };
 
-const resolveFirstPlayerChoice = (
+const resolveFirstPlayerChoice = async (
   registry: Awaited<ReturnType<typeof createLocalDevMatchRegistry>>,
   created: CreatedDevMatchResponse,
-): void => {
-  const result = registry.chooseFirstPlayer(
+): Promise<void> => {
+  const result = await registry.chooseFirstPlayer(
     created.matchId,
     created.firstPlayerChoice.chooserPlayerId,
     "goFirst",
@@ -72,6 +75,19 @@ const resolveFirstPlayerChoice = (
     throw new Error(`Unable to choose first player: ${result}`);
   }
 };
+
+const authContext = (
+  userId: string,
+  sessionId: string,
+  displayName: string,
+): AuthContext => ({
+  subject: {
+    type: "user",
+    userId,
+    sessionId,
+    displayName,
+  },
+});
 
 test("can create active matches without game timers", async () => {
   const registry = await createLocalDevMatchRegistry(
@@ -85,7 +101,7 @@ test("can create active matches without game timers", async () => {
     { ...structuredClone(premadeSetup), matchId },
     { timersEnabled: false },
   );
-  resolveFirstPlayerChoice(registry, created);
+  await resolveFirstPlayerChoice(registry, created);
 
   const match = registry.getMatch(matchId);
   assert.ok(match !== undefined);
@@ -112,7 +128,7 @@ test("accepted registry actions include snapshots for replay frames", async () =
     ...structuredClone(premadeSetup),
     matchId,
   });
-  const ready = registry.chooseFirstPlayer(
+  const ready = await registry.chooseFirstPlayer(
     created.matchId,
     created.firstPlayerChoice.chooserPlayerId,
     "goFirst",
@@ -304,6 +320,122 @@ test("active persistence rehydrates a match from checkpoint and compact action l
   assert.equal(getLocalDevSnapshot(recoveredMatch).stateSeq, accepted.stateSeq);
 });
 
+test("active persistence rehydrates claimed seats for account reconnect", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const matchId = "active-persistence-claimed-seat-match" as MatchId;
+  const playerId = premadeSetup.playerOrder[0];
+  const initialAuth = authContext("claimed-user", "session-1", "Claimed User");
+  const refreshedAuth = authContext(
+    "claimed-user",
+    "session-2",
+    "Refreshed User",
+  );
+  const firstRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const created = await firstRegistry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: playerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: playerId,
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+
+  const claimed = await firstRegistry.claimSeat(matchId, playerId, initialAuth);
+  if (typeof claimed === "string") {
+    throw new Error(`Expected seat claim to succeed: ${claimed}`);
+  }
+  const recoveredRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+
+  const reconnected = await recoveredRegistry.claimSeatForAuth(
+    matchId,
+    refreshedAuth,
+  );
+
+  if (typeof reconnected === "string") {
+    throw new Error(`Expected recovered seat claim to succeed: ${reconnected}`);
+  }
+  assert.equal(reconnected.seat.playerId, playerId);
+  assert.equal(
+    recoveredRegistry.authorizeSeat(refreshedAuth, matchId, playerId),
+    "authorized",
+  );
+});
+
+test("first-player choice waits for the active checkpoint before resolving", async () => {
+  const basePersistence = createInMemoryMatchPersistence();
+  const checkpointGate = deferredVoid();
+  let checkpointStarted = false;
+  const blockingPersistence: MatchPersistence = {
+    ...basePersistence,
+    async saveSnapshot(input: MatchPersistenceSnapshot) {
+      checkpointStarted = true;
+      await checkpointGate.promise;
+      await basePersistence.saveSnapshot(input);
+    },
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: blockingPersistence,
+    },
+  );
+  const matchId = "first-player-choice-checkpoint-match" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const chooser = created.firstPlayerChoice.chooserPlayerId;
+
+  const choicePromise = Promise.resolve(
+    registry.chooseFirstPlayer(matchId, chooser, "goFirst"),
+  );
+  let resolved = false;
+  void choicePromise.then(() => {
+    resolved = true;
+  });
+  await waitForBotMicrotasks();
+
+  assert.equal(checkpointStarted, true);
+  assert.equal(resolved, false);
+
+  checkpointGate.resolve();
+  const ready = await choicePromise;
+
+  if (typeof ready === "string" || ready.snapshot === undefined) {
+    throw new Error(
+      `Unable to start match: ${
+        typeof ready === "string" ? ready : "missing snapshot"
+      }`,
+    );
+  }
+  assert.equal(ready.matchId, matchId);
+});
+
 test("completed-match save does not block the terminal action response", async () => {
   const saveStarted = deferredVoid();
   const saveFinished = deferredVoid();
@@ -325,7 +457,7 @@ test("completed-match save does not block the terminal action response", async (
     ...structuredClone(premadeSetup),
     matchId,
   });
-  const ready = registry.chooseFirstPlayer(
+  const ready = await registry.chooseFirstPlayer(
     created.matchId,
     created.firstPlayerChoice.chooserPlayerId,
     "goFirst",
@@ -433,7 +565,7 @@ test("registry can omit action result snapshots for live socket traffic", async 
     ...structuredClone(premadeSetup),
     matchId,
   });
-  const ready = registry.chooseFirstPlayer(
+  const ready = await registry.chooseFirstPlayer(
     created.matchId,
     created.firstPlayerChoice.chooserPlayerId,
     "goFirst",
@@ -501,7 +633,7 @@ test("first-player choice drains the chooser game timer before the engine starts
     [{ matchId, sync: "timers" }],
   );
 
-  const ready = registry.chooseFirstPlayer(matchId, chooser, "goFirst");
+  const ready = await registry.chooseFirstPlayer(matchId, chooser, "goFirst");
   if (typeof ready === "string") {
     throw new Error(`Unable to start match: ${ready}`);
   }
@@ -542,7 +674,7 @@ test("first-player choice timeout concedes the chooser", async () => {
     }),
     [{ matchId, sync: "state" }],
   );
-  const ready = registry.chooseFirstPlayer(matchId, chooser, "goFirst");
+  const ready = await registry.chooseFirstPlayer(matchId, chooser, "goFirst");
 
   assert.equal(ready, "alreadyStarted");
   const match = registry.getMatch(matchId);

@@ -154,6 +154,32 @@ describe("redis match persistence", () => {
     ).toEqual(["decision-1", "decision-2"]);
   });
 
+  test("ignores stale legacy logs after a newer snapshot is current", async () => {
+    const redis = new FakeRedis();
+    const persistence = createRedisMatchPersistence(redis);
+    const setup = await createFixtureDevMatchSetup(matchId);
+    const local = createLocalDevMatch(setup);
+
+    await persistence.saveSnapshot({
+      metadata: metadata(),
+      state: local.state,
+      manifest: local.state.cardManifest,
+      actions: [],
+      decisions: [],
+    });
+    redis.lists.set("match:redis-match:actions", [
+      JSON.stringify(record("stale-action")),
+    ]);
+    redis.lists.set("match:redis-match:decisions", [
+      JSON.stringify(record("stale-decision")),
+    ]);
+
+    const loaded = await persistence.loadSnapshot(matchId);
+
+    expect(loaded?.actions).toEqual([]);
+    expect(loaded?.decisions).toEqual([]);
+  });
+
   test("lists active matches with scan-style discovery", async () => {
     const redis = new FakeRedis();
     const persistence = createRedisMatchPersistence(redis);

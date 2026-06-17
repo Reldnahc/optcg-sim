@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { MatchId } from "@optcg/types";
 
 import type {
@@ -37,8 +39,20 @@ const keys = (matchId: MatchId) => {
     manifest: `${prefix}:manifest`,
     actions: `${prefix}:actions`,
     decisions: `${prefix}:decisions`,
+    current: `${prefix}:current`,
     locks: `${prefix}:locks`,
     freeze: `${prefix}:freeze`,
+    snapshot(generation: string) {
+      const snapshotPrefix = `${prefix}:snapshots:${generation}`;
+      return {
+        metadata: `${snapshotPrefix}:metadata`,
+        state: `${snapshotPrefix}:state`,
+        context: `${snapshotPrefix}:context`,
+        manifest: `${snapshotPrefix}:manifest`,
+        actions: `${snapshotPrefix}:actions`,
+        decisions: `${snapshotPrefix}:decisions`,
+      };
+    },
   };
 };
 
@@ -79,62 +93,108 @@ const scanAll = async (
   return keysFound;
 };
 
+const snapshotGeneration = (snapshot: MatchPersistenceSnapshot): string =>
+  `${String(snapshot.state.seq)}:${randomUUID()}`;
+
+const loadSnapshotFromKeys = async (
+  redis: RedisLike,
+  snapshotKeys: {
+    readonly metadata: string;
+    readonly state: string;
+    readonly manifest: string;
+    readonly context: string;
+    readonly actions: string;
+    readonly decisions: string;
+  },
+): Promise<MatchPersistenceSnapshot | undefined> => {
+  const [metadata, state, manifest, context, actions, decisions] =
+    await Promise.all([
+      redis.get(snapshotKeys.metadata),
+      redis.get(snapshotKeys.state),
+      redis.get(snapshotKeys.manifest),
+      redis.get(snapshotKeys.context),
+      redis.lRange(snapshotKeys.actions, 0, -1),
+      redis.lRange(snapshotKeys.decisions, 0, -1),
+    ]);
+  if (metadata === null || state === null || manifest === null) {
+    return undefined;
+  }
+  const recoveryContext =
+    context === null
+      ? undefined
+      : (parseJson(context) as NonNullable<
+          MatchPersistenceSnapshot["recoveryContext"]
+        >);
+  return {
+    metadata: parseJson(metadata) as MatchPersistenceSnapshot["metadata"],
+    state: parseJson(state) as MatchPersistenceSnapshot["state"],
+    manifest: parseJson(manifest) as MatchPersistenceSnapshot["manifest"],
+    ...(recoveryContext === undefined ? {} : { recoveryContext }),
+    actions: actions.map((record) => parseJson(record) as StoredSessionRecord),
+    decisions: decisions.map(
+      (record) => parseJson(record) as StoredSessionRecord,
+    ),
+  };
+};
+
 export const createRedisMatchPersistence = (
   redis: RedisLike,
 ): MatchPersistence => ({
   async saveSnapshot(input) {
     const matchKeys = keys(input.metadata.matchId);
+    const generation = snapshotGeneration(input);
+    const snapshotKeys = matchKeys.snapshot(generation);
     await redis.set(matchKeys.meta, serialize(input.metadata));
-    await redis.set(matchKeys.state, serialize(input.state));
-    await redis.set(matchKeys.manifest, serialize(input.manifest));
+    await redis.set(snapshotKeys.metadata, serialize(input.metadata));
+    await redis.set(snapshotKeys.state, serialize(input.state));
+    await redis.set(snapshotKeys.manifest, serialize(input.manifest));
     if (input.recoveryContext === undefined) {
-      await redis.del(matchKeys.context);
+      await redis.del(snapshotKeys.context);
     } else {
-      await redis.set(matchKeys.context, serialize(input.recoveryContext));
+      await redis.set(snapshotKeys.context, serialize(input.recoveryContext));
     }
-    await redis.del(matchKeys.actions);
-    await redis.del(matchKeys.decisions);
-    await pushRecords(redis, matchKeys.actions, input.actions);
-    await pushRecords(redis, matchKeys.decisions, input.decisions);
+    await redis.del(snapshotKeys.actions);
+    await redis.del(snapshotKeys.decisions);
+    await pushRecords(redis, snapshotKeys.actions, input.actions);
+    await pushRecords(redis, snapshotKeys.decisions, input.decisions);
+    await redis.set(matchKeys.current, generation);
   },
   async appendAction({ matchId, record }) {
-    await redis.rPush(keys(matchId).actions, serialize(record));
+    const matchKeys = keys(matchId);
+    const generation = await redis.get(matchKeys.current);
+    await redis.rPush(
+      generation === null
+        ? matchKeys.actions
+        : matchKeys.snapshot(generation).actions,
+      serialize(record),
+    );
   },
   async appendDecision({ matchId, record }) {
-    await redis.rPush(keys(matchId).decisions, serialize(record));
+    const matchKeys = keys(matchId);
+    const generation = await redis.get(matchKeys.current);
+    await redis.rPush(
+      generation === null
+        ? matchKeys.decisions
+        : matchKeys.snapshot(generation).decisions,
+      serialize(record),
+    );
   },
   async loadSnapshot(matchId) {
     const matchKeys = keys(matchId);
-    const [metadata, state, manifest, context, actions, decisions] =
-      await Promise.all([
-        redis.get(matchKeys.meta),
-        redis.get(matchKeys.state),
-        redis.get(matchKeys.manifest),
-        redis.get(matchKeys.context),
-        redis.lRange(matchKeys.actions, 0, -1),
-        redis.lRange(matchKeys.decisions, 0, -1),
-      ]);
-    if (metadata === null || state === null || manifest === null) {
-      return undefined;
-    }
-    const recoveryContext =
-      context === null
-        ? undefined
-        : (parseJson(context) as NonNullable<
-            MatchPersistenceSnapshot["recoveryContext"]
-          >);
-    return {
-      metadata: parseJson(metadata) as MatchPersistenceSnapshot["metadata"],
-      state: parseJson(state) as MatchPersistenceSnapshot["state"],
-      manifest: parseJson(manifest) as MatchPersistenceSnapshot["manifest"],
-      ...(recoveryContext === undefined ? {} : { recoveryContext }),
-      actions: actions.map(
-        (record) => parseJson(record) as StoredSessionRecord,
-      ),
-      decisions: decisions.map(
-        (record) => parseJson(record) as StoredSessionRecord,
-      ),
-    };
+    const generation = await redis.get(matchKeys.current);
+    return loadSnapshotFromKeys(
+      redis,
+      generation === null
+        ? {
+            metadata: matchKeys.meta,
+            state: matchKeys.state,
+            manifest: matchKeys.manifest,
+            context: matchKeys.context,
+            actions: matchKeys.actions,
+            decisions: matchKeys.decisions,
+          }
+        : matchKeys.snapshot(generation),
+    );
   },
   async listActiveMatchIds() {
     const ids = (await scanAll(redis, "match:*:meta"))

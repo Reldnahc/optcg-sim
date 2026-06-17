@@ -338,7 +338,7 @@ const handleApiRequest = async (
     const matchId = decodeURIComponent(
       accountSeatClaimRoute.groups?.["matchId"] ?? "",
     ) as MatchId;
-    const result = registry.claimSeatForAuth(
+    const result = await registry.claimSeatForAuth(
       matchId,
       authProvider.authenticate(request),
     );
@@ -366,7 +366,7 @@ const handleApiRequest = async (
     const playerId = decodeURIComponent(
       seatClaimRoute.groups?.["playerId"] ?? "",
     ) as PlayerId;
-    const result = registry.claimSeat(
+    const result = await registry.claimSeat(
       matchId,
       playerId,
       authProvider.authenticate(request),
@@ -419,7 +419,7 @@ const handleApiRequest = async (
         });
         return;
       }
-      const result = registry.chooseFirstPlayer(
+      const result = await registry.chooseFirstPlayer(
         matchId as MatchId,
         playerId as PlayerId,
         choice,
