@@ -103,12 +103,18 @@ describe("match session service", () => {
       expectedStateSeq: local.state.seq,
     };
 
+    await service.saveSnapshot(matchId);
     service.applyEnvelope(envelope(request, local.state.seq));
     await service.flushPersistence(matchId);
+
+    const loadedAfterFlush = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterFlush?.actions).toHaveLength(1);
+    expect(loadedAfterFlush?.actions[0]?.result.snapshot).toBeUndefined();
+
     await service.saveSnapshot(matchId);
 
-    const loaded = await persistence.loadSnapshot(matchId);
-    expect(loaded?.actions).toHaveLength(1);
+    const loadedAfterCheckpoint = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterCheckpoint?.actions).toHaveLength(0);
   });
 
   test("fails closed for missing sessions", () => {

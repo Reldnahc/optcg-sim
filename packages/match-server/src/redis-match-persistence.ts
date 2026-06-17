@@ -33,6 +33,7 @@ const keys = (matchId: MatchId) => {
   return {
     state: `${prefix}:state`,
     meta: `${prefix}:meta`,
+    context: `${prefix}:context`,
     manifest: `${prefix}:manifest`,
     actions: `${prefix}:actions`,
     decisions: `${prefix}:decisions`,
@@ -86,6 +87,11 @@ export const createRedisMatchPersistence = (
     await redis.set(matchKeys.meta, serialize(input.metadata));
     await redis.set(matchKeys.state, serialize(input.state));
     await redis.set(matchKeys.manifest, serialize(input.manifest));
+    if (input.recoveryContext === undefined) {
+      await redis.del(matchKeys.context);
+    } else {
+      await redis.set(matchKeys.context, serialize(input.recoveryContext));
+    }
     await redis.del(matchKeys.actions);
     await redis.del(matchKeys.decisions);
     await pushRecords(redis, matchKeys.actions, input.actions);
@@ -99,20 +105,29 @@ export const createRedisMatchPersistence = (
   },
   async loadSnapshot(matchId) {
     const matchKeys = keys(matchId);
-    const [metadata, state, manifest, actions, decisions] = await Promise.all([
-      redis.get(matchKeys.meta),
-      redis.get(matchKeys.state),
-      redis.get(matchKeys.manifest),
-      redis.lRange(matchKeys.actions, 0, -1),
-      redis.lRange(matchKeys.decisions, 0, -1),
-    ]);
+    const [metadata, state, manifest, context, actions, decisions] =
+      await Promise.all([
+        redis.get(matchKeys.meta),
+        redis.get(matchKeys.state),
+        redis.get(matchKeys.manifest),
+        redis.get(matchKeys.context),
+        redis.lRange(matchKeys.actions, 0, -1),
+        redis.lRange(matchKeys.decisions, 0, -1),
+      ]);
     if (metadata === null || state === null || manifest === null) {
       return undefined;
     }
+    const recoveryContext =
+      context === null
+        ? undefined
+        : (parseJson(context) as NonNullable<
+            MatchPersistenceSnapshot["recoveryContext"]
+          >);
     return {
       metadata: parseJson(metadata) as MatchPersistenceSnapshot["metadata"],
       state: parseJson(state) as MatchPersistenceSnapshot["state"],
       manifest: parseJson(manifest) as MatchPersistenceSnapshot["manifest"],
+      ...(recoveryContext === undefined ? {} : { recoveryContext }),
       actions: actions.map(
         (record) => parseJson(record) as StoredSessionRecord,
       ),

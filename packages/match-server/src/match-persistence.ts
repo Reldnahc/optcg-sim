@@ -53,6 +53,9 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
         metadata: clone(input.metadata),
         state: clone(input.state),
         manifest: clone(input.manifest),
+        ...(input.recoveryContext === undefined
+          ? {}
+          : { recoveryContext: clone(input.recoveryContext) }),
         actions: [],
         decisions: [],
       });

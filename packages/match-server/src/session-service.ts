@@ -8,9 +8,11 @@ import { createInMemoryMatchSessionStore } from "./match-session-store.js";
 import type {
   ClientActionEnvelope,
   MatchPersistence,
+  MatchRecoveryContext,
   MatchSessionMetadata,
   SessionActionResult,
   SessionObservation,
+  StoredSessionRecord,
 } from "./session-types.js";
 import type { LocalDevMatch } from "./local-match.js";
 
@@ -23,6 +25,11 @@ export interface RegisterLocalDevMatchInput {
   readonly local: LocalDevMatch;
   readonly metadata: MatchSessionMetadata;
   readonly persistence?: MatchPersistence;
+  readonly initialRecords?: {
+    readonly actions?: readonly StoredSessionRecord[];
+    readonly decisions?: readonly StoredSessionRecord[];
+  };
+  readonly recoveryContext?: () => MatchRecoveryContext | undefined;
   readonly includeActionSnapshots?: boolean;
 }
 
@@ -86,12 +93,16 @@ export const createMatchSessionService = ({
       local,
       metadata,
       persistence,
+      initialRecords,
+      recoveryContext,
       includeActionSnapshots,
     }) {
       const runtime = createMatchSessionRuntime({
         local,
         metadata,
         ...(persistence === undefined ? {} : { persistence }),
+        ...(initialRecords === undefined ? {} : { initialRecords }),
+        ...(recoveryContext === undefined ? {} : { recoveryContext }),
         ...(includeActionSnapshots === undefined
           ? {}
           : { includeActionSnapshots }),

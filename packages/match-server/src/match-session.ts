@@ -11,6 +11,7 @@ import type {
   ActionRejectionReason,
   ClientActionEnvelope,
   MatchPersistence,
+  MatchRecoveryContext,
   MatchSessionMetadata,
   SessionActionResult,
   SessionActionRequest,
@@ -28,6 +29,11 @@ export interface CreateMatchSessionRuntimeOptions {
   readonly local: LocalDevMatch;
   readonly metadata?: MatchSessionMetadata;
   readonly persistence?: MatchPersistence;
+  readonly initialRecords?: {
+    readonly actions?: readonly StoredSessionRecord[];
+    readonly decisions?: readonly StoredSessionRecord[];
+  };
+  readonly recoveryContext?: () => MatchRecoveryContext | undefined;
   readonly includeActionSnapshots?: boolean;
   readonly now?: () => string;
 }
@@ -89,19 +95,81 @@ const requestExpectedStateSeq = (
 ): number | undefined =>
   request.type === "respondToDecision" ? undefined : request.expectedStateSeq;
 
+const compactSessionResult = (
+  result: SessionActionResult,
+): SessionActionResult => {
+  if (result.snapshot === undefined) {
+    return result;
+  }
+  return {
+    type: result.type,
+    matchId: result.matchId,
+    clientActionId: result.clientActionId,
+    accepted: result.accepted,
+    stateSeq: result.stateSeq,
+    ...(result.actionSeq === undefined ? {} : { actionSeq: result.actionSeq }),
+    ...(result.reason === undefined ? {} : { reason: result.reason }),
+    errors: result.errors,
+  };
+};
+
+const compactStoredSessionRecord = (
+  record: StoredSessionRecord,
+): StoredSessionRecord => ({
+  envelope: record.envelope,
+  result: compactSessionResult(record.result),
+  recordedAt: record.recordedAt,
+});
+
+const sortedStoredRecords = (
+  records: readonly StoredSessionRecord[],
+): StoredSessionRecord[] =>
+  [...records].sort((left, right) => {
+    const stateDelta = left.result.stateSeq - right.result.stateSeq;
+    if (stateDelta !== 0) {
+      return stateDelta;
+    }
+    const recordedAtDelta =
+      Date.parse(left.recordedAt) - Date.parse(right.recordedAt);
+    if (recordedAtDelta !== 0) {
+      return recordedAtDelta;
+    }
+    return left.envelope.clientActionId.localeCompare(
+      right.envelope.clientActionId,
+    );
+  });
+
 export const createMatchSessionRuntime = ({
   local,
   metadata,
   persistence,
+  initialRecords,
+  recoveryContext,
   includeActionSnapshots = true,
   now = () => new Date().toISOString(),
 }: CreateMatchSessionRuntimeOptions): MatchSessionRuntime => {
   const idempotency = new Map<string, StoredSessionRecord>();
-  const records: StoredSessionRecord[] = [];
+  const initialActions =
+    initialRecords?.actions?.map(compactStoredSessionRecord) ?? [];
+  const initialDecisions =
+    initialRecords?.decisions?.map(compactStoredSessionRecord) ?? [];
+  const records: StoredSessionRecord[] = sortedStoredRecords([
+    ...initialActions,
+    ...initialDecisions,
+  ]);
   const pendingActions: StoredSessionRecord[] = [];
   const pendingDecisions: StoredSessionRecord[] = [];
-  const acceptedActions: StoredSessionRecord[] = [];
-  const acceptedDecisions: StoredSessionRecord[] = [];
+
+  for (const record of records) {
+    idempotency.set(
+      idempotencyKey({
+        matchId: record.envelope.matchId,
+        playerId: record.envelope.playerId,
+        clientActionId: record.envelope.clientActionId,
+      }),
+      record,
+    );
+  }
 
   const storeRecord = (
     envelope: ClientActionEnvelope,
@@ -112,6 +180,7 @@ export const createMatchSessionRuntime = ({
       result,
       recordedAt: now(),
     };
+    const compactRecord = compactStoredSessionRecord(record);
     idempotency.set(
       idempotencyKey({
         matchId: envelope.matchId,
@@ -123,11 +192,9 @@ export const createMatchSessionRuntime = ({
     records.push(record);
     if (result.accepted) {
       if (envelope.request.type === "respondToDecision") {
-        pendingDecisions.push(record);
-        acceptedDecisions.push(record);
+        pendingDecisions.push(compactRecord);
       } else {
-        pendingActions.push(record);
-        acceptedActions.push(record);
+        pendingActions.push(compactRecord);
       }
     }
     return result;
@@ -244,13 +311,17 @@ export const createMatchSessionRuntime = ({
       if (persistence === undefined || metadata === undefined) {
         return;
       }
+      const context = recoveryContext?.();
       await persistence.saveSnapshot({
         metadata,
         state: local.state,
         manifest: local.state.cardManifest,
-        actions: acceptedActions,
-        decisions: acceptedDecisions,
+        ...(context === undefined ? {} : { recoveryContext: context }),
+        actions: [],
+        decisions: [],
       });
+      pendingActions.length = 0;
+      pendingDecisions.length = 0;
     },
     records: () => records,
   };

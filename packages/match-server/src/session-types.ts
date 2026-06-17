@@ -6,9 +6,16 @@ import type {
   MatchCardManifest,
   MatchId,
   PlayerId,
+  VariantKey,
 } from "@optcg/types";
 
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
+import type { AuthSubject } from "./dev-auth.js";
+import type { ReadyDeckSubmission } from "./deck-submission.js";
+import type { DevDeckVerificationMode } from "./default-dev-manifest.js";
+import type { DevMatchSetup } from "./local-match.js";
+import type { LocalRollbackState } from "./local-rollback.js";
+import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export type GameType = "ranked" | "unranked" | "custom" | "dev";
 export type SpectatorPolicyMode = "disabled" | "live-filtered";
@@ -143,10 +150,30 @@ export interface SessionObservation {
   readonly durationMs: number;
 }
 
+export interface MatchRecoverySeatContext {
+  readonly matchId: MatchId;
+  readonly playerId: PlayerId;
+  readonly subject?: AuthSubject;
+  readonly deckSubmission?: ReadyDeckSubmission;
+  readonly deckSubmissionVerificationMode?: DevDeckVerificationMode;
+  readonly verifiedHandoff?: VerifiedSimHandoff;
+}
+
+export interface MatchRecoveryContext {
+  readonly setup: DevMatchSetup;
+  readonly seats: Readonly<Record<string, MatchRecoverySeatContext>>;
+  readonly firstPlayerChoice: FirstPlayerChoiceState;
+  readonly timersEnabled: boolean;
+  readonly botPlayerIds: readonly PlayerId[];
+  readonly rollback: LocalRollbackState;
+  readonly cardVariantOverrides: Readonly<Record<InstanceId, VariantKey>>;
+}
+
 export interface MatchPersistenceSnapshot {
   readonly metadata: MatchSessionMetadata;
   readonly state: GameState;
   readonly manifest: MatchCardManifest;
+  readonly recoveryContext?: MatchRecoveryContext;
   readonly actions: readonly StoredSessionRecord[];
   readonly decisions: readonly StoredSessionRecord[];
 }

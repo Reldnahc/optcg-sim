@@ -442,6 +442,19 @@ export const createLocalDevMatch = (setup: DevMatchSetup): LocalDevMatch => {
   return { state: started.state, rollback, cardVariantOverrides };
 };
 
+export const createRecoveredLocalDevMatch = ({
+  cardVariantOverrides,
+  rollback,
+  state,
+}: Pick<
+  LocalDevMatch,
+  "cardVariantOverrides" | "rollback" | "state"
+>): LocalDevMatch => ({
+  state: structuredClone(state),
+  rollback: structuredClone(rollback),
+  cardVariantOverrides: structuredClone(cardVariantOverrides),
+});
+
 export const setLocalDevMatchPlayerLabels = (
   match: LocalDevMatch,
   playerLabels: DevMatchSnapshot["playerLabels"],

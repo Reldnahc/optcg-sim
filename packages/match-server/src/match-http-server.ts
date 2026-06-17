@@ -77,7 +77,11 @@ import {
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
 } from "./match-http-server-options.js";
+import { createRedisClientForLobbyStore } from "./lobby-store.js";
+import { resolveRedisConfig } from "./redis-config.js";
+import { createRedisMatchPersistence } from "./redis-match-persistence.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
+import type { MatchPersistence } from "./session-types.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -86,6 +90,24 @@ interface FirstPlayerChoiceRequest {
   playerId?: unknown;
   choice?: unknown;
 }
+
+const resolveActiveMatchPersistence = async (
+  options: CreateMatchHttpServerOptions,
+): Promise<MatchPersistence | undefined> => {
+  if (options.matchPersistence !== undefined) {
+    return options.matchPersistence;
+  }
+  const redisConfig = resolveRedisConfig({
+    redisUrl: options.redisUrl,
+    redisMode: options.redisMode,
+  });
+  if (redisConfig.redisUrl === undefined) {
+    return undefined;
+  }
+  return createRedisMatchPersistence(
+    await createRedisClientForLobbyStore(redisConfig.redisUrl),
+  );
+};
 
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
@@ -770,6 +792,7 @@ export const createMatchHttpServer = async (
   const createDefaultSetup = createDefaultMatchSetupFactory(options);
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();
+  const matchPersistence = await resolveActiveMatchPersistence(options);
   const registry = await createLocalDevMatchRegistry(
     createDefaultSetup,
     options.setup,
@@ -784,6 +807,7 @@ export const createMatchHttpServer = async (
           ? {}
           : { completedMatchRepository };
       })(),
+      ...(matchPersistence === undefined ? {} : { matchPersistence }),
       includeActionSnapshots: false,
       matchTimerPolicy: resolveMatchTimerPolicy(options),
       onBotActionAccepted(matchId) {

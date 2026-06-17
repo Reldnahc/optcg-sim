@@ -22,6 +22,7 @@ import {
 } from "./postgres-completed-match.js";
 import { createLocalReplayFixtureRepository } from "./local-replay-fixture-repository.js";
 import type { SimHandoffVerifier } from "./sim-handoff.js";
+import type { MatchPersistence } from "./session-types.js";
 
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
@@ -35,6 +36,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly rawDeckVerificationMode?: DevDeckVerificationMode;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
+  readonly matchPersistence?: MatchPersistence;
   readonly replayRepository?: CompletedMatchReplayRepository;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;

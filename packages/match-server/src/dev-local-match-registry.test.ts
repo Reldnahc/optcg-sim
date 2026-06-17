@@ -9,6 +9,8 @@ import {
   createLocalDevMatchRegistry,
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
+import { getLocalDevSnapshot } from "./local-match.js";
+import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type { BotStrategy } from "./bot-types.js";
 import type { DevMatchSetup } from "./local-match.js";
 import type { MatchTimerPolicy } from "./match-timers.js";
@@ -154,6 +156,152 @@ test("accepted registry actions include snapshots for replay frames", async () =
     assert.equal(result.accepted, true);
     assert.ok(result.snapshot?.players[playerId] !== undefined);
   }
+});
+
+test("active persistence stores compact accepted records without replay snapshots", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const matchId = "compact-active-persistence-match" as MatchId;
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+  const actionOwner = Object.entries(created.snapshot.players).find(
+    ([, player]) => player.actions.length > 0,
+  );
+  const playerId = actionOwner?.[0] as PlayerId | undefined;
+  const actionIndex = actionOwner?.[1].actions[0]?.index;
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Expected a player with a visible action.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: created.snapshot.stateSeq,
+  };
+  const envelope: ClientActionEnvelope = {
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId: "compact-active-persistence-action",
+    expectedStateSeq: created.snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  };
+
+  const result = await registry.applyEnvelope(envelope);
+  const loaded = await persistence.loadSnapshot(matchId);
+
+  assert.notEqual(result, "matchNotFound");
+  assert.equal(typeof result, "object");
+  assert.ok(loaded !== undefined);
+  if (typeof result === "object") {
+    assert.equal(result.accepted, true);
+    assert.ok(result.snapshot !== undefined);
+    assert.equal(loaded.state.seq, created.snapshot.stateSeq);
+    assert.equal(loaded.actions.length, 1);
+    assert.equal(loaded.actions[0]?.result.snapshot, undefined);
+  }
+});
+
+test("active persistence rehydrates a match from checkpoint and compact action log", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const matchId = "active-persistence-recovery-match" as MatchId;
+  const firstRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const created = await firstRegistry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+  const actionOwner = Object.entries(created.snapshot.players).find(
+    ([, player]) => player.actions.length > 0,
+  );
+  const playerId = actionOwner?.[0] as PlayerId | undefined;
+  const actionIndex = actionOwner?.[1].actions[0]?.index;
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Expected a player with a visible action.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: created.snapshot.stateSeq,
+  };
+  const envelope: ClientActionEnvelope = {
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId: "recovered-active-persistence-action",
+    expectedStateSeq: created.snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  };
+  const accepted = await firstRegistry.applyEnvelope(envelope);
+  if (accepted === "matchNotFound" || !accepted.accepted) {
+    throw new Error("Expected the first registry action to be accepted.");
+  }
+
+  const recoveredRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const recoveredMatch = recoveredRegistry.getMatch(matchId);
+  const duplicate = await recoveredRegistry.applyEnvelope(envelope);
+
+  assert.ok(recoveredMatch !== undefined);
+  assert.equal(recoveredMatch.state.seq, accepted.stateSeq);
+  assert.equal(recoveredMatch.state.actionSeq, accepted.actionSeq);
+  assert.notEqual(duplicate, "matchNotFound");
+  assert.equal(typeof duplicate, "object");
+  if (typeof duplicate === "object") {
+    assert.equal(duplicate.accepted, true);
+    assert.equal(duplicate.stateSeq, accepted.stateSeq);
+  }
+  assert.equal(getLocalDevSnapshot(recoveredMatch).stateSeq, accepted.stateSeq);
 });
 
 test("completed-match save does not block the terminal action response", async () => {

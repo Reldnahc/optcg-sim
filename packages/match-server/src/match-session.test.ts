@@ -155,7 +155,8 @@ describe("match session runtime", () => {
     });
     const input = envelope(submitRequest(local.state.seq), local.state.seq);
 
-    runtime.applyEnvelope(input);
+    await runtime.saveSnapshot();
+    const accepted = runtime.applyEnvelope(input);
     runtime.applyEnvelope(input);
     runtime.applyEnvelope(
       envelope(
@@ -165,15 +166,21 @@ describe("match session runtime", () => {
       ),
     );
     await runtime.flushPersistence();
-    await runtime.saveSnapshot();
 
-    const loaded = await persistence.loadSnapshot(matchId);
-    expect(loaded?.actions).toHaveLength(1);
-    expect(loaded?.decisions).toHaveLength(0);
-    expect(loaded?.state.matchId).toBe(matchId);
-    expect(loaded?.manifest.manifestHash).toBe(
+    const loadedAfterFlush = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterFlush?.actions).toHaveLength(1);
+    expect(loadedAfterFlush?.actions[0]?.result.snapshot).toBeUndefined();
+    expect(loadedAfterFlush?.decisions).toHaveLength(0);
+    expect(loadedAfterFlush?.state.matchId).toBe(matchId);
+    expect(loadedAfterFlush?.manifest.manifestHash).toBe(
       local.state.cardManifest.manifestHash,
     );
+
+    await runtime.saveSnapshot();
+
+    const loadedAfterCheckpoint = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterCheckpoint?.actions).toHaveLength(0);
+    expect(loadedAfterCheckpoint?.state.seq).toBe(accepted.stateSeq);
   });
 
   test("keeps accepted records pending when persistence append fails", async () => {
@@ -195,15 +202,21 @@ describe("match session runtime", () => {
         },
       },
     });
+
+    await runtime.saveSnapshot();
     runtime.applyEnvelope(
       envelope(submitRequest(local.state.seq), local.state.seq),
     );
 
     await expect(runtime.flushPersistence()).rejects.toThrow("write failed");
     await runtime.flushPersistence();
+
+    const loadedAfterFlush = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterFlush?.actions).toHaveLength(1);
+
     await runtime.saveSnapshot();
 
-    const loaded = await persistence.loadSnapshot(matchId);
-    expect(loaded?.actions).toHaveLength(1);
+    const loadedAfterCheckpoint = await persistence.loadSnapshot(matchId);
+    expect(loadedAfterCheckpoint?.actions).toHaveLength(0);
   });
 });
