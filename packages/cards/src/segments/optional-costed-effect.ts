@@ -3,6 +3,7 @@ import type { Effect } from "@optcg/types";
 import {
   optionalActivationCostParsers,
   parseCostFromSet,
+  type OptionalActivationCostParseResult,
 } from "../costs/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type {
@@ -29,6 +30,7 @@ export function optionalCostedEffectExpressionParser(options: {
     const costRestSource = "restSource" in cost ? cost.restSource : undefined;
     const costPresentationSpans =
       "presentationSpans" in cost ? cost.presentationSpans : undefined;
+    const paidCostReference = paidCostReferenceForCost(cost);
     const body = parseOptionalCostedBody(cost.rest, options, costRestSource);
     if (body === undefined || body.rest.length > 0) {
       return undefined;
@@ -45,7 +47,8 @@ export function optionalCostedEffectExpressionParser(options: {
           {
             id: "cost:choose-one-trash",
             connector: "always",
-            saveResultAs: paidCostReferenceForBody(body.effect),
+            saveResultAs:
+              paidCostReference ?? paidCostReferenceForBody(body.effect),
             effect: {
               type: "payCost",
               cost: cost.cost,
@@ -91,6 +94,12 @@ export function optionalCostedEffectSegmentParser(options: {
         : { presentationSpans: parsed.presentationSpans }),
     };
   };
+}
+
+function paidCostReferenceForCost(
+  cost: OptionalActivationCostParseResult,
+): string | undefined {
+  return "paidCostReference" in cost ? cost.paidCostReference : undefined;
 }
 
 function paidCostReferenceForBody(effect: Effect): string {

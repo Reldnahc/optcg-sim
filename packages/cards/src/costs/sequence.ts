@@ -40,6 +40,7 @@ const costParsers = [
 export interface OptionalCostSequenceParseResult {
   readonly cost: OptionalCost;
   readonly evidence: readonly PrimitiveEvidence[];
+  readonly paidCostReference?: string;
   readonly rest: string;
 }
 
@@ -77,9 +78,11 @@ export function parseOptionalCostSequence(
     if (parsedCost === undefined) {
       return undefined;
     }
+    const paidCostReference = paidCostReferenceForCost(parsedCost.cost);
     return {
       cost: toOptionalCost(parsedCost.cost),
       evidence: parsedCost.evidence,
+      ...(paidCostReference === undefined ? {} : { paidCostReference }),
       rest: "",
     };
   }
@@ -96,6 +99,18 @@ export function parseOptionalCostSequence(
     ],
     rest: "",
   };
+}
+
+function paidCostReferenceForCost(
+  cost: SequenceCostPrimitive,
+): string | undefined {
+  if (cost.type === "restDon") {
+    return "paidCost:restDon";
+  }
+  if (cost.type === "trashFromHand") {
+    return "paidCost:trashFromHand";
+  }
+  return undefined;
 }
 
 function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
