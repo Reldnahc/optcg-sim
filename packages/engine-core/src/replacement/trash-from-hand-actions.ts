@@ -14,7 +14,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { toCardRef, zonesEqual } from "../actions/state.js";
 import { cardMatchesHandSelectionFilter } from "../actions/state.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
@@ -254,6 +259,7 @@ export const getReplacementTrashFromHandLegalActions = (
 export const applyReplacementTrashFromHandDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): ReplacementDecisionResult | null => {
   const decision = state.pendingDecision;
   const pending = pendingReplacementTrashFromHandPayload(state, decision);
@@ -267,6 +273,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
         state,
         [],
         invalidDecision("Response type must be cards for selectCards."),
+        options,
       ),
     };
   }
@@ -278,6 +285,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
         state,
         [],
         invalidDecision("Response cards must be CardRef values."),
+        options,
       ),
     };
   }
@@ -290,6 +298,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
         invalidDecision(
           "Selected cards must match the replacement trash-from-hand count.",
         ),
+        options,
       ),
     };
   }
@@ -301,6 +310,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
         state,
         [],
         invalidDecision("Replacement controller is missing."),
+        options,
       ),
     };
   }
@@ -326,6 +336,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
           invalidDecision(
             "Selected cards must be current cards in the replacement controller's hand.",
           ),
+          options,
         ),
       };
     }
@@ -422,7 +433,7 @@ export const applyReplacementTrashFromHandDecisionResponse = (
   if ("error" in continued) {
     return {
       completedPayload: undefined,
-      result: toEngineResult(state, [], [continued.error]),
+      result: toEngineResult(state, [], [continued.error], options),
     };
   }
   const nextState: GameState = {
@@ -437,6 +448,6 @@ export const applyReplacementTrashFromHandDecisionResponse = (
   delete nextState.pendingDecision;
   return {
     completedPayload,
-    result: toEngineResult(nextState, events),
+    result: toEngineResult(nextState, events, undefined, options),
   };
 };

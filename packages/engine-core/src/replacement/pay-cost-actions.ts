@@ -10,7 +10,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
   expandMoveCardsCostRoutes,
@@ -204,6 +209,7 @@ const pendingReplacementPayCostPayload = (
 export const applyReplacementPayCostDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): ReplacementDecisionResult | null => {
   const decision = state.pendingDecision;
   const pending = pendingReplacementPayCostPayload(state, decision);
@@ -218,6 +224,7 @@ export const applyReplacementPayCostDecisionResponse = (
         state,
         [],
         invalidDecision("Response type must be payment for payCost."),
+        options,
       ),
     };
   }
@@ -228,6 +235,7 @@ export const applyReplacementPayCostDecisionResponse = (
         state,
         [],
         invalidDecision("Payment option mismatch."),
+        options,
       ),
     };
   }
@@ -239,6 +247,7 @@ export const applyReplacementPayCostDecisionResponse = (
         state,
         [],
         invalidDecision("Replacement controller is missing."),
+        options,
       ),
     };
   }
@@ -260,6 +269,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment DON!! selection is invalid."),
+          options,
         ),
       };
     }
@@ -271,6 +281,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment DON!! selection is invalid."),
+          options,
         ),
       };
     }
@@ -286,6 +297,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment DON!! selection is invalid."),
+          options,
         ),
       };
     }
@@ -310,6 +322,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment card selection is invalid."),
+          options,
         ),
       };
     }
@@ -329,6 +342,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment card selection is invalid."),
+          options,
         ),
       };
     }
@@ -348,6 +362,7 @@ export const applyReplacementPayCostDecisionResponse = (
           state,
           [],
           invalidDecision("Payment card selection is invalid."),
+          options,
         ),
       };
     }
@@ -451,7 +466,7 @@ export const applyReplacementPayCostDecisionResponse = (
   if ("error" in continued) {
     return {
       completedPayload: undefined,
-      result: toEngineResult(state, [], [continued.error]),
+      result: toEngineResult(state, [], [continued.error], options),
     };
   }
   const nextState: GameState = {
@@ -466,6 +481,6 @@ export const applyReplacementPayCostDecisionResponse = (
   delete nextState.pendingDecision;
   return {
     completedPayload,
-    result: toEngineResult(nextState, events),
+    result: toEngineResult(nextState, events, undefined, options),
   };
 };

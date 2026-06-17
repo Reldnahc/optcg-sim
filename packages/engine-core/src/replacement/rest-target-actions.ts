@@ -1,12 +1,13 @@
 import type { Action, EngineResult, GameState } from "@optcg/types";
 
 import { finalizeBattleAfterReplacementResolution } from "../battle/actions.js";
+import { type EngineResultOptions, toEngineResult } from "../action-results.js";
+import { prependEventsToEngineResult } from "../engine-result-events.js";
 import { finalizeSelectedTargetEffectResolution } from "../effect-runtime.js";
 import { applyReplacementOwnerDeckBottomDecisionResponse } from "./owner-deck-bottom-decision.js";
 import { applyReplacementPayCostDecisionResponse } from "./pay-cost-actions.js";
 import { applyReplacementRestTargetDecisionResponse } from "./rest-target-decision.js";
 import { applyReplacementTrashFromHandDecisionResponse } from "./trash-from-hand-actions.js";
-import { toEngineResult } from "../action-results.js";
 import { resumeSequenceFrameAfterReplacement } from "../effect-runtime-sequence/frames.js";
 
 const queueEntryIdFromReplacementPayload = (
@@ -43,12 +44,13 @@ const hasBattleKoReplacementContinuation = (payload: unknown): boolean => {
 export const applyReplacementRestTargetDecisionWithContinuation = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const replacementRestTargetResult =
-    applyReplacementRestTargetDecisionResponse(state, action) ??
-    applyReplacementOwnerDeckBottomDecisionResponse(state, action) ??
-    applyReplacementTrashFromHandDecisionResponse(state, action) ??
-    applyReplacementPayCostDecisionResponse(state, action);
+    applyReplacementRestTargetDecisionResponse(state, action, options) ??
+    applyReplacementOwnerDeckBottomDecisionResponse(state, action, options) ??
+    applyReplacementTrashFromHandDecisionResponse(state, action, options) ??
+    applyReplacementPayCostDecisionResponse(state, action, options);
   if (replacementRestTargetResult === null) {
     return null;
   }
@@ -82,10 +84,10 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
     actionSeq: state.actionSeq + 1,
   };
   if (hasBattleKoReplacementContinuation(completedPayload)) {
-    return finalizeBattleAfterReplacementResolution(
-      state,
-      nextState,
-      result.events,
+    return prependEventsToEngineResult(
+      finalizeBattleAfterReplacementResolution(state, nextState, result.events),
+      [],
+      options,
     );
   }
   if (queuedEntry !== undefined && pausedFrame !== undefined) {
@@ -109,21 +111,27 @@ export const applyReplacementRestTargetDecisionWithContinuation = (
     );
     if (resumed !== undefined) {
       if (!resumed.ok) {
-        return toEngineResult(state, [], [resumed.error]);
+        return toEngineResult(state, [], [resumed.error], options);
       }
-      return toEngineResult(resumed.state, [
-        ...result.events,
-        ...resumed.events,
-      ]);
+      return toEngineResult(
+        resumed.state,
+        [...result.events, ...resumed.events],
+        undefined,
+        options,
+      );
     }
   }
   return queuedEntry === undefined
-    ? toEngineResult(nextState, result.events)
-    : finalizeSelectedTargetEffectResolution(
-        nextState,
-        state,
-        queuedEntry,
-        result.events,
-        result.events.slice(1),
+    ? toEngineResult(nextState, result.events, undefined, options)
+    : prependEventsToEngineResult(
+        finalizeSelectedTargetEffectResolution(
+          nextState,
+          state,
+          queuedEntry,
+          result.events,
+          result.events.slice(1),
+        ),
+        [],
+        options,
       );
 };

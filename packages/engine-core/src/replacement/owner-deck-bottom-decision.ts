@@ -16,6 +16,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -298,6 +299,7 @@ export const getReplacementOwnerDeckBottomLegalActions = (
 export const applyReplacementOwnerDeckBottomDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): ReplacementOwnerDeckBottomDecisionResult | null => {
   const decision = state.pendingDecision;
   const pending = pendingReplacementOwnerDeckBottomPayload(state, decision);
@@ -311,6 +313,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
         state,
         [],
         invalidDecision("Response type must be targets for selectTargets."),
+        options,
       ),
     };
   }
@@ -322,6 +325,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
         state,
         [],
         invalidDecision("Response targets must be CardRef values."),
+        options,
       ),
     };
   }
@@ -344,6 +348,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
         invalidDecision(
           "Selected targets must be current legal replacement targets.",
         ),
+        options,
       ),
     };
   }
@@ -376,6 +381,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
           state,
           [],
           invalidDecision("Selected replacement target is no longer on field."),
+          options,
         ),
       };
     }
@@ -399,6 +405,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
         state,
         [],
         invalidDecision("Selected replacement target could not be moved."),
+        options,
       ),
     };
   }
@@ -460,7 +467,7 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
   if ("error" in continued) {
     return {
       completedPayload: undefined,
-      result: toEngineResult(state, [], [continued.error]),
+      result: toEngineResult(state, [], [continued.error], options),
     };
   }
   const nextState: GameState = {
@@ -475,6 +482,6 @@ export const applyReplacementOwnerDeckBottomDecisionResponse = (
   delete nextState.pendingDecision;
   return {
     completedPayload,
-    result: toEngineResult(nextState, events),
+    result: toEngineResult(nextState, events, undefined, options),
   };
 };

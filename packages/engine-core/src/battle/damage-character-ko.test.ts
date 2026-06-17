@@ -887,24 +887,32 @@ test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", 
     true,
   );
 
-  const resolved = applyAction(paused.state, {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "targets",
-      targets: [
-        must(
-          decision.candidates.find(
-            (candidate) =>
-              candidate.card.instanceId === restCandidate.instanceId,
-          ),
-          "rest target",
-        ).card,
-      ],
+  const resolved = applyAction(
+    paused.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "targets",
+        targets: [
+          must(
+            decision.candidates.find(
+              (candidate) =>
+                candidate.card.instanceId === restCandidate.instanceId,
+            ),
+            "rest target",
+          ).card,
+        ],
+      },
     },
-  });
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
 
   assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.stateHash, "");
   assert.equal(resolved.state.pendingDecision, undefined);
   assert.equal(resolved.state.battle, undefined);
   assert.deepEqual(resolved.state.effectQueue, []);

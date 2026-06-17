@@ -14,7 +14,12 @@ import type {
   TargetCandidate,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
@@ -251,6 +256,7 @@ export const getReplacementRestTargetLegalActions = (
 export const applyReplacementRestTargetDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): ReplacementDecisionResult | null => {
   const decision = state.pendingDecision;
   const pending = pendingReplacementRestPayload(state, decision);
@@ -264,6 +270,7 @@ export const applyReplacementRestTargetDecisionResponse = (
         state,
         [],
         invalidDecision("Response type must be targets for selectTargets."),
+        options,
       ),
     };
   }
@@ -275,6 +282,7 @@ export const applyReplacementRestTargetDecisionResponse = (
         state,
         [],
         invalidDecision("Response targets must be CardRef values."),
+        options,
       ),
     };
   }
@@ -301,6 +309,7 @@ export const applyReplacementRestTargetDecisionResponse = (
         invalidDecision(
           "Selected targets must be current legal replacement targets.",
         ),
+        options,
       ),
     };
   }
@@ -384,7 +393,7 @@ export const applyReplacementRestTargetDecisionResponse = (
   if ("error" in continued) {
     return {
       completedPayload: undefined,
-      result: toEngineResult(state, [], [continued.error]),
+      result: toEngineResult(state, [], [continued.error], options),
     };
   }
   const nextState: GameState = {
@@ -399,6 +408,6 @@ export const applyReplacementRestTargetDecisionResponse = (
   delete nextState.pendingDecision;
   return {
     completedPayload,
-    result: toEngineResult(nextState, events),
+    result: toEngineResult(nextState, events, undefined, options),
   };
 };

@@ -46,7 +46,7 @@ import {
   resumePlaySourceOverflowDecision,
 } from "./effect-runtime.js";
 import { getReplacementDecisionLegalActions } from "./replacement/decision-actions.js";
-import { applyReplacementRestTargetDecisionWithContinuation } from "./replacement/rest-target-actions.js";
+import { applyReplacementRestTargetDecisionWithContinuation as applyReplacementContinuationDecision } from "./replacement/rest-target-actions.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
   resumeSequenceFrameAfterLifeTriggerDecision,
@@ -680,11 +680,9 @@ const applyRespondToDecision = (
   const replacementRestTargetResult = profileActionSpan(
     options,
     "engine:decision:replacementRestTarget",
-    () => applyReplacementRestTargetDecisionWithContinuation(state, action),
+    () => applyReplacementContinuationDecision(state, action, options),
   );
-  if (replacementRestTargetResult !== null) {
-    return replacementRestTargetResult;
-  }
+  if (replacementRestTargetResult !== null) return replacementRestTargetResult;
   const battleResult = applyBattleDecisionResponseWithContinuation(
     state,
     action,
