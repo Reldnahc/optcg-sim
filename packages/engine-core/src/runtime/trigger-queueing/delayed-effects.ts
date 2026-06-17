@@ -12,6 +12,7 @@ import type {
 
 import {
   appendEffectQueuedEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
@@ -110,6 +111,7 @@ const sourceFromDelayedRecord = (
 
 export const queueDelayedEndOfTurnEffects = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   const delayedEffects = state.delayedEffects ?? [];
   if (delayedEffects.length === 0 || hasPendingTriggerRuntimeWork(state)) {
@@ -192,7 +194,7 @@ export const queueDelayedEndOfTurnEffects = (
   for (const { entry, effectBlock, resolved } of appended) {
     appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
   }
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };
 
 export const queueDelayedStartOfMainPhaseEffects = (
@@ -285,6 +287,7 @@ const recentRuntimeEvents = (state: GameState): readonly EngineEvent[] =>
 
 export const queueDelayedEventEffects = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   const delayedEffects = state.delayedEffects ?? [];
   if (delayedEffects.length === 0 || hasPendingTriggerRuntimeWork(state)) {
@@ -372,5 +375,5 @@ export const queueDelayedEventEffects = (
   for (const { entry, effectBlock, resolved } of appended) {
     appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
   }
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };

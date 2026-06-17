@@ -437,7 +437,10 @@ export const processEffectRuntime = (
   if (queuedFromMainEvent !== undefined) {
     return queuedFromMainEvent;
   }
-  const queuedFromDelayedEndOfTurn = queueDelayedEndOfTurnEffects(state);
+  const queuedFromDelayedEndOfTurn = queueDelayedEndOfTurnEffects(
+    state,
+    options,
+  );
   if (queuedFromDelayedEndOfTurn !== undefined) {
     return queuedFromDelayedEndOfTurn;
   }
@@ -467,7 +470,7 @@ export const processEffectRuntime = (
   if (queuedFromEventReaction !== undefined) {
     return queuedFromEventReaction;
   }
-  const queuedFromDelayedEvent = queueDelayedEventEffects(state);
+  const queuedFromDelayedEvent = queueDelayedEventEffects(state, options);
   if (queuedFromDelayedEvent !== undefined) {
     return queuedFromDelayedEvent;
   }
