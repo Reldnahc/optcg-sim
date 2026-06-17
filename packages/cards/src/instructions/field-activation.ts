@@ -24,6 +24,12 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     return selfOrDonActivation;
   }
 
+  const compoundCharactersAndLeaderActivation =
+    parseCompoundCharactersAndLeaderActivation(input.text);
+  if (compoundCharactersAndLeaderActivation !== undefined) {
+    return compoundCharactersAndLeaderActivation;
+  }
+
   const compoundFieldAndDonActivation = parseCompoundFieldAndDonActivation(
     input.text,
   );
@@ -408,6 +414,52 @@ function parseSetThisCharacterOrDonActive(
       "choice:option",
       "choice:option",
       ...donActivation.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseCompoundCharactersAndLeaderActivation(
+  text: string,
+): ReturnType<InstructionParser> {
+  const match =
+    /^set (?<fieldTarget>up to [1-9]\d* of your .+? Characters) and your Leader as active\.?$/iu.exec(
+      text,
+    );
+  const fieldTarget = match?.groups?.["fieldTarget"];
+  if (fieldTarget === undefined) {
+    return undefined;
+  }
+
+  const fieldActivation = parseSetFieldActiveInstruction({
+    text: `set ${fieldTarget} as active`,
+  });
+  if (fieldActivation === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "activate:field-targets",
+          connector: "always",
+          effect: fieldActivation.effect,
+        },
+        {
+          id: "activate:leader",
+          connector: "then",
+          effect: { type: "activate", target: { type: "myLeader" } },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:activate",
+      "composition:compoundActivation",
+      ...fieldActivation.evidence,
+      "target:yourLeader",
+      "state:active",
     ],
     rest: "",
   };
