@@ -12,6 +12,12 @@ type DurationParser = (input: ParseInput) => DurationParseResult | undefined;
 
 export type DurationParserSet = readonly DurationParser[];
 
+interface NextTurnEndDurationParseOptions {
+  readonly player: Extract<Duration, { type: "untilEndOfNextTurn" }>["player"];
+  readonly pattern: RegExp;
+  readonly evidence: PrimitiveEvidence;
+}
+
 export const opponentNextRefreshPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextRefreshPhase",
   matches: [{ id: "in-opponent-next-refresh-phase" }],
@@ -81,31 +87,34 @@ export function parseSelfNextRefreshPhaseDuration(
 export function parseOpponentNextEndPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
-  if (
-    !/^until the end of your opponent's next (?:End Phase|turn)\.?$/i.test(
-      input.text,
-    )
-  ) {
-    return undefined;
-  }
-
-  return {
-    duration: { type: "untilEndOfNextTurn", player: "opponent" },
-    evidence: ["duration:opponentNextEndPhase"],
-    rest: "",
-  };
+  return parseNextTurnEndDuration(input, {
+    player: "opponent",
+    pattern: /^until the end of your opponent's next (?:End Phase|turn)\.?$/i,
+    evidence: "duration:opponentNextEndPhase",
+  });
 }
 
 export function parseSelfNextEndPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
-  if (!/^until the end of your next turn\.?$/i.test(input.text)) {
+  return parseNextTurnEndDuration(input, {
+    player: "self",
+    pattern: /^until the end of your next turn\.?$/i,
+    evidence: "duration:selfNextEndPhase",
+  });
+}
+
+function parseNextTurnEndDuration(
+  input: ParseInput,
+  options: NextTurnEndDurationParseOptions,
+): DurationParseResult | undefined {
+  if (!options.pattern.test(input.text)) {
     return undefined;
   }
 
   return {
-    duration: { type: "untilEndOfNextTurn", player: "self" },
-    evidence: ["duration:selfNextEndPhase"],
+    duration: { type: "untilEndOfNextTurn", player: options.player },
+    evidence: [options.evidence],
     rest: "",
   };
 }
