@@ -34,7 +34,7 @@ const rangedNonReminderLines = (text: string): SourceSlice[] => {
       end: root.start + index + rawText.length,
     });
     if (trimmed.text.length > 0 && !isParentheticalReminderLine(trimmed.text)) {
-      lines.push(trimmed);
+      lines.push(...splitAdjacentEntryPointSlices(trimmed));
     }
   }
 
@@ -43,6 +43,44 @@ const rangedNonReminderLines = (text: string): SourceSlice[] => {
 
 const isParentheticalReminderLine = (line: string): boolean =>
   line.startsWith("(") && line.endsWith(")");
+
+const splitAdjacentEntryPointSlices = (line: SourceSlice): SourceSlice[] => {
+  const splitStarts = [0];
+
+  for (let index = 1; index < line.rawText.length; index += 1) {
+    if (isAdjacentEntryPointStart(line.rawText, index)) {
+      splitStarts.push(index);
+    }
+  }
+
+  if (splitStarts.length === 1) {
+    return [line];
+  }
+
+  return splitStarts.map((start, index) => {
+    const end = splitStarts[index + 1] ?? line.rawText.length;
+    const rawText = line.rawText.slice(start, end);
+    return trimSource({
+      text: rawText,
+      rawText,
+      start: line.start + start,
+      end: line.start + end,
+    });
+  });
+};
+
+const isAdjacentEntryPointStart = (text: string, index: number): boolean => {
+  if (text[index] !== "[") {
+    return false;
+  }
+  const precedingText = text.slice(0, index).trimEnd();
+  return (
+    precedingText.endsWith(".") &&
+    supportedEntryPoints.some((entryPoint) =>
+      text.startsWith(entryPoint.text, index),
+    )
+  );
+};
 
 const joinDetachedEffectHeaderSlices = (
   lines: readonly SourceSlice[],

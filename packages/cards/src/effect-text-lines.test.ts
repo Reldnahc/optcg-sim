@@ -73,6 +73,17 @@ Then, if you have a {Celestial Dragons} type Character, draw 1 card.`,
     ]);
   });
 
+  it("splits adjacent effect entries that are glued onto the same physical line", () => {
+    const lines = gameplayLinesFromTextParts([
+      "[On Play] Draw 1 card.[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card from your hand: Draw 1 card.",
+    ]);
+
+    assert.deepEqual(lines, [
+      "[On Play] Draw 1 card.",
+      "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card from your hand: Draw 1 card.",
+    ]);
+  });
+
   it("preserves ranges while grouping choose-one blocks and trailing Then lines", () => {
     const text = `[Main] Choose one:
 \u2022 Draw 2 cards.
