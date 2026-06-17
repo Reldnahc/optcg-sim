@@ -604,6 +604,76 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses this Character keyword and dynamic cost gains through the keyword parser", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "this Character gains [Rush] and +1 cost for every 5 Events in your trash.",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "giveKeyword",
+              target: { type: "self" },
+              keyword: "rush",
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "modifyCost",
+              player: "self",
+              target: { type: "self" },
+              value: {
+                type: "countMatchingZoneCards",
+                player: "self",
+                zone: "trash",
+                filter: { categories: ["event"] },
+                per: 5,
+                multiplier: 1,
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "this Character gains [Rush] and +1 cost for every 5 Events in your trash.",
+        },
+        context,
+      )?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:giveKeyword",
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "keyword:anySupported",
+        "modifier:positiveCost",
+        "duration:whileConditionTrue",
+        "value:dynamic:matchingZoneCards",
+        "zone:trash",
+        "filter:category:event",
+      ]),
+    );
+  });
+
   it("parses implicit this Character power gain inside composed continuous text", () => {
     expect(
       parseYourLeaderConditionalPowerInstruction(

@@ -6,8 +6,7 @@ import { parseThatCharacterReference } from "../../../references/index.js";
 import type { InstructionParseResult } from "../../../types.js";
 import type { ContinuousInstructionParser } from "../shared.js";
 import { continuousDuration, continuousDurationEvidence } from "../shared.js";
-import { parseKeywordAndPositiveCostGrant } from "./keyword-and-cost.js";
-import { parseKeywordAndPositivePowerGrant } from "./keyword-and-power.js";
+import { parseContinuousModifierListForTarget } from "../modifier-list.js";
 import { parseNamedCardsAndSelfKeywordGrant } from "./named-and-self.js";
 import { parseKeywordGrantForTarget } from "./shared.js";
 
@@ -45,13 +44,7 @@ const parseLeaderKeywordGrant: ContinuousInstructionParser = (
   }
 
   return (
-    parseKeywordAndPositiveCostGrant({
-      target: leaderTarget.target,
-      targetEvidence: leaderTarget.evidence,
-      text: leaderKeywordText,
-      context,
-    }) ??
-    parseKeywordAndPositivePowerGrant({
+    parseContinuousModifierListForTarget({
       target: leaderTarget.target,
       targetEvidence: leaderTarget.evidence,
       text: leaderKeywordText,
@@ -86,19 +79,13 @@ const parseSelfKeywordGrant = (
   }
 
   return (
-    parseKeywordAndPositiveCostGrant({
+    parseContinuousModifierListForTarget({
       target: { type: "self" },
       targetEvidence: target.evidence,
       text: keywordText,
       context,
     }) ??
     parseKeywordGrantForTarget({
-      target: { type: "self" },
-      targetEvidence: target.evidence,
-      text: keywordText,
-      context,
-    }) ??
-    parseKeywordAndPositivePowerGrant({
       target: { type: "self" },
       targetEvidence: target.evidence,
       text: keywordText,

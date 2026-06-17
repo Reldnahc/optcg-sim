@@ -1,7 +1,6 @@
 import type { CardFilter, Duration, Effect } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
-import { parseKeyword } from "../../keywords/index.js";
 import {
   allPowerModifierParsers,
   parseModifierFromSet,
@@ -13,7 +12,7 @@ import {
   parseYourLeaderTarget,
 } from "../../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
-import { parseMatchingZoneCardsScaledSuffix } from "../../values/dynamic-number.js";
+import { parseContinuousModifierListForTarget } from "./modifier-list.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
@@ -423,124 +422,12 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const dynamicValue = parseMatchingZoneCardsScaledSuffix(1, modifierText);
-  const statText = dynamicValue?.prefixText ?? modifierText;
-  const parts = statText
-    .replace(/\.$/u, "")
-    .split(/\s+and\s+/iu)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-  if (parts.length === 0) {
-    return undefined;
-  }
-
-  const effects: Effect[] = [];
-  const instructionEvidence: PrimitiveEvidence[] = [];
-  const modifierEvidence: PrimitiveEvidence[] = [];
-  const durationEvidence: PrimitiveEvidence[] = [];
-
-  for (const part of parts) {
-    const keyword = parseKeyword({ text: part });
-    if (keyword !== undefined) {
-      if (keyword.rest.length > 0 && keyword.rest !== ".") {
-        return undefined;
-      }
-      effects.push({
-        type: "giveKeyword",
-        target: { type: "self" },
-        keyword: keyword.keyword,
-        duration: continuousDuration(context.condition),
-      });
-      instructionEvidence.push("instruction:giveKeyword");
-      modifierEvidence.push(...keyword.evidence);
-      durationEvidence.push(continuousDurationEvidence(context.condition));
-      continue;
-    }
-
-    const power = parseModifierFromSet({ text: part }, allPowerModifierParsers);
-    if (power !== undefined) {
-      const parsedDuration = parseStatGainDuration(power.rest, context);
-      if (parsedDuration === undefined) {
-        return undefined;
-      }
-      effects.push({
-        type: "modifyPower",
-        target: { type: "self" },
-        value:
-          dynamicValue === undefined
-            ? power.value
-            : { ...dynamicValue.value, multiplier: power.value },
-        duration: parsedDuration.duration,
-      });
-      instructionEvidence.push("instruction:modifyPower");
-      modifierEvidence.push(...power.evidence);
-      durationEvidence.push(parsedDuration.evidence);
-      if (dynamicValue !== undefined) {
-        modifierEvidence.push(...dynamicValue.evidence);
-      }
-      continue;
-    }
-
-    const cost = /^\+(?<value>[1-9]\d*) cost\b(?<rest>.*)$/iu.exec(part);
-    const costValueText = cost?.groups?.["value"];
-    const costRestText = cost?.groups?.["rest"]?.trim() ?? "";
-    if (costValueText !== undefined) {
-      const parsedDuration = parseStatGainDuration(costRestText, context);
-      if (parsedDuration === undefined) {
-        return undefined;
-      }
-      effects.push({
-        type: "modifyCost",
-        player: "self",
-        target: { type: "self" },
-        value:
-          dynamicValue === undefined
-            ? Number.parseInt(costValueText, 10)
-            : {
-                ...dynamicValue.value,
-                multiplier: Number.parseInt(costValueText, 10),
-              },
-        duration: parsedDuration.duration,
-      });
-      instructionEvidence.push("instruction:modifyCost");
-      modifierEvidence.push("modifier:positiveCost");
-      durationEvidence.push(parsedDuration.evidence);
-      if (dynamicValue !== undefined) {
-        modifierEvidence.push(...dynamicValue.evidence);
-      }
-      continue;
-    }
-
-    return undefined;
-  }
-
-  const effect =
-    effects.length === 1
-      ? effects[0]
-      : {
-          type: "sequence" as const,
-          effects: effects.map((part) => ({
-            connector: "always" as const,
-            effect: part,
-          })),
-        };
-  if (effect === undefined) {
-    return undefined;
-  }
-  const evidence = [
-    ...new Set<PrimitiveEvidence>([
-      ...instructionEvidence,
-      ...target.evidence,
-      ...modifierEvidence,
-      ...durationEvidence,
-    ]),
-  ];
-
-  return {
-    effect,
-    evidence,
-    rest: "",
-  };
+  return parseContinuousModifierListForTarget({
+    target: { type: "self" },
+    targetEvidence: target.evidence,
+    text: modifierText,
+    context,
+  });
 };
 
 const parseThisCharacterDistinctNamePowerInstruction: ContinuousInstructionParser =
