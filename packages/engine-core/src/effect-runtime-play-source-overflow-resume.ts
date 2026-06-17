@@ -7,6 +7,7 @@ import type {
 
 import {
   appendEffectResolvedEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "./action-results.js";
@@ -20,6 +21,7 @@ export const resumePlaySourceOverflowDecision = (params: {
   playCardResult: EngineResult;
   createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError;
   queueEffectResolvedCustomTriggers: QueueEffectResolvedCustomTriggers;
+  options?: EngineResultOptions;
 }): EngineResult | undefined => {
   const {
     originalState,
@@ -27,6 +29,7 @@ export const resumePlaySourceOverflowDecision = (params: {
     playCardResult,
     createUnsupportedPendingRuntimeWorkError,
     queueEffectResolvedCustomTriggers,
+    options = {},
   } = params;
   const runtime = decision.runtime?.playSourceOverflow;
   if (runtime === undefined) {
@@ -51,6 +54,7 @@ export const resumePlaySourceOverflowDecision = (params: {
           count: originalState.effectQueue.length,
         }),
       ],
+      options,
     );
   }
 
@@ -85,6 +89,7 @@ export const resumePlaySourceOverflowDecision = (params: {
     nextState,
     selected,
     allEvents,
+    options,
   );
   if (triggered !== undefined) {
     if (triggered.errors !== undefined) {
@@ -93,5 +98,5 @@ export const resumePlaySourceOverflowDecision = (params: {
     nextState = triggered.state;
     allEvents.push(...triggered.events);
   }
-  return toEngineResult(nextState, allEvents);
+  return toEngineResult(nextState, allEvents, undefined, options);
 };

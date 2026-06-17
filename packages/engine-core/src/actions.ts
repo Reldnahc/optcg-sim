@@ -608,6 +608,7 @@ const applyRespondToDecision = (
         state,
         decision,
         playCardResult,
+        options,
       );
       if (resumedPlaySource !== undefined) {
         return continueRuntimeAndAttackTimingAfterDecision(

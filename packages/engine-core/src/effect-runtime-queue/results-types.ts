@@ -49,5 +49,6 @@ export interface EffectRuntimeQueueResults {
     originalState: GameState,
     decision: SelectCardsDecision,
     playCardResult: EngineResult,
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 }
