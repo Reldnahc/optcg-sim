@@ -693,12 +693,20 @@ const executableActions = (
   state: GameState,
   playerId: PlayerId,
 ): ExecutableDevAction[] => {
-  const rawActions = getLegalActions(state, playerId).map(
-    (action): Omit<ExecutableDevAction, "index"> => ({
-      ...visibleAction(state, action),
-      apply: (currentState) =>
-        applyAction(currentState, action, liveEngineOptions),
-    }),
+  const legalActions = recordActionTimingSpan(
+    "executableActions:getLegalActions",
+    () => getLegalActions(state, playerId),
+  );
+  const rawActions = recordActionTimingSpan(
+    "executableActions:decorateLegalActions",
+    () =>
+      legalActions.map(
+        (action): Omit<ExecutableDevAction, "index"> => ({
+          ...visibleAction(state, action),
+          apply: (currentState) =>
+            applyAction(currentState, action, liveEngineOptions),
+        }),
+      ),
   );
   const actions = [
     ...setupStartOfGameActions(state, playerId),

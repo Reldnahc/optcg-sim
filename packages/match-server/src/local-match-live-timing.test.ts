@@ -10,6 +10,7 @@ import {
   applyLocalDevDecision,
   createLocalDevMatch,
   getLocalDevSnapshot,
+  getLocalDevSnapshotForPlayer,
   type DevMatchSetup,
 } from "./local-match.js";
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
@@ -73,6 +74,61 @@ const withActionTimingLogs = async (
 };
 
 describe("local dev match live timing", () => {
+  test("player snapshot action generation records legal-action subspans", async () => {
+    const match = createTestMatch();
+    const clientActionId = "client-action-snapshot-timing";
+    const envelope = {
+      protocolVersion: "test",
+      matchId: match.state.matchId,
+      playerId: p1,
+      clientActionId,
+      expectedStateSeq: match.state.seq,
+      requestHash: "test-request-hash",
+      request: {
+        type: "submitAction" as const,
+        playerId: p1,
+        actionIndex: 0,
+        expectedStateSeq: match.state.seq,
+      },
+    } satisfies ClientActionEnvelope;
+    const raw = JSON.stringify(envelope);
+
+    const chunks = await withActionTimingLogs(() =>
+      captureStdoutAsync(() => {
+        const timing = createSocketActionTiming(raw);
+        timing.record(() => {
+          getLocalDevSnapshotForPlayer(match, p1);
+        });
+        const sessionResult = {
+          type: "actionResult" as const,
+          matchId: match.state.matchId,
+          clientActionId,
+          accepted: true,
+          stateSeq: match.state.seq,
+          actionSeq: match.state.actionSeq,
+          errors: [],
+        } satisfies SessionActionResult;
+        timing.write({
+          matchId: match.state.matchId,
+          playerId: p1,
+          payload: { clientActionId },
+          envelope,
+          result: sessionResult,
+        });
+        return Promise.resolve();
+      }),
+    );
+
+    assert.equal(chunks.length, 1);
+    const payload = JSON.parse(chunks[0] ?? "{}") as {
+      readonly spans?: readonly { readonly name: string }[];
+    };
+    const spanNames = payload.spans?.map((span) => span.name) ?? [];
+    assert.ok(spanNames.includes("playerSnapshot:actions"));
+    assert.ok(spanNames.includes("executableActions:getLegalActions"));
+    assert.ok(spanNames.includes("executableActions:decorateLegalActions"));
+  });
+
   test("explicit decision responses use live engine timing options", async () => {
     const match = createTestMatch();
     const before = getLocalDevSnapshot(match);
