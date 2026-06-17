@@ -713,7 +713,7 @@ const applyRespondToDecision = (
   const optionalActivationResult = profileActionSpan(
     options,
     "engine:decision:optionalActivation",
-    () => applyOptionalActivationDecisionResponse(state, action),
+    () => applyOptionalActivationDecisionResponse(state, action, options),
   );
   if (optionalActivationResult !== null) {
     return continueAfterEffectDecision(

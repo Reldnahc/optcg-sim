@@ -14,9 +14,11 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
+import { prependEventsToEngineResult } from "../../engine-result-events.js";
 import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
@@ -113,6 +115,7 @@ const fieldTrashCandidates = (player: PlayerState): readonly CardInstance[] => [
 export const applyOptionalActivationDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined) {
@@ -820,9 +823,14 @@ export const applyOptionalActivationDecisionResponse = (
       return null;
     }
     if (!resumed.ok) {
-      return toEngineResult(state, [], [resumed.error]);
+      return toEngineResult(state, [], [resumed.error], options);
     }
-    return toEngineResult(resumed.state, [...events, ...resumed.events]);
+    return toEngineResult(
+      resumed.state,
+      [...events, ...resumed.events],
+      undefined,
+      options,
+    );
   }
   if (decision.type !== "chooseOptionalActivation") {
     return null;
@@ -880,9 +888,14 @@ export const applyOptionalActivationDecisionResponse = (
       return null;
     }
     if (!resumed.ok) {
-      return toEngineResult(state, [], [resumed.error]);
+      return toEngineResult(state, [], [resumed.error], options);
     }
-    return toEngineResult(resumed.state, [...events, ...resumed.events]);
+    return toEngineResult(
+      resumed.state,
+      [...events, ...resumed.events],
+      undefined,
+      options,
+    );
   }
   const entryLookup = effectQueueEntryForDecision(state, decision);
   if (!entryLookup.ok && entryLookup.reason === "not-effect-decision") {
@@ -944,10 +957,11 @@ export const applyOptionalActivationDecisionResponse = (
     const resumed = processEffectRuntimeAfterOptionalActivationDecline(
       cleanup.state,
     );
-    return {
-      ...resumed,
-      events: [...events, ...cleanup.events, ...resumed.events],
-    };
+    return prependEventsToEngineResult(
+      resumed,
+      [...events, ...cleanup.events],
+      options,
+    );
   }
 
   const resumed = processEffectRuntimeAfterOptionalActivationAccept(
@@ -957,10 +971,7 @@ export const applyOptionalActivationDecisionResponse = (
       ? undefined
       : [selected.id],
   );
-  return {
-    ...resumed,
-    events: [...events, ...resumed.events],
-  };
+  return prependEventsToEngineResult(resumed, events, options);
 };
 
 export const getOptionalActivationLegalActions = (
