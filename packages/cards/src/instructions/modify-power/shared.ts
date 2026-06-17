@@ -24,6 +24,7 @@ export const modifyPowerInstructionPrimitive = {
     "duration:thisBattle",
     "duration:thisTurn",
     "duration:selfNextTurnStart",
+    "duration:selfNextEndPhase",
     "duration:opponentNextEndPhase",
     "duration:opponentNextRefreshPhase",
   ],

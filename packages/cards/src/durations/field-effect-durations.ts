@@ -30,6 +30,11 @@ export const opponentNextEndPhaseDurationPrimitive = {
   ],
 } as const;
 
+export const selfNextEndPhaseDurationPrimitive = {
+  primitiveId: "duration:selfNextEndPhase",
+  matches: [{ id: "until-end-self-next-turn" }],
+} as const;
+
 export const thisTurnDurationPrimitive = {
   primitiveId: "duration:thisTurn",
   matches: [{ id: "during-this-turn" }],
@@ -91,6 +96,20 @@ export function parseOpponentNextEndPhaseDuration(
   };
 }
 
+export function parseSelfNextEndPhaseDuration(
+  input: ParseInput,
+): DurationParseResult | undefined {
+  if (!/^until the end of your next turn\.?$/i.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "untilEndOfNextTurn", player: "self" },
+    evidence: ["duration:selfNextEndPhase"],
+    rest: "",
+  };
+}
+
 export function parseSelfNextTurnStartDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
@@ -148,6 +167,7 @@ export function parseDurationFromSet(
 
 export const fieldEffectDurationParsers = [
   parseOpponentNextEndPhaseDuration,
+  parseSelfNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
   parseSelfNextRefreshPhaseDuration,
   parseSelfNextTurnStartDuration,

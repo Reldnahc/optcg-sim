@@ -8,12 +8,14 @@ import {
   parseDurationFromSet,
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
+  parseSelfNextEndPhaseDuration,
   parseSelfNextRefreshPhaseDuration,
   parseThisTurnDuration,
   replacementDurationParsers,
   refreshRestrictionDurationParsers,
   restrictionDurationParsers,
   selfNextRefreshPhaseDurationPrimitive,
+  selfNextEndPhaseDurationPrimitive,
   thisTurnDurationPrimitive,
 } from "./index.js";
 
@@ -33,6 +35,10 @@ describe("field-effect duration parsers", () => {
     expect(selfNextRefreshPhaseDurationPrimitive).toEqual({
       primitiveId: "duration:selfNextRefreshPhase",
       matches: [{ id: "in-self-next-refresh-phase" }],
+    });
+    expect(selfNextEndPhaseDurationPrimitive).toEqual({
+      primitiveId: "duration:selfNextEndPhase",
+      matches: [{ id: "until-end-self-next-turn" }],
     });
     expect(thisTurnDurationPrimitive).toEqual({
       primitiveId: "duration:thisTurn",
@@ -72,6 +78,18 @@ describe("field-effect duration parsers", () => {
     ).toEqual({
       duration: { type: "untilEndOfNextTurn", player: "opponent" },
       evidence: ["duration:opponentNextEndPhase"],
+      rest: "",
+    });
+  });
+
+  it("parses self next turn End Phase duration", () => {
+    expect(
+      parseSelfNextEndPhaseDuration({
+        text: "until the end of your next turn.",
+      }),
+    ).toEqual({
+      duration: { type: "untilEndOfNextTurn", player: "self" },
+      evidence: ["duration:selfNextEndPhase"],
       rest: "",
     });
   });
