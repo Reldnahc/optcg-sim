@@ -19,6 +19,7 @@ export {
   preventOpponentCharactersRefreshPrimitive,
   preventThatCharacterRefreshPrimitive,
 } from "./refresh-lock.js";
+export { parseSetPowerToZeroInstruction } from "./set-power-zero.js";
 export {
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersInstruction,

@@ -104,6 +104,23 @@ export const effectToDerivedModifier = (
       operation: { type: "addKeyword", keyword: effect.keyword },
     };
   }
+  if (effect.type === "setPowerToZero") {
+    if (!isSupportedTarget(effect.target)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported power set target"),
+      );
+    }
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported power set duration"),
+      );
+    }
+    return {
+      layer: "powerSet",
+      target: effect.target,
+      operation: { type: "setPower", value: 0 },
+    };
+  }
   if (effect.type === "allowAttackActiveCharacters") {
     if (
       effect.target.type !== "self" &&

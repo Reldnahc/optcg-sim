@@ -356,6 +356,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "allowAttackActiveCharacters" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "giveAttribute" &&
+    effect.type !== "setPowerToZero" &&
     effect.type !== "setBasePower" &&
     effect.type !== "modifyCost" &&
     effect.type !== "modifyCounter" &&
@@ -383,6 +384,9 @@ export const isSupportedContinuousQueueEffect = (
     effect.type === "allowAttackActiveCharacters" &&
     !isSupportedTarget(effect.target)
   ) {
+    return false;
+  }
+  if (effect.type === "setPowerToZero" && !isSupportedTarget(effect.target)) {
     return false;
   }
   if (
@@ -479,6 +483,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "allowAttackActiveCharacters" &&
     effect.type !== "giveKeyword" &&
     effect.type !== "giveAttribute" &&
+    effect.type !== "setPowerToZero" &&
     effect.type !== "invalidateEffects" &&
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&

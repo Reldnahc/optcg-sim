@@ -84,6 +84,13 @@ const mapEffectToModifier = (
       operation: { type: "addPower", value },
     };
   }
+  if (effect.type === "setPowerToZero") {
+    return {
+      layer: "powerSet",
+      target,
+      operation: { type: "setPower", value: 0 },
+    };
+  }
   if (effect.type === "allowAttackActiveCharacters") {
     return {
       layer: "attackPermission",

@@ -234,3 +234,63 @@ test("sequence support accepts selected target setBasePower without source-prese
     true,
   );
 });
+
+test("sequence support accepts selected target setPowerToZero through resolved-target continuous family", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-power-zero-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: "selected:power-zero-target",
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zone: "characterArea",
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["character"] },
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "setPowerToZero",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "selected:power-zero-target",
+              },
+              zone: "characterArea",
+              player: "opponent",
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+            duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    isSupportedSequenceBlock(
+      syntheticEntry("mustRemainInSameZone"),
+      effectBlock,
+    ),
+    true,
+  );
+});

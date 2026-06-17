@@ -189,6 +189,7 @@ export type ModifierLayer =
   | "basePowerSet"
   | "baseCostSet"
   | "counterSet"
+  | "powerSet"
   | "powerAdd"
   | "costAdd"
   | "effectInvalidation"
@@ -205,6 +206,7 @@ export type ModifierOperation =
   | { type: "setBasePower"; value: number }
   | { type: "setBaseCost"; value: number }
   | { type: "setCounter"; value: number }
+  | { type: "setPower"; value: number }
   | { type: "addPower"; value: number }
   | { type: "addCost"; value: number }
   | { type: "invalidateEffects" }

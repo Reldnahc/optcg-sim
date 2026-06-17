@@ -8,6 +8,7 @@ export type ContinuousQueueEffect = Extract<
       | "allowAttackActiveCharacters"
       | "giveKeyword"
       | "giveAttribute"
+      | "setPowerToZero"
       | "setBasePower"
       | "modifyCost"
       | "modifyCounter"

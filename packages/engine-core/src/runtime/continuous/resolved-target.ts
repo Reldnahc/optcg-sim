@@ -10,6 +10,7 @@ type ResolvedTargetContinuousCandidate = Extract<
       | "modifyPower"
       | "giveKeyword"
       | "giveAttribute"
+      | "setPowerToZero"
       | "setBasePower"
       | "modifyCost"
       | "invalidateEffects"
@@ -33,6 +34,7 @@ const isResolvedTargetContinuousCandidate = (
   effect.type === "modifyPower" ||
   effect.type === "giveKeyword" ||
   effect.type === "giveAttribute" ||
+  effect.type === "setPowerToZero" ||
   effect.type === "setBasePower" ||
   effect.type === "modifyCost" ||
   effect.type === "invalidateEffects" ||

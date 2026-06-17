@@ -59,6 +59,29 @@ const continuousPowerBonusForCard = (
   return powerBonus;
 };
 
+const continuousPowerSetForCard = (
+  state: GameState,
+  card: CardInstance,
+): number | undefined => {
+  let power: number | undefined;
+  const effects = allContinuousEffects(state);
+
+  for (const effect of effects) {
+    if (effect.modifier.layer !== "powerSet") continue;
+    if (effect.modifier.operation.type !== "setPower") continue;
+    if (!durationIsActive(state, effect)) continue;
+    if (!recordConditionPasses(state, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
+
+    power =
+      power === undefined
+        ? effect.modifier.operation.value
+        : Math.min(power, effect.modifier.operation.value);
+  }
+
+  return power;
+};
+
 const continuousBasePowerForCard = (
   state: GameState,
   card: CardInstance,
@@ -479,6 +502,7 @@ const computeCardView = (
       ? (battle.counterPower ?? 0)
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
+  const continuousPowerSet = continuousPowerSetForCard(state, card);
   const keywords = computedKeywordsForCard(state, card, metadata);
   const restrictions = continuousRestrictionLabelsForCard(state, card);
   const fieldRemovalProtections = fieldRemovalProtectionsForCard(state, card);
@@ -494,7 +518,9 @@ const computeCardView = (
     instanceId: card.instanceId,
     cardId: card.cardId,
     basePower,
-    currentPower: basePower + donBonus + counterBonus + continuousPowerBonus,
+    currentPower:
+      continuousPowerSet ??
+      basePower + donBonus + counterBonus + continuousPowerBonus,
     ...(baseCost === undefined
       ? {}
       : {

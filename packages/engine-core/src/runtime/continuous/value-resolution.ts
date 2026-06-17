@@ -474,6 +474,7 @@ const currentPowerForSnapshotTarget = (
   }
   let basePower = printedPower;
   let powerAdd = cardInstance.attachedDon.length * 1000;
+  let powerSet: number | undefined;
   for (const effect of state.continuousEffects) {
     if (!continuousTargetMatchesCard(effect.modifier.target, card)) {
       continue;
@@ -484,11 +485,17 @@ const currentPowerForSnapshotTarget = (
     if (effect.modifier.operation.type === "addPower") {
       powerAdd += effect.modifier.operation.value;
     }
+    if (effect.modifier.operation.type === "setPower") {
+      powerSet =
+        powerSet === undefined
+          ? effect.modifier.operation.value
+          : Math.min(powerSet, effect.modifier.operation.value);
+    }
   }
   if (stat === "basePower") {
     return basePower;
   }
-  return basePower + powerAdd;
+  return powerSet ?? basePower + powerAdd;
 };
 
 export const resolveBasePowerValue = (
