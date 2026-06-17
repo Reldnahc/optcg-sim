@@ -5,7 +5,10 @@ import type {
   ReplacementProcess,
 } from "@optcg/types";
 
-import type { SelectedTargetKoReplacementPayload } from "./types.js";
+import type {
+  SelectedTargetKoReplacementPayload,
+  SelectedTargetRestReplacementPayload,
+} from "./types.js";
 
 export const buildKoReplacementProcess = (params: {
   battleContinuation?: SelectedTargetKoReplacementPayload["battleContinuation"];
@@ -207,3 +210,41 @@ export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
       usedReplacementIds: [],
     };
   };
+
+export const buildSelectedTargetsRestReplacementProcess = (
+  entry: EffectQueueEntry,
+  targets: readonly CardRef[],
+): ReplacementProcess => {
+  const firstTarget = targets[0];
+  if (firstTarget === undefined) {
+    throw new Error("rest replacement process requires a target.");
+  }
+  const payload: SelectedTargetRestReplacementPayload = {
+    effectId: entry.effectBlockId,
+    queueEntryId: entry.id,
+    source: entry.source,
+    target: firstTarget,
+    ...(targets.length > 1 ? { targets: [...targets] } : {}),
+    restAttempt: {
+      processFamily: "rest",
+      sourceKind: "cardEffect",
+      sourceControllerId: entry.controllerId,
+      sourceCardId: entry.source.cardId,
+      sourceCardCategory: entry.sourceSnapshot.category,
+    },
+  };
+  return {
+    id:
+      targets.length === 1
+        ? `${entry.id}:rest:${firstTarget.instanceId}:0`
+        : `${entry.id}:rest:${targets
+            .map((target) => target.instanceId)
+            .join("+")}`,
+    type: "rest",
+    source: entry.source,
+    target: firstTarget,
+    payload,
+    causedBy: entry.causedBy,
+    usedReplacementIds: [],
+  };
+};

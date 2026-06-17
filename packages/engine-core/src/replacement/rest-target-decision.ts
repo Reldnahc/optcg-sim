@@ -193,11 +193,12 @@ const replacementRestCandidateIsActive = (
 const replacementRestDecisionCandidates = (
   state: GameState,
   decision: SelectTargetsDecision,
+  source: CardRef,
 ): TargetCandidate[] => {
   const resolved = resolvePublicTargetCandidatesForRequest(
     state,
     decision.request,
-    { sourceControllerId: decision.playerId },
+    { source, sourceControllerId: decision.playerId },
   );
   if (!resolved.ok) {
     return [];
@@ -225,7 +226,11 @@ export const getReplacementRestTargetLegalActions = (
   ) {
     return [];
   }
-  const currentCandidates = replacementRestDecisionCandidates(state, decision);
+  const currentCandidates = replacementRestDecisionCandidates(
+    state,
+    decision,
+    pending.payload.source,
+  );
   if (currentCandidates.length < decision.request.min) {
     return [];
   }
@@ -273,7 +278,11 @@ export const applyReplacementRestTargetDecisionResponse = (
       ),
     };
   }
-  const currentCandidates = replacementRestDecisionCandidates(state, decision);
+  const currentCandidates = replacementRestDecisionCandidates(
+    state,
+    decision,
+    pending.payload.source,
+  );
   const targetRefs = targets;
   if (
     targetRefs.length !== decision.request.min ||

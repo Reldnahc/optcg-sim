@@ -18,7 +18,7 @@ import {
   resolvedCard,
 } from "../../action-test-fixtures.js";
 import { buildKoReplacementProcess } from "../field-removal-process/builders.js";
-import { opponentFieldRemovalReplacementCoveredTargets } from "./applicability.js";
+import { opponentReplacementCoveredTargets } from "./applicability.js";
 import type { SupportedReplacementEffectBlock } from "./types.js";
 
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -132,7 +132,7 @@ test("opponent field-removal replacement evaluates shared turn conditions", () =
 
   state.turn.turnPlayerId = p1;
   assert.deepEqual(
-    opponentFieldRemovalReplacementCoveredTargets(
+    opponentReplacementCoveredTargets(
       state,
       process,
       locatedSource,
@@ -144,7 +144,7 @@ test("opponent field-removal replacement evaluates shared turn conditions", () =
 
   state.turn.turnPlayerId = p2;
   assert.deepEqual(
-    opponentFieldRemovalReplacementCoveredTargets(
+    opponentReplacementCoveredTargets(
       state,
       process,
       locatedSource,

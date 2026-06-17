@@ -13,7 +13,7 @@ import {
 } from "../field-removal-targets.js";
 import { createOncePerTurnGate } from "../../rules/once-per-turn.js";
 import { replacementAlreadyUsed } from "../process-gate.js";
-import { opponentFieldRemovalReplacementCoveredTargets } from "./applicability.js";
+import { opponentReplacementCoveredTargets } from "./applicability.js";
 import {
   effectIdFromReplacementProcess,
   resolveReviewedImplementedDslEffectDefinition,
@@ -35,10 +35,14 @@ import {
   isSupportedOpponentFieldRemovalLifeReplacementEffect,
   isSupportedOpponentKoTrashFromHandReplacementEffect,
   isSupportedReplacementEffect,
+  isSupportedRestInsteadReplacementEffect,
   isSupportedSelfKoDrawReplacementEffect,
   isSupportedSelfKoTrashFromHandReplacementEffect,
 } from "./support-shapes.js";
-import { validateKoReplacementTargets } from "./target-validation.js";
+import {
+  validateKoReplacementTargets,
+  validateRestReplacementTargets,
+} from "./target-validation.js";
 import type {
   DetectSelectedTargetKoReplacementCandidateResult,
   LocatedReplacementSource,
@@ -94,9 +98,10 @@ const coveredTargetsForSupportedEffect = (
     isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||
     isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
     isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
+    isSupportedRestInsteadReplacementEffect(effect) ||
     isSupportedAnyOfReplacementEffect(effect)
   ) {
-    return opponentFieldRemovalReplacementCoveredTargets(
+    return opponentReplacementCoveredTargets(
       state,
       process,
       source,
@@ -167,15 +172,26 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
   process: ReplacementProcess,
 ): DetectSelectedTargetKoReplacementCandidateResult => {
   const effectId = effectIdFromReplacementProcess(process);
-  if (process.type !== "ko" && process.type !== "moveZone") {
+  if (
+    process.type !== "ko" &&
+    process.type !== "moveZone" &&
+    process.type !== "rest"
+  ) {
     return failure(effectId, "unsupported-replacement-process");
   }
 
-  const targetLookups = validateKoReplacementTargets(
-    state,
-    effectId,
-    fieldRemovalProcessTargets(process),
-  );
+  const targetLookups =
+    process.type === "rest"
+      ? validateRestReplacementTargets(
+          state,
+          effectId,
+          fieldRemovalProcessTargets(process),
+        )
+      : validateKoReplacementTargets(
+          state,
+          effectId,
+          fieldRemovalProcessTargets(process),
+        );
   if (!targetLookups.ok) return targetLookups;
   for (const { resolved } of targetLookups.targets) {
     if (

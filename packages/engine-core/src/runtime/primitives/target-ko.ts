@@ -19,8 +19,12 @@ import type {
 
 import { toEngineResult, toStateSeq } from "../../action-results.js";
 import { getOpponentId } from "../../actions/state.js";
-import { buildSelectedTargetsFieldRemovalKoReplacementProcess } from "../../replacement/field-removal-process.js";
+import {
+  buildSelectedTargetsFieldRemovalKoReplacementProcess,
+  buildSelectedTargetsRestReplacementProcess,
+} from "../../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "./field-removal.js";
+import { executeSelectedTargetRestReplacementProcess } from "./rest.js";
 
 export type SelectedTargetKoExecutionFailureReason =
   | "unsupported-effect-shape"
@@ -465,12 +469,104 @@ const executeSelectedTargetKoEffect = (
   return toEngineResult(finalState, events);
 };
 
+const executeSelectedTargetRestEffect = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: Extract<Effect, { type: "rest" }>,
+  selectedTargets: readonly CardRef[],
+): EngineResult => {
+  if (
+    effect.target.type !== "choose" &&
+    effect.target.type !== "chooseFromZones"
+  ) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "unsupported-target-shape",
+        ),
+      ],
+    );
+  }
+
+  if (selectedTargets.length < effect.target.request.min) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "selected-target-count-below-minimum",
+        ),
+      ],
+    );
+  }
+
+  if (hasDuplicateTargets(selectedTargets)) {
+    return toEngineResult(
+      state,
+      [],
+      [
+        selectedTargetKoExecutionError(
+          entry.effectBlockId,
+          "duplicate-targets",
+        ),
+      ],
+    );
+  }
+
+  const events: EngineEvent[] = [];
+  if (selectedTargets.length === 0) {
+    return toEngineResult(
+      {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+      },
+      events,
+    );
+  }
+  const process = buildSelectedTargetsRestReplacementProcess(
+    entry,
+    selectedTargets,
+  );
+  const resolvedProcess = executeSelectedTargetRestReplacementProcess(
+    state,
+    events,
+    entry.effectBlockId,
+    process,
+  );
+  if ("error" in resolvedProcess) {
+    return toEngineResult(state, [], [resolvedProcess.error]);
+  }
+  if (resolvedProcess.paused === true) {
+    return toEngineResult(resolvedProcess.state, events);
+  }
+
+  const finalState: GameState = {
+    ...resolvedProcess.state,
+    seq: toStateSeq(state.seq + 1),
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  return toEngineResult(finalState, events);
+};
+
 export const executeSelectedTargetEffectPrimitive = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Effect,
   selectedTargets: readonly CardRef[],
 ): EngineResult => {
+  if (effect.type === "rest") {
+    return executeSelectedTargetRestEffect(
+      state,
+      entry,
+      effect,
+      selectedTargets,
+    );
+  }
+
   if (effect.type !== "ko") {
     return toEngineResult(
       state,

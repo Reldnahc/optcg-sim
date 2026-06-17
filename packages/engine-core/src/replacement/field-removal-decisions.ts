@@ -66,7 +66,7 @@ const replacementRestCandidates = (
   const resolved = resolvePublicTargetCandidatesForRequest(
     state,
     instead.target.request,
-    { sourceControllerId: candidate.controllerId },
+    { source: candidate.source, sourceControllerId: candidate.controllerId },
   );
   if (!resolved.ok) {
     return [];

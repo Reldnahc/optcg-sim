@@ -17,7 +17,10 @@ import {
   executeAcceptedFieldRemovalReplacementProcess,
   finalizeSelectedTargetEffectResolution,
 } from "../effect-runtime.js";
-import { executeUnreplacedSelectedTargetFieldRemovalProcess } from "../runtime/primitives/execute.js";
+import {
+  executeUnreplacedSelectedTargetFieldRemovalProcess,
+  executeUnreplacedSelectedTargetRestProcess,
+} from "../runtime/primitives/execute.js";
 import { hasSequenceFrameForDecision } from "../effect-runtime-sequence/frame-decisions.js";
 import { isReplacementContinuationDecision } from "./decision-actions.js";
 import { removeReplacementProcessState } from "./process-gate.js";
@@ -315,12 +318,26 @@ export const applyChooseReplacementDecisionResponse = (
           );
   }
 
-  const unreplaced = executeUnreplacedSelectedTargetFieldRemovalProcess(
-    processState,
-    events,
-    effectIdFromStoredReplacementPayload(storedProcess.payload, decision.id),
-    process,
-  );
+  const unreplaced =
+    process.type === "rest"
+      ? executeUnreplacedSelectedTargetRestProcess(
+          processState,
+          events,
+          effectIdFromStoredReplacementPayload(
+            storedProcess.payload,
+            decision.id,
+          ),
+          process,
+        )
+      : executeUnreplacedSelectedTargetFieldRemovalProcess(
+          processState,
+          events,
+          effectIdFromStoredReplacementPayload(
+            storedProcess.payload,
+            decision.id,
+          ),
+          process,
+        );
   if ("error" in unreplaced) {
     return toEngineResult(state, [], [unreplaced.error]);
   }

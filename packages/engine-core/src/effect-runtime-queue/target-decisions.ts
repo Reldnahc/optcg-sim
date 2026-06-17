@@ -42,7 +42,6 @@ import {
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
 import { activeEffectTextPresentationWithTargetLinks } from "../runtime/effect-presentation.js";
-import { restFieldObjects } from "../effect-runtime-sequence/saved-field-object.js";
 import {
   canAdmitOncePerTurnEffect,
   consumeOncePerTurnForQueueEntry,
@@ -558,36 +557,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           (entry) => entry.id !== resolvedEntry.id,
         ),
       };
-      if (resolved.effect.type === "rest") {
-        const allEvents: EngineEvent[] = [];
-        const rested = restFieldObjects(
-          queueRemovedState,
-          selectedTargets,
-          {
-            sourceKind: "cardEffect",
-            sourceControllerId: resolvedEntry.controllerId,
-            sourceCardCategory: resolvedEntry.sourceSnapshot.category,
-          },
-          {
-            events: allEvents,
-            sourceKind: "effect",
-            sourceControllerId: resolvedEntry.controllerId,
-            sourceCardId: resolvedEntry.source.cardId,
-          },
-        );
-        nextState = rested.changed
-          ? { ...rested.state, seq: toStateSeq(rested.state.seq + 1) }
-          : rested.state;
-        return finalizeSelectedTargetEffectResolution(
-          nextState,
-          state,
-          resolvedEntry,
-          allEvents,
-          [],
-        );
-      }
-
-      if (resolved.effect.type !== "ko") {
+      if (resolved.effect.type !== "ko" && resolved.effect.type !== "rest") {
         const records = createContinuousRecordsForResolvedEffect(
           queueRemovedState,
           resolvingEntry,
@@ -613,7 +583,8 @@ export const createEffectRuntimeQueueTargetDecisions = (
           [],
         );
       }
-      const effectForPrimitive: SupportedSelectedTargetKoEffect =
+      const effectForPrimitive =
+        resolved.effect.type === "ko" &&
         resolved.effect.target.request.allowFewerIfUnavailable &&
         selectedTargets.length < resolved.effect.target.request.min
           ? {

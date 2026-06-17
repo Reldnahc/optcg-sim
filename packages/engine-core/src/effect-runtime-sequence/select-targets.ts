@@ -14,11 +14,14 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import { buildSelectedTargetsRestReplacementProcess } from "../replacement/field-removal-process.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import type { ContinuousTargetChoiceEffect } from "../runtime/continuous/targeting.js";
 import { isSupportedContinuousTargetChoiceEffect } from "../runtime/continuous/targeting.js";
-import { restFieldObjects } from "./saved-field-object.js";
-import { resolvePlayerId } from "../runtime/primitives/execute.js";
+import {
+  executeSelectedTargetRestReplacementProcess,
+  resolvePlayerId,
+} from "../runtime/primitives/execute.js";
 import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
@@ -537,25 +540,68 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
 
   if (isRestEffectWithChooseTarget(pausedSegment.effect)) {
     const completedSegmentEvents: EngineEvent[] = [];
-    const rested = restFieldObjects(
-      params.state,
-      params.selectedTargets,
-      {
-        sourceKind: "cardEffect",
-        sourceControllerId: entry.controllerId,
-        sourceCardId: entry.source.cardId,
-        sourceCardCategory: entry.sourceSnapshot.category,
-      },
-      {
-        events: completedSegmentEvents,
-        sourceKind: "effect",
-        sourceControllerId: entry.controllerId,
-        sourceCardId: entry.source.cardId,
-      },
-    );
     const scopedSegmentKey = segmentKeyForPath(
       frame.effectPath,
       params.segmentKey,
+    );
+    const process = buildSelectedTargetsRestReplacementProcess(
+      entry,
+      params.selectedTargets,
+    );
+    const rested = executeSelectedTargetRestReplacementProcess(
+      params.state,
+      completedSegmentEvents,
+      entry.effectBlockId,
+      process,
+    );
+    if ("error" in rested) {
+      return {
+        error: rested.error,
+        ok: false,
+      };
+    }
+    if (rested.paused === true) {
+      const replacementDecision = rested.state.pendingDecision;
+      if (replacementDecision === undefined) {
+        return {
+          error: params.sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      const replacementFrame = frameForPausedSequenceDecision({
+        decision: replacementDecision,
+        entry,
+        effectPath: [...frame.effectPath],
+        index: frame.pendingDecision.resumeAtSegmentIndex,
+        savedReferences: frame.savedReferences,
+        segmentResults: {
+          ...frame.segmentResults,
+          [scopedSegmentKey(
+            pausedSegment,
+            frame.pendingDecision.resumeAtSegmentIndex,
+          )]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            selectedTargets: [...params.selectedTargets],
+          },
+        },
+        state: rested.state,
+      });
+      return {
+        events: completedSegmentEvents,
+        ok: true,
+        state: stateWithPausedSequenceFrame(
+          rested.state,
+          entry,
+          replacementFrame,
+        ),
+      };
+    }
+    const changedState = completedSegmentEvents.some(
+      (event) => event.type === "cardRested",
     );
     return params.resumeSequenceFrameFromLedgers({
       createTrashDecision: params.createUnsupportedTrashDecision,
@@ -575,12 +621,12 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
             ...params.emptySegmentResult(),
             attempted: true,
             succeeded: true,
-            changedState: rested.changed,
+            changedState,
             selectedTargets: [...params.selectedTargets],
           },
         },
       },
-      state: rested.changed
+      state: changedState
         ? { ...rested.state, seq: toStateSeq(rested.state.seq + 1) }
         : rested.state,
     });

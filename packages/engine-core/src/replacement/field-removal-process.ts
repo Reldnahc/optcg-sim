@@ -6,6 +6,7 @@ export {
   buildSelectedTargetFieldRemovalMoveZoneReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   buildSelectedTargetMoveZoneReplacementProcess,
+  buildSelectedTargetsRestReplacementProcess,
   buildSelectedTargetsFieldRemovalKoReplacementProcess,
   buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess,
 } from "./field-removal-process/builders.js";

@@ -42,6 +42,10 @@ export {
   isSupportedMainEventTargetKoEffectAllowingOncePerTurn,
 } from "./target-ko.js";
 export {
+  executeSelectedTargetRestReplacementProcess,
+  executeUnreplacedSelectedTargetRestProcess,
+} from "./rest.js";
+export {
   executeNoChoiceWinGamePrimitive,
   executeWinGamePrimitive,
   isSupportedQueuedWinGameEffect,

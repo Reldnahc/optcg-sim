@@ -1,4 +1,6 @@
 import type {
+  CardId,
+  CardFilter,
   CardRef,
   EffectQueueEntry,
   GameState,
@@ -8,7 +10,10 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
+import {
+  cardMatchesHandSelectionFilter,
+  cardMatchesSearchFilter,
+} from "../../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import { isSupportedLifeTopToHandEffect } from "../../effect-runtime-move-cards.js";
 import {
@@ -77,10 +82,13 @@ const replacementTriggerMatchesProcess = (
   if (process.type === "moveZone") {
     return trigger.type === "wouldMoveZone";
   }
+  if (process.type === "rest") {
+    return trigger.type === "wouldBeRested";
+  }
   return false;
 };
 
-export const opponentFieldRemovalReplacementCoveredTargets = (
+export const opponentReplacementCoveredTargets = (
   state: GameState,
   process: ReplacementProcess,
   source: LocatedReplacementSource,
@@ -92,14 +100,16 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
     return [];
   }
   const sourceControllerRelation =
-    target.type === "wouldBeKOd" || target.type === "wouldMoveZone"
+    target.type === "wouldBeKOd" ||
+    target.type === "wouldMoveZone" ||
+    target.type === "wouldBeRested"
       ? target.sourceControllerRelation
       : undefined;
   const eligibleTargetLookups =
     sourceControllerRelation === "any"
       ? targetLookups
       : targetLookups.filter(({ located }) =>
-          isOpponentControlledFieldRemovalProcess(
+          isOpponentControlledReplacementProcess(
             process,
             located.card.controller,
           ),
@@ -108,12 +118,20 @@ export const opponentFieldRemovalReplacementCoveredTargets = (
     return [];
   }
   if (
-    (target.type !== "wouldMoveZone" && target.type !== "wouldBeKOd") ||
+    (target.type !== "wouldMoveZone" &&
+      target.type !== "wouldBeKOd" &&
+      target.type !== "wouldBeRested") ||
     (target.target.type !== "all" && target.target.type !== "self")
   ) {
     return [];
   }
-  if (!fieldRemovalSourceKindMatches(process, target.sourceKind)) {
+  if (!processSourceKindMatches(process, target.sourceKind)) {
+    return [];
+  }
+  if (
+    target.type === "wouldBeRested" &&
+    !restProcessSourceCardFilterMatches(state, process, target.sourceCardFilter)
+  ) {
     return [];
   }
   if (!canPayOpponentFieldRemovalReplacementCost(state, source, effect)) {
@@ -271,7 +289,7 @@ const canPayReplacementInsteadSegment = (
     const candidates = resolvePublicTargetCandidatesForRequest(
       state,
       instead.target.request,
-      { sourceControllerId: source.card.controller },
+      { source: source.ref, sourceControllerId: source.card.controller },
     );
     return (
       candidates.ok &&
@@ -404,7 +422,7 @@ const replacementRestCandidateIsActive = (
   return located !== null && located.card.state !== "rested";
 };
 
-const fieldRemovalSourceKindMatches = (
+const processSourceKindMatches = (
   process: ReplacementProcess,
   sourceKind: "battle" | "cardEffect" | undefined,
 ): boolean => {
@@ -412,14 +430,15 @@ const fieldRemovalSourceKindMatches = (
     return true;
   }
   const payload = process.payload;
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("fieldRemovalAttempt" in payload)
-  ) {
+  if (typeof payload !== "object" || payload === null) {
     return false;
   }
-  const attempt = payload.fieldRemovalAttempt;
+  const attempt =
+    process.type === "rest" && "restAttempt" in payload
+      ? payload.restAttempt
+      : "fieldRemovalAttempt" in payload
+        ? payload.fieldRemovalAttempt
+        : undefined;
   return (
     typeof attempt === "object" &&
     attempt !== null &&
@@ -428,7 +447,39 @@ const fieldRemovalSourceKindMatches = (
   );
 };
 
-const isOpponentControlledFieldRemovalProcess = (
+const restProcessSourceCardFilterMatches = (
+  state: GameState,
+  process: ReplacementProcess,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  const payload = process.payload;
+  if (
+    process.type !== "rest" ||
+    typeof payload !== "object" ||
+    payload === null ||
+    !("restAttempt" in payload)
+  ) {
+    return false;
+  }
+  const attempt = payload.restAttempt;
+  if (
+    typeof attempt !== "object" ||
+    attempt === null ||
+    !("sourceCardId" in attempt) ||
+    typeof attempt.sourceCardId !== "string"
+  ) {
+    return false;
+  }
+  return cardMatchesSearchFilter(
+    state.cardManifest.cards[attempt.sourceCardId as CardId],
+    filter,
+  );
+};
+
+const isOpponentControlledReplacementProcess = (
   process: ReplacementProcess,
   targetControllerId: PlayerId,
 ): boolean => {
@@ -436,16 +487,19 @@ const isOpponentControlledFieldRemovalProcess = (
   if (typeof payload !== "object" || payload === null) {
     return false;
   }
-  if (!("fieldRemovalAttempt" in payload)) {
-    return false;
-  }
-  const attempt = payload.fieldRemovalAttempt;
+  const attempt =
+    process.type === "rest" && "restAttempt" in payload
+      ? payload.restAttempt
+      : "fieldRemovalAttempt" in payload
+        ? payload.fieldRemovalAttempt
+        : undefined;
   if (typeof attempt !== "object" || attempt === null) {
     return false;
   }
   if (
     !("processFamily" in attempt) ||
-    attempt.processFamily !== "fieldRemoval" ||
+    (attempt.processFamily !== "fieldRemoval" &&
+      attempt.processFamily !== "rest") ||
     !("sourceControllerId" in attempt) ||
     typeof attempt.sourceControllerId !== "string"
   ) {

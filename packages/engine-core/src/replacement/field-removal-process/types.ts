@@ -1,4 +1,5 @@
 import type {
+  CardCategory,
   CardId,
   ActiveEffectTextPresentation,
   CardInstance,
@@ -33,6 +34,21 @@ export interface SelectedTargetKoReplacementPayload {
   };
   battleContinuation?: {
     type: "endBattleAfterCharacterKoAttempt";
+  };
+}
+
+export interface SelectedTargetRestReplacementPayload {
+  effectId: string;
+  queueEntryId?: EffectQueueEntry["id"];
+  source: CardRef;
+  target: CardRef;
+  targets?: CardRef[];
+  restAttempt: {
+    processFamily: "rest";
+    sourceKind: "cardEffect";
+    sourceControllerId: PlayerId;
+    sourceCardId?: CardId;
+    sourceCardCategory?: CardCategory;
   };
 }
 

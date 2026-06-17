@@ -29,7 +29,8 @@ export const resumeSequenceFrameAfterReplacement = (
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "ko" &&
-      pausedSegment.effect.type !== "bounce")
+      pausedSegment.effect.type !== "bounce" &&
+      pausedSegment.effect.type !== "rest")
   ) {
     return {
       error: sequenceRuntimeError(
