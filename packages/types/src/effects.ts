@@ -314,6 +314,10 @@ export interface CardFilter {
   anyOf?: CardFilter[];
   cardIds?: CardId[];
   names?: string[];
+  nameRelation?: {
+    type: "sameAsSavedCards";
+    selection: string;
+  };
   nameContains?: string;
   nameNot?: string[];
   categories?: CardCategory[];

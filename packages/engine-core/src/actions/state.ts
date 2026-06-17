@@ -9,6 +9,7 @@ import type {
   PlayerState,
   ResolvedCard,
   SavedFieldObjectTargetBinding,
+  SequenceSavedResultReference,
   SequenceSavedResultReferenceMap,
 } from "@optcg/types";
 
@@ -158,6 +159,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "cost",
   "effectEntryPoint",
   "names",
+  "nameRelation",
   "nameNot",
   "power",
   "statComparisons",
@@ -184,6 +186,10 @@ const isSupportedColorRelation = (
     typeof relation.binding.saveResultAs === "string" &&
     (relation.binding.objectIndex === undefined ||
       Number.isSafeInteger(relation.binding.objectIndex)));
+
+const isSupportedNameRelation = (
+  relation: CardFilter["nameRelation"],
+): boolean => relation === undefined || relation.selection.length > 0;
 
 const isSupportedNumericFilter = (
   value:
@@ -252,6 +258,7 @@ export const isSupportedHandSelectionCardFilter = (
     isSupportedColorRelation(filter.colorRelation) &&
     (filter.colorsAny === undefined || isStringArray(filter.colorsAny)) &&
     (filter.names === undefined || isStringArray(filter.names)) &&
+    isSupportedNameRelation(filter.nameRelation) &&
     (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
     (filter.typesIncludeAny === undefined ||
       isStringArray(filter.typesIncludeAny)) &&
@@ -342,6 +349,59 @@ const cardMatchesColorRelation = (
   return !card.colors.some((color) => savedCard.colors.includes(color));
 };
 
+const savedCardsForNameRelation = (
+  state: GameState | undefined,
+  relation: NonNullable<CardFilter["nameRelation"]>,
+  savedReferences: SequenceSavedResultReferenceMap | undefined,
+): ResolvedCard[] | undefined => {
+  if (state === undefined) {
+    return undefined;
+  }
+  const saved = savedReferences?.[relation.selection];
+  const selectedCards = selectedCardsForNameRelation(saved);
+  if (selectedCards === undefined || selectedCards.length === 0) {
+    return undefined;
+  }
+  const cards = selectedCards
+    .map((ref) => state.cardManifest.cards[ref.cardId])
+    .filter((card): card is ResolvedCard => card !== undefined);
+  return cards.length === selectedCards.length ? cards : undefined;
+};
+
+const selectedCardsForNameRelation = (
+  saved: SequenceSavedResultReference | undefined,
+): readonly CardRef[] | undefined => {
+  if (saved?.kind === "selectedCards") {
+    return saved.cards;
+  }
+  if (saved?.kind === "paidCost") {
+    return saved.selectedCards;
+  }
+  return undefined;
+};
+
+const cardMatchesNameRelation = (
+  state: GameState | undefined,
+  card: ResolvedCard,
+  relation: CardFilter["nameRelation"],
+  savedReferences: SequenceSavedResultReferenceMap | undefined,
+): boolean => {
+  if (relation === undefined) {
+    return true;
+  }
+  const savedCards = savedCardsForNameRelation(
+    state,
+    relation,
+    savedReferences,
+  );
+  if (savedCards === undefined) {
+    return false;
+  }
+  return savedCards.some((savedCard) =>
+    cardMatchesAnyName(card, [savedCard.name]),
+  );
+};
+
 const cardMatchesBaseFilter = (
   state: GameState | undefined,
   card: ResolvedCard | undefined,
@@ -418,6 +478,11 @@ const cardMatchesBaseFilter = (
     return false;
   }
   if (filter.names !== undefined && !cardMatchesAnyName(card, filter.names)) {
+    return false;
+  }
+  if (
+    !cardMatchesNameRelation(state, card, filter.nameRelation, savedReferences)
+  ) {
     return false;
   }
   if (filter.cost !== undefined) {

@@ -116,6 +116,31 @@ export const parseNamePredicate: PredicateParser = (text, current) => {
   };
 };
 
+export const parseSameNameAsTrashedCardPredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^(?:the )?same card name as the trashed card\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      nameRelation: {
+        type: "sameAsSavedCards",
+        selection: "paidCost",
+      },
+    },
+    evidence: ["filter:nameRelation"],
+    rest: match.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseDifferentNamesPredicate: PredicateParser = (
   text,
   current,

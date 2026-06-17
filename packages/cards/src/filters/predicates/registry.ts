@@ -20,6 +20,7 @@ import {
   parseNameListPredicate,
   parseNamePredicate,
   parseSelfExclusionPredicate,
+  parseSameNameAsTrashedCardPredicate,
 } from "./name.js";
 import {
   parseAttachedDonPredicate,
@@ -86,5 +87,6 @@ export const predicateParsers: readonly PredicateParser[] = [
   parseNameCardPredicate,
   parseNameListPredicate,
   parseNamePredicate,
+  parseSameNameAsTrashedCardPredicate,
   parseDifferentNamesPredicate,
 ];

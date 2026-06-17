@@ -7,6 +7,7 @@ import type { CardFilter } from "@optcg/types";
 import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
+  toCardRef,
 } from "./state.js";
 import {
   createActiveState,
@@ -191,5 +192,58 @@ test("hand-selection filters can compare color against a saved returned field ob
       savedReferences,
     ),
     true,
+  );
+});
+
+test("hand-selection filters can match card name against saved paid-cost cards", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const paidCard = must(player.hand[0], "paid cost card");
+  const sameName = must(player.hand[1], "same name candidate");
+  const differentName = must(player.hand[2], "different name candidate");
+  state.cardManifest.cards[paidCard.cardId] = {
+    ...resolvedCard({ cardId: paidCard.cardId, category: "character" }),
+    name: "Sanji",
+  };
+  state.cardManifest.cards[sameName.cardId] = {
+    ...resolvedCard({ cardId: sameName.cardId, category: "character" }),
+    name: "Sanji",
+  };
+  state.cardManifest.cards[differentName.cardId] = {
+    ...resolvedCard({ cardId: differentName.cardId, category: "character" }),
+    name: "Nami",
+  };
+  const filter: CardFilter = {
+    categories: ["character"],
+    nameRelation: { type: "sameAsSavedCards", selection: "paidCost" },
+  };
+  const savedReferences = {
+    paidCost: {
+      kind: "paidCost" as const,
+      paidCost: true,
+      selectedCards: [toCardRef(paidCard, p1)],
+    },
+  };
+
+  assert.equal(isSupportedHandSelectionCardFilter(filter), true);
+  assert.equal(
+    cardMatchesHandSelectionFilter(
+      state,
+      p1,
+      sameName,
+      filter,
+      savedReferences,
+    ),
+    true,
+  );
+  assert.equal(
+    cardMatchesHandSelectionFilter(
+      state,
+      p1,
+      differentName,
+      filter,
+      savedReferences,
+    ),
+    false,
   );
 });
