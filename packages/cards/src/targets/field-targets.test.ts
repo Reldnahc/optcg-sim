@@ -313,6 +313,31 @@ describe("field target parsers", () => {
     });
   });
 
+  it("parses selected own Leader target without extra predicates", () => {
+    expect(
+      parseYourSelectedLeaderTarget({
+        text: "of your Leader gains [Double Attack] during this turn.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: { categories: ["leader"] },
+        },
+      },
+      evidence: ["target:yourLeader", "player:self", "filter:category:leader"],
+      rest: "gains [Double Attack] during this turn.",
+    });
+  });
+
   it("parses selected named Leader target", () => {
     expect(
       parseYourSelectedLeaderTarget({

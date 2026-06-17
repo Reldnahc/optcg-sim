@@ -132,9 +132,6 @@ function parseSelectedLeaderFilter(text: string):
     return undefined;
   }
   const predicateText = leaderMatch.groups?.["predicates"] ?? "";
-  if (predicateText.trim().length === 0) {
-    return undefined;
-  }
 
   return withSelectedLeaderPredicates(
     { categories: ["leader"] },

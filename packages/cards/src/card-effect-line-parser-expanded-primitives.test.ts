@@ -274,6 +274,52 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     });
   });
 
+  it("parses no-other-name conditions before selected Leader keyword grants", () => {
+    const result = parseCardEffectLine(
+      "[On Play] If you have no other [Buggy] Characters, up to 1 of your Leader gains [Double Attack] during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        condition: {
+          type: "fieldCount",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            names: ["Buggy"],
+            excludeSelf: true,
+          },
+          op: "eq",
+          value: 0,
+        },
+        effect: {
+          type: "giveKeyword",
+          keyword: "doubleAttack",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              player: "self",
+              zones: ["leaderArea"],
+              filter: { categories: ["leader"] },
+            },
+          },
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:fieldCount",
+        "filter:excludeSelf",
+        "target:yourLeader",
+        "instruction:giveKeyword",
+        "keyword:anySupported",
+      ]),
+    );
+  });
+
   it("parses forced opponent DON return under different wrappers", () => {
     const onPlay = parseCardEffectLine(
       "[On Play] If your Leader has the {Impel Down} type, your opponent returns 1 DON!! card from their field to their DON!! deck.",
