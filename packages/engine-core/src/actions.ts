@@ -726,7 +726,7 @@ const applyRespondToDecision = (
   const triggerOrderResult = profileActionSpan(
     options,
     "engine:decision:triggerOrder",
-    () => applyChooseTriggerOrderDecisionResponse(state, action),
+    () => applyChooseTriggerOrderDecisionResponse(state, action, options),
   );
   if (triggerOrderResult !== null) {
     return continueAfterEffectDecision(

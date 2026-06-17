@@ -147,6 +147,29 @@ test("valid orderedIds response chooses only the next trigger from the selected 
   assert.deepEqual(state, before);
 });
 
+test("live chooseTriggerOrder response preserves omitted state hash", () => {
+  const state = setupChoiceState();
+
+  const result = applyAction(
+    state,
+    {
+      type: "respondToDecision",
+      decisionId: toDecisionId("decision:choose-trigger-order"),
+      response: {
+        type: "orderedIds",
+        ids: [toQueueEntryId("queue-b")],
+      },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.notEqual(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("invalid chooseTriggerOrder responses fail closed with no mutation or hash change", () => {
   const attempts = [
     {

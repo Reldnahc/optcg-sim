@@ -6,8 +6,14 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { processEffectRuntimeAfterTriggerOrderChoice } from "../effect-runtime.js";
+import { prependEventsToEngineResult } from "../engine-result-events.js";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -123,6 +129,7 @@ const reorderSelectedTriggerGroup = (
 export const applyChooseTriggerOrderDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "chooseTriggerOrder") {
@@ -135,6 +142,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
       invalidDecision(
         "Response type must be orderedIds for chooseTriggerOrder.",
       ),
+      options,
     );
   }
 
@@ -145,6 +153,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
       state,
       [],
       invalidDecision("orderedIds must choose exactly one triggerId."),
+      options,
     );
   }
   const currentGroupEntries = resolveCurrentGroupEntries(
@@ -158,6 +167,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
       invalidDecision(
         "chooseTriggerOrder triggerIds are stale for current effectQueue.",
       ),
+      options,
     );
   }
   const decisionIdsByResponseId = new Map<
@@ -172,6 +182,7 @@ export const applyChooseTriggerOrderDecisionResponse = (
         state,
         [],
         invalidDecision("orderedIds must choose exactly one triggerId."),
+        options,
       );
     }
     orderedIds.push(queueEntryId);
@@ -207,8 +218,5 @@ export const applyChooseTriggerOrderDecisionResponse = (
     nextState,
     orderedIds,
   );
-  return {
-    ...resumed,
-    events: [...events, ...resumed.events],
-  };
+  return prependEventsToEngineResult(resumed, events, options);
 };
