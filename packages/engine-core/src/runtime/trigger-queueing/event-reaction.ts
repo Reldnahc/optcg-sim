@@ -9,7 +9,11 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
-import { toEngineResult, toStateSeq } from "../../action-results.js";
+import {
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../../action-results.js";
 import { isCardEffectInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
@@ -112,10 +116,14 @@ export const createEventReactionTriggerQueueing = (
     reason: EventReactionTriggerQueueingFailureReason,
   ) => EngineError,
 ): {
-  queueEventReactionTriggers: (state: GameState) => EngineResult | undefined;
+  queueEventReactionTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
 } => {
   const queueEventReactionTriggers = (
     state: GameState,
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     if (hasPendingTriggerRuntimeWork(state)) {
       return undefined;
@@ -158,7 +166,7 @@ export const createEventReactionTriggerQueueing = (
           state.cardManifest,
         );
         if (!lookup.ok) {
-          return toEngineResult(state, [], [lookup.error]);
+          return toEngineResult(state, [], [lookup.error], options);
         }
         const reactionEffects = lookup.definition.effects.flatMap((effect) => {
           const match = matchEventTrigger(
@@ -214,6 +222,7 @@ export const createEventReactionTriggerQueueing = (
               state,
               [],
               [eventReactionTriggerQueueingError("invalid-event-reaction")],
+              options,
             );
           }
           const triggerType = triggerTypesForEvent[0];
@@ -222,6 +231,7 @@ export const createEventReactionTriggerQueueing = (
               state,
               [],
               [eventReactionTriggerQueueingError("invalid-event-reaction")],
+              options,
             );
           }
           const entrySource = {
@@ -271,7 +281,7 @@ export const createEventReactionTriggerQueueing = (
     }
 
     const queued = appendAdmittedTriggerEntries(state, appended);
-    return toEngineResult(queued.state, queued.events);
+    return toEngineResult(queued.state, queued.events, undefined, options);
   };
 
   return { queueEventReactionTriggers };

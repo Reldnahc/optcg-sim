@@ -733,6 +733,18 @@ test("event reactions queue for matching cardPlayed events from the required sou
   });
 });
 
+test("live event reaction queueing preserves omitted state hash", () => {
+  const { state } = cardPlayedReactionState("trash");
+
+  const result = processEffectRuntime(state, {
+    includeStateHash: false,
+    validateInvariants: false,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("event reactions do not queue when a matching cardPlayed event came from another zone", () => {
   const { state } = cardPlayedReactionState("hand");
 

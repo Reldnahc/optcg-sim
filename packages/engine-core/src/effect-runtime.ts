@@ -463,7 +463,7 @@ export const processEffectRuntime = (
       return queuedFromOnOpponentAttack;
     }
   }
-  const queuedFromEventReaction = queueEventReactionTriggers(state);
+  const queuedFromEventReaction = queueEventReactionTriggers(state, options);
   if (queuedFromEventReaction !== undefined) {
     return queuedFromEventReaction;
   }

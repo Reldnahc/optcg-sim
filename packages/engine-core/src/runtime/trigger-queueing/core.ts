@@ -176,7 +176,10 @@ export interface EffectRuntimeTriggerQueueingHelpers {
   queueOpponentActivationTriggers: (
     state: GameState,
   ) => EngineResult | undefined;
-  queueEventReactionTriggers: (state: GameState) => EngineResult | undefined;
+  queueEventReactionTriggers: (
+    state: GameState,
+    options?: EngineResultOptions,
+  ) => EngineResult | undefined;
   queueEndOfYourTurnTriggers: (state: GameState) => EngineResult | undefined;
   queueEffectResolvedCustomTriggers: (
     state: GameState,
