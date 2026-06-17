@@ -6,6 +6,7 @@ import {
   parseCombinedKoOrFieldRemovalReplacement,
   parseOpponentFieldRemovalReplacement,
   parseOpponentKoReplacement,
+  parseOpponentRestReplacement,
 } from "./trigger-conditions.js";
 import type { ReplacementTriggerParseResult } from "./shared.js";
 
@@ -69,6 +70,7 @@ const parseReplacementTrigger = (
 ): ReplacementTriggerParseResult | undefined =>
   parseCombinedKoOrFieldRemovalReplacement(text) ??
   parseOpponentKoReplacement(text) ??
+  parseOpponentRestReplacement(text) ??
   parseOpponentFieldRemovalReplacement(text) ??
   parseAnyFieldRemovalReplacement(text);
 

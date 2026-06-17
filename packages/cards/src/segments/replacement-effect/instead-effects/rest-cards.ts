@@ -113,6 +113,19 @@ function parseRestTargetFilter(text: string):
     }
   | undefined {
   const normalized = text.trim();
+  if (/^other Characters$/iu.test(normalized)) {
+    return {
+      filter: { categories: ["character"], excludeSelf: true },
+      evidence: [
+        "target:yourCharacters",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:excludeSelf",
+      ],
+      zones: ["characterArea"],
+    };
+  }
+
   const donMatch = /^(?<state>active|rested) DON!! cards?$/iu.exec(normalized);
   const donState = donMatch?.groups?.["state"]?.toLowerCase();
   if (donState === "active" || donState === "rested") {

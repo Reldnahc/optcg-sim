@@ -11,7 +11,8 @@ export function parseReplacementEntryPoint(
     !/^If .+? would be K\.O\.'d or would be removed from the field\b[^,]*,\s*you may\b/i.test(
       text,
     ) &&
-    !/^If .+? would be K\.O\.'d\b[^,]*,\s*you may\b/i.test(text)
+    !/^If .+? would be K\.O\.'d\b[^,]*,\s*you may\b/i.test(text) &&
+    !/^If .+? would be rested\b[^,]*,\s*you may\b/i.test(text)
   ) {
     return undefined;
   }

@@ -72,3 +72,65 @@ it("parses delayed opponent active-DON rest at the start of their next Main Phas
     ]),
   );
 });
+
+it("parses rest replacement into a typed reusable replacement trigger", () => {
+  const result = parseCardEffectLine(
+    "[Opponent's Turn] If this Character would be rested by your opponent's Character's effect, you may rest 1 of your other Characters instead.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      condition: { type: "opponentTurn" },
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldBeRested",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+          sourceCardFilter: { categories: ["character"] },
+          target: { type: "self" },
+        },
+      },
+      effect: {
+        type: "replacement",
+        when: {
+          type: "wouldBeRested",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+          sourceCardFilter: { categories: ["character"] },
+          target: { type: "self" },
+        },
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              chooser: "self",
+              player: "self",
+              zones: ["characterArea"],
+              min: 1,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                excludeSelf: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:replacement",
+      "entry:opponentTurn",
+      "replacement:wouldBeRested",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "filter:category:character",
+      "filter:excludeSelf",
+      "composition:replacementInstead",
+    ]),
+  );
+});

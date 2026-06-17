@@ -129,6 +129,56 @@ export function parseOpponentKoReplacement(
   };
 }
 
+export function parseOpponentRestReplacement(
+  text: string,
+): ReplacementTriggerParseResult | undefined {
+  const match =
+    /^If this Character would be rested by your opponent's (?<source>Leader|Character|Event|Stage)'s effect,\s*(?<body>.+)$/iu.exec(
+      text.trim(),
+    );
+  const sourceText = match?.groups?.["source"]?.toLowerCase();
+  const bodyText = match?.groups?.["body"];
+  if (
+    (sourceText !== "leader" &&
+      sourceText !== "character" &&
+      sourceText !== "event" &&
+      sourceText !== "stage") ||
+    bodyText === undefined
+  ) {
+    return undefined;
+  }
+  const instead = parseInsteadEffect(bodyText);
+  if (instead === undefined) {
+    return undefined;
+  }
+  const sourceCategory =
+    sourceText === "leader"
+      ? "leader"
+      : sourceText === "character"
+        ? "character"
+        : sourceText === "event"
+          ? "event"
+          : "stage";
+
+  return {
+    when: {
+      type: "wouldBeRested",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      sourceCardFilter: { categories: [sourceCategory] },
+      target: { type: "self" },
+    },
+    instead: instead.effect,
+    evidence: [
+      "replacement:wouldBeRested",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      `filter:category:${sourceCategory}` as const,
+      ...instead.evidence,
+    ],
+  };
+}
+
 function parseBattleKoReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {

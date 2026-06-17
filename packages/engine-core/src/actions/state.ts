@@ -158,6 +158,7 @@ const supportedHandSelectionFilterKeys = new Set([
   "custom",
   "cost",
   "effectEntryPoint",
+  "excludeSelf",
   "names",
   "nameRelation",
   "nameNot",
@@ -266,6 +267,7 @@ export const isSupportedHandSelectionCardFilter = (
       isStringArray(filter.typesNotIncludeAny)) &&
     (filter.nameNot === undefined || isStringArray(filter.nameNot)) &&
     isSupportedEffectEntryPointFilter(filter.effectEntryPoint) &&
+    (filter.excludeSelf === undefined || filter.excludeSelf) &&
     (filter.state === undefined ||
       supportedHandSelectionStates.has(filter.state)) &&
     isSupportedNumericFilter(filter.cost) &&

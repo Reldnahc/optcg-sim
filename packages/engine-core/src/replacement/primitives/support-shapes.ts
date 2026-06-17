@@ -155,6 +155,15 @@ const replacementTriggersEqual = (
       JSON.stringify(left.target) === JSON.stringify(right.target)
     );
   }
+  if (left.type === "wouldBeRested" && right.type === "wouldBeRested") {
+    return (
+      left.sourceKind === right.sourceKind &&
+      left.sourceControllerRelation === right.sourceControllerRelation &&
+      JSON.stringify(left.sourceCardFilter) ===
+        JSON.stringify(right.sourceCardFilter) &&
+      JSON.stringify(left.target) === JSON.stringify(right.target)
+    );
+  }
   return false;
 };
 
@@ -350,6 +359,21 @@ export const isSupportedSelfKoTrashFromHandReplacementEffect = (
   isSelfTarget(effect.effect.when.target) &&
   isSupportedTrashFromHandInsteadEffect(effect.effect.instead);
 
+export const isSupportedRestInsteadReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEnvelope(effect) &&
+  effect.trigger.replacement.type === "wouldBeRested" &&
+  isSelfTarget(effect.trigger.replacement.target) &&
+  effect.trigger.replacement.sourceKind === "cardEffect" &&
+  effect.trigger.replacement.sourceControllerRelation ===
+    "opponentControlled" &&
+  effect.oncePerTurn === undefined &&
+  effect.effect.when.type === "wouldBeRested" &&
+  isSelfTarget(effect.effect.when.target) &&
+  replacementTriggersEqual(effect.trigger.replacement, effect.effect.when) &&
+  isSupportedRestOwnCardsInsteadEffect(effect.effect.instead);
+
 const isSupportedAtomicReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -362,7 +386,8 @@ const isSupportedAtomicReplacementEffect = (
   isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||
   isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
   isSupportedOpponentKoTrashFromHandReplacementEffect(effect) ||
-  isSupportedSelfKoTrashFromHandReplacementEffect(effect);
+  isSupportedSelfKoTrashFromHandReplacementEffect(effect) ||
+  isSupportedRestInsteadReplacementEffect(effect);
 
 export const isSupportedAnyOfReplacementEffect = (
   effect: EffectDefinition["effects"][number],

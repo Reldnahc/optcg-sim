@@ -392,6 +392,13 @@ export type ReplacementTrigger =
     }
   | { type: "wouldTakeDamage"; target: Target }
   | { type: "wouldBeTrashed"; target: Target }
+  | {
+      type: "wouldBeRested";
+      sourceKind?: "cardEffect";
+      sourceControllerRelation?: "any" | "opponentControlled";
+      sourceCardFilter?: CardFilter;
+      target: Target;
+    }
   | { type: "wouldDraw"; player: PlayerRef }
   | {
       type: "wouldMoveZone";
