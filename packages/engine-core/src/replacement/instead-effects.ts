@@ -162,8 +162,9 @@ export const isSupportedReturnSelfToHandInsteadEffect = (
 const isSupportedAtomicNoDecisionInsteadEffect = (
   effect: SequenceSegmentEffect,
 ): boolean =>
-  (effect.type === "moveCards" && isSupportedLifeTopToHandEffect(effect)) ||
-  (effect.type === "moveCards" && isSupportedLifeTopToTrashEffect(effect)) ||
+  (effect.type === "moveCards" &&
+    (isSupportedLifeTopToHandEffect(effect) ||
+      isSupportedLifeTopToTrashEffect(effect))) ||
   (effect.type === "setLifeCardFaceUp" &&
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
   (effect.type === "bounce" &&
