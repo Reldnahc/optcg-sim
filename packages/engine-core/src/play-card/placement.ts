@@ -12,6 +12,7 @@ import type {
 import {
   appendEvent,
   createEvent,
+  type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
@@ -50,6 +51,7 @@ const createCharacterOverflowDecisionResult = (params: {
     enterRested: boolean;
     queueEntryId: EffectQueueEntry["id"];
   };
+  engineOptions?: EngineResultOptions;
 }): EngineResult => {
   const {
     state,
@@ -65,6 +67,7 @@ const createCharacterOverflowDecisionResult = (params: {
     },
     runtimePlaySelectedEnterRested,
     runtimePlaySourceOverflow,
+    engineOptions = {},
   } = params;
   const decisionId =
     decisionIdOverride ?? getCharacterOverflowDecisionId(state, enteringCard);
@@ -124,7 +127,7 @@ const createCharacterOverflowDecisionResult = (params: {
     eventJournal: [...state.eventJournal, ...events],
   };
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, engineOptions);
 };
 
 const createPlayedCard = (params: {
@@ -182,6 +185,7 @@ export const placePlayedCardResult = (params: {
     enterRested: boolean;
     queueEntryId: EffectQueueEntry["id"];
   };
+  engineOptions?: EngineResultOptions;
   effectSourceCardId?: CardInstance["cardId"];
   resolveOnPlayRuntime?: boolean;
   resolvePlayCardEffectRuntime?: ResolvePlayCardEffectRuntime;
@@ -203,6 +207,7 @@ export const placePlayedCardResult = (params: {
     enterRested,
     runtimePlaySelectedEnterRested,
     runtimePlaySourceOverflow,
+    engineOptions = {},
     effectSourceCardId,
     resolveOnPlayRuntime = true,
     resolvePlayCardEffectRuntime,
@@ -238,6 +243,7 @@ export const placePlayedCardResult = (params: {
       ...(runtimePlaySourceOverflow === undefined
         ? {}
         : { runtimePlaySourceOverflow }),
+      engineOptions,
     });
   }
 
@@ -531,7 +537,7 @@ export const placePlayedCardResult = (params: {
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextState);
   if (!resolveOnPlayRuntime) {
-    return toEngineResult(nextState, events);
+    return toEngineResult(nextState, events, undefined, engineOptions);
   }
   if (resolvePlayCardEffectRuntime === undefined) {
     return illegalAction(

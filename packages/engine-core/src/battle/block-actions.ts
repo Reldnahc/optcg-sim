@@ -13,6 +13,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   illegalAction,
   toDecisionId,
   toEngineResult,
@@ -197,6 +198,7 @@ export const applyBlockStepDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
   resolveSupportedVanillaBattle: BattleResolver,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   const battle = state.battle;
@@ -316,7 +318,12 @@ export const applyBlockStepDecisionResponse = (
         ? illegalAction(state, "Battle resolution failed.")
         : toEngineResult(state, [], [firstError]);
     }
-    return toEngineResult(resolved.state, [...events, ...resolved.events]);
+    return toEngineResult(
+      resolved.state,
+      [...events, ...resolved.events],
+      undefined,
+      options,
+    );
   }
 
   const resumedState: GameState = {
@@ -330,5 +337,10 @@ export const applyBlockStepDecisionResponse = (
   if (resolved.errors !== undefined) {
     return resolved;
   }
-  return toEngineResult(resolved.state, [...events, ...resolved.events]);
+  return toEngineResult(
+    resolved.state,
+    [...events, ...resolved.events],
+    undefined,
+    options,
+  );
 };

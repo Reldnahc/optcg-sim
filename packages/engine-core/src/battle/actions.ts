@@ -14,6 +14,7 @@ import type {
 import {
   appendEvent,
   createEvent,
+  type EngineResultOptions,
   illegalAction,
   rebaseEvents,
   toDecisionId,
@@ -601,24 +602,31 @@ const cleanupBattleAfterAttackTiming = (
 const withOriginalManifestResult = (
   result: EngineResult,
   originalState: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const stateWithManifest: GameState = {
     ...result.state,
     cardManifest: originalState.cardManifest,
   };
   return result.errors === undefined
-    ? toEngineResult(stateWithManifest, result.events)
+    ? toEngineResult(stateWithManifest, result.events, undefined, options)
     : toEngineResult(
         stateWithManifest,
         result.events,
         toErrorTuple(result.errors),
+        options,
       );
 };
 
 const resolveSupportedBattleWithAttackTimingMetadata = (
   state: GameState,
+  options: EngineResultOptions = {},
 ): EngineResult =>
-  withOriginalManifestResult(resolveSupportedVanillaBattle(state), state);
+  withOriginalManifestResult(
+    resolveSupportedVanillaBattle(state),
+    state,
+    options,
+  );
 
 const mustBattle = (state: GameState): NonNullable<GameState["battle"]> => {
   const battle = state.battle;
@@ -742,6 +750,7 @@ export const applyAttackCostDecisionResponse = (
 export const applyBattleDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const resolveWithOriginalManifest = (
     resolverState: GameState,
@@ -754,6 +763,8 @@ export const applyBattleDecisionResponse = (
           cardManifest: state.cardManifest,
         },
         [],
+        undefined,
+        options,
       ),
     );
     if (
@@ -763,16 +774,25 @@ export const applyBattleDecisionResponse = (
     ) {
       return runtime;
     }
-    const resolved = resolveSupportedBattleWithAttackTimingMetadata({
-      ...runtime.state,
-      cardManifest: state.cardManifest,
-    });
+    const resolved = resolveSupportedBattleWithAttackTimingMetadata(
+      {
+        ...runtime.state,
+        cardManifest: state.cardManifest,
+      },
+      options,
+    );
     return resolved.errors === undefined
-      ? toEngineResult(resolved.state, [...runtime.events, ...resolved.events])
+      ? toEngineResult(
+          resolved.state,
+          [...runtime.events, ...resolved.events],
+          undefined,
+          options,
+        )
       : toEngineResult(
           resolved.state,
           [...runtime.events, ...resolved.events],
           toErrorTuple(resolved.errors),
+          options,
         );
   };
   const counterResponse = applyCounterStepDecisionResponse(
@@ -781,16 +801,17 @@ export const applyBattleDecisionResponse = (
     resolveWithOriginalManifest,
   );
   if (counterResponse !== null) {
-    return withOriginalManifestResult(counterResponse, state);
+    return withOriginalManifestResult(counterResponse, state, options);
   }
   const blockResponse = applyBlockStepDecisionResponse(
     state,
     action,
     resolveWithOriginalManifest,
+    options,
   );
   return blockResponse === null
     ? null
-    : withOriginalManifestResult(blockResponse, state);
+    : withOriginalManifestResult(blockResponse, state, options);
 };
 
 export const continueAttackTimingBattleIfReady = (

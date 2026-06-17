@@ -485,7 +485,7 @@ const applyRespondToDecision = (
   const playCardResult = profileActionSpan(
     options,
     "engine:decision:playCard",
-    () => applyPlayCardDecisionResponse(state, action),
+    () => applyPlayCardDecisionResponse(state, action, options),
   );
   if (playCardResult !== null) {
     if (
@@ -578,7 +578,7 @@ const applyRespondToDecision = (
   const battleResult = profileActionSpan(
     options,
     "engine:decision:battle",
-    () => applyBattleDecisionResponse(state, action),
+    () => applyBattleDecisionResponse(state, action, options),
   );
   if (battleResult !== null) {
     return battleResult.errors === undefined &&
@@ -904,7 +904,7 @@ export const applyAction = (
     }
     if (action.type === "playCard")
       return profileActionSpan(options, "engine:applyAction:playCard", () =>
-        applyPlayCard(state, action),
+        applyPlayCard(state, action, options),
       );
     if (action.type === "endMainPhase")
       return profileActionSpan(options, "engine:applyAction:endMainPhase", () =>

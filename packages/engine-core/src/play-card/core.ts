@@ -15,6 +15,7 @@ import type {
 import {
   appendEvent,
   createEvent,
+  type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
@@ -116,6 +117,7 @@ const canonicalRestDonCostPayment = (
 export const applyPlayCard = (
   state: GameState,
   action: Extract<Action, { type: "playCard" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (!isMatchActive(state)) {
     return illegalAction(
@@ -165,6 +167,21 @@ export const applyPlayCard = (
   if (!canResolveDestinationConflict(player, supported.category)) {
     return illegalAction(state, "playCard destination conflict is invalid.");
   }
+  const resolveRuntime = (
+    originalState: GameState,
+    acceptedState: GameState,
+    acceptedEvents: EngineEvent[],
+    runtimeSourceCard: CardInstance,
+    runtimeSupported: SupportedPlayMetadata,
+  ): EngineResult =>
+    resolvePlayCardEffectRuntime(
+      originalState,
+      acceptedState,
+      acceptedEvents,
+      runtimeSourceCard,
+      runtimeSupported,
+      options,
+    );
 
   const events: EngineEvent[] = [];
   appendEvent(
@@ -208,7 +225,8 @@ export const applyPlayCard = (
         sourceCard: handCard,
         supported,
         costArea: payment.nextCostArea,
-        resolvePlayCardEffectRuntime,
+        resolvePlayCardEffectRuntime: resolveRuntime,
+        engineOptions: options,
       });
     }
     return createPlayCardPaymentDecisionResult({
@@ -217,6 +235,7 @@ export const applyPlayCard = (
       playerId,
       handCard,
       playCost,
+      engineOptions: options,
     });
   }
 
@@ -229,7 +248,8 @@ export const applyPlayCard = (
     sourceCard: handCard,
     supported,
     costArea: player.costArea,
-    resolvePlayCardEffectRuntime,
+    resolvePlayCardEffectRuntime: resolveRuntime,
+    engineOptions: options,
   });
 };
 
@@ -251,24 +271,30 @@ const resolvePlayCardEffectRuntime = (
   acceptedEvents: EngineEvent[],
   handCard: CardInstance,
   supported: SupportedPlayMetadata,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (!shouldResolveOnPlayRuntime(acceptedState, handCard, supported)) {
-    return toEngineResult(acceptedState, acceptedEvents);
+    return toEngineResult(acceptedState, acceptedEvents, undefined, options);
   }
 
   const continued = continueRuntimeUntilIdle(
     originalState,
-    toEngineResult(acceptedState, acceptedEvents),
+    toEngineResult(acceptedState, acceptedEvents, undefined, options),
   );
   if (continued.errors !== undefined) {
-    return toEngineResult(originalState, [], toErrorTuple(continued.errors));
+    return toEngineResult(
+      originalState,
+      [],
+      toErrorTuple(continued.errors),
+      options,
+    );
   }
   const stateWithJournal: GameState = {
     ...continued.state,
     eventJournal: [...originalState.eventJournal, ...continued.events],
   };
   assertGameStateInvariants(stateWithJournal);
-  return toEngineResult(stateWithJournal, continued.events);
+  return toEngineResult(stateWithJournal, continued.events, undefined, options);
 };
 
 const toErrorTuple = (
@@ -290,6 +316,7 @@ const toErrorTuple = (
 export const applyPlayCardDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined) {
@@ -308,10 +335,10 @@ export const applyPlayCardDecisionResponse = (
         null ||
       parseRuntimePlaySourceOverflowDecisionInstanceId(decision.id) !== null)
   ) {
-    return applyCharacterOverflowResponse(state, action);
+    return applyCharacterOverflowResponse(state, action, options);
   }
   if (decision.type === "payCost" && isPlayCardPaymentDecisionId(decision.id)) {
-    return applyPlayCardPaymentResponse(state, action);
+    return applyPlayCardPaymentResponse(state, action, options);
   }
   return null;
 };
@@ -674,6 +701,7 @@ export const applyRuntimePlaySelectedFromHand = (params: {
 const applyCharacterOverflowResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const decision = state.pendingDecision;
   if (
@@ -788,6 +816,21 @@ const applyCharacterOverflowResponse = (
     { decisionId: decision.id, playerId: decision.playerId },
     { type: "public" },
   );
+  const resolveRuntime = (
+    originalState: GameState,
+    acceptedState: GameState,
+    acceptedEvents: EngineEvent[],
+    runtimeSourceCard: CardInstance,
+    runtimeSupported: SupportedPlayMetadata,
+  ): EngineResult =>
+    resolvePlayCardEffectRuntime(
+      originalState,
+      acceptedState,
+      acceptedEvents,
+      runtimeSourceCard,
+      runtimeSupported,
+      options,
+    );
   return placePlayedCardResult({
     state,
     events,
@@ -801,7 +844,8 @@ const applyCharacterOverflowResponse = (
     selectedOverflowCharacterIndex: selectedIndex,
     ...(runtimeEnterRested === null ? {} : { enterRested: runtimeEnterRested }),
     resolveOnPlayRuntime: !runtimeOverflow,
-    resolvePlayCardEffectRuntime,
+    resolvePlayCardEffectRuntime: resolveRuntime,
+    engineOptions: options,
     incrementActionSeq: true,
   });
 };
@@ -809,6 +853,7 @@ const applyCharacterOverflowResponse = (
 const applyPlayCardPaymentResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const context = getPlayCardPaymentContext(state, action);
   if (!context.ok) {
@@ -856,6 +901,21 @@ const applyPlayCardPaymentResponse = (
     { decisionId: decision.id, playerId: decision.playerId },
     { type: "public" },
   );
+  const resolveRuntime = (
+    originalState: GameState,
+    acceptedState: GameState,
+    acceptedEvents: EngineEvent[],
+    runtimeSourceCard: CardInstance,
+    runtimeSupported: SupportedPlayMetadata,
+  ): EngineResult =>
+    resolvePlayCardEffectRuntime(
+      originalState,
+      acceptedState,
+      acceptedEvents,
+      runtimeSourceCard,
+      runtimeSupported,
+      options,
+    );
 
   return placePlayedCardResult({
     state,
@@ -866,6 +926,7 @@ const applyPlayCardPaymentResponse = (
     sourceCard: handCard,
     supported,
     costArea: payment.nextCostArea,
-    resolvePlayCardEffectRuntime,
+    resolvePlayCardEffectRuntime: resolveRuntime,
+    engineOptions: options,
   });
 };

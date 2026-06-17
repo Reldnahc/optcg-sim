@@ -22,6 +22,20 @@ import {
   setupOpenedCharacterTargetBlockStepDecision,
 } from "./test-fixtures.js";
 
+const recordSpanNames = (): {
+  readonly names: string[];
+  readonly profileSpan: <T>(name: string, fn: () => T) => T;
+} => {
+  const names: string[] = [];
+  return {
+    names,
+    profileSpan(name, fn) {
+      names.push(name);
+      return fn();
+    },
+  };
+};
+
 test("applyDeclareAttack enters block step and opens defender decline decision when defender has would-be legal blocker", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -118,6 +132,29 @@ test("applyDeclareAttack enters block step and opens defender decline decision w
   });
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(result.events, replay.events);
+});
+
+test("live block responses can omit engine result state hashes", () => {
+  const { opened, defenderBlocker, decision } = setupOpenedBlockStepDecision();
+  const spans = recordSpanNames();
+
+  const blocked = applyAction(
+    opened.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [cardRef(defenderBlocker, p2)] },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+      profileSpan: spans.profileSpan,
+    },
+  );
+
+  assert.equal(blocked.errors, undefined);
+  assert.equal(blocked.stateHash, "");
+  assert.ok(spans.names.includes("engine:decision:battle"));
 });
 
 test("conditional continuous blocker grant opens Block Step decision and can be activated", () => {

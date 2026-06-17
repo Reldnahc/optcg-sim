@@ -63,6 +63,20 @@ const payFirstTwoDon = (state: GameState): EngineResult => {
   });
 };
 
+const recordSpanNames = (): {
+  readonly names: string[];
+  readonly profileSpan: <T>(name: string, fn: () => T) => T;
+} => {
+  const names: string[] = [];
+  return {
+    names,
+    profileSpan(name, fn) {
+      names.push(name);
+      return fn();
+    },
+  };
+};
+
 const reviewedMainEventDrawUpToDefinition = (
   cardId: CardInstance["cardId"],
   support: ResolvedCard["support"],
@@ -107,6 +121,33 @@ const installImplementedMainEvent = (
   };
   return implemented;
 };
+
+test("live play-card actions can omit engine result state hashes", () => {
+  const state = setupMainPlayState();
+  const player = must(state.players[p1], "p1");
+  const card = must(player.hand[0], "play card");
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "character",
+    cost: 0,
+    power: 3000,
+  });
+  const spans = recordSpanNames();
+
+  const result = applyAction(
+    state,
+    { type: "playCard", cardInstanceId: card.instanceId },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+      profileSpan: spans.profileSpan,
+    },
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+  assert.ok(spans.names.includes("engine:applyAction:playCard"));
+});
 
 const expectUnsupportedPlayCardNoMutation = (
   state: GameState,

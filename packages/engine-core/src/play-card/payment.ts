@@ -9,6 +9,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
@@ -41,8 +42,16 @@ export const createPlayCardPaymentDecisionResult = (params: {
   playerId: PlayerId;
   handCard: CardInstance;
   playCost: number;
+  engineOptions?: EngineResultOptions;
 }): EngineResult => {
-  const { state, events, playerId, handCard, playCost } = params;
+  const {
+    state,
+    events,
+    playerId,
+    handCard,
+    playCost,
+    engineOptions = {},
+  } = params;
   const decisionId = getPlayCardDecisionId(state, handCard);
   const pendingDecision: NonNullable<GameState["pendingDecision"]> = {
     id: decisionId,
@@ -72,7 +81,7 @@ export const createPlayCardPaymentDecisionResult = (params: {
     eventJournal: [...state.eventJournal, ...events],
   };
   assertGameStateInvariants(nextState);
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, engineOptions);
 };
 
 export const isPlayCardPaymentDecisionId = (
