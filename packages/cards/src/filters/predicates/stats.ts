@@ -64,6 +64,51 @@ export const parsePowerPredicate: PredicateParser = (
     };
   }
 
+  const powerOfRangeMatch =
+    /^a (?<base>base )?power of (?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*)\b\s*(?<rangeRest>.*)$/i.exec(
+      text,
+    );
+  const normalizedPowerOfRange =
+    powerOfRangeMatch === null
+      ? text
+      : `${powerOfRangeMatch.groups?.["min"] ?? ""} to ${
+          powerOfRangeMatch.groups?.["max"] ?? ""
+        } ${powerOfRangeMatch.groups?.["base"] ?? ""}power ${
+          powerOfRangeMatch.groups?.["rangeRest"] ?? ""
+        }`.trim();
+  const rangeMatch =
+    /^(?<min>0|[1-9]\d*) to (?<max>0|[1-9]\d*) (?<base>base )?power\b\s*(?<rangeRest>.*)$/i.exec(
+      normalizedPowerOfRange,
+    );
+  const minText = rangeMatch?.groups?.["min"];
+  const maxText = rangeMatch?.groups?.["max"];
+  if (minText !== undefined && maxText !== undefined) {
+    const min = Number.parseInt(minText, 10);
+    const max = Number.parseInt(maxText, 10);
+    if (min > max) {
+      return undefined;
+    }
+    const useCurrentPower =
+      rangeMatch?.groups?.["base"] === undefined &&
+      options.powerSemantics === "current";
+    return {
+      filter: {
+        ...current,
+        ...(useCurrentPower
+          ? { currentPower: { min, max } }
+          : { power: { min, max } }),
+      },
+      evidence: [
+        useCurrentPower ? "filter:currentPower" : "filter:power",
+        "condition:comparator:gte",
+        "condition:comparator:lte",
+        thresholdEvidence(minText),
+        thresholdEvidence(maxText),
+      ],
+      rest: rangeMatch?.groups?.["rangeRest"] ?? "",
+    };
+  }
+
   const powerOfExactMatch =
     /^a (?<base>base )?power of (?<value>0|[1-9]\d*)\b\s*(?<rest>.*)$/i.exec(
       text,

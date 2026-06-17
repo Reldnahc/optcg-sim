@@ -112,6 +112,59 @@ describe("play from hand instruction parser", () => {
     });
   });
 
+  it("parses play from hand with a reusable power range predicate", () => {
+    expect(
+      parsePlayFromHandInstruction({
+        text: "Play up to 1 {Big Mom Pirates} type Character card with 6000 to 8000 power from your hand.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesAny: ["Big Mom Pirates"],
+                power: { min: 6000, max: 8000 },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "zone:hand",
+        "player:self",
+        "chooser:self:upTo",
+        "filter:type",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:gte",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenPlay",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses opponent play from their hand as opponent-owned hand selection", () => {
     expect(
       parsePlayFromHandInstruction({
