@@ -9,6 +9,44 @@ export const parseHandCounterSetInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const noCounterMatch =
+    /^All of your (?<filter>.+?) without a Counter have a \+(?<value>[1-9]\d*) Counter, according to the rules\.?$/iu.exec(
+      input.text,
+    );
+  const noCounterFilterText = noCounterMatch?.groups?.["filter"];
+  const noCounterValueText = noCounterMatch?.groups?.["value"];
+  if (noCounterFilterText !== undefined && noCounterValueText !== undefined) {
+    const parsedFilter = parseCardFilterPredicates({
+      text: noCounterFilterText.replace(/\s+cards?$/iu, ""),
+    });
+    if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+      return undefined;
+    }
+    return {
+      effect: {
+        type: "modifyCounter",
+        player: "self",
+        sourceZone: "hand",
+        filter: {
+          ...parsedFilter.filter,
+          counter: { max: 0 },
+        },
+        value: Number.parseInt(noCounterValueText, 10),
+        duration: continuousDuration(context.condition),
+      },
+      evidence: [
+        "instruction:modifyCounter",
+        "player:self",
+        "zone:hand",
+        ...parsedFilter.evidence,
+        "filter:counter",
+        "modifier:positiveCounter",
+        continuousDurationEvidence(context.condition),
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^The counter of all of your (?<filter>.+?) in your hand becomes \+(?<value>[1-9]\d*)\.?$/i.exec(
       input.text,

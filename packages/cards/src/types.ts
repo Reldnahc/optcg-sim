@@ -218,6 +218,7 @@ export type PrimitiveEvidence =
   | "filter:attribute"
   | "filter:negated"
   | "filter:cost"
+  | "filter:counter"
   | "filter:baseCost"
   | "filter:power"
   | "filter:currentPower"

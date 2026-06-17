@@ -349,6 +349,42 @@ it("parses hand Character counter setting as a reusable continuous primitive", (
   );
 });
 
+it("parses field-wide no-counter Character cards as a reusable hand counter modifier", () => {
+  const result = parseCardEffectLine(
+    "All of your {Land of Wano} type Character cards without a Counter have a +1000 Counter, according to the rules.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "modifyCounter",
+        player: "self",
+        sourceZone: "hand",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Land of Wano"],
+          counter: { max: 0 },
+        },
+        value: 1000,
+        duration: { type: "whileSourceOnField" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:implicitPermanent",
+      "instruction:modifyCounter",
+      "zone:hand",
+      "filter:type",
+      "filter:category:character",
+      "filter:counter",
+      "modifier:positiveCounter",
+    ]),
+  );
+});
+
 it("parses On Play/On K.O. search with name-or-type-including reveal filter", () => {
   const result = parseCardEffectLine(
     '[On Play]/[On K.O.] Look at 5 cards from the top of your deck; reveal up to 1 [Monkey.D.Luffy] or up to 1 card with a type including "Whitebeard Pirates" and add it to your hand. Then, place the rest at the bottom of your deck in any order.',
