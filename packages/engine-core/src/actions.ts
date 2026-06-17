@@ -739,7 +739,7 @@ const applyRespondToDecision = (
   const effectOptionResult = profileActionSpan(
     options,
     "engine:decision:effectOption",
-    () => applyChooseEffectOptionDecisionResponse(state, action),
+    () => applyChooseEffectOptionDecisionResponse(state, action, options),
   );
   if (effectOptionResult !== null) {
     return continueAfterEffectDecision(

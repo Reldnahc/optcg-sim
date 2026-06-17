@@ -7,7 +7,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { toEngineResult } from "../action-results.js";
+import { type EngineResultOptions, toEngineResult } from "../action-results.js";
 import {
   resumeSequenceFrameAfterEffectOption,
   resumeSequenceFrameAfterEffectOptionDecline,
@@ -50,6 +50,7 @@ export const getChooseEffectOptionLegalActions = (
 export const applyChooseEffectOptionDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "chooseEffectOption") {
@@ -61,6 +62,7 @@ export const applyChooseEffectOptionDecisionResponse = (
       state,
       [],
       invalidDecision("Response must be an object for chooseEffectOption."),
+      options,
     );
   }
   const responseType = (response as { type?: unknown }).type;
@@ -70,6 +72,7 @@ export const applyChooseEffectOptionDecisionResponse = (
         state,
         [],
         invalidDecision("effectOptionDeclined requires an optional decision."),
+        options,
       );
     }
     const resumed = resumeSequenceFrameAfterEffectOptionDecline(
@@ -82,11 +85,12 @@ export const applyChooseEffectOptionDecisionResponse = (
         state,
         [],
         invalidDecision("chooseEffectOption decision is stale."),
+        options,
       );
     }
     return resumed.ok
-      ? toEngineResult(resumed.state, resumed.events)
-      : toEngineResult(state, [], [resumed.error]);
+      ? toEngineResult(resumed.state, resumed.events, undefined, options)
+      : toEngineResult(state, [], [resumed.error], options);
   }
   if (responseType !== "effectOption") {
     return toEngineResult(
@@ -95,6 +99,7 @@ export const applyChooseEffectOptionDecisionResponse = (
       invalidDecision(
         "Response type must be effectOption or effectOptionDeclined for chooseEffectOption.",
       ),
+      options,
     );
   }
   const optionId = (response as { optionId?: unknown }).optionId;
@@ -106,6 +111,7 @@ export const applyChooseEffectOptionDecisionResponse = (
       state,
       [],
       invalidDecision("effectOption optionId must match a decision option."),
+      options,
     );
   }
 
@@ -120,9 +126,10 @@ export const applyChooseEffectOptionDecisionResponse = (
       state,
       [],
       invalidDecision("chooseEffectOption decision is stale."),
+      options,
     );
   }
   return resumed.ok
-    ? toEngineResult(resumed.state, resumed.events)
-    : toEngineResult(state, [], [resumed.error]);
+    ? toEngineResult(resumed.state, resumed.events, undefined, options)
+    : toEngineResult(state, [], [resumed.error], options);
 };

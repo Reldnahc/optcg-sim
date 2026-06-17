@@ -153,6 +153,29 @@ test("choice effect creates an effect option decision and resolves the selected 
   assert.equal(afterP1.deck.length, beforeDeck - 1);
 });
 
+test("live choice option response preserves omitted state hash", () => {
+  const state = setupChoiceState();
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "choice decision");
+  assert.equal(decision.type, "chooseEffectOption");
+
+  const resolved = applyAction(
+    paused.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "effectOption", optionId: "draw-one" },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.stateHash, "");
+});
+
 test("choice effect can give the option decision to the opponent", () => {
   const state = setupChoiceState(choiceEffect(undefined, "opponent"));
 
