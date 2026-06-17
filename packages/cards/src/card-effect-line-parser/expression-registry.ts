@@ -75,7 +75,7 @@ import {
   selectedAttackRetargetExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "../instructions/index.js";
-import type { ParseInput } from "../types.js";
+import type { ExpressionParseResult, ParseInput } from "../types.js";
 import {
   conditionParsers,
   continuousInstructionParsers,
@@ -84,6 +84,26 @@ import {
 
 const singleInstructionExpressionParser = (input: ParseInput) => {
   const parsed = syntheticInstructionSegmentParser(instructionParsers)(input);
+  if (parsed === undefined) {
+    return undefined;
+  }
+  return {
+    effect: parsed.effect,
+    evidence: parsed.evidence,
+    rest: "",
+    ...(parsed.presentationSpans === undefined
+      ? {}
+      : { presentationSpans: parsed.presentationSpans }),
+  };
+};
+
+const optionalActionExpressionParser = (
+  input: ParseInput,
+): ExpressionParseResult | undefined => {
+  const parsed = optionalActionEffectSegmentParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser],
+  })(input);
   if (parsed === undefined) {
     return undefined;
   }
@@ -143,6 +163,7 @@ function generalExpressionParser(input: ParseInput) {
         conditions: conditionParsers,
         connectors: [parseAndConnector],
         instructions: instructionParsers,
+        expressions: [optionalActionExpressionParser],
       }),
       delayedEndOfTurnSegmentParser({
         connectors: [parseAndConnector],
