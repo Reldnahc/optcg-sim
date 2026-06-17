@@ -30,6 +30,14 @@ describe("comma-before-look connector parser", () => {
     ).toBeUndefined();
   });
 
+  it("does not capture Then-comma look connectors owned by the Then parser", () => {
+    expect(
+      parseCommaBeforeLookConnector({
+        text: "Draw 1 card. Then, look at 3 cards from the top of your deck.",
+      }),
+    ).toBeUndefined();
+  });
+
   it("integrates with expression parsing without owning instruction text", () => {
     const effectA: Effect = { type: "custom", handler: "synthetic:A" };
     const effectB: Effect = { type: "custom", handler: "synthetic:B" };

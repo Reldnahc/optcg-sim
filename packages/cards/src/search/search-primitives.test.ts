@@ -108,6 +108,32 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses reveal up-to typed Character-card selection as type plus category filters", () => {
+    const result = parseSearchSelectionToHand({
+      text: "reveal up to 1 {Donquixote Pirates} type Character card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(result).toMatchObject({
+      filter: {
+        categories: ["character"],
+        typesAny: ["Donquixote Pirates"],
+      },
+      min: 0,
+      max: 1,
+      revealTo: "bothPlayers",
+      rest: "Then, place the rest at the bottom of your deck in any order.",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "reveal:bothPlayers",
+        "cardinality:upTo",
+        "filter:type",
+        "filter:category:character",
+        "destination:hand",
+      ]),
+    );
+  });
+
   it("parses comma-separated hand destination before rest-bottom composition", () => {
     expect(
       parseSearchSelectionToHand({

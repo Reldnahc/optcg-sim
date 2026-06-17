@@ -2,7 +2,7 @@ import type { ConnectorParser } from "../types.js";
 import { splitSourceByDelimiter } from "../source-slices.js";
 
 export const parseCommaBeforeLookConnector: ConnectorParser = (input) => {
-  const commaBeforeLookPattern = /,\s+(?=look at\b)/iu;
+  const commaBeforeLookPattern = /(?<!\bThen),\s+(?=look at\b)/iu;
   const split =
     input.source === undefined
       ? undefined
