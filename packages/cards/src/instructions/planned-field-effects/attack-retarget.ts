@@ -31,9 +31,12 @@ const leaderOrTypedCharacterFilter = (typeName: string): CardFilter => ({
   ],
 });
 
-const targetZones: Zone[] = ["leaderArea", "characterArea"];
+const characterFilter: CardFilter = { categories: ["character"] };
 
-const selectSegment = (typeName: string) => ({
+const targetZones: Zone[] = ["leaderArea", "characterArea"];
+const characterTargetZones: Zone[] = ["characterArea"];
+
+const selectSegment = (zones: Zone[], filter: CardFilter) => ({
   id: "select:change-attack-target",
   connector: "always" as const,
   saveResultAs: attackRetargetSelectionId,
@@ -43,12 +46,12 @@ const selectSegment = (typeName: string) => ({
       timing: "onResolution" as const,
       chooser: "self" as const,
       player: "self" as const,
-      zones: targetZones,
+      zones,
       min: 1,
       max: 1,
       allowFewerIfUnavailable: false,
       visibility: "public" as const,
-      filter: leaderOrTypedCharacterFilter(typeName),
+      filter,
     },
   },
 });
@@ -83,7 +86,38 @@ const resultForType = (
   return {
     effect: {
       type: "sequence",
-      effects: [selectSegment(typeName), changeAttackTargetSegment],
+      effects: [
+        selectSegment(targetZones, leaderOrTypedCharacterFilter(typeName)),
+        changeAttackTargetSegment,
+      ],
+    },
+    evidence,
+    rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
+  };
+};
+
+const resultForCharacters = (input: ParseInput): ExpressionParseResult => {
+  const evidence: PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    "instruction:changeAttackTarget",
+    "target:yourCharacters",
+    "player:self",
+    "filter:category:character",
+  ];
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        selectSegment(characterTargetZones, characterFilter),
+        changeAttackTargetSegment,
+      ],
     },
     evidence,
     rest: "",
@@ -107,6 +141,14 @@ export const selectedAttackRetargetExpressionParser = (
   const selectedType = selectedMatch?.groups?.["type"]?.trim();
   if (selectedType !== undefined && selectedType.length > 0) {
     return resultForType(input, selectedType);
+  }
+
+  if (
+    /^Select 1 of your Characters?\. Change the attack target to the selected Character\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return resultForCharacters(input);
   }
 
   const directMatch =

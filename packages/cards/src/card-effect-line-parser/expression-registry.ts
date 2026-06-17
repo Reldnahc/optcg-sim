@@ -255,6 +255,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     instructions: instructionParsers,
     expressions: [
       searchRevealExpressionParser,
+      selectedAttackRetargetExpressionParser,
       singleInstructionExpressionParser,
     ],
   })(input);
@@ -416,6 +417,7 @@ const conditionalBlockBodyExpressions = () =>
       expressions: basicBodyExpressions(),
     }),
     selectedOpponentCharactersAttackCostExpressionParser,
+    selectedAttackRetargetExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
     }),
