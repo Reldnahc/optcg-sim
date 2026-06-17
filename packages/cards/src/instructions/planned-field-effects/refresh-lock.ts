@@ -1,4 +1,4 @@
-import type { CardFilter, Target } from "@optcg/types";
+import type { CardCategory, CardFilter, Target, Zone } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
@@ -179,13 +179,7 @@ export const parsePreventOpponentCharactersRestInstruction: InstructionParser =
 
 const parseOpponentRefreshLockTarget = (
   text: string,
-):
-  | {
-      readonly target: Target;
-      readonly evidence: readonly PrimitiveEvidence[];
-      readonly rest: string;
-    }
-  | undefined => {
+): RefreshLockTargetParseResult | undefined => {
   const cardinality = parseUpToCardinality({ text });
   if (cardinality !== undefined) {
     const restedDon = parseOpponentRestedDonRefreshLockTarget(
@@ -318,36 +312,11 @@ const parseOpponentRestedDonRefreshLockTarget = (
   text: string,
   min: number,
   max: number,
-):
-  | {
-      readonly evidence: readonly PrimitiveEvidence[];
-      readonly rest: string;
-      readonly target: Target;
-    }
-  | undefined => {
-  const match =
-    /^of your opponent's rested DON!! cards?\b\s*(?<rest>.*)$/iu.exec(text);
-  if (match === null) {
-    return undefined;
-  }
-  return {
-    target: {
-      type: "chooseFromZones",
-      request: {
-        timing: "onResolution",
-        chooser: "self",
-        player: "opponent",
-        zones: ["costArea"],
-        filter: {
-          categories: ["don"],
-          state: "rested",
-        },
-        min,
-        max,
-        allowFewerIfUnavailable: true,
-        visibility: "public",
-      },
-    },
+): RefreshLockTargetParseResult | undefined =>
+  parseOpponentRestedChooseFromZonesRefreshLockTarget(text, min, max, {
+    pattern: /^of your opponent's rested DON!! cards?\b\s*(?<rest>.*)$/iu,
+    zones: ["costArea"],
+    categories: ["don"],
     evidence: [
       "target:opponentRestedCards",
       "player:opponent",
@@ -355,46 +324,18 @@ const parseOpponentRestedDonRefreshLockTarget = (
       "filter:category:don",
       "filter:state:rested",
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
-  };
-};
+  });
 
 const parseOpponentRestedCharactersOrStagesRefreshLockTarget = (
   text: string,
   min: number,
   max: number,
-):
-  | {
-      readonly evidence: readonly PrimitiveEvidence[];
-      readonly rest: string;
-      readonly target: Target;
-    }
-  | undefined => {
-  const match =
-    /^of your opponent's rested Characters or Stages\b\s*(?<rest>.*)$/iu.exec(
-      text,
-    );
-  if (match === null) {
-    return undefined;
-  }
-  return {
-    target: {
-      type: "chooseFromZones",
-      request: {
-        timing: "onResolution",
-        chooser: "self",
-        player: "opponent",
-        zones: ["characterArea", "stageArea"],
-        filter: {
-          categories: ["character", "stage"],
-          state: "rested",
-        },
-        min,
-        max,
-        allowFewerIfUnavailable: true,
-        visibility: "public",
-      },
-    },
+): RefreshLockTargetParseResult | undefined =>
+  parseOpponentRestedChooseFromZonesRefreshLockTarget(text, min, max, {
+    pattern:
+      /^of your opponent's rested Characters or Stages\b\s*(?<rest>.*)$/iu,
+    zones: ["characterArea", "stageArea"],
+    categories: ["character", "stage"],
     evidence: [
       "target:opponentRestedCards",
       "player:opponent",
@@ -404,9 +345,7 @@ const parseOpponentRestedCharactersOrStagesRefreshLockTarget = (
       "filter:category:stage",
       "filter:state:rested",
     ],
-    rest: match.groups?.["rest"]?.trim() ?? "",
-  };
-};
+  });
 
 const parseAnyRestedCharacterRefreshLockTarget = (
   text: string,
@@ -454,37 +393,11 @@ const parseOpponentRestedCardsRefreshLockTarget = (
   text: string,
   min: number,
   max: number,
-):
-  | {
-      readonly evidence: readonly PrimitiveEvidence[];
-      readonly rest: string;
-      readonly target: Target;
-    }
-  | undefined => {
-  const match = /^of your opponent's rested cards?\b\s*(?<rest>.*)$/iu.exec(
-    text,
-  );
-  if (match === null) {
-    return undefined;
-  }
-  return {
-    target: {
-      type: "chooseFromZones",
-      request: {
-        timing: "onResolution",
-        chooser: "self",
-        player: "opponent",
-        zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
-        filter: {
-          categories: ["leader", "character", "stage", "don"],
-          state: "rested",
-        },
-        min,
-        max,
-        allowFewerIfUnavailable: true,
-        visibility: "public",
-      },
-    },
+): RefreshLockTargetParseResult | undefined =>
+  parseOpponentRestedChooseFromZonesRefreshLockTarget(text, min, max, {
+    pattern: /^of your opponent's rested cards?\b\s*(?<rest>.*)$/iu,
+    zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
+    categories: ["leader", "character", "stage", "don"],
     evidence: [
       "target:opponentRestedCards",
       "player:opponent",
@@ -498,6 +411,49 @@ const parseOpponentRestedCardsRefreshLockTarget = (
       "filter:category:don",
       "filter:state:rested",
     ],
+  });
+
+interface RefreshLockTargetParseResult {
+  readonly evidence: readonly PrimitiveEvidence[];
+  readonly rest: string;
+  readonly target: Target;
+}
+
+function parseOpponentRestedChooseFromZonesRefreshLockTarget(
+  text: string,
+  min: number,
+  max: number,
+  options: {
+    readonly pattern: RegExp;
+    readonly zones: readonly Zone[];
+    readonly categories: readonly CardCategory[];
+    readonly evidence: readonly PrimitiveEvidence[];
+  },
+): RefreshLockTargetParseResult | undefined {
+  const match = options.pattern.exec(text);
+  if (match === null) {
+    return undefined;
+  }
+
+  return {
+    target: {
+      type: "chooseFromZones",
+      request: {
+        timing: "onResolution",
+        chooser: "self",
+        player: "opponent",
+        zones: [...options.zones],
+        filter: {
+          categories: [...options.categories],
+          state: "rested",
+        },
+        min,
+        max,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+    },
+    evidence: options.evidence,
     rest: match.groups?.["rest"]?.trim() ?? "",
   };
-};
+}
