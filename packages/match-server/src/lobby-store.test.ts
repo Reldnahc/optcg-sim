@@ -11,9 +11,13 @@ import type { RedisLike, RedisSetOptions } from "./redis-match-persistence.js";
 class FakeRedis implements RedisLike {
   public readonly strings = new Map<string, string>();
   public readonly lists = new Map<string, string[]>();
+  public afterGet?: (key: string, value: string | null) => void;
+  public beforeCompareAndDelete?: (key: string, expectedValue: string) => void;
 
   public get(key: string): Promise<string | null> {
-    return Promise.resolve(this.strings.get(key) ?? null);
+    const value = this.strings.get(key) ?? null;
+    this.afterGet?.(key, value);
+    return Promise.resolve(value);
   }
 
   public set(
@@ -38,6 +42,7 @@ class FakeRedis implements RedisLike {
     key: string,
     expectedValue: string,
   ): Promise<boolean> {
+    this.beforeCompareAndDelete?.(key, expectedValue);
     if (this.strings.get(key) !== expectedValue) {
       return Promise.resolve(false);
     }
@@ -146,5 +151,34 @@ describe("redis lobby store", () => {
     await expect(
       store.updateLobby("lobby-test", () => Promise.resolve(undefined)),
     ).rejects.toThrow(/Lobby is busy/u);
+  });
+
+  test("does not delete a replacement lobby lock when stale owner releases", async () => {
+    const redis = new FakeRedis();
+    const store = createRedisLobbyStore({ redis });
+    await store.createLobby(lobby());
+    const lockKey = "lobby:lobby-test:lock";
+    let replacedLock = false;
+    const replaceLock = (): void => {
+      if (replacedLock) {
+        return;
+      }
+      replacedLock = true;
+      redis.strings.set(lockKey, "replacement-owner");
+    };
+    redis.afterGet = (key, value) => {
+      if (key === lockKey && value !== null) {
+        replaceLock();
+      }
+    };
+    redis.beforeCompareAndDelete = (key) => {
+      if (key === lockKey) {
+        replaceLock();
+      }
+    };
+
+    await store.updateLobby("lobby-test", () => Promise.resolve(undefined));
+
+    expect(redis.strings.get(lockKey)).toBe("replacement-owner");
   });
 });

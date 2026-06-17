@@ -227,10 +227,7 @@ const releaseLock = async (
   lobbyId: string,
   token: string,
 ): Promise<void> => {
-  const key = keyForLock(lobbyId);
-  if ((await redis.get(key)) === token) {
-    await redis.del(key);
-  }
+  await redis.compareAndDelete(keyForLock(lobbyId), token);
 };
 
 export const createRedisLobbyStore = ({

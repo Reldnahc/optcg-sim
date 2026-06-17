@@ -37,7 +37,11 @@ import {
   type DevSocketConnection,
 } from "./dev-socket-connections.js";
 import { connectedPlayerIdsForMatch } from "./dev-match-connection-state.js";
-import { advanceMatchTimersAndBroadcast } from "./dev-match-timer-broadcast.js";
+import {
+  advanceMatchTimersAndBroadcast,
+  advanceMatchTimersAndBroadcastSafely,
+  createSerializedMatchTimerAdvanceScheduler,
+} from "./dev-match-timer-broadcast.js";
 import {
   applyBrowserCorsHeaders,
   handleBrowserCorsPreflight,
@@ -526,6 +530,7 @@ const handleWebSocketUpgrade = async (
   lobbyConnections: Set<DevLobbySocketConnection>,
   socketIdleTimeoutMs: number,
   rematchLobbyDisconnectGraceMs: number,
+  onMatchTimerError: (error: unknown) => void,
 ): Promise<void> => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
@@ -681,15 +686,17 @@ const handleWebSocketUpgrade = async (
   registerConnectionLifecycle(connection, () => {
     connections.delete(connection);
     lobbyRegistry.cancelRematchConsensusForMatch(matchId);
-    void registry
-      .advanceTimers({
-        elapsedMs: 0,
-        connectedPlayerIds: (id) => connectedPlayerIdsForMatch(id, connections),
-        matchIds: [matchId],
-      })
-      .then(() => {
+    advanceMatchTimersAndBroadcastSafely({
+      registry,
+      connections,
+      elapsedMs: 0,
+      broadcast: () => undefined,
+      matchIds: [matchId],
+      afterAdvance: () => {
         broadcastMatchState(matchId, registry, connections);
-      });
+      },
+      onError: onMatchTimerError,
+    });
   });
   if (match === undefined) {
     sendSocketJson(
@@ -837,6 +844,7 @@ export const createMatchHttpServer = async (
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
   const staticAssetsDirectory = options.staticAssetsDirectory;
+  const onMatchTimerError = options.onMatchTimerError ?? (() => undefined);
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -845,24 +853,26 @@ export const createMatchHttpServer = async (
         : { authBaseUrl: options.authBaseUrl }),
     });
   const replayRepository = resolveReplayRepository(options);
-  let lastMatchTimerTickMs = Date.now();
-  const matchTimerInterval = setInterval(() => {
-    const now = Date.now();
-    const elapsedMs = Math.max(0, now - lastMatchTimerTickMs);
-    lastMatchTimerTickMs = now;
-    void advanceMatchTimersAndBroadcast(
-      registry,
-      socketConnections,
-      elapsedMs,
-      (matchId, sync) => {
-        if (sync === "timers") {
-          broadcastMatchTimers(matchId, registry, socketConnections);
-          return;
-        }
-        broadcastMatchState(matchId, registry, socketConnections);
-      },
-    );
-  }, matchTimerTickMs);
+  const matchTimerScheduler = createSerializedMatchTimerAdvanceScheduler({
+    advance: (elapsedMs) =>
+      advanceMatchTimersAndBroadcast(
+        registry,
+        socketConnections,
+        elapsedMs,
+        (matchId, sync) => {
+          if (sync === "timers") {
+            broadcastMatchTimers(matchId, registry, socketConnections);
+            return;
+          }
+          broadcastMatchState(matchId, registry, socketConnections);
+        },
+      ),
+    onError: onMatchTimerError,
+  });
+  const matchTimerInterval = setInterval(
+    matchTimerScheduler.tick,
+    matchTimerTickMs,
+  );
   matchTimerInterval.unref();
   const server = createServer((request, response) => {
     applyBrowserCorsHeaders(request, response, allowedBrowserOrigins);
@@ -919,6 +929,7 @@ export const createMatchHttpServer = async (
       lobbySocketConnections,
       socketIdleTimeoutMs,
       rematchLobbyDisconnectGraceMs,
+      onMatchTimerError,
     ).catch(() => {
       socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     });

@@ -43,6 +43,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly rematchLobbyDisconnectGraceMs?: number;
   readonly matchTimerPolicy?: MatchTimerPolicy;
   readonly matchTimerTickMs?: number;
+  readonly onMatchTimerError?: (error: unknown) => void;
 }
 
 export const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
