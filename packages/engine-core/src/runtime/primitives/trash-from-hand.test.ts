@@ -258,6 +258,34 @@ test("valid trashFromHand response moves selected hand cards to public trash and
   );
 });
 
+test("live trashFromHand response preserves omitted state hash", () => {
+  const { result: decisionResult } = createTrashDecision({
+    type: "trashFromHand",
+    player: "self",
+    chooser: "self",
+    count: 2,
+  });
+  const beforeP1 = must(decisionResult.state.players[p1], "p1 before");
+  const selected = beforeP1.hand.slice(0, 2).map((card) => handRef(card));
+  const decision = must(decisionResult.state.pendingDecision, "decision");
+
+  const result = applyAction(
+    decisionResult.state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: selected },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("up-to trashFromHand allows choosing fewer than the maximum hand cards", () => {
   const { result: decisionResult } = createTrashDecision({
     type: "trashFromHand",

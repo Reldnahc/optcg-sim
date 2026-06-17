@@ -47,6 +47,7 @@ import {
 } from "./effect-runtime.js";
 import { getReplacementDecisionLegalActions } from "./replacement/decision-actions.js";
 import { applyReplacementRestTargetDecisionWithContinuation as applyReplacementContinuationDecision } from "./replacement/rest-target-actions.js";
+import { prependEventsToEngineResult } from "./engine-result-events.js";
 import { continueRuntimeAfterDecisionResult } from "./effect-runtime-decision-continuation.js";
 import {
   resumeSequenceFrameAfterLifeTriggerDecision,
@@ -648,21 +649,18 @@ const applyRespondToDecision = (
     "engine:decision:sequenceSelectCards",
     () => applySequenceSelectCardsChoiceResponse(state, action, options),
   );
-  if (sequenceSelectCards !== null) {
+  if (sequenceSelectCards !== null)
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       sequenceSelectCards,
       options,
     );
-  }
   const attackCost = profileActionSpan(
     options,
     "engine:decision:attackCost",
     () => applyAttackCostDecisionResponse(state, action, options),
   );
-  if (attackCost !== null) {
-    return attackCost;
-  }
+  if (attackCost !== null) return attackCost;
   if (isHandSelectionSelectCardsDecision(decision)) {
     const handSelection = profileActionSpan(
       options,
@@ -688,18 +686,14 @@ const applyRespondToDecision = (
     action,
     options,
   );
-  if (battleResult !== null) {
-    return battleResult;
-  }
+  if (battleResult !== null) return battleResult;
   const lifeTriggerResult = applyLifeTriggerDecisionResponseWithContinuation(
     state,
     action,
     decision,
     options,
   );
-  if (lifeTriggerResult !== null) {
-    return lifeTriggerResult;
-  }
+  if (lifeTriggerResult !== null) return lifeTriggerResult;
   const returnDonBodyResult = profileActionSpan(
     options,
     "engine:decision:returnDonBody",
@@ -829,7 +823,7 @@ const applyRespondToDecision = (
     const trashResult = profileActionSpan(
       options,
       "engine:decision:trashFromHand",
-      () => applySupportedTrashFromHandChoiceResponse(state, action),
+      () => applySupportedTrashFromHandChoiceResponse(state, action, options),
     );
     if (!trashResult.ok) {
       return trashResult.result;
@@ -861,7 +855,12 @@ const applyRespondToDecision = (
       trashResult.allEvents,
       trashResult.resolutionEvents,
     );
-    return continueAfterEffectDecision(state, decision, finalized, options);
+    return continueAfterEffectDecision(
+      state,
+      decision,
+      prependEventsToEngineResult(finalized, [], options),
+      options,
+    );
   }
   const setupStartOfGame = profileActionSpan(
     options,

@@ -15,6 +15,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -408,10 +409,11 @@ const findDecisionQueueEntry = (
 export const applySupportedTrashFromHandChoiceResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): TrashFromHandResponseApplication => {
   const fail = (reason: string): TrashFromHandResponseApplication => ({
     ok: false,
-    result: toEngineResult(state, [], invalidDecision(reason)),
+    result: toEngineResult(state, [], invalidDecision(reason), options),
   });
 
   const decision = state.pendingDecision;
@@ -528,7 +530,7 @@ export const applySupportedTrashFromHandChoiceResponse = (
     if (!sequenceResume.ok) {
       return {
         ok: false,
-        result: toEngineResult(state, [], [sequenceResume.error]),
+        result: toEngineResult(state, [], [sequenceResume.error], options),
       };
     }
     nextState = sequenceResume.state;
