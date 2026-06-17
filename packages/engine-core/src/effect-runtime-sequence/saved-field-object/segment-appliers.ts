@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import { appendEvent, toStateSeq } from "../../action-results.js";
+import { reifyCardRef } from "../../actions/state.js";
 import { moveConcreteCardsToTrash } from "../../concrete-card-movement.js";
 import {
   executeSelectedTargetEffectPrimitive,
@@ -550,12 +551,29 @@ export const applySavedFieldObjectChangeAttackTargetSequenceSegment = (params: {
       state: params.state,
     };
   }
+  const selected = reifyCardRef(params.state, selectedTarget);
+  if (selected === null) {
+    return {
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
 
   const nextState = {
     ...params.state,
     battle: {
       ...params.state.battle,
       currentTarget: selectedTarget,
+      damageCount: selected.isLeader ? params.state.battle.damageCount : 1,
     },
     seq: toStateSeq(params.state.seq + 1),
   };

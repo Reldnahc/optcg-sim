@@ -93,6 +93,21 @@ const optionalTriggerCardTrashThenRetargetSequence = (): Extract<
   ],
 });
 
+const installSupportedDoubleAttackLeader = (
+  state: ReturnType<typeof setupAttackState>,
+) => {
+  const p1State = must(state.players[p1], "p1");
+  const attacker = p1State.leader;
+  state.cardManifest.cards[attacker.cardId] = {
+    ...resolvedCard({
+      cardId: attacker.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    printedKeywords: ["doubleAttack"],
+  };
+};
+
 test("defender On Your Opponent's Attack hand-trash retarget resumes to legal counter pass", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -216,6 +231,145 @@ test("defender On Your Opponent's Attack hand-trash retarget resumes to legal co
     targeted.state.battle.currentTarget.instanceId,
     newTarget.instanceId,
   );
+  const decision = must(targeted.state.pendingDecision, "counter decision");
+  const passAction = getLegalActions(targeted.state, p2).find(
+    (action) =>
+      action.type === "respondToDecision" &&
+      action.decisionId === decision.id &&
+      action.response.type === "cards" &&
+      action.response.cards.length === 0,
+  );
+  if (passAction === undefined) {
+    assert.fail("expected counter-step pass action after hand-trash retarget");
+  }
+
+  const passed = applyAction(targeted.state, passAction);
+
+  assert.equal(passed.errors, undefined);
+  assert.equal(passed.state.battle, undefined);
+});
+
+test("defender hand-trash retarget from Double Attack leader to Character clears multi-damage", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = p2State.leader;
+  const costCard = must(p2State.hand[0], "trigger hand cost card");
+  const costDefinitionId = "def-trigger-hand-cost-card";
+  const costDefinition = effectDefinition(costCard.cardId, { type: "trigger" });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [costDefinitionId]: costDefinition,
+  };
+  state.cardManifest.cards[costCard.cardId] = resolvedCard({
+    cardId: costCard.cardId,
+    category: "event",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: costDefinitionId,
+      rulesVersion: costDefinition.metadata.rulesVersion,
+      sourceTextHash: costDefinition.metadata.sourceTextHash,
+    },
+  });
+  const newTarget = {
+    ...must(p2State.hand[1], "new attack target"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p2,
+      slot: "character" as const,
+      index: 0,
+    },
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  p2State.characters = [newTarget];
+  p2State.hand = [costCard, ...p2State.hand.slice(2)].map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const costCardInHand = must(p2State.hand[0], "trigger hand cost card");
+  state.cardManifest.cards[newTarget.cardId] = {
+    ...resolvedCard({
+      cardId: newTarget.cardId,
+      category: "character",
+      power: 3000,
+    }),
+    types: ["Blackbeard Pirates"],
+  };
+  installSupportedDoubleAttackLeader(state);
+  const definition = withOnOpponentAttackDrawEffect(
+    state,
+    source,
+    "def-on-opponent-attack-trigger-trash-retarget-double-attack",
+  );
+  const effect = must(definition.effects[0], "On Opponent Attack effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-opponent-attack-trigger-trash-retarget-double-attack": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: optionalTriggerCardTrashThenRetargetSequence(),
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.battle?.damageCount, 2);
+  assert.equal(opened.state.pendingDecision?.type, "payCost");
+
+  const paid = applyAction(opened.state, {
+    type: "respondToDecision",
+    decisionId: opened.state.pendingDecision.id,
+    response: {
+      type: "payment",
+      optionId: "trashFromHand",
+      selectedCardInstanceIds: [costCardInHand.instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision?.type, "selectTargets");
+
+  const targeted = applyAction(paid.state, {
+    type: "respondToDecision",
+    decisionId: paid.state.pendingDecision.id,
+    response: {
+      type: "targets",
+      targets: [
+        {
+          instanceId: newTarget.instanceId,
+          cardId: newTarget.cardId,
+          playerId: p2,
+          zone: newTarget.zone,
+        },
+      ],
+    },
+  });
+
+  assert.equal(targeted.errors, undefined);
+  assert.equal(
+    targeted.state.battle?.currentTarget.instanceId,
+    newTarget.instanceId,
+  );
+  assert.equal(targeted.state.battle.damageCount, 1);
   const decision = must(targeted.state.pendingDecision, "counter decision");
   const passAction = getLegalActions(targeted.state, p2).find(
     (action) =>
