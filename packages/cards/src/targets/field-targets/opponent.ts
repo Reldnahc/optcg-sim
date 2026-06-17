@@ -169,14 +169,16 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
 export function parseOpponentCharactersOrDonCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
-  const match =
-    /^of your opponent's (?:(?<charactersFirst>Characters? or DON!! cards?)|(?<donFirst>DON!! cards? or Characters?))\b\s*(?<rest>.*)$/i.exec(
-      input.text,
-    );
+  const match = /^of your opponent's (?<targetText>.+)$/i.exec(input.text);
   if (match === null) {
     return undefined;
   }
-  const predicateText = match.groups?.["rest"]?.trim() ?? "";
+  const targetText = match.groups?.["targetText"]?.trim() ?? "";
+  const characterAlternative = parseCharacterAlternative(targetText);
+  if (characterAlternative === undefined) {
+    return undefined;
+  }
+  const { predicateText } = characterAlternative;
   const predicates =
     predicateText.length > 0
       ? parseCardFilterPredicates(
@@ -228,3 +230,20 @@ export function parseOpponentCharactersOrDonCardsTarget(
     rest: predicateRest === "." ? "" : predicateRest,
   };
 }
+
+const parseCharacterAlternative = (
+  text: string,
+): { readonly predicateText: string } | undefined => {
+  const charactersFirst =
+    /^Characters? or DON!! cards?\b\s*(?<rest>.*)$/iu.exec(text);
+  if (charactersFirst !== null) {
+    return { predicateText: charactersFirst.groups?.["rest"]?.trim() ?? "" };
+  }
+
+  const donFirst = /^DON!! cards? or (?<characters>.+)$/iu.exec(text);
+  const characterText = donFirst?.groups?.["characters"]?.trim();
+  if (characterText === undefined) {
+    return undefined;
+  }
+  return { predicateText: characterText };
+};
