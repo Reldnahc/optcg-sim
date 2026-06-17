@@ -145,6 +145,9 @@ const activatedReactionEventsForSource = (
     if (acceptsTriggerType("cardPlayed")) {
       return event.type === "cardPlayed" && isRecentRuntimeEvent(state, event);
     }
+    if (acceptsTriggerType("cardRested")) {
+      return event.type === "cardRested" && isRecentRuntimeEvent(state, event);
+    }
     if (acceptsTriggerType("fieldRemoved")) {
       return event.type === "cardMoved" && isRecentRuntimeEvent(state, event);
     }

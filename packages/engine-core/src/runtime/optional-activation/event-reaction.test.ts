@@ -215,6 +215,92 @@ const appendCardPlayedEvent = (
   state.eventJournal = [...state.eventJournal, ...events];
 };
 
+const installActivatedTrashSelfDrawDefinition = (params: {
+  state: ReturnType<typeof createActiveState>;
+  sourceCardId: CardId;
+  effectId: EffectId;
+  trigger: EffectDefinition["effects"][number]["trigger"];
+}): EffectDefinition => {
+  const definitionId = `def-${String(params.effectId)}`;
+  const definition: EffectDefinition = {
+    cardId: params.sourceCardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: params.effectId,
+        category: "activate",
+        trigger: params.trigger,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: { type: "trashSelf", optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: { type: "draw", player: "self", count: 2 },
+            },
+          ],
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: `${definitionId}:source`,
+      rulesVersion: `${definitionId}:rules`,
+      effectDefinitionsVersion: "0.1.0",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  params.state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  params.state.cardManifest.effectDefinitions = {
+    ...params.state.cardManifest.effectDefinitions,
+    [definitionId]: definition,
+  };
+  params.state.cardManifest.cards[params.sourceCardId] = resolvedCard({
+    cardId: params.sourceCardId,
+    category: "character",
+    cost: 5,
+    power: 6000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+      sourceTextHash: definition.metadata.sourceTextHash,
+      rulesVersion: definition.metadata.rulesVersion,
+      cardDataVersion: params.state.cardManifest.cardDataVersion,
+    },
+  });
+  return definition;
+};
+
+const appendCardRestedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  card: CardInstance,
+): void => {
+  const events: EngineEvent[] = [];
+  appendEvent(
+    state,
+    events,
+    "cardRested",
+    {
+      playerId: card.controller,
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      category: "character",
+      sourceControllerId: p2,
+      sourceKind: "effect",
+    },
+    { type: "public" },
+  );
+  state.eventJournal = [...state.eventJournal, ...events];
+};
+
 const appendFieldRemovedByEffectEvent = (
   state: ReturnType<typeof createActiveState>,
   removed: CardInstance,
@@ -411,6 +497,86 @@ test("activated played-card reactions honor effect-entry-point filters", () => {
     must(result.state.players[p1], "p1 after").hand.length,
     beforeHand + 1,
   );
+});
+
+test("activated card-rested reactions support optional self-trash costs before body effects", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const sourceCard = must(p1State.hand[0], "source card");
+  const drawCards: CardInstance[] = [
+    must(p1State.hand[1], "first draw card"),
+    must(p1State.hand[2], "second draw card"),
+  ].map(
+    (card, index): CardInstance => ({
+      ...card,
+      zone: { zone: "deck", playerId: p1, slot: "deck", index },
+    }),
+  );
+  const source: CardInstance = {
+    ...sourceCard,
+    zone: {
+      zone: "characterArea",
+      playerId: p1,
+      slot: "character",
+      index: 0,
+    },
+    state: "rested",
+    attachedDon: [],
+  };
+  p1State.hand = p1State.hand.slice(3);
+  p1State.characters = [source];
+  p1State.deck = drawCards;
+  const effectId = toEffectId("activated-card-rested-trash-self-draw");
+  installActivatedTrashSelfDrawDefinition({
+    state,
+    sourceCardId: source.cardId,
+    effectId,
+    trigger: {
+      type: "cardRested",
+      target: "self",
+      player: "self",
+      sourceController: "opponent",
+      sourceKind: "effect",
+    },
+  });
+  const beforeDeck = p1State.deck.length;
+  const beforeHand = p1State.hand.length;
+  appendCardRestedEvent(state, source);
+
+  const p1Actions = getLegalActions(state, p1).filter(
+    (action) => action.type === "activateEffect",
+  );
+
+  assert.equal(p1Actions.length, 1);
+  assert.equal(p1Actions[0]?.effectId, effectId);
+
+  const prompted = applyAction(state, must(p1Actions[0], "activated reaction"));
+  const decision = must(prompted.state.pendingDecision, "trash-self cost");
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "trashSelf");
+
+  const paid = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "trashSelf",
+    },
+  });
+  const afterP1 = must(paid.state.players[p1], "p1 after");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(afterP1.deck.length, beforeDeck - 2);
+  assert.equal(afterP1.hand.length, beforeHand + 2);
+  assert.equal(
+    afterP1.characters.some((card) => card.instanceId === source.instanceId),
+    false,
+  );
+  assert.equal(afterP1.trash.at(0)?.instanceId, source.instanceId);
 });
 
 test("activated played-card reactions support any-of source filters and reusable moveCards bodies", () => {

@@ -42,6 +42,12 @@ const isSupportedActivatedReactionTrigger = (trigger: Trigger): boolean => {
   if (trigger.type === "cardPlayed") {
     return isSupportedActivatedReactionCardPlayedTrigger(trigger);
   }
+  if (trigger.type === "cardRested") {
+    return (
+      isSupportedEventCardFilter(trigger.filter) &&
+      isSupportedEventCardFilter(trigger.sourceFilter)
+    );
+  }
   if (trigger.type === "fieldRemoved") {
     return (
       trigger.target !== "self" && isSupportedEventCardFilter(trigger.filter)
