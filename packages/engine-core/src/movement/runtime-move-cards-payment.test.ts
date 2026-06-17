@@ -73,6 +73,56 @@ test("hand to deck top moveCards payment route supports only one card until orde
   assert.equal(isSupportedMoveCardsPaymentRoute(option), false);
 });
 
+test("moveCards payment can place selected hand cards on deck bottom in selected order", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const selected = [
+    must(player.hand[1], "first selected hand card"),
+    must(player.hand[0], "second selected hand card"),
+  ];
+  const originalDeckIds = player.deck.map((card) => card.instanceId);
+  const option: MoveCardsPaymentOption = {
+    id: "moveCards",
+    type: "moveCards",
+    count: 2,
+    from: { player: "self", zone: "hand" },
+    to: { player: "self", zone: "deck", position: "bottom" },
+  };
+  const events: EngineEvent[] = [];
+
+  assert.equal(isSupportedMoveCardsPaymentRoute(option), true);
+
+  const updated = applyMoveCardsPayment({
+    decisionId: "decision:hand-to-deck-bottom" as DecisionId,
+    events,
+    player,
+    playerId: p1,
+    selected: selected.map((card) => card.instanceId),
+    selectedOption: option,
+    state,
+  });
+
+  assert.ok(updated);
+  assert.deepEqual(
+    updated.deck.map((card) => card.instanceId),
+    [
+      ...originalDeckIds,
+      must(selected[0], "first moved").instanceId,
+      must(selected[1], "second moved").instanceId,
+    ],
+  );
+  assert.equal(
+    updated.hand.some((card) =>
+      selected.some((moved) => moved.instanceId === card.instanceId),
+    ),
+    false,
+  );
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ["cardMoved", "cardMoved", "cardMoved", "cardMoved"],
+  );
+});
+
 test("moveCards payment can place a selected field character on deck bottom", () => {
   const state = createActiveState();
   const player = must(state.players[p1], "p1");

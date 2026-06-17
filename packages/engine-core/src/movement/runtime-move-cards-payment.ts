@@ -38,9 +38,9 @@ export const isSupportedMoveCardsPaymentRoute = (
     option.from.zone === "hand" &&
     option.from.position === undefined &&
     option.to.zone === "deck" &&
-    option.to.position === "top"
+    (option.to.position === "top" || option.to.position === "bottom")
   ) {
-    return option.count === 1;
+    return option.to.position === "bottom" || option.count === 1;
   }
   if (
     (option.from.zone === "characterArea" ||
@@ -152,9 +152,13 @@ export const applyMoveCardsPayment = (params: {
     params.selectedOption.from.zone === "hand" &&
     params.selectedOption.from.position === undefined &&
     params.selectedOption.to.zone === "deck" &&
-    params.selectedOption.to.position === "top" &&
-    params.selectedOption.count === 1
+    (params.selectedOption.to.position === "top" ||
+      params.selectedOption.to.position === "bottom") &&
+    (params.selectedOption.to.position === "bottom" ||
+      params.selectedOption.count === 1) &&
+    params.selected.length === params.selectedOption.count
   ) {
+    const placeOnTop = params.selectedOption.to.position === "top";
     const selectedCards: CardInstance[] = [];
     for (const selectedId of params.selected) {
       const card = params.player.hand.find(
@@ -181,7 +185,7 @@ export const applyMoveCardsPayment = (params: {
         zone: "deck" as const,
         playerId: params.playerId,
         slot: "deck" as const,
-        index,
+        index: placeOnTop ? index : params.player.deck.length + index,
       },
     }));
     for (const [index, movedCard] of movedCards.entries()) {
@@ -238,7 +242,9 @@ export const applyMoveCardsPayment = (params: {
         "hand",
       ),
       deck: reindexZoneCards(
-        [...movedCards, ...params.player.deck],
+        placeOnTop
+          ? [...movedCards, ...params.player.deck]
+          : [...params.player.deck, ...movedCards],
         "deck",
         params.playerId,
         "deck",

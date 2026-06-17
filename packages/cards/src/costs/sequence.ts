@@ -339,7 +339,7 @@ function normalizeAdjacentOptionalCostBoundaries(text: string): string {
 
 function normalizeCompositePlaceCostBoundaries(text: string): string {
   return text.replace(
-    /^You may place this Character and (?<trashCost>[1-9]\d* .+? from your trash at the bottom of your deck in any order)$/iu,
-    "You may place this Character at the bottom of your deck and place $<trashCost>",
+    /^You may place (?<source>this (?:Character|card)) and (?<zoneCost>[1-9]\d* .+? from your (?:hand|trash) at the bottom of your deck(?: in any order)?)$/iu,
+    "You may place $<source> at the bottom of your deck and place $<zoneCost>",
   );
 }

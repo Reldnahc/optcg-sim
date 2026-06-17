@@ -30,7 +30,7 @@ export const parseMoveCardsCost = (
   }
 
   const thisCharacterToDeckBottom =
-    parseThisCharacterToDeckBottomCostRoute(afterAction);
+    parseSourceCardToDeckBottomCostRoute(afterAction);
   if (thisCharacterToDeckBottom !== undefined) {
     const cost: Extract<OptionalCost, { type: "moveCards" }> = {
       type: "moveCards",
@@ -47,7 +47,7 @@ export const parseMoveCardsCost = (
     };
     const evidence: PrimitiveEvidence[] = [
       "cost:moveCards",
-      "target:thisCharacter",
+      thisCharacterToDeckBottom.evidence,
       "cardinality:exact",
       "count:positiveInteger",
       "player:self",
@@ -352,14 +352,21 @@ function parseThisStageToOwnerDeckBottomCostRoute(
     : undefined;
 }
 
-function parseThisCharacterToDeckBottomCostRoute(
+function parseSourceCardToDeckBottomCostRoute(
   text: string,
-): true | undefined {
-  return /^this Character at the bottom of (?:your|the owner's) deck$/iu.test(
-    text,
-  )
-    ? true
-    : undefined;
+): { readonly evidence: PrimitiveEvidence } | undefined {
+  const match =
+    /^this (?<target>Character|card) at the bottom of (?:your|the owner's) deck$/iu.exec(
+      text,
+    );
+  const target = match?.groups?.["target"]?.toLowerCase();
+  if (target !== "character" && target !== "card") {
+    return undefined;
+  }
+  return {
+    evidence:
+      target === "character" ? "target:thisCharacter" : "target:thisCard",
+  };
 }
 
 const parseLifeToHandCost = (

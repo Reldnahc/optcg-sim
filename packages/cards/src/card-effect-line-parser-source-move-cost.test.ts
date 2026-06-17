@@ -121,3 +121,74 @@ it.each([
     );
   },
 );
+
+it("parses source-plus-hand bottom-deck costs before an independent body", () => {
+  const parsed = parseCardEffectLine(
+    "[Activate: Main] You may place this card and 1 card from your hand at the bottom of your deck in any order: Draw 2 cards.",
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "sequence",
+                optional: true,
+                costs: [
+                  {
+                    type: "moveCards",
+                    count: 1,
+                    from: {
+                      player: "self",
+                      zone: "characterArea",
+                      source: "effectSource",
+                    },
+                    to: {
+                      player: "self",
+                      zone: "deck",
+                      position: "bottom",
+                    },
+                  },
+                  {
+                    type: "moveCards",
+                    count: 1,
+                    from: { player: "self", zone: "hand" },
+                    to: {
+                      player: "self",
+                      zone: "deck",
+                      position: "bottom",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: { type: "draw", count: 2 },
+          },
+        ],
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:moveCards",
+      "target:thisCard",
+      "zone:characterArea",
+      "zone:hand",
+      "destination:deck",
+      "position:bottom",
+      "instruction:draw",
+    ]),
+  );
+});
