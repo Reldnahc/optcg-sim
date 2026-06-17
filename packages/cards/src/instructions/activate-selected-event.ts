@@ -1,4 +1,4 @@
-import type { HandSelectionId } from "@optcg/types";
+import type { HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -6,6 +6,8 @@ import type { InstructionParser } from "../types.js";
 
 const handEventActivationSelection =
   "handSelection:activate-event" as HandSelectionId;
+const trashEventActivationSelection =
+  "trashSelection:activate-event" as SelectionId;
 
 export const parseActivateSelectedEventInstruction: InstructionParser = (
   input,
@@ -16,7 +18,9 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
     return undefined;
   }
 
-  const cardinality = parseUpToCardinality({ text: afterActivate });
+  const mainEffectPrefix = /^the\s+\[Main\]\s+effect\s+of\s+/iu;
+  const sourceText = afterActivate.replace(mainEffectPrefix, "");
+  const cardinality = parseUpToCardinality({ text: sourceText });
   if (cardinality === undefined) {
     return undefined;
   }
@@ -36,14 +40,14 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
           saveResultAs: handEventActivationSelection,
           effect: {
             type: "selectCards",
-            zone: "hand",
+            zone: source.zone,
             player: "self",
             chooser: "self",
             min: cardinality.cardinality.min,
             max: cardinality.cardinality.max,
             filter: source.filter,
-            saveAs: handEventActivationSelection,
-            visibility: "chooserOnly",
+            saveAs: source.selection,
+            visibility: source.zone === "hand" ? "chooserOnly" : "bothPlayers",
           },
         },
         {
@@ -51,7 +55,10 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
           connector: "ifPossible",
           effect: {
             type: "activateSelectedEvent",
-            selection: handEventActivationSelection,
+            selection: source.selection,
+            ...(source.zone === "trash"
+              ? { sourceZone: "trash" as const }
+              : {}),
             trigger: { type: "main" },
             ignoreCost: true,
           },
@@ -61,7 +68,7 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
     evidence: [
       "instruction:activateSelectedEvent",
       ...cardinality.evidence,
-      "zone:hand",
+      source.zone === "hand" ? "zone:hand" : "zone:trash",
       "player:self",
       "chooser:self:upTo",
       ...source.evidence,
@@ -80,13 +87,17 @@ function parseActivateEventSource(text: string):
       readonly evidence: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
       >["evidence"];
+      readonly selection: SelectionId;
+      readonly zone: "hand" | "trash";
     }
   | undefined {
-  const sourceMatch = /^(?<predicates>.+) from your hand\.?$/i.exec(text);
+  const sourceMatch =
+    /^(?<predicates>.+) (?:from your hand|in your trash)\.?$/i.exec(text);
   const predicateText = sourceMatch?.groups?.["predicates"];
   if (predicateText === undefined) {
     return undefined;
   }
+  const zone = /\bin your trash\.?$/iu.test(text) ? "trash" : "hand";
 
   const predicates = parseCardFilterPredicates({ text: predicateText });
   if (
@@ -100,6 +111,11 @@ function parseActivateEventSource(text: string):
   return {
     filter: predicates.filter,
     evidence: predicates.evidence,
+    selection:
+      zone === "hand"
+        ? handEventActivationSelection
+        : trashEventActivationSelection,
+    zone,
   };
 }
 

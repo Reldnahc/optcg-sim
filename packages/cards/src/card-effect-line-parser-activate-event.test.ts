@@ -62,4 +62,81 @@ describe("selected Event activation parsing", () => {
       ]),
     );
   });
+
+  it("parses conditional costed trash Event activation as reusable selection plus activation", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [On Play] DON!! −1: If your Leader is [Sanji], activate the [Main] effect of up to 1 Event card with a cost of 7 or less in your trash.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        condition: { type: "yourTurn" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1 },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "hasCardInZone",
+                  zone: "leaderArea",
+                  player: "self",
+                  filter: { names: ["Sanji"] },
+                },
+                then: {
+                  type: "sequence",
+                  effects: [
+                    {
+                      effect: {
+                        type: "selectCards",
+                        zone: "trash",
+                        player: "self",
+                        chooser: "self",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          categories: ["event"],
+                          cost: { max: 7 },
+                        },
+                        saveAs: "trashSelection:activate-event",
+                        visibility: "bothPlayers",
+                      },
+                    },
+                    {
+                      effect: {
+                        type: "activateSelectedEvent",
+                        selection: "trashSelection:activate-event",
+                        sourceZone: "trash",
+                        trigger: { type: "main" },
+                        ignoreCost: true,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:yourTurn",
+        "cost:returnDon",
+        "condition:leaderIdentity",
+        "zone:trash",
+        "instruction:activateSelectedEvent",
+        "reference:eventMain",
+      ]),
+    );
+  });
 });

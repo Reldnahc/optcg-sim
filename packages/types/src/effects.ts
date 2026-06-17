@@ -583,6 +583,7 @@ export interface PlaySelectedEffect {
 export interface ActivateSelectedEventEffect {
   type: "activateSelectedEvent";
   selection: SelectionId;
+  sourceZone?: "hand" | "trash";
   trigger: Trigger;
   ignoreCost: boolean;
 }

@@ -118,10 +118,11 @@ export const applyActivateSelectedEventSequenceSegment = (params: {
   }
 
   let changedState = previousResult?.attempted === true;
+  const sourceZone = segment.effect.sourceZone ?? "hand";
   for (const selected of selectedCards) {
     if (
       selected.playerId !== entry.controllerId ||
-      selected.zone?.zone !== "hand"
+      selected.zone?.zone !== sourceZone
     ) {
       nextLedgers = {
         ...nextLedgers,
@@ -147,6 +148,7 @@ export const applyActivateSelectedEventSequenceSegment = (params: {
       state: nextState,
       playerId: entry.controllerId,
       cardInstanceId: selected.instanceId,
+      sourceZone,
       ignoreCost: segment.effect.ignoreCost,
       causedBy: {
         type: "effect",

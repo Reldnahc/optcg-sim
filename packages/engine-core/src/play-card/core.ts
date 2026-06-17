@@ -420,10 +420,18 @@ export const applyRuntimeActivateSelectedEvent = (params: {
   state: GameState;
   playerId: PlayerId;
   cardInstanceId: CardInstance["instanceId"];
+  sourceZone?: "hand" | "trash";
   ignoreCost: boolean;
   causedBy?: CausalityRef;
 }): EngineResult => {
-  const { state, playerId, cardInstanceId, ignoreCost, causedBy } = params;
+  const {
+    state,
+    playerId,
+    cardInstanceId,
+    sourceZone = "hand",
+    ignoreCost,
+    causedBy,
+  } = params;
   const player = state.players[playerId];
   if (player === undefined) {
     return illegalAction(
@@ -431,20 +439,21 @@ export const applyRuntimeActivateSelectedEvent = (params: {
       "activateSelectedEvent requires an existing player.",
     );
   }
-  const handIndex = player.hand.findIndex(
+  const sourceCards = sourceZone === "hand" ? player.hand : player.trash;
+  const sourceIndex = sourceCards.findIndex(
     (card) => card.instanceId === cardInstanceId,
   );
-  if (handIndex < 0) {
+  if (sourceIndex < 0) {
     return illegalAction(
       state,
-      "activateSelectedEvent requires a card in hand.",
+      `activateSelectedEvent requires a card in ${sourceZone}.`,
     );
   }
-  const handCard = player.hand[handIndex];
-  if (handCard === undefined) {
-    return illegalAction(state, "activateSelectedEvent hand card not found.");
+  const sourceCard = sourceCards[sourceIndex];
+  if (sourceCard === undefined) {
+    return illegalAction(state, "activateSelectedEvent card not found.");
   }
-  const supported = getSupportedPlayMetadata(state, handCard);
+  const supported = getSupportedPlayMetadata(state, sourceCard);
   if (supported === null || supported.category !== "event") {
     return illegalAction(
       state,
@@ -454,7 +463,7 @@ export const applyRuntimeActivateSelectedEvent = (params: {
   if (
     !ignoreCost &&
     getActiveDonCount(player.costArea) <
-      getEffectivePlayCost(state, playerId, handCard, supported)
+      getEffectivePlayCost(state, playerId, sourceCard, supported)
   ) {
     return illegalAction(
       state,
@@ -463,18 +472,55 @@ export const applyRuntimeActivateSelectedEvent = (params: {
   }
 
   const events: EngineEvent[] = [];
+  if (sourceZone === "trash") {
+    appendEvent(
+      state,
+      events,
+      "cardPlayed",
+      {
+        playerId,
+        instanceId: sourceCard.instanceId,
+        cardId: sourceCard.cardId,
+        category: supported.category,
+        turnNumber: state.turn.globalTurn,
+      },
+      { type: "public" },
+    );
+    const played = events[events.length - 1];
+    if (played !== undefined && causedBy !== undefined) {
+      played.causedBy = causedBy;
+    }
+
+    const nextStateBase: GameState = {
+      ...state,
+      seq: toStateSeq(state.seq + 1),
+      actionSeq: state.actionSeq,
+    };
+    delete nextStateBase.pendingDecision;
+    const nextState = applyRuleProcessingCheckpoint({
+      state: nextStateBase,
+      events,
+      phase: state.turn.phase,
+      createEvent: (seqOffset, type, payload, visibility) =>
+        createEvent(state, seqOffset, type, payload, visibility),
+    });
+    nextState.eventJournal = [...state.eventJournal, ...events];
+    assertGameStateInvariants(nextState);
+    return toEngineResult(nextState, events);
+  }
+
   appendEvent(
     state,
     events,
     "cardRevealed",
-    { playerId, instanceId: handCard.instanceId, cardId: handCard.cardId },
+    { playerId, instanceId: sourceCard.instanceId, cardId: sourceCard.cardId },
     { type: "public" },
   );
   const revealed = events[events.length - 1];
   if (revealed !== undefined && causedBy !== undefined) {
     revealed.causedBy = causedBy;
   }
-  const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
+  const movedResult = moveConcreteCardsToTrash(state, events, [sourceCard], {
     cardMovedPayloadShape: "zoneRefs",
     cardMovedVisibility: { type: "public" },
     cardTrashedVisibility: { type: "public" },
@@ -492,8 +538,8 @@ export const applyRuntimeActivateSelectedEvent = (params: {
     "cardPlayed",
     {
       playerId,
-      instanceId: handCard.instanceId,
-      cardId: handCard.cardId,
+      instanceId: sourceCard.instanceId,
+      cardId: sourceCard.cardId,
       category: supported.category,
       turnNumber: state.turn.globalTurn,
     },

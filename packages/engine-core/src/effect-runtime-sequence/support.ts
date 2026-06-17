@@ -754,13 +754,14 @@ const isSupportedSequenceBlockWithState = (
         );
       }
       if (segment.effect.type === "activateSelectedEvent") {
+        const sourceZone = segment.effect.sourceZone ?? "hand";
         return (
           segment.effect.ignoreCost &&
           segment.effect.trigger.type === "main" &&
           canConsumeSelectedCards(
             supportState.savedResults,
             segment.effect.selection,
-            ["hand"],
+            [sourceZone],
           ) &&
           recordSupportedProducer(supportState, segment)
         );

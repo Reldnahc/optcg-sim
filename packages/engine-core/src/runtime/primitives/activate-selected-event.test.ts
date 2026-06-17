@@ -5,6 +5,7 @@ import type {
   CardInstance,
   EffectDefinition,
   HandSelectionId,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -60,11 +61,21 @@ const mainEventDrawDefinition = (
 
 const activateEventSelectionId =
   "handSelection:activate-event" as HandSelectionId;
+const activateTrashEventSelectionId =
+  "trashSelection:activate-event" as SelectionId;
 
 const sourceOnPlayDefinition = (
   source: CardInstance,
   effectDefinitionId: string,
+  options: {
+    readonly activationSourceZone?: "hand" | "trash";
+  } = {},
 ): EffectDefinition => {
+  const activationSourceZone = options.activationSourceZone ?? "hand";
+  const selection =
+    activationSourceZone === "hand"
+      ? activateEventSelectionId
+      : activateTrashEventSelectionId;
   const supportCard = resolvedCard({
     cardId: source.cardId,
     category: "character",
@@ -91,17 +102,20 @@ const sourceOnPlayDefinition = (
             {
               id: "select:event",
               connector: "always",
-              saveResultAs: activateEventSelectionId,
+              saveResultAs: selection,
               effect: {
                 type: "selectCards",
-                zone: "hand",
+                zone: activationSourceZone,
                 player: "self",
                 chooser: "self",
                 min: 0,
                 max: 1,
                 filter: { categories: ["event"], typesAny: ["Dressrosa"] },
-                saveAs: activateEventSelectionId,
-                visibility: "chooserOnly",
+                saveAs: selection,
+                visibility:
+                  activationSourceZone === "hand"
+                    ? "chooserOnly"
+                    : "bothPlayers",
               },
             },
             {
@@ -109,7 +123,10 @@ const sourceOnPlayDefinition = (
               connector: "ifPossible",
               effect: {
                 type: "activateSelectedEvent",
-                selection: activateEventSelectionId,
+                selection,
+                ...(activationSourceZone === "trash"
+                  ? { sourceZone: "trash" as const }
+                  : {}),
                 trigger: { type: "main" },
                 ignoreCost: true,
               },
@@ -230,6 +247,128 @@ test("sequence activateSelectedEvent activates a selected hand Event through Mai
     nextPlayer.hand.some((card) => card.instanceId === event.instanceId),
     false,
   );
+  assert.equal(nextPlayer.trash[0]?.instanceId, event.instanceId);
+  assert.equal(
+    activated.events.some(
+      (runtimeEvent) => runtimeEvent.type === "effectQueued",
+    ),
+    true,
+  );
+  assert.equal(
+    activated.events.some((runtimeEvent) => runtimeEvent.type === "cardDrawn"),
+    true,
+  );
+});
+
+test("sequence activateSelectedEvent activates a selected trash Event through Main Event runtime without moving it", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const player = must(state.players[p1], "p1");
+  const source = {
+    ...must(player.hand[0], "source"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p1,
+      slot: "character" as const,
+      index: 0,
+    },
+    state: "active" as const,
+    attachedDon: [],
+    turnPlayed: state.turn.globalTurn,
+  };
+  const event = {
+    ...must(player.hand[1], "event"),
+    cardId: "event-dressrosa-trash" as CardInstance["cardId"],
+    zone: {
+      zone: "trash" as const,
+      playerId: p1,
+      slot: "trash" as const,
+      index: 0,
+    },
+  };
+  player.characters = [source];
+  player.hand = reindexHand(player.hand.slice(2));
+  player.trash = [event];
+
+  const sourceDefinitionId = "def-source-activate-selected-trash-event";
+  const eventDefinitionId = "def-selected-trash-event-main";
+  const sourceDefinition = sourceOnPlayDefinition(source, sourceDefinitionId, {
+    activationSourceZone: "trash",
+  });
+  const eventDefinition = mainEventDrawDefinition(event, eventDefinitionId);
+  state.cardManifest.effectDefinitionsVersion =
+    sourceDefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    [sourceDefinitionId]: sourceDefinition,
+    [eventDefinitionId]: eventDefinition,
+  };
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: sourceDefinitionId,
+      rulesVersion: sourceDefinition.metadata.rulesVersion,
+      sourceTextHash: sourceDefinition.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.cards[event.cardId] = {
+    ...resolvedCard({
+      cardId: event.cardId,
+      category: "event",
+      cost: 0,
+      effectText: "[Main] Draw 1 card.",
+      support: {
+        status: "implemented-dsl",
+        effectDefinitionId: eventDefinitionId,
+        rulesVersion: eventDefinition.metadata.rulesVersion,
+        sourceTextHash: eventDefinition.metadata.sourceTextHash,
+      },
+    }),
+    types: ["Dressrosa"],
+  };
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-activate-selected-trash-event"),
+      timingWindowId: toTimingWindowId(
+        "timing-window-activate-selected-trash-event",
+      ),
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(sourceDefinition.effects[0], "source effect").id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+    },
+  ];
+
+  const prompted = processEffectRuntime(state);
+  const decision = must(prompted.state.pendingDecision, "event selection");
+
+  assert.equal(prompted.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  const activated = applyAction(prompted.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: event.instanceId,
+          cardId: event.cardId,
+          playerId: p1,
+          zone: event.zone,
+        },
+      ],
+    },
+  });
+  const nextPlayer = must(activated.state.players[p1], "result p1");
+
+  assert.equal(activated.errors, undefined);
   assert.equal(nextPlayer.trash[0]?.instanceId, event.instanceId);
   assert.equal(
     activated.events.some(

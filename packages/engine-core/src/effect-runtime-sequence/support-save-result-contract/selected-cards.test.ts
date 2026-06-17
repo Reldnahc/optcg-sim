@@ -192,6 +192,24 @@ test("selectedCards matrix accepts hand selection activated as event", () => {
   ]);
 });
 
+test("selectedCards matrix accepts trash selection activated as event when source zone is declared", () => {
+  const selection = "saved-result:trash-event" as SelectionId;
+
+  assertSupported([
+    selectTrash(selection),
+    {
+      connector: "then",
+      effect: {
+        type: "activateSelectedEvent",
+        selection,
+        sourceZone: "trash",
+        trigger: { type: "main" },
+        ignoreCost: true,
+      },
+    },
+  ]);
+});
+
 test("selectedCards matrix accepts hand selection reveal", () => {
   const selection = "saved-result:hand-reveal" as SelectionId;
 
