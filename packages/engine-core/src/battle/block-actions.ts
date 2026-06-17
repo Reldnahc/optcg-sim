@@ -20,6 +20,7 @@ import {
 } from "../action-results.js";
 import { reifyCardRef, toCardRef } from "../actions/state.js";
 import { sameCardRef } from "./support.js";
+import { retargetBattle } from "./targeting.js";
 import { hasUnsupportedCounterWindow } from "./counter-actions.js";
 import { getSupportedBattleCombatViewOrNull } from "./capabilities.js";
 import { computeView } from "../view/compute-view.js";
@@ -289,15 +290,18 @@ export const applyBlockStepDecisionResponse = (
       },
       { type: "public" },
     );
+    const retargetedBattle = retargetBattle(
+      state,
+      { ...battle, blocker: blockerRef },
+      blockerRef,
+    );
+    if (retargetedBattle === null) {
+      return illegalAction(state, "Selected blocker is not legal.");
+    }
     const activatedBaseState: GameState = {
       ...state,
       actionSeq: eventState.actionSeq,
-      battle: {
-        ...battle,
-        blocker: blockerRef,
-        currentTarget: blockerRef,
-        damageCount: 1,
-      },
+      battle: retargetedBattle,
     };
     const rested = restFieldObjects(
       activatedBaseState,

@@ -390,7 +390,7 @@ test("two damage without Double Attack source fails closed without mutation", ()
   assert.equal(JSON.stringify(opened.state), before);
 });
 
-test("two damage against Character target fails closed without mutation", () => {
+test("stale multi-damage against Character target resolves as one character battle", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -416,22 +416,26 @@ test("two damage against Character target fails closed without mutation", () => 
     step: "attack",
     damageCount: 2,
   };
-  const before = JSON.stringify(state);
-  const beforeHash = hashCanonicalStateValue(state);
 
   const result = resolveSupportedVanillaBattle(state);
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "illegalAction",
-      reason:
-        "Battle requires unsupported blocker, step, or multi-damage behavior.",
-    },
-  ]);
-  assert.deepEqual(result.events, []);
-  assertRejectedHash(result, beforeHash);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assertAcceptedHash(result);
+  assert.equal(result.state.battle?.step, "counter");
+  assert.equal(result.state.battle.damageCount, 1);
+
+  const passed = passCounterStep(result.state, p2);
+
+  assertAcceptedHash(passed);
+  const nextP2 = must(passed.state.players[p2], "p2 result");
+  assert.equal(passed.state.battle, undefined);
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === target.instanceId),
+    true,
+  );
 });
 
 test("first Double Attack damage point with supported Life Trigger pauses before second point", () => {

@@ -39,6 +39,7 @@ import {
   isSupportedCounterStepTarget,
   sameCardRef,
 } from "./support.js";
+import { normalizeBattleTargetDamageCount } from "./targeting.js";
 import {
   createCounterStepPassDecision,
   getUnsupportedCounterWindowReason,
@@ -158,7 +159,16 @@ export const resolveSupportedVanillaBattle = (
   if (resolutionState.battle === undefined) {
     return illegalAction(state, "No active battle to resolve.");
   }
-  if (!isSupportedBattleResolutionEnvelope(resolutionState.battle)) {
+  const normalizedBattle = normalizeBattleTargetDamageCount(
+    resolutionState,
+    resolutionState.battle,
+  );
+  if (normalizedBattle === null) {
+    return illegalAction(state, "Battle participants are stale or invalid.");
+  }
+  const initialBattle = normalizedBattle;
+  resolutionState = { ...resolutionState, battle: initialBattle };
+  if (!isSupportedBattleResolutionEnvelope(initialBattle)) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
@@ -175,7 +185,6 @@ export const resolveSupportedVanillaBattle = (
       "Battle requires unsupported trigger or replacement processing.",
     );
   }
-  const initialBattle = resolutionState.battle;
   const initialAttacker = reifyCardRef(resolutionState, initialBattle.attacker);
   const initialTarget = reifyCardRef(
     resolutionState,
@@ -204,7 +213,7 @@ export const resolveSupportedVanillaBattle = (
   }
   const events: EngineEvent[] = [];
   if (initialBattle.step !== "counter") {
-    const counterStep = enterCounterStep(state, options);
+    const counterStep = enterCounterStep(resolutionState, options);
     if (counterStep.result !== undefined) {
       return counterStep.result;
     }
