@@ -18,6 +18,15 @@ interface NextTurnEndDurationParseOptions {
   readonly evidence: PrimitiveEvidence;
 }
 
+interface NextTurnStartDurationParseOptions {
+  readonly player: Extract<
+    Duration,
+    { type: "untilStartOfNextTurn" }
+  >["player"];
+  readonly pattern: RegExp;
+  readonly evidence: PrimitiveEvidence;
+}
+
 export const opponentNextRefreshPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextRefreshPhase",
   matches: [{ id: "in-opponent-next-refresh-phase" }],
@@ -59,29 +68,21 @@ export const selfNextTurnStartDurationPrimitive = {
 export function parseOpponentNextRefreshPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
-  if (!/^in your opponent's next Refresh Phase\.?$/i.test(input.text)) {
-    return undefined;
-  }
-
-  return {
-    duration: { type: "untilStartOfNextTurn", player: "opponent" },
-    evidence: ["duration:opponentNextRefreshPhase"],
-    rest: "",
-  };
+  return parseNextTurnStartDuration(input, {
+    player: "opponent",
+    pattern: /^in your opponent's next Refresh Phase\.?$/i,
+    evidence: "duration:opponentNextRefreshPhase",
+  });
 }
 
 export function parseSelfNextRefreshPhaseDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
-  if (!/^in your next Refresh Phase\.?$/i.test(input.text)) {
-    return undefined;
-  }
-
-  return {
-    duration: { type: "untilStartOfNextTurn", player: "self" },
-    evidence: ["duration:selfNextRefreshPhase"],
-    rest: "",
-  };
+  return parseNextTurnStartDuration(input, {
+    player: "self",
+    pattern: /^in your next Refresh Phase\.?$/i,
+    evidence: "duration:selfNextRefreshPhase",
+  });
 }
 
 export function parseOpponentNextEndPhaseDuration(
@@ -122,13 +123,24 @@ function parseNextTurnEndDuration(
 export function parseSelfNextTurnStartDuration(
   input: ParseInput,
 ): DurationParseResult | undefined {
-  if (!/^until the start of your next turn\.?$/i.test(input.text)) {
+  return parseNextTurnStartDuration(input, {
+    player: "self",
+    pattern: /^until the start of your next turn\.?$/i,
+    evidence: "duration:selfNextTurnStart",
+  });
+}
+
+function parseNextTurnStartDuration(
+  input: ParseInput,
+  options: NextTurnStartDurationParseOptions,
+): DurationParseResult | undefined {
+  if (!options.pattern.test(input.text)) {
     return undefined;
   }
 
   return {
-    duration: { type: "untilStartOfNextTurn", player: "self" },
-    evidence: ["duration:selfNextTurnStart"],
+    duration: { type: "untilStartOfNextTurn", player: options.player },
+    evidence: [options.evidence],
     rest: "",
   };
 }
