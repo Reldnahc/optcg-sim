@@ -24,7 +24,6 @@ import type {
   RuntimeVersionSet,
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
-import type { Trigger } from "./effect-triggers.js";
 import type {
   AttackTrashCost,
   CardFilter,
@@ -143,13 +142,7 @@ export type EffectQueueOrigin =
 
 export interface DelayedEffectRecord {
   id: string;
-  timing:
-    | { type: "endOfTurn"; turn: "current" }
-    | {
-        type: "event";
-        trigger: Trigger;
-        expires: { type: "endOfTurn"; turn: "current" };
-      };
+  timing: Extract<Effect, { type: "delayed" }>["timing"];
   controllerId: PlayerId;
   source: CardRef;
   sourceSnapshot: CardSnapshot;

@@ -1,3 +1,5 @@
+import type { CardFilter } from "@optcg/types";
+
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import type { ParseInput } from "../../types.js";
 import { leaderOrCharacterFilterWithPredicates } from "./shared.js";
@@ -56,12 +58,18 @@ export function parseOpponentCardsTarget(
 export function parseOpponentDonCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
-  const match = /^of your opponent's DON!! cards?\b\s*(?<rest>.*)$/i.exec(
-    input.text,
-  );
+  const match =
+    /^of your opponent's (?:(?<state>active|rested) )?DON!! cards?\b\s*(?<rest>.*)$/i.exec(
+      input.text,
+    );
   if (match === null) {
     return undefined;
   }
+  const state = match.groups?.["state"]?.toLowerCase();
+  const filter: CardFilter =
+    state === "active" || state === "rested"
+      ? { categories: ["don"], state }
+      : { categories: ["don"] };
 
   return {
     target: {
@@ -75,7 +83,7 @@ export function parseOpponentDonCardsTarget(
         max: 1,
         allowFewerIfUnavailable: true,
         visibility: "public",
-        filter: { categories: ["don"] },
+        filter,
       },
     },
     evidence: [
@@ -83,6 +91,11 @@ export function parseOpponentDonCardsTarget(
       "player:opponent",
       "zone:costArea",
       "filter:category:don",
+      ...(state === "active"
+        ? (["filter:state:active"] as const)
+        : state === "rested"
+          ? (["filter:state:rested"] as const)
+          : []),
     ],
     rest: match.groups?.["rest"]?.trim() ?? "",
   };

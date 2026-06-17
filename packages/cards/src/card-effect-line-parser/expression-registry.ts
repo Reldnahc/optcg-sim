@@ -43,6 +43,7 @@ import {
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
   delayedEndOfTurnSegmentParser,
+  delayedStartOfNextMainPhaseSegmentParser,
   drawForEachFieldTrashSameExpressionParser,
   entryConditionContinuousExpressionParser,
   eventTimedDelayedSegmentParser,
@@ -167,6 +168,10 @@ function generalExpressionParser(input: ParseInput) {
         expressions: [optionalActionExpressionParser],
       }),
       delayedEndOfTurnSegmentParser({
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
+      }),
+      delayedStartOfNextMainPhaseSegmentParser({
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),

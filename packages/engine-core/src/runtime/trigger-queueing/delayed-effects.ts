@@ -34,6 +34,39 @@ const currentEndPhaseEvents = (state: GameState): readonly EngineEvent[] =>
     return payload.phase === "end" && typeof payload.playerId === "string";
   });
 
+const currentMainPhaseEvents = (state: GameState): readonly EngineEvent[] =>
+  state.eventJournal.filter((event) => {
+    if (
+      event.type !== "phaseStarted" ||
+      event.createdAtStateSeq !== state.seq
+    ) {
+      return false;
+    }
+    const payload = event.payload as { phase?: unknown; playerId?: unknown };
+    return payload.phase === "main" && typeof payload.playerId === "string";
+  });
+
+const opponentOf = (state: GameState, playerId: PlayerId): PlayerId | null => {
+  const playerIds = Object.keys(state.players) as PlayerId[];
+  return playerIds.find((candidate) => candidate !== playerId) ?? null;
+};
+
+const delayedTimingPlayerId = (
+  state: GameState,
+  record: DelayedEffectRecord,
+): PlayerId | null => {
+  if (record.timing.type !== "startOfMainPhase") {
+    return record.controllerId;
+  }
+  if (record.timing.player === "self") {
+    return record.controllerId;
+  }
+  if (record.timing.player === "opponent") {
+    return opponentOf(state, record.controllerId);
+  }
+  return null;
+};
+
 const dueDelayedEffects = (
   delayedEffects: readonly DelayedEffectRecord[],
   playerId: PlayerId,
@@ -41,6 +74,17 @@ const dueDelayedEffects = (
   delayedEffects.filter(
     (record) =>
       record.controllerId === playerId && record.timing.type === "endOfTurn",
+  );
+
+const dueDelayedMainPhaseEffects = (
+  state: GameState,
+  delayedEffects: readonly DelayedEffectRecord[],
+  playerId: PlayerId,
+): readonly DelayedEffectRecord[] =>
+  delayedEffects.filter(
+    (record) =>
+      record.timing.type === "startOfMainPhase" &&
+      delayedTimingPlayerId(state, record) === playerId,
   );
 
 const expiredEventDelayedEffects = (
@@ -132,6 +176,91 @@ export const queueDelayedEndOfTurnEffects = (
       payload.playerId,
     )) {
       dueIds.add(record.id);
+    }
+  }
+  if (appended.length === 0 && dueIds.size === 0) {
+    return undefined;
+  }
+
+  const nextState: GameState = {
+    ...state,
+    seq: toStateSeq(state.seq + 1),
+    delayedEffects: delayedEffects.filter((record) => !dueIds.has(record.id)),
+    effectQueue: [...state.effectQueue, ...appended.map(({ entry }) => entry)],
+  };
+  const events: EngineEvent[] = [];
+  for (const { entry, effectBlock, resolved } of appended) {
+    appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
+  }
+  return toEngineResult(nextState, events);
+};
+
+export const queueDelayedStartOfMainPhaseEffects = (
+  state: GameState,
+): EngineResult | undefined => {
+  const delayedEffects = state.delayedEffects ?? [];
+  if (delayedEffects.length === 0 || hasPendingTriggerRuntimeWork(state)) {
+    return undefined;
+  }
+  const phaseEvents = currentMainPhaseEvents(state);
+  if (phaseEvents.length === 0) {
+    return undefined;
+  }
+
+  const appended: Array<{
+    readonly entry: EffectQueueEntry;
+    readonly effectBlock: EffectDefinition["effects"][number];
+    readonly resolved: ResolvedCard | undefined;
+  }> = [];
+  const dueIds = new Set<string>();
+  for (const event of phaseEvents) {
+    const payload = event.payload as { playerId?: PlayerId };
+    if (payload.playerId === undefined) {
+      continue;
+    }
+    const due = dueDelayedMainPhaseEffects(
+      state,
+      delayedEffects,
+      payload.playerId,
+    );
+    for (const record of due) {
+      const resolvedCard = state.cardManifest.cards[record.source.cardId];
+      const entry: EffectQueueEntry = {
+        id: `queue-entry:delayed:${String(event.id)}:${record.id}` as EffectQueueEntry["id"],
+        state: "pending",
+        timingWindowId:
+          `timing-window:delayed:${String(event.id)}` as EffectQueueEntry["timingWindowId"],
+        generation: 0,
+        controllerId: record.controllerId,
+        source: record.source,
+        sourceSnapshot: record.sourceSnapshot,
+        effectBlockId: record.effectBlock.id,
+        effectBlockOverride: record.effectBlock,
+        orderingGroup: "turnPlayer",
+        createdAtEventSeq: event.seq,
+        queuedAtStateSeq: toStateSeq(state.seq + 1),
+        sourcePresencePolicy: "noSourceRequired",
+        causedBy: {
+          type: "ruleProcess",
+          name: "effectRuntime:delayedStartOfMainPhase",
+        },
+        ...(resolvedCard === undefined
+          ? {}
+          : effectQueueEntryPresentationForEffectBlock({
+              effectBlock: record.effectBlock,
+              resolvedCard,
+              source: record.source,
+            })),
+      };
+      if (!canAdmitTriggerQueueEntry(state, entry, record.effectBlock).ok) {
+        continue;
+      }
+      dueIds.add(record.id);
+      appended.push({
+        entry,
+        effectBlock: record.effectBlock,
+        resolved: resolvedCard,
+      });
     }
   }
   if (appended.length === 0 && dueIds.size === 0) {

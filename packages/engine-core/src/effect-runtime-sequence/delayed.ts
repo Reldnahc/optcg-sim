@@ -34,7 +34,9 @@ export const toDelayedEffectBlock = (
   trigger:
     effect.timing.type === "event"
       ? effect.timing.trigger
-      : { type: "endOfYourTurn" },
+      : effect.timing.type === "startOfMainPhase"
+        ? { type: "startOfMainPhase" }
+        : { type: "endOfYourTurn" },
   sourcePresencePolicy: "noSourceRequired",
   effect: effect.effect,
 });

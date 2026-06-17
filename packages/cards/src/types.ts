@@ -340,6 +340,7 @@ export type PrimitiveEvidence =
   | "duration:permanent"
   | "usageLimit:nextMatchingPlay"
   | "duration:endOfTurn"
+  | "duration:startOfNextMainPhase"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
   | "duration:selfNextRefreshPhase"

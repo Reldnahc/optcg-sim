@@ -78,6 +78,64 @@ export function delayedEndOfTurnSegmentParser(options: {
   };
 }
 
+export function delayedStartOfNextMainPhaseSegmentParser(options: {
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): SegmentParser {
+  return (input: ParseInput) => {
+    const match =
+      /^(?<body>[\s\S]+?)\s+at the start of (?<player>your|your opponent's|their) next Main Phase\.?$/iu.exec(
+        input.text,
+      );
+    const bodyText = match?.groups?.["body"];
+    const playerText = match?.groups?.["player"]?.toLowerCase();
+    if (bodyText === undefined || playerText === undefined) {
+      return undefined;
+    }
+    const player =
+      playerText === "your"
+        ? "self"
+        : playerText === "your opponent's" ||
+            /^your opponent rests?\b/iu.test(bodyText)
+          ? "opponent"
+          : undefined;
+    if (player === undefined) {
+      return undefined;
+    }
+
+    const body = parseExpression(
+      { text: bodyText },
+      {
+        connectors: options.connectors,
+        segments: [
+          instructionExpressionSegmentParser(options),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
+      },
+    );
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "delayed",
+        timing: {
+          type: "startOfMainPhase",
+          turn: "next",
+          player,
+        },
+        effect: body.effect,
+      },
+      evidence: [
+        "duration:startOfNextMainPhase",
+        "composition:delayed",
+        ...body.evidence,
+      ],
+    };
+  };
+}
+
 export function eventTimedDelayedSegmentParser(options: {
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
@@ -208,6 +266,8 @@ export function conditionalExpressionSegmentParser(options: {
           ? parseExpression(thenInput, {
               connectors: options.connectors,
               segments: [
+                delayedEndOfTurnSegmentParser(options),
+                delayedStartOfNextMainPhaseSegmentParser(options),
                 instructionExpressionSegmentParser({
                   connectors: options.connectors,
                   instructions: options.instructions,

@@ -228,6 +228,52 @@ export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser
 export const parseRestOpponentDonCardsInstruction: InstructionParser = (
   input,
 ) => {
+  const opponentActionRest = /^your opponent rests?\s+(?<rest>.*)$/i.exec(
+    input.text,
+  )?.groups?.["rest"];
+  if (opponentActionRest !== undefined) {
+    const cardinality = /^1\b\s*(?<rest>.*)$/i.exec(opponentActionRest);
+    const cardinalityRest = cardinality?.groups?.["rest"];
+    if (cardinalityRest === undefined) {
+      return undefined;
+    }
+    const normalizedTargetText = cardinalityRest.replace(
+      /^of their\s+/iu,
+      "of your opponent's ",
+    );
+    const target = parseOpponentDonCardsTarget({ text: normalizedTargetText });
+    if (
+      target === undefined ||
+      target.target?.type !== "chooseFromZones" ||
+      (target.rest.length > 0 && target.rest !== ".")
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            ...target.target.request,
+            chooser: "opponent",
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: true,
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:exact",
+        "chooser:opponent",
+        ...target.evidence,
+      ],
+      rest: "",
+    };
+  }
+
   const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;

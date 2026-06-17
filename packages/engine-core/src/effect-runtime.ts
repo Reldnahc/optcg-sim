@@ -25,6 +25,7 @@ import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/c
 import {
   queueDelayedEndOfTurnEffects,
   queueDelayedEventEffects,
+  queueDelayedStartOfMainPhaseEffects,
 } from "./runtime/trigger-queueing/delayed-effects.js";
 import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 import { resolveImplementedDslEffectDefinition } from "./effect-runtime-definition-lookup.js";
@@ -420,6 +421,11 @@ export const processEffectRuntime = (state: GameState): EngineResult => {
   const queuedFromDelayedEndOfTurn = queueDelayedEndOfTurnEffects(state);
   if (queuedFromDelayedEndOfTurn !== undefined) {
     return queuedFromDelayedEndOfTurn;
+  }
+  const queuedFromDelayedStartOfMainPhase =
+    queueDelayedStartOfMainPhaseEffects(state);
+  if (queuedFromDelayedStartOfMainPhase !== undefined) {
+    return queuedFromDelayedStartOfMainPhase;
   }
   const queuedFromEndOfYourTurn = queueEndOfYourTurnTriggers(state);
   if (queuedFromEndOfYourTurn !== undefined) {

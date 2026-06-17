@@ -377,7 +377,12 @@ const isSupportedDelayedSegment = (
     {
       id: "effect:delayed-child" as EffectDefinition["effects"][number]["id"],
       category: "auto",
-      trigger: { type: "endOfYourTurn" },
+      trigger:
+        effect.timing.type === "event"
+          ? effect.timing.trigger
+          : effect.timing.type === "startOfMainPhase"
+            ? { type: "startOfMainPhase" }
+            : { type: "endOfYourTurn" },
       sourcePresencePolicy: "noSourceRequired",
       effect: effect.effect,
     },

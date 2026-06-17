@@ -860,6 +860,11 @@ export type Effect =
       timing:
         | { type: "endOfTurn"; turn: "current" }
         | {
+            type: "startOfMainPhase";
+            turn: "next";
+            player: PlayerRef;
+          }
+        | {
             type: "event";
             trigger: Trigger;
             expires: { type: "endOfTurn"; turn: "current" };

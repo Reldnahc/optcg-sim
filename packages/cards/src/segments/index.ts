@@ -47,6 +47,7 @@ export {
   conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
   delayedEndOfTurnSegmentParser,
+  delayedStartOfNextMainPhaseSegmentParser,
   eventTimedDelayedSegmentParser,
   trailingConditionalExpressionSegmentParser,
   instructionExpressionSegmentParser,
