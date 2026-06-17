@@ -1,9 +1,4 @@
-import type {
-  CardFilter,
-  Duration,
-  DynamicNumberValue,
-  Effect,
-} from "@optcg/types";
+import type { CardFilter, Duration, Effect } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parseKeyword } from "../../keywords/index.js";
@@ -18,6 +13,7 @@ import {
   parseYourLeaderTarget,
 } from "../../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
+import { parseMatchingZoneCardsScaledSuffix } from "../../values/dynamic-number.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
@@ -427,8 +423,8 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const dynamicValue = parseTrashBatchDynamicValue(modifierText);
-  const statText = dynamicValue?.statText ?? modifierText;
+  const dynamicValue = parseMatchingZoneCardsScaledSuffix(1, modifierText);
+  const statText = dynamicValue?.prefixText ?? modifierText;
   const parts = statText
     .replace(/\.$/u, "")
     .split(/\s+and\s+/iu)
@@ -544,96 +540,6 @@ const parseThisCharacterStatGainInstruction: ContinuousInstructionParser = (
     effect,
     evidence,
     rest: "",
-  };
-};
-
-const parseTrashBatchDynamicValue = (
-  text: string,
-):
-  | {
-      readonly statText: string;
-      readonly value: Extract<
-        DynamicNumberValue,
-        { type: "countMatchingZoneCards" }
-      >;
-      readonly evidence: readonly PrimitiveEvidence[];
-    }
-  | undefined => {
-  const restedDonMatch =
-    /^(?<statText>.+?)\s+for every (?<per>[1-9]\d*) of your rested DON!! cards\.?$/iu.exec(
-      text,
-    );
-  const restedDonStatText = restedDonMatch?.groups?.["statText"]?.trim();
-  const restedDonPerText = restedDonMatch?.groups?.["per"];
-  if (
-    restedDonStatText !== undefined &&
-    restedDonStatText.length > 0 &&
-    restedDonPerText !== undefined
-  ) {
-    return {
-      statText: restedDonStatText,
-      value: {
-        type: "countMatchingZoneCards",
-        player: "self",
-        zone: "costArea",
-        filter: { categories: ["don"], state: "rested" },
-        per: Number.parseInt(restedDonPerText, 10),
-        multiplier: 1,
-      },
-      evidence: [
-        "value:dynamic:matchingZoneCards",
-        "zone:costArea",
-        "filter:category:don",
-        "filter:state:rested",
-      ],
-    };
-  }
-
-  const match =
-    /^(?<statText>.+?)\s+for every (?<per>[1-9]\d*) (?<filter>cards?|.+?) in your trash\.?$/iu.exec(
-      text,
-    );
-  const statText = match?.groups?.["statText"]?.trim();
-  const perText = match?.groups?.["per"];
-  const filterText = match?.groups?.["filter"]?.trim();
-  if (
-    statText === undefined ||
-    statText.length === 0 ||
-    perText === undefined ||
-    filterText === undefined
-  ) {
-    return undefined;
-  }
-
-  const evidence: PrimitiveEvidence[] = [
-    "value:dynamic:matchingZoneCards",
-    "zone:trash",
-  ];
-  const filter =
-    /^cards?$/iu.test(filterText) || filterText.length === 0
-      ? undefined
-      : parseCardFilterPredicates({ text: filterText });
-  if (filter === undefined && !/^cards?$/iu.test(filterText)) {
-    return undefined;
-  }
-  if (filter !== undefined) {
-    if (filter.rest.trim().length > 0) {
-      return undefined;
-    }
-    evidence.push(...filter.evidence);
-  }
-
-  return {
-    statText,
-    value: {
-      type: "countMatchingZoneCards",
-      player: "self",
-      zone: "trash",
-      ...(filter === undefined ? {} : { filter: filter.filter }),
-      per: Number.parseInt(perText, 10),
-      multiplier: 1,
-    },
-    evidence,
   };
 };
 

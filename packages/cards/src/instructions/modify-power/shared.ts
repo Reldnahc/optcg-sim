@@ -1,16 +1,11 @@
-import type {
-  Cardinality,
-  DynamicNumberValue,
-  Duration,
-  Target,
-} from "@optcg/types";
+import type { Cardinality, Target } from "@optcg/types";
 
 import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
 } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
-import type { PrimitiveEvidence } from "../../types.js";
+import { parseAttachedDonScaledValue } from "../../values/dynamic-number.js";
 
 export const modifyPowerInstructionPrimitive = {
   primitiveId: "instruction:modifyPower",
@@ -51,7 +46,7 @@ export function parseGainsPositivePower(target: Target, text: string) {
   );
   const dynamicDuration =
     typeof modifier.value === "number"
-      ? parseAttachedDonScaledDuration(modifier.value, modifier.rest)
+      ? parseAttachedDonScaledValue(modifier.value, modifier.rest)
       : undefined;
   const parsedDuration = dynamicDuration ?? duration;
   if (parsedDuration?.duration === undefined) {
@@ -65,58 +60,15 @@ export function parseGainsPositivePower(target: Target, text: string) {
       value: dynamicDuration?.value ?? modifier.value,
       duration: parsedDuration.duration,
     },
-    evidence: [
-      ...modifier.evidence,
-      ...parsedDuration.evidence,
-      ...(dynamicDuration?.evidence ?? []),
-    ],
+    evidence: [...modifier.evidence, ...parsedDuration.evidence],
   };
 }
 
 export function parseAttachedDonScaledDuration(
   multiplier: number,
   text: string,
-):
-  | {
-      readonly duration: Duration;
-      readonly value: DynamicNumberValue;
-      readonly evidence: readonly PrimitiveEvidence[];
-    }
-  | undefined {
-  const match =
-    /^(?<duration>[\s\S]+?)\s+for every DON!! card given to (?<target>this Character|that Character)\.?$/iu.exec(
-      text.trim(),
-    );
-  const durationText = match?.groups?.["duration"];
-  const targetText = match?.groups?.["target"];
-  if (durationText === undefined || targetText === undefined) {
-    return undefined;
-  }
-  const duration = parseDurationFromSet(
-    { text: durationText },
-    fieldEffectDurationParsers,
-  );
-  if (duration?.duration === undefined || duration.rest.length > 0) {
-    return undefined;
-  }
-  const target =
-    targetText.toLowerCase() === "that character"
-      ? ({ type: "affectedCard" } as const)
-      : ({ type: "self" } as const);
-  const targetEvidence =
-    target.type === "affectedCard"
-      ? ("target:thatCharacter" as const)
-      : ("target:thisCharacter" as const);
-  return {
-    duration: duration.duration,
-    value: {
-      type: "countAttachedDon",
-      target,
-      per: 1,
-      multiplier,
-    },
-    evidence: ["value:dynamic:attachedDonCount", targetEvidence],
-  };
+): ReturnType<typeof parseAttachedDonScaledValue> {
+  return parseAttachedDonScaledValue(multiplier, text);
 }
 
 export function withCardinality(

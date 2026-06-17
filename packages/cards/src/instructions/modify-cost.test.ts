@@ -172,4 +172,69 @@ describe("modify cost instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses attached DON scaled positive cost modifiers through reusable dynamic values", () => {
+    expect(
+      parseTargetedModifyCostInstruction({
+        text: "this Character gains +1 cost during this turn for every DON!! card given to this Character.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        target: { type: "self" },
+        value: {
+          type: "countAttachedDon",
+          target: { type: "self" },
+          per: 1,
+          multiplier: 1,
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "modifier:positiveCost",
+        "count:positiveInteger",
+        "duration:thisTurn",
+        "value:dynamic:attachedDonCount",
+        "target:thisCharacter",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses trash-count scaled positive cost modifiers through reusable dynamic values", () => {
+    expect(
+      parseTargetedModifyCostInstruction({
+        text: "this Character gains +1 cost during this turn for every 5 Events in your trash.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        target: { type: "self" },
+        value: {
+          type: "countMatchingZoneCards",
+          player: "self",
+          zone: "trash",
+          filter: { categories: ["event"] },
+          per: 5,
+          multiplier: 1,
+        },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyCost",
+        "target:thisCharacter",
+        "modifier:positiveCost",
+        "count:positiveInteger",
+        "duration:thisTurn",
+        "value:dynamic:matchingZoneCards",
+        "zone:trash",
+        "filter:category:event",
+      ],
+      rest: "",
+    });
+  });
 });

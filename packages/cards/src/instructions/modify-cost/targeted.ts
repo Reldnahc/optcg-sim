@@ -11,6 +11,10 @@ import {
   yourFieldEffectTargetParsers,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
+import {
+  parseAttachedDonScaledValue,
+  parseMatchingZoneCardsScaledSuffix,
+} from "../../values/dynamic-number.js";
 import { parsePositiveCostModifier } from "./shared.js";
 
 export const parseTargetedModifyCostInstruction: InstructionParser = (
@@ -81,11 +85,25 @@ function parseCostGainForTarget(
     return undefined;
   }
 
+  const matchingZoneValue =
+    typeof modifier.value === "number"
+      ? parseMatchingZoneCardsScaledSuffix(modifier.value, modifier.rest)
+      : undefined;
+  const durationText = matchingZoneValue?.prefixText ?? modifier.rest;
   const duration = parseDurationFromSet(
-    { text: modifier.rest },
+    { text: durationText },
     attackRestrictionDurationParsers,
   );
-  if (duration?.duration === undefined || duration.rest.length > 0) {
+  const dynamicDuration =
+    typeof modifier.value === "number"
+      ? parseAttachedDonScaledValue(modifier.value, modifier.rest)
+      : undefined;
+  const parsedDuration = dynamicDuration ?? duration;
+  if (
+    parsedDuration?.duration === undefined ||
+    (dynamicDuration === undefined &&
+      (duration === undefined || duration.rest.length > 0))
+  ) {
     return undefined;
   }
 
@@ -94,10 +112,15 @@ function parseCostGainForTarget(
       type: "modifyCost",
       player: "self",
       target,
-      value: modifier.value,
-      duration: duration.duration,
+      value:
+        dynamicDuration?.value ?? matchingZoneValue?.value ?? modifier.value,
+      duration: parsedDuration.duration,
     },
-    evidence: [...modifier.evidence, ...duration.evidence],
+    evidence: [
+      ...modifier.evidence,
+      ...parsedDuration.evidence,
+      ...(matchingZoneValue?.evidence ?? []),
+    ],
     rest: "",
   };
 }
