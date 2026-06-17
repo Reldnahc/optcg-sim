@@ -147,14 +147,11 @@ export function parseProtectionSource(
       const filter = parseBattleSourceFilter(rest);
       if (filter !== undefined) {
         return {
-          source: {
+          source: buildProtectionSourceWithFilter({
             kind: "battle",
             controllerRelation: "eitherController",
             cardFilter: filter.filter,
-            ...(filter.filter.categories === undefined
-              ? {}
-              : { cardCategories: filter.filter.categories }),
-          },
+          }),
           evidence: ["protectionSource:battle", ...filter.evidence],
           rest: "",
         };
@@ -203,57 +200,21 @@ function parseBattleSourceFilter(text: string):
 function parseOpponentCardFilterEffectsSource(
   text: string,
 ): ProtectionSourceParseResult | undefined {
-  const match = /^by effects of your opponent's (?<filter>.+?)\.?$/i.exec(text);
-  const filterText = match?.groups?.["filter"];
-  if (filterText === undefined) {
-    return undefined;
-  }
-  const parsedFilter = parseCardFilterPredicates({ text: filterText });
-  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
-    return undefined;
-  }
-  return {
-    source: {
-      kind: "cardEffect",
-      controllerRelation: "opponentControlled",
-      cardFilter: parsedFilter.filter,
-      ...(parsedFilter.filter.categories === undefined
-        ? {}
-        : { cardCategories: parsedFilter.filter.categories }),
-    },
-    evidence: [
-      "protectionSource:opponentCardFilterEffects",
-      "player:opponent",
-      ...parsedFilter.evidence,
-    ],
-    rest: "",
-  };
+  return parseCardFilterEffectsSourceWithPattern(text, {
+    pattern: /^by effects of your opponent's (?<filter>.+?)\.?$/i,
+    controllerRelation: "opponentControlled",
+    evidence: ["protectionSource:opponentCardFilterEffects", "player:opponent"],
+  });
 }
 
 function parseCardFilterEffectsSource(
   text: string,
 ): ProtectionSourceParseResult | undefined {
-  const match = /^by effects of (?<filter>.+?)\.?$/i.exec(text);
-  const filterText = match?.groups?.["filter"];
-  if (filterText === undefined) {
-    return undefined;
-  }
-  const parsedFilter = parseCardFilterPredicates({ text: filterText });
-  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
-    return undefined;
-  }
-  return {
-    source: {
-      kind: "cardEffect",
-      controllerRelation: "eitherController",
-      cardFilter: parsedFilter.filter,
-      ...(parsedFilter.filter.categories === undefined
-        ? {}
-        : { cardCategories: parsedFilter.filter.categories }),
-    },
-    evidence: ["protectionSource:cardFilterEffects", ...parsedFilter.evidence],
-    rest: "",
-  };
+  return parseCardFilterEffectsSourceWithPattern(text, {
+    pattern: /^by effects of (?<filter>.+?)\.?$/i,
+    controllerRelation: "eitherController",
+    evidence: ["protectionSource:cardFilterEffects"],
+  });
 }
 
 function parseBattleSourceCategories(text: string):
@@ -267,26 +228,7 @@ function parseBattleSourceCategories(text: string):
   if (categoriesText === undefined) {
     return undefined;
   }
-  const categories = categoriesText
-    .split(/\s*(?:,|and)\s*/iu)
-    .map((category) => categoryByText.get(category.trim().toLowerCase()))
-    .filter(
-      (category): category is ProtectionSourceCardCategory =>
-        category !== undefined && category !== "don",
-    );
-  if (
-    categories.length === 0 ||
-    new Set(categories).size !== categories.length
-  ) {
-    return undefined;
-  }
-
-  return {
-    categories,
-    evidence: categories.map(
-      (category) => categoryEvidenceByCategory[category],
-    ),
-  };
+  return parseProtectionSourceCategoryList(categoriesText);
 }
 
 const categoryByText = new Map<string, CardCategory>([
@@ -322,7 +264,77 @@ function parseOpponentCardCategoryEffectsSource(
   if (categoriesText === undefined) {
     return undefined;
   }
-  const categories = categoriesText
+  const categories = parseProtectionSourceCategoryList(categoriesText);
+  if (categories === undefined) {
+    return undefined;
+  }
+
+  return {
+    source: {
+      kind: "cardEffect",
+      controllerRelation: "opponentControlled",
+      cardCategories: categories.categories,
+    },
+    evidence: [
+      "protectionSource:opponentCardCategoryEffects",
+      ...categories.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function buildProtectionSourceWithFilter(options: {
+  readonly kind: ProtectionSource["kind"];
+  readonly controllerRelation: ProtectionSource["controllerRelation"];
+  readonly cardFilter: CardFilter;
+}): ProtectionSource {
+  return {
+    kind: options.kind,
+    controllerRelation: options.controllerRelation,
+    cardFilter: options.cardFilter,
+    ...(options.cardFilter.categories === undefined
+      ? {}
+      : { cardCategories: options.cardFilter.categories }),
+  };
+}
+
+function parseCardFilterEffectsSourceWithPattern(
+  text: string,
+  options: {
+    readonly pattern: RegExp;
+    readonly controllerRelation: ProtectionSource["controllerRelation"];
+    readonly evidence: readonly PrimitiveEvidence[];
+  },
+): ProtectionSourceParseResult | undefined {
+  const match = options.pattern.exec(text);
+  const filterText = match?.groups?.["filter"];
+  if (filterText === undefined) {
+    return undefined;
+  }
+
+  const parsedFilter = parseCardFilterPredicates({ text: filterText });
+  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    source: buildProtectionSourceWithFilter({
+      kind: "cardEffect",
+      controllerRelation: options.controllerRelation,
+      cardFilter: parsedFilter.filter,
+    }),
+    evidence: [...options.evidence, ...parsedFilter.evidence],
+    rest: "",
+  };
+}
+
+function parseProtectionSourceCategoryList(text: string):
+  | {
+      readonly categories: readonly ProtectionSourceCardCategory[];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const categories = text
     .split(/\s*(?:,|and)\s*/iu)
     .map((category) => categoryByText.get(category.trim().toLowerCase()))
     .filter(
@@ -335,17 +347,12 @@ function parseOpponentCardCategoryEffectsSource(
   ) {
     return undefined;
   }
+
   return {
-    source: {
-      kind: "cardEffect",
-      controllerRelation: "opponentControlled",
-      cardCategories: categories,
-    },
-    evidence: [
-      "protectionSource:opponentCardCategoryEffects",
-      ...categories.map((category) => categoryEvidenceByCategory[category]),
-    ],
-    rest: "",
+    categories,
+    evidence: categories.map(
+      (category) => categoryEvidenceByCategory[category],
+    ),
   };
 }
 
