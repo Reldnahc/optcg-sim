@@ -602,6 +602,27 @@ test("unsupported life trigger activation keeps add-to-hand available without mu
   assert.equal(addedToHand.state.pendingDecision, undefined);
 });
 
+test("live lifeTrigger response preserves omitted state hash", () => {
+  const { state } = openSupportedLifeTriggerDecision();
+  const decision = must(state.pendingDecision, "life trigger decision");
+
+  const result = applyAction(
+    state,
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "lifeTrigger", choice: "addToHand" },
+    },
+    {
+      includeStateHash: false,
+      validateInvariants: false,
+    },
+  );
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.stateHash, "");
+});
+
 test("malformed lifeTrigger choice fails closed without declining to hand", () => {
   const { state } = openSupportedLifeTriggerDecision();
   const decision = must(state.pendingDecision, "life trigger decision");

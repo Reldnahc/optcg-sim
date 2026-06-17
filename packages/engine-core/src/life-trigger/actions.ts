@@ -23,6 +23,8 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 import {
   appendEffectQueuedEvent,
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
+  type EngineResultOptions,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -38,7 +40,6 @@ import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.j
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import { lifeTriggerQueueOrigin } from "./queue-origin.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -302,12 +303,14 @@ const toSourceSnapshot = (
 const validateDecisionCard = (
   state: GameState,
   decision: ConfirmLifeTriggerDecision,
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   if (decision.card.playerId !== decision.playerId) {
     return toEngineResult(
       state,
       [],
       invalidDecision("Life Trigger card player does not match decision."),
+      options,
     );
   }
   if (state.cardManifest.cards[decision.card.cardId] === undefined) {
@@ -315,6 +318,7 @@ const validateDecisionCard = (
       state,
       [],
       invalidDecision("Life Trigger card metadata is missing."),
+      options,
     );
   }
   if (isCardInNormalZone(state, decision.card.instanceId)) {
@@ -322,6 +326,7 @@ const validateDecisionCard = (
       state,
       [],
       invalidDecision("Life Trigger card is stale for current state."),
+      options,
     );
   }
   return undefined;
@@ -369,11 +374,15 @@ const isLifeTriggerChoiceAvailable = (
   (choice === "activateTrigger" || choice === "addToHand") &&
   decision.options.includes(choice);
 
-const getUnavailableLifeTriggerChoiceError = (state: GameState): EngineResult =>
+const getUnavailableLifeTriggerChoiceError = (
+  state: GameState,
+  options: EngineResultOptions,
+): EngineResult =>
   toEngineResult(
     state,
     [],
     invalidDecision("Life Trigger choice is not available."),
+    options,
   );
 
 const getAvailableLifeTriggerLegalActions = (
@@ -407,15 +416,20 @@ const getAvailableLifeTriggerLegalActions = (
     : []),
 ];
 
-const malformedContinuation = (state: GameState): EngineResult =>
+const malformedContinuation = (
+  state: GameState,
+  options: EngineResultOptions = {},
+): EngineResult =>
   toEngineResult(
     state,
     [],
     invalidDecision("Life Trigger damage continuation is malformed."),
+    options,
   );
 
 const validateDamageContinuation = (
   state: GameState,
+  options: EngineResultOptions,
 ): EngineResult | undefined => {
   const battle = state.battle;
   const battleWithInternal = battle as EngineInternalBattleState | undefined;
@@ -433,7 +447,7 @@ const validateDamageContinuation = (
     reifyCardRef(state, battle.attacker) === null ||
     reifyCardRef(state, battle.currentTarget) === null
   ) {
-    return malformedContinuation(state);
+    return malformedContinuation(state, options);
   }
   return undefined;
 };
@@ -441,6 +455,7 @@ const validateDamageContinuation = (
 const continueDamageAfterLifeTriggerResponse = (
   state: GameState,
   responseResult: EngineResult,
+  options: EngineResultOptions,
 ): EngineResult => {
   if (responseResult.errors !== undefined) {
     return responseResult;
@@ -459,39 +474,49 @@ const continueDamageAfterLifeTriggerResponse = (
       responseResult.state,
     );
     if (releasedState === null) {
-      return malformedContinuation(state);
+      return malformedContinuation(state, options);
     }
     if (releasedState.effectQueue.length > 0) {
       const resolved = processEffectRuntime(releasedState);
       if (resolved.errors !== undefined) {
-        return toEngineResult(state, [], toErrorTuple(resolved.errors));
+        return toEngineResult(
+          state,
+          [],
+          toErrorTuple(resolved.errors),
+          options,
+        );
       }
-      return toEngineResult(resolved.state, [
-        ...responseResult.events,
-        ...resolved.events,
-      ]);
+      return toEngineResult(
+        resolved.state,
+        [...responseResult.events, ...resolved.events],
+        undefined,
+        options,
+      );
     }
     return responseResult;
   }
   if (damageContinuationResolver === undefined) {
-    return malformedContinuation(state);
+    return malformedContinuation(state, options);
   }
   const continued = damageContinuationResolver(responseResult.state);
   if (continued.errors !== undefined) {
-    return malformedContinuation(state);
+    return malformedContinuation(state, options);
   }
-  return toEngineResult(continued.state, [
-    ...responseResult.events,
-    ...continued.events,
-  ]);
+  return toEngineResult(
+    continued.state,
+    [...responseResult.events, ...continued.events],
+    undefined,
+    options,
+  );
 };
 
 const applyActivatedTriggerResponse = (
   state: GameState,
   decision: ConfirmLifeTriggerDecision,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions,
 ): EngineResult => {
-  const validation = validateDecisionCard(state, decision);
+  const validation = validateDecisionCard(state, decision, options);
   if (validation !== undefined) {
     return validation;
   }
@@ -509,6 +534,7 @@ const applyActivatedTriggerResponse = (
           decision.card.cardId,
         )} is unsupported for activation.`,
       ),
+      options,
     );
   }
   if (
@@ -524,6 +550,7 @@ const applyActivatedTriggerResponse = (
           decision.card.cardId,
         )} is unsupported for activation.`,
       ),
+      options,
     );
   }
 
@@ -578,6 +605,7 @@ const applyActivatedTriggerResponse = (
             decision.card.cardId,
           )} is unsupported for activation.`,
         ),
+        options,
       );
     }
     appendEvent(
@@ -657,20 +685,27 @@ const applyActivatedTriggerResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, options);
   const resolved = processEffectRuntime(nextState);
   if (resolved.errors !== undefined) {
-    return toEngineResult(state, [], toErrorTuple(resolved.errors));
+    return toEngineResult(state, [], toErrorTuple(resolved.errors), options);
   }
   return continueRuntimeAfterDecisionResult(
     state,
-    toEngineResult(resolved.state, [...events, ...resolved.events]),
+    toEngineResult(
+      resolved.state,
+      [...events, ...resolved.events],
+      undefined,
+      options,
+    ),
+    options,
   );
 };
 
 export const applyLifeTriggerDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "confirmLifeTrigger") {
@@ -683,20 +718,22 @@ export const applyLifeTriggerDecisionResponse = (
       invalidDecision(
         "Response type must be lifeTrigger for confirmLifeTrigger.",
       ),
+      options,
     );
   }
   const choice: string = action.response.choice;
   if (!isLifeTriggerChoiceAvailable(decision, choice)) {
-    return getUnavailableLifeTriggerChoiceError(state);
+    return getUnavailableLifeTriggerChoiceError(state, options);
   }
   if (choice === "activateTrigger") {
-    const continuationValidation = validateDamageContinuation(state);
+    const continuationValidation = validateDamageContinuation(state, options);
     if (continuationValidation !== undefined) {
       return continuationValidation;
     }
     return continueDamageAfterLifeTriggerResponse(
       state,
-      applyActivatedTriggerResponse(state, decision, action),
+      applyActivatedTriggerResponse(state, decision, action, options),
+      options,
     );
   }
   if (choice !== "addToHand") {
@@ -704,13 +741,14 @@ export const applyLifeTriggerDecisionResponse = (
       state,
       [],
       invalidDecision("Life Trigger choice is unsupported."),
+      options,
     );
   }
-  const continuationValidation = validateDamageContinuation(state);
+  const continuationValidation = validateDamageContinuation(state, options);
   if (continuationValidation !== undefined) {
     return continuationValidation;
   }
-  const validation = validateDecisionCard(state, decision);
+  const validation = validateDecisionCard(state, decision, options);
   if (validation !== undefined) {
     return validation;
   }
@@ -720,6 +758,7 @@ export const applyLifeTriggerDecisionResponse = (
       state,
       [],
       invalidDecision("Life Trigger decision player is missing."),
+      options,
     );
   }
 
@@ -790,9 +829,10 @@ export const applyLifeTriggerDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, options);
   return continueDamageAfterLifeTriggerResponse(
     state,
-    toEngineResult(nextState, events),
+    toEngineResult(nextState, events, undefined, options),
+    options,
   );
 };

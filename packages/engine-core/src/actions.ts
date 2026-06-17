@@ -332,7 +332,7 @@ const applyLifeTriggerDecisionResponseWithContinuation = (
   const lifeTriggerResult = profileActionSpan(
     options,
     "engine:decision:lifeTrigger",
-    () => applyLifeTriggerDecisionResponse(state, action),
+    () => applyLifeTriggerDecisionResponse(state, action, options),
   );
   if (lifeTriggerResult === null) {
     return null;
