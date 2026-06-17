@@ -595,6 +595,7 @@ export const createQueueEntryResolver = (
         nextState,
         selectedForBodyResolution,
         [...resolutionEventsForTrigger, ...resolvedEvents, ...cleanup.events],
+        options,
       );
       if (triggered !== undefined) {
         if (triggered.errors !== undefined) {

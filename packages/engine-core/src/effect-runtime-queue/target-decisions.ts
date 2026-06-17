@@ -78,6 +78,7 @@ export interface EffectRuntimeQueueTargetDecisionDependencies {
     state: GameState,
     resolvedEntry: EffectQueueEntry,
     resolutionEvents: readonly EngineEvent[],
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 }
 
@@ -532,6 +533,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         nextState,
         resolvedEntry,
         [...resolutionEvents, ...resolvedEvents, ...cleanup.events],
+        options,
       );
       if (triggered !== undefined) {
         if (triggered.errors !== undefined) {

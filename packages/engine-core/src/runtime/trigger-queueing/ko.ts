@@ -17,6 +17,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import {
   appendEffectQueuedEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
@@ -85,6 +86,7 @@ export const createKOTriggerQueueing = (
     state: GameState,
     resolvedEntry: EffectQueueEntry,
     resolutionEvents: readonly EngineEvent[],
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 } => {
   const detectBattleKOTriggerCandidates = (
@@ -332,6 +334,7 @@ export const createKOTriggerQueueing = (
     state: GameState,
     resolvedEntry: EffectQueueEntry,
     resolutionEvents: readonly EngineEvent[],
+    options: EngineResultOptions = {},
   ): EngineResult | undefined => {
     const effectResolved = resolutionEvents.find(
       (event) => event.type === "effectResolved",
@@ -360,7 +363,7 @@ export const createKOTriggerQueueing = (
         state.cardManifest,
       );
       if (!lookup.ok) {
-        return toEngineResult(state, [], [lookup.error]);
+        return toEngineResult(state, [], [lookup.error], options);
       }
       const matching = lookup.definition.effects.filter((effect) =>
         isSupportedEffectResolvedCustomEffect(effect, eventName),
@@ -378,6 +381,7 @@ export const createKOTriggerQueueing = (
               count: state.effectQueue.length,
             }),
           ],
+          options,
         );
       }
 
@@ -457,6 +461,7 @@ export const createKOTriggerQueueing = (
             count: state.effectQueue.length + appended.length,
           }),
         ],
+        options,
       );
     }
     let deferredTriggers = state.deferredTriggers;
@@ -472,6 +477,7 @@ export const createKOTriggerQueueing = (
               count: state.effectQueue.length,
             }),
           ],
+          options,
         );
       }
       deferredTriggers = [
@@ -498,7 +504,7 @@ export const createKOTriggerQueueing = (
       appendEffectQueuedEvent(state, events, entry, effectBlock, resolved);
     }
     nextState.eventJournal = [...state.eventJournal, ...events];
-    return toEngineResult(nextState, events);
+    return toEngineResult(nextState, events, undefined, options);
   };
 
   return {

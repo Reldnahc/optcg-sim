@@ -18,6 +18,7 @@ export type QueueEffectResolvedCustomTriggers = (
   state: GameState,
   entry: EffectQueueEntry,
   events: readonly EngineEvent[],
+  options?: EngineResultOptions,
 ) => EngineResult | undefined;
 
 export interface EffectRuntimeQueueResultsDependencies {

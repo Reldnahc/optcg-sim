@@ -189,6 +189,7 @@ export interface EffectRuntimeTriggerQueueingHelpers {
     state: GameState,
     resolvedEntry: EffectQueueEntry,
     resolutionEvents: readonly EngineEvent[],
+    options?: EngineResultOptions,
   ) => EngineResult | undefined;
 }
 
