@@ -311,6 +311,7 @@ export const createLocalDevMatchRegistry = async (
   const completedPersistingMatchIds = new Set<MatchId>();
   const activeBotRuns = new Set<MatchId>();
   const pendingCheckpointWrites = new Map<MatchId, Promise<void>>();
+  const matchMutationQueues = new Map<MatchId, Promise<void>>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
   const botStrategy = options.botStrategy ?? defaultBotStrategy;
@@ -334,6 +335,28 @@ export const createLocalDevMatchRegistry = async (
   };
   const waitForPendingCheckpoint = async (matchId: MatchId): Promise<void> => {
     await pendingCheckpointWrites.get(matchId);
+  };
+  const runMatchMutation = <T>(
+    matchId: MatchId,
+    mutation: () => Promise<T>,
+  ): Promise<T> => {
+    const previous = matchMutationQueues.get(matchId);
+    const run =
+      previous === undefined
+        ? mutation()
+        : previous.catch(() => undefined).then(mutation);
+    const tracked = run
+      .then(
+        () => undefined,
+        () => undefined,
+      )
+      .finally(() => {
+        if (matchMutationQueues.get(matchId) === tracked) {
+          matchMutationQueues.delete(matchId);
+        }
+      });
+    matchMutationQueues.set(matchId, tracked);
+    return run;
   };
   const captureSessionRollbackState = (matchId: MatchId) => ({
     session: sessions.get(matchId),
@@ -690,185 +713,193 @@ export const createLocalDevMatchRegistry = async (
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createTemplateSetup(matchId));
       const normalizedSetup = { ...actualSetup, matchId };
-      const rollbackState = captureSessionRollbackState(matchId);
-      const session = createActiveLocalDevMatchSession(
-        normalizedSetup,
-        sessionService,
-        matchTimerPolicy,
-        {
-          ...activeSessionSnapshotOptions,
-          ...(matchPersistence === undefined
-            ? {}
-            : { persistence: matchPersistence }),
-        },
-      );
-      sessions.set(matchId, session);
-      try {
-        await saveSessionCheckpoint(matchId);
-      } catch (error: unknown) {
-        restoreSessionRollbackState(matchId, rollbackState);
-        throw error;
-      }
-      return buildCreatedResponse(normalizedSetup, session);
-    },
-    async chooseFirstPlayer(matchId, playerId, choice) {
-      const session = sessions.get(matchId);
-      if (session === undefined) {
-        return "matchNotFound";
-      }
-      if (
-        session.status === "active" ||
-        session.match.state.status.type === "completed" ||
-        session.match.state.status.type === "gameOver"
-      ) {
-        return "alreadyStarted";
-      }
-      if (playerId !== session.firstPlayerChoice.chooserPlayerId) {
-        return "notChooser";
-      }
-      const firstPlayerId = resolvedFirstPlayerId(
-        session.setup,
-        playerId,
-        choice,
-      );
-      const resolvedSetup = {
-        ...session.setup,
-        firstPlayerId,
-      };
-      const resolvedChoice: FirstPlayerChoiceState = {
-        ...session.firstPlayerChoice,
-        choice,
-        resolvedFirstPlayerId: firstPlayerId,
-      };
-      const rollbackState = captureSessionRollbackState(matchId);
-      const sessionWithSeats: ActiveLocalDevMatchSession = {
-        ...createActiveLocalDevMatchSession(
-          resolvedSetup,
+      return runMatchMutation(matchId, async () => {
+        const rollbackState = captureSessionRollbackState(matchId);
+        const session = createActiveLocalDevMatchSession(
+          normalizedSetup,
           sessionService,
           matchTimerPolicy,
           {
             ...activeSessionSnapshotOptions,
-            firstPlayerChoice: resolvedChoice,
-            timersEnabled: session.timersEnabled,
-            botPlayerIds: session.botPlayerIds,
-            seats: session.seats,
-            initialTimers: session.match.state.timers,
             ...(matchPersistence === undefined
               ? {}
               : { persistence: matchPersistence }),
           },
-        ),
-      };
-      syncActiveSessionPlayerLabels(sessionWithSeats);
-      sessions.set(matchId, sessionWithSeats);
-      try {
-        await saveSessionCheckpoint(matchId);
-      } catch (error: unknown) {
-        restoreSessionRollbackState(matchId, rollbackState);
-        throw error;
-      }
-      scheduleBotActions(sessionWithSeats);
-      return buildCreatedResponse(resolvedSetup, sessionWithSeats);
+        );
+        sessions.set(matchId, session);
+        try {
+          await saveSessionCheckpoint(matchId);
+        } catch (error: unknown) {
+          restoreSessionRollbackState(matchId, rollbackState);
+          throw error;
+        }
+        return buildCreatedResponse(normalizedSetup, session);
+      });
+    },
+    async chooseFirstPlayer(matchId, playerId, choice) {
+      return runMatchMutation(matchId, async () => {
+        const session = sessions.get(matchId);
+        if (session === undefined) {
+          return "matchNotFound";
+        }
+        if (
+          session.status === "active" ||
+          session.match.state.status.type === "completed" ||
+          session.match.state.status.type === "gameOver"
+        ) {
+          return "alreadyStarted";
+        }
+        if (playerId !== session.firstPlayerChoice.chooserPlayerId) {
+          return "notChooser";
+        }
+        const firstPlayerId = resolvedFirstPlayerId(
+          session.setup,
+          playerId,
+          choice,
+        );
+        const resolvedSetup = {
+          ...session.setup,
+          firstPlayerId,
+        };
+        const resolvedChoice: FirstPlayerChoiceState = {
+          ...session.firstPlayerChoice,
+          choice,
+          resolvedFirstPlayerId: firstPlayerId,
+        };
+        const rollbackState = captureSessionRollbackState(matchId);
+        const sessionWithSeats: ActiveLocalDevMatchSession = {
+          ...createActiveLocalDevMatchSession(
+            resolvedSetup,
+            sessionService,
+            matchTimerPolicy,
+            {
+              ...activeSessionSnapshotOptions,
+              firstPlayerChoice: resolvedChoice,
+              timersEnabled: session.timersEnabled,
+              botPlayerIds: session.botPlayerIds,
+              seats: session.seats,
+              initialTimers: session.match.state.timers,
+              ...(matchPersistence === undefined
+                ? {}
+                : { persistence: matchPersistence }),
+            },
+          ),
+        };
+        syncActiveSessionPlayerLabels(sessionWithSeats);
+        sessions.set(matchId, sessionWithSeats);
+        try {
+          await saveSessionCheckpoint(matchId);
+        } catch (error: unknown) {
+          restoreSessionRollbackState(matchId, rollbackState);
+          throw error;
+        }
+        scheduleBotActions(sessionWithSeats);
+        return buildCreatedResponse(resolvedSetup, sessionWithSeats);
+      });
     },
     async claimSeat(matchId, playerId, auth) {
-      const session = sessions.get(matchId);
-      if (session === undefined) {
-        return "matchNotFound";
-      }
-      const seat = session.seats[String(playerId)];
-      if (seat === undefined) {
-        return "seatNotFound";
-      }
-      if (seat.subject !== undefined) {
+      return runMatchMutation(matchId, async () => {
+        const session = sessions.get(matchId);
+        if (session === undefined) {
+          return "matchNotFound";
+        }
+        const seat = session.seats[String(playerId)];
+        if (seat === undefined) {
+          return "seatNotFound";
+        }
+        if (seat.subject !== undefined) {
+          if (auth === undefined) {
+            return "unauthenticated";
+          }
+          if (subjectsMatch(seat.subject, auth.subject)) {
+            await saveSeatSubjectChange(matchId, session, seat, () => {
+              refreshSeatSubject(seat, auth.subject);
+            });
+            return {
+              matchId,
+              seat: {
+                playerId,
+                sessionToken: createDevUserSessionToken(
+                  seat.subject.userId,
+                  seat.subject.sessionId,
+                  seat.subject.displayName,
+                ),
+              },
+              ...(session.status === "active"
+                ? {}
+                : {
+                    firstPlayerChoice: firstPlayerChoiceResponse(
+                      session.firstPlayerChoice,
+                    ),
+                  }),
+            };
+          }
+          return "claimed";
+        }
         if (auth === undefined) {
           return "unauthenticated";
         }
-        if (subjectsMatch(seat.subject, auth.subject)) {
-          await saveSeatSubjectChange(matchId, session, seat, () => {
-            refreshSeatSubject(seat, auth.subject);
-          });
-          return {
-            matchId,
-            seat: {
-              playerId,
-              sessionToken: createDevUserSessionToken(
-                seat.subject.userId,
-                seat.subject.sessionId,
-                seat.subject.displayName,
-              ),
-            },
-            ...(session.status === "active"
-              ? {}
-              : {
-                  firstPlayerChoice: firstPlayerChoiceResponse(
-                    session.firstPlayerChoice,
-                  ),
-                }),
-          };
-        }
-        return "claimed";
-      }
-      if (auth === undefined) {
-        return "unauthenticated";
-      }
-      const sessionToken = createDevUserSessionToken(
-        auth.subject.userId,
-        auth.subject.sessionId,
-        auth.subject.displayName,
-      );
-      await saveSeatSubjectChange(matchId, session, seat, () => {
-        seat.subject = auth.subject;
+        const sessionToken = createDevUserSessionToken(
+          auth.subject.userId,
+          auth.subject.sessionId,
+          auth.subject.displayName,
+        );
+        await saveSeatSubjectChange(matchId, session, seat, () => {
+          seat.subject = auth.subject;
+        });
+        return {
+          matchId,
+          seat: { playerId, sessionToken },
+          ...(session.status === "active"
+            ? {}
+            : {
+                firstPlayerChoice: firstPlayerChoiceResponse(
+                  session.firstPlayerChoice,
+                ),
+              }),
+        };
       });
-      return {
-        matchId,
-        seat: { playerId, sessionToken },
-        ...(session.status === "active"
-          ? {}
-          : {
-              firstPlayerChoice: firstPlayerChoiceResponse(
-                session.firstPlayerChoice,
-              ),
-            }),
-      };
     },
     async claimSeatForAuth(matchId, auth) {
-      const session = sessions.get(matchId);
-      if (session === undefined) {
-        return "matchNotFound";
-      }
-      if (auth === undefined) {
-        return "unauthenticated";
-      }
-      const seat = Object.values(session.seats).find(
-        (candidate) =>
-          candidate.subject !== undefined &&
-          subjectsOwnSameAccount(candidate.subject, auth.subject),
-      );
-      if (seat === undefined) {
-        return "seatNotFound";
-      }
-      await saveSeatSubjectChange(matchId, session, seat, () => {
-        refreshSeatSubject(seat, auth.subject);
+      return runMatchMutation(matchId, async () => {
+        const session = sessions.get(matchId);
+        if (session === undefined) {
+          return "matchNotFound";
+        }
+        if (auth === undefined) {
+          return "unauthenticated";
+        }
+        const seat = Object.values(session.seats).find(
+          (candidate) =>
+            candidate.subject !== undefined &&
+            subjectsOwnSameAccount(candidate.subject, auth.subject),
+        );
+        if (seat === undefined) {
+          return "seatNotFound";
+        }
+        await saveSeatSubjectChange(matchId, session, seat, () => {
+          refreshSeatSubject(seat, auth.subject);
+        });
+        const refreshedSubject = auth.subject;
+        return {
+          matchId,
+          seat: {
+            playerId: seat.playerId,
+            sessionToken: createDevUserSessionToken(
+              refreshedSubject.userId,
+              refreshedSubject.sessionId,
+              refreshedSubject.displayName,
+            ),
+          },
+          ...(session.status === "active"
+            ? {}
+            : {
+                firstPlayerChoice: firstPlayerChoiceResponse(
+                  session.firstPlayerChoice,
+                ),
+              }),
+        };
       });
-      const refreshedSubject = auth.subject;
-      return {
-        matchId,
-        seat: {
-          playerId: seat.playerId,
-          sessionToken: createDevUserSessionToken(
-            refreshedSubject.userId,
-            refreshedSubject.sessionId,
-            refreshedSubject.displayName,
-          ),
-        },
-        ...(session.status === "active"
-          ? {}
-          : {
-              firstPlayerChoice: firstPlayerChoiceResponse(
-                session.firstPlayerChoice,
-              ),
-            }),
-      };
     },
     getMatch(matchId) {
       const session = sessions.get(matchId);
