@@ -477,6 +477,10 @@ const previousLoserId = (
   );
 };
 
+const isCompletedSession = (session: ActiveLocalDevMatchSession): boolean =>
+  session.match.state.status.type === "completed" ||
+  session.match.state.status.type === "gameOver";
+
 export const createLocalDevMatchRegistry = async (
   createDefaultSetup: (matchId?: MatchId) => Promise<LocalDevMatchSetup>,
   initialSetup?: LocalDevMatchSetup,
@@ -493,6 +497,7 @@ export const createLocalDevMatchRegistry = async (
   let nextMatchNumber = 1;
   const sessions = new Map<MatchId, LocalDevMatchSession>();
   const completedPersistedMatchIds = new Set<MatchId>();
+  const completedPersistingMatchIds = new Set<MatchId>();
   const activeBotRuns = new Set<MatchId>();
   const sessionService = createMatchSessionService();
   const matchTimerPolicy = options.matchTimerPolicy ?? defaultMatchTimerPolicy;
@@ -555,6 +560,7 @@ export const createLocalDevMatchRegistry = async (
     const completedMatchRepository = options.completedMatchRepository;
     if (
       completedMatchRepository === undefined ||
+      !isCompletedSession(session) ||
       completedPersistedMatchIds.has(session.match.state.matchId)
     ) {
       return;
@@ -578,6 +584,31 @@ export const createLocalDevMatchRegistry = async (
       await completedMatchRepository.saveCompletedMatch(record);
     });
     completedPersistedMatchIds.add(session.match.state.matchId);
+  };
+
+  const scheduleCompletedMatchPersistence = (
+    session: ActiveLocalDevMatchSession,
+  ): void => {
+    const matchId = session.match.state.matchId;
+    if (
+      options.completedMatchRepository === undefined ||
+      !isCompletedSession(session) ||
+      completedPersistedMatchIds.has(matchId) ||
+      completedPersistingMatchIds.has(matchId)
+    ) {
+      return;
+    }
+    completedPersistingMatchIds.add(matchId);
+    setTimeout(() => {
+      void persistCompletedMatchIfNeeded(session).then(
+        () => {
+          completedPersistingMatchIds.delete(matchId);
+        },
+        () => {
+          completedPersistingMatchIds.delete(matchId);
+        },
+      );
+    }, 0);
   };
 
   const botRequestFromChoice = (
@@ -640,7 +671,7 @@ export const createLocalDevMatchRegistry = async (
             continue;
           }
           acceptedAction = true;
-          await persistCompletedMatchIfNeeded(session);
+          scheduleCompletedMatchPersistence(session);
           options.onBotActionAccepted?.(matchId);
         }
         if (!acceptedAction) {
@@ -924,28 +955,28 @@ export const createLocalDevMatchRegistry = async (
     virtualConnectedPlayerIds(matchId) {
       return sessions.get(matchId)?.botPlayerIds ?? new Set();
     },
-    async applyEnvelope(envelope) {
+    applyEnvelope(envelope) {
       const session = sessions.get(envelope.matchId);
       if (session === undefined) {
-        return "matchNotFound";
+        return Promise.resolve("matchNotFound" as const);
       }
       if (session.status !== "active") {
-        return {
-          type: "actionResult",
+        return Promise.resolve({
+          type: "actionResult" as const,
           matchId: envelope.matchId,
           clientActionId: envelope.clientActionId,
-          accepted: false,
+          accepted: false as const,
           stateSeq: envelope.expectedStateSeq,
-          reason: "illegalAction",
+          reason: "illegalAction" as const,
           errors: ["First-player setup is not resolved."],
-        };
+        });
       }
       const result = sessionService.applyEnvelope(envelope);
       if (result.accepted) {
-        await persistCompletedMatchIfNeeded(session);
+        scheduleCompletedMatchPersistence(session);
         scheduleBotActions(session);
       }
-      return result;
+      return Promise.resolve(result);
     },
     advanceTimers({ elapsedMs, connectedPlayerIds, matchIds }) {
       const allowedMatchIds =

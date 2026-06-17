@@ -16,6 +16,7 @@ import type {
   ClientActionEnvelope,
   SessionActionRequest,
 } from "./session-types.js";
+import type { CompletedMatchRepository } from "./postgres-completed-match.js";
 
 let premadeSetup: DevMatchSetup;
 
@@ -35,6 +36,25 @@ afterEach(() => {
 const waitForBotMicrotasks = async (): Promise<void> => {
   await Promise.resolve();
   await Promise.resolve();
+};
+
+const deferredVoid = (): {
+  readonly promise: Promise<void>;
+  readonly resolve: () => void;
+} => {
+  let resolvePromise: (() => void) | undefined;
+  const promise = new Promise<void>((resolve) => {
+    resolvePromise = resolve;
+  });
+  return {
+    promise,
+    resolve() {
+      if (resolvePromise === undefined) {
+        throw new Error("Deferred promise was not initialized.");
+      }
+      resolvePromise();
+    },
+  };
 };
 
 const resolveFirstPlayerChoice = (
@@ -134,6 +154,124 @@ test("accepted registry actions include snapshots for replay frames", async () =
     assert.equal(result.accepted, true);
     assert.ok(result.snapshot?.players[playerId] !== undefined);
   }
+});
+
+test("completed-match save does not block the terminal action response", async () => {
+  const saveStarted = deferredVoid();
+  const saveFinished = deferredVoid();
+  let saveCount = 0;
+  const completedMatchRepository: CompletedMatchRepository = {
+    async saveCompletedMatch() {
+      saveCount += 1;
+      saveStarted.resolve();
+      await saveFinished.promise;
+    },
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { completedMatchRepository, createDefaultMatch: false },
+  );
+  const matchId = "async-completed-match-save" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const ready = registry.chooseFirstPlayer(
+    created.matchId,
+    created.firstPlayerChoice.chooserPlayerId,
+    "goFirst",
+  );
+  if (typeof ready === "string" || ready.snapshot === undefined) {
+    throw new Error(
+      `Unable to start match: ${
+        typeof ready === "string" ? ready : "missing snapshot"
+      }`,
+    );
+  }
+  let snapshot = ready.snapshot;
+  let playerId: PlayerId | undefined;
+  let actionIndex: number | undefined;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const concedeOwner = Object.entries(snapshot.players).find(([, player]) =>
+      player.actions.some((action) => action.type === "concede"),
+    );
+    playerId = concedeOwner?.[0] as PlayerId | undefined;
+    actionIndex = concedeOwner?.[1].actions.find(
+      (action) => action.type === "concede",
+    )?.index;
+    if (playerId !== undefined && actionIndex !== undefined) {
+      break;
+    }
+    const pendingPlayerId = Object.values(snapshot.players).find(
+      (player) => player.view.pendingDecision !== undefined,
+    )?.view.pendingDecision?.playerId;
+    if (pendingPlayerId === undefined) {
+      throw new Error("Expected pending setup before concede action.");
+    }
+    const setupAction = snapshot.players[pendingPlayerId]?.actions[0];
+    if (setupAction?.index === undefined) {
+      throw new Error("Expected visible setup action.");
+    }
+    const setupRequest: SessionActionRequest = {
+      type: "submitAction",
+      playerId: pendingPlayerId,
+      actionIndex: setupAction.index,
+      expectedStateSeq: snapshot.stateSeq,
+    };
+    const setupResult = await registry.applyEnvelope({
+      protocolVersion: "dev",
+      matchId,
+      playerId: pendingPlayerId,
+      clientActionId: `async-completed-match-setup-${String(attempt)}`,
+      expectedStateSeq: snapshot.stateSeq,
+      requestHash: requestHash(setupRequest),
+      request: setupRequest,
+    });
+    if (setupResult === "matchNotFound" || !setupResult.accepted) {
+      throw new Error("Expected setup action to be accepted.");
+    }
+    if (setupResult.snapshot === undefined) {
+      throw new Error("Expected setup action snapshot.");
+    }
+    snapshot = setupResult.snapshot;
+  }
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Timed out advancing setup to concession.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: snapshot.stateSeq,
+  };
+  const envelope: ClientActionEnvelope = {
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId: "async-completed-match-save-action",
+    expectedStateSeq: snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  };
+
+  const actionPromise = registry.applyEnvelope(envelope);
+  let actionReturnedBeforeSaveFinished = false;
+  void actionPromise.then(() => {
+    actionReturnedBeforeSaveFinished = true;
+  });
+  await saveStarted.promise;
+  await waitForBotMicrotasks();
+  saveFinished.resolve();
+  const result = await actionPromise;
+
+  assert.notEqual(result, "matchNotFound");
+  assert.equal(typeof result, "object");
+  if (typeof result === "object") {
+    assert.equal(result.accepted, true);
+  }
+  assert.equal(actionReturnedBeforeSaveFinished, true);
+  assert.equal(saveCount, 1);
 });
 
 test("registry can omit action result snapshots for live socket traffic", async () => {
