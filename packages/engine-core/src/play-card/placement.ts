@@ -11,6 +11,7 @@ import type {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
   createEvent,
   type EngineResultOptions,
   illegalAction,
@@ -19,7 +20,6 @@ import {
 } from "../action-results.js";
 import { reindexZoneCards, toCardRef } from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import { getCharacterOverflowDecisionId } from "./legal-actions.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import {
@@ -126,7 +126,7 @@ const createCharacterOverflowDecisionResult = (params: {
     players: { ...state.players, [playerId]: player },
     eventJournal: [...state.eventJournal, ...events],
   };
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, engineOptions);
   return toEngineResult(nextState, events, undefined, engineOptions);
 };
 
@@ -334,7 +334,7 @@ export const placePlayedCardResult = (params: {
         createEvent(state, seqOffset, type, payload, visibility),
     });
     nextState.eventJournal = [...state.eventJournal, ...events];
-    assertGameStateInvariants(nextState);
+    assertGameStateInvariantsIfEnabled(nextState, engineOptions);
     if (resolvePlayCardEffectRuntime === undefined) {
       return illegalAction(
         state,
@@ -535,7 +535,7 @@ export const placePlayedCardResult = (params: {
       createEvent(state, seqOffset, type, payload, visibility),
   });
   nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, engineOptions);
   if (!resolveOnPlayRuntime) {
     return toEngineResult(nextState, events, undefined, engineOptions);
   }

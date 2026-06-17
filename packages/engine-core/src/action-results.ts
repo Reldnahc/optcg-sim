@@ -11,6 +11,7 @@ import type {
   StateSeq,
 } from "@optcg/types";
 
+import { assertGameStateInvariants } from "./state/invariants.js";
 import { hashCanonicalStateValue } from "./state/canonical-state.js";
 
 export const toStateSeq = (value: number): StateSeq => value as StateSeq;
@@ -23,6 +24,7 @@ const toEngineEventId = (value: string): EngineEventId =>
 export interface EngineResultOptions {
   readonly includeStateHash?: boolean;
   readonly profileSpan?: <T>(name: string, fn: () => T) => T;
+  readonly validateInvariants?: boolean;
 }
 
 const profileEngineSpan = <T>(
@@ -54,6 +56,18 @@ export const toEngineResult = (
     result.errors = [...errors];
   }
   return result;
+};
+
+export const assertGameStateInvariantsIfEnabled = (
+  state: GameState,
+  options: EngineResultOptions = {},
+): void => {
+  if (options.validateInvariants === false) {
+    return;
+  }
+  profileEngineSpan(options, "engine:assertGameStateInvariants", () => {
+    assertGameStateInvariants(state);
+  });
 };
 
 export const illegalAction = (state: GameState, reason: string): EngineResult =>

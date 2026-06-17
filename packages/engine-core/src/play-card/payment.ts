@@ -9,12 +9,12 @@ import type {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
   type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getPlayCardDecisionId,
   getPlayCardDecisionPrompt,
@@ -80,7 +80,7 @@ export const createPlayCardPaymentDecisionResult = (params: {
     pendingDecision,
     eventJournal: [...state.eventJournal, ...events],
   };
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState, engineOptions);
   return toEngineResult(nextState, events, undefined, engineOptions);
 };
 

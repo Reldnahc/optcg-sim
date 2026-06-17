@@ -14,6 +14,7 @@ import type {
 
 import {
   appendEvent,
+  assertGameStateInvariantsIfEnabled,
   createEvent,
   type EngineResultOptions,
   illegalAction,
@@ -25,7 +26,6 @@ import {
   targetMatchesCard,
   zonesEqual,
 } from "../actions/state.js";
-import { assertGameStateInvariants } from "../state/invariants.js";
 import {
   getPlayCardPendingDecisionLegalActions,
   parseCharacterOverflowDecisionInstanceId,
@@ -293,7 +293,7 @@ const resolvePlayCardEffectRuntime = (
     ...continued.state,
     eventJournal: [...originalState.eventJournal, ...continued.events],
   };
-  assertGameStateInvariants(stateWithJournal);
+  assertGameStateInvariantsIfEnabled(stateWithJournal, options);
   return toEngineResult(stateWithJournal, continued.events, undefined, options);
 };
 
@@ -591,7 +591,7 @@ export const applyRuntimeActivateSelectedEvent = (params: {
       createEvent(state, seqOffset, type, payload, visibility),
   });
   nextState.eventJournal = [...state.eventJournal, ...events];
-  assertGameStateInvariants(nextState);
+  assertGameStateInvariantsIfEnabled(nextState);
   return toEngineResult(nextState, events);
 };
 
