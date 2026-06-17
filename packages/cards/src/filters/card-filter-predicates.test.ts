@@ -607,6 +607,16 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses attribute Leader predicates as generic card filters", () => {
+    expect(
+      parseCardFilterPredicates({ text: "<Slash> attribute Leader" }),
+    ).toEqual({
+      filter: { attributesAny: ["slash"], categories: ["leader"] },
+      evidence: ["filter:attribute", "filter:category:leader"],
+      rest: "",
+    });
+  });
 });
 
 it("parses shorthand cost thresholds without 'of'", () => {

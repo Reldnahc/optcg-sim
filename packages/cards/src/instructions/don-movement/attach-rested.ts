@@ -756,7 +756,7 @@ const parseRestedDonAttachmentTarget = (
   if (typeIncludingLeaderOrCharacter !== undefined) {
     return typeIncludingLeaderOrCharacter;
   }
-  const normalizedTargetText = targetText.replace(/^1 of your /iu, "");
+  const normalizedTargetText = targetText.replace(/^(?:1 of )?your /iu, "");
   const parsed = parseCardFilterPredicates(
     { text: normalizedTargetText },
     { powerSemantics: "current" },

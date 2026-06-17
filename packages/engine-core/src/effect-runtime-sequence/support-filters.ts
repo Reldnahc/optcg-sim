@@ -27,6 +27,7 @@ export const isSupportedAttachDonTargetFilter = (
 const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attachedDon",
+  "attributesAny",
   "baseCost",
   "categories",
   "colorsAny",

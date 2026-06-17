@@ -282,7 +282,7 @@ export const parseAttributeCategoryPredicate: PredicateParser = (
   current,
 ) => {
   const match = new RegExp(
-    `^(?<attribute>${angleAttributePattern}) attribute (?<category>Character|Stage|Event)(?: cards?|s)?\\b\\s*(?<rest>.*)$`,
+    `^(?<attribute>${angleAttributePattern}) attribute (?<category>Leader|Character|Stage|Event)(?: cards?|s)?\\b\\s*(?<rest>.*)$`,
     "i",
   ).exec(text);
   const attributeText = match?.groups?.["attribute"];
