@@ -1,4 +1,7 @@
+import type { Effect, Target, Zone } from "@optcg/types";
+
 import { parseYourFieldReplacementTarget } from "../../targets/replacement-targets.js";
+import type { PrimitiveEvidence } from "../../types.js";
 import { parseInsteadEffect } from "./instead-effects/index.js";
 import type { ReplacementTriggerParseResult } from "./shared.js";
 
@@ -20,39 +23,30 @@ export function parseCombinedKoOrFieldRemovalReplacement(
     return undefined;
   }
 
-  const target = parseYourFieldReplacementTarget({
-    text: normalizeFieldRemovalTargetText(targetText),
-  });
-  if (
-    target === undefined ||
-    target.rest.length > 0 ||
-    (target.target.type !== "all" && target.target.type !== "self")
-  ) {
-    return undefined;
-  }
-  const instead = parseInsteadEffect(bodyText);
-  if (instead === undefined) {
+  const parts = parseFieldReplacementParts(targetText, bodyText);
+  if (parts === undefined) {
     return undefined;
   }
 
   const koWhen = {
     type: "wouldBeKOd" as const,
     sourceControllerRelation: "any" as const,
-    target: target.target,
+    target: parts.target,
   };
   const fieldRemovalWhen = {
     type: "wouldMoveZone" as const,
-    from: target.target.type === "self" ? "characterArea" : target.target.zone,
+    from: fieldReplacementTargetZone(parts.target),
     sourceKind: "cardEffect" as const,
     sourceControllerRelation: "opponentControlled" as const,
-    target: target.target,
+    target: parts.target,
   };
-  return {
+
+  return buildReplacementTriggerResult({
+    parts,
     when: {
       type: "anyOf",
       replacements: [koWhen, fieldRemovalWhen],
     },
-    instead: instead.effect,
     evidence: [
       "composition:triggerAnyOf",
       "replacement:wouldBeKOd",
@@ -60,10 +54,8 @@ export function parseCombinedKoOrFieldRemovalReplacement(
       "replacement:fieldRemoval",
       "replacementSource:opponent",
       "replacementSource:cardEffect",
-      ...target.evidence,
-      ...instead.evidence,
     ],
-  };
+  });
 }
 
 export function parseOpponentKoReplacement(
@@ -88,23 +80,13 @@ export function parseOpponentKoReplacement(
   const hasCardEffectSource =
     anyEffectText !== undefined || opponentEffectOnlyText !== undefined;
 
-  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
-  const target = parseYourFieldReplacementTarget({
-    text: normalizedTargetText,
-  });
-  if (
-    target === undefined ||
-    target.rest.length > 0 ||
-    (target.target.type !== "all" && target.target.type !== "self")
-  ) {
-    return undefined;
-  }
-  const instead = parseInsteadEffect(bodyText);
-  if (instead === undefined) {
+  const parts = parseFieldReplacementParts(targetText, bodyText);
+  if (parts === undefined) {
     return undefined;
   }
 
-  return {
+  return buildReplacementTriggerResult({
+    parts,
     when: {
       type: "wouldBeKOd",
       ...(anyEffectText !== undefined ||
@@ -112,9 +94,8 @@ export function parseOpponentKoReplacement(
         ? { sourceControllerRelation: "any" as const }
         : {}),
       ...(hasCardEffectSource ? { sourceKind: "cardEffect" as const } : {}),
-      target: target.target,
+      target: parts.target,
     },
-    instead: instead.effect,
     evidence: [
       "replacement:wouldBeKOd",
       ...(/by your opponent/i.test(text)
@@ -123,10 +104,8 @@ export function parseOpponentKoReplacement(
       ...(hasCardEffectSource
         ? (["replacementSource:cardEffect"] as const)
         : []),
-      ...target.evidence,
-      ...instead.evidence,
     ],
-  };
+  });
 }
 
 export function parseOpponentRestReplacement(
@@ -192,35 +171,20 @@ function parseBattleKoReplacement(
     return undefined;
   }
 
-  const target = parseYourFieldReplacementTarget({
-    text: normalizeFieldRemovalTargetText(targetText),
-  });
-  if (
-    target === undefined ||
-    target.rest.length > 0 ||
-    (target.target.type !== "all" && target.target.type !== "self")
-  ) {
-    return undefined;
-  }
-  const instead = parseInsteadEffect(bodyText);
-  if (instead === undefined) {
+  const parts = parseFieldReplacementParts(targetText, bodyText);
+  if (parts === undefined) {
     return undefined;
   }
 
-  return {
+  return buildReplacementTriggerResult({
+    parts,
     when: {
       type: "wouldBeKOd",
       sourceKind: "battle",
-      target: target.target,
+      target: parts.target,
     },
-    instead: instead.effect,
-    evidence: [
-      "replacement:wouldBeKOd",
-      "protectionSource:battle",
-      ...target.evidence,
-      ...instead.evidence,
-    ],
-  };
+    evidence: ["replacement:wouldBeKOd", "protectionSource:battle"],
+  });
 }
 
 export function parseOpponentFieldRemovalReplacement(
@@ -237,32 +201,20 @@ export function parseOpponentFieldRemovalReplacement(
     return undefined;
   }
 
-  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
-  const target = parseYourFieldReplacementTarget({
-    text: normalizedTargetText,
-  });
-  if (
-    target === undefined ||
-    target.rest.length > 0 ||
-    (target.target.type !== "all" && target.target.type !== "self")
-  ) {
-    return undefined;
-  }
-  const instead = parseInsteadEffect(bodyText);
-  if (instead === undefined) {
+  const parts = parseFieldReplacementParts(targetText, bodyText);
+  if (parts === undefined) {
     return undefined;
   }
 
-  return {
+  return buildReplacementTriggerResult({
+    parts,
     when: {
       type: "wouldMoveZone",
-      from:
-        target.target.type === "self" ? "characterArea" : target.target.zone,
+      from: fieldReplacementTargetZone(parts.target),
       ...(effectOnlyText === undefined ? {} : { sourceKind: "cardEffect" }),
       sourceControllerRelation: "opponentControlled",
-      target: target.target,
+      target: parts.target,
     },
-    instead: instead.effect,
     evidence: [
       "replacement:wouldMoveZone",
       "replacement:fieldRemoval",
@@ -270,10 +222,8 @@ export function parseOpponentFieldRemovalReplacement(
       ...(effectOnlyText === undefined
         ? []
         : ["replacementSource:cardEffect" as const]),
-      ...target.evidence,
-      ...instead.evidence,
     ],
-  };
+  });
 }
 
 export function parseAnyFieldRemovalReplacement(
@@ -289,39 +239,90 @@ export function parseAnyFieldRemovalReplacement(
     return undefined;
   }
 
-  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
+  const parts = parseFieldReplacementParts(targetText, bodyText);
+  if (parts === undefined) {
+    return undefined;
+  }
+
+  return buildReplacementTriggerResult({
+    parts,
+    when: {
+      type: "wouldMoveZone",
+      from: fieldReplacementTargetZone(parts.target),
+      sourceControllerRelation: "any",
+      target: parts.target,
+    },
+    evidence: [
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:any",
+    ],
+  });
+}
+
+type FieldReplacementTarget =
+  | Extract<Target, { type: "all" }>
+  | Extract<Target, { type: "self" }>;
+
+interface FieldReplacementParts {
+  readonly target: FieldReplacementTarget;
+  readonly instead: Effect;
+  readonly targetEvidence: readonly PrimitiveEvidence[];
+  readonly insteadEvidence: readonly PrimitiveEvidence[];
+}
+
+function parseFieldReplacementParts(
+  targetText: string,
+  bodyText: string,
+): FieldReplacementParts | undefined {
   const target = parseYourFieldReplacementTarget({
-    text: normalizedTargetText,
+    text: normalizeFieldRemovalTargetText(targetText),
   });
   if (
     target === undefined ||
     target.rest.length > 0 ||
-    (target.target.type !== "all" && target.target.type !== "self")
+    !isSupportedFieldReplacementTarget(target.target)
   ) {
     return undefined;
   }
+
   const instead = parseInsteadEffect(bodyText);
   if (instead === undefined) {
     return undefined;
   }
 
   return {
-    when: {
-      type: "wouldMoveZone",
-      from:
-        target.target.type === "self" ? "characterArea" : target.target.zone,
-      sourceControllerRelation: "any",
-      target: target.target,
-    },
+    target: target.target,
     instead: instead.effect,
+    targetEvidence: target.evidence,
+    insteadEvidence: instead.evidence,
+  };
+}
+
+function buildReplacementTriggerResult(options: {
+  readonly when: ReplacementTriggerParseResult["when"];
+  readonly parts: FieldReplacementParts;
+  readonly evidence: readonly PrimitiveEvidence[];
+}): ReplacementTriggerParseResult {
+  return {
+    when: options.when,
+    instead: options.parts.instead,
     evidence: [
-      "replacement:wouldMoveZone",
-      "replacement:fieldRemoval",
-      "replacementSource:any",
-      ...target.evidence,
-      ...instead.evidence,
+      ...options.evidence,
+      ...options.parts.targetEvidence,
+      ...options.parts.insteadEvidence,
     ],
   };
+}
+
+function isSupportedFieldReplacementTarget(
+  target: Target,
+): target is FieldReplacementTarget {
+  return target.type === "all" || target.type === "self";
+}
+
+function fieldReplacementTargetZone(target: FieldReplacementTarget): Zone {
+  return target.type === "self" ? "characterArea" : target.zone;
 }
 
 function normalizeFieldRemovalTargetText(text: string): string {
