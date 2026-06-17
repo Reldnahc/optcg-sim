@@ -323,7 +323,9 @@ function parseFieldToOwnerDeckBottomCostRoute(text: string):
     }
   | undefined {
   const match =
-    /^of your (?<target>.+?) at the bottom of the owner's deck$/iu.exec(text);
+    /^of your (?<target>.+?) at the bottom of (?:the owner's|your) deck$/iu.exec(
+      text,
+    );
   const targetText = match?.groups?.["target"];
   if (targetText === undefined) {
     return undefined;

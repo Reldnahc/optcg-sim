@@ -238,6 +238,50 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses filtered field card move costs to your deck bottom as reusable moveCards costs", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "rest this card and place 1 of your Characters with 1000 base power at the bottom of your deck",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "restSelf" },
+          {
+            type: "moveCards",
+            count: 1,
+            chooser: "self",
+            from: { player: "self", zone: "characterArea" },
+            to: { player: "self", zone: "deck", position: "bottom" },
+            filter: {
+              categories: ["character"],
+              power: { op: "eq", value: 1000 },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:restSelf",
+        "target:thisCard",
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:characterArea",
+        "destination:deck",
+        "position:bottom",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses return-DON and hand-trash as one optional cost sequence", () => {
     expect(
       parseOptionalCostSequence({
