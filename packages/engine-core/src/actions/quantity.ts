@@ -8,7 +8,12 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import {
   clearPendingDecision,
   effectQueueEntryForDecision,
@@ -95,6 +100,7 @@ const hasCurrentChooseQuantityRuntimeContext = (
 export const applyChooseQuantityDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || decision.type !== "chooseQuantity") {
@@ -106,6 +112,7 @@ export const applyChooseQuantityDecisionResponse = (
       state,
       [],
       invalidDecision("Response must be an object for chooseQuantity."),
+      options,
     );
   }
   const responseType = (response as { type?: unknown }).type;
@@ -116,6 +123,7 @@ export const applyChooseQuantityDecisionResponse = (
       invalidDecision(
         "Response type must be chooseQuantity for chooseQuantity.",
       ),
+      options,
     );
   }
   const mode: unknown = decision.mode;
@@ -131,6 +139,7 @@ export const applyChooseQuantityDecisionResponse = (
       state,
       [],
       invalidDecision("chooseQuantity bounds are malformed."),
+      options,
     );
   }
   if (!hasCurrentChooseQuantityRuntimeContext(state, decision)) {
@@ -140,6 +149,7 @@ export const applyChooseQuantityDecisionResponse = (
       invalidDecision(
         "chooseQuantity decision is stale for current effect queue.",
       ),
+      options,
     );
   }
   const quantity = (response as { quantity?: unknown }).quantity;
@@ -153,6 +163,7 @@ export const applyChooseQuantityDecisionResponse = (
       state,
       [],
       invalidDecision("quantity must be a whole number within min and max."),
+      options,
     );
   }
 
@@ -183,5 +194,5 @@ export const applyChooseQuantityDecisionResponse = (
   };
   nextState = clearPendingDecision(nextState);
 
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };

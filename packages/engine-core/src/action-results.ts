@@ -22,7 +22,14 @@ const toEngineEventId = (value: string): EngineEventId =>
 
 export interface EngineResultOptions {
   readonly includeStateHash?: boolean;
+  readonly profileSpan?: <T>(name: string, fn: () => T) => T;
 }
+
+const profileEngineSpan = <T>(
+  options: EngineResultOptions,
+  name: string,
+  fn: () => T,
+): T => options.profileSpan?.(name, fn) ?? fn();
 
 export const toEngineResult = (
   state: GameState,
@@ -34,7 +41,11 @@ export const toEngineResult = (
     state,
     events,
     stateHash:
-      options.includeStateHash === false ? "" : hashCanonicalStateValue(state),
+      options.includeStateHash === false
+        ? ""
+        : profileEngineSpan(options, "engine:toEngineResult:stateHash", () =>
+            hashCanonicalStateValue(state),
+          ),
   };
   if (state.pendingDecision !== undefined) {
     result.decisions = [state.pendingDecision];

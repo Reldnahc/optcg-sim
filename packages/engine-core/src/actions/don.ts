@@ -10,6 +10,7 @@ import type {
 
 import {
   createEvent,
+  type EngineResultOptions,
   illegalAction,
   toEngineResult,
   toStateSeq,
@@ -65,6 +66,7 @@ export const getAttachDonLegalActions = (
 export const applyAttachDon = (
   state: GameState,
   action: Extract<Action, { type: "attachDon" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (!isMatchActive(state)) {
     return illegalAction(
@@ -152,5 +154,5 @@ export const applyAttachDon = (
   });
   nextWithRules.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariants(nextWithRules);
-  return toEngineResult(nextWithRules, events);
+  return toEngineResult(nextWithRules, events, undefined, options);
 };
