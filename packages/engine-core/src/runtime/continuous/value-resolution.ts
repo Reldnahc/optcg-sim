@@ -172,17 +172,27 @@ const countMatchingZoneCards = (
         )
       : null;
   }
+  const zoneCards = value.zone === "costArea" ? player.costArea : player.trash;
   const matchingCount =
     filter === undefined
-      ? player.trash.length
-      : player.trash.filter((card) =>
-          cardMatchesBasicFilter(state, card, filter),
+      ? zoneCards.length
+      : zoneCards.filter((card) =>
+          value.zone === "costArea"
+            ? costAreaDonMatchesFilter(card, filter)
+            : cardMatchesBasicFilter(state, card, filter),
         ).length;
   return applyDynamicZoneCountArithmetic(
     Math.floor(matchingCount / value.per) * value.multiplier,
     value,
   );
 };
+
+const costAreaDonMatchesFilter = (
+  card: CardInstance,
+  filter: CardFilter,
+): boolean =>
+  (filter.categories === undefined || filter.categories.includes("don")) &&
+  (filter.state === undefined || card.state === filter.state);
 
 const countMatchingZoneCardsAcrossPlayers = (
   state: GameState,

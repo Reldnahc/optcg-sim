@@ -264,7 +264,7 @@ export type DynamicNumberValue =
   | {
       type: "countMatchingZoneCards";
       player: PlayerRef;
-      zone: "trash" | "life";
+      zone: "trash" | "life" | "costArea";
       filter?: CardFilter;
       per: number;
       multiplier: number;

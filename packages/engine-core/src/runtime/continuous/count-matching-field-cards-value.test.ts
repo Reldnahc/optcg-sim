@@ -80,3 +80,27 @@ test("countMatchingZoneCards dynamic value applies offset and minimum after coun
     0,
   );
 });
+
+test("countMatchingZoneCards dynamic value counts rested cost-area DON", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  player.costArea = player.donDeck.slice(0, 3).map((card, index) => ({
+    ...card,
+    state: index === 0 ? "active" : "rested",
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+  }));
+  player.donDeck = player.donDeck.slice(3);
+  const value: DynamicNumberValue = {
+    type: "countMatchingZoneCards",
+    player: "self",
+    zone: "costArea",
+    filter: { categories: ["don"], state: "rested" },
+    per: 1,
+    multiplier: 1000,
+  };
+
+  assert.equal(
+    resolveDynamicNumberValue(state, value, { controllerId: p1 }),
+    2000,
+  );
+});

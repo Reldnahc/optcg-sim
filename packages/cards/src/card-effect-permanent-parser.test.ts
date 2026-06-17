@@ -970,4 +970,42 @@ describe("permanent card effect line parser", () => {
       ]),
     );
   });
+
+  it("parses rested DON batches as the same dynamic zone-count value primitive", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] [Your Turn] This Character gains +1000 power for every 3 of your rested DON!! cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: {
+            type: "countMatchingZoneCards",
+            player: "self",
+            zone: "costArea",
+            filter: { categories: ["don"], state: "rested" },
+            per: 3,
+            multiplier: 1000,
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "marker:attachedDon",
+        "entry:yourTurn",
+        "instruction:modifyPower",
+        "target:thisCharacter",
+        "modifier:positivePower",
+        "value:dynamic:matchingZoneCards",
+        "zone:costArea",
+        "filter:category:don",
+        "filter:state:rested",
+      ]),
+    );
+  });
 });

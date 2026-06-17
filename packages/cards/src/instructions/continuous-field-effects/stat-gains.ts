@@ -541,6 +541,36 @@ const parseTrashBatchDynamicValue = (
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined => {
+  const restedDonMatch =
+    /^(?<statText>.+?)\s+for every (?<per>[1-9]\d*) of your rested DON!! cards\.?$/iu.exec(
+      text,
+    );
+  const restedDonStatText = restedDonMatch?.groups?.["statText"]?.trim();
+  const restedDonPerText = restedDonMatch?.groups?.["per"];
+  if (
+    restedDonStatText !== undefined &&
+    restedDonStatText.length > 0 &&
+    restedDonPerText !== undefined
+  ) {
+    return {
+      statText: restedDonStatText,
+      value: {
+        type: "countMatchingZoneCards",
+        player: "self",
+        zone: "costArea",
+        filter: { categories: ["don"], state: "rested" },
+        per: Number.parseInt(restedDonPerText, 10),
+        multiplier: 1,
+      },
+      evidence: [
+        "value:dynamic:matchingZoneCards",
+        "zone:costArea",
+        "filter:category:don",
+        "filter:state:rested",
+      ],
+    };
+  }
+
   const match =
     /^(?<statText>.+?)\s+for every (?<per>[1-9]\d*) (?<filter>cards?|.+?) in your trash\.?$/iu.exec(
       text,

@@ -268,7 +268,9 @@ const isSupportedModifierValue = (
         Number.isSafeInteger(value.multiplier) &&
         value.multiplier !== 0 &&
         (value.filter === undefined ||
-          Object.keys(value.filter).every((key) => key === "categories"))) ||
+          Object.keys(value.filter).every(
+            (key) => key === "categories" || key === "state",
+          ))) ||
       (value.type === "countAttachedDon" &&
         Number.isSafeInteger(value.per) &&
         value.per > 0 &&
