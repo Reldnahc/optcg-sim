@@ -9,6 +9,7 @@ import type {
 
 import {
   appendEvent,
+  type EngineResultOptions,
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
@@ -46,12 +47,14 @@ export const executeDamagePrimitive = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: Effect,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (!isSupportedDamageEffect(effect)) {
     return toEngineResult(
       state,
       [],
       [damageExecutionError(entry.effectBlockId, "unsupported-effect-shape")],
+      options,
     );
   }
 
@@ -63,6 +66,7 @@ export const executeDamagePrimitive = (
       state,
       [],
       [damageExecutionError(entry.effectBlockId, "unsupported-player-ref")],
+      options,
     );
   }
 
@@ -72,6 +76,7 @@ export const executeDamagePrimitive = (
       state,
       [],
       [damageExecutionError(entry.effectBlockId, "unsupported-zero-life")],
+      options,
     );
   }
 
@@ -81,6 +86,7 @@ export const executeDamagePrimitive = (
       state,
       [],
       [damageExecutionError(entry.effectBlockId, "unsupported-life-decision")],
+      options,
     );
   }
 
@@ -154,5 +160,7 @@ export const executeDamagePrimitive = (
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
+    undefined,
+    options,
   );
 };

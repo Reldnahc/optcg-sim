@@ -6,7 +6,7 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { toEngineResult } from "../action-results.js";
+import { type EngineResultOptions, toEngineResult } from "../action-results.js";
 import { executeDamagePrimitive } from "../runtime/primitives/execute.js";
 
 type DamageEffect = Extract<Effect, { type: "damage" }>;
@@ -28,17 +28,20 @@ export const resolveQueuedDamagePrimitive = (
   entry: EffectQueueEntry,
   effect: DamageEffect,
   priorEvents: readonly EngineEvent[],
+  options: EngineResultOptions = {},
 ): QueuedDamageResolution => {
-  const resolution = executeDamagePrimitive(state, entry, effect);
+  const resolution = executeDamagePrimitive(state, entry, effect, options);
   if (resolution.errors !== undefined) {
     return { status: "unsupported" };
   }
   if (resolution.state.pendingDecision !== undefined) {
     return {
-      result: toEngineResult(resolution.state, [
-        ...priorEvents,
-        ...resolution.events,
-      ]),
+      result: toEngineResult(
+        resolution.state,
+        [...priorEvents, ...resolution.events],
+        undefined,
+        options,
+      ),
       status: "pendingDecision",
     };
   }

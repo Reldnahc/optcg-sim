@@ -501,6 +501,7 @@ export const createQueueEntryResolver = (
           resolvingEntry,
           damageEffect,
           allEvents,
+          options,
         );
         if (resolution.status === "unsupported") {
           return unsupportedEffectQueueResult(originalState);
