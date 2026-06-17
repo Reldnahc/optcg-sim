@@ -40,6 +40,7 @@ const keys = (matchId: MatchId) => {
     actions: `${prefix}:actions`,
     decisions: `${prefix}:decisions`,
     current: `${prefix}:current`,
+    snapshotsPrefix: `${prefix}:snapshots:`,
     locks: `${prefix}:locks`,
     freeze: `${prefix}:freeze`,
     snapshot(generation: string) {
@@ -76,6 +77,11 @@ const matchIdFromMetaKey = (key: string): MatchId | undefined => {
   return match?.[1] as MatchId | undefined;
 };
 
+const matchIdFromCurrentKey = (key: string): MatchId | undefined => {
+  const match = /^match:(.+):current$/u.exec(key);
+  return match?.[1] as MatchId | undefined;
+};
+
 const scanAll = async (
   redis: RedisLike,
   pattern: string,
@@ -95,6 +101,41 @@ const scanAll = async (
 
 const snapshotGeneration = (snapshot: MatchPersistenceSnapshot): string =>
   `${String(snapshot.state.seq)}:${randomUUID()}`;
+
+const cleanupOldSnapshotGenerations = async (
+  redis: RedisLike,
+  matchKeys: ReturnType<typeof keys>,
+  currentGeneration: string,
+): Promise<void> => {
+  const currentPrefix = `${matchKeys.snapshotsPrefix}${currentGeneration}:`;
+  const staleKeys = (
+    await scanAll(redis, `${matchKeys.snapshotsPrefix}*`)
+  ).filter(
+    (key) =>
+      key.startsWith(matchKeys.snapshotsPrefix) &&
+      !key.startsWith(currentPrefix),
+  );
+  for (const key of staleKeys) {
+    await redis.del(key);
+  }
+};
+
+const legacyActiveMatchIds = async (redis: RedisLike): Promise<MatchId[]> => {
+  const ids: MatchId[] = [];
+  for (const matchId of (await scanAll(redis, "match:*:meta"))
+    .map(matchIdFromMetaKey)
+    .filter((candidate): candidate is MatchId => candidate !== undefined)) {
+    const matchKeys = keys(matchId);
+    const [state, manifest] = await Promise.all([
+      redis.get(matchKeys.state),
+      redis.get(matchKeys.manifest),
+    ]);
+    if (state !== null && manifest !== null) {
+      ids.push(matchId);
+    }
+  }
+  return ids;
+};
 
 const loadSnapshotFromKeys = async (
   redis: RedisLike,
@@ -144,7 +185,6 @@ export const createRedisMatchPersistence = (
     const matchKeys = keys(input.metadata.matchId);
     const generation = snapshotGeneration(input);
     const snapshotKeys = matchKeys.snapshot(generation);
-    await redis.set(matchKeys.meta, serialize(input.metadata));
     await redis.set(snapshotKeys.metadata, serialize(input.metadata));
     await redis.set(snapshotKeys.state, serialize(input.state));
     await redis.set(snapshotKeys.manifest, serialize(input.manifest));
@@ -158,6 +198,9 @@ export const createRedisMatchPersistence = (
     await pushRecords(redis, snapshotKeys.actions, input.actions);
     await pushRecords(redis, snapshotKeys.decisions, input.decisions);
     await redis.set(matchKeys.current, generation);
+    await cleanupOldSnapshotGenerations(redis, matchKeys, generation).catch(
+      () => undefined,
+    );
   },
   async appendAction({ matchId, record }) {
     const matchKeys = keys(matchId);
@@ -197,9 +240,12 @@ export const createRedisMatchPersistence = (
     );
   },
   async listActiveMatchIds() {
-    const ids = (await scanAll(redis, "match:*:meta"))
-      .map(matchIdFromMetaKey)
-      .filter((matchId): matchId is MatchId => matchId !== undefined);
+    const ids = [
+      ...(await scanAll(redis, "match:*:current"))
+        .map(matchIdFromCurrentKey)
+        .filter((matchId): matchId is MatchId => matchId !== undefined),
+      ...(await legacyActiveMatchIds(redis)),
+    ];
     return [...new Set(ids)];
   },
   async tryAcquireRecoveryLock({ matchId, ownerInstanceId, now, ttlMs }) {

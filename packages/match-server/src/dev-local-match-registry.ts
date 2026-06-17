@@ -335,12 +335,55 @@ export const createLocalDevMatchRegistry = async (
   const waitForPendingCheckpoint = async (matchId: MatchId): Promise<void> => {
     await pendingCheckpointWrites.get(matchId);
   };
+  const captureSessionRollbackState = (matchId: MatchId) => ({
+    session: sessions.get(matchId),
+    runtime: sessionService.getRuntime(matchId),
+  });
+  const restoreSessionRollbackState = (
+    matchId: MatchId,
+    rollbackState: ReturnType<typeof captureSessionRollbackState>,
+  ): void => {
+    if (rollbackState.session === undefined) {
+      sessions.delete(matchId);
+    } else {
+      sessions.set(matchId, rollbackState.session);
+    }
+    sessionService.restoreRuntime(matchId, rollbackState.runtime);
+  };
   const saveActiveSessionCheckpoint = async (
     matchId: MatchId,
     session: LocalDevMatchSession,
   ): Promise<void> => {
     if (session.status === "active") {
       await saveSessionCheckpoint(matchId);
+    }
+  };
+  const restoreSeatSubject = (
+    seat: LocalDevMatchSeat,
+    subject: LocalDevMatchSeat["subject"],
+  ): void => {
+    if (subject === undefined) {
+      delete seat.subject;
+      return;
+    }
+    seat.subject = subject;
+  };
+  const saveSeatSubjectChange = async (
+    matchId: MatchId,
+    session: LocalDevMatchSession,
+    seat: LocalDevMatchSeat,
+    updateSubject: () => void,
+  ): Promise<void> => {
+    const previousSubject =
+      seat.subject === undefined ? undefined : structuredClone(seat.subject);
+    updateSubject();
+    syncActiveSessionPlayerLabels(session);
+    try {
+      await saveActiveSessionCheckpoint(matchId, session);
+    } catch (error: unknown) {
+      restoreSeatSubject(seat, previousSubject);
+      syncActiveSessionPlayerLabels(session);
+      throw error;
     }
   };
   const waitForBotActionDelay = async (): Promise<void> => {
@@ -559,6 +602,7 @@ export const createLocalDevMatchRegistry = async (
           `dev-local-match-${String(nextMatchNumber++)}` as MatchId,
         ));
       const botPlayerIds = new Set(options?.botPlayerIds ?? []);
+      const rollbackState = captureSessionRollbackState(actualSetup.matchId);
       const session =
         options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
           ? createPendingLocalDevMatchSession(
@@ -596,7 +640,12 @@ export const createLocalDevMatchRegistry = async (
             };
       sessions.set(actualSetup.matchId, session);
       if (session.status === "active") {
-        await saveSessionCheckpoint(actualSetup.matchId);
+        try {
+          await saveSessionCheckpoint(actualSetup.matchId);
+        } catch (error: unknown) {
+          restoreSessionRollbackState(actualSetup.matchId, rollbackState);
+          throw error;
+        }
         syncActiveSessionPlayerLabels(session);
         scheduleBotActions(session);
       }
@@ -641,6 +690,7 @@ export const createLocalDevMatchRegistry = async (
     async resetMatch(matchId, setup) {
       const actualSetup = setup ?? (await createTemplateSetup(matchId));
       const normalizedSetup = { ...actualSetup, matchId };
+      const rollbackState = captureSessionRollbackState(matchId);
       const session = createActiveLocalDevMatchSession(
         normalizedSetup,
         sessionService,
@@ -653,7 +703,12 @@ export const createLocalDevMatchRegistry = async (
         },
       );
       sessions.set(matchId, session);
-      await saveSessionCheckpoint(matchId);
+      try {
+        await saveSessionCheckpoint(matchId);
+      } catch (error: unknown) {
+        restoreSessionRollbackState(matchId, rollbackState);
+        throw error;
+      }
       return buildCreatedResponse(normalizedSetup, session);
     },
     async chooseFirstPlayer(matchId, playerId, choice) {
@@ -685,6 +740,7 @@ export const createLocalDevMatchRegistry = async (
         choice,
         resolvedFirstPlayerId: firstPlayerId,
       };
+      const rollbackState = captureSessionRollbackState(matchId);
       const sessionWithSeats: ActiveLocalDevMatchSession = {
         ...createActiveLocalDevMatchSession(
           resolvedSetup,
@@ -705,7 +761,12 @@ export const createLocalDevMatchRegistry = async (
       };
       syncActiveSessionPlayerLabels(sessionWithSeats);
       sessions.set(matchId, sessionWithSeats);
-      await saveSessionCheckpoint(matchId);
+      try {
+        await saveSessionCheckpoint(matchId);
+      } catch (error: unknown) {
+        restoreSessionRollbackState(matchId, rollbackState);
+        throw error;
+      }
       scheduleBotActions(sessionWithSeats);
       return buildCreatedResponse(resolvedSetup, sessionWithSeats);
     },
@@ -723,9 +784,9 @@ export const createLocalDevMatchRegistry = async (
           return "unauthenticated";
         }
         if (subjectsMatch(seat.subject, auth.subject)) {
-          refreshSeatSubject(seat, auth.subject);
-          syncActiveSessionPlayerLabels(session);
-          await saveActiveSessionCheckpoint(matchId, session);
+          await saveSeatSubjectChange(matchId, session, seat, () => {
+            refreshSeatSubject(seat, auth.subject);
+          });
           return {
             matchId,
             seat: {
@@ -755,9 +816,9 @@ export const createLocalDevMatchRegistry = async (
         auth.subject.sessionId,
         auth.subject.displayName,
       );
-      seat.subject = auth.subject;
-      syncActiveSessionPlayerLabels(session);
-      await saveActiveSessionCheckpoint(matchId, session);
+      await saveSeatSubjectChange(matchId, session, seat, () => {
+        seat.subject = auth.subject;
+      });
       return {
         matchId,
         seat: { playerId, sessionToken },
@@ -786,10 +847,10 @@ export const createLocalDevMatchRegistry = async (
       if (seat === undefined) {
         return "seatNotFound";
       }
-      refreshSeatSubject(seat, auth.subject);
+      await saveSeatSubjectChange(matchId, session, seat, () => {
+        refreshSeatSubject(seat, auth.subject);
+      });
       const refreshedSubject = auth.subject;
-      syncActiveSessionPlayerLabels(session);
-      await saveActiveSessionCheckpoint(matchId, session);
       return {
         matchId,
         seat: {

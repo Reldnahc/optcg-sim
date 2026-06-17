@@ -19,10 +19,20 @@ import type {
 const matchId = "redis-match" as MatchId;
 const p1 = "p1" as PlayerId;
 
+const redisGlobPattern = (pattern: string): RegExp =>
+  new RegExp(
+    `^${pattern
+      .split("*")
+      .map((part) => part.replace(/[.+?^${}()|[\]\\]/gu, "\\$&"))
+      .join(".*")}$`,
+    "u",
+  );
+
 class FakeRedis implements RedisLike {
   public readonly strings = new Map<string, string>();
   public readonly lists = new Map<string, string[]>();
   public readonly scanPatterns: string[] = [];
+  public failSetWhen: ((key: string) => boolean) | undefined;
 
   public get(key: string): Promise<string | null> {
     return Promise.resolve(this.strings.get(key) ?? null);
@@ -33,6 +43,9 @@ class FakeRedis implements RedisLike {
     value: string,
     options?: RedisSetOptions,
   ): Promise<"OK" | null> {
+    if (this.failSetWhen?.(key) === true) {
+      return Promise.reject(new Error(`set failed for ${key}`));
+    }
     if (options?.nx === true && this.strings.has(key)) {
       return Promise.resolve(null);
     }
@@ -63,9 +76,9 @@ class FakeRedis implements RedisLike {
     options: { readonly match: string; readonly count: number },
   ): Promise<[string, string[]]> {
     this.scanPatterns.push(options.match);
-    const suffix = options.match.replace(/^match:\*/u, "");
-    const keys = [...this.strings.keys()].filter(
-      (key) => key.startsWith("match:") && key.endsWith(suffix),
+    const pattern = redisGlobPattern(options.match);
+    const keys = [...this.strings.keys(), ...this.lists.keys()].filter((key) =>
+      pattern.test(key),
     );
     return Promise.resolve(["0", keys]);
   }
@@ -180,13 +193,71 @@ describe("redis match persistence", () => {
     expect(loaded?.decisions).toEqual([]);
   });
 
+  test("does not discover a snapshot until its current pointer is committed", async () => {
+    const redis = new FakeRedis();
+    const persistence = createRedisMatchPersistence(redis);
+    const setup = await createFixtureDevMatchSetup(matchId);
+    const local = createLocalDevMatch(setup);
+    redis.failSetWhen = (key) => key.includes(":snapshots:");
+
+    await expect(
+      persistence.saveSnapshot({
+        metadata: metadata(),
+        state: local.state,
+        manifest: local.state.cardManifest,
+        actions: [],
+        decisions: [],
+      }),
+    ).rejects.toThrow(/set failed/u);
+
+    await expect(persistence.listActiveMatchIds()).resolves.toEqual([]);
+  });
+
+  test("removes old snapshot generations after committing a new snapshot", async () => {
+    const redis = new FakeRedis();
+    const persistence = createRedisMatchPersistence(redis);
+    const setup = await createFixtureDevMatchSetup(matchId);
+    const local = createLocalDevMatch(setup);
+
+    await persistence.saveSnapshot({
+      metadata: metadata(),
+      state: local.state,
+      manifest: local.state.cardManifest,
+      actions: [record("old-action")],
+      decisions: [],
+    });
+    const firstGenerationKeys = [
+      ...redis.strings.keys(),
+      ...redis.lists.keys(),
+    ].filter((key) => key.includes(":snapshots:"));
+
+    await persistence.saveSnapshot({
+      metadata: metadata(),
+      state: local.state,
+      manifest: local.state.cardManifest,
+      actions: [],
+      decisions: [record("new-decision")],
+    });
+
+    const remainingKeys = new Set([
+      ...redis.strings.keys(),
+      ...redis.lists.keys(),
+    ]);
+    expect(firstGenerationKeys.filter((key) => remainingKeys.has(key))).toEqual(
+      [],
+    );
+    expect(
+      [...remainingKeys].filter((key) => key.includes(":snapshots:")).length,
+    ).toBeGreaterThan(0);
+  });
+
   test("lists active matches with scan-style discovery", async () => {
     const redis = new FakeRedis();
     const persistence = createRedisMatchPersistence(redis);
-    redis.strings.set("match:redis-match:meta", "{}");
+    redis.strings.set("match:redis-match:current", "1:generation");
 
     await expect(persistence.listActiveMatchIds()).resolves.toEqual([matchId]);
-    expect(redis.scanPatterns).toEqual(["match:*:meta"]);
+    expect(redis.scanPatterns).toEqual(["match:*:current", "match:*:meta"]);
   });
 
   test("uses atomic owner locks and releases only matching owners", async () => {

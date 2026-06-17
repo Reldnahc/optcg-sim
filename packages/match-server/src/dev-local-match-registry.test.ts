@@ -436,6 +436,133 @@ test("first-player choice waits for the active checkpoint before resolving", asy
   assert.equal(ready.matchId, matchId);
 });
 
+test("first-player choice stays retryable when the active checkpoint fails", async () => {
+  const basePersistence = createInMemoryMatchPersistence();
+  let failSaves = true;
+  const failingPersistence: MatchPersistence = {
+    ...basePersistence,
+    async saveSnapshot(input: MatchPersistenceSnapshot) {
+      if (failSaves) {
+        throw new Error("checkpoint failed");
+      }
+      await basePersistence.saveSnapshot(input);
+    },
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: failingPersistence,
+    },
+  );
+  const matchId = "first-player-choice-failed-checkpoint-match" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const chooser = created.firstPlayerChoice.chooserPlayerId;
+
+  await assert.rejects(
+    () => registry.chooseFirstPlayer(matchId, chooser, "goFirst"),
+    /checkpoint failed/u,
+  );
+
+  assert.notEqual(registry.getFirstPlayerChoice(matchId), undefined);
+  assert.equal(registry.getMatch(matchId), undefined);
+
+  failSaves = false;
+  const retried = await registry.chooseFirstPlayer(matchId, chooser, "goFirst");
+
+  if (typeof retried === "string" || retried.snapshot === undefined) {
+    throw new Error(
+      `Expected retry to start match: ${
+        typeof retried === "string" ? retried : "missing snapshot"
+      }`,
+    );
+  }
+  assert.equal(retried.matchId, matchId);
+});
+
+test("seat claims roll back when their active checkpoint fails", async () => {
+  const basePersistence = createInMemoryMatchPersistence();
+  let failSaves = false;
+  const failingPersistence: MatchPersistence = {
+    ...basePersistence,
+    async saveSnapshot(input: MatchPersistenceSnapshot) {
+      if (failSaves) {
+        throw new Error("checkpoint failed");
+      }
+      await basePersistence.saveSnapshot(input);
+    },
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: failingPersistence,
+    },
+  );
+  const matchId = "seat-claim-failed-checkpoint-match" as MatchId;
+  const playerId = premadeSetup.playerOrder[0];
+  const initialAuth = authContext("seat-user", "session-1", "Seat User");
+  const refreshedAuth = authContext(
+    "seat-user",
+    "session-2",
+    "Refreshed Seat User",
+  );
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: playerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: playerId,
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+
+  failSaves = true;
+  await assert.rejects(
+    () => registry.claimSeat(matchId, playerId, initialAuth),
+    /checkpoint failed/u,
+  );
+
+  assert.equal(
+    registry.authorizeSeat(initialAuth, matchId, playerId),
+    "forbidden",
+  );
+
+  failSaves = false;
+  const claimed = await registry.claimSeat(matchId, playerId, initialAuth);
+  if (typeof claimed === "string") {
+    throw new Error(`Expected retry seat claim to succeed: ${claimed}`);
+  }
+
+  failSaves = true;
+  await assert.rejects(
+    () => registry.claimSeatForAuth(matchId, refreshedAuth),
+    /checkpoint failed/u,
+  );
+
+  assert.equal(
+    registry.authorizeSeat(initialAuth, matchId, playerId),
+    "authorized",
+  );
+  assert.equal(
+    registry.authorizeSeat(refreshedAuth, matchId, playerId),
+    "forbidden",
+  );
+});
+
 test("completed-match save does not block the terminal action response", async () => {
   const saveStarted = deferredVoid();
   const saveFinished = deferredVoid();

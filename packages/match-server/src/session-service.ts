@@ -40,6 +40,10 @@ export interface CreateMatchSessionServiceOptions {
 
 export interface MatchSessionService {
   registerLocalDevMatch(input: RegisterLocalDevMatchInput): MatchSessionRuntime;
+  restoreRuntime(
+    matchId: MatchId,
+    runtime: MatchSessionRuntime | undefined,
+  ): void;
   applyEnvelope(envelope: ClientActionEnvelope): SessionActionResult;
   flushPersistence(matchId: MatchId): Promise<void>;
   saveSnapshot(matchId: MatchId): Promise<void>;
@@ -110,6 +114,13 @@ export const createMatchSessionService = ({
       });
       sessions.set(metadata.matchId, runtime);
       return runtime;
+    },
+    restoreRuntime(matchId, runtime) {
+      if (runtime === undefined) {
+        sessions.delete(matchId);
+        return;
+      }
+      sessions.set(matchId, runtime);
     },
     applyEnvelope(envelope) {
       const startedAt = clock.nowMs();
