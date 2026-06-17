@@ -62,6 +62,46 @@ export const parseNameCardPredicate: PredicateParser = (text, current) => {
   };
 };
 
+export const parseNameListPredicate: PredicateParser = (text, current) => {
+  const matches = [...text.matchAll(/\[(?<name>[^\]]+)\]/giu)];
+  if (matches.length < 2 || matches[0]?.index !== 0) {
+    return undefined;
+  }
+
+  const names: string[] = [];
+  let previousEnd = 0;
+  let consumedEnd = 0;
+  for (const [index, match] of matches.entries()) {
+    const nameText = match.groups?.["name"]?.trim();
+    if (nameText === undefined || nameText.length === 0) {
+      return undefined;
+    }
+    const matchIndex = match.index;
+    if (index > 0) {
+      const separator = text.slice(previousEnd, matchIndex);
+      if (!/^\s*(?:,\s*)?(?:(?:or)\s+)?$/iu.test(separator)) {
+        break;
+      }
+    }
+    names.push(nameText);
+    previousEnd = matchIndex + match[0].length;
+    consumedEnd = previousEnd;
+  }
+
+  if (names.length < 2) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      anyOf: names.map((name) => ({ names: [name] })),
+    },
+    evidence: ["filter:anyOf", ...names.map(() => "filter:name" as const)],
+    rest: text.slice(consumedEnd).trim(),
+  };
+};
+
 export const parseNamePredicate: PredicateParser = (text, current) => {
   const match = /^\[(?<name>[^\]]+)\]\s*(?<rest>.*)$/i.exec(text);
   const nameText = match?.groups?.["name"]?.trim();

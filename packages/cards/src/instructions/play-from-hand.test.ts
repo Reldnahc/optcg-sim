@@ -521,4 +521,74 @@ describe("play from hand instruction parser", () => {
       ]),
     );
   });
+
+  it("parses hand-or-trash play with comma-or name alternatives and shared predicates", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "play up to 1 [Sabo], [Portgas.D.Ace], or [Monkey.D.Luffy] with a cost of 2 from your hand or trash.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "choice",
+        options: [
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      anyOf: [
+                        { names: ["Sabo"] },
+                        { names: ["Portgas.D.Ace"] },
+                        { names: ["Monkey.D.Luffy"] },
+                      ],
+                      cost: { op: "eq", value: 2 },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "trash",
+                    filter: {
+                      anyOf: [
+                        { names: ["Sabo"] },
+                        { names: ["Portgas.D.Ace"] },
+                        { names: ["Monkey.D.Luffy"] },
+                      ],
+                      cost: { op: "eq", value: 2 },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "zone:hand",
+        "zone:trash",
+        "filter:anyOf",
+        "filter:name",
+        "filter:cost",
+        "composition:chooseOne",
+      ]),
+    );
+  });
 });

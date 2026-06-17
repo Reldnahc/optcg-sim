@@ -617,6 +617,33 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses bracketed name lists with shared trailing predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "[Sabo], [Portgas.D.Ace], or [Monkey.D.Luffy] with a cost of 2",
+      }),
+    ).toEqual({
+      filter: {
+        anyOf: [
+          { names: ["Sabo"] },
+          { names: ["Portgas.D.Ace"] },
+          { names: ["Monkey.D.Luffy"] },
+        ],
+        cost: { op: "eq", value: 2 },
+      },
+      evidence: [
+        "filter:anyOf",
+        "filter:name",
+        "filter:name",
+        "filter:name",
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
 });
 
 it("parses shorthand cost thresholds without 'of'", () => {
