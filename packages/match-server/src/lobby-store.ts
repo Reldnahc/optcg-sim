@@ -342,6 +342,21 @@ export const createRedisClientForLobbyStore = async (
     del: (key) => client.del(key),
     rPush: (key, ...values) => client.rPush(key, values),
     lRange: (key, start, stop) => client.lRange(key, start, stop),
+    async compareAndDelete(key, expectedValue) {
+      const result = await client.eval(
+        [
+          "if redis.call('GET', KEYS[1]) == ARGV[1] then",
+          "  return redis.call('DEL', KEYS[1])",
+          "end",
+          "return 0",
+        ].join("\n"),
+        {
+          keys: [key],
+          arguments: [expectedValue],
+        },
+      );
+      return result === 1;
+    },
     async scan(cursor, options) {
       const result = await client.scan(cursor, {
         MATCH: options.match,

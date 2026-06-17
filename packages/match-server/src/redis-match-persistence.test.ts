@@ -33,9 +33,12 @@ class FakeRedis implements RedisLike {
   public readonly lists = new Map<string, string[]>();
   public readonly scanPatterns: string[] = [];
   public failSetWhen: ((key: string) => boolean) | undefined;
+  public afterGet: ((key: string, value: string | null) => void) | undefined;
 
   public get(key: string): Promise<string | null> {
-    return Promise.resolve(this.strings.get(key) ?? null);
+    const value = this.strings.get(key) ?? null;
+    this.afterGet?.(key, value);
+    return Promise.resolve(value);
   }
 
   public set(
@@ -57,6 +60,18 @@ class FakeRedis implements RedisLike {
     const deleted =
       (this.strings.delete(key) ? 1 : 0) + (this.lists.delete(key) ? 1 : 0);
     return Promise.resolve(deleted);
+  }
+
+  public compareAndDelete(
+    key: string,
+    expectedValue: string,
+  ): Promise<boolean> {
+    this.afterGet?.(key, this.strings.get(key) ?? null);
+    if (this.strings.get(key) !== expectedValue) {
+      return Promise.resolve(false);
+    }
+    this.strings.delete(key);
+    return Promise.resolve(true);
   }
 
   public rPush(key: string, ...values: string[]): Promise<number> {
@@ -276,20 +291,23 @@ describe("redis match persistence", () => {
       now: "2026-05-30T00:00:01.000Z",
       ttlMs: 30_000,
     });
-    await persistence.releaseRecoveryLock({
+    const wrongOwnerLock = {
       matchId,
       ownerInstanceId: "owner-2",
-    });
+      acquiredAt: "2026-05-30T00:00:01.000Z",
+      expiresAt: "2026-05-30T00:00:31.000Z",
+    };
+    await persistence.releaseRecoveryLock({ lock: wrongOwnerLock });
     const stillBlocked = await persistence.tryAcquireRecoveryLock({
       matchId,
       ownerInstanceId: "owner-2",
       now: "2026-05-30T00:00:02.000Z",
       ttlMs: 30_000,
     });
-    await persistence.releaseRecoveryLock({
-      matchId,
-      ownerInstanceId: "owner-1",
-    });
+    if (acquired === undefined) {
+      throw new Error("Expected first lock acquisition.");
+    }
+    await persistence.releaseRecoveryLock({ lock: acquired });
     const reacquired = await persistence.tryAcquireRecoveryLock({
       matchId,
       ownerInstanceId: "owner-2",
@@ -297,10 +315,43 @@ describe("redis match persistence", () => {
       ttlMs: 30_000,
     });
 
-    expect(acquired?.ownerInstanceId).toBe("owner-1");
+    expect(acquired.ownerInstanceId).toBe("owner-1");
     expect(blocked).toBeUndefined();
     expect(stillBlocked).toBeUndefined();
     expect(reacquired?.ownerInstanceId).toBe("owner-2");
+  });
+
+  test("does not release a recovery lock reacquired after a stale owner read", async () => {
+    const redis = new FakeRedis();
+    const persistence = createRedisMatchPersistence(redis);
+
+    const firstLock = await persistence.tryAcquireRecoveryLock({
+      matchId,
+      ownerInstanceId: "owner-1",
+      now: "2026-05-30T00:00:00.000Z",
+      ttlMs: 1_000,
+    });
+    if (firstLock === undefined) {
+      throw new Error("Expected first lock acquisition.");
+    }
+    const secondLock = {
+      matchId,
+      ownerInstanceId: "owner-2",
+      acquiredAt: "2026-05-30T00:00:02.000Z",
+      expiresAt: "2026-05-30T00:00:03.000Z",
+    };
+    redis.afterGet = (key) => {
+      if (key === "match:redis-match:locks") {
+        redis.afterGet = undefined;
+        redis.strings.set(key, JSON.stringify(secondLock));
+      }
+    };
+
+    await persistence.releaseRecoveryLock({ lock: firstLock });
+
+    expect(redis.strings.get("match:redis-match:locks")).toBe(
+      JSON.stringify(secondLock),
+    );
   });
 
   test("writes freeze metadata", async () => {

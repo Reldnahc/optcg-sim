@@ -33,22 +33,25 @@ export const recoverActiveMatches = async ({
     if (lock === undefined) {
       continue;
     }
-    const snapshot = await persistence.loadSnapshot(matchId);
-    if (snapshot === undefined) {
-      await persistence.freezeMatch({
+    try {
+      const snapshot = await persistence.loadSnapshot(matchId);
+      if (snapshot === undefined) {
+        await persistence.freezeMatch({
+          matchId,
+          reason: "recovery snapshot missing",
+          frozenAt: now,
+        });
+        continue;
+      }
+      recovered.push({
         matchId,
-        reason: "recovery snapshot missing",
-        frozenAt: now,
+        stateSeq: snapshot.state.seq,
+        actionCount: snapshot.actions.length,
+        decisionCount: snapshot.decisions.length,
       });
-      continue;
+    } finally {
+      await persistence.releaseRecoveryLock({ lock });
     }
-    recovered.push({
-      matchId,
-      stateSeq: snapshot.state.seq,
-      actionCount: snapshot.actions.length,
-      decisionCount: snapshot.decisions.length,
-    });
-    await persistence.releaseRecoveryLock({ matchId, ownerInstanceId });
   }
   return recovered;
 };

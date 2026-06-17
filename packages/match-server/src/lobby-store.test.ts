@@ -34,6 +34,17 @@ class FakeRedis implements RedisLike {
     return Promise.resolve(deleted);
   }
 
+  public compareAndDelete(
+    key: string,
+    expectedValue: string,
+  ): Promise<boolean> {
+    if (this.strings.get(key) !== expectedValue) {
+      return Promise.resolve(false);
+    }
+    this.strings.delete(key);
+    return Promise.resolve(true);
+  }
+
   public rPush(key: string, ...values: string[]): Promise<number> {
     const list = this.lists.get(key) ?? [];
     list.push(...values);

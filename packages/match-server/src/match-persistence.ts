@@ -112,10 +112,14 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
       locks.set(matchId, lock);
       return Promise.resolve(clone(lock));
     },
-    releaseRecoveryLock({ matchId, ownerInstanceId }) {
-      const existing = locks.get(matchId);
-      if (existing?.ownerInstanceId === ownerInstanceId) {
-        locks.delete(matchId);
+    releaseRecoveryLock({ lock }) {
+      const existing = locks.get(lock.matchId);
+      if (
+        existing?.ownerInstanceId === lock.ownerInstanceId &&
+        existing.acquiredAt === lock.acquiredAt &&
+        existing.expiresAt === lock.expiresAt
+      ) {
+        locks.delete(lock.matchId);
       }
       return Promise.resolve();
     },

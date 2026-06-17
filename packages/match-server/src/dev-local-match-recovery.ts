@@ -161,10 +161,7 @@ export const recoverPersistedLocalDevMatchSessions = async ({
       }
       recoveredSessions.push(recovered);
     } finally {
-      await matchPersistence.releaseRecoveryLock({
-        matchId,
-        ownerInstanceId: recoveryOwnerInstanceId,
-      });
+      await matchPersistence.releaseRecoveryLock({ lock });
     }
   }
   return recoveredSessions;

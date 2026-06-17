@@ -203,10 +203,7 @@ export interface MatchPersistence {
     readonly now: string;
     readonly ttlMs: number;
   }): Promise<RecoveryLock | undefined>;
-  releaseRecoveryLock(input: {
-    readonly matchId: MatchId;
-    readonly ownerInstanceId: string;
-  }): Promise<void>;
+  releaseRecoveryLock(input: { readonly lock: RecoveryLock }): Promise<void>;
   freezeMatch(input: {
     readonly matchId: MatchId;
     readonly reason: string;

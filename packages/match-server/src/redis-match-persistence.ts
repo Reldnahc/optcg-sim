@@ -24,6 +24,7 @@ export interface RedisLike {
   del(key: string): Promise<number>;
   rPush(key: string, ...values: string[]): Promise<number>;
   lRange(key: string, start: number, stop: number): Promise<string[]>;
+  compareAndDelete(key: string, expectedValue: string): Promise<boolean>;
   scan(
     cursor: string,
     options: { readonly match: string; readonly count: number },
@@ -275,17 +276,8 @@ export const createRedisMatchPersistence = (
     await redis.set(lockKey, serialize(lock), { px: ttlMs });
     return lock;
   },
-  async releaseRecoveryLock({ matchId, ownerInstanceId }) {
-    const lockKey = keys(matchId).locks;
-    const existing = await redis.get(lockKey);
-    if (existing === null) {
-      return;
-    }
-    if (
-      (parseJson(existing) as RecoveryLock).ownerInstanceId === ownerInstanceId
-    ) {
-      await redis.del(lockKey);
-    }
+  async releaseRecoveryLock({ lock }) {
+    await redis.compareAndDelete(keys(lock.matchId).locks, serialize(lock));
   },
   async freezeMatch(input) {
     await redis.set(keys(input.matchId).freeze, serialize(input));
