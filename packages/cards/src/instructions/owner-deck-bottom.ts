@@ -198,7 +198,7 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
   const match =
-    /^place\s+(?<selection>.+?)\s+at the bottom of the owner's deck(?<order>\s+in any order)?\.?$/iu.exec(
+    /^(?:place|return)\s+(?<selection>.+?)\s+(?:at|to) the bottom of the owner's deck(?<order>\s+in any order)?\.?$/iu.exec(
       input.text,
     );
   const selectionText = match?.groups?.["selection"];

@@ -1,13 +1,21 @@
 import type { Effect, Target } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseOpponentFieldTarget } from "../targets/index.js";
-import type { InstructionParser } from "../types.js";
+import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
 const returnSelectionId = "selected:return-to-owner-hand";
 
 export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
+  const opponentChosen = parseOpponentChosenReturnToOwnerHand(input.text);
+  if (opponentChosen !== undefined) {
+    return opponentChosen;
+  }
+
   const match = /^return\s+(?<rest>.+)\s+to the owner's hand\.?$/iu.exec(
     input.text,
   );
@@ -82,6 +90,7 @@ export function selectThenReturnToOwnerHand(
   max: number,
   filter: NonNullable<Extract<Target, { type: "choose" }>["request"]["filter"]>,
   zone: "characterArea" | "stageArea" = "characterArea",
+  chooser: "self" | "opponent" = "self",
 ): Effect {
   return {
     type: "sequence",
@@ -94,7 +103,7 @@ export function selectThenReturnToOwnerHand(
           type: "selectTargets",
           request: {
             timing: "onResolution",
-            chooser: "self",
+            chooser,
             player,
             zone,
             min,
@@ -126,3 +135,90 @@ export function selectThenReturnToOwnerHand(
     ],
   };
 }
+
+const parseOpponentChosenReturnToOwnerHand = (
+  text: string,
+): ReturnType<InstructionParser> => {
+  const match =
+    /^your opponent returns\s+(?<selection>.+)\s+to the owner's hand\.?$/iu.exec(
+      text,
+    );
+  const selectionText = match?.groups?.["selection"];
+  if (selectionText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseReturnCardinality(selectionText);
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const targetText = cardinality.rest
+    .replace(/^of their\s+/iu, "")
+    .replace(/^their\s+/iu, "")
+    .trim();
+  const predicates = parseCardFilterPredicates(
+    { text: targetText },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    predicates.filter.categories?.[0] !== "character"
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: selectThenReturnToOwnerHand(
+      "opponent",
+      cardinality.min,
+      cardinality.max,
+      predicates.filter,
+      "characterArea",
+      "opponent",
+    ),
+    evidence: [
+      "instruction:returnToOwnerHand",
+      ...cardinality.evidence,
+      "chooser:opponent",
+      "player:opponent",
+      ...predicates.evidence,
+      "destination:ownerHand",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
+
+const parseReturnCardinality = (
+  text: string,
+):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly max: number;
+      readonly min: number;
+      readonly rest: string;
+    }
+  | undefined => {
+  const upTo = parseUpToCardinality({ text });
+  if (upTo !== undefined) {
+    return {
+      evidence: upTo.evidence,
+      max: upTo.cardinality.max,
+      min: upTo.cardinality.min,
+      rest: upTo.rest,
+    };
+  }
+
+  const exact = parseExactCardinality({ text });
+  if (exact === undefined) {
+    return undefined;
+  }
+  return {
+    evidence: exact.evidence,
+    max: exact.count,
+    min: exact.count,
+    rest: exact.rest,
+  };
+};

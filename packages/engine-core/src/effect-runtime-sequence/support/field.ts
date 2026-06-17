@@ -117,7 +117,7 @@ export const isSupportedSequenceTargetRequest = (
   const maxSupportedTargetCount = zones.includes("costArea") ? 10 : 5;
   return (
     request.timing === "onResolution" &&
-    request.chooser === "self" &&
+    (request.chooser === "self" || request.chooser === "opponent") &&
     zones.every(
       (zone) =>
         zone === "leaderArea" ||
