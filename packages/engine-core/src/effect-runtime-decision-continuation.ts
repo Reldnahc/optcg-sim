@@ -1,6 +1,6 @@
 import type { EngineError, EngineResult, GameState } from "@optcg/types";
 
-import { toEngineResult } from "./action-results.js";
+import { toEngineResult, type EngineResultOptions } from "./action-results.js";
 import { processEffectRuntime } from "./effect-runtime.js";
 
 const nonEmptyErrors = (
@@ -16,6 +16,7 @@ const nonEmptyErrors = (
 export const continueRuntimeAfterDecisionResult = (
   originalState: GameState,
   result: EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (
     result.errors !== undefined ||
@@ -24,12 +25,13 @@ export const continueRuntimeAfterDecisionResult = (
     return result;
   }
 
-  return continueRuntimeUntilIdle(originalState, result);
+  return continueRuntimeUntilIdle(originalState, result, options);
 };
 
 export const continueRuntimeUntilIdle = (
   originalState: GameState,
   result: EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   let current = result;
   for (let stepCount = 0; stepCount < 20; stepCount += 1) {
@@ -42,20 +44,40 @@ export const continueRuntimeUntilIdle = (
     }
     const next = processEffectRuntime(current.state);
     if (next.errors !== undefined) {
-      return toEngineResult(originalState, [], nonEmptyErrors(next.errors));
+      return toEngineResult(
+        originalState,
+        [],
+        nonEmptyErrors(next.errors),
+        options,
+      );
     }
     if (next.events.length === 0) {
-      if (next.stateHash !== current.stateHash) {
-        current = toEngineResult(next.state, current.events);
+      const stateChanged =
+        options.includeStateHash === false
+          ? next.state !== current.state
+          : next.stateHash !== current.stateHash;
+      if (stateChanged) {
+        current = toEngineResult(
+          next.state,
+          current.events,
+          undefined,
+          options,
+        );
         continue;
       }
       return current;
     }
-    current = toEngineResult(next.state, [...current.events, ...next.events]);
+    current = toEngineResult(
+      next.state,
+      [...current.events, ...next.events],
+      undefined,
+      options,
+    );
   }
   return toEngineResult(
     originalState,
     [],
     [{ type: "illegalAction", reason: "Runtime continuation did not settle." }],
+    options,
   );
 };

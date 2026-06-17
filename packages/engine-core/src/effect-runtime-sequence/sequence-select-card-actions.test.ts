@@ -172,6 +172,57 @@ const spotlightSpanTimeline = (
     }),
   );
 
+test("search sequence decision responses can omit live state hashes", () => {
+  const { state } = sequenceQueueState(
+    revealSelectMoveThenOrderRemainderSequence(),
+    3,
+  );
+  markTopDeckAsSearchCandidates(state, 3);
+  const liveOptions = {
+    includeStateHash: false,
+    validateInvariants: false,
+  } as const;
+
+  const selecting = processEffectRuntime(state);
+  assert.equal(selecting.errors, undefined);
+  const selectionDecision = must(
+    selecting.state.pendingDecision,
+    "selection decision",
+  );
+  assert.equal(selectionDecision.type, "selectCards");
+  const selected = must(selectionDecision.candidates[0], "candidate").card;
+
+  const ordering = applyAction(
+    selecting.state,
+    {
+      type: "respondToDecision",
+      decisionId: selectionDecision.id,
+      response: { type: "cards", cards: [selected] },
+    },
+    liveOptions,
+  );
+  assert.equal(ordering.errors, undefined);
+  assert.equal(ordering.stateHash, "");
+  const orderDecision = must(ordering.state.pendingDecision, "order decision");
+  assert.equal(orderDecision.type, "orderCards");
+
+  const resolved = applyAction(
+    ordering.state,
+    {
+      type: "respondToDecision",
+      decisionId: orderDecision.id,
+      response: {
+        type: "orderedIds",
+        ids: orderDecision.cards.map((card) => String(card.instanceId)),
+      },
+    },
+    liveOptions,
+  );
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.stateHash, "");
+  assert.equal(resolved.state.pendingDecision, undefined);
+});
+
 test("sequence select-card pauses expose a legal action for automated players", () => {
   const { state } = sequenceQueueState(revealThenSelectFromSetSequence(), 3);
   const paused = processEffectRuntime(state);

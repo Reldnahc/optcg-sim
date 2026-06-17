@@ -222,7 +222,7 @@ const continueRuntimeAndAttackTimingAfterDecision = (
   options: ApplyActionOptions = {},
 ): EngineResult => {
   const continued = continueAttackTimingDecisionResultIfReady(
-    continueRuntimeAfterDecisionResult(originalState, result),
+    continueRuntimeAfterDecisionResult(originalState, result, options),
   );
   return continueEndPhaseIfReady(continued, options);
 };
@@ -536,7 +536,7 @@ const applyRespondToDecision = (
   const sequenceSelectCards = profileActionSpan(
     options,
     "engine:decision:sequenceSelectCards",
-    () => applySequenceSelectCardsChoiceResponse(state, action),
+    () => applySequenceSelectCardsChoiceResponse(state, action, options),
   );
   if (sequenceSelectCards !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(
@@ -687,7 +687,7 @@ const applyRespondToDecision = (
   const placeSetRemainderResult = profileActionSpan(
     options,
     "engine:decision:placeSetRemainder",
-    () => applyPlaceSetRemainderSequenceAwareResponse(state, action),
+    () => applyPlaceSetRemainderSequenceAwareResponse(state, action, options),
   );
   if (placeSetRemainderResult !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(
@@ -699,7 +699,7 @@ const applyRespondToDecision = (
   const lifeReorderResult = profileActionSpan(
     options,
     "engine:decision:lifeReorder",
-    () => applyLifeReorderSequenceAwareResponse(state, action),
+    () => applyLifeReorderSequenceAwareResponse(state, action, options),
   );
   if (lifeReorderResult !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(
@@ -711,7 +711,7 @@ const applyRespondToDecision = (
   const topLifePlacementResult = profileActionSpan(
     options,
     "engine:decision:topLifePlacement",
-    () => applyTopLifePlacementSequenceAwareResponse(state, action),
+    () => applyTopLifePlacementSequenceAwareResponse(state, action, options),
   );
   if (topLifePlacementResult !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(
@@ -723,7 +723,12 @@ const applyRespondToDecision = (
   const selectedHandDeckPlacementResult = profileActionSpan(
     options,
     "engine:decision:selectedHandDeckPlacement",
-    () => applySelectedHandDeckPlacementSequenceAwareResponse(state, action),
+    () =>
+      applySelectedHandDeckPlacementSequenceAwareResponse(
+        state,
+        action,
+        options,
+      ),
   );
   if (selectedHandDeckPlacementResult !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(
@@ -735,7 +740,7 @@ const applyRespondToDecision = (
   const topDeckPlacementResult = profileActionSpan(
     options,
     "engine:decision:topDeckPlacement",
-    () => applyTopDeckPlacementSequenceAwareResponse(state, action),
+    () => applyTopDeckPlacementSequenceAwareResponse(state, action, options),
   );
   if (topDeckPlacementResult !== null) {
     return continueRuntimeAndAttackTimingAfterDecision(

@@ -929,7 +929,7 @@ export const applyLocalDevDecision = (
   const responseResult = recordActionTimingSpan("decisionApply", () =>
     decision.type === "mulligan"
       ? respondToMulliganDecision(match.state, action)
-      : applyAction(match.state, action),
+      : applyAction(match.state, action, liveEngineOptions),
   );
   const mulliganResult = recordActionTimingSpan(
     "startMulliganAfterSetupIfReady",

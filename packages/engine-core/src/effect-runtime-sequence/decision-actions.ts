@@ -7,7 +7,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { toEngineResult } from "../action-results.js";
+import { toEngineResult, type EngineResultOptions } from "../action-results.js";
 import {
   resumeSequenceFrameAfterHandSelection,
   resumeSequenceFrameAfterPlaceSetRemainder,
@@ -50,6 +50,7 @@ const selectedCardsFromResponse = (
 export const applySequenceSelectCardsChoiceResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (
@@ -71,9 +72,9 @@ export const applySequenceSelectCardsChoiceResponse = (
     return null;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, resumed.events);
+  return toEngineResult(resumed.state, resumed.events, undefined, options);
 };
 
 export const getSequenceSelectCardsChoiceLegalActions = (
@@ -105,6 +106,7 @@ export const getSequenceSelectCardsChoiceLegalActions = (
 export const resumeSequenceAfterTopDeckPlacementResponse = (
   state: GameState,
   orderResult: EngineResult,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (
@@ -125,20 +127,24 @@ export const resumeSequenceAfterTopDeckPlacementResponse = (
     return null;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [
-    ...orderResult.events,
-    ...resumed.events,
-  ]);
+  return toEngineResult(
+    resumed.state,
+    [...orderResult.events, ...resumed.events],
+    undefined,
+    options,
+  );
 };
 
 export const applyTopDeckPlacementSequenceAwareResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   const result = applyTopDeckPlacementDecisionResponse(state, action, {
+    ...options,
     deferQueueResolution:
       decision?.type === "orderCards" &&
       hasSequenceFrameForDecision(state, decision.id),
@@ -146,15 +152,19 @@ export const applyTopDeckPlacementSequenceAwareResponse = (
   if (result === null) {
     return null;
   }
-  return resumeSequenceAfterTopDeckPlacementResponse(state, result) ?? result;
+  return (
+    resumeSequenceAfterTopDeckPlacementResponse(state, result, options) ??
+    result
+  );
 };
 
 export const applyLifeReorderSequenceAwareResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
-  const result = applyLifeReorderDecisionResponse(state, action);
+  const result = applyLifeReorderDecisionResponse(state, action, options);
   if (result === null) {
     return null;
   }
@@ -176,17 +186,23 @@ export const applyLifeReorderSequenceAwareResponse = (
     return result;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
+  return toEngineResult(
+    resumed.state,
+    [...result.events, ...resumed.events],
+    undefined,
+    options,
+  );
 };
 
 export const applyTopLifePlacementSequenceAwareResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
-  const result = applyTopLifePlacementDecisionResponse(state, action);
+  const result = applyTopLifePlacementDecisionResponse(state, action, options);
   if (result === null) {
     return null;
   }
@@ -208,14 +224,20 @@ export const applyTopLifePlacementSequenceAwareResponse = (
     return result;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
+  return toEngineResult(
+    resumed.state,
+    [...result.events, ...resumed.events],
+    undefined,
+    options,
+  );
 };
 
 export const applySelectedHandDeckPlacementSequenceAwareResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   const result = applySelectedHandDeckPlacementDecisionResponse(state, action);
@@ -223,7 +245,7 @@ export const applySelectedHandDeckPlacementSequenceAwareResponse = (
     return null;
   }
   if (!result.ok) {
-    return toEngineResult(state, [], result.errors);
+    return toEngineResult(state, [], result.errors, options);
   }
   if (
     decision === undefined ||
@@ -231,7 +253,7 @@ export const applySelectedHandDeckPlacementSequenceAwareResponse = (
     !hasSequenceFrameForDecision(state, decision.id) ||
     result.state.pendingDecision !== undefined
   ) {
-    return toEngineResult(result.state, result.events);
+    return toEngineResult(result.state, result.events, undefined, options);
   }
   const resumed = resumeSequenceFrameAfterSelectedHandDeckPlacement(
     result.state,
@@ -239,20 +261,26 @@ export const applySelectedHandDeckPlacementSequenceAwareResponse = (
     createSupportedTrashFromHandChoiceDecision,
   );
   if (resumed === undefined) {
-    return toEngineResult(result.state, result.events);
+    return toEngineResult(result.state, result.events, undefined, options);
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
+  return toEngineResult(
+    resumed.state,
+    [...result.events, ...resumed.events],
+    undefined,
+    options,
+  );
 };
 
 export const applyPlaceSetRemainderSequenceAwareResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
-  const result = applyPlaceSetRemainderOrderResponse(state, action);
+  const result = applyPlaceSetRemainderOrderResponse(state, action, options);
   if (result === null) {
     return null;
   }
@@ -274,7 +302,12 @@ export const applyPlaceSetRemainderSequenceAwareResponse = (
     return result;
   }
   if (!resumed.ok) {
-    return toEngineResult(state, [], [resumed.error]);
+    return toEngineResult(state, [], [resumed.error], options);
   }
-  return toEngineResult(resumed.state, [...result.events, ...resumed.events]);
+  return toEngineResult(
+    resumed.state,
+    [...result.events, ...resumed.events],
+    undefined,
+    options,
+  );
 };

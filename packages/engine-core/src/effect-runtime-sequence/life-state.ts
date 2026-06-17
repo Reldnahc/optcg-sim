@@ -17,6 +17,7 @@ import {
   toDecisionId,
   toEngineResult,
   toStateSeq,
+  type EngineResultOptions,
 } from "../action-results.js";
 import { getOpponentId } from "../actions/state.js";
 import type { SegmentLedgers } from "./runner.js";
@@ -262,6 +263,7 @@ export const applySetLifeFaceUpSequenceSegment = (params: {
 export const applyLifeReorderDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (
@@ -334,12 +336,15 @@ export const applyLifeReorderDecisionResponse = (
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
+    undefined,
+    options,
   );
 };
 
 export const applyTopLifePlacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (
@@ -351,7 +356,12 @@ export const applyTopLifePlacementDecisionResponse = (
     return null;
   }
   const fail = (reason: string): EngineResult =>
-    toEngineResult(state, [], [{ type: "invalidDecisionResponse", reason }]);
+    toEngineResult(
+      state,
+      [],
+      [{ type: "invalidDecisionResponse", reason }],
+      options,
+    );
   if (action.response.type !== "topBottomPlacement") {
     return fail("Response type must be topBottomPlacement.");
   }
@@ -439,5 +449,7 @@ export const applyTopLifePlacementDecisionResponse = (
   return toEngineResult(
     { ...nextState, eventJournal: [...nextState.eventJournal, ...events] },
     events,
+    undefined,
+    options,
   );
 };

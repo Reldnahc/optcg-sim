@@ -10,7 +10,12 @@ import type {
   SequenceSegmentResult,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  toEngineResult,
+  toStateSeq,
+  type EngineResultOptions,
+} from "../action-results.js";
 import {
   activeDeckCardsForOrder,
   createRemainingCardsOrderDecision,
@@ -288,13 +293,14 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
 export const applyPlaceSetRemainderOrderResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || !isPlaceSetRemainderOrderDecision(decision)) {
     return null;
   }
   const fail = (reason: string): EngineResult =>
-    toEngineResult(state, [], invalidDecision(reason));
+    toEngineResult(state, [], invalidDecision(reason), options);
   const expectedIds = decision.cards.map((card) => String(card.instanceId));
   if (decision.placement?.type === "topOrBottom") {
     if (action.response.type !== "topBottomPlacement") {
@@ -385,7 +391,7 @@ export const applyPlaceSetRemainderOrderResponse = (
       eventJournal: [...state.eventJournal, ...events],
     };
     delete nextState.pendingDecision;
-    return toEngineResult(nextState, events);
+    return toEngineResult(nextState, events, undefined, options);
   }
   if (action.response.type !== "orderedIds") {
     return fail("Response type must be orderedIds for set remainder order.");
@@ -458,5 +464,5 @@ export const applyPlaceSetRemainderOrderResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   delete nextState.pendingDecision;
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };

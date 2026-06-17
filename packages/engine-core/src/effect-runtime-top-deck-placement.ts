@@ -19,6 +19,7 @@ import {
   toDecisionId,
   toEngineResult,
   toStateSeq,
+  type EngineResultOptions,
 } from "./action-results.js";
 import { reorderDeckSlice, zonesEqual } from "./actions/state.js";
 import {
@@ -272,14 +273,16 @@ const orderedCardsFromIds = (
 export const applyTopDeckPlacementDecisionResponse = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
-  options: { deferQueueResolution?: boolean } = {},
+  options: EngineResultOptions & {
+    readonly deferQueueResolution?: boolean;
+  } = {},
 ): EngineResult | null => {
   const decision = state.pendingDecision;
   if (decision === undefined || !isTopDeckPlacementOrderDecision(decision)) {
     return null;
   }
   const fail = (reason: string): EngineResult =>
-    toEngineResult(state, [], invalidDecision(reason));
+    toEngineResult(state, [], invalidDecision(reason), options);
   const expectedIds = decision.cards.map((card) => String(card.instanceId));
   let topIds: string[];
   let bottomIds: string[];
@@ -320,6 +323,7 @@ export const applyTopDeckPlacementDecisionResponse = (
       state,
       [],
       [placementError(String(decision.id), "unsupported-player-ref")],
+      options,
     );
   }
   const activeDeckCards = player.deck.slice(0, decision.cards.length);
@@ -340,6 +344,7 @@ export const applyTopDeckPlacementDecisionResponse = (
       state,
       [],
       [placementError(String(decision.id), "stale-placement-decision")],
+      options,
     );
   }
 
@@ -392,5 +397,5 @@ export const applyTopDeckPlacementDecisionResponse = (
     eventJournal: [...state.eventJournal, ...events],
   };
   nextState = clearPendingDecision(nextState);
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };
