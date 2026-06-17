@@ -1,10 +1,20 @@
 import type { ExpressionParseResult, ParseInput } from "../../types.js";
+import { parseLeaderNameCondition } from "../../conditions/index.js";
 import { sourceSpan } from "../../source-slices.js";
 import {
+  parseAnyFieldRemovalReplacement,
   parseCombinedKoOrFieldRemovalReplacement,
   parseOpponentFieldRemovalReplacement,
   parseOpponentKoReplacement,
 } from "./trigger-conditions.js";
+import type { ReplacementTriggerParseResult } from "./shared.js";
+
+type ParsedReplacement = ReplacementTriggerParseResult & {
+  readonly condition?: NonNullable<
+    ExpressionParseResult["blockPatch"]
+  >["condition"];
+  readonly conditionEvidence?: ExpressionParseResult["evidence"];
+};
 
 export function replacementInsteadExpressionParser(
   input: ParseInput,
@@ -16,10 +26,9 @@ export function replacementInsteadExpressionParser(
     return undefined;
   }
 
-  const parsed =
-    parseCombinedKoOrFieldRemovalReplacement(input.text) ??
-    parseOpponentKoReplacement(input.text) ??
-    parseOpponentFieldRemovalReplacement(input.text);
+  const parsed: ParsedReplacement | undefined =
+    parseConditionalReplacement(input.text) ??
+    parseReplacementTrigger(input.text);
   if (parsed === undefined) {
     return undefined;
   }
@@ -33,6 +42,7 @@ export function replacementInsteadExpressionParser(
     evidence: [
       "expression:replacement",
       "composition:replacementInstead",
+      ...(parsed.conditionEvidence ?? []),
       ...parsed.evidence,
     ],
     ...(input.source === undefined
@@ -46,7 +56,45 @@ export function replacementInsteadExpressionParser(
     blockPatch: {
       category: "replacement",
       optional: true,
+      ...(parsed.condition === undefined
+        ? {}
+        : { condition: parsed.condition }),
       trigger: { type: "replacement", replacement: parsed.when },
     },
   };
 }
+
+const parseReplacementTrigger = (
+  text: string,
+): ReplacementTriggerParseResult | undefined =>
+  parseCombinedKoOrFieldRemovalReplacement(text) ??
+  parseOpponentKoReplacement(text) ??
+  parseOpponentFieldRemovalReplacement(text) ??
+  parseAnyFieldRemovalReplacement(text);
+
+const parseConditionalReplacement = (
+  text: string,
+): ParsedReplacement | undefined => {
+  const match =
+    /^If (?<condition>your Leader's type includes\s+(?:"[^"]+"|[^,]+?)) and (?<replacement>.+)$/iu.exec(
+      text.trim(),
+    );
+  const conditionText = match?.groups?.["condition"];
+  const replacementText = match?.groups?.["replacement"];
+  if (conditionText === undefined || replacementText === undefined) {
+    return undefined;
+  }
+  const condition = parseLeaderNameCondition({ text: conditionText });
+  if (condition === undefined || condition.rest.length > 0) {
+    return undefined;
+  }
+  const replacement = parseReplacementTrigger(`If ${replacementText}`);
+  if (replacement === undefined) {
+    return undefined;
+  }
+  return {
+    ...replacement,
+    condition: condition.condition,
+    conditionEvidence: ["expression:conditional", ...condition.evidence],
+  };
+};

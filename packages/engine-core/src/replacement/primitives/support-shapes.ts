@@ -209,6 +209,13 @@ const replacementKoSourcesMatch = (
   when.sourceKind === trigger.sourceKind &&
   when.sourceControllerRelation === trigger.sourceControllerRelation;
 
+const replacementMoveSourcesMatch = (
+  trigger: Extract<ReplacementTrigger, { type: "wouldMoveZone" }>,
+  when: Extract<ReplacementTrigger, { type: "wouldMoveZone" }>,
+): boolean =>
+  when.sourceKind === trigger.sourceKind &&
+  when.sourceControllerRelation === trigger.sourceControllerRelation;
+
 export const isSupportedKoInsteadReplacementEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is SupportedReplacementEffectBlock =>
@@ -268,14 +275,13 @@ export const isSupportedOpponentEffectFieldRemovalReplacementEffect = (
   isSupportedReplacementEnvelope(effect) &&
   effect.trigger.replacement.type === "wouldMoveZone" &&
   effect.trigger.replacement.from === "characterArea" &&
-  effect.trigger.replacement.sourceKind === "cardEffect" &&
   isSupportedSelfOrAllCharacterReplacementTarget(
     effect.trigger.replacement.target,
   ) &&
   effect.oncePerTurn !== false &&
   effect.effect.when.type === "wouldMoveZone" &&
   effect.effect.when.from === "characterArea" &&
-  effect.effect.when.sourceKind === "cardEffect" &&
+  replacementMoveSourcesMatch(effect.trigger.replacement, effect.effect.when) &&
   isSupportedSelfOrAllCharacterReplacementTarget(effect.effect.when.target) &&
   isSupportedOpponentEffectFieldRemovalInsteadEffect(effect.effect.instead);
 

@@ -362,6 +362,7 @@ export type PrimitiveEvidence =
   | "replacement:wouldMoveZone"
   | "replacement:fieldRemoval"
   | "replacementSource:self"
+  | "replacementSource:any"
   | "replacementSource:opponent"
   | "replacementSource:cardEffect"
   | "condition:onlyMatchingFieldCards"

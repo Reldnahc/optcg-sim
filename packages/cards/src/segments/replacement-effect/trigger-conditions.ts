@@ -226,6 +226,54 @@ export function parseOpponentFieldRemovalReplacement(
   };
 }
 
+export function parseAnyFieldRemovalReplacement(
+  text: string,
+): ReplacementTriggerParseResult | undefined {
+  const match =
+    /^If (?<target>.+?) would be removed from the field,\s*(?<body>.+)$/i.exec(
+      text.trim(),
+    );
+  const targetText = match?.groups?.["target"];
+  const bodyText = match?.groups?.["body"];
+  if (targetText === undefined || bodyText === undefined) {
+    return undefined;
+  }
+
+  const normalizedTargetText = normalizeFieldRemovalTargetText(targetText);
+  const target = parseYourFieldReplacementTarget({
+    text: normalizedTargetText,
+  });
+  if (
+    target === undefined ||
+    target.rest.length > 0 ||
+    (target.target.type !== "all" && target.target.type !== "self")
+  ) {
+    return undefined;
+  }
+  const instead = parseInsteadEffect(bodyText);
+  if (instead === undefined) {
+    return undefined;
+  }
+
+  return {
+    when: {
+      type: "wouldMoveZone",
+      from:
+        target.target.type === "self" ? "characterArea" : target.target.zone,
+      sourceControllerRelation: "any",
+      target: target.target,
+    },
+    instead: instead.effect,
+    evidence: [
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:any",
+      ...target.evidence,
+      ...instead.evidence,
+    ],
+  };
+}
+
 function normalizeFieldRemovalTargetText(text: string): string {
   const trimmed = text.trim();
   const ownedSubject = /^you have an?\s+(?<predicate>.+?)\s+that$/i.exec(
