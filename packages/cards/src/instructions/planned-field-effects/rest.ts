@@ -1,3 +1,5 @@
+import type { Effect, Target } from "@optcg/types";
+
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   parseOpponentCardsTarget,
@@ -5,8 +7,14 @@ import {
   parseOpponentCharactersTarget,
   parseOpponentDonCardsTarget,
   parseOpponentLeaderOrCharacterCardsTarget,
+  type FieldTargetParser,
 } from "../../targets/index.js";
-import type { InstructionParser } from "../../types.js";
+import type {
+  InstructionParser,
+  InstructionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../../types.js";
 import {
   thatCharacterSavedTarget,
   thatCharacterSelectionId,
@@ -179,50 +187,10 @@ export const parseRestThisCharacterInstruction: InstructionParser = (input) => {
 
 export const parseRestOpponentCharactersOrDonCardsInstruction: InstructionParser =
   (input) => {
-    const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.[
-      "rest"
-    ];
-    if (actionRest === undefined) {
-      return undefined;
-    }
-
-    const cardinality = parseUpToCardinality({ text: actionRest });
-    if (cardinality === undefined) {
-      return undefined;
-    }
-
-    const target = parseOpponentCharactersOrDonCardsTarget({
-      text: cardinality.rest,
-    });
-    if (
-      target === undefined ||
-      target.target?.type !== "chooseFromZones" ||
-      (target.rest.length > 0 && target.rest !== ".")
-    ) {
-      return undefined;
-    }
-
-    return {
-      effect: {
-        type: "rest",
-        target: {
-          type: "chooseFromZones",
-          request: {
-            ...target.target.request,
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
-            allowFewerIfUnavailable: true,
-          },
-        },
-      },
-      evidence: [
-        "instruction:rest",
-        ...cardinality.evidence,
-        "chooser:self:upTo",
-        ...target.evidence,
-      ],
-      rest: "",
-    };
+    return parseUpToRestChooseFromZonesInstruction(
+      input,
+      parseOpponentCharactersOrDonCardsTarget,
+    );
   };
 
 export const parseRestOpponentDonCardsInstruction: InstructionParser = (
@@ -245,33 +213,19 @@ export const parseRestOpponentDonCardsInstruction: InstructionParser = (
     if (
       target === undefined ||
       target.target?.type !== "chooseFromZones" ||
-      (target.rest.length > 0 && target.rest !== ".")
+      hasUnsupportedRest(target.rest)
     ) {
       return undefined;
     }
 
-    return {
-      effect: {
-        type: "rest",
-        target: {
-          type: "chooseFromZones",
-          request: {
-            ...target.target.request,
-            chooser: "opponent",
-            min: 1,
-            max: 1,
-            allowFewerIfUnavailable: true,
-          },
-        },
-      },
-      evidence: [
-        "instruction:rest",
-        "cardinality:exact",
-        "chooser:opponent",
-        ...target.evidence,
-      ],
-      rest: "",
-    };
+    return buildRestChooseFromZonesInstruction({
+      target: target.target,
+      min: 1,
+      max: 1,
+      chooser: "opponent",
+      evidence: ["cardinality:exact", "chooser:opponent"],
+      targetEvidence: target.evidence,
+    });
   }
 
   const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
@@ -279,84 +233,17 @@ export const parseRestOpponentDonCardsInstruction: InstructionParser = (
     return undefined;
   }
 
-  const cardinality = parseUpToCardinality({ text: actionRest });
-  if (cardinality === undefined) {
-    return undefined;
-  }
-
-  const target = parseOpponentDonCardsTarget({ text: cardinality.rest });
-  if (
-    target === undefined ||
-    target.target?.type !== "chooseFromZones" ||
-    (target.rest.length > 0 && target.rest !== ".")
-  ) {
-    return undefined;
-  }
-
-  return {
-    effect: {
-      type: "rest",
-      target: {
-        type: "chooseFromZones",
-        request: {
-          ...target.target.request,
-          min: cardinality.cardinality.min,
-          max: cardinality.cardinality.max,
-          allowFewerIfUnavailable: true,
-        },
-      },
-    },
-    evidence: [
-      "instruction:rest",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
-      ...target.evidence,
-    ],
-    rest: "",
-  };
+  return parseUpToRestChooseFromZonesTarget(
+    actionRest,
+    parseOpponentDonCardsTarget,
+  );
 };
 
 export const parseRestOpponentCardsInstruction: InstructionParser = (input) => {
-  const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
-  if (actionRest === undefined) {
-    return undefined;
-  }
-
-  const cardinality = parseUpToCardinality({ text: actionRest });
-  if (cardinality === undefined) {
-    return undefined;
-  }
-
-  const target = parseOpponentCardsTarget({ text: cardinality.rest });
-  if (
-    target === undefined ||
-    target.target?.type !== "chooseFromZones" ||
-    (target.rest.length > 0 && target.rest !== ".")
-  ) {
-    return undefined;
-  }
-
-  return {
-    effect: {
-      type: "rest",
-      target: {
-        type: "chooseFromZones",
-        request: {
-          ...target.target.request,
-          min: cardinality.cardinality.min,
-          max: cardinality.cardinality.max,
-          allowFewerIfUnavailable: true,
-        },
-      },
-    },
-    evidence: [
-      "instruction:rest",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
-      ...target.evidence,
-    ],
-    rest: "",
-  };
+  return parseUpToRestChooseFromZonesInstruction(
+    input,
+    parseOpponentCardsTarget,
+  );
 };
 
 export const parseRestOpponentLeaderOrCharactersInstruction: InstructionParser =
@@ -373,43 +260,10 @@ export const parseRestOpponentLeaderOrCharactersInstruction: InstructionParser =
       return exactLeader;
     }
 
-    const cardinality = parseUpToCardinality({ text: actionRest });
-    if (cardinality === undefined) {
-      return undefined;
-    }
-
-    const target = parseOpponentLeaderOrCharacterCardsTarget({
-      text: cardinality.rest,
-    });
-    if (
-      target === undefined ||
-      target.target?.type !== "chooseFromZones" ||
-      (target.rest.length > 0 && target.rest !== ".")
-    ) {
-      return undefined;
-    }
-
-    return {
-      effect: {
-        type: "rest",
-        target: {
-          type: "chooseFromZones",
-          request: {
-            ...target.target.request,
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
-            allowFewerIfUnavailable: true,
-          },
-        },
-      },
-      evidence: [
-        "instruction:rest",
-        ...cardinality.evidence,
-        "chooser:self:upTo",
-        ...target.evidence,
-      ],
-      rest: "",
-    };
+    return parseUpToRestChooseFromZonesTarget(
+      actionRest,
+      parseOpponentLeaderOrCharacterCardsTarget,
+    );
   };
 
 function parseExactOpponentLeaderTarget(
@@ -427,4 +281,91 @@ function parseExactOpponentLeaderTarget(
     evidence: ["instruction:rest", "target:opponentLeader"],
     rest: "",
   };
+}
+
+type ChooseFromZonesTarget = Extract<Target, { type: "chooseFromZones" }>;
+type RestEffect = Extract<Effect, { type: "rest" }>;
+
+function parseUpToRestChooseFromZonesInstruction(
+  input: ParseInput,
+  targetParser: FieldTargetParser,
+): InstructionParseResult | undefined {
+  const actionRest = /^Rest\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
+  if (actionRest === undefined) {
+    return undefined;
+  }
+
+  return parseUpToRestChooseFromZonesTarget(actionRest, targetParser);
+}
+
+function parseUpToRestChooseFromZonesTarget(
+  text: string,
+  targetParser: FieldTargetParser,
+): InstructionParseResult | undefined {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = targetParser({ text: cardinality.rest });
+  if (
+    target === undefined ||
+    target.target?.type !== "chooseFromZones" ||
+    hasUnsupportedRest(target.rest)
+  ) {
+    return undefined;
+  }
+
+  return buildRestChooseFromZonesInstruction({
+    target: target.target,
+    min: cardinality.cardinality.min,
+    max: cardinality.cardinality.max,
+    chooser: "self",
+    evidence: [...cardinality.evidence, "chooser:self:upTo"],
+    targetEvidence: target.evidence,
+  });
+}
+
+function buildRestChooseFromZonesInstruction(options: {
+  readonly target: ChooseFromZonesTarget;
+  readonly min: number;
+  readonly max: number;
+  readonly chooser: "self" | "opponent";
+  readonly evidence: readonly PrimitiveEvidence[];
+  readonly targetEvidence: readonly PrimitiveEvidence[];
+}): InstructionParseResult {
+  return {
+    effect: buildRestChooseFromZonesEffect(options),
+    evidence: [
+      "instruction:rest",
+      ...options.evidence,
+      ...options.targetEvidence,
+    ],
+    rest: "",
+  };
+}
+
+function buildRestChooseFromZonesEffect(options: {
+  readonly target: ChooseFromZonesTarget;
+  readonly min: number;
+  readonly max: number;
+  readonly chooser: "self" | "opponent";
+}): RestEffect {
+  return {
+    type: "rest",
+    target: {
+      type: "chooseFromZones",
+      request: {
+        ...options.target.request,
+        chooser: options.chooser,
+        min: options.min,
+        max: options.max,
+        allowFewerIfUnavailable: true,
+      },
+    },
+  };
+}
+
+function hasUnsupportedRest(rest: string): boolean {
+  return rest.length > 0 && rest !== ".";
 }
