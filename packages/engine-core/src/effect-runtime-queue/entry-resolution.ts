@@ -149,6 +149,7 @@ export const createQueueEntryResolver = (
           const paused = createChooseOptionalActivationDecision(
             nextState,
             selected,
+            options,
           );
           return { ...paused, events: [...allEvents, ...paused.events] };
         }
@@ -301,6 +302,7 @@ export const createQueueEntryResolver = (
             selectedForBodyResolution,
             moveCardsEffect,
             { min, max },
+            options,
           );
           return {
             ...quantityDecision,
@@ -358,6 +360,7 @@ export const createQueueEntryResolver = (
             selectedForBodyResolution,
             drawUpToEffect,
             { min: 0, max: drawUpToEffect.count },
+            options,
           );
           return {
             ...quantityDecision,

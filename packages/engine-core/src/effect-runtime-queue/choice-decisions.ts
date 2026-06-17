@@ -7,13 +7,19 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  type EngineResultOptions,
+  toEngineResult,
+  toStateSeq,
+} from "../action-results.js";
 import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 
 export const createChooseOptionalActivationDecision = (
   state: GameState,
   entry: EffectQueueEntry,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const decisionId =
     `decision:chooseOptionalActivation:${String(entry.id)}` as DecisionId;
@@ -55,7 +61,7 @@ export const createChooseOptionalActivationDecision = (
     pendingDecision,
     eventJournal: [...state.eventJournal, ...events],
   };
-  return toEngineResult(nextState, events);
+  return toEngineResult(nextState, events, undefined, options);
 };
 
 export const createChooseQuantityDecision = (
@@ -63,13 +69,14 @@ export const createChooseQuantityDecision = (
   entry: EffectQueueEntry,
   effect: Effect,
   bounds: { min: number; max: number },
+  options: EngineResultOptions = {},
 ): EngineResult => {
   const playerId =
     effect.type === "moveCards" && effect.chooser !== undefined
       ? resolvePlayerId(state, entry, effect.chooser)
       : entry.controllerId;
   if (playerId === undefined) {
-    return toEngineResult(state, []);
+    return toEngineResult(state, [], undefined, options);
   }
   const decisionId =
     `decision:chooseQuantity:${String(entry.id)}` as DecisionId;
@@ -113,5 +120,7 @@ export const createChooseQuantityDecision = (
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
+    undefined,
+    options,
   );
 };
