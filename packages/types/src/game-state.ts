@@ -30,6 +30,7 @@ import type {
   CardFilter,
   Condition,
   Duration,
+  Effect,
   EffectEntryPointFilter,
   EffectDefinition,
   SavedFieldObjectTargetBinding,
@@ -199,6 +200,7 @@ export type ModifierLayer =
   | "attackPermission"
   | "restriction"
   | "protection"
+  | "replacement"
   | "donPhasePlacement"
   | "playEntryState";
 
@@ -234,6 +236,10 @@ export type ModifierOperation =
     }
   | { type: "attackCost"; cost: AttackTrashCost }
   | { type: "protection"; protection: Protection }
+  | {
+      type: "replacement";
+      replacement: Extract<Effect, { type: "replacement" }>;
+    }
   | {
       type: "redirectDonPhasePlacement";
       count: number;

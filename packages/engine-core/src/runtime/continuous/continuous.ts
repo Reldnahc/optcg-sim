@@ -182,6 +182,16 @@ const mapEffectToModifier = (
   if (effect.type === "redirectDonPhasePlacement") {
     return toDonPhasePlacementModifier(effect);
   }
+  if (effect.type === "grantReplacement") {
+    return {
+      layer: "replacement",
+      target,
+      operation: {
+        type: "replacement",
+        replacement: effect.replacement,
+      },
+    };
+  }
   if (effect.type === "attackCost") {
     return {
       layer: "restriction",
@@ -471,6 +481,17 @@ export const createContinuousRecordsForResolvedEffect = (
         player: effect.player,
         ...(effect.filter === undefined ? {} : { filter: effect.filter }),
       },
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
+  if (effect.type === "grantReplacement") {
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      { type: "player", player: "self" },
       0,
       context,
     );

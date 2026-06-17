@@ -1,4 +1,11 @@
-import type { CardRef, GameState, ReplacementProcess } from "@optcg/types";
+import type {
+  CardRef,
+  ContinuousEffectRecord,
+  EffectId,
+  GameState,
+  PlayerId,
+  ReplacementProcess,
+} from "@optcg/types";
 
 import {
   cardRefsEqual,
@@ -12,7 +19,10 @@ import {
   resolveReviewedImplementedDslEffectDefinition,
 } from "./definition-lookup.js";
 import { failure } from "./errors.js";
-import { replacementSourcesForController } from "./source-lookup.js";
+import {
+  findCardByInstanceId,
+  replacementSourcesForController,
+} from "./source-lookup.js";
 import {
   isReplacementTriggerEffect,
   isSupportedAnyOfReplacementEffect,
@@ -34,12 +44,123 @@ import type {
   LocatedReplacementSource,
   SelectedTargetKoReplacementCandidate,
   SupportedReplacementEffectBlock,
+  ValidatedReplacementTarget,
 } from "./types.js";
 
 const toReplacementCandidateId = (
   source: LocatedReplacementSource,
   effect: SupportedReplacementEffectBlock,
 ): string => `${String(source.ref.instanceId)}:${String(effect.id)}`;
+
+const coveredTargetsForSupportedEffect = (
+  state: GameState,
+  process: ReplacementProcess,
+  source: LocatedReplacementSource,
+  controllerTargets: readonly ValidatedReplacementTarget[],
+  effect: SupportedReplacementEffectBlock,
+): readonly CardRef[] | null => {
+  if (isSupportedSelfKoDrawReplacementEffect(effect)) {
+    if (process.type !== "ko") {
+      return null;
+    }
+    return controllerTargets
+      .filter(
+        ({ located }) => source.card.instanceId === located.card.instanceId,
+      )
+      .map(({ ref }) => ref);
+  }
+  if (isSupportedSelfKoTrashFromHandReplacementEffect(effect)) {
+    if (process.type !== "ko") {
+      return null;
+    }
+    return controllerTargets
+      .filter(
+        ({ located }) => source.card.instanceId === located.card.instanceId,
+      )
+      .map(({ ref }) => ref);
+  }
+  if (
+    isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) &&
+    process.type !== "ko"
+  ) {
+    return null;
+  }
+  if (
+    isSupportedKoLifeTopToHandReplacementEffect(effect) ||
+    isSupportedKoInsteadReplacementEffect(effect) ||
+    isSupportedOpponentKoTrashFromHandReplacementEffect(effect) ||
+    isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
+    isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(effect) ||
+    isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(effect) ||
+    isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
+    isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
+    isSupportedAnyOfReplacementEffect(effect)
+  ) {
+    return opponentFieldRemovalReplacementCoveredTargets(
+      state,
+      process,
+      source,
+      controllerTargets,
+      effect,
+    );
+  }
+  return controllerTargets.map(({ ref }) => ref);
+};
+
+const temporaryReplacementBlocksForController = (
+  state: GameState,
+  controllerId: PlayerId,
+): {
+  readonly effect: SupportedReplacementEffectBlock;
+  readonly source: LocatedReplacementSource;
+}[] => {
+  const blocks: {
+    readonly effect: SupportedReplacementEffectBlock;
+    readonly source: LocatedReplacementSource;
+  }[] = [];
+  for (const record of state.continuousEffects) {
+    const block = temporaryReplacementBlock(record);
+    if (block === undefined || record.controller !== controllerId) {
+      continue;
+    }
+    const located = findCardByInstanceId(state, record.source.instanceId);
+    const resolved = state.cardManifest.cards[record.source.cardId];
+    if (located === null || resolved === undefined) {
+      continue;
+    }
+    blocks.push({
+      effect: block,
+      source: {
+        card: located.card,
+        playerId: located.playerId,
+        ref: record.source,
+        resolved,
+      },
+    });
+  }
+  return blocks;
+};
+
+const temporaryReplacementBlock = (
+  record: ContinuousEffectRecord,
+): SupportedReplacementEffectBlock | undefined => {
+  if (
+    record.modifier.layer !== "replacement" ||
+    record.modifier.operation.type !== "replacement"
+  ) {
+    return undefined;
+  }
+  const replacement = record.modifier.operation.replacement;
+  const block: SupportedReplacementEffectBlock = {
+    id: record.id as EffectId,
+    category: "replacement",
+    trigger: { type: "replacement", replacement: replacement.when },
+    optional: true,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    effect: replacement,
+  };
+  return isSupportedReplacementEffect(block) ? block : undefined;
+};
 
 export const detectSupportedSelectedTargetKoReplacementCandidate = (
   state: GameState,
@@ -115,57 +236,14 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
         ) {
           continue;
         }
-        let coveredTargets: readonly CardRef[] = [];
-        if (isSupportedSelfKoDrawReplacementEffect(effect)) {
-          if (process.type !== "ko") {
-            continue;
-          }
-          coveredTargets = controllerTargets
-            .filter(
-              ({ located }) =>
-                source.card.instanceId === located.card.instanceId,
-            )
-            .map(({ ref }) => ref);
-        } else if (isSupportedSelfKoTrashFromHandReplacementEffect(effect)) {
-          if (process.type !== "ko") {
-            continue;
-          }
-          coveredTargets = controllerTargets
-            .filter(
-              ({ located }) =>
-                source.card.instanceId === located.card.instanceId,
-            )
-            .map(({ ref }) => ref);
-        } else if (
-          isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) &&
-          process.type !== "ko"
-        ) {
-          continue;
-        } else if (
-          isSupportedKoLifeTopToHandReplacementEffect(effect) ||
-          isSupportedKoInsteadReplacementEffect(effect) ||
-          isSupportedOpponentKoTrashFromHandReplacementEffect(effect) ||
-          isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
-          isSupportedOpponentEffectFieldRemovalRestCardsReplacementEffect(
-            effect,
-          ) ||
-          isSupportedOpponentEffectFieldRemovalRestSelfReplacementEffect(
-            effect,
-          ) ||
-          isSupportedOpponentEffectKoRestSelfReplacementEffect(effect) ||
-          isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||
-          isSupportedAnyOfReplacementEffect(effect)
-        ) {
-          coveredTargets = opponentFieldRemovalReplacementCoveredTargets(
-            state,
-            process,
-            source,
-            controllerTargets,
-            effect,
-          );
-        } else {
-          coveredTargets = controllerTargets.map(({ ref }) => ref);
-        }
+        const coveredTargets = coveredTargetsForSupportedEffect(
+          state,
+          process,
+          source,
+          controllerTargets,
+          effect,
+        );
+        if (coveredTargets === null) continue;
         if (coveredTargets.length === 0) {
           continue;
         }
@@ -187,6 +265,42 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
           replacementEffect: effect.effect,
         });
       }
+    }
+
+    for (const { effect, source } of temporaryReplacementBlocksForController(
+      state,
+      controllerId,
+    )) {
+      const candidateId = `temporary:${String(effect.id)}`;
+      if (replacementAlreadyUsed(process, candidateId)) {
+        continue;
+      }
+      const coveredTargets = coveredTargetsForSupportedEffect(
+        state,
+        process,
+        source,
+        controllerTargets,
+        effect,
+      );
+      if (coveredTargets === null || coveredTargets.length === 0) {
+        continue;
+      }
+      const processTargets = fieldRemovalProcessTargets(process);
+      const needsCoveredTargets =
+        processTargets.length !== 1 ||
+        coveredTargets.length !== 1 ||
+        !cardRefsEqual(
+          processTargets[0] as CardRef,
+          coveredTargets[0] as CardRef,
+        );
+      applicable.push({
+        id: candidateId,
+        effectBlockId: effect.id,
+        controllerId,
+        source: source.ref,
+        ...(needsCoveredTargets ? { coveredTargets } : {}),
+        replacementEffect: effect.effect,
+      });
     }
   }
   if (applicable.length === 0) return { ok: true };

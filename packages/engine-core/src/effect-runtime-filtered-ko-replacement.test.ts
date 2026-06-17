@@ -5,6 +5,7 @@ import type {
   CardId,
   CardInstance,
   CardRef,
+  ContinuousEffectRecord,
   Effect,
   EffectDefinition,
   EffectId,
@@ -262,6 +263,118 @@ const cardRef = (card: CardInstance, playerId: PlayerId): CardRef => ({
   cardId: card.cardId,
   playerId,
   zone: card.zone,
+});
+
+test("detects temporary battle K.O. replacement records through the shared replacement path", () => {
+  const { state, entry, target } = setupFilteredKoReplacementState();
+  state.cardManifest.cards[must(state.players[p1], "p1").leader.cardId] =
+    resolvedCard({
+      cardId: must(state.players[p1], "p1").leader.cardId,
+      category: "leader",
+      power: 5000,
+    });
+  state.cardManifest.cards[must(state.players[p2], "p2").leader.cardId] =
+    resolvedCard({
+      cardId: must(state.players[p2], "p2").leader.cardId,
+      category: "leader",
+      power: 5000,
+    });
+  const p2State = must(state.players[p2], "p2");
+  p2State.characters = [target];
+  p2State.hand = [
+    {
+      ...must(p2State.deck[0], "temporary replacement cost card"),
+      instanceId: toInstanceId("temporary-replacement-cost-instance"),
+      cardId: toCardId("temporary-replacement-cost-card"),
+      zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+    },
+  ];
+  state.cardManifest.cards[toCardId("temporary-replacement-cost-card")] =
+    resolvedCard({
+      cardId: toCardId("temporary-replacement-cost-card"),
+      category: "character",
+    });
+  const eventSource: CardInstance = {
+    ...must(p2State.deck[0], "temporary replacement source"),
+    cardId: toCardId("temporary-replacement-event"),
+    instanceId: toInstanceId("temporary-replacement-event-instance"),
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+    controller: p2,
+  };
+  p2State.trash = [eventSource];
+  state.cardManifest.cards[eventSource.cardId] = resolvedCard({
+    cardId: eventSource.cardId,
+    category: "event",
+  });
+  const replacement: Extract<Effect, { type: "replacement" }> = {
+    type: "replacement",
+    when: {
+      type: "wouldBeKOd",
+      sourceKind: "battle",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: { categories: ["character"] },
+      },
+    },
+    instead: {
+      type: "trashFromHand",
+      player: "self",
+      chooser: "self",
+      count: 1,
+    },
+  };
+  const record: ContinuousEffectRecord = {
+    id: "temporary-replacement-record",
+    source: cardRef(eventSource, p2),
+    sourceSnapshot: {
+      instanceId: eventSource.instanceId,
+      cardId: eventSource.cardId,
+      ownerId: p2,
+      controllerId: p2,
+      zone: eventSource.zone,
+      category: "event",
+      colors: ["blue"],
+      keywords: [],
+    },
+    controller: p2,
+    modifier: {
+      layer: "replacement",
+      target: { type: "player", player: "self" },
+      operation: { type: "replacement", replacement },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "temporary-replacement-test" },
+    createdAtStateSeq: state.seq,
+  };
+  state.continuousEffects = [record];
+  const process = buildKoReplacementProcess({
+    effectId: entry.effectBlockId,
+    id: "temporary-battle-ko-process",
+    queueEntryId: entry.id,
+    source: entry.source,
+    target: cardRef(target, p2),
+    causedBy: entry.causedBy,
+    sourceKind: "battle",
+    sourceControllerId: p1,
+  });
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: true,
+    candidate: {
+      id: "temporary:temporary-replacement-record",
+      effectBlockId: "temporary-replacement-record",
+      controllerId: p2,
+      source: cardRef(eventSource, p2),
+      replacementEffect: replacement,
+    },
+  });
 });
 
 test("detects opponent-effect K.O.-only rest-self replacement through reusable target filters", () => {

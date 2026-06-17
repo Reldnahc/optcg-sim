@@ -3,11 +3,13 @@ import type {
   Duration,
   DynamicNumberValue,
   Effect,
+  EffectId,
   Keyword,
   Target,
 } from "@optcg/types";
 
 import { isSupportedQueuedEffectConditionShape } from "../../effect-runtime-conditions.js";
+import { isSupportedReplacementEffect } from "../../replacement/primitives/support-shapes.js";
 import type { ContinuousQueueEffect } from "./types.js";
 import { isSupportedDonPhasePlacementEffect } from "./don-phase-placement-modifier.js";
 
@@ -371,6 +373,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "invalidateEffectEntryPoint" &&
     effect.type !== "giveProtection" &&
     effect.type !== "protectFromKO" &&
+    effect.type !== "grantReplacement" &&
     effect.type !== "cannotBecomeActive" &&
     effect.type !== "cannotAttack" &&
     effect.type !== "cannotAttackTarget" &&
@@ -382,6 +385,19 @@ export const isSupportedContinuousQueueEffect = (
     return false;
   }
   if (!isSupportedDuration(effect.duration)) return false;
+  if (effect.type === "grantReplacement") {
+    return isSupportedReplacementEffect({
+      id: "continuous:replacement-support" as EffectId,
+      category: "replacement",
+      trigger: {
+        type: "replacement",
+        replacement: effect.replacement.when,
+      },
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: effect.replacement,
+    });
+  }
   if (
     effect.type === "allowAttackActiveCharacters" &&
     !isSupportedTarget(effect.target)

@@ -21,6 +21,7 @@ export type ContinuousQueueEffect = Extract<
       | "invalidateEffectEntryPoint"
       | "giveProtection"
       | "protectFromKO"
+      | "grantReplacement"
       | "cannotBecomeActive"
       | "cannotAttack"
       | "cannotAttackTarget"

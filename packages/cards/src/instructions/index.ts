@@ -19,6 +19,7 @@ export {
 } from "./continuous-field-effects.js";
 export { parseDrawInstruction } from "./draw.js";
 export { parseDamageInstruction } from "./damage.js";
+export { parseGrantReplacementInstruction } from "./grant-replacement.js";
 export { parseHandToDeckBottomInstruction } from "./hand-to-deck-bottom.js";
 export { parsePlaceAtOwnerLifeInstruction } from "./field-to-life.js";
 export { parsePlaceAtOwnerDeckBottomInstruction } from "./owner-deck-bottom.js";

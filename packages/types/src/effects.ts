@@ -918,6 +918,11 @@ export type Effect =
       sourceCardCategories?: CardCategory[];
       sourceCardFilter?: CardFilter;
     }
+  | {
+      type: "grantReplacement";
+      replacement: Extract<Effect, { type: "replacement" }>;
+      duration: Duration;
+    }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }
   | {
