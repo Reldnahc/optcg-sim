@@ -17,7 +17,7 @@ it("parses optional hand-trash cost into only-matching Characters KO condition",
         effects: [
           {
             connector: "always",
-            saveResultAs: "paidCost",
+            saveResultAs: "paidCost:trashFromHand",
             effect: {
               type: "payCost",
               cost: {

@@ -206,7 +206,16 @@ it("parses conditional play followed by sentence-form optional Life cost and if-
                   connector: "ifYouDo",
                   effect: {
                     type: "modifyPower",
-                    target: { type: "myLeader" },
+                    target: {
+                      type: "chooseFromZones",
+                      request: {
+                        player: "self",
+                        zones: ["leaderArea"],
+                        min: 0,
+                        max: 1,
+                        filter: { categories: ["leader"] },
+                      },
+                    },
                     value: 2000,
                     duration: {
                       type: "untilEndOfNextTurn",

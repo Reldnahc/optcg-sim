@@ -918,7 +918,7 @@ describe("card effect line parser", () => {
           effects: [
             {
               connector: "always",
-              saveResultAs: "paidCost",
+              saveResultAs: "paidCost:trashFromHand",
               effect: {
                 type: "payCost",
                 cost: {

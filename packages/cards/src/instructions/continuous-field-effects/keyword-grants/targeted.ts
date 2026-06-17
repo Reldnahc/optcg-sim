@@ -1,15 +1,33 @@
+import type { Target } from "@optcg/types";
+
 import { parseUpToCardinality } from "../../../cardinality/index.js";
-import { parseKeyword } from "../../../keywords/index.js";
 import {
+  directPowerGainTargetParsers,
   parseTargetFromSet,
   yourFieldEffectTargetParsers,
 } from "../../../targets/index.js";
-import type { InstructionParser } from "../../../types.js";
-import { parseFieldEffectDuration } from "../shared.js";
+import type { InstructionParser, PrimitiveEvidence } from "../../../types.js";
+import { parseContinuousModifierListForTarget } from "../modifier-list.js";
+import { parseKeywordGrantForTarget } from "./shared.js";
 
 export const parseTargetedKeywordGrantInstruction: InstructionParser = (
   input,
 ) => {
+  const directTarget = parseTargetFromSet(
+    input,
+    directPowerGainTargetParsers(),
+  );
+  if (directTarget?.target !== undefined) {
+    const parsed = parseKeywordModifierText({
+      target: directTarget.target,
+      targetEvidence: directTarget.evidence,
+      rest: directTarget.rest,
+    });
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
   const cardinality = parseUpToCardinality(input);
   if (cardinality === undefined) {
     return undefined;
@@ -54,34 +72,58 @@ export const parseTargetedKeywordGrantInstruction: InstructionParser = (
     return undefined;
   }
 
-  const keyword = parseKeyword({ text: keywordText });
-  if (keyword === undefined) {
-    return undefined;
-  }
-  const duration = parseFieldEffectDuration({ text: keyword.rest });
-  if (
-    duration === undefined ||
-    duration.duration === undefined ||
-    duration.rest.length > 0
-  ) {
-    return undefined;
-  }
-
-  return {
-    effect: {
-      type: "giveKeyword",
-      target: target.target,
-      keyword: keyword.keyword,
-      duration: duration.duration,
-    },
-    evidence: [
-      "instruction:giveKeyword",
+  const parsed = parseContinuousModifierListForTarget({
+    target: target.target,
+    targetEvidence: [
       ...cardinality.evidence,
       "chooser:self:upTo",
       ...target.evidence,
-      ...keyword.evidence,
-      ...duration.evidence,
     ],
-    rest: "",
-  };
+    text: keywordText,
+    context: { condition: undefined },
+  });
+  if (parsed !== undefined) {
+    return parsed;
+  }
+
+  return parseKeywordGrantForTarget({
+    target: target.target,
+    targetEvidence: [
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+    ],
+    text: keywordText,
+    context: { condition: undefined },
+  });
 };
+
+function parseKeywordModifierText({
+  target,
+  targetEvidence,
+  rest,
+}: {
+  readonly target: Target;
+  readonly targetEvidence: readonly PrimitiveEvidence[];
+  readonly rest: string;
+}): ReturnType<InstructionParser> {
+  const keywordText = /^gains\s+(?<rest>.*)$/i.exec(rest)?.groups?.["rest"];
+  if (keywordText === undefined) {
+    return undefined;
+  }
+
+  return (
+    parseContinuousModifierListForTarget({
+      target,
+      targetEvidence,
+      text: keywordText,
+      context: { condition: undefined },
+    }) ??
+    parseKeywordGrantForTarget({
+      target,
+      targetEvidence,
+      text: keywordText,
+      context: { condition: undefined },
+    })
+  );
+}

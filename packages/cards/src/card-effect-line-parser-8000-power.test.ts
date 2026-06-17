@@ -187,7 +187,7 @@ it("parses optional filtered hand-trash On K.O. cost into play-this-from-trash b
         effects: [
           {
             connector: "always",
-            saveResultAs: "paidCost",
+            saveResultAs: "paidCost:trashFromHand",
             effect: {
               type: "payCost",
               cost: {
@@ -234,7 +234,7 @@ it("parses opponent-attack filtered hand-trash cost into base-power body", () =>
         effects: [
           {
             connector: "always",
-            saveResultAs: "paidCost",
+            saveResultAs: "paidCost:trashFromHand",
             effect: {
               type: "payCost",
               cost: {

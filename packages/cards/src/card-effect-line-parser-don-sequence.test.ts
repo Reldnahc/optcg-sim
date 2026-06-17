@@ -560,7 +560,7 @@ it("parses main rest-DON cost with attached-DON condition and power reduction bo
         effects: [
           {
             connector: "always",
-            saveResultAs: "paidCost",
+            saveResultAs: "paidCost:restDon",
             effect: {
               type: "payCost",
               cost: {

@@ -35,6 +35,7 @@ export function optionalCostedEffectExpressionParser(options: {
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
+    const bodyPaidCostReference = findPaidCostReference(body.effect);
     const presentationSpans = [
       ...(costPresentationSpans ?? []),
       ...(body.presentationSpans ?? []),
@@ -48,7 +49,7 @@ export function optionalCostedEffectExpressionParser(options: {
             id: "cost:choose-one-trash",
             connector: "always",
             saveResultAs:
-              paidCostReference ?? paidCostReferenceForBody(body.effect),
+              bodyPaidCostReference ?? paidCostReference ?? "paidCost",
             effect: {
               type: "payCost",
               cost: cost.cost,
@@ -102,11 +103,10 @@ function paidCostReferenceForCost(
   return "paidCostReference" in cost ? cost.paidCostReference : undefined;
 }
 
-function paidCostReferenceForBody(effect: Effect): string {
-  return findPaidCostReference(effect) ?? "paidCost";
-}
-
 function findPaidCostReference(effect: Effect): string | undefined {
+  if (usesGenericPaidCostReference(effect)) {
+    return "paidCost";
+  }
   if (
     effect.type === "modifyPower" &&
     typeof effect.value === "object" &&
@@ -129,6 +129,33 @@ function findPaidCostReference(effect: Effect): string | undefined {
     return findPaidCostReference(effect.then);
   }
   return undefined;
+}
+
+function usesGenericPaidCostReference(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => usesGenericPaidCostReference(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value["selection"] === "paidCost") {
+    return true;
+  }
+  const binding = value["binding"];
+  if (
+    isRecord(binding) &&
+    binding["family"] === "paidCost" &&
+    binding["saveResultAs"] === "paidCost"
+  ) {
+    return true;
+  }
+  return Object.values(value).some((item) =>
+    usesGenericPaidCostReference(item),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function parseOptionalCostedBody(

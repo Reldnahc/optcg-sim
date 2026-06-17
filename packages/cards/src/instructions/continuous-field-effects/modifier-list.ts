@@ -35,6 +35,7 @@ export function parseContinuousModifierListForTarget({
   if (parts.length === 0) {
     return undefined;
   }
+  const commonDuration = parseCommonModifierListDuration(parts, context);
 
   const effects: Effect[] = [];
   const instructionEvidence: PrimitiveEvidence[] = [];
@@ -44,18 +45,23 @@ export function parseContinuousModifierListForTarget({
   for (const part of parts) {
     const keyword = parseKeyword({ text: part });
     if (keyword !== undefined) {
-      if (keyword.rest.length > 0 && keyword.rest !== ".") {
+      const parsedDuration = parseContinuousModifierDuration(
+        keyword.rest,
+        context,
+        commonDuration,
+      );
+      if (parsedDuration === undefined) {
         return undefined;
       }
       effects.push({
         type: "giveKeyword",
         target,
         keyword: keyword.keyword,
-        duration: continuousDuration(context.condition),
+        duration: parsedDuration.duration,
       });
       instructionEvidence.push("instruction:giveKeyword");
       modifierEvidence.push(...keyword.evidence);
-      durationEvidence.push(continuousDurationEvidence(context.condition));
+      durationEvidence.push(...parsedDuration.evidence);
       continue;
     }
 
@@ -64,6 +70,7 @@ export function parseContinuousModifierListForTarget({
       const parsedDuration = parseContinuousModifierDuration(
         power.rest,
         context,
+        commonDuration,
       );
       if (parsedDuration === undefined) {
         return undefined;
@@ -93,6 +100,7 @@ export function parseContinuousModifierListForTarget({
       const parsedDuration = parseContinuousModifierDuration(
         costRestText,
         context,
+        commonDuration,
       );
       if (parsedDuration === undefined) {
         return undefined;
@@ -154,6 +162,10 @@ export function parseContinuousModifierListForTarget({
 function parseContinuousModifierDuration(
   rest: string,
   context: ContinuousInstructionContext,
+  commonDuration?: {
+    readonly duration: Duration;
+    readonly evidence: readonly PrimitiveEvidence[];
+  },
 ):
   | {
       readonly duration: Duration;
@@ -162,6 +174,9 @@ function parseContinuousModifierDuration(
   | undefined {
   const normalized = rest.replace(/\.$/u, "").trim();
   if (normalized.length === 0) {
+    if (commonDuration !== undefined) {
+      return commonDuration;
+    }
     return {
       duration: continuousDuration(context.condition),
       evidence: [continuousDurationEvidence(context.condition)],
@@ -171,4 +186,38 @@ function parseContinuousModifierDuration(
   return explicit?.duration !== undefined && explicit.rest.length === 0
     ? { duration: explicit.duration, evidence: explicit.evidence }
     : undefined;
+}
+
+function parseCommonModifierListDuration(
+  parts: readonly string[],
+  context: ContinuousInstructionContext,
+):
+  | {
+      readonly duration: Duration;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const lastPart = parts.at(-1);
+  if (lastPart === undefined) {
+    return undefined;
+  }
+
+  const keyword = parseKeyword({ text: lastPart });
+  if (keyword !== undefined && keyword.rest.trim().length > 0) {
+    return parseContinuousModifierDuration(keyword.rest, context);
+  }
+
+  const power = parseModifierFromSet(
+    { text: lastPart },
+    allPowerModifierParsers,
+  );
+  if (power !== undefined && power.rest.trim().length > 0) {
+    return parseContinuousModifierDuration(power.rest, context);
+  }
+
+  const cost = /^\+(?<value>[1-9]\d*) cost\b(?<rest>.*)$/iu.exec(lastPart);
+  const costRestText = cost?.groups?.["rest"]?.trim() ?? "";
+  return costRestText.length === 0
+    ? undefined
+    : parseContinuousModifierDuration(costRestText, context);
 }

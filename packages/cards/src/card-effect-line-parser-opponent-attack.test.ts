@@ -19,7 +19,7 @@ describe("opponent attack effect line parser", () => {
           effects: [
             {
               connector: "always",
-              saveResultAs: "paidCost",
+              saveResultAs: "paidCost:restDon",
               effect: {
                 type: "payCost",
                 cost: {
@@ -161,7 +161,7 @@ describe("opponent attack effect line parser", () => {
           effects: [
             {
               connector: "always",
-              saveResultAs: "paidCost",
+              saveResultAs: "paidCost:trashFromHand",
               effect: {
                 type: "payCost",
                 cost: {
@@ -384,7 +384,7 @@ describe("opponent attack effect line parser", () => {
           effects: [
             {
               connector: "always",
-              saveResultAs: "paidCost",
+              saveResultAs: "paidCost:trashFromHand",
               effect: {
                 type: "payCost",
                 cost: {
