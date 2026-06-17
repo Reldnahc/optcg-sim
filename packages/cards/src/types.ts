@@ -79,6 +79,7 @@ export type PrimitiveEvidence =
   | "connector:commaBeforeLook"
   | "composition:conditionAnd"
   | "composition:conditionOr"
+  | "composition:conditionNot"
   | "composition:compoundActivation"
   | "composition:triggerAnyOf"
   | "condition:synthetic:C"
