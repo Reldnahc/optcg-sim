@@ -119,4 +119,55 @@ describe("selected power continuation expression parser", () => {
       ]),
     );
   });
+
+  it("saves a selected power target and applies refresh lock to the selected Character", () => {
+    const result = selectedPowerContinuationExpressionParser({
+      text: "Up to 1 of your {Straw Hat Crew} type Characters gains +6000 power during this turn. Then, the selected Character will not become active in your next Refresh Phase.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:power-continuation-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Straw Hat Crew"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              value: 6000,
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            effect: {
+              type: "cannotBecomeActive",
+              duration: { type: "untilStartOfNextTurn", player: "self" },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:modifyPower",
+        "instruction:preventActivation",
+        "target:selectedCharacter",
+        "duration:thisTurn",
+        "duration:selfNextRefreshPhase",
+      ]),
+    );
+  });
 });

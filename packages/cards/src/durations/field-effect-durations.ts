@@ -17,6 +17,11 @@ export const opponentNextRefreshPhaseDurationPrimitive = {
   matches: [{ id: "in-opponent-next-refresh-phase" }],
 } as const;
 
+export const selfNextRefreshPhaseDurationPrimitive = {
+  primitiveId: "duration:selfNextRefreshPhase",
+  matches: [{ id: "in-self-next-refresh-phase" }],
+} as const;
+
 export const opponentNextEndPhaseDurationPrimitive = {
   primitiveId: "duration:opponentNextEndPhase",
   matches: [
@@ -50,6 +55,20 @@ export function parseOpponentNextRefreshPhaseDuration(
   return {
     duration: { type: "untilStartOfNextTurn", player: "opponent" },
     evidence: ["duration:opponentNextRefreshPhase"],
+    rest: "",
+  };
+}
+
+export function parseSelfNextRefreshPhaseDuration(
+  input: ParseInput,
+): DurationParseResult | undefined {
+  if (!/^in your next Refresh Phase\.?$/i.test(input.text)) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "untilStartOfNextTurn", player: "self" },
+    evidence: ["duration:selfNextRefreshPhase"],
     rest: "",
   };
 }
@@ -130,6 +149,7 @@ export function parseDurationFromSet(
 export const fieldEffectDurationParsers = [
   parseOpponentNextEndPhaseDuration,
   parseOpponentNextRefreshPhaseDuration,
+  parseSelfNextRefreshPhaseDuration,
   parseSelfNextTurnStartDuration,
   parseThisTurnDuration,
   parseThisBattleDuration,
@@ -155,6 +175,7 @@ export const attackRestrictionDurationParsers = [
 
 export const refreshRestrictionDurationParsers = [
   parseOpponentNextRefreshPhaseDuration,
+  parseSelfNextRefreshPhaseDuration,
   parseThisTurnDuration,
 ] as const;
 

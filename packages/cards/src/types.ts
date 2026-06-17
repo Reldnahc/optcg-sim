@@ -340,6 +340,7 @@ export type PrimitiveEvidence =
   | "duration:endOfTurn"
   | "duration:opponentNextRefreshPhase"
   | "duration:opponentNextEndPhase"
+  | "duration:selfNextRefreshPhase"
   | "duration:selfNextTurnStart"
   | "phase:don"
   | "modifier:positivePower"

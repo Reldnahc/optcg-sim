@@ -10,6 +10,7 @@ import type {
 import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
+  refreshRestrictionDurationParsers,
 } from "../durations/index.js";
 import { parseKeywordGrantForTarget } from "../instructions/continuous-field-effects/keyword-grants/shared.js";
 import { parseModifyPowerInstruction } from "../instructions/index.js";
@@ -58,6 +59,12 @@ function parseSelectedPowerContinuation(
   );
   if (keywordContinuation !== undefined) {
     return keywordContinuation;
+  }
+
+  const refreshLockContinuation =
+    parseSelectedPowerRefreshLockContinuation(input);
+  if (refreshLockContinuation !== undefined) {
+    return refreshLockContinuation;
   }
 
   const split =
@@ -164,6 +171,89 @@ function parseSelectedPowerContinuation(
       "target:selectedCharacter",
       "modifier:positivePower",
       ...additionalConditionEvidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseSelectedPowerRefreshLockContinuation(
+  input: ParseInput,
+): ExpressionParseResult | undefined {
+  const split =
+    /^(?<first>.+?)\.\s+Then,\s+the selected Character will not become active (?<duration>.+)$/iu.exec(
+      input.text,
+    );
+  const firstText = split?.groups?.["first"];
+  const durationText = split?.groups?.["duration"];
+  if (firstText === undefined || durationText === undefined) {
+    return undefined;
+  }
+
+  const first = parseModifyPowerInstruction({ text: `${firstText}.` });
+  if (
+    first === undefined ||
+    first.rest.length > 0 ||
+    first.effect.type !== "modifyPower" ||
+    !isSelectableTarget(first.effect.target)
+  ) {
+    return undefined;
+  }
+
+  const savedTarget = savedFieldObjectTarget(first.effect.target);
+  const selectionEffect = selectTargetsEffect(first.effect.target);
+  if (savedTarget === undefined || selectionEffect === undefined) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    refreshRestrictionDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  const firstPower: ModifyPowerEffect = {
+    ...first.effect,
+    target: savedTarget,
+  };
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:power-continuation-target",
+          connector: "always",
+          saveResultAs: powerContinuationSelection,
+          effect: selectionEffect,
+        },
+        {
+          id: "power:first-selected-target",
+          connector: "then",
+          effect: firstPower,
+        },
+        {
+          id: "refresh-lock:selected-power-target",
+          connector: "then",
+          effect: {
+            type: "cannotBecomeActive",
+            target: savedTarget,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "composition:selectThenApply",
+      ...first.evidence,
+      "target:selectedCharacter",
+      "instruction:preventActivation",
       ...duration.evidence,
     ],
     rest: "",
