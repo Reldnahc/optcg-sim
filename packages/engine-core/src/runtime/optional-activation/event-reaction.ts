@@ -14,9 +14,11 @@ import type {
 
 import {
   appendEffectQueuedEvent,
+  type EngineResultOptions,
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
+import { prependEventsToEngineResult } from "../../engine-result-events.js";
 import { isMatchActive } from "../../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../../effect-runtime-conditions.js";
 import {
@@ -270,6 +272,7 @@ export const getActivatedReactionLegalActions = (
 export const applyActivatedReactionAction = (
   state: GameState,
   action: Extract<Action, { type: "activateEffect" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   if (!isMatchActive(state)) {
     return illegalAction(
@@ -327,10 +330,7 @@ export const applyActivatedReactionAction = (
     eventJournal: [...state.eventJournal, ...queuedEvents],
   };
   const resolved = processEffectRuntime(queuedState);
-  return {
-    ...resolved,
-    events: [...queuedEvents, ...resolved.events],
-  };
+  return prependEventsToEngineResult(resolved, queuedEvents, options);
 };
 
 const probePlayerId = "player-1" as EffectQueueEntry["controllerId"];

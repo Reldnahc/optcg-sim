@@ -15,9 +15,11 @@ import type {
 
 import {
   appendEffectQueuedEvent,
+  type EngineResultOptions,
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
+import { prependEventsToEngineResult } from "../../engine-result-events.js";
 import { isMatchActive } from "../../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
@@ -352,6 +354,7 @@ export const getActivateMainLegalActions = (
 export const applyActivateMainAction = (
   state: GameState,
   action: Extract<Action, { type: "activateEffect" }>,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (!isMatchActive(state)) {
     return illegalAction(
@@ -438,8 +441,5 @@ export const applyActivateMainAction = (
     eventJournal: [...state.eventJournal, ...queuedEvents],
   };
   const resolved = processEffectRuntime(queuedState);
-  return {
-    ...resolved,
-    events: [...queuedEvents, ...resolved.events],
-  };
+  return prependEventsToEngineResult(resolved, queuedEvents, options);
 };

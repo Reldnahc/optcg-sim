@@ -1006,15 +1006,15 @@ export const applyAction = (
         "engine:applyAction:activateEffect",
         () =>
           profileActionSpan(options, "engine:activateEffect:startOfTurn", () =>
-            applyStartOfTurnAction(state, action),
+            applyStartOfTurnAction(state, action, options),
           ) ??
           profileActionSpan(
             options,
             "engine:activateEffect:activatedReaction",
-            () => applyActivatedReactionAction(state, action),
+            () => applyActivatedReactionAction(state, action, options),
           ) ??
           profileActionSpan(options, "engine:activateEffect:activateMain", () =>
-            applyActivateMainAction(state, action),
+            applyActivateMainAction(state, action, options),
           ),
       );
     return illegalAction(state, `Unsupported action type: ${action.type}`);

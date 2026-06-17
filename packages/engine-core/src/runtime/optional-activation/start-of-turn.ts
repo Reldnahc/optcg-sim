@@ -15,9 +15,11 @@ import type {
 
 import {
   appendEffectQueuedEvent,
+  type EngineResultOptions,
   illegalAction,
   toStateSeq,
 } from "../../action-results.js";
+import { prependEventsToEngineResult } from "../../engine-result-events.js";
 import { isMatchActive } from "../../actions/state.js";
 import {
   evaluateQueuedEffectCondition,
@@ -262,6 +264,7 @@ export const getStartOfTurnLegalActions = (
 export const applyStartOfTurnAction = (
   state: GameState,
   action: Extract<Action, { type: "activateEffect" }>,
+  options: EngineResultOptions = {},
 ): EngineResult | undefined => {
   if (state.turn.phase !== "refresh") {
     return undefined;
@@ -330,8 +333,5 @@ export const applyStartOfTurnAction = (
     eventJournal: [...state.eventJournal, ...queuedEvents],
   };
   const resolved = processEffectRuntime(queuedState);
-  return {
-    ...resolved,
-    events: [...queuedEvents, ...resolved.events],
-  };
+  return prependEventsToEngineResult(resolved, queuedEvents, options);
 };
