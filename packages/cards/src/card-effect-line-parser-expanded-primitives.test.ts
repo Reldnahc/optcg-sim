@@ -573,6 +573,21 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     });
   });
 
+  it("parses concise rules text name aliases as the same metadata primitive", () => {
+    const result = parseCardEffectLine(
+      "Also treat this card's name as [Tony Tony.Chopper] according to the rules.",
+    );
+
+    expect(result).toEqual({
+      kind: "metadata",
+      metadata: {
+        type: "nameAliases",
+        names: ["Tony Tony.Chopper"],
+      },
+      evidence: ["metadata:nameAliases", "filter:name", "target:thisCard"],
+    });
+  });
+
   it("parses next-use hand play-cost reduction as a consumable modifyCost primitive", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] [Once Per Turn] DON!! \u22121: The next time you play [Trafalgar Law] with a cost of 4 or more from your hand during this turn, the cost will be reduced by 2.",
