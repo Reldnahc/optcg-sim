@@ -113,12 +113,14 @@ export const createChooseQuantityDecisionForQueuedEffect = (
   state: GameState,
   entry: EffectQueueEntry,
   request: ChooseQuantityRuntimeDecisionRequest,
+  options: EngineResultOptions = {},
 ): EngineResult => {
   if (state.pendingDecision !== undefined) {
     return toEngineResult(
       state,
       [],
       [chooseQuantityRuntimeError(entry, "pending-decision-exists")],
+      options,
     );
   }
   if (
@@ -133,6 +135,7 @@ export const createChooseQuantityDecisionForQueuedEffect = (
       state,
       [],
       [chooseQuantityRuntimeError(entry, "entry-not-pending")],
+      options,
     );
   }
   if (state.players[request.playerId] === undefined) {
@@ -140,6 +143,7 @@ export const createChooseQuantityDecisionForQueuedEffect = (
       state,
       [],
       [chooseQuantityRuntimeError(entry, "missing-player")],
+      options,
     );
   }
   if (
@@ -153,6 +157,7 @@ export const createChooseQuantityDecisionForQueuedEffect = (
       state,
       [],
       [chooseQuantityRuntimeError(entry, "invalid-bounds")],
+      options,
     );
   }
 
@@ -201,6 +206,8 @@ export const createChooseQuantityDecisionForQueuedEffect = (
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
+    undefined,
+    options,
   );
 };
 
