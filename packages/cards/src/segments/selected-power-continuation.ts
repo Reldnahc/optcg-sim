@@ -13,7 +13,10 @@ import {
   refreshRestrictionDurationParsers,
 } from "../durations/index.js";
 import { parseKeywordGrantForTarget } from "../instructions/continuous-field-effects/keyword-grants/shared.js";
-import { parseModifyPowerInstruction } from "../instructions/index.js";
+import {
+  parseModifyPowerInstruction,
+  parseSelectTargetsInstruction,
+} from "../instructions/index.js";
 import type {
   ConditionParser,
   ExpressionParseResult,
@@ -53,6 +56,14 @@ function parseSelectedPowerContinuation(
     readonly additionalConditionParsers?: readonly ConditionParser[];
   } = {},
 ): ExpressionParseResult | undefined {
+  const explicitSelectContinuation = parseExplicitSelectKeywordContinuation(
+    input,
+    options,
+  );
+  if (explicitSelectContinuation !== undefined) {
+    return explicitSelectContinuation;
+  }
+
   const keywordContinuation = parseSelectedPowerKeywordContinuation(
     input,
     options,
@@ -172,6 +183,98 @@ function parseSelectedPowerContinuation(
       "modifier:positivePower",
       ...additionalConditionEvidence,
       ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseExplicitSelectKeywordContinuation(
+  input: ParseInput,
+  options: {
+    readonly additionalConditionParsers?: readonly ConditionParser[];
+  },
+): ExpressionParseResult | undefined {
+  const split =
+    /^(?<first>Select .+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains (?<keyword>\[[^\]]+\].+)$/iu.exec(
+      input.text,
+    );
+  const firstText = split?.groups?.["first"];
+  const conditionText = split?.groups?.["condition"];
+  const keywordText = split?.groups?.["keyword"];
+  if (firstText === undefined || keywordText === undefined) {
+    return undefined;
+  }
+
+  const first = parseSelectTargetsInstruction({ text: `${firstText}.` });
+  if (
+    first === undefined ||
+    first.rest.length > 0 ||
+    first.effect.type !== "selectTargets"
+  ) {
+    return undefined;
+  }
+
+  const savedTarget = savedFieldObjectTargetFromSelect(first.effect);
+  if (savedTarget === undefined) {
+    return undefined;
+  }
+
+  const additionalCondition =
+    conditionText === undefined
+      ? undefined
+      : parseConditionExpression(
+          conditionText,
+          options.additionalConditionParsers ?? [],
+        );
+  if (conditionText !== undefined && additionalCondition === undefined) {
+    return undefined;
+  }
+
+  const keyword = parseKeywordGrantForTarget({
+    target: savedTarget,
+    targetEvidence: ["target:selectedCharacter"],
+    text: keywordText,
+    context: { condition: undefined },
+  });
+  if (keyword === undefined || keyword.rest.length > 0) {
+    return undefined;
+  }
+
+  const keywordEffect: Effect =
+    additionalCondition === undefined
+      ? keyword.effect
+      : {
+          type: "conditional",
+          if: additionalCondition.condition,
+          then: keyword.effect,
+        };
+  const additionalConditionEvidence: readonly PrimitiveEvidence[] =
+    additionalCondition === undefined
+      ? []
+      : ["expression:conditional", ...additionalCondition.evidence];
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:power-continuation-target",
+          connector: "always",
+          saveResultAs: powerContinuationSelection,
+          effect: first.effect,
+        },
+        {
+          id: "keyword:selected-target",
+          connector: "then",
+          effect: keywordEffect,
+        },
+      ],
+    },
+    evidence: [
+      "composition:selectThenApply",
+      ...first.evidence,
+      ...keyword.evidence,
+      ...additionalConditionEvidence,
     ],
     rest: "",
   };
@@ -450,6 +553,42 @@ function savedFieldObjectTarget(target: SelectableTarget): Target | undefined {
     };
   }
   const request = target.request;
+  if (!request.zones.every(isSavedFieldObjectZone)) {
+    return undefined;
+  }
+  return {
+    type: "savedFieldObject",
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: powerContinuationSelection,
+    },
+    zones: request.zones,
+    player: request.player,
+    visibility: "publicOnly",
+    onFailure: "failClosed",
+  };
+}
+
+function savedFieldObjectTargetFromSelect(
+  effect: SelectTargetsEffect,
+): Target | undefined {
+  const request = effect.request;
+  if ("zone" in request) {
+    if (!isSavedFieldObjectZone(request.zone)) {
+      return undefined;
+    }
+    return {
+      type: "savedFieldObject",
+      binding: {
+        family: "selectedTargets",
+        saveResultAs: powerContinuationSelection,
+      },
+      zone: request.zone,
+      player: request.player,
+      visibility: "publicOnly",
+      onFailure: "failClosed",
+    };
+  }
   if (!request.zones.every(isSavedFieldObjectZone)) {
     return undefined;
   }
