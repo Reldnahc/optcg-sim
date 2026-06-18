@@ -142,6 +142,61 @@ it("parses revealed Life card conditions through the reusable reveal-top source 
   );
 });
 
+it("parses revealed Life card play followed by a generic if-you-do continuation", () => {
+  const result = parseCardEffectLine(
+    "[Main] Reveal 1 card from the top of your Life cards. If that card is a [Sabo] with a cost of 5, you may play that card. If you do, up to 1 of your Leader gains +2000 power until the end of your opponent's next turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      effect: {
+        type: "sequence",
+        effects: [
+          { connector: "always", effect: { type: "revealTop", zone: "life" } },
+          {
+            connector: "then",
+            effect: {
+              type: "selectFromSet",
+              filter: { names: ["Sabo"], cost: { op: "eq", value: 5 } },
+            },
+          },
+          {
+            connector: "ifPreviousSucceeded",
+            effect: {
+              type: "sequence",
+              effects: [
+                { effect: { type: "playSelected", ignoreCost: true } },
+                {
+                  connector: "ifPreviousSucceeded",
+                  effect: {
+                    type: "modifyPower",
+                    value: 2000,
+                    duration: { type: "untilEndOfNextTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:revealTop",
+      "zone:life",
+      "instruction:selectFromSet",
+      "filter:name",
+      "filter:cost",
+      "instruction:playSelected",
+      "connector:ifPreviousSucceeded",
+      "instruction:modifyPower",
+      "duration:opponentNextEndPhase",
+    ]),
+  );
+});
+
 it("parses revealed-card type-includes condition with composed draw and trash body", () => {
   const result = parseCardEffectLine(
     `[On Play] Reveal 1 card from the top of your deck. If that card's type includes "Whitebeard Pirates", draw 2 cards and trash 1 card from your hand.`,

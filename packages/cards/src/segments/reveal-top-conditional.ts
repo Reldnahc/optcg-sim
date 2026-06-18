@@ -244,6 +244,60 @@ function parseRevealPlayContinuation(
   };
 }
 
+function parseRevealPlayIfYouDoContinuation(
+  text: string,
+  options: {
+    readonly instructions: readonly InstructionParser[];
+    readonly expressions?: readonly ((
+      input: ParseInput,
+    ) => ExpressionParseResult | undefined)[];
+  },
+): ExpressionParseResult | undefined {
+  const match = /^you may play that card\. If you do, (?<body>[\s\S]+)$/iu.exec(
+    text,
+  );
+  const bodyText = match?.groups?.["body"]?.trim();
+  if (bodyText === undefined || bodyText.length === 0) {
+    return undefined;
+  }
+  const body = parseExpression(
+    { text: bodyText },
+    {
+      connectors: [],
+      segments: [syntheticInstructionSegmentParser(options.instructions)],
+    },
+  );
+  if (body === undefined || body.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "playSelected",
+            selection: revealedTopSelection,
+            ignoreCost: true,
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: body.effect,
+        },
+      ],
+    },
+    evidence: [
+      "expression:sequence",
+      "instruction:playSelected",
+      "connector:ifPreviousSucceeded",
+      ...body.evidence,
+    ],
+    rest: "",
+  };
+}
+
 function parseConditionalBody(
   text: string,
   options: {
@@ -256,6 +310,10 @@ function parseConditionalBody(
   const revealPlayKeyword = parseRevealPlayKeywordContinuation(text);
   if (revealPlayKeyword !== undefined) {
     return revealPlayKeyword;
+  }
+  const revealPlayIfYouDo = parseRevealPlayIfYouDoContinuation(text, options);
+  if (revealPlayIfYouDo !== undefined) {
+    return revealPlayIfYouDo;
   }
   const revealPlay = parseRevealPlayContinuation(text);
   if (revealPlay !== undefined) {

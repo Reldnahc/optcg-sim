@@ -467,3 +467,74 @@ it("parses Life deck-top extraction as a reusable private Life reorder primitive
     ]),
   );
 });
+
+it("parses Life reveal named play with if-you-do Leader power continuation", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] You may trash this Character: Reveal 1 card from the top of your Life cards. If that card is a [Sabo] with a cost of 5, you may play that card. If you do, up to 1 of your Leader gains +2000 power until the end of your opponent's next turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: { type: "trashSelf", optional: true },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                { effect: { type: "revealTop", zone: "life" } },
+                {
+                  effect: {
+                    type: "selectFromSet",
+                    filter: { names: ["Sabo"], cost: { op: "eq", value: 5 } },
+                  },
+                },
+                {
+                  connector: "ifPreviousSucceeded",
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      { effect: { type: "playSelected", ignoreCost: true } },
+                      {
+                        connector: "ifPreviousSucceeded",
+                        effect: {
+                          type: "modifyPower",
+                          value: 2000,
+                          duration: { type: "untilEndOfNextTurn" },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "cost:trashSelf",
+      "instruction:revealTop",
+      "zone:life",
+      "instruction:selectFromSet",
+      "filter:name",
+      "filter:cost",
+      "instruction:playSelected",
+      "instruction:modifyPower",
+      "duration:opponentNextEndPhase",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});
