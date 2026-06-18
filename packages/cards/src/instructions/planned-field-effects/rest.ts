@@ -15,10 +15,8 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../../types.js";
-import {
-  thatCharacterSavedTarget,
-  thatCharacterSelectionId,
-} from "./shared.js";
+import { selectThenApplyFieldTarget } from "../effect-builders.js";
+import { thatCharacterSelectionId } from "./shared.js";
 
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
@@ -83,37 +81,16 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
   }
 
   return {
-    effect: {
-      type: "sequence",
-      effects: [
-        {
-          id: "select:that-character",
-          connector: "always",
-          saveResultAs: thatCharacterSelectionId,
-          effect: {
-            type: "selectTargets",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone: "characterArea",
-              filter: target.filter ?? { categories: ["character"] },
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              allowFewerIfUnavailable: true,
-              visibility: "public",
-            },
-          },
-        },
-        {
-          connector: "then",
-          effect: {
-            type: "rest",
-            target: thatCharacterSavedTarget,
-          },
-        },
-      ],
-    },
+    effect: selectThenApplyFieldTarget({
+      selectionId: thatCharacterSelectionId,
+      selectId: "select:that-character",
+      player: "opponent",
+      zone: "characterArea",
+      filter: target.filter ?? { categories: ["character"] },
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      apply: (target) => ({ type: "rest", target }),
+    }),
     evidence: [
       "instruction:rest",
       ...cardinality.evidence,

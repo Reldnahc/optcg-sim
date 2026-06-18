@@ -29,9 +29,9 @@ import type {
   InstructionParser,
   ParseInput,
 } from "../../types.js";
+import { selectThenApplyFieldTarget } from "../effect-builders.js";
 import { withCardinality } from "../modify-power/shared.js";
 import {
-  thatCharacterSavedTarget,
   thatCharacterSelectionId,
   selectedBlockerRestrictedAttackerId,
   selectedBlockerRestrictedTarget,
@@ -92,40 +92,23 @@ export const parsePreventOpponentCharactersBlockerActivationInstruction: Instruc
     ) {
       return undefined;
     }
+    const parsedDuration = duration.duration;
 
     return {
-      effect: {
-        type: "sequence",
-        effects: [
-          {
-            id: "select:blocker-restricted-character",
-            connector: "always",
-            saveResultAs: thatCharacterSelectionId,
-            effect: {
-              type: "selectTargets",
-              request: {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zone: "characterArea",
-                filter: target.filter ?? { categories: ["character"] },
-                min: cardinality.cardinality.min,
-                max: cardinality.cardinality.max,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-              },
-            },
-          },
-          {
-            connector: "then",
-            effect: {
-              type: "cannotBlock",
-              target: thatCharacterSavedTarget,
-              duration: duration.duration,
-            },
-          },
-        ],
-      },
+      effect: selectThenApplyFieldTarget({
+        selectionId: thatCharacterSelectionId,
+        selectId: "select:blocker-restricted-character",
+        player: "opponent",
+        zone: "characterArea",
+        filter: target.filter ?? { categories: ["character"] },
+        min: cardinality.cardinality.min,
+        max: cardinality.cardinality.max,
+        apply: (target) => ({
+          type: "cannotBlock",
+          target,
+          duration: parsedDuration,
+        }),
+      }),
       evidence: [
         "instruction:cannotBlock",
         ...cardinality.evidence,
@@ -201,40 +184,23 @@ function parseOpponentCannotActivateBlocker(
   ) {
     return undefined;
   }
+  const parsedDuration = duration.duration;
 
   return {
-    effect: {
-      type: "sequence",
-      effects: [
-        {
-          id: "select:blocker-restricted-character",
-          connector: "always",
-          saveResultAs: thatCharacterSelectionId,
-          effect: {
-            type: "selectTargets",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone: "characterArea",
-              filter: predicates.filter,
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              allowFewerIfUnavailable: true,
-              visibility: "public",
-            },
-          },
-        },
-        {
-          connector: "then",
-          effect: {
-            type: "cannotBlock",
-            target: thatCharacterSavedTarget,
-            duration: duration.duration,
-          },
-        },
-      ],
-    },
+    effect: selectThenApplyFieldTarget({
+      selectionId: thatCharacterSelectionId,
+      selectId: "select:blocker-restricted-character",
+      player: "opponent",
+      zone: "characterArea",
+      filter: predicates.filter,
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      apply: (target) => ({
+        type: "cannotBlock",
+        target,
+        duration: parsedDuration,
+      }),
+    }),
     evidence: [
       "instruction:cannotBlock",
       ...cardinality.evidence,

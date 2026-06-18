@@ -1,5 +1,3 @@
-import type { Target } from "@optcg/types";
-
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   parseDurationFromSet,
@@ -7,20 +5,9 @@ import {
 } from "../../durations/index.js";
 import { parseOpponentCharactersTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
+import { selectThenApplyFieldTarget } from "../effect-builders.js";
 
 const powerZeroSelectionId = "selected:power-zero-target";
-
-const powerZeroSavedTarget: Target = {
-  type: "savedFieldObject",
-  binding: {
-    family: "selectedTargets",
-    saveResultAs: powerZeroSelectionId,
-  },
-  zone: "characterArea",
-  player: "opponent",
-  visibility: "publicOnly",
-  onFailure: "failClosed",
-};
 
 export const parseSetPowerToZeroInstruction: InstructionParser = (input) => {
   const match = /^set the power of (?<targetText>.+)$/iu.exec(input.text);
@@ -56,40 +43,23 @@ export const parseSetPowerToZeroInstruction: InstructionParser = (input) => {
   ) {
     return undefined;
   }
+  const parsedDuration = duration.duration;
 
   return {
-    effect: {
-      type: "sequence",
-      effects: [
-        {
-          id: "select:power-zero-target",
-          connector: "always",
-          saveResultAs: powerZeroSelectionId,
-          effect: {
-            type: "selectTargets",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone: "characterArea",
-              filter: target.filter ?? { categories: ["character"] },
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              allowFewerIfUnavailable: true,
-              visibility: "public",
-            },
-          },
-        },
-        {
-          connector: "then",
-          effect: {
-            type: "setPowerToZero",
-            target: powerZeroSavedTarget,
-            duration: duration.duration,
-          },
-        },
-      ],
-    },
+    effect: selectThenApplyFieldTarget({
+      selectionId: powerZeroSelectionId,
+      selectId: "select:power-zero-target",
+      player: "opponent",
+      zone: "characterArea",
+      filter: target.filter ?? { categories: ["character"] },
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      apply: (target) => ({
+        type: "setPowerToZero",
+        target,
+        duration: parsedDuration,
+      }),
+    }),
     evidence: [
       "instruction:setPowerToZero",
       ...cardinality.evidence,

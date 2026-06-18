@@ -6,10 +6,8 @@ import {
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import { parseOpponentCharactersTarget } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
-import {
-  thatCharacterSavedTarget,
-  thatCharacterSelectionId,
-} from "./shared.js";
+import { selectThenApplyFieldTarget } from "../effect-builders.js";
+import { thatCharacterSelectionId } from "./shared.js";
 
 export const preventOpponentCharactersAttackPrimitive = {
   primitiveId: "instruction:preventActivation",
@@ -56,40 +54,23 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
     ) {
       return undefined;
     }
+    const parsedDuration = duration.duration;
 
     return {
-      effect: {
-        type: "sequence",
-        effects: [
-          {
-            id: "select:cannot-attack",
-            connector: "always",
-            saveResultAs: thatCharacterSelectionId,
-            effect: {
-              type: "selectTargets",
-              request: {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zone: "characterArea",
-                filter: target.filter ?? { categories: ["character"] },
-                min: cardinality.cardinality.min,
-                max: cardinality.cardinality.max,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-              },
-            },
-          },
-          {
-            connector: "then",
-            effect: {
-              type: "cannotAttack",
-              target: thatCharacterSavedTarget,
-              duration: duration.duration,
-            },
-          },
-        ],
-      },
+      effect: selectThenApplyFieldTarget({
+        selectionId: thatCharacterSelectionId,
+        selectId: "select:cannot-attack",
+        player: "opponent",
+        zone: "characterArea",
+        filter: target.filter ?? { categories: ["character"] },
+        min: cardinality.cardinality.min,
+        max: cardinality.cardinality.max,
+        apply: (target) => ({
+          type: "cannotAttack",
+          target,
+          duration: parsedDuration,
+        }),
+      }),
       evidence: [
         "instruction:preventActivation",
         ...cardinality.evidence,
@@ -136,55 +117,28 @@ const parseOpponentRestedLeaderOrCharacterAttackRestriction: InstructionParser =
     ) {
       return undefined;
     }
+    const parsedDuration = duration.duration;
 
     return {
-      effect: {
-        type: "sequence",
-        effects: [
-          {
-            id: "select:cannot-attack",
-            connector: "always",
-            saveResultAs: thatCharacterSelectionId,
-            effect: {
-              type: "selectTargets",
-              request: {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zones: ["leaderArea", "characterArea"],
-                filter: {
-                  anyOf: [
-                    { categories: ["leader"], state: "rested" },
-                    characterTarget.filter ?? { categories: ["character"] },
-                  ],
-                },
-                min: cardinality.cardinality.min,
-                max: cardinality.cardinality.max,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-              },
-            },
-          },
-          {
-            connector: "then",
-            effect: {
-              type: "cannotAttack",
-              target: {
-                type: "savedFieldObject",
-                binding: {
-                  family: "selectedTargets",
-                  saveResultAs: thatCharacterSelectionId,
-                },
-                zones: ["leaderArea", "characterArea"],
-                player: "opponent",
-                visibility: "publicOnly",
-                onFailure: "failClosed",
-              },
-              duration: duration.duration,
-            },
-          },
-        ],
-      },
+      effect: selectThenApplyFieldTarget({
+        selectionId: thatCharacterSelectionId,
+        selectId: "select:cannot-attack",
+        player: "opponent",
+        zones: ["leaderArea", "characterArea"],
+        filter: {
+          anyOf: [
+            { categories: ["leader"], state: "rested" },
+            characterTarget.filter ?? { categories: ["character"] },
+          ],
+        },
+        min: cardinality.cardinality.min,
+        max: cardinality.cardinality.max,
+        apply: (target) => ({
+          type: "cannotAttack",
+          target,
+          duration: parsedDuration,
+        }),
+      }),
       evidence: [
         "instruction:preventActivation",
         ...cardinality.evidence,
