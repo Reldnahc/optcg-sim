@@ -151,6 +151,38 @@ const parseThisLeaderOrTypedCharacterTarget = (
 ):
   | { readonly target: Target; readonly evidence: readonly PrimitiveEvidence[] }
   | undefined => {
+  const leaderOrCharacterMatch = /^your Leader or 1 of your Characters$/iu.exec(
+    text,
+  );
+  if (leaderOrCharacterMatch !== null) {
+    return {
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            anyOf: [{ categories: ["leader"] }, { categories: ["character"] }],
+          },
+        },
+      },
+      evidence: [
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "count:positiveInteger",
+        "filter:anyOf",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+    };
+  }
+
   const match =
     /^this Leader or up to 1 of your \{(?<type>[^}]+)\} type Characters$/iu.exec(
       text,

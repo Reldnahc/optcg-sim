@@ -11,6 +11,36 @@ export const parseSelfFieldCountCondition: ConditionParser = (
     return undefined;
   }
 
+  const restedNamedMatch = /^a rested \[(?<name>[^\]]+)\]$/iu.exec(
+    comparisonText,
+  );
+  const restedName = restedNamedMatch?.groups?.["name"]?.trim();
+  if (restedName !== undefined && restedName.length > 0) {
+    return {
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          names: [restedName],
+          state: "rested",
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:fieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "filter:category:character",
+        "filter:name",
+        "filter:state:rested",
+      ],
+      rest: "",
+    };
+  }
+
   const singularCharacterMatch =
     /^an?\s+(?<predicate>Character(?: card)?s?\b.*)$/i.exec(comparisonText);
   const singularPredicateText = singularCharacterMatch?.groups?.["predicate"];

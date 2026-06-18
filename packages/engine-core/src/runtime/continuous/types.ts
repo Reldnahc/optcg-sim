@@ -13,6 +13,7 @@ export type ContinuousQueueEffect = Extract<
       | "modifyCost"
       | "modifyCounter"
       | "preventDraw"
+      | "preventLifeToHand"
       | "preventDonActivation"
       | "preventPlay"
       | "enterRested"

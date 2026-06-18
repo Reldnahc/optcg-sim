@@ -148,6 +148,27 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
     };
   }
 
+  const thisCharacterByAnyEffect =
+    /^this Character is K\.O\.'d by an effect$/iu.exec(normalized);
+  if (thisCharacterByAnyEffect !== null) {
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "replacementSource:cardEffect",
+      ],
+    };
+  }
+
   const opponentCharacter =
     /^your opponent's (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by your effect)?|returned to the owner's hand by your effect)$/iu.exec(
       normalized,

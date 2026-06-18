@@ -225,6 +225,21 @@ export const effectToDerivedModifier = (
   if (effect.type === "invalidateEffects") {
     return toInvalidateEffectsModifier(effect);
   }
+  if (effect.type === "preventLifeToHand") {
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported life-to-hand restriction"),
+      );
+    }
+    return {
+      layer: "restriction",
+      target: { type: "player", player: effect.player },
+      operation: {
+        type: "restriction",
+        restriction: "cannotAddLifeToHandByOwnEffects",
+      },
+    };
+  }
   if (effect.type === "invalidateEffectEntryPoint") {
     if (!isSupportedDuration(effect.duration)) {
       throw new TypeError(

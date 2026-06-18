@@ -884,6 +884,7 @@ export const isSupportedQueuedAutoSequenceForEntryPoint = (
     effect,
     {
       allowSavedReferences: options.allowSavedReferences ?? true,
+      allowInitialTrashFromHand: options.allowInitialTrashFromHand ?? false,
       requirePositiveDrawCount: options.requirePositiveDrawCount ?? true,
     },
   );

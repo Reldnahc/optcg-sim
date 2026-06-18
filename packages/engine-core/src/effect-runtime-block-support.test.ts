@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, SourcePresencePolicy } from "@optcg/types";
+import type {
+  Effect,
+  EffectDefinition,
+  SourcePresencePolicy,
+} from "@optcg/types";
 
 import {
   autoRuntimeEntryAdapterForTriggerType,
@@ -86,6 +90,58 @@ test("auto runtime admission composes optionality with reusable body primitives"
         trigger: { type: "onPlay" },
       }),
       autoAdapter("onPlay", "mustRemainInSameZone"),
+    ),
+    true,
+  );
+});
+
+test("auto runtime admission accepts initial hand-trash sequences through reusable entry adapters", () => {
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "trashFromHand",
+          player: "self",
+          chooser: "self",
+          count: 1,
+        },
+      },
+      {
+        connector: "then",
+        effect: { type: "draw", player: "self", count: 2 },
+      },
+    ],
+  };
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        condition: {
+          type: "fieldCount",
+          player: "self",
+          filter: { categories: ["don"] },
+          op: "gte",
+          value: 8,
+        },
+        effect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+      autoAdapter("onPlay", "mustRemainInSameZone"),
+    ),
+    true,
+  );
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "whenAttacking" },
+      }),
+      autoAdapter("whenAttacking", "mustRemainInSameZone"),
     ),
     true,
   );

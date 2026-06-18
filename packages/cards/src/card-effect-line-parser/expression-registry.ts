@@ -471,12 +471,12 @@ const rootExpressionParsers = () =>
     }),
     conditionalContinuousExpressionParser({
       conditions: conditionParsers,
-      connectors: [parseAndConnector],
+      connectors: [parseSentenceConnector, parseAndConnector],
       instructions: continuousInstructionParsers,
     }),
     entryConditionContinuousExpressionParser({
       conditions: conditionParsers,
-      connectors: [parseAndConnector],
+      connectors: [parseSentenceConnector, parseAndConnector],
       instructions: continuousInstructionParsers,
     }),
     conditionalBlockExpressionParser({

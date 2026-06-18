@@ -118,6 +118,7 @@ export type PrimitiveEvidence =
   | "instruction:draw"
   | "instruction:lookAt"
   | "instruction:preventDraw"
+  | "instruction:preventLifeToHand"
   | "instruction:preventDonActivation"
   | "instruction:preventPlay"
   | "instruction:preventPlayByEffects"

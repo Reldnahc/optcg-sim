@@ -14,7 +14,11 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "../action-results.js";
-import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
+import {
+  addCardsToHand,
+  getOpponentId,
+  reindexZoneCards,
+} from "../actions/state.js";
 import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
@@ -394,6 +398,50 @@ const resolveMoveCardsCount = (
     source: entry.source,
   });
 
+const targetPlayerForLifeToHandRestriction = (
+  state: GameState,
+  effect: GameState["continuousEffects"][number],
+): PlayerId | undefined => {
+  const target = effect.modifier.target;
+  if (target.type !== "player") {
+    return undefined;
+  }
+  switch (target.player) {
+    case "self":
+    case "controller":
+      return effect.controller;
+    case "owner":
+      return effect.source.playerId;
+    case "opponent":
+      return getOpponentId(state, effect.controller) ?? undefined;
+    case "turnPlayer":
+      return state.turn.turnPlayerId;
+    case "nonTurnPlayer":
+      return getOpponentId(state, state.turn.turnPlayerId) ?? undefined;
+    default:
+      return undefined;
+  }
+};
+
+const isLifeToHandPreventedByOwnEffects = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  playerId: PlayerId,
+): boolean =>
+  entry.controllerId === playerId &&
+  state.continuousEffects.some((effect) => {
+    if (
+      effect.modifier.layer !== "restriction" ||
+      effect.modifier.operation.type !== "restriction" ||
+      effect.modifier.operation.restriction !==
+        "cannotAddLifeToHandByOwnEffects" ||
+      effect.modifier.target.type !== "player"
+    ) {
+      return false;
+    }
+    return targetPlayerForLifeToHandRestriction(state, effect) === playerId;
+  });
+
 const executeEffectSourceTrashToHandMove = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -594,6 +642,9 @@ const executeLifeToHandMove = (
 
   const movedCount = Math.min(effect.count, player.life.length);
   if (movedCount === 0) {
+    return toEngineResult(state, []);
+  }
+  if (isLifeToHandPreventedByOwnEffects(state, entry, playerId)) {
     return toEngineResult(state, []);
   }
 

@@ -132,6 +132,12 @@ export function entryConditionContinuousExpressionParser(options: {
     const body = parseExpression(input.text, {
       connectors: options.connectors,
       segments: [
+        conditionalContinuousSegmentParser({
+          condition,
+          conditions: options.conditions ?? [],
+          connectors: options.connectors,
+          instructions: options.instructions,
+        }),
         continuousInstructionSegmentParser({
           condition,
           conditions: options.conditions ?? [],
@@ -225,5 +231,52 @@ function continuousInstructionSegmentParser(options: {
     }
 
     return undefined;
+  };
+}
+
+function conditionalContinuousSegmentParser(options: {
+  readonly condition: Condition | undefined;
+  readonly conditions: readonly ConditionParser[];
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly ContinuousInstructionParser[];
+}): SegmentParser {
+  return (input) => {
+    const parsed = parseLeadingConditionalExpression(
+      input.text,
+      options.conditions,
+    );
+    if (parsed === undefined) {
+      return undefined;
+    }
+
+    const condition = combineConditions(
+      options.condition,
+      parsed.condition.condition,
+    );
+    const body = parseExpression(parsed.thenText, {
+      connectors: options.connectors,
+      segments: [
+        continuousInstructionSegmentParser({
+          condition,
+          conditions: options.conditions,
+          instructions: options.instructions,
+        }),
+      ],
+    });
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: normalizeContinuousEffect(body.effect),
+      evidence: [
+        "expression:conditionalContinuous",
+        ...parsed.condition.evidence,
+        ...(options.condition === undefined
+          ? []
+          : (["composition:conditionAnd"] as const)),
+        ...body.evidence,
+      ],
+    };
   };
 }

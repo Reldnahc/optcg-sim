@@ -144,6 +144,16 @@ const mapEffectToModifier = (
       operation: { type: "restriction", restriction: "cannotDrawByOwnEffects" },
     };
   }
+  if (effect.type === "preventLifeToHand") {
+    return {
+      layer: "restriction",
+      target,
+      operation: {
+        type: "restriction",
+        restriction: "cannotAddLifeToHandByOwnEffects",
+      },
+    };
+  }
   if (effect.type === "preventDonActivation") {
     return {
       layer: "restriction",
@@ -399,7 +409,10 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
-  if (effect.type === "preventDonActivation") {
+  if (
+    effect.type === "preventLifeToHand" ||
+    effect.type === "preventDonActivation"
+  ) {
     const record = createRecord(
       state,
       entry,

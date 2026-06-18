@@ -667,6 +667,12 @@ export type Effect =
       duration: Duration;
     }
   | {
+      type: "preventLifeToHand";
+      player: PlayerRef;
+      source: "ownEffects";
+      duration: Duration;
+    }
+  | {
       type: "preventDonActivation";
       player: PlayerRef;
       sourceCategories: CardCategory[];

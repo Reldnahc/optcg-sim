@@ -134,6 +134,27 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Engine runtime: passed");
   });
 
+  it.each([
+    "[DON!! x1] All of your Characters gain +1 cost. If you have a Character with a cost of 8 or more, this Leader gains +1000 power.",
+    "[On Play] If you have 6 or less cards in your hand and a Character with a cost of 8 or more, draw 1 card.",
+    "[When Attacking] If your Leader is [Edward.Newgate], you cannot add Life cards to your hand using your own effects during this turn.",
+    "[Opponent's Turn] When this Character is K.O.'d by an effect, up to 1 of your Leader gains +2000 power during this turn.",
+    "[On Your Opponent's Attack] You may trash any number of {Music} type cards from your hand. Your Leader or 1 of your Characters gains +1000 power during this battle for every card trashed.",
+    "If you have a rested [Uta], this Character gains +1000 power.",
+    "[On Play] If you have 8 or more DON!! cards on your field, trash 1 card from your hand and draw 2 cards.",
+  ])(
+    "reports parser and runtime support for ST14-ST20 closeout primitive: %s",
+    async (text) => {
+      const report = await createSupportProbeReport({ text });
+
+      expect(report.exitCode).toBe(0);
+      expect(report.lines).toContain("Parse: passed");
+      expect(report.lines).toContain("Engine runtime: passed");
+      expect(report.lines).toContain("Primitive parser: passed");
+      expect(report.lines).toContain("Primitive runtime: passed");
+    },
+  );
+
   it("reports engine runtime support for relative DON-count self hand cost reduction", async () => {
     const report = await createSupportProbeReport({
       text: "If the number of DON!! cards on your field is at least 2 less than the number on your opponent's field, give this card in your hand −3 cost.",

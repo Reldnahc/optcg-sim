@@ -37,6 +37,7 @@ const isSupportedSequenceBody = (
     block,
     adapter.triggerType,
     block.sourcePresencePolicy,
+    { allowInitialTrashFromHand: true },
   );
 
 const isSupportedContinuousBody = (

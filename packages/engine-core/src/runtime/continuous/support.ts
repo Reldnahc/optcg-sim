@@ -367,6 +367,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "modifyCost" &&
     effect.type !== "modifyCounter" &&
     effect.type !== "preventDraw" &&
+    effect.type !== "preventLifeToHand" &&
     effect.type !== "preventDonActivation" &&
     effect.type !== "preventPlay" &&
     effect.type !== "enterRested" &&
@@ -455,6 +456,9 @@ export const isSupportedContinuousQueueEffect = (
     });
   }
   if (effect.type === "preventDraw") {
+    return effect.player === "self";
+  }
+  if (effect.type === "preventLifeToHand") {
     return effect.player === "self";
   }
   if (effect.type === "preventDonActivation") {

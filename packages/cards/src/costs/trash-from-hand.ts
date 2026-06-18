@@ -51,9 +51,9 @@ const parseAnyNumberTrashFromHandCost = (
     return undefined;
   }
 
-  const parsedFilter = parseCategoryListFilter(
-    filterText.replace(/\s+cards?$/i, ""),
-  );
+  const parsedFilter =
+    parseCategoryListFilter(filterText.replace(/\s+cards?$/i, "")) ??
+    parseGeneralTrashFromHandFilter(filterText);
   if (parsedFilter === undefined) {
     return undefined;
   }
@@ -74,6 +74,32 @@ const parseAnyNumberTrashFromHandCost = (
       ...parsedFilter.evidence,
     ],
     rest: "",
+  };
+};
+
+const parseGeneralTrashFromHandFilter = (
+  text: string,
+):
+  | {
+      readonly filter: CardFilter;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const parsedFilter = [text, text.replace(/\s+cards?$/i, "")].reduce<
+    ReturnType<typeof parseCardFilterPredicates> | undefined
+  >(
+    (parsed, candidate) =>
+      parsed?.rest.length === 0
+        ? parsed
+        : parseCardFilterPredicates({ text: candidate }),
+    undefined,
+  );
+  if (parsedFilter === undefined || parsedFilter.rest.length > 0) {
+    return undefined;
+  }
+  return {
+    filter: parsedFilter.filter,
+    evidence: parsedFilter.evidence,
   };
 };
 
