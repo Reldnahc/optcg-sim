@@ -230,6 +230,63 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses opponent Event activation reactions with forced hand bottom-deck placement", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] When your opponent activates an Event, your opponent must place 1 card from their hand at the bottom of their deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "opponentActivated",
+          activations: ["event"],
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "handSelection:opponent-hand-to-deck-bottom",
+              effect: {
+                type: "selectCards",
+                zone: "hand",
+                player: "opponent",
+                chooser: "opponent",
+                min: 1,
+                max: 1,
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "moveSelected",
+                selection: "handSelection:opponent-hand-to-deck-bottom",
+                from: "hand",
+                to: "deck",
+                position: "bottom",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:opponentActivated",
+        "activation:event",
+        "instruction:moveSelected",
+        "zone:hand",
+        "player:opponent",
+        "chooser:opponent",
+        "zone:deck",
+        "position:bottom",
+      ]),
+    );
+  });
+
   it("parses self Event activation reactions through canonical effect queue events", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] [Once Per Turn] When you activate an Event, add up to 1 DON!! card from your DON!! deck and set it as active.",

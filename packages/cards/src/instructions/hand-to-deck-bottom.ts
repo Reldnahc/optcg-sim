@@ -46,11 +46,14 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   }
 
   const match =
-    /^(?:(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?<order>\s+in any order)?\.?$/i.exec(
+    /^(?:(?<mustActor>your opponent|you|they) must place|(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?<order>\s+in any order)?\.?$/i.exec(
       input.text,
     );
   const selectionText = match?.groups?.["selection"]?.trim();
-  const actorText = match?.groups?.["actor"]?.toLowerCase() ?? "you";
+  const actorText =
+    match?.groups?.["mustActor"]?.toLowerCase() ??
+    match?.groups?.["actor"]?.toLowerCase() ??
+    "you";
   const possessive = match?.groups?.["possessive"]?.toLowerCase();
   const zoneText = match?.groups?.["zone"]?.toLowerCase();
   const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
