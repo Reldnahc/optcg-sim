@@ -107,13 +107,13 @@ export const isSupportedPayCostSegment = (
     (cost.type !== "trashFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "trashFromField" ||
-      isSupportedHandSelectionCardFilter(cost.filter)) &&
+      isSupportedPublicFieldTargetFilter(cost.filter)) &&
     (cost.type !== "koFromField" ||
-      isSupportedHandSelectionCardFilter(cost.filter)) &&
+      isSupportedPublicFieldTargetFilter(cost.filter)) &&
     (cost.type !== "revealFromHand" ||
       isSupportedHandSelectionCardFilter(cost.filter)) &&
     (cost.type !== "restFromField" ||
-      isSupportedHandSelectionCardFilter(cost.filter)) &&
+      isSupportedPublicFieldTargetFilter(cost.filter)) &&
     (cost.type !== "moveCards" ||
       (isSupportedMoveCardsCostRoute(cost) &&
         isSupportedHandSelectionCardFilter(cost.filter))) &&

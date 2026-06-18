@@ -21,6 +21,7 @@ import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
 } from "../actions/state.js";
+import { isSupportedPublicFieldTargetFilter } from "./support-filters.js";
 import {
   getReturnDonEligibleCount,
   getReturnDonEligibleInstanceIds,
@@ -350,6 +351,10 @@ const supportsChooseOneTrashFilter = (
   filter: CardFilter | undefined,
 ): boolean => isSupportedHandSelectionCardFilter(filter);
 
+const supportsPublicFieldCostFilter = (
+  filter: CardFilter | undefined,
+): boolean => isSupportedPublicFieldTargetFilter(filter);
+
 const fieldCardMatchesFilter = (
   state: GameState,
   playerId: EffectQueueEntry["controllerId"],
@@ -401,7 +406,7 @@ const isSupportedChooseOneOption = (
   if (option.type === "trashFromHand") {
     return supportsChooseOneTrashFilter(option.filter);
   }
-  return supportsChooseOneTrashFilter(option.filter);
+  return supportsPublicFieldCostFilter(option.filter);
 };
 
 const findRestableSource = (
@@ -530,7 +535,7 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "trashFromField" || option.type === "koFromField") {
-      if (!supportsChooseOneTrashFilter(option.filter)) {
+      if (!supportsPublicFieldCostFilter(option.filter)) {
         continue;
       }
       const fieldFilter = option.filter;
@@ -813,7 +818,7 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "trashFromField" || cost.type === "koFromField") {
-    if (!supportsChooseOneTrashFilter(cost.filter)) {
+    if (!supportsPublicFieldCostFilter(cost.filter)) {
       return paymentOptions;
     }
     const fieldMatchCount =
@@ -955,7 +960,7 @@ export const getSequenceOptionalPayCostOptions = (
       });
       continue;
     }
-    if (!supportsChooseOneTrashFilter(option.filter)) {
+    if (!supportsPublicFieldCostFilter(option.filter)) {
       return [];
     }
     const fieldFilter = option.filter;

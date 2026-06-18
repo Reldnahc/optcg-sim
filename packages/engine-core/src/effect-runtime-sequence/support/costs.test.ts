@@ -25,3 +25,22 @@ test("pay-cost support accepts move-field-to-Life costs with public field filter
     true,
   );
 });
+
+test("pay-cost support accepts field-trash costs with public field filters", () => {
+  assert.equal(
+    isSupportedPayCostSegment({
+      type: "payCost",
+      cost: {
+        type: "trashFromField",
+        count: 1,
+        chooser: "self",
+        optional: true,
+        filter: {
+          categories: ["character"],
+          currentPower: { min: 6000 },
+        },
+      },
+    }),
+    true,
+  );
+});

@@ -8,7 +8,7 @@ import type {
   PlayerState,
 } from "@optcg/types";
 
-import { isSupportedHandSelectionCardFilter } from "../actions/state.js";
+import { isSupportedPublicFieldTargetFilter } from "./support-filters.js";
 import { restFromFieldSelectableIds } from "../runtime/costs/rest-from-field.js";
 import { chooseCombos } from "./payment-combos.js";
 
@@ -25,7 +25,7 @@ export const restFromFieldPaymentOption = (
 ): RestFromFieldPaymentOption | undefined => {
   if (
     cost.chooser !== "self" ||
-    !isSupportedHandSelectionCardFilter(cost.filter)
+    !isSupportedPublicFieldTargetFilter(cost.filter)
   ) {
     return undefined;
   }
@@ -56,7 +56,7 @@ export const restFromFieldPaymentLegalActions = (
   decisionId: OptionalPayCostDecision["id"],
   option: RestFromFieldPaymentOption,
 ): LegalAction[] => {
-  if (!isSupportedHandSelectionCardFilter(option.filter)) {
+  if (!isSupportedPublicFieldTargetFilter(option.filter)) {
     return [];
   }
   const selectableCardIds = restFromFieldSelectableIds(

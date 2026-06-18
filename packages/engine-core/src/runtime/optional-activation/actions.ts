@@ -31,6 +31,7 @@ import {
 } from "../../concrete-card-movement.js";
 import { applyAttachDonCostPayment } from "../primitives/attach-don-cost.js";
 import { selectedFieldTrashSourceZone } from "../../effect-runtime-field-trash-payment.js";
+import { isSupportedPublicFieldTargetFilter } from "../../effect-runtime-sequence/support-filters.js";
 import { applyModifyPowerPayment } from "../primitives/modify-power-cost.js";
 import {
   applyRestFromFieldPaymentResponse,
@@ -97,6 +98,10 @@ const orderedCurrentChoiceGroupIds = (
 const supportsChooseOneTrashFilter = (
   filter: CardFilter | undefined,
 ): boolean => isSupportedHandSelectionCardFilter(filter);
+
+const supportsPublicFieldCostFilter = (
+  filter: CardFilter | undefined,
+): boolean => isSupportedPublicFieldTargetFilter(filter);
 
 const fieldCardMatchesFilter = (
   state: GameState,
@@ -531,8 +536,12 @@ export const applyOptionalActivationDecisionResponse = (
               invalidDecision("Payment card selection is invalid."),
             );
           }
+          const filterSupported =
+            selectedOption.type === "trashFromHand"
+              ? supportsChooseOneTrashFilter(selectedOption.filter)
+              : supportsPublicFieldCostFilter(selectedOption.filter);
           if (
-            !supportsChooseOneTrashFilter(selectedOption.filter) ||
+            !filterSupported ||
             !fieldCardMatchesFilter(
               state,
               decision.playerId,
