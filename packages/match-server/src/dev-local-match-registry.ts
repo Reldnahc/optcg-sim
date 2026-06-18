@@ -215,6 +215,7 @@ export const createLocalDevMatchRegistry = async (
   const completedPersistedMatchIds = new Set<MatchId>();
   const completedPersistingMatchIds = new Set<MatchId>();
   const activeBotRuns = new Set<MatchId>();
+  const recoveredTimerSuspendedMatchIds = new Set<MatchId>();
   const pendingCheckpointWrites = new Map<MatchId, Promise<void>>();
   const matchMutationQueues = new Map<MatchId, Promise<void>>();
   const sessionService = createMatchSessionService();
@@ -317,6 +318,7 @@ export const createLocalDevMatchRegistry = async (
       await waitForPendingCheckpoint(envelope.matchId);
       const result = sessionService.applyEnvelope(envelope);
       if (result.accepted) {
+        recoveredTimerSuspendedMatchIds.delete(envelope.matchId);
         await sessionService.flushPersistence(envelope.matchId);
         scheduleCompletedMatchPersistence(session);
       }
@@ -384,7 +386,9 @@ export const createLocalDevMatchRegistry = async (
     });
     for (const session of recoveredSessions) {
       syncActiveSessionPlayerLabels(session);
-      sessions.set(session.match.state.matchId, session);
+      const matchId = session.match.state.matchId;
+      sessions.set(matchId, session);
+      recoveredTimerSuspendedMatchIds.add(matchId);
     }
   };
   const defaultMatchId = "dev-local-match" as MatchId;
@@ -616,6 +620,7 @@ export const createLocalDevMatchRegistry = async (
         rollbackState: ReturnType<typeof captureSessionRollbackState>,
         session: LocalDevMatchSession,
       ): Promise<CreatedDevMatchResponse> => {
+        recoveredTimerSuspendedMatchIds.delete(actualSetup.matchId);
         sessions.set(actualSetup.matchId, session);
         if (session.status === "active") {
           try {
@@ -635,6 +640,7 @@ export const createLocalDevMatchRegistry = async (
       ) {
         const rollbackState = captureSessionRollbackState(actualSetup.matchId);
         const session = createSession();
+        recoveredTimerSuspendedMatchIds.delete(actualSetup.matchId);
         sessions.set(actualSetup.matchId, session);
         if (session.status === "active") {
           try {
@@ -707,6 +713,7 @@ export const createLocalDevMatchRegistry = async (
               : { persistence: matchPersistence }),
           },
         );
+        recoveredTimerSuspendedMatchIds.delete(matchId);
         sessions.set(matchId, session);
         try {
           await saveSessionCheckpoint(matchId);
@@ -935,10 +942,17 @@ export const createLocalDevMatchRegistry = async (
               if (session === undefined || !session.timersEnabled) {
                 return undefined;
               }
+              const realConnectedPlayerIds = connectedPlayerIds(matchId);
+              if (recoveredTimerSuspendedMatchIds.has(matchId)) {
+                if (realConnectedPlayerIds.size === 0) {
+                  return undefined;
+                }
+                recoveredTimerSuspendedMatchIds.delete(matchId);
+              }
               const result = advanceLocalDevMatchTimers(session.match, {
                 elapsedMs,
                 connectedPlayerIds: connectedPlayerIdsWithBots(
-                  connectedPlayerIds(matchId),
+                  realConnectedPlayerIds,
                   session.botPlayerIds,
                 ),
                 policy: matchTimerPolicy,

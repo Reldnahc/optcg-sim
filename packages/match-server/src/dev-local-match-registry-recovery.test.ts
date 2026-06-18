@@ -407,3 +407,79 @@ test("timer expiries are checkpointed for active recovery", async () => {
     winner: opponentId,
   });
 });
+
+test("recovered active matches do not drain timers before sockets reconnect", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const matchTimerPolicy: MatchTimerPolicy = {
+    gameTimeMs: 10_000,
+    disconnectGraceMs: 120,
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+      matchTimerPolicy,
+    },
+  );
+  const matchId = "recovered-presence-suspended-timers-match" as MatchId;
+  const playerId = premadeSetup.playerOrder[0];
+  const opponentId = premadeSetup.playerOrder[1];
+  await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: playerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: playerId,
+      },
+    },
+  );
+  const recoveredRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+      matchTimerPolicy,
+    },
+  );
+
+  const suspendedUpdates = await recoveredRegistry.advanceTimers({
+    elapsedMs: 121,
+    connectedPlayerIds: () => new Set(),
+    matchIds: [matchId],
+  });
+
+  assert.deepEqual(suspendedUpdates, []);
+  assert.notEqual(
+    recoveredRegistry.getMatch(matchId)?.state.status.type,
+    "completed",
+  );
+  assert.notEqual(
+    recoveredRegistry.getMatch(matchId)?.state.status.type,
+    "gameOver",
+  );
+  assert.equal(
+    recoveredRegistry.getMatch(matchId)?.state.timers.disconnects,
+    undefined,
+  );
+
+  const resumedUpdates = await recoveredRegistry.advanceTimers({
+    elapsedMs: 30,
+    connectedPlayerIds: () => new Set([playerId]),
+    matchIds: [matchId],
+  });
+  const opponentDisconnect =
+    recoveredRegistry.getMatch(matchId)?.state.timers.disconnects?.[opponentId];
+
+  assert.deepEqual(resumedUpdates, [{ matchId, sync: "timers" }]);
+  assert.ok(opponentDisconnect !== undefined);
+  assert.equal(opponentDisconnect.remainingMs, 90);
+  assert.equal(opponentDisconnect.isRunning, true);
+});
