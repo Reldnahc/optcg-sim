@@ -24,6 +24,11 @@ export function revealTopConditionalExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
+    const placed = parseRevealTopPlacedCondition(input, options);
+    if (placed !== undefined) {
+      return placed;
+    }
+
     const match = parseRevealTopCondition(input.text);
     const predicateText = match?.predicateText;
     const bodyText = match?.body.trim();
@@ -79,6 +84,106 @@ export function revealTopConditionalExpressionParser(options: {
             ],
           }),
     };
+  };
+}
+
+function parseRevealTopPlacedCondition(
+  input: ParseInput,
+  options: {
+    readonly instructions: readonly InstructionParser[];
+    readonly expressions?: readonly ((
+      input: ParseInput,
+    ) => ExpressionParseResult | undefined)[];
+  },
+): ExpressionParseResult | undefined {
+  const match =
+    /^Reveal 1 card from the top of your deck and place it at the top or bottom of your deck\. If the revealed card's type includes\s+"(?<type>[^"]+)",\s*(?<body>[\s\S]+)$/iu.exec(
+      input.text,
+    );
+  const typeText = match?.groups?.["type"]?.trim();
+  const bodyText = match?.groups?.["body"]?.trim();
+  if (
+    typeText === undefined ||
+    typeText.length === 0 ||
+    bodyText === undefined
+  ) {
+    return undefined;
+  }
+
+  const body = parseConditionalBody(bodyText, options);
+  if (body === undefined || body.rest.length > 0) {
+    return undefined;
+  }
+
+  const evidence = [
+    "expression:sequence",
+    "instruction:revealTop",
+    "look:topDeck",
+    "zone:deck",
+    "count:positiveInteger",
+    "reveal:bothPlayers",
+    "instruction:placeSetRemainder",
+    "destination:deck",
+    "position:topOrBottom",
+    "order:chooser",
+    "condition:cardMatches",
+    "filter:type",
+    "connector:ifPreviousSucceeded",
+    ...body.evidence,
+  ] as const;
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "revealTop",
+            player: "self",
+            count: 1,
+            saveAs: revealedTopSet,
+            visibility: "bothPlayers",
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "placeSetRemainder",
+            set: revealedTopSet,
+            owner: "self",
+            destination: "deck",
+            position: "topOrBottom",
+            order: "chooser",
+          },
+        },
+        {
+          connector: "ifPreviousSucceeded",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "cardMatches",
+              target: {
+                type: "savedSelectedCard",
+                selection: revealedTopSet,
+                onFailure: "failClosed",
+              },
+              filter: { typesIncludeAny: [typeText] },
+            },
+            then: body.effect,
+          },
+        },
+      ],
+    },
+    evidence,
+    rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
   };
 }
 
