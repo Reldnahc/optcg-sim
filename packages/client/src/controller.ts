@@ -22,6 +22,7 @@ import type {
   MatchCardCatalog,
   MatchLiveTransport,
   MatchRematchRequestMessage,
+  MatchLiveConnectionStatus,
   MatchSnapshot,
   MatchTransport,
   PendingRematch,
@@ -118,6 +119,7 @@ export interface MatchClientController {
   connectLive: (input: {
     onState: (state: MatchClientSessionState) => void;
     onRematchRequest?: (message: MatchRematchRequestMessage) => void;
+    onConnectionStatus?: (status: MatchLiveConnectionStatus) => void;
     onError: (message: string) => void;
   }) => void;
   disconnectLive: () => void;
@@ -510,7 +512,7 @@ export const createMatchClientController = ({
       }
       return waitForSocketState(setupState.seat);
     },
-    connectLive({ onState, onRematchRequest, onError }) {
+    connectLive({ onState, onRematchRequest, onConnectionStatus, onError }) {
       const credential = sessionStore.loadClaimedSeat();
       if (
         credential === undefined ||
@@ -523,6 +525,7 @@ export const createMatchClientController = ({
         matchId: credential.matchId,
         playerId: credential.playerId,
         sessionToken: credential.sessionToken,
+        ...(onConnectionStatus === undefined ? {} : { onConnectionStatus }),
         onError,
         onStateSync(message) {
           if (

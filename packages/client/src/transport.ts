@@ -294,6 +294,11 @@ export interface MatchActionResultMessage {
   errors: string[];
 }
 
+export type MatchLiveConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "reconnecting";
+
 export interface LiveMatchConnection {
   close: () => void;
   submitVisibleAction: (
@@ -320,6 +325,7 @@ export interface MatchLiveTransport {
     onSetupSync: (message: MatchSetupSyncMessage) => void;
     onSessionTransition: (message: MatchSessionTransitionMessage) => void;
     onRematchRequest: (message: MatchRematchRequestMessage) => void;
+    onConnectionStatus?: (status: MatchLiveConnectionStatus) => void;
     onError: (message: string) => void;
   }) => LiveMatchConnection;
 }

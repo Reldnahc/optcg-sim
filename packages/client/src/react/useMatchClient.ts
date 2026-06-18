@@ -18,6 +18,7 @@ import type {
   AccountLoadout,
   AccountLoadoutValidation,
 } from "../account-client.js";
+import type { MatchLiveConnectionStatus } from "../transport.js";
 import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
 import type {
   ClientActionModel,
@@ -122,6 +123,8 @@ export const useMatchClient = ({
   const [actionInFlight, setActionInFlight] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [rematchRequestedBy, setRematchRequestedBy] = useState<PlayerId>();
+  const [liveConnectionStatus, setLiveConnectionStatus] =
+    useState<MatchLiveConnectionStatus>();
 
   const currentPlayerId = clientState?.seat.playerId;
   const playerSnapshot =
@@ -188,6 +191,7 @@ export const useMatchClient = ({
     lobbyConnectionKey: enabled ? lobbyConnectionKey : undefined,
     setClientState,
     setRematchRequestedBy,
+    setLiveConnectionStatus,
     setErrors,
   });
 
@@ -736,6 +740,9 @@ export const useMatchClient = ({
       ...(accountLoadoutsError === undefined ? {} : { accountLoadoutsError }),
       accountLoadoutValidationRequired,
       ...(rematchStatus === undefined ? {} : { rematchStatus }),
+      ...(liveConnectionStatus === undefined
+        ? {}
+        : { connectionStatus: liveConnectionStatus }),
       actionInFlight,
       errors: visibleErrors(errors),
     },

@@ -30,6 +30,7 @@ import type {
   PendingDecisionInteractionMode,
 } from "../index.js";
 import type { AccountLoadout } from "../account-client.js";
+import type { MatchLiveConnectionStatus } from "../transport.js";
 
 export interface MatchClientUiState {
   clientState?: MatchClientSessionState;
@@ -55,6 +56,7 @@ export interface MatchClientUiState {
   accountLoadoutsError?: string | undefined;
   accountLoadoutValidationRequired: boolean;
   rematchStatus?: "requestedBySelf" | "requestedByOpponent" | undefined;
+  connectionStatus?: MatchLiveConnectionStatus | undefined;
   actionInFlight: boolean;
   errors: string[];
 }

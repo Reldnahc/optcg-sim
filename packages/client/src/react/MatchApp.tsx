@@ -90,6 +90,9 @@ const backgroundImageStyle = ({
   }
 };
 
+const reconnectScreenMessage =
+  "The server might be restarting. Your game will resume once reconnected.";
+
 export const MatchApp = ({
   accountSessionToken,
   client: suppliedClient,
@@ -539,6 +542,8 @@ export const MatchApp = ({
   ]
     .filter(Boolean)
     .join(" ");
+  const reconnectScreenVisible =
+    client.state.connectionStatus === "reconnecting";
 
   return (
     <MatchVisualSettingsProvider value={visualSettings}>
@@ -569,6 +574,18 @@ export const MatchApp = ({
             client.selectCard(undefined);
           }}
         />
+        {reconnectScreenVisible ? (
+          <section
+            className="match-reconnect-overlay"
+            role="status"
+            aria-live="assertive"
+          >
+            <div className="match-reconnect-panel">
+              <h1>Lost connection</h1>
+              <p>{reconnectScreenMessage}</p>
+            </div>
+          </section>
+        ) : null}
         {replayControls === undefined ? null : (
           <div className="replay-match-controls" data-replay-match-surface="">
             {replayControls}

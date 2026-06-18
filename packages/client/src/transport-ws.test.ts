@@ -8,7 +8,10 @@ import {
   createDevWebSocketLobbyTransport,
   createDevWebSocketMatchTransport,
 } from "./transport-ws.js";
-import type { MatchStateSyncMessage } from "./transport.js";
+import type {
+  MatchLiveConnectionStatus,
+  MatchStateSyncMessage,
+} from "./transport.js";
 
 const expectedCanonicalJson = (value: unknown): string => {
   if (value === undefined) {
@@ -293,6 +296,47 @@ describe("dev WebSocket match transport", () => {
     const result = await resultPromise;
 
     assert.equal(result.snapshot.stateSeq, 8);
+  });
+
+  test("reports reconnecting and recreates the match socket after an established close", async () => {
+    const recording = createRecordingWebSocket();
+    const statuses: MatchLiveConnectionStatus[] = [];
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+      reconnectDelayMs: 0,
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onTimerSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
+      onRematchRequest() {},
+      onConnectionStatus(status) {
+        statuses.push(status);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const firstSocket = recording.sockets[0];
+    if (firstSocket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    assert.deepEqual(statuses, ["connecting"]);
+    firstSocket.open();
+    assert.deepEqual(statuses, ["connecting", "connected"]);
+    firstSocket.close();
+    assert.equal(statuses[statuses.length - 1], "reconnecting");
+
+    const secondSocket = await waitForSocket(recording.sockets, 1);
+    secondSocket.open();
+    assert.equal(statuses[statuses.length - 1], "connected");
+    connection.close();
   });
 
   test("waits for a state sync at the accepted action state before resolving", async () => {

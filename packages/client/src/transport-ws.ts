@@ -3,6 +3,7 @@ import type {
   LobbyStateSyncMessage,
   MatchActionResult,
   MatchActionResultMessage,
+  MatchLiveConnectionStatus,
   MatchLiveTransport,
   MatchRematchRequestMessage,
   MatchSessionTransitionMessage,
@@ -18,6 +19,7 @@ export interface DevWebSocketMatchTransportOptions {
   baseUrl: string;
   WebSocket?: typeof WebSocket;
   randomUUID?: () => string;
+  reconnectDelayMs?: number;
 }
 
 type PendingRequest = {
@@ -92,6 +94,7 @@ export const createDevWebSocketMatchTransport = ({
   baseUrl,
   WebSocket: WebSocketImpl = WebSocket,
   randomUUID = createClientActionId,
+  reconnectDelayMs = 1_000,
 }: DevWebSocketMatchTransportOptions): MatchLiveTransport => ({
   connect({
     matchId,
@@ -102,6 +105,7 @@ export const createDevWebSocketMatchTransport = ({
     onSetupSync,
     onSessionTransition,
     onRematchRequest,
+    onConnectionStatus,
     onError,
   }) {
     const url = new URL(
@@ -115,12 +119,31 @@ export const createDevWebSocketMatchTransport = ({
     let socket: WebSocket;
     let openPromise: Promise<void>;
     let intentionallyClosed = false;
+    let establishedConnection = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let connectionStatus: MatchLiveConnectionStatus | undefined;
+
+    const emitConnectionStatus = (status: MatchLiveConnectionStatus): void => {
+      if (connectionStatus === status) {
+        return;
+      }
+      connectionStatus = status;
+      onConnectionStatus?.(status);
+    };
 
     const rejectPending = (error: Error): void => {
       for (const request of pending.values()) {
         request.reject(error);
       }
       pending.clear();
+    };
+
+    const clearReconnectTimer = (): void => {
+      if (reconnectTimer === undefined) {
+        return;
+      }
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
     };
 
     const handleMessage = (event: MessageEvent): void => {
@@ -198,8 +221,13 @@ export const createDevWebSocketMatchTransport = ({
       onError("Match WebSocket error.");
     };
 
-    const connectSocket = (): void => {
+    const connectSocket = ({
+      reconnecting,
+    }: {
+      reconnecting: boolean;
+    }): void => {
       let opened = false;
+      emitConnectionStatus(reconnecting ? "reconnecting" : "connecting");
       const nextSocket = new WebSocketImpl(url);
       socket = nextSocket;
       openPromise = new Promise<void>((resolve, reject) => {
@@ -207,6 +235,8 @@ export const createDevWebSocketMatchTransport = ({
           "open",
           () => {
             opened = true;
+            establishedConnection = true;
+            emitConnectionStatus("connected");
             resolve();
           },
           { once: true },
@@ -232,15 +262,36 @@ export const createDevWebSocketMatchTransport = ({
       });
       void openPromise.catch(() => undefined);
       nextSocket.addEventListener("message", handleMessage);
+      const scheduleReconnect = (): void => {
+        if (intentionallyClosed || reconnectTimer !== undefined) {
+          return;
+        }
+        emitConnectionStatus(
+          establishedConnection ? "reconnecting" : "connecting",
+        );
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = undefined;
+          if (intentionallyClosed || nextSocket !== socket) {
+            return;
+          }
+          connectSocket({ reconnecting: establishedConnection });
+        }, reconnectDelayMs);
+      };
       nextSocket.addEventListener("close", () => {
         if (nextSocket === socket) {
           rejectPending(new Error("Match WebSocket closed."));
+          scheduleReconnect();
         }
       });
-      nextSocket.addEventListener("error", handleError);
+      nextSocket.addEventListener("error", () => {
+        handleError();
+        if (!opened && nextSocket === socket) {
+          scheduleReconnect();
+        }
+      });
     };
 
-    connectSocket();
+    connectSocket({ reconnecting: false });
 
     const ensureOpenSocket = async (): Promise<void> => {
       if (intentionallyClosed) {
@@ -250,7 +301,8 @@ export const createDevWebSocketMatchTransport = ({
         socket.readyState === WebSocket.CLOSING ||
         socket.readyState === WebSocket.CLOSED
       ) {
-        connectSocket();
+        clearReconnectTimer();
+        connectSocket({ reconnecting: establishedConnection });
       }
       await openPromise;
     };
@@ -275,6 +327,7 @@ export const createDevWebSocketMatchTransport = ({
     return {
       close() {
         intentionallyClosed = true;
+        clearReconnectTimer();
         socket.close();
         rejectPending(new Error("Match WebSocket closed."));
       },
