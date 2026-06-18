@@ -168,6 +168,7 @@ export const getCounterStepDecisionLegalActions = (
 
 const canOfferCounterStepPassAction = (state: GameState): boolean => {
   const battle = state.battle;
+  // Runtime work is resolved by the action/decision continuation path; legal actions stay hidden while it is pending.
   if (
     battle === undefined ||
     battle.step !== "counter" ||

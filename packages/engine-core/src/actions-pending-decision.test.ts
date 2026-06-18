@@ -6,19 +6,25 @@ import type { Action } from "@optcg/types";
 import { createInitialState } from "./setup/initial-state.js";
 import { startMulliganFlow } from "./setup/mulligan.js";
 import { applyAction, getLegalActions } from "./actions.js";
-import { createChooseQuantityDecisionForQueuedEffect } from "./effect-runtime.js";
+import {
+  createChooseQuantityDecisionForQueuedEffect,
+  processEffectRuntime,
+} from "./effect-runtime.js";
 import { filterStateForPlayer } from "./view/filter-state-for-player.js";
 import {
   createActiveState,
   createInput,
+  addExtraDeckCard,
   must,
   p1,
   p2,
+  reviewedOnPlayDrawDefinition,
   resolvedCard,
 } from "./action-test-fixtures.js";
 import {
   queueDrawForP1,
   queueingState,
+  setupOnPlayDefinition,
 } from "./effect-runtime-queue/test-support.js";
 import {
   setupFullCharacterPlayState,
@@ -466,6 +472,89 @@ test("createChooseQuantityDecisionForQueuedEffect rejects negative bounds withou
   assert.equal(JSON.stringify(state), before);
   assert.equal(JSON.stringify(result.state), before);
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});
+
+test("respondToDecision settles supported effect runtime before generic action gates", () => {
+  const { state, played } = queueingState();
+  state.turn.phase = "main";
+  state.eventJournal = [];
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-action-gate-draw-up-to",
+      rulesVersion: "action-gate-draw-up-to-rules",
+      sourceTextHash: "action-gate-draw-up-to-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const effect = {
+    ...must(definition.effects[0], "draw effect"),
+    effect: { type: "drawUpTo" as const, count: 2, player: "self" as const },
+  };
+  setupOnPlayDefinition(
+    state,
+    played,
+    { ...definition, effects: [effect] },
+    "def-action-gate-draw-up-to",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-action-gate-draw-up-to"),
+      source: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        playerId: p1,
+        zone: played.zone,
+      },
+      sourceSnapshot: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: played.zone,
+        category: "character",
+        colors: ["red"],
+        cost: 1,
+        power: 3000,
+        keywords: [],
+      },
+      effectBlockId: effect.id,
+      sourcePresencePolicy:
+        effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+    },
+  ];
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "quantity decision");
+  assert.equal(decision.type, "chooseQuantity");
+  addExtraDeckCard(paused.state, p1);
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.deferredTriggers.length, 0);
+  assert.equal(result.state.status.type, "active");
+  assert.equal(result.state.turn.phase, "main");
+  assert.equal(result.state.turn.turnPlayerId, p1);
+  assert.equal(result.state.battle, undefined);
+  assert.equal(
+    getLegalActions(result.state, p1).some(
+      (action) => action.type === "endMainPhase",
+    ),
+    true,
+  );
 });
 
 test("respondToDecision rejects stale effect-originated chooseQuantity runtime context without mutation", () => {
