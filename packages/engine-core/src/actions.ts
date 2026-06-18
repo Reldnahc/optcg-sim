@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Central action dispatcher intentionally routes all action families. */
 import type {
   Action,
   EngineResult,
