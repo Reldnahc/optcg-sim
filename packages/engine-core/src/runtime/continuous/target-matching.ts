@@ -189,6 +189,12 @@ const cardMatchesAllFilter = (
   ) {
     return false;
   }
+  if (
+    filter.nameNot !== undefined &&
+    cardMatchesAnyName(metadata, filter.nameNot)
+  ) {
+    return false;
+  }
   return (
     numericFilterMatches(card.attachedDon.length, filter.attachedDon) &&
     numericFilterMatches(metadata.cost, filter.baseCost) &&

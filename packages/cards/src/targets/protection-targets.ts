@@ -17,6 +17,7 @@ type ProtectionTargetParser = (
 const protectionTargetParsers = (): readonly ProtectionTargetParser[] =>
   [
     parseAllProtectionTarget,
+    parseImplicitAllProtectionTarget,
     (input) => parseThisCharacterTarget({ ...input, allowImplicit: true }),
   ] as const;
 
@@ -48,5 +49,29 @@ const parseAllProtectionTarget: ProtectionTargetParser = (
   if (target === undefined || target.rest.length > 0) {
     return undefined;
   }
+  return { ...target, rest: processText };
+};
+
+const parseImplicitAllProtectionTarget: ProtectionTargetParser = (
+  input,
+): ProtectionTargetParseResult | undefined => {
+  const match =
+    /^(?<target>(?:your opponent's|your|Characters?\b).+?)\s+(?<process>cannot be .+)$/iu.exec(
+      input.text,
+    );
+  const targetText = match?.groups?.["target"]?.trim();
+  const processText = match?.groups?.["process"];
+  if (targetText === undefined || processText === undefined) {
+    return undefined;
+  }
+
+  const normalizedTarget = targetText.startsWith("Characters")
+    ? `All ${targetText}`
+    : `All of ${targetText}`;
+  const target = parseAllFieldTarget({ text: normalizedTarget });
+  if (target === undefined || target.rest.length > 0) {
+    return undefined;
+  }
+
   return { ...target, rest: processText };
 };

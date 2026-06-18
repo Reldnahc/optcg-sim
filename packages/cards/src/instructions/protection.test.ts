@@ -355,6 +355,63 @@ describe("continuous protection instruction parser", () => {
     );
   });
 
+  it("parses implicit-all own Character K.O. protection with reusable target filters", () => {
+    const result = parseProtectionInstruction(
+      {
+        text: "your {Example} type Characters with a cost of 4 or less other than [Sample] cannot be K.O.'d by effects.",
+      },
+      {
+        condition: {
+          type: "cardState",
+          target: { type: "self" },
+          state: "active",
+        },
+      },
+    );
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            typesAny: ["Example"],
+            cost: { max: 4 },
+            nameNot: ["Sample"],
+          },
+        },
+        sourceKind: "cardEffect",
+        sourceControllerRelation: "eitherController",
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "cardState",
+            target: { type: "self" },
+            state: "active",
+          },
+        },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "cardinality:all",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "filter:cost",
+        "filter:nameNot",
+        "protectionProcess:ko",
+        "protectionSource:effects",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses none-of-your typed K.O. protection with an explicit field-effect duration", () => {
     const result = parseExplicitProtectionInstruction({
       text: "None of your {ODYSSEY} or {Straw Hat Crew} type Characters can be K.O.'d by effects until the end of your opponent's next turn.",

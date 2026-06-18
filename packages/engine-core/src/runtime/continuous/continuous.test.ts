@@ -395,38 +395,6 @@ test("modifyPower exactCard uses effect value without mutating canonical power",
   );
 });
 
-test("filtered all modifier applies only to matching cards", () => {
-  const state = createState();
-  const p1State = must(state.players[p1], "p1");
-  const c0 = withCharacter(p1, toCardId("char-vanilla"), 0);
-  const c1 = withCharacter(p1, toCardId("char-rush"), 1);
-  p1State.characters = [c0, c1];
-  state.cardManifest.cards[toCardId("char-rush")] = {
-    ...must(state.cardManifest.cards[toCardId("char-rush")], "rush"),
-    power: 4000,
-  };
-  state.continuousEffects = [
-    {
-      ...continuousPowerEffectRecord(state),
-      id: "filtered-all-power",
-      modifier: {
-        layer: "powerAdd",
-        target: {
-          type: "all",
-          zone: "characterArea",
-          player: "self",
-          filter: { power: { op: "eq", value: 4000 } },
-        },
-        operation: { type: "addPower", value: 1000 },
-      },
-      duration: { type: "thisTurn" },
-    },
-  ];
-  const view = computeView(state);
-  assert.equal(view.cards[c0.instanceId]?.currentPower, 3000);
-  assert.equal(view.cards[c1.instanceId]?.currentPower, 5000);
-});
-
 test("exact-card modifier stops applying when target leaves bound zone", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");

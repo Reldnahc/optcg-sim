@@ -52,3 +52,46 @@ test("runtime admission accepts permanent keyword grants gated by field-count co
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts permanent all-target K.O. protection with name exclusion", () => {
+  const block: EffectBlock = {
+    id: "effect:conditional-permanent-protection" as EffectBlock["id"],
+    category: "permanent",
+    trigger: { type: "permanent" },
+    sourcePresencePolicy: "mustRemainInSameZone",
+    condition: {
+      type: "cardState",
+      target: { type: "self" },
+      state: "active",
+    },
+    effect: {
+      type: "protectFromKO",
+      target: {
+        type: "all",
+        player: "self",
+        zone: "characterArea",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Example"],
+          cost: { max: 4 },
+          nameNot: ["Excluded"],
+        },
+      },
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "eitherController",
+      duration: {
+        type: "whileConditionTrue",
+        condition: {
+          type: "cardState",
+          target: { type: "self" },
+          state: "active",
+        },
+      },
+    },
+  };
+
+  const report = evaluateEffectBlockRuntimeSupport(block);
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});
