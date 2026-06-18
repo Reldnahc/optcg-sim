@@ -52,7 +52,10 @@ export type KoEffect =
   | AllTargetKoEffect
   | SelfKoEffect;
 export type BounceEffect = Extract<Effect, { type: "bounce" }> & {
-  target: Extract<Target, { type: "savedFieldObject" } | { type: "self" }>;
+  target: Extract<
+    Target,
+    { type: "all" } | { type: "savedFieldObject" } | { type: "self" }
+  >;
   destination: "deckBottom" | "hand" | "lifeTop" | "lifeBottom";
 };
 export type ChangeAttackTargetEffect = Extract<
@@ -113,7 +116,14 @@ export const isSupportedBounceSegment = (
   (effect.destinationFaceUp === undefined ||
     typeof effect.destinationFaceUp === "boolean") &&
   (effect.target.type === "self" ||
-    isSupportedSavedFieldObjectKoTarget(effect.target));
+    isSupportedSavedFieldObjectKoTarget(effect.target) ||
+    (effect.target.type === "all" &&
+      effect.destination === "deckBottom" &&
+      effect.target.zone === "characterArea" &&
+      (effect.target.player === "self" ||
+        effect.target.player === "opponent" ||
+        effect.target.player === "anyPlayer") &&
+      isSupportedPublicFieldTargetFilter(effect.target.filter)));
 
 export const isSupportedSequenceTargetRequest = (
   request:

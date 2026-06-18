@@ -11,10 +11,14 @@ import type {
 import { toStateSeq } from "../action-results.js";
 import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
+import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type BounceEffect = Extract<Effect, { type: "bounce" }> & {
-  target: Extract<Target, { type: "savedFieldObject" } | { type: "self" }>;
+  target: Extract<
+    Target,
+    { type: "all" } | { type: "savedFieldObject" } | { type: "self" }
+  >;
   destination: "deckBottom" | "hand" | "lifeTop" | "lifeBottom";
 };
 type SegmentLedgers = {
@@ -183,10 +187,33 @@ export const applyBounceSequenceSegment = (params: {
 const resolveBounceTargets = (params: {
   effect: BounceEffect;
   entry: EffectQueueEntry;
+  state: GameState;
   ledgers: SegmentLedgers;
 }): CardRef[] | undefined => {
   if (params.effect.target.type === "self") {
     return [params.entry.source];
+  }
+  if (params.effect.target.type === "all") {
+    const resolved = resolvePublicTargetCandidatesForRequest(
+      params.state,
+      {
+        timing: "onResolution",
+        chooser: "self",
+        player: params.effect.target.player,
+        zone: params.effect.target.zone,
+        ...(params.effect.target.filter === undefined
+          ? {}
+          : { filter: params.effect.target.filter }),
+        min: 0,
+        max: 10,
+        allowFewerIfUnavailable: true,
+        visibility: "public",
+      },
+      { sourceControllerId: params.entry.controllerId },
+    );
+    return resolved.ok
+      ? resolved.candidates.map((candidate) => candidate.card)
+      : undefined;
   }
 
   const selected =

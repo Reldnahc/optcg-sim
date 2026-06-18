@@ -94,6 +94,29 @@ test("sequence support accepts controller-selected opponent trash moved to owner
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts all Characters moved to owner deck bottom", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "main" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "bounce",
+      destination: "deckBottom",
+      target: {
+        type: "all",
+        player: "anyPlayer",
+        zone: "characterArea",
+        filter: { categories: ["character"], cost: { max: 3 } },
+      },
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts single selected hand card movement to Life top", () => {
   const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {

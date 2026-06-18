@@ -5,7 +5,10 @@ import {
   parseUpToCardinality,
 } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
-import { parseOpponentCharactersTarget } from "../targets/index.js";
+import {
+  parseAllFieldTarget,
+  parseOpponentCharactersTarget,
+} from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 import { selectThenApplyFieldTarget } from "./effect-builders.js";
 
@@ -190,6 +193,24 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
       evidence: [
         "instruction:bounce",
         "target:thisCharacter",
+        "destination:deck",
+        "position:bottom",
+      ],
+      rest: "",
+    };
+  }
+
+  const allTarget = parseAllFieldTarget({ text: selectionText });
+  if (allTarget !== undefined && allTarget.rest.length === 0) {
+    return {
+      effect: {
+        type: "bounce",
+        destination: "deckBottom",
+        target: allTarget.target,
+      },
+      evidence: [
+        "instruction:bounce",
+        ...allTarget.evidence,
         "destination:deck",
         "position:bottom",
       ],
