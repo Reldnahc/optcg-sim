@@ -514,10 +514,16 @@ export const createContinuousRecordsForResolvedEffect = (
   if (target === undefined) {
     return null;
   }
-  if (target.type === "choose" || target.type === "chooseFromZones") {
+  if (
+    target.type === "choose" ||
+    target.type === "chooseFromZones" ||
+    target.type === "replacementTarget"
+  ) {
     if (chosenTargets === undefined) return null;
     if (chosenTargets.length === 0) {
-      return target.request.min === 0 ? [] : null;
+      return target.type !== "replacementTarget" && target.request.min === 0
+        ? []
+        : null;
     }
     const records: ContinuousEffectRecord[] = [];
     for (const [index, chosen] of chosenTargets.entries()) {

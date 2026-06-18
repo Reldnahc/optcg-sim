@@ -97,7 +97,9 @@ export const isSupportedModifyPowerInsteadEffect = (
   effect: ReplacementInstead,
 ): effect is Extract<ReplacementInstead, { type: "modifyPower" }> =>
   effect.type === "modifyPower" &&
-  (effect.target.type === "myLeader" || effect.target.type === "self") &&
+  (effect.target.type === "myLeader" ||
+    effect.target.type === "self" ||
+    effect.target.type === "replacementTarget") &&
   typeof effect.value === "number" &&
   effect.duration.type === "thisTurn";
 
@@ -475,7 +477,11 @@ export const replacementOptionLabel = (
   }
   if (isSupportedModifyPowerInsteadEffect(instead)) {
     const targetLabel =
-      instead.target.type === "myLeader" ? "your Leader" : "this Character";
+      instead.target.type === "myLeader"
+        ? "your Leader"
+        : instead.target.type === "replacementTarget"
+          ? "that card"
+          : "this Character";
     return `Give ${targetLabel} ${String(Number(instead.value))} power instead`;
   }
   if (isSupportedTrashSelfInsteadEffect(instead)) {

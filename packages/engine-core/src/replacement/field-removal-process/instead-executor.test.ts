@@ -113,3 +113,109 @@ test("replacement instead executor applies supported sequenced no-decision primi
     deckTop.instanceId,
   );
 });
+
+test("replacement instead executor applies modifyPower to the replacement target", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const sourceHandCard = must(player.hand[0], "source card");
+  const targetHandCard = must(player.hand[1], "target card");
+  const source = {
+    ...sourceHandCard,
+    cardId: toCardId("replacement-power-source"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p1,
+      slot: "character" as const,
+      index: 0,
+    },
+    state: "active" as const,
+    attachedDon: [],
+  };
+  const target = {
+    ...targetHandCard,
+    cardId: toCardId("replacement-power-target"),
+    zone: {
+      zone: "characterArea" as const,
+      playerId: p1,
+      slot: "character" as const,
+      index: 1,
+    },
+    state: "active" as const,
+    attachedDon: [],
+  };
+  player.characters = [source, target];
+  player.hand = player.hand.slice(2);
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 6000,
+  });
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 5000,
+  });
+
+  const sourceRef: CardRef = {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    playerId: p1,
+    zone: source.zone,
+  };
+  const targetRef: CardRef = {
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    playerId: p1,
+    zone: target.zone,
+  };
+  const entry: EffectQueueEntry = {
+    id: "queue-entry:replacement-power" as QueueEntryId,
+    state: "resolving",
+    timingWindowId: "timing-window:replacement-power" as TimingWindowId,
+    generation: 0,
+    controllerId: p1,
+    source: sourceRef,
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "character",
+      colors: ["red"],
+      keywords: [],
+      power: 6000,
+    },
+    effectBlockId:
+      "effect:replacement-power" as EffectQueueEntry["effectBlockId"],
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 0,
+    queuedAtStateSeq: state.seq,
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
+    causedBy: { type: "ruleProcess", name: "replacement-power-test" },
+  };
+  const effect = {
+    type: "modifyPower",
+    target: { type: "replacementTarget" },
+    value: -1000,
+    duration: { type: "thisTurn" },
+  } satisfies Extract<Effect, { type: "modifyPower" }>;
+
+  const result = executeReplacementInsteadEffect(state, entry, effect, {
+    replacementTargets: [targetRef],
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.continuousEffects.length, 1);
+  assert.deepEqual(result.state.continuousEffects[0]?.modifier.target, {
+    type: "exactCard",
+    card: targetRef,
+    binding: {
+      family: "selectedTargets",
+      saveResultAs: String(entry.effectBlockId),
+      objectIndex: 0,
+    },
+    createdAtStateSeq: state.seq,
+  });
+  assert.notEqual(targetRef.instanceId, sourceRef.instanceId);
+});

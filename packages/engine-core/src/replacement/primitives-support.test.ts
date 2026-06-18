@@ -56,6 +56,16 @@ const restSelfInstead = (): Extract<Effect, { type: "rest" }> => ({
   target: { type: "self" },
 });
 
+const replacementTargetPowerInstead = (): Extract<
+  Effect,
+  { type: "modifyPower" }
+> => ({
+  type: "modifyPower",
+  target: { type: "replacementTarget" },
+  value: -1000,
+  duration: { type: "thisTurn" },
+});
+
 const replacementTargetDeckBottomInstead = (): Extract<
   Effect,
   { type: "bounce" }
@@ -298,6 +308,16 @@ test("replacement support admits rest-own-cards instead under K.O. replacement t
     "replacement-ko-rest-own-cards",
     wouldBeKodByCardEffect(),
     restOwnCardsInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support admits replacement-target power modifiers under K.O. replacement triggers", () => {
+  const block = replacementBlock(
+    "replacement-ko-replacement-target-power",
+    wouldBeKodByCardEffect(),
+    replacementTargetPowerInstead(),
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);

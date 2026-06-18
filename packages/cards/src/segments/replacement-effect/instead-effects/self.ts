@@ -1,3 +1,5 @@
+import type { Effect } from "@optcg/types";
+
 import {
   parseDurationFromSet,
   replacementDurationParsers,
@@ -69,7 +71,7 @@ export function parseModifyPowerInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
   const match =
-    /^you may give (?<target>your Leader|this Character) (?<modifier>.+?) instead\.?$/iu.exec(
+    /^you may give (?<target>your Leader|this Character|that Character|that card) (?<modifier>.+?) instead\.?$/iu.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];
@@ -97,23 +99,42 @@ export function parseModifyPowerInstead(
   return {
     effect: {
       type: "modifyPower",
-      target:
-        targetText.toLowerCase() === "your leader"
-          ? { type: "myLeader" }
-          : { type: "self" },
+      target: powerInsteadTarget(targetText),
       value: modifier.value,
       duration: duration.duration,
     },
     evidence: [
       "instruction:modifyPower",
-      targetText.toLowerCase() === "your leader"
-        ? "target:yourLeader"
-        : "target:thisCharacter",
+      powerInsteadTargetEvidence(targetText),
       ...modifier.evidence,
       ...duration.evidence,
     ],
   };
 }
+
+const powerInsteadTarget = (
+  targetText: string,
+): Extract<Effect, { type: "modifyPower" }>["target"] => {
+  const normalized = targetText.toLowerCase();
+  if (normalized === "your leader") {
+    return { type: "myLeader" };
+  }
+  if (normalized === "that character" || normalized === "that card") {
+    return { type: "replacementTarget" };
+  }
+  return { type: "self" };
+};
+
+const powerInsteadTargetEvidence = (targetText: string) => {
+  const normalized = targetText.toLowerCase();
+  if (normalized === "your leader") {
+    return "target:yourLeader" as const;
+  }
+  if (normalized === "that character" || normalized === "that card") {
+    return "target:replacementTarget" as const;
+  }
+  return "target:thisCharacter" as const;
+};
 
 export function parseRestSelfInstead(
   text: string,

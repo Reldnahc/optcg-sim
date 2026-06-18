@@ -127,3 +127,53 @@ it("parses all-target deck-bottom placement followed by both players trashing do
     ]),
   );
 });
+
+it("parses KO replacement power changes against the replacement target", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [Opponent's Turn] [Once Per Turn] If your Character with 5000 power or more would be K.O.'d, you may give that Character -1000 power during this turn instead of that Character being K.O.'d.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldBeKOd",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: {
+              categories: ["character"],
+            },
+          },
+        },
+      },
+      optional: true,
+      oncePerTurn: true,
+      condition: { type: "and" },
+      effect: {
+        type: "replacement",
+        instead: {
+          type: "modifyPower",
+          target: { type: "replacementTarget" },
+          value: -1000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "entry:opponentTurn",
+      "marker:oncePerTurn",
+      "replacement:wouldBeKOd",
+      "target:replacementTarget",
+      "filter:currentPower",
+      "instruction:modifyPower",
+      "duration:thisTurn",
+    ]),
+  );
+});

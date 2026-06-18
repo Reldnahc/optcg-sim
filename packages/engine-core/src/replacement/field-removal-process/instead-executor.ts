@@ -157,6 +157,9 @@ export const executeReplacementInsteadEffect = (
       state,
       entry,
       effect,
+      effect.target.type === "replacementTarget"
+        ? (context.replacementTargets ?? [])
+        : undefined,
     );
     if (records === null) {
       return toEngineResult(

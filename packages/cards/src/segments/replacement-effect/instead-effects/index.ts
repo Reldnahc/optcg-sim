@@ -79,6 +79,16 @@ function normalizeInsteadText(
   text: string,
 ): { readonly text: string; readonly optional: boolean } | undefined {
   const trimmed = text.trim();
+  const insteadOfMatch = /^(?<body>.+?\binstead)\s+of\s+.+\.?$/iu.exec(trimmed);
+  if (insteadOfMatch?.groups?.["body"] !== undefined) {
+    const normalized = `${insteadOfMatch.groups["body"]}.`;
+    return {
+      text: /^you may\b/iu.test(normalized)
+        ? normalized
+        : `you may ${normalized}`,
+      optional: /^you may\b/iu.test(normalized),
+    };
+  }
   if (/^you may\b/iu.test(trimmed)) {
     return { text: trimmed, optional: true };
   }
