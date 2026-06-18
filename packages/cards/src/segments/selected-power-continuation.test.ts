@@ -171,6 +171,72 @@ describe("selected power continuation expression parser", () => {
     );
   });
 
+  it("saves up to 2 selected targets and distributes different power modifiers by selected order", () => {
+    const result = selectedPowerContinuationExpressionParser({
+      text: "Select up to 2 of your opponent's Characters, and give 1 Character −3000 power and the other −2000 power until the end of your opponent's next turn.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:distributed-power-targets",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 2,
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "modifyPower",
+              value: -3000,
+              target: {
+                binding: {
+                  saveResultAs: "selected:distributed-power-targets",
+                  objectIndex: 0,
+                },
+              },
+              duration: { type: "untilEndOfNextTurn", player: "opponent" },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "modifyPower",
+              value: -2000,
+              target: {
+                binding: {
+                  saveResultAs: "selected:distributed-power-targets",
+                  objectIndex: 1,
+                },
+              },
+              duration: { type: "untilEndOfNextTurn", player: "opponent" },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:selectThenApply",
+        "instruction:selectTargets",
+        "instruction:modifyPower",
+        "target:opponentCharacters",
+        "duration:opponentNextEndPhase",
+      ]),
+    );
+  });
+
   it("saves a selected power target and conditionally protects that card from K.O. if it is a Character", () => {
     const result = selectedPowerContinuationExpressionParser({
       text: "Up to 1 of your {FILM} type Leader or Character cards gains +4000 power during this battle. If that card is a Character, that Character cannot be K.O.'d during this turn.",

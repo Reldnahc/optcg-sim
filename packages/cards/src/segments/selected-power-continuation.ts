@@ -17,6 +17,10 @@ import {
   parseModifyPowerInstruction,
   parseSelectTargetsInstruction,
 } from "../instructions/index.js";
+import {
+  allPowerModifierParsers,
+  parseModifierFromSet,
+} from "../modifiers/index.js";
 import type {
   ConditionParser,
   ExpressionParseResult,
@@ -30,10 +34,16 @@ import {
 
 const powerContinuationSelection =
   "selected:power-continuation-target" as SelectionId;
+const distributedPowerSelection =
+  "selected:distributed-power-targets" as SelectionId;
 
 type ModifyPowerEffect = Extract<Effect, { type: "modifyPower" }>;
 type SelectTargetsEffect = Extract<Effect, { type: "selectTargets" }>;
 type SelectableTarget = Extract<Target, { type: "choose" | "chooseFromZones" }>;
+type PowerModifier = {
+  readonly value: number;
+  readonly evidence: readonly PrimitiveEvidence[];
+};
 
 export function selectedPowerContinuationExpressionParser(
   input: ParseInput,
@@ -56,6 +66,11 @@ function parseSelectedPowerContinuation(
     readonly additionalConditionParsers?: readonly ConditionParser[];
   } = {},
 ): ExpressionParseResult | undefined {
+  const distributedPower = parseSelectedDistributedPower(input);
+  if (distributedPower !== undefined) {
+    return distributedPower;
+  }
+
   const explicitSelectContinuation = parseExplicitSelectKeywordContinuation(
     input,
     options,
@@ -188,6 +203,111 @@ function parseSelectedPowerContinuation(
       "target:selectedCharacter",
       "modifier:positivePower",
       ...additionalConditionEvidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseSelectedDistributedPower(
+  input: ParseInput,
+): ExpressionParseResult | undefined {
+  const split =
+    /^(?<selection>Select up to [1-9]\d* .+?),\s+and give 1 Character (?<first>[+\-−][1-9]\d* power) and the other (?<second>[+\-−][1-9]\d* power) (?<duration>.+)$/iu.exec(
+      input.text,
+    );
+  const selectionText = split?.groups?.["selection"];
+  const firstModifierText = split?.groups?.["first"];
+  const secondModifierText = split?.groups?.["second"];
+  const durationText = split?.groups?.["duration"];
+  if (
+    selectionText === undefined ||
+    firstModifierText === undefined ||
+    secondModifierText === undefined ||
+    durationText === undefined
+  ) {
+    return undefined;
+  }
+
+  const selection = parseSelectTargetsInstruction({
+    text: `${selectionText}.`,
+  });
+  if (
+    selection === undefined ||
+    selection.rest.length > 0 ||
+    selection.effect.type !== "selectTargets"
+  ) {
+    return undefined;
+  }
+  const firstModifier = parsePowerModifier(firstModifierText);
+  const secondModifier = parsePowerModifier(secondModifierText);
+  if (firstModifier === undefined || secondModifier === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    fieldEffectDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  const firstTarget = savedFieldObjectTargetFromSelect(
+    selection.effect,
+    distributedPowerSelection,
+    0,
+  );
+  const secondTarget = savedFieldObjectTargetFromSelect(
+    selection.effect,
+    distributedPowerSelection,
+    1,
+  );
+  if (firstTarget === undefined || secondTarget === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:distributed-power-targets",
+          connector: "always",
+          saveResultAs: distributedPowerSelection,
+          effect: selection.effect,
+        },
+        {
+          id: "power:first-distributed-selected-target",
+          connector: "then",
+          effect: {
+            type: "modifyPower",
+            target: firstTarget,
+            value: firstModifier.value,
+            duration: duration.duration,
+          },
+        },
+        {
+          id: "power:other-distributed-selected-target",
+          connector: "then",
+          effect: {
+            type: "modifyPower",
+            target: secondTarget,
+            value: secondModifier.value,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "composition:selectThenApply",
+      ...selection.evidence,
+      "instruction:modifyPower",
+      ...firstModifier.evidence,
+      ...secondModifier.evidence,
       ...duration.evidence,
     ],
     rest: "",
@@ -604,6 +724,14 @@ function isSelectableTarget(target: Target): target is SelectableTarget {
   return target.type === "choose" || target.type === "chooseFromZones";
 }
 
+function parsePowerModifier(text: string): PowerModifier | undefined {
+  const modifier = parseModifierFromSet({ text }, allPowerModifierParsers);
+  if (modifier === undefined || modifier.rest.length > 0) {
+    return undefined;
+  }
+  return { value: modifier.value, evidence: modifier.evidence };
+}
+
 function selectTargetsEffect(
   target: SelectableTarget,
 ): SelectTargetsEffect | undefined {
@@ -672,6 +800,8 @@ function savedFieldObjectTarget(target: SelectableTarget): Target | undefined {
 
 function savedFieldObjectTargetFromSelect(
   effect: SelectTargetsEffect,
+  saveResultAs: SelectionId = powerContinuationSelection,
+  objectIndex?: number,
 ): Target | undefined {
   const request = effect.request;
   if ("zone" in request) {
@@ -682,7 +812,8 @@ function savedFieldObjectTargetFromSelect(
       type: "savedFieldObject",
       binding: {
         family: "selectedTargets",
-        saveResultAs: powerContinuationSelection,
+        saveResultAs,
+        ...(objectIndex === undefined ? {} : { objectIndex }),
       },
       zone: request.zone,
       player: request.player,
@@ -697,7 +828,8 @@ function savedFieldObjectTargetFromSelect(
     type: "savedFieldObject",
     binding: {
       family: "selectedTargets",
-      saveResultAs: powerContinuationSelection,
+      saveResultAs,
+      ...(objectIndex === undefined ? {} : { objectIndex }),
     },
     zones: request.zones,
     player: request.player,

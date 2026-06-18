@@ -233,6 +233,16 @@ function generalExpressionParser(input: ParseInput) {
         connectors: [parseAndConnector],
         instructions: instructionParsers,
       }),
+      (segmentInput) => {
+        const parsed = selectedPowerContinuationExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
       sameNumberHandTrashDeckTrashSegmentParser,
       syntheticInstructionSegmentParser(instructionParsers),
     ],
