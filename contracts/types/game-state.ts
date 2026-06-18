@@ -24,12 +24,12 @@ import type {
   RuntimeVersionSet,
 } from "./card-metadata.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
-import type { Trigger } from "./effect-triggers.js";
 import type {
   AttackTrashCost,
   CardFilter,
   Condition,
   Duration,
+  Effect,
   EffectEntryPointFilter,
   EffectDefinition,
   SavedFieldObjectTargetBinding,
@@ -142,13 +142,7 @@ export type EffectQueueOrigin =
 
 export interface DelayedEffectRecord {
   id: string;
-  timing:
-    | { type: "endOfTurn"; turn: "current" }
-    | {
-        type: "event";
-        trigger: Trigger;
-        expires: { type: "endOfTurn"; turn: "current" };
-      };
+  timing: Extract<Effect, { type: "delayed" }>["timing"];
   controllerId: PlayerId;
   source: CardRef;
   sourceSnapshot: CardSnapshot;
@@ -189,6 +183,7 @@ export type ModifierLayer =
   | "basePowerSet"
   | "baseCostSet"
   | "counterSet"
+  | "powerSet"
   | "powerAdd"
   | "costAdd"
   | "effectInvalidation"
@@ -198,6 +193,7 @@ export type ModifierLayer =
   | "attackPermission"
   | "restriction"
   | "protection"
+  | "replacement"
   | "donPhasePlacement"
   | "playEntryState";
 
@@ -205,6 +201,7 @@ export type ModifierOperation =
   | { type: "setBasePower"; value: number }
   | { type: "setBaseCost"; value: number }
   | { type: "setCounter"; value: number }
+  | { type: "setPower"; value: number }
   | { type: "addPower"; value: number }
   | { type: "addCost"; value: number }
   | { type: "invalidateEffects" }
@@ -232,6 +229,10 @@ export type ModifierOperation =
     }
   | { type: "attackCost"; cost: AttackTrashCost }
   | { type: "protection"; protection: Protection }
+  | {
+      type: "replacement";
+      replacement: Extract<Effect, { type: "replacement" }>;
+    }
   | {
       type: "redirectDonPhasePlacement";
       count: number;

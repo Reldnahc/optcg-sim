@@ -63,6 +63,13 @@ export type Condition =
   | { type: "opponentTurn" }
   | { type: "lifeCount"; player: PlayerRef; op: Comparator; value: number }
   | {
+      type: "lifeVisibilityCount";
+      player: PlayerRef;
+      faceUp: boolean;
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "lifeCountDifference";
       minuend: { player: PlayerRef };
       subtrahend: { player: PlayerRef };
@@ -78,6 +85,13 @@ export type Condition =
   | {
       type: "fieldCount";
       player: PlayerRef;
+      filter?: CardFilter;
+      op: Comparator;
+      value: number;
+    }
+  | {
+      type: "fieldCountTotal";
+      players: PlayerRef[];
       filter?: CardFilter;
       op: Comparator;
       value: number;
@@ -241,12 +255,21 @@ export type DynamicNumberValue =
       multiplier: number;
     }
   | {
+      type: "countMatchingFieldCards";
+      player: PlayerRef;
+      zone: "characterArea";
+      filter: CardFilter;
+      multiplier: number;
+    }
+  | {
       type: "countMatchingZoneCards";
       player: PlayerRef;
-      zone: "trash" | "life";
+      zone: "trash" | "life" | "costArea";
       filter?: CardFilter;
       per: number;
       multiplier: number;
+      offset?: number;
+      minimum?: number;
     }
   | {
       type: "countMatchingZoneCardsAcrossPlayers";
@@ -255,6 +278,8 @@ export type DynamicNumberValue =
       filter?: CardFilter;
       per: number;
       multiplier: number;
+      offset?: number;
+      minimum?: number;
     }
   | {
       type: "countAttachedDon";
@@ -289,11 +314,19 @@ export interface CardFilter {
   anyOf?: CardFilter[];
   cardIds?: CardId[];
   names?: string[];
+  nameRelation?: {
+    type: "sameAsSavedCards";
+    selection: string;
+  };
   nameContains?: string;
   nameNot?: string[];
   categories?: CardCategory[];
   colorsAny?: CardColor[];
   colorsAll?: CardColor[];
+  colorRelation?: {
+    type: "differentFromSavedFieldObject";
+    binding: SavedFieldObjectTargetBinding;
+  };
   typesAny?: string[];
   typesIncludeAny?: string[];
   typesNotIncludeAny?: string[];
@@ -359,6 +392,13 @@ export type ReplacementTrigger =
     }
   | { type: "wouldTakeDamage"; target: Target }
   | { type: "wouldBeTrashed"; target: Target }
+  | {
+      type: "wouldBeRested";
+      sourceKind?: "cardEffect";
+      sourceControllerRelation?: "any" | "opponentControlled";
+      sourceCardFilter?: CardFilter;
+      target: Target;
+    }
   | { type: "wouldDraw"; player: PlayerRef }
   | {
       type: "wouldMoveZone";
@@ -576,6 +616,7 @@ export interface PlaySelectedEffect {
 export interface ActivateSelectedEventEffect {
   type: "activateSelectedEvent";
   selection: SelectionId;
+  sourceZone?: "hand" | "trash";
   trigger: Trigger;
   ignoreCost: boolean;
 }
@@ -599,7 +640,7 @@ export interface PayCostEffect {
 export type AttackTrashCost = { type: "trashFromHand"; count: number };
 
 export type Effect =
-  | { type: "draw"; count: number; player: PlayerRef }
+  | { type: "draw"; count: number | DynamicNumberValue; player: PlayerRef }
   | { type: "drawUpTo"; count: number; player: PlayerRef }
   | {
       type: "preventDraw";
@@ -771,7 +812,7 @@ export type Effect =
   | {
       type: "trashFromHand";
       player: PlayerRef;
-      count: number;
+      count: number | DynamicNumberValue;
       min?: number;
       filter?: CardFilter;
       chooser: PlayerRef;
@@ -825,6 +866,11 @@ export type Effect =
       type: "delayed";
       timing:
         | { type: "endOfTurn"; turn: "current" }
+        | {
+            type: "startOfMainPhase";
+            turn: "next";
+            player: PlayerRef;
+          }
         | {
             type: "event";
             trigger: Trigger;
@@ -883,6 +929,11 @@ export type Effect =
         | "selfControlled";
       sourceCardCategories?: CardCategory[];
       sourceCardFilter?: CardFilter;
+    }
+  | {
+      type: "grantReplacement";
+      replacement: Extract<Effect, { type: "replacement" }>;
+      duration: Duration;
     }
   | { type: "cannotBecomeActive"; target: Target; duration: Duration }
   | { type: "cannotAttack"; target: Target; duration: Duration }

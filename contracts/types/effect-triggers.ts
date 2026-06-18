@@ -66,6 +66,7 @@ export type Trigger =
       filter?: CardFilter;
       sourceController?: PlayerRef;
       sourceKind?: "effect" | "ko" | "any";
+      destination?: Zone;
     }
   | {
       type: "cardPlayed";

@@ -157,6 +157,7 @@ export type ReplaceableProcessType =
   | "damage"
   | "trash"
   | "draw"
+  | "rest"
   | "moveZone"
   | "custom";
 
