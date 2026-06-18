@@ -888,6 +888,16 @@ export const getSequenceOptionalPayCostOptions = (
     }
     return paymentOptions;
   }
+  if (cost.type === "shuffleDeck") {
+    if (cost.player === "self" && currentPlayer !== undefined) {
+      paymentOptions.push({
+        id: "shuffleDeck",
+        type: "shuffleDeck",
+        player: cost.player,
+      });
+    }
+    return paymentOptions;
+  }
   if (cost.type === "turnLifeFaceUp") {
     const option: TurnLifeFaceUpPaymentOption =
       turnLifeFaceUpPaymentOption(cost);

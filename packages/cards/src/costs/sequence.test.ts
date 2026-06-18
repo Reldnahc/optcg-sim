@@ -178,6 +178,41 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses trash-to-deck and shuffle as reusable cost sequence parts", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "return 20 cards from your trash to your deck and shuffle it",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        costs: [
+          {
+            type: "moveCards",
+            count: 20,
+            chooser: "self",
+            from: { player: "self", zone: "trash" },
+            to: { player: "self", zone: "deck" },
+            order: "chooserChoice",
+          },
+          { type: "shuffleDeck", player: "self" },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:moveCards",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:trash",
+        "destination:deck",
+        "cost:shuffleDeck",
+        "instruction:shuffleDeck",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses filtered trash-to-deck-bottom move-card costs with filter-before-card wording", () => {
     expect(
       parseOptionalCostSequence({

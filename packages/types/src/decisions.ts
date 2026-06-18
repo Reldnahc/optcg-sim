@@ -117,6 +117,7 @@ export type PaymentOption =
       faceUp?: boolean;
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
+  | { id: string; type: "shuffleDeck"; player: PlayerRef }
   | { id: string; type: "custom"; action: string };
 
 export interface TargetCandidate {

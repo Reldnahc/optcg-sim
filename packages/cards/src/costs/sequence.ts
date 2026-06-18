@@ -20,6 +20,17 @@ import { parseTrashFromHandCost } from "./trash-from-hand.js";
 import { parseTrashFromFieldCost } from "./trash-from-field.js";
 import { parseTrashSelfCost } from "./trash-self.js";
 
+const parseShuffleDeckCost = (
+  input: ParseInput,
+): CostParseResult | undefined =>
+  /^(?:shuffle it|shuffle your deck|you shuffle your deck)$/iu.test(input.text)
+    ? {
+        cost: { type: "shuffleDeck", player: "self", optional: true },
+        evidence: ["cost:shuffleDeck", "instruction:shuffleDeck"],
+        rest: "",
+      }
+    : undefined;
+
 const costParsers = [
   parseReturnDonSequenceCost,
   parseRestFromFieldCost,
@@ -29,6 +40,7 @@ const costParsers = [
   parseRestDonCost,
   parseMoveCardsCost,
   parseFieldToLifeSequenceCost,
+  parseShuffleDeckCost,
   parseModifyPowerCost,
   parseRevealFromHandCost,
   parseTurnLifeFaceUpCost,
@@ -191,6 +203,8 @@ function toOptionalCost(cost: SequenceCostPrimitive): OptionalCost {
       };
     case "moveCards":
       return { ...cost, optional: true };
+    case "shuffleDeck":
+      return { ...cost, optional: true };
     case "moveFieldToLife":
       return { ...cost, optional: true };
     case "modifyPower":
@@ -295,6 +309,8 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         order: cost.order,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
       };
+    case "shuffleDeck":
+      return { type: "shuffleDeck", player: cost.player };
     case "moveFieldToLife":
       return {
         type: "moveFieldToLife",
@@ -323,7 +339,7 @@ function applyInheritedAction(
   inheritedAction: "rest" | undefined,
 ): string {
   const startsWithExplicitCostAction =
-    /^(?:K\.O\.|(?:DON!!|add|give|place|rest|return|reveal|trash|turn)\b)/i.test(
+    /^(?:K\.O\.|(?:DON!!|add|give|place|rest|return|reveal|shuffle|trash|turn)\b)/i.test(
       text,
     );
   if (inheritedAction === undefined || startsWithExplicitCostAction) {

@@ -18,6 +18,7 @@ export type SequenceCostPrimitive =
   | Extract<OptionalCost, { type: "trashFromHand" }>
   | Extract<OptionalCost, { type: "revealFromHand" }>
   | Extract<OptionalCost, { type: "moveCards" }>
+  | Extract<OptionalCost, { type: "shuffleDeck" }>
   | Extract<OptionalCost, { type: "moveFieldToLife" }>;
 
 export interface CostParseResult {

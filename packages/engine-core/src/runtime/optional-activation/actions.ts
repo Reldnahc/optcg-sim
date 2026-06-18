@@ -59,11 +59,10 @@ import {
 } from "../../effect-runtime-sequence/frames.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-from-hand.js";
 import { invalidDecision } from "../../engine-error-helpers.js";
-import {
-  applyLifeVisibilityPayment,
-  type LifeVisibilityCostPaidPayload,
-} from "./life-visibility-payment.js";
-import { applyDonPayment, type DonCostPaidPayload } from "./don-payment.js";
+import { applyLifeVisibilityPayment } from "./life-visibility-payment.js";
+import { applyDonPayment } from "./don-payment.js";
+import { applyShuffleDeckPayment } from "./shuffle-deck-payment.js";
+import type { PayCostPaidPayload } from "./pay-cost-paid-payload.js";
 import {
   clearPendingDecision,
   effectQueueEntryForDecision,
@@ -153,6 +152,7 @@ export const applyOptionalActivationDecisionResponse = (
         decision.cost.type !== "attachDon" &&
         decision.cost.type !== "moveCards" &&
         decision.cost.type !== "moveFieldToLife" &&
+        decision.cost.type !== "shuffleDeck" &&
         decision.cost.type !== "turnLifeFaceUp" &&
         decision.cost.type !== "setLifeFaceUp" &&
         decision.cost.type !== "modifyPower" &&
@@ -188,66 +188,7 @@ export const applyOptionalActivationDecisionResponse = (
           invalidDecision("Payment option mismatch."),
         );
       }
-      let costPaidPayload:
-        | DonCostPaidPayload
-        | {
-            playerId: PlayerId;
-            optionId: "attachDon";
-            selectedDonInstanceIds: NonNullable<
-              typeof action.response.selectedDonInstanceIds
-            >;
-            selectedCardInstanceIds: NonNullable<
-              typeof action.response.selectedCardInstanceIds
-            >;
-          }
-        | {
-            playerId: PlayerId;
-            optionId: "restSelf";
-            selectedCardInstanceIds: [CardInstance["instanceId"]];
-          }
-        | {
-            playerId: PlayerId;
-            optionId: "trashSelf";
-            selectedCardInstanceIds: [CardInstance["instanceId"]];
-          }
-        | {
-            playerId: PlayerId;
-            optionId:
-              | "trashFromHand"
-              | "trashFromField"
-              | "koFromField"
-              | "revealFromHand";
-            selectedCardInstanceIds: NonNullable<
-              typeof action.response.selectedCardInstanceIds
-            >;
-          }
-        | {
-            playerId: PlayerId;
-            optionId: "restFromField";
-            selectedCardInstanceIds: NonNullable<
-              typeof action.response.selectedCardInstanceIds
-            >;
-          }
-        | {
-            playerId: PlayerId;
-            optionId: "moveCards";
-            selectedCardInstanceIds: NonNullable<
-              typeof action.response.selectedCardInstanceIds
-            >;
-          }
-        | {
-            playerId: PlayerId;
-            optionId: "moveFieldToLife";
-            selectedCardInstanceIds: NonNullable<
-              typeof action.response.selectedCardInstanceIds
-            >;
-          }
-        | LifeVisibilityCostPaidPayload
-        | {
-            playerId: PlayerId;
-            optionId: "modifyPower";
-            value: number;
-          };
+      let costPaidPayload: PayCostPaidPayload;
       if (selectedOption.type === "moveCards") {
         if (!isSupportedMoveCardsPaymentRoute(selectedOption)) {
           return toEngineResult(
@@ -303,6 +244,28 @@ export const applyOptionalActivationDecisionResponse = (
           optionId: "moveCards",
           selectedCardInstanceIds: selected,
         };
+      } else if (selectedOption.type === "shuffleDeck") {
+        if (
+          selectedOption.player !== "self" ||
+          paymentResponse.selectedCardInstanceIds !== undefined ||
+          paymentResponse.selectedDonInstanceIds !== undefined
+        ) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment shuffle deck response is invalid."),
+          );
+        }
+        const paid = applyShuffleDeckPayment({
+          decisionId: decision.id,
+          player,
+          playerId: decision.playerId,
+          state,
+        });
+        state = paid.state;
+        nextPlayer = paid.player;
+        events.push(...paid.events);
+        costPaidPayload = paid.costPaidPayload;
       } else if (selectedOption.type === "moveFieldToLife") {
         const paid = applyMoveFieldToLifePaymentResponse({
           chooserId: decision.playerId,

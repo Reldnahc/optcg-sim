@@ -150,6 +150,13 @@ const paymentOptionLabel = (
         return `Place ${countLabel(selectedCardsCount || option.count, "card", "cards")} from trash at bottom`;
       }
       if (
+        option.from.zone === "trash" &&
+        option.to.zone === "deck" &&
+        option.to.position === undefined
+      ) {
+        return `Return ${countLabel(selectedCardsCount || option.count, "card", "cards")} from trash to deck`;
+      }
+      if (
         option.from.zone === "deck" &&
         option.from.position === "top" &&
         option.to.zone === "trash"
@@ -167,6 +174,8 @@ const paymentOptionLabel = (
       )} at ${lifePositionLabel(option.position)}`;
     case "discard":
       return `Discard ${countLabel(option.count, "card", "cards")}`;
+    case "shuffleDeck":
+      return "Shuffle deck";
     case "custom":
       return option.action;
   }

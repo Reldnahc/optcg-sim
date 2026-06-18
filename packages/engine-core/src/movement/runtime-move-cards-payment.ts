@@ -30,7 +30,7 @@ export const isSupportedMoveCardsPaymentRoute = (
     option.from.zone === "trash" &&
     option.from.position === undefined &&
     option.to.zone === "deck" &&
-    option.to.position === "bottom"
+    (option.to.position === undefined || option.to.position === "bottom")
   ) {
     return true;
   }
@@ -82,7 +82,8 @@ export const applyMoveCardsPayment = (params: {
   if (
     params.selectedOption.from.zone === "trash" &&
     params.selectedOption.to.zone === "deck" &&
-    params.selectedOption.to.position === "bottom"
+    (params.selectedOption.to.position === undefined ||
+      params.selectedOption.to.position === "bottom")
   ) {
     const selectedCards: CardInstance[] = [];
     for (const selectedId of params.selected) {

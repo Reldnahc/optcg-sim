@@ -35,7 +35,7 @@ export const expandMoveCardsCostRoutes = (
     cost.from.zone === "trash" &&
     cost.from.position === undefined &&
     cost.to.zone === "deck" &&
-    cost.to.position === "bottom"
+    (cost.to.position === undefined || cost.to.position === "bottom")
   ) {
     return [
       {
@@ -169,7 +169,7 @@ export const selectableMoveCardsCostIds = (
     option.from.zone === "trash" &&
     option.from.position === undefined &&
     option.to.zone === "deck" &&
-    option.to.position === "bottom"
+    (option.to.position === undefined || option.to.position === "bottom")
   ) {
     return player.trash
       .filter((card) =>

@@ -102,6 +102,7 @@ export type Cost =
       duration: Duration;
       optional?: boolean;
     }
+  | { type: "shuffleDeck"; player: PlayerRef; optional?: boolean }
   | { type: "trashSelf"; filter?: CardFilter }
   | {
       type: "trashFromField";
@@ -248,5 +249,6 @@ export type OptionalCost =
   | OptionalRevealFromHandCost
   | OptionalMoveCardsCost
   | OptionalMoveFieldToLifeCost
+  | { type: "shuffleDeck"; player: PlayerRef; optional: true }
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };

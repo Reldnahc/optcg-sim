@@ -94,6 +94,9 @@ export const isSupportedPayCostSegment = (
       isSupportedPublicFieldTargetFilter(cost.filter)
     );
   }
+  if (cost.type === "shuffleDeck") {
+    return cost.player === "self";
+  }
   return (
     (cost.type === "restDon" ||
       cost.type === "restFromField" ||
@@ -166,7 +169,7 @@ const isSupportedMoveCardsCostRoute = (
     cost.from.zone === "trash" &&
     cost.from.position === undefined &&
     cost.to.zone === "deck" &&
-    cost.to.position === "bottom"
+    (cost.to.position === undefined || cost.to.position === "bottom")
   ) {
     return true;
   }

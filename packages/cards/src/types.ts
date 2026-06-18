@@ -190,6 +190,7 @@ export type PrimitiveEvidence =
   | "cost:trashFromHand"
   | "cost:revealFromHand"
   | "cost:moveCards"
+  | "cost:shuffleDeck"
   | "cost:moveFieldToLife"
   | "cost:modifyPower"
   | "cost:returnToOwnerHand"

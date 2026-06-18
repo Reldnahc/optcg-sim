@@ -127,7 +127,13 @@ export const parseMoveCardsCost = (
       count: cardinality.count,
       chooser: "self",
       from: { player: "self", zone: "trash" },
-      to: { player: "self", zone: "deck", position: "bottom" },
+      to: {
+        player: "self",
+        zone: "deck",
+        ...(trashToBottom.position === undefined
+          ? {}
+          : { position: trashToBottom.position }),
+      },
       order: "chooserChoice",
       ...(trashToBottom.filter === undefined
         ? {}
@@ -140,8 +146,6 @@ export const parseMoveCardsCost = (
       "player:self",
       "zone:trash",
       "destination:deck",
-      "position:bottom",
-      "order:anyOrder",
       ...trashToBottom.evidence,
     ];
 
@@ -276,18 +280,26 @@ const parseLifeTopToTrashCost = (
 
 function parseTrashToBottomDeckCostRoute(text: string):
   | {
+      readonly position?: "bottom";
       readonly filter?: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
       >["filter"];
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined {
+  if (/^cards? from your trash to your deck$/i.test(text)) {
+    return { evidence: [] };
+  }
+
   if (
     /^cards? from your trash (?:at|to) the bottom of your deck(?: in any order)?$/i.test(
       text,
     )
   ) {
-    return { evidence: [] };
+    return {
+      position: "bottom",
+      evidence: ["position:bottom", "order:anyOrder"],
+    };
   }
 
   const filterBeforeCardMatch =
@@ -302,7 +314,11 @@ function parseTrashToBottomDeckCostRoute(text: string):
     if (predicates === undefined || predicates.rest.length > 0) {
       return undefined;
     }
-    return { filter: predicates.filter, evidence: predicates.evidence };
+    return {
+      position: "bottom",
+      filter: predicates.filter,
+      evidence: ["position:bottom", "order:anyOrder", ...predicates.evidence],
+    };
   }
 
   const filteredMatch =
@@ -322,7 +338,11 @@ function parseTrashToBottomDeckCostRoute(text: string):
   if (predicates === undefined || predicates.rest.length > 0) {
     return undefined;
   }
-  return { filter: predicates.filter, evidence: predicates.evidence };
+  return {
+    position: "bottom",
+    filter: predicates.filter,
+    evidence: ["position:bottom", "order:anyOrder", ...predicates.evidence],
+  };
 }
 
 function parseFieldToOwnerDeckBottomCostRoute(text: string):

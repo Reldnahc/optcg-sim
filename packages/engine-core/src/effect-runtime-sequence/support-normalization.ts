@@ -31,6 +31,8 @@ const toOptionalCost = (cost: Cost): OptionalCost | undefined => {
       return { ...cost, optional: true };
     case "moveCards":
       return { ...cost, optional: true };
+    case "shuffleDeck":
+      return { ...cost, optional: true };
     case "moveFieldToLife":
       return { ...cost, optional: true };
     case "turnLifeFaceUp":
