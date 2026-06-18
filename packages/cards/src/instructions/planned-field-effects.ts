@@ -29,6 +29,7 @@ export {
   selectedOpponentCharactersAttackCostExpressionParser,
   selectedOpponentCharactersAttackCostPrimitive,
   selectedAttackRetargetExpressionParser,
+  selectThenPreventBlockerActivationExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
   yourLeaderPowerOpponentNextEndPrimitive,
 } from "./planned-field-effects/index.js";

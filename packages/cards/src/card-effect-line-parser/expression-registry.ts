@@ -75,6 +75,7 @@ import {
 import {
   selectedOpponentCharactersAttackCostExpressionParser,
   selectedAttackRetargetExpressionParser,
+  selectThenPreventBlockerActivationExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "../instructions/index.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
@@ -485,6 +486,7 @@ const rootExpressionParsers = () =>
     }),
     playFromDeckExpressionParser,
     playStageFromDeckExpressionParser,
+    selectThenPreventBlockerActivationExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedAttackRetargetExpressionParser,
     conditionalAlternateSelectionExpressionParser({

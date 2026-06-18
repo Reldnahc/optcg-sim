@@ -39,6 +39,7 @@ export {
 export {
   parsePreventOpponentCharactersBlockerActivationInstruction,
   preventSelectedAttackerBlockerActivationPrimitive,
+  selectThenPreventBlockerActivationExpressionParser,
   selectPowerThenPreventBlockerActivationExpressionParser,
 } from "./blocker-restriction.js";
 export { selectedAttackRetargetExpressionParser } from "./attack-retarget.js";

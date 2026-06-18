@@ -344,6 +344,75 @@ describe("card effect event parser blocker restrictions", () => {
     );
   });
 
+  it("parses Main Event selected attacker Blocker activation restriction without a power modifier", () => {
+    const result = parseCardEffectLine(
+      "[Main] Select up to 1 of your {Straw Hat Crew} type Leader or Character cards. Your opponent cannot activate [Blocker] if that Leader or Character attacks during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "selected:blocker-restricted-attacker",
+              effect: {
+                type: "selectTargets",
+                request: {
+                  timing: "onResolution",
+                  chooser: "self",
+                  player: "self",
+                  zones: ["leaderArea", "characterArea"],
+                  min: 0,
+                  max: 1,
+                  allowFewerIfUnavailable: true,
+                  visibility: "public",
+                  filter: {
+                    categories: ["leader", "character"],
+                    typesAny: ["Straw Hat Crew"],
+                  },
+                },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "preventBlockerActivation",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "selectedTargets",
+                    saveResultAs: "selected:blocker-restricted-attacker",
+                  },
+                  zones: ["leaderArea", "characterArea"],
+                  player: "self",
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "composition:selectThenApply",
+        "target:yourLeaderOrCharacters",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+        "instruction:preventBlockerActivation",
+        "duration:thisTurn",
+        "activation:blocker",
+      ]),
+    );
+  });
+
   it("parses costed Main Event Leader attack Blocker restriction behind Life condition", () => {
     const result = parseCardEffectLine(
       "[Main] You may rest 1 of your DON!! cards: If you have 1 or less Life cards, your opponent cannot activate [Blocker] whenever your Leader attacks during this turn.",

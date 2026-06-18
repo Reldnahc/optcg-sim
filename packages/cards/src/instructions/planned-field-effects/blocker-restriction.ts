@@ -571,6 +571,98 @@ export const selectPowerThenPreventBlockerActivationExpressionParser = (
   };
 };
 
+export const selectThenPreventBlockerActivationExpressionParser = (
+  input: ParseInput,
+): ExpressionParseResult | undefined => {
+  const match =
+    /^Select\s+(?<selection>up to [^.]+?)\.\s+Your opponent cannot activate \[Blocker\] if (?:that Leader or Character|that card|the selected card) attacks\s+(?<duration>during this turn\.?)$/iu.exec(
+      input.text,
+    );
+  const selectionText = match?.groups?.["selection"];
+  const durationText = match?.groups?.["duration"];
+  if (selectionText === undefined || durationText === undefined) {
+    return undefined;
+  }
+
+  const cardinality = parseUpToCardinality({ text: selectionText });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    selectedPowerGainTargetParsers(),
+  );
+  if (target?.target === undefined || target.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  const selectionTarget = withCardinality(
+    target.target,
+    cardinality.cardinality,
+  );
+  const selectionRequest = publicFieldSelectionRequest(selectionTarget);
+  if (selectionRequest === undefined) {
+    return undefined;
+  }
+
+  const evidence = [
+    "composition:selectThenApply",
+    ...cardinality.evidence,
+    "chooser:self:upTo",
+    "player:self",
+    ...target.evidence,
+    ...duration.evidence,
+    "instruction:preventBlockerActivation",
+    "activation:blocker",
+  ] as const;
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:blocker-restricted-attacker",
+          connector: "always",
+          saveResultAs: selectedBlockerRestrictedAttackerId,
+          effect: {
+            type: "selectTargets",
+            request: selectionRequest,
+          },
+        },
+        {
+          id: "selected-attacker:prevent-blocker",
+          connector: "then",
+          effect: {
+            type: "preventBlockerActivation",
+            target: selectedBlockerRestrictedTarget,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence,
+    rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
+  };
+};
+
 function publicFieldSelectionRequest(
   target: Target,
 ): SelectTargetsEffect["request"] | undefined {
