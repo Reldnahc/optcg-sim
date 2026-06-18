@@ -7,6 +7,7 @@ import { cloneGameState, recordRollbackPoint } from "./local-rollback.js";
 export interface MatchTimerPolicy {
   readonly gameTimeMs: number;
   readonly disconnectGraceMs: number;
+  readonly disconnectForgivenessMs?: number;
 }
 
 export type MatchTimerExpiryReason = "game" | "disconnect";
@@ -29,7 +30,8 @@ export interface AdvanceLocalDevMatchTimersResult {
 
 export const defaultMatchTimerPolicy: MatchTimerPolicy = {
   gameTimeMs: 17 * 60 * 1000 + 30 * 1000,
-  disconnectGraceMs: 120 * 1000,
+  disconnectGraceMs: 3 * 60 * 1000,
+  disconnectForgivenessMs: 5 * 1000,
 };
 
 const playerIds = (state: GameState): PlayerId[] =>
@@ -151,17 +153,38 @@ const nextDisconnectTimers = (
     readonly [PlayerId, NonNullable<TimerState["disconnects"]>[PlayerId]]
   > = [];
   const expiries: MatchTimerExpiry[] = [];
+  const disconnectForgivenessMs = Math.max(
+    0,
+    policy.disconnectForgivenessMs ?? 0,
+  );
 
   for (const playerId of playerIds(state)) {
     const existing = source[playerId];
     if (connectedPlayerIds.has(playerId)) {
       if (existing !== undefined) {
-        entries.push([playerId, { ...existing, isRunning: false }] as const);
+        const canForgive =
+          existing.isRunning &&
+          (existing.currentDisconnectElapsedMs ?? 0) < disconnectForgivenessMs;
+        const remainingMs = canForgive
+          ? (existing.disconnectStartedRemainingMs ?? existing.remainingMs)
+          : existing.remainingMs;
+        if (remainingMs < policy.disconnectGraceMs) {
+          entries.push([
+            playerId,
+            { playerId, remainingMs, isRunning: false },
+          ] as const);
+        }
       }
       continue;
     }
 
     const previousRemaining = existing?.remainingMs ?? policy.disconnectGraceMs;
+    const wasRunning = existing?.isRunning === true;
+    const disconnectStartedRemainingMs = wasRunning
+      ? (existing.disconnectStartedRemainingMs ?? previousRemaining)
+      : previousRemaining;
+    const currentDisconnectElapsedMs =
+      (wasRunning ? (existing.currentDisconnectElapsedMs ?? 0) : 0) + elapsedMs;
     const remainingMs = Math.max(0, previousRemaining - elapsedMs);
     entries.push([
       playerId,
@@ -169,6 +192,8 @@ const nextDisconnectTimers = (
         playerId,
         remainingMs,
         isRunning: remainingMs > 0,
+        currentDisconnectElapsedMs,
+        disconnectStartedRemainingMs,
       },
     ] as const);
     if (

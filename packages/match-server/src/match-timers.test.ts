@@ -12,6 +12,7 @@ import {
 import {
   advanceLocalDevMatchTimers,
   applyLocalDevMatchTimerExpiries,
+  defaultMatchTimerPolicy,
   initializeLocalDevMatchTimers,
   type MatchTimerPolicy,
 } from "./match-timers.js";
@@ -22,6 +23,13 @@ const p2 = "p2" as PlayerId;
 const policy: MatchTimerPolicy = {
   gameTimeMs: 1_000,
   disconnectGraceMs: 120,
+  disconnectForgivenessMs: 0,
+};
+
+const forgivingPolicy: MatchTimerPolicy = {
+  gameTimeMs: 1_000,
+  disconnectGraceMs: 120,
+  disconnectForgivenessMs: 50,
 };
 
 let premadeSetup: DevMatchSetup;
@@ -91,6 +99,11 @@ const disconnectTimer = (
 };
 
 describe("match timers", () => {
+  test("defaults to three minutes of disconnect grace with five seconds of forgiveness", () => {
+    assert.equal(defaultMatchTimerPolicy.disconnectGraceMs, 3 * 60 * 1000);
+    assert.equal(defaultMatchTimerPolicy.disconnectForgivenessMs, 5 * 1000);
+  });
+
   test("initializes both players with the configured game time", () => {
     const match = createTimedMatch();
 
@@ -160,6 +173,58 @@ describe("match timers", () => {
     });
     assert.equal(disconnectTimer(match, p1).remainingMs, 80);
     assert.equal(disconnectTimer(match, p1).isRunning, true);
+  });
+
+  test("forgives short disconnects without consuming grace", () => {
+    const match = createTimedMatch();
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p2]),
+      elapsedMs: 30,
+      policy: forgivingPolicy,
+    });
+    assert.equal(disconnectTimer(match, p1).remainingMs, 90);
+    assert.equal(disconnectTimer(match, p1).isRunning, true);
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p1, p2]),
+      elapsedMs: 0,
+      policy: forgivingPolicy,
+    });
+    assert.equal(match.state.timers.disconnects?.[p1], undefined);
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p2]),
+      elapsedMs: 10,
+      policy: forgivingPolicy,
+    });
+    assert.equal(disconnectTimer(match, p1).remainingMs, 110);
+  });
+
+  test("keeps grace consumed after the forgiveness window expires", () => {
+    const match = createTimedMatch();
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p2]),
+      elapsedMs: 50,
+      policy: forgivingPolicy,
+    });
+    assert.equal(disconnectTimer(match, p1).remainingMs, 70);
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p1, p2]),
+      elapsedMs: 0,
+      policy: forgivingPolicy,
+    });
+    assert.equal(disconnectTimer(match, p1).remainingMs, 70);
+    assert.equal(disconnectTimer(match, p1).isRunning, false);
+
+    advanceLocalDevMatchTimers(match, {
+      connectedPlayerIds: new Set([p2]),
+      elapsedMs: 10,
+      policy: forgivingPolicy,
+    });
+    assert.equal(disconnectTimer(match, p1).remainingMs, 60);
   });
 
   test("disconnect grace expiry concedes the disconnected player while their game timer also drains", () => {
