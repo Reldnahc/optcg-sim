@@ -143,6 +143,108 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses up to 1 each opponent Leader and Character negative power as split selected targets", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give up to 1 each of your opponent's Leader and Character cards −2000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: "selected:modify-power-leader-target",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zones: ["leaderArea"],
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["leader"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "modifyPower",
+                    value: -2000,
+                    target: {
+                      binding: {
+                        saveResultAs: "selected:modify-power-leader-target",
+                      },
+                    },
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: "selected:modify-power-character-target",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zones: ["characterArea"],
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "modifyPower",
+                    value: -2000,
+                    target: {
+                      binding: {
+                        saveResultAs: "selected:modify-power-character-target",
+                      },
+                    },
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(
+      parseModifyPowerInstruction({
+        text: "Give up to 1 each of your opponent's Leader and Character cards −2000 power during this turn.",
+      })?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "instruction:modifyPower",
+        "composition:sequence",
+        "composition:selectThenApply",
+        "target:opponentLeader",
+        "target:opponentCharacters",
+        "filter:category:leader",
+        "filter:category:character",
+        "modifier:negativePower",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses negative power with the reusable explicit field-effect duration family", () => {
     expect(
       parseModifyPowerInstruction({

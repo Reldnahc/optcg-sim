@@ -10,6 +10,7 @@ import {
   parseTargetFromSet,
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
+import { selectThenApplyFieldTarget } from "../effect-builders.js";
 import { parseAttachedDonScaledDuration, withCardinality } from "./shared.js";
 
 export const parseNegativePowerInstruction: InstructionParser = (input) => {
@@ -27,6 +28,12 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     parseOpponentLeaderAndAllCharactersNegativePowerInstruction(actionRest);
   if (opponentLeaderAndCharacters !== undefined) {
     return opponentLeaderAndCharacters;
+  }
+
+  const opponentLeaderAndCharacterEach =
+    parseOpponentLeaderAndCharacterEachNegativePowerInstruction(actionRest);
+  if (opponentLeaderAndCharacterEach !== undefined) {
+    return opponentLeaderAndCharacterEach;
   }
 
   const allTarget = parseAllFieldTarget({ text: actionRest });
@@ -180,6 +187,91 @@ function parseOpponentLeaderAndAllCharactersNegativePowerInstruction(
       "zone:leaderArea",
       "zone:characterArea",
       "filter:category:leader",
+      "filter:category:character",
+      ...modifier.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseOpponentLeaderAndCharacterEachNegativePowerInstruction(
+  actionRest: string,
+): ReturnType<InstructionParser> {
+  const match =
+    /^up to 1 (?:of )?each of your opponent's Leader and Character cards?\s+(?<modifier>[\s\S]+)$/iu.exec(
+      actionRest,
+    );
+  const modifierText = match?.groups?.["modifier"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier = parseNegativePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    fieldEffectDurationParsers,
+  );
+  if (duration === undefined || duration.duration === undefined) {
+    return undefined;
+  }
+  const effectDuration = duration.duration;
+
+  const leader = selectThenApplyFieldTarget({
+    selectionId: "selected:modify-power-leader-target",
+    selectId: "select:modify-power-leader-target",
+    player: "opponent",
+    zones: ["leaderArea"],
+    min: 0,
+    max: 1,
+    filter: { categories: ["leader"] },
+    apply: (target) => ({
+      type: "modifyPower",
+      target,
+      value: modifier.value,
+      duration: effectDuration,
+    }),
+  });
+  const character = selectThenApplyFieldTarget({
+    selectionId: "selected:modify-power-character-target",
+    selectId: "select:modify-power-character-target",
+    player: "opponent",
+    zones: ["characterArea"],
+    min: 0,
+    max: 1,
+    filter: { categories: ["character"] },
+    apply: (target) => ({
+      type: "modifyPower",
+      target,
+      value: modifier.value,
+      duration: effectDuration,
+    }),
+  });
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        { connector: "always", effect: leader },
+        { connector: "then", effect: character },
+      ],
+    },
+    evidence: [
+      "instruction:modifyPower",
+      "composition:sequence",
+      "composition:selectThenApply",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "target:opponentLeader",
+      "player:opponent",
+      "zone:leaderArea",
+      "filter:category:leader",
+      "target:opponentCharacters",
+      "zone:characterArea",
       "filter:category:character",
       ...modifier.evidence,
       ...duration.evidence,
