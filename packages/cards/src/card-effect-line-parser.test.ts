@@ -677,7 +677,19 @@ describe("card effect line parser", () => {
                         colorsAny: ["black"],
                         categories: ["character"],
                         typesAny: ["Five Elders"],
-                        custom: "costLteSelfDonFieldCount",
+                        statComparisons: [
+                          {
+                            stat: "cost",
+                            op: "lte",
+                            value: {
+                              type: "countMatchingZoneCards",
+                              player: "self",
+                              zone: "costArea",
+                              per: 1,
+                              multiplier: 1,
+                            },
+                          },
+                        ],
                       },
                       saveAs: "handSelection:play-from-hand",
                       visibility: "chooserOnly",

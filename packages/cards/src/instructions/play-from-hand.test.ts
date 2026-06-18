@@ -26,7 +26,19 @@ describe("play from hand instruction parser", () => {
                 colorsAny: ["black"],
                 categories: ["character"],
                 typesAny: ["Five Elders"],
-                custom: "costLteSelfDonFieldCount",
+                statComparisons: [
+                  {
+                    stat: "cost",
+                    op: "lte",
+                    value: {
+                      type: "countMatchingZoneCards",
+                      player: "self",
+                      zone: "costArea",
+                      per: 1,
+                      multiplier: 1,
+                    },
+                  },
+                ],
               },
               saveAs: "handSelection:play-from-hand",
               visibility: "chooserOnly",
@@ -59,6 +71,101 @@ describe("play from hand instruction parser", () => {
       ],
       rest: "",
     });
+  });
+
+  it("parses opponent DON field count as a reusable dynamic cost predicate", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "Play up to 1 [Charlotte Katakuri] from your hand with a cost of 3 or more that is equal to or less than the number of DON!! cards on your opponent's field.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              filter: {
+                names: ["Charlotte Katakuri"],
+                cost: { min: 3 },
+                statComparisons: [
+                  {
+                    stat: "cost",
+                    op: "lte",
+                    value: {
+                      type: "countMatchingZoneCards",
+                      player: "opponent",
+                      zone: "costArea",
+                      per: 1,
+                      multiplier: 1,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          { effect: { type: "playSelected", ignoreCost: true } },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "filter:name",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:comparator:lte",
+        "valueSource:donFieldCount:opponent",
+      ]),
+    );
+  });
+
+  it("parses post-source hand filters with dynamic self DON field count", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "Play up to 1 {Shandian Warrior} type Character card from your hand with a cost equal to or less than the number of DON!! cards on your field.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              filter: {
+                categories: ["character"],
+                typesAny: ["Shandian Warrior"],
+                statComparisons: [
+                  {
+                    stat: "cost",
+                    op: "lte",
+                    value: {
+                      type: "countMatchingZoneCards",
+                      player: "self",
+                      zone: "costArea",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          { effect: { type: "playSelected", ignoreCost: true } },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "valueSource:donFieldCount:self",
+      ]),
+    );
   });
 
   it("parses play from hand rested as reusable play-selected entry state", () => {

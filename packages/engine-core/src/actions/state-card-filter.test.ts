@@ -13,6 +13,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
@@ -104,6 +105,78 @@ test("hand-selection filters do not treat type-or-attribute alternatives as a ca
       categories: ["character"],
       cost: { max: 4 },
     }),
+    false,
+  );
+});
+
+test("hand-selection filters compare cost against self and opponent DON field counts", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const opponent = must(state.players[p2], "p2");
+  const playable = must(player.hand[0], "playable");
+  const tooExpensive = must(player.hand[1], "too expensive");
+
+  player.costArea = player.hand.slice(2, 5).map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea" as const, playerId: p1, slot: "cost", index },
+  }));
+  opponent.costArea = opponent.hand.slice(0, 5).map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea" as const, playerId: p2, slot: "cost", index },
+  }));
+  state.cardManifest.cards[playable.cardId] = resolvedCard({
+    cardId: playable.cardId,
+    category: "character",
+    cost: 5,
+  });
+  state.cardManifest.cards[tooExpensive.cardId] = resolvedCard({
+    cardId: tooExpensive.cardId,
+    category: "character",
+    cost: 6,
+  });
+
+  const opponentDonFilter: CardFilter = {
+    statComparisons: [
+      {
+        stat: "cost",
+        op: "lte",
+        value: {
+          type: "countMatchingZoneCards",
+          player: "opponent",
+          zone: "costArea",
+          per: 1,
+          multiplier: 1,
+        },
+      },
+    ],
+  };
+  const selfDonFilter: CardFilter = {
+    statComparisons: [
+      {
+        stat: "cost",
+        op: "lte",
+        value: {
+          type: "countMatchingZoneCards",
+          player: "self",
+          zone: "costArea",
+          per: 1,
+          multiplier: 1,
+        },
+      },
+    ],
+  };
+
+  assert.equal(isSupportedHandSelectionCardFilter(opponentDonFilter), true);
+  assert.equal(
+    cardMatchesHandSelectionFilter(state, p1, playable, opponentDonFilter),
+    true,
+  );
+  assert.equal(
+    cardMatchesHandSelectionFilter(state, p1, tooExpensive, opponentDonFilter),
+    false,
+  );
+  assert.equal(
+    cardMatchesHandSelectionFilter(state, p1, playable, selfDonFilter),
     false,
   );
 });

@@ -256,19 +256,39 @@ export const parseDynamicDonFieldCostPredicate: PredicateParser = (
   current,
 ) => {
   const match =
-    /^a cost equal to or less than the number of DON!! cards on your field\b\s*(?<rest>.*)$/i.exec(
+    /^(?:a cost |that is )?equal to or less than the number of DON!! cards on (?<player>your|your opponent's) field\b\s*(?<rest>.*)$/i.exec(
       text,
     );
-  if (match === null) {
+  const playerText = match?.groups?.["player"];
+  if (match === null || playerText === undefined) {
     return undefined;
   }
+  const player = playerText.toLowerCase() === "your" ? "self" : "opponent";
 
   return {
-    filter: { ...current, custom: "costLteSelfDonFieldCount" },
+    filter: {
+      ...current,
+      statComparisons: [
+        ...(current.statComparisons ?? []),
+        {
+          stat: "cost",
+          op: "lte",
+          value: {
+            type: "countMatchingZoneCards",
+            player,
+            zone: "costArea",
+            per: 1,
+            multiplier: 1,
+          },
+        },
+      ],
+    },
     evidence: [
       "filter:cost",
       "condition:comparator:lte",
-      "valueSource:donFieldCount:self",
+      player === "self"
+        ? "valueSource:donFieldCount:self"
+        : "valueSource:donFieldCount:opponent",
     ],
     rest: match.groups?.["rest"] ?? "",
   };

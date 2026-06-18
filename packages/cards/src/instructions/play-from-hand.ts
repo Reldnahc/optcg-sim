@@ -540,7 +540,7 @@ function parsePlayFromHandSource(
   | undefined {
   const sourceText = player === "self" ? "your hand" : "their hand";
   const sourceMatch = new RegExp(
-    `^(?<predicates>.+) from ${sourceText}(?<colorRelation>\\s+that is a different color than the returned Character)?(?<rested>\\s+rested)?\\.?$`,
+    `^(?<predicates>.+?) from ${sourceText}(?<postPredicates>\\s+with .+?)?(?<colorRelation>\\s+that is a different color than the returned Character)?(?<rested>\\s+rested)?\\.?$`,
     "iu",
   ).exec(text);
   if (sourceMatch === null) {
@@ -552,7 +552,10 @@ function parsePlayFromHandSource(
   }
 
   const predicates = parseCardFilterPredicates({
-    text: normalizePlayFromHandPredicateText(predicateText, player),
+    text: normalizePlayFromHandPredicateText(
+      `${predicateText}${sourceMatch.groups?.["postPredicates"] ?? ""}`,
+      player,
+    ),
   });
   const hasReturnedColorRelation =
     sourceMatch.groups?.["colorRelation"] !== undefined;

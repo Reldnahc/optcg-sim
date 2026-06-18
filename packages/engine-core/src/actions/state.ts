@@ -211,6 +211,28 @@ const isSupportedNumericFilter = (
   );
 };
 
+const isSupportedStatComparisonValue = (
+  value: number | DynamicNumberValue,
+): boolean => {
+  if (typeof value === "number") {
+    return true;
+  }
+  if (value.type === "savedNumber") {
+    return typeof value.selection === "string";
+  }
+  return (
+    value.type === "countMatchingZoneCards" &&
+    (value.player === "self" || value.player === "opponent") &&
+    value.zone === "costArea" &&
+    value.filter === undefined &&
+    Number.isInteger(value.per) &&
+    value.per > 0 &&
+    Number.isInteger(value.multiplier) &&
+    (value.offset === undefined || Number.isInteger(value.offset)) &&
+    (value.minimum === undefined || Number.isInteger(value.minimum))
+  );
+};
+
 export const isSupportedSearchCardFilter = (filter: CardFilter): boolean => {
   for (const key of Object.keys(filter)) {
     if (!supportedSearchFilterKeys.has(key)) return false;
@@ -280,7 +302,8 @@ export const isSupportedHandSelectionCardFilter = (
             (comparison.stat === "cost" ||
               comparison.stat === "baseCost" ||
               comparison.stat === "power") &&
-            typeof comparison.op === "string",
+            typeof comparison.op === "string" &&
+            isSupportedStatComparisonValue(comparison.value),
         ))) &&
     (filter.custom === undefined ||
       supportedHandSelectionCustomFilters.has(filter.custom))
@@ -288,17 +311,41 @@ export const isSupportedHandSelectionCardFilter = (
 };
 
 const resolveFilterNumberValue = (
+  state: GameState | undefined,
+  controllerId: PlayerId | undefined,
   value: number | DynamicNumberValue,
   savedReferences?: SequenceSavedResultReferenceMap,
 ): number | null => {
   if (typeof value === "number") {
     return value;
   }
-  if (value.type !== "savedNumber") {
+  if (value.type === "savedNumber") {
+    const reference = savedReferences?.[value.selection];
+    return reference?.kind === "chosenNumber" ? reference.value : null;
+  }
+  if (
+    state === undefined ||
+    controllerId === undefined ||
+    value.type !== "countMatchingZoneCards" ||
+    value.zone !== "costArea" ||
+    value.filter !== undefined
+  ) {
     return null;
   }
-  const reference = savedReferences?.[value.selection];
-  return reference?.kind === "chosenNumber" ? reference.value : null;
+  const playerId =
+    value.player === "self" ? controllerId : getOpponentId(state, controllerId);
+  if (playerId === null) {
+    return null;
+  }
+  const count = state.players[playerId]?.costArea.length;
+  if (count === undefined || value.per <= 0) {
+    return null;
+  }
+  const resolved =
+    Math.floor(count / value.per) * value.multiplier + (value.offset ?? 0);
+  return value.minimum === undefined
+    ? resolved
+    : Math.max(resolved, value.minimum);
 };
 
 const numericComparisonMatches = (
@@ -406,6 +453,7 @@ const cardMatchesNameRelation = (
 
 const cardMatchesBaseFilter = (
   state: GameState | undefined,
+  controllerId: PlayerId | undefined,
   card: ResolvedCard | undefined,
   filter: CardFilter,
   savedReferences?: SequenceSavedResultReferenceMap,
@@ -414,7 +462,13 @@ const cardMatchesBaseFilter = (
   if (
     filter.anyOf !== undefined &&
     !filter.anyOf.some((candidate) =>
-      cardMatchesBaseFilter(state, card, candidate, savedReferences),
+      cardMatchesBaseFilter(
+        state,
+        controllerId,
+        card,
+        candidate,
+        savedReferences,
+      ),
     )
   ) {
     return false;
@@ -532,7 +586,12 @@ const cardMatchesBaseFilter = (
   }
   if (filter.statComparisons !== undefined) {
     for (const comparison of filter.statComparisons) {
-      const value = resolveFilterNumberValue(comparison.value, savedReferences);
+      const value = resolveFilterNumberValue(
+        state,
+        controllerId,
+        comparison.value,
+        savedReferences,
+      );
       const left =
         comparison.stat === "cost" || comparison.stat === "baseCost"
           ? card.cost
@@ -588,7 +647,7 @@ const cardMatchesEffectEntryPointFilter = (
 export const cardMatchesSearchFilter = (
   card: ResolvedCard | undefined,
   filter: CardFilter,
-): boolean => cardMatchesBaseFilter(undefined, card, filter);
+): boolean => cardMatchesBaseFilter(undefined, undefined, card, filter);
 
 export const cardMatchesHandSelectionFilter = (
   state: GameState,
@@ -601,7 +660,9 @@ export const cardMatchesHandSelectionFilter = (
     return true;
   }
   const resolved = state.cardManifest.cards[card.cardId];
-  if (!cardMatchesBaseFilter(state, resolved, filter, savedReferences)) {
+  if (
+    !cardMatchesBaseFilter(state, playerId, resolved, filter, savedReferences)
+  ) {
     return false;
   }
   if (
