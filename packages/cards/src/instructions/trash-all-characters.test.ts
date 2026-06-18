@@ -123,4 +123,70 @@ describe("trash instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses selected self Character trash as reusable select-then-trash primitives", () => {
+    const result = parseTrashInstruction({
+      text: "Trash 1 of your {FILM} type Characters.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:trash-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["FILM"],
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "trash",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:trash-target",
+                },
+                zone: "characterArea",
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:trash",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
 });

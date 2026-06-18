@@ -43,9 +43,9 @@ export function delayedEndOfTurnSegmentParser(options: {
   readonly instructions: readonly InstructionParser[];
 }): SegmentParser {
   return (input: ParseInput) => {
-    const match = /^at the end of this turn,\s*(?<body>[\s\S]+)$/iu.exec(
-      input.text,
-    );
+    const match =
+      /^at the end of this turn,\s*(?<body>[\s\S]+)$/iu.exec(input.text) ??
+      /^(?<body>[\s\S]+?)\s+at the end of this turn\.?$/iu.exec(input.text);
     const bodyText = match?.groups?.["body"];
     if (bodyText === undefined) {
       return undefined;
