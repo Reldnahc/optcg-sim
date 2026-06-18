@@ -88,6 +88,49 @@ describe("replacement instead-effect parser groups", () => {
     });
   });
 
+  it("parses up-to filtered rest-Characters instead as the same rest primitive", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may rest up to 1 of your Characters with a cost of 3 or more other than [Pica] instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: {
+              categories: ["character"],
+              cost: { min: 3 },
+              nameNot: ["Pica"],
+            },
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "target:yourCharacters",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "filter:nameNot",
+        "cardinality:upTo",
+        "count:positiveInteger",
+      ],
+    });
+  });
+
   it("parses replacement-subject Life placement instead as a bounce primitive", () => {
     expect(
       parseReplacementInsteadFromSet(

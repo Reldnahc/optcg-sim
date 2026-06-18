@@ -177,3 +177,58 @@ it("parses KO replacement power changes against the replacement target", () => {
     ]),
   );
 });
+
+it("parses KO replacement up-to filtered rest bodies", () => {
+  const result = parseCardEffectLine(
+    "[Once Per Turn] If this Character would be K.O.'d, you may rest up to 1 of your Characters with a cost of 3 or more other than [Pica] instead.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldBeKOd",
+          target: { type: "self" },
+        },
+      },
+      oncePerTurn: true,
+      optional: true,
+      effect: {
+        type: "replacement",
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              chooser: "self",
+              player: "self",
+              zones: ["characterArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              filter: {
+                categories: ["character"],
+                cost: { min: 3 },
+                nameNot: ["Pica"],
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:oncePerTurn",
+      "replacement:wouldBeKOd",
+      "instruction:rest",
+      "cardinality:upTo",
+      "filter:cost",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "filter:nameNot",
+    ]),
+  );
+});

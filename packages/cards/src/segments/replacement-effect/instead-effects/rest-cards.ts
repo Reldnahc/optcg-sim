@@ -13,22 +13,22 @@ export function parseRestCardsInstead(
   }
 
   const match =
-    /^you may rest (?<count>[1-9]\d*) of (?<owner>your|your opponent's) (?<target>cards|Characters) instead\.?$/i.exec(
+    /^you may rest (?<quantity>up to [1-9]\d*|[1-9]\d*) of (?<owner>your|your opponent's) (?<target>cards|Characters) instead\.?$/i.exec(
       text.trim(),
     );
-  const countText = match?.groups?.["count"];
+  const quantityText = match?.groups?.["quantity"];
   const ownerText = match?.groups?.["owner"];
   const targetText = match?.groups?.["target"];
   if (
-    countText === undefined ||
+    quantityText === undefined ||
     ownerText === undefined ||
     targetText === undefined
   ) {
     return parseFilteredRestInstead(text);
   }
-  const count = Number.parseInt(countText, 10);
+  const cardinality = parseRestCardinality(quantityText);
   const owner = parseRestOwner(ownerText);
-  if (owner === undefined) {
+  if (owner === undefined || cardinality === undefined) {
     return undefined;
   }
   const target = targetText.toLowerCase();
@@ -47,9 +47,9 @@ export function parseRestCardsInstead(
           chooser: "self",
           player: owner.player,
           zones,
-          min: count,
-          max: count,
-          allowFewerIfUnavailable: false,
+          min: cardinality.min,
+          max: cardinality.max,
+          allowFewerIfUnavailable: cardinality.allowFewerIfUnavailable,
           visibility: "public",
         },
       },
@@ -62,7 +62,7 @@ export function parseRestCardsInstead(
       ...(target === "characters"
         ? []
         : (["zone:stageArea", "zone:costArea"] as const)),
-      "cardinality:exact",
+      cardinality.evidence,
       "count:positiveInteger",
     ],
   };
@@ -72,14 +72,14 @@ function parseFilteredRestInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
   const match =
-    /^you may rest (?<count>[1-9]\d*) of (?<owner>your|your opponent's) (?<target>.+?) instead\.?$/iu.exec(
+    /^you may rest (?<quantity>up to [1-9]\d*|[1-9]\d*) of (?<owner>your|your opponent's) (?<target>.+?) instead\.?$/iu.exec(
       text.trim(),
     );
-  const countText = match?.groups?.["count"];
+  const quantityText = match?.groups?.["quantity"];
   const ownerText = match?.groups?.["owner"];
   const targetText = match?.groups?.["target"];
   if (
-    countText === undefined ||
+    quantityText === undefined ||
     ownerText === undefined ||
     targetText === undefined
   ) {
@@ -92,10 +92,10 @@ function parseFilteredRestInstead(
   }
 
   const parsedTarget = parseRestTargetFilter(targetText, owner);
-  if (parsedTarget === undefined) {
+  const cardinality = parseRestCardinality(quantityText);
+  if (parsedTarget === undefined || cardinality === undefined) {
     return undefined;
   }
-  const count = Number.parseInt(countText, 10);
 
   return {
     effect: {
@@ -107,9 +107,9 @@ function parseFilteredRestInstead(
           chooser: "self",
           player: owner.player,
           zones: parsedTarget.zones,
-          min: count,
-          max: count,
-          allowFewerIfUnavailable: false,
+          min: cardinality.min,
+          max: cardinality.max,
+          allowFewerIfUnavailable: cardinality.allowFewerIfUnavailable,
           visibility: "public",
           filter: parsedTarget.filter,
         },
@@ -118,9 +118,43 @@ function parseFilteredRestInstead(
     evidence: [
       "instruction:rest",
       ...parsedTarget.evidence,
-      "cardinality:exact",
+      cardinality.evidence,
       "count:positiveInteger",
     ],
+  };
+}
+
+function parseRestCardinality(text: string):
+  | {
+      readonly allowFewerIfUnavailable: boolean;
+      readonly evidence: Extract<
+        PrimitiveEvidence,
+        "cardinality:exact" | "cardinality:upTo"
+      >;
+      readonly max: number;
+      readonly min: number;
+    }
+  | undefined {
+  const upTo = /^up to (?<count>[1-9]\d*)$/iu.exec(text.trim())?.groups?.[
+    "count"
+  ];
+  if (upTo !== undefined) {
+    return {
+      allowFewerIfUnavailable: true,
+      evidence: "cardinality:upTo",
+      max: Number.parseInt(upTo, 10),
+      min: 0,
+    };
+  }
+  if (!/^[1-9]\d*$/u.test(text.trim())) {
+    return undefined;
+  }
+  const count = Number.parseInt(text, 10);
+  return {
+    allowFewerIfUnavailable: false,
+    evidence: "cardinality:exact",
+    max: count,
+    min: count,
   };
 }
 

@@ -87,6 +87,7 @@ const restCardsInstead = (
     Extract<Effect, { type: "rest" }>["target"],
     { type: "chooseFromZones" }
   >["request"]["filter"],
+  options: { readonly min?: number; readonly max?: number } = {},
 ): Extract<Effect, { type: "rest" }> => ({
   type: "rest",
   target: {
@@ -96,9 +97,9 @@ const restCardsInstead = (
       chooser: "self",
       player,
       zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
-      min: 2,
-      max: 2,
-      allowFewerIfUnavailable: false,
+      min: options.min ?? 2,
+      max: options.max ?? 2,
+      allowFewerIfUnavailable: (options.min ?? 2) < (options.max ?? 2),
       visibility: "public",
       ...(filter === undefined ? {} : { filter }),
     },
@@ -110,7 +111,9 @@ const restOwnCardsInstead = (
     Extract<Effect, { type: "rest" }>["target"],
     { type: "chooseFromZones" }
   >["request"]["filter"],
-): Extract<Effect, { type: "rest" }> => restCardsInstead("self", filter);
+  options?: { readonly min?: number; readonly max?: number },
+): Extract<Effect, { type: "rest" }> =>
+  restCardsInstead("self", filter, options);
 
 const returnDonInstead = (): Extract<Effect, { type: "returnDon" }> => ({
   type: "returnDon",
@@ -331,6 +334,23 @@ test("replacement support admits filtered rest-own-cards instead primitives", ()
       categories: ["leader"],
       names: ["Fish-Man Island", "Shirahoshi"],
     }),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support admits up-to rest-own-cards instead primitives", () => {
+  const block = replacementBlock(
+    "replacement-ko-rest-up-to-own-card",
+    wouldBeKodByCardEffect(),
+    restOwnCardsInstead(
+      {
+        categories: ["character"],
+        cost: { min: 3 },
+        nameNot: ["Pica"],
+      },
+      { min: 0, max: 1 },
+    ),
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);

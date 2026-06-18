@@ -51,9 +51,13 @@ export const isSupportedRestCardsInsteadEffect = (
   (effect.target.request.player === "self" ||
     effect.target.request.player === "opponent") &&
   isSupportedHandSelectionCardFilter(effect.target.request.filter) &&
-  effect.target.request.min === effect.target.request.max &&
-  effect.target.request.min > 0 &&
-  !effect.target.request.allowFewerIfUnavailable &&
+  Number.isInteger(effect.target.request.min) &&
+  Number.isInteger(effect.target.request.max) &&
+  effect.target.request.min >= 0 &&
+  effect.target.request.max > 0 &&
+  effect.target.request.min <= effect.target.request.max &&
+  effect.target.request.allowFewerIfUnavailable ===
+    effect.target.request.min < effect.target.request.max &&
   effect.target.request.visibility === "public";
 
 export const isSupportedRestOwnCardsInsteadEffect =
