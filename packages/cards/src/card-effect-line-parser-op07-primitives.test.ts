@@ -143,3 +143,108 @@ it("parses opponent rested Character or DON refresh lock as mixed public-zone se
     ]),
   );
 });
+
+it("parses conditional return-DON cost with selected Leader and Character refresh locks", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] DON!! \u22123 (You may return the specified number of DON!! cards from your field to your DON!! deck.): If you have 3 or more {Foxy Pirates} type Characters, select up to 1 each of your opponent's rested Leader and Character cards. The selected cards will not become active in your opponent's next Refresh Phase.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: { type: "returnDon", count: 3, optional: true },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: {
+                type: "fieldCount",
+                player: "self",
+                op: "gte",
+                value: 3,
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Foxy Pirates"],
+                },
+              },
+              then: {
+                type: "sequence",
+                effects: [
+                  {
+                    saveResultAs: "selected:refresh-lock-leader-target",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "opponent",
+                        zones: ["leaderArea"],
+                        min: 0,
+                        max: 1,
+                        filter: { categories: ["leader"], state: "rested" },
+                      },
+                    },
+                  },
+                  {
+                    saveResultAs: "selected:refresh-lock-character-target",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "opponent",
+                        zones: ["characterArea"],
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          categories: ["character"],
+                          state: "rested",
+                        },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "cannotBecomeActive",
+                      duration: {
+                        type: "untilStartOfNextTurn",
+                        player: "opponent",
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "cannotBecomeActive",
+                      duration: {
+                        type: "untilStartOfNextTurn",
+                        player: "opponent",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "cost:returnDon",
+      "condition:fieldCount",
+      "filter:type",
+      "instruction:selectTargets",
+      "instruction:preventActivation",
+      "target:opponentLeader",
+      "target:opponentCharacters",
+      "duration:opponentNextRefreshPhase",
+    ]),
+  );
+});

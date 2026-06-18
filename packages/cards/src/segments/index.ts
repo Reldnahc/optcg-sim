@@ -36,6 +36,7 @@ export { revealedHandPlayExpressionParser } from "./revealed-hand-play.js";
 export { revealTopPlayExpressionParser } from "./reveal-top-play.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
 export { selectedBasePowerSnapshotExpressionParser } from "./selected-base-power-snapshot.js";
+export { selectedRefreshLockExpressionParser } from "./selected-refresh-lock.js";
 export { sameNumberHandTrashDeckTrashSegmentParser } from "./same-number-deck-trash.js";
 export {
   conditionalAdditionalSelectedPowerContinuationExpressionParser,

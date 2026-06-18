@@ -70,6 +70,7 @@ import {
   searchRevealExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
   selectedPowerContinuationExpressionParser,
+  selectedRefreshLockExpressionParser,
   syntheticInstructionSegmentParser,
   trailingConditionalExpressionSegmentParser,
   trashTopDeckConditionalExpressionParser,
@@ -279,6 +280,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     expressions: [
       searchRevealExpressionParser,
       selectedAttackRetargetExpressionParser,
+      selectedRefreshLockExpressionParser,
       singleInstructionExpressionParser,
     ],
   })(input);
@@ -324,6 +326,7 @@ const costedExpressions = [
   searchRevealExpressionParser,
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
+  selectedRefreshLockExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser({
     conditions: conditionParsers,
   }),
@@ -454,6 +457,7 @@ const conditionalBlockBodyExpressions = () =>
     }),
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedAttackRetargetExpressionParser,
+    selectedRefreshLockExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
     }),
@@ -523,6 +527,7 @@ const rootExpressionParsers = () =>
       instructions: instructionParsers,
     }),
     selectedOpponentCharactersAttackCostExpressionParser,
+    selectedRefreshLockExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
