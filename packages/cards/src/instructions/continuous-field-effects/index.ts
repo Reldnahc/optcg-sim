@@ -15,6 +15,7 @@ export {
   thisCharacterKeywordGrantPrimitive,
 } from "./keyword-grants.js";
 export {
+  parseAllCharactersRefreshLockInstruction,
   parseSelfCannotAttackInstruction,
   selfCannotAttackPrimitive,
 } from "./restrictions.js";

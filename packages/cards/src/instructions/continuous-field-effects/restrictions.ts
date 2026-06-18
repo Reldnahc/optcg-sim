@@ -50,6 +50,65 @@ export const parseSelfCannotAttackInstruction: ContinuousInstructionParser = (
   };
 };
 
+export const parseAllCharactersRefreshLockInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^all (?<target>.+?) do not become active in your and your opponent's Refresh Phases\.?$/iu.exec(
+        input.text.trim(),
+      );
+    const targetText = match?.groups?.["target"];
+    if (targetText === undefined) {
+      return undefined;
+    }
+
+    const predicates = parseCardFilterPredicates(
+      { text: targetText },
+      { powerSemantics: "current" },
+    );
+    if (
+      predicates === undefined ||
+      predicates.rest.trim().length > 0 ||
+      predicates.filter.categories?.[0] !== "character"
+    ) {
+      return undefined;
+    }
+
+    const duration = continuousDuration(context.condition);
+    const effect = (player: "self" | "opponent") =>
+      ({
+        type: "cannotBecomeActive" as const,
+        target: {
+          type: "all" as const,
+          player,
+          zone: "characterArea" as const,
+          filter: predicates.filter,
+        },
+        duration,
+      }) as const;
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          { connector: "always", effect: effect("self") },
+          { connector: "always", effect: effect("opponent") },
+        ],
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:all",
+        "player:self",
+        "player:opponent",
+        "target:yourCharacters",
+        "target:opponentCharacters",
+        "zone:characterArea",
+        ...predicates.evidence,
+        continuousDurationEvidence(context.condition),
+      ],
+      rest: "",
+    };
+  };
+
 const combineConditions = (
   ...conditions: readonly (Condition | undefined)[]
 ): Condition | undefined => {

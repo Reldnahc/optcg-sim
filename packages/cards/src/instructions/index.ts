@@ -10,6 +10,7 @@ export {
   parseExplicitDurationAllFieldStatGainInstruction,
   parseHandCounterSetInstruction,
   parsePlayEntryStateInstruction,
+  parseAllCharactersRefreshLockInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,

@@ -232,3 +232,86 @@ it("parses KO replacement up-to filtered rest bodies", () => {
     ]),
   );
 });
+
+it("parses conditional all-character refresh locks across both players", () => {
+  const result = parseCardEffectLine(
+    "If your Leader is [Donquixote Doflamingo], all Characters with a cost of 5 or less do not become active in your and your opponent's Refresh Phases.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "cannotBecomeActive",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 5 },
+                },
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: {
+                  type: "hasCardInZone",
+                  player: "self",
+                  zone: "leaderArea",
+                  filter: {
+                    categories: ["leader"],
+                    names: ["Donquixote Doflamingo"],
+                  },
+                },
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "cannotBecomeActive",
+              target: {
+                type: "all",
+                player: "opponent",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 5 },
+                },
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: {
+                  type: "hasCardInZone",
+                  player: "self",
+                  zone: "leaderArea",
+                  filter: {
+                    categories: ["leader"],
+                    names: ["Donquixote Doflamingo"],
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "expression:conditionalContinuous",
+      "condition:leaderIdentity",
+      "instruction:preventActivation",
+      "cardinality:all",
+      "player:self",
+      "player:opponent",
+      "filter:cost",
+      "duration:whileConditionTrue",
+    ]),
+  );
+});
