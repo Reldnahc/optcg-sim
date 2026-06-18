@@ -94,3 +94,42 @@ test("leader-zone hasCardInZone supports current-power filters", () => {
     { supported: true, passed: false },
   );
 });
+
+test("leader-zone hasCardInZone supports field-state filters", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  self.leader.state = "active";
+  state.cardManifest.cards[self.leader.cardId] = {
+    ...resolvedCard({ cardId: self.leader.cardId, category: "leader" }),
+    types: ["Dressrosa"],
+  };
+  const condition: Extract<Condition, { type: "hasCardInZone" }> = {
+    type: "hasCardInZone",
+    player: "self",
+    zone: "leaderArea",
+    filter: {
+      categories: ["leader"],
+      typesAny: ["Dressrosa"],
+      state: "active",
+    },
+  };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+
+  self.leader.state = "rested";
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});

@@ -40,6 +40,7 @@ type SupportedLeaderZoneFilter = Required<Pick<CardFilter, "categories">> &
     | "nameContains"
     | "power"
     | "currentPower"
+    | "state"
     | "anyOf"
   >;
 
@@ -186,6 +187,7 @@ export const isSupportedLeaderZoneFilter = (
       key !== "nameContains" &&
       key !== "power" &&
       key !== "currentPower" &&
+      key !== "state" &&
       key !== "anyOf"
     ) {
       return false;
@@ -226,6 +228,7 @@ export const isSupportedLeaderZoneFilter = (
     typeof filter.nameContains === "string" && filter.nameContains.length > 0;
   const hasPower = filter.power !== undefined;
   const hasCurrentPower = filter.currentPower !== undefined;
+  const hasState = filter.state === "active" || filter.state === "rested";
   const hasAnyOf =
     Array.isArray(filter.anyOf) &&
     filter.anyOf.length > 0 &&
@@ -247,6 +250,7 @@ export const isSupportedLeaderZoneFilter = (
       hasNameContains ||
       hasPower ||
       hasCurrentPower ||
+      hasState ||
       hasAnyOf)
   );
 };
@@ -299,6 +303,8 @@ const leaderMatchesFilter = (
     currentPower,
     filter.currentPower,
   );
+  const stateMatch =
+    filter.state === undefined ? true : leaderCard.state === filter.state;
   const anyOfMatch =
     filter.anyOf === undefined
       ? true
@@ -318,6 +324,7 @@ const leaderMatchesFilter = (
     nameContainsMatch &&
     powerMatch &&
     currentPowerMatch &&
+    stateMatch &&
     anyOfMatch
   );
 };

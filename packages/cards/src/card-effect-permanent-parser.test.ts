@@ -594,6 +594,47 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses leader identity and state conditions as reusable filter predicates", () => {
+    const result = parseCardEffectLine(
+      "If your Leader has the {Dressrosa} type and is active, this Character gains +2000 power.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: 2000,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "hasCardInZone",
+              zone: "leaderArea",
+              player: "self",
+              filter: {
+                categories: ["leader"],
+                typesAny: ["Dressrosa"],
+                state: "active",
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "condition:leaderIdentity",
+        "filter:type",
+        "filter:state:active",
+        "instruction:modifyPower",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses attached-DON conditional all-field power gains with another threshold", () => {
     const result = parseCardEffectLine(
       "[DON!! x2] If you have a Character with a cost of 6 or more, your Leader and all of your Characters gain +2000 power.",

@@ -82,6 +82,22 @@ export const parseActiveCharacterPredicate: PredicateParser = (
   return parseFieldStateCharacterPredicate(text, current, "active");
 };
 
+export const parseFieldStatePredicate: PredicateParser = (text, current) => {
+  const match = /^(?:is\s+)?(?<state>active|rested)\b\s*(?<rest>.*)$/iu.exec(
+    text,
+  );
+  const state = match?.groups?.["state"]?.toLowerCase();
+  if (state !== "active" && state !== "rested") {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, state },
+    evidence: [`filter:state:${state}`],
+    rest: match?.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseFieldStateNamePredicate: PredicateParser = (
   text,
   current,

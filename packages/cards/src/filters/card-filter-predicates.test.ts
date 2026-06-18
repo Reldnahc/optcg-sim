@@ -307,6 +307,24 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses standalone field-state predicates without binding to Characters", () => {
+    expect(parseCardFilterPredicates({ text: "is active" })).toEqual({
+      filter: {
+        state: "active",
+      },
+      evidence: ["filter:state:active"],
+      rest: "",
+    });
+
+    expect(parseCardFilterPredicates({ text: "rested" })).toEqual({
+      filter: {
+        state: "rested",
+      },
+      evidence: ["filter:state:rested"],
+      rest: "",
+    });
+  });
+
   it("parses field-state bracketed names as reusable field filters", () => {
     expect(parseCardFilterPredicates({ text: "rested [Uta]" })).toEqual({
       filter: {
