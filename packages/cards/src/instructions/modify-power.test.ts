@@ -303,6 +303,51 @@ describe("modify power instruction parser", () => {
     });
   });
 
+  it("parses positive power for self Leader or Character targets excluding this card", () => {
+    expect(
+      parseModifyPowerInstruction({
+        text: "up to 1 of your Leader or Character cards other than this card gains +1000 power during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "modifyPower",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            filter: {
+              anyOf: [
+                { categories: ["leader"] },
+                { categories: ["character"], excludeSelf: true },
+              ],
+            },
+          },
+        },
+        value: 1000,
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:excludeSelf",
+        "modifier:positivePower",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses positive power for selected self Leader targets with power predicates", () => {
     expect(
       parseModifyPowerInstruction({
