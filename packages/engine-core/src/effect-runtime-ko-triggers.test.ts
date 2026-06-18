@@ -269,6 +269,29 @@ test("ignores already queued On K.O. event batches when the source later leaves 
   assert.deepEqual(result.candidates, []);
 });
 
+test("ignores K.O. event batches for cards without On K.O. definitions before source-presence checks", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+  });
+  p2State.characters = [];
+  p2State.trash = [];
+  const events = appendBattleKOEvents(state, source);
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.candidates, []);
+});
+
 test("detects last-known On K.O. candidates with the field source snapshot", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2");

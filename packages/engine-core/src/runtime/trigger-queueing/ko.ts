@@ -1,4 +1,5 @@
 import type {
+  CardId,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -139,31 +140,26 @@ export const createKOTriggerQueueing = (
         };
       }
 
-      const source = findCardInstanceInTrash(
-        state,
-        payload.playerId,
-        payload.instanceId,
-      );
       const movedPayload = movedEvent.payload as {
+        cardId?: CardId;
         from?: unknown;
         to?: unknown;
       };
       const origin = zoneRefFromUnknown(movedPayload.from);
       const destination = zoneRefFromUnknown(movedPayload.to);
-      if (
-        source === undefined ||
-        origin === undefined ||
-        destination === undefined ||
-        source.zone.zone !== "trash" ||
-        !zonesEqual(source.zone, destination)
-      ) {
+      if (origin === undefined || destination === undefined) {
         return {
           ok: false,
-          error: onKOTriggerCandidateDetectionError("source-presence-failed"),
+          error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
         };
       }
-
-      const resolved = state.cardManifest.cards[source.cardId];
+      if (movedPayload.cardId === undefined) {
+        return {
+          ok: false,
+          error: onKOTriggerCandidateDetectionError("invalid-ko-event-batch"),
+        };
+      }
+      const resolved = state.cardManifest.cards[movedPayload.cardId];
       if (resolved === undefined) {
         return {
           ok: false,
@@ -173,7 +169,6 @@ export const createKOTriggerQueueing = (
       if (resolved.support.effectDefinitionId === undefined) {
         continue;
       }
-
       const lookup = dependencies.resolveImplementedDslEffectDefinition(
         resolved,
         state.cardManifest,
@@ -186,6 +181,22 @@ export const createKOTriggerQueueing = (
       );
       if (onKOEffects.length === 0) {
         continue;
+      }
+
+      const source = findCardInstanceInTrash(
+        state,
+        payload.playerId,
+        payload.instanceId,
+      );
+      if (
+        source === undefined ||
+        source.zone.zone !== "trash" ||
+        !zonesEqual(source.zone, destination)
+      ) {
+        return {
+          ok: false,
+          error: onKOTriggerCandidateDetectionError("source-presence-failed"),
+        };
       }
       const matching = onKOEffects.filter((effect) =>
         isSupportedOnKOCompatibleQueuedEffect(effect),
