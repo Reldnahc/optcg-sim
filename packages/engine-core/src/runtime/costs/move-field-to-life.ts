@@ -23,7 +23,7 @@ export const moveFieldToLifePaymentOptions = (cost: {
   readonly count: number;
   readonly faceUp?: boolean;
   readonly filter?: MoveFieldToLifePaymentOption["filter"];
-  readonly player: "opponent" | "anyPlayer";
+  readonly player: "self" | "opponent" | "anyPlayer";
   readonly position: "top" | "bottom" | "topOrBottom";
 }): MoveFieldToLifePaymentOption[] => {
   const positions =
@@ -174,6 +174,9 @@ const moveFieldToLifeCandidatePlayers = (
     .filter(([playerId]) => {
       if (option.player === "anyPlayer") {
         return true;
+      }
+      if (option.player === "self") {
+        return playerId === chooserId;
       }
       return playerId !== chooserId;
     })

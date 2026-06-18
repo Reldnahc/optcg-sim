@@ -88,7 +88,7 @@ export type Cost =
       type: "moveFieldToLife";
       count: number;
       chooser: "self";
-      player: "opponent" | "anyPlayer";
+      player: "self" | "opponent" | "anyPlayer";
       filter?: CardFilter;
       position: "top" | "bottom" | "topOrBottom";
       faceUp?: boolean;
@@ -163,7 +163,7 @@ export type OptionalMoveFieldToLifeCost = {
   type: "moveFieldToLife";
   count: number;
   chooser: "self";
-  player: "opponent" | "anyPlayer";
+  player: "self" | "opponent" | "anyPlayer";
   filter?: CardFilter;
   position: "top" | "bottom" | "topOrBottom";
   faceUp?: boolean;

@@ -111,7 +111,7 @@ export type PaymentOption =
       id: string;
       type: "moveFieldToLife";
       count: number;
-      player: "opponent" | "anyPlayer";
+      player: "self" | "opponent" | "anyPlayer";
       filter?: CardFilter;
       position: "top" | "bottom";
       faceUp?: boolean;

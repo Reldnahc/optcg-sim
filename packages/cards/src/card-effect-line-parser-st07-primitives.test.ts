@@ -76,3 +76,62 @@ it.each(["On Play", "Main"])(
     );
   },
 );
+
+it("parses Activate Main rest-Stage and Life-to-hand cost into self Character owner-Life placement", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] You may rest this Stage and add 1 card from the top or bottom of your Life cards to your hand: Add up to 1 of your Characters with a cost of 3 to the top of the owner's Life cards face-up.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          { effect: { type: "payCost", cost: { type: "sequence" } } },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "self",
+                      zone: "characterArea",
+                      filter: {
+                        categories: ["character"],
+                        cost: { op: "eq", value: 3 },
+                      },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "bounce",
+                    destination: "lifeTop",
+                    destinationFaceUp: true,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "composition:costSequence",
+      "cost:restSelf",
+      "cost:moveCards",
+      "instruction:moveSelected",
+      "target:yourCharacters",
+      "destination:life",
+      "destination:faceUp",
+    ]),
+  );
+});

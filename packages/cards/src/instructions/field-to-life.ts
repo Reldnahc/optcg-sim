@@ -5,7 +5,10 @@ import {
   parseUpToCardinality,
 } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
-import { parseOpponentCharactersTarget } from "../targets/index.js";
+import {
+  parseOpponentCharactersTarget,
+  parseYourCharactersTarget,
+} from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 import { selectThenApplyFieldTarget } from "./effect-builders.js";
 
@@ -54,7 +57,7 @@ const fieldToLifeBody = (
     : fieldToLifeMove(target, position, faceUp);
 
 const selectThenPlaceAtOwnerLife = (
-  player: "opponent" | "anyPlayer",
+  player: "self" | "opponent" | "anyPlayer",
   min: number,
   max: number,
   filter: CharacterFilter,
@@ -107,6 +110,16 @@ const parseFieldToLifeTarget = (text: string) => {
     };
   }
 
+  const self = parseYourCharactersTarget({ text });
+  if (self?.target?.type === "choose") {
+    return {
+      player: "self" as const,
+      filter: self.target.request.filter ?? { categories: ["character"] },
+      evidence: self.evidence,
+      rest: self.rest.trim(),
+    };
+  }
+
   return parseAnyCharacterTarget(text);
 };
 
@@ -118,7 +131,7 @@ const normalizePosition = (text: string): "top" | "bottom" | "topOrBottom" =>
       : "bottom";
 
 export type FieldToLifePlacementParts = {
-  readonly player: "opponent" | "anyPlayer";
+  readonly player: "self" | "opponent" | "anyPlayer";
   readonly count: number;
   readonly min: number;
   readonly max: number;

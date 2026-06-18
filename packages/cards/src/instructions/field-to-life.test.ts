@@ -162,4 +162,54 @@ describe("field-to-Life instruction parser", () => {
       ]),
     );
   });
+
+  it("parses your Character placement to owner Life through the same field movement primitive", () => {
+    const result = parsePlaceAtOwnerLifeInstruction({
+      text: "Add up to 1 of your Characters with a cost of 3 to the top of the owner's Life cards face-up.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:field-to-life",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { op: "eq", value: 3 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "bounce",
+              destination: "lifeTop",
+              destinationFaceUp: true,
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:moveSelected",
+        "player:self",
+        "target:yourCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "destination:life",
+        "position:top",
+        "destination:faceUp",
+      ]),
+    );
+  });
 });
