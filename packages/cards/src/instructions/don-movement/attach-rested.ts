@@ -73,7 +73,7 @@ type DonAttachTarget = {
 
 const parseDonAttachmentInstruction: InstructionParser = (input) => {
   const match =
-    /^give (?<quantity>up to [1-9]\d*) (?:(?:(?<opponentSource>of your opponent's)|of your currently given) )?(?<rested>rested )?DON!! cards?(?: from (?<sourceZone>your opponent's|your|its owner's) cost area)? to (?<target>.+)$/iu.exec(
+    /^give (?<quantity>up to [1-9]\d*)(?: total)? (?:(?:(?<opponentSource>of your opponent's)|of your currently given) )?(?<rested>rested )?DON!! cards?(?: from (?<sourceZone>your opponent's|your|its owner's) cost area)? to (?<target>.+)$/iu.exec(
       input.text,
     );
   const quantityText = match?.groups?.["quantity"];

@@ -864,3 +864,73 @@ it("parses opponent hand trash, hand reveal, and opponent draw as separate primi
     ]),
   );
 });
+
+it("parses total currently-given DON redistribution as attached-DON source selection", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] Give up to 2 total of your currently given DON!! cards to 1 of your Characters.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      oncePerTurn: true,
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "donSelection:attach",
+            saveResultKinds: ["selectedTargets", "selectedCards:don"],
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "costArea",
+                min: 0,
+                max: 2,
+                filter: { categories: ["don"], state: "attached" },
+              },
+            },
+          },
+          {
+            saveResultAs: "targetSelection:attach-don",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "attachSelectedDon",
+              selection: "donSelection:attach",
+              target: {
+                type: "savedFieldObject",
+                player: "self",
+                zone: "characterArea",
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "instruction:attachDon",
+      "zone:costArea",
+      "filter:state:attached",
+      "zone:characterArea",
+      "filter:category:character",
+      "composition:selectThenApply",
+    ]),
+  );
+});
