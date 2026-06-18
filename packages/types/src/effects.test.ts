@@ -1017,7 +1017,7 @@ test("temporary modifier and restriction authoring supports extended durations a
   const unsupportedSavedSelectionTarget: Target = {
     // @ts-expect-error saved selection targets are deferred until a field-target producer exists.
     type: "selection",
-    selection: "handSelection:thatCharacter" as HandSelectionId,
+    selection: "handSelection:thatCharacter",
   };
   const malformedUntilEndDuration: Duration = {
     type: "untilEndOfTurn",

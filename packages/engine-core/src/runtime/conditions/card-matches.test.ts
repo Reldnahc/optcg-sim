@@ -103,3 +103,88 @@ test("cardMatches condition checks a saved selected target against a reusable fi
     { supported: true, passed: false },
   );
 });
+
+test("cardMatches condition checks a saved selected card against manifest metadata", () => {
+  const state = createActiveState();
+  const trashedCardId = toCardId("trashed-high-cost-card");
+  state.cardManifest.cards[trashedCardId] = resolvedCard({
+    cardId: trashedCardId,
+    category: "character",
+    cost: 6,
+    power: 7000,
+  });
+
+  const condition: Extract<Condition, { type: "cardMatches" }> = {
+    type: "cardMatches",
+    target: {
+      type: "savedSelectedCard",
+      selection: "selected:trashed-top-deck",
+      onFailure: "failClosed",
+    },
+    filter: { cost: { op: "gte", value: 6 } },
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), condition, {
+      savedReferences: {
+        "selected:trashed-top-deck": {
+          kind: "selectedCards",
+          cards: [
+            {
+              instanceId: toInstanceId("trashed-high-cost-instance"),
+              cardId: trashedCardId,
+              playerId: p1,
+            },
+          ],
+        },
+      },
+    }),
+    { supported: true, passed: true },
+  );
+
+  state.cardManifest.cards[trashedCardId] = resolvedCard({
+    cardId: trashedCardId,
+    category: "character",
+    cost: 5,
+    power: 7000,
+  });
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), condition, {
+      savedReferences: {
+        "selected:trashed-top-deck": {
+          kind: "selectedCards",
+          cards: [
+            {
+              instanceId: toInstanceId("trashed-high-cost-instance"),
+              cardId: trashedCardId,
+              playerId: p1,
+            },
+          ],
+        },
+      },
+    }),
+    { supported: true, passed: false },
+  );
+});
+
+test("cardMatches saved selected card fails closed without matching producer", () => {
+  const state = createActiveState();
+  const condition: Extract<Condition, { type: "cardMatches" }> = {
+    type: "cardMatches",
+    target: {
+      type: "savedSelectedCard",
+      selection: "selected:missing",
+      onFailure: "failClosed",
+    },
+    filter: { cost: { op: "gte", value: 6 } },
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(state, queueDrawForP1(), condition, {
+      savedReferences: {},
+    }),
+    { supported: false },
+  );
+});

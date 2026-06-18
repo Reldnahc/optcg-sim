@@ -35,6 +35,20 @@ test("explicit save-result metadata accepts every valid producer kind", () => {
       "selectedTargets",
       "selectedCards:don",
     ]),
+    withSaveResultKinds(
+      {
+        connector: "always",
+        saveResultAs: "saved-result:explicit-deck-trash",
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "trash" },
+          order: "original",
+        },
+      },
+      ["selectedCards:deck"],
+    ),
     withSaveResultKinds(selectCharacterTarget(target), ["selectedTargets"]),
     withSaveResultKinds(revealSet, ["selectedCards:set"]),
     {
@@ -86,6 +100,22 @@ test("explicit save-result metadata rejects mismatched producer kinds", () => {
   ]);
   assertUnsupported([
     withSaveResultKinds(selectHand(hand), ["selectedTargets"]),
+  ]);
+  assertUnsupported([
+    withSaveResultKinds(
+      {
+        connector: "always",
+        saveResultAs: "saved-result:explicit-deck-trash-wrong",
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "trash" },
+          order: "original",
+        },
+      },
+      ["selectedCards:hand"],
+    ),
   ]);
   assertUnsupported([
     withSaveResultKinds(

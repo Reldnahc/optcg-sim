@@ -1,4 +1,5 @@
 import type {
+  Condition,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -295,6 +296,33 @@ const canConsumeSavedFieldObjectBinding = (
     binding.saveResultAs,
   );
 
+const canConsumeConditionSavedReferences = (
+  state: SequenceSupportState,
+  condition: Condition | undefined,
+): boolean => {
+  if (condition === undefined) {
+    return true;
+  }
+  if (condition.type === "cardMatches") {
+    const target = condition.target;
+    return (
+      target.type !== "savedSelectedCard" ||
+      canConsumeSelectedCards(state.savedResults, target.selection, [
+        ...selectedCardKinds,
+      ])
+    );
+  }
+  if (condition.type === "and" || condition.type === "or") {
+    return condition.conditions.every((child) =>
+      canConsumeConditionSavedReferences(state, child),
+    );
+  }
+  if (condition.type === "not") {
+    return canConsumeConditionSavedReferences(state, condition.condition);
+  }
+  return true;
+};
+
 const isSupportedMoveSelectedWithSavedResults = (
   state: SequenceSupportState,
   effect: MoveSelectedEffect,
@@ -351,7 +379,8 @@ const isSupportedConditionalSegment = (
 ): effect is ConditionalEffect => {
   if (
     effect.type !== "conditional" ||
-    !isSupportedQueuedEffectConditionShape(effect.if)
+    !isSupportedQueuedEffectConditionShape(effect.if) ||
+    !canConsumeConditionSavedReferences(supportState, effect.if)
   ) {
     return false;
   }
@@ -467,6 +496,10 @@ const isSupportedSequenceBlockWithState = (
     flattenedBlock.optional === true ||
     flattenedBlock.cost !== undefined ||
     !isSupportedQueuedEffectConditionShape(flattenedBlock.condition) ||
+    !canConsumeConditionSavedReferences(
+      supportState,
+      flattenedBlock.condition,
+    ) ||
     flattenedBlock.conditionTiming !== undefined ||
     flattenedBlock.failurePolicy !== undefined ||
     flattenedBlock.sourcePresencePolicy !== entry.sourcePresencePolicy ||

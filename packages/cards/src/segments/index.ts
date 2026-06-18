@@ -43,6 +43,7 @@ export {
   selectedPowerContinuationExpressionParser,
 } from "./selected-power-continuation.js";
 export { searchRevealExpressionParser } from "./search-reveal.js";
+export { trashTopDeckConditionalExpressionParser } from "./trash-top-deck-conditional.js";
 export {
   conditionalCostedBlockExpressionParser,
   conditionalBlockExpressionParser,

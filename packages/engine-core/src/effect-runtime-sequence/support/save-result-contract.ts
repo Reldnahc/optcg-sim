@@ -124,6 +124,19 @@ const selectedCardsKindsToCapability = ({
   ...(max === undefined ? {} : { max }),
 });
 
+const savedSelectedCardsKindForMoveCardsSegment = (
+  effect: Extract<Effect, { type: "moveCards" }>,
+): SavedSelectedCardsKind | undefined => {
+  if (
+    effect.from.zone === "deck" &&
+    effect.from.position === "top" &&
+    effect.to.zone === "trash"
+  ) {
+    return "deck";
+  }
+  return undefined;
+};
+
 const inferredSaveResultKindsForSegment = (
   segment: SequenceSegment,
 ): readonly SequenceSaveResultKind[] | null => {
@@ -160,6 +173,14 @@ const inferredSaveResultKindsForSegment = (
       segment.effect.type === "trashFromHandUntilCount"
     ) {
       kinds.push("selectedCards:hand");
+    } else if (segment.effect.type === "moveCards") {
+      const selectedCardsKind = savedSelectedCardsKindForMoveCardsSegment(
+        segment.effect,
+      );
+      if (selectedCardsKind === undefined) {
+        return null;
+      }
+      kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
     } else if (
       segment.effect.type !== "revealTop" &&
       segment.effect.type !== "selectFromSet" &&
@@ -293,6 +314,25 @@ const recordSaveResultAsProducer = (
     const capability = selectedCardsKindsToCapability({
       kinds: ["hand"],
       ...(maxCount === undefined ? {} : { max: maxCount }),
+    });
+    return addCapability(state, saveResultAs, capability);
+  }
+  if (segment.effect.type === "moveCards") {
+    const selectedCardsKind = savedSelectedCardsKindForMoveCardsSegment(
+      segment.effect,
+    );
+    if (
+      selectedCardsKind === undefined ||
+      (typeof segment.effect.count !== "number" &&
+        segment.effect.count.type !== "countMatchingZoneCards")
+    ) {
+      return null;
+    }
+    const capability = selectedCardsKindsToCapability({
+      kinds: [selectedCardsKind],
+      ...(typeof segment.effect.count === "number"
+        ? { max: segment.effect.count }
+        : {}),
     });
     return addCapability(state, saveResultAs, capability);
   }

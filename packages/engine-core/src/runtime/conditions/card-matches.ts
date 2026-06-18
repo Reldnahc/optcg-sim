@@ -77,6 +77,20 @@ const resolveSavedSelectedFieldObjectRef = (
   return expectedPlayer === object.playerId ? object : undefined;
 };
 
+const resolveSavedSelectedCardRef = (
+  target: Extract<Condition, { type: "cardMatches" }>["target"],
+  context: ConditionEvaluationContext | undefined,
+): CardRef | undefined => {
+  if (target.type !== "savedSelectedCard") {
+    return undefined;
+  }
+  const saved = context?.savedReferences?.[target.selection];
+  if (saved?.kind !== "selectedCards") {
+    return undefined;
+  }
+  return saved.cards[target.objectIndex ?? 0];
+};
+
 const findFieldCardInstanceByRef = (
   state: GameState,
   card: CardRef,
@@ -133,10 +147,14 @@ const resolveCardMatchesRef = (
       zone: entry.source.zone,
     };
   }
-  return resolveSavedSelectedFieldObjectRef(state, entry, target, context);
+  return (
+    resolveSavedSelectedFieldObjectRef(state, entry, target, context) ??
+    resolveSavedSelectedCardRef(target, context)
+  );
 };
 
 const supportedCardMatchesFilterKeys = new Set<keyof CardFilter>([
+  "anyOf",
   "categories",
   "colorsAny",
   "attributesAny",
@@ -147,13 +165,18 @@ const supportedCardMatchesFilterKeys = new Set<keyof CardFilter>([
   "typesAny",
   "typesIncludeAny",
   "typesNotIncludeAny",
+  "baseCost",
+  "cost",
+  "power",
 ]);
 
 const isSupportedCardMatchesFilter = (filter: CardFilter): boolean => {
   const keys = Object.keys(filter) as (keyof CardFilter)[];
   return (
     keys.length > 0 &&
-    keys.every((key) => supportedCardMatchesFilterKeys.has(key))
+    keys.every((key) => supportedCardMatchesFilterKeys.has(key)) &&
+    (filter.anyOf === undefined ||
+      filter.anyOf.every(isSupportedCardMatchesFilter))
   );
 };
 
@@ -161,6 +184,7 @@ export const isSupportedCardMatchesCondition = (
   condition: Extract<Condition, { type: "cardMatches" }>,
 ): boolean =>
   (condition.target.type === "self" ||
+    condition.target.type === "savedSelectedCard" ||
     (condition.target.type === "savedFieldObject" &&
       condition.target.binding.family === "selectedTargets" &&
       (condition.target.player === "self" ||
@@ -188,7 +212,11 @@ export const evaluateCardMatches = (
   }
   const card = findFieldCardInstanceByRef(state, cardRef);
   const metadata =
-    card === undefined ? undefined : state.cardManifest.cards[card.cardId];
+    card === undefined && condition.target.type === "savedSelectedCard"
+      ? state.cardManifest.cards[cardRef.cardId]
+      : card === undefined
+        ? undefined
+        : state.cardManifest.cards[card.cardId];
   if (metadata === undefined) {
     return { supported: false };
   }

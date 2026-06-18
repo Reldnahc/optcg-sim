@@ -310,6 +310,7 @@ export type Target =
   | { type: "all"; zone: Zone; player: TargetPlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }
   | { type: "chooseFromZones"; request: MultiZoneTargetRequest }
+  | SavedSelectedCardTarget
   | SavedFieldObjectTarget;
 
 export interface CardFilter {
@@ -528,6 +529,13 @@ export interface SavedFieldObjectTarget {
   controller?: PlayerRef;
   filter?: CardFilter;
   visibility: "publicOnly";
+  onFailure: "failClosed";
+}
+
+export interface SavedSelectedCardTarget {
+  type: "savedSelectedCard";
+  selection: string;
+  objectIndex?: number;
   onFailure: "failClosed";
 }
 

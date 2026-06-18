@@ -72,6 +72,7 @@ import {
   selectedPowerContinuationExpressionParser,
   syntheticInstructionSegmentParser,
   trailingConditionalExpressionSegmentParser,
+  trashTopDeckConditionalExpressionParser,
 } from "../segments/index.js";
 import {
   selectedOpponentCharactersAttackCostExpressionParser,
@@ -301,6 +302,9 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  trashTopDeckConditionalExpressionParser({
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   chosenCostRevealExpressionParser({
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -362,6 +366,9 @@ const topLevelChooseOneExpressions = () =>
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
     }),
+    trashTopDeckConditionalExpressionParser({
+      expressions: basicBodyExpressions(),
+    }),
     chosenCostRevealExpressionParser({
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
@@ -416,6 +423,9 @@ const conditionalBlockBodyExpressions = () =>
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    trashTopDeckConditionalExpressionParser({
       expressions: basicBodyExpressions(),
     }),
     chosenCostRevealExpressionParser({
@@ -515,6 +525,9 @@ const rootExpressionParsers = () =>
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    trashTopDeckConditionalExpressionParser({
       expressions: basicBodyExpressions(),
     }),
     chosenCostRevealExpressionParser({
