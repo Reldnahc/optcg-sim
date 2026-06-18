@@ -214,6 +214,69 @@ it("parses opponent rested DON attachment to opponent Characters", () => {
   );
 });
 
+it("parses target-first rested DON attachment to own Leader or Character targets", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] Give this Leader or 1 of your Characters up to 1 rested DON!! card.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultKinds: ["selectedCards:don"],
+            effect: {
+              type: "selectCards",
+              zone: "costArea",
+              player: "self",
+              min: 0,
+              max: 1,
+              filter: { categories: ["don"], state: "rested" },
+            },
+          },
+          {
+            saveResultKinds: ["selectedTargets"],
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 1,
+                max: 1,
+                filter: { categories: ["leader", "character"] },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "attachSelectedDon",
+              target: {
+                type: "savedFieldObject",
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                filter: { categories: ["leader", "character"] },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "instruction:attachDon",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:state:rested",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses currently-given DON attachment as attached-DON source selection", () => {
   const result = parseCardEffectLine(
     "[Activate: Main] You may rest this Stage: Give up to 1 of your currently given DON!! cards to 1 of your {Straw Hat Crew} type Characters.",

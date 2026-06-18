@@ -32,6 +32,11 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
     return targetDistribution;
   }
 
+  const targetFirst = parseTargetFirstRestedDonInstruction(input);
+  if (targetFirst !== undefined) {
+    return targetFirst;
+  }
+
   const match =
     /^give (?<quantity>up to [1-9]\d*) rested DON!! cards? to (?<target>.+)$/i.exec(
       input.text,
@@ -304,6 +309,20 @@ const parseDonAttachmentTarget = (
       ? {}
       : { targetOwner: sourceTargetOwner }),
   };
+};
+
+const parseTargetFirstRestedDonInstruction: InstructionParser = (input) => {
+  const match =
+    /^give (?<target>.+?) (?<quantity>up to [1-9]\d*) rested DON!! cards?\.?$/iu.exec(
+      input.text,
+    );
+  const targetText = match?.groups?.["target"];
+  const quantityText = match?.groups?.["quantity"];
+  if (targetText === undefined || quantityText === undefined) {
+    return undefined;
+  }
+
+  return parseAttachRestedDonToTarget(quantityText, targetText);
 };
 
 const parseAttachRestedDonEachInstruction: InstructionParser = (input) => {
@@ -728,7 +747,7 @@ const parseRestedDonAttachmentTarget = (
       savedTargetZone: { zones: ["leaderArea", "characterArea"] },
     };
   }
-  if (/^your Leader or 1 of your Characters\.?$/iu.test(targetText)) {
+  if (/^(?:your|this) Leader or 1 of your Characters\.?$/iu.test(targetText)) {
     const zoneTarget = {
       zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
     };
