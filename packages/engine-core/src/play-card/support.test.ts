@@ -175,6 +175,124 @@ test("getSupportedPlayMetadata accepts playable Characters with unsupported futu
   );
 });
 
+test("getSupportedPlayMetadata rejects unsupported always-on Character blocks but accepts dormant triggers", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-relevance",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const baseEffect = must(definition.effects[0], "base effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+
+  state.cardManifest.effectDefinitions = {
+    "def-character-relevance": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:future-on-ko` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 3,
+  });
+
+  state.cardManifest.effectDefinitions = {
+    "def-character-relevance": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:unsupported-permanent` as EffectDefinition["effects"][number]["id"],
+          category: "permanent",
+          trigger: { type: "permanent" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: { type: "custom", name: "unsupported-permanent" },
+        },
+      ],
+    },
+  };
+  assert.equal(getSupportedPlayMetadata(state, character), null);
+});
+
+test("getSupportedPlayMetadata accepts dormant Stage activations but rejects unsupported Stage On Play", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const stage = must(p1State.hand[1], "implemented stage");
+  const implemented = resolvedCard({
+    cardId: stage.cardId,
+    category: "stage",
+    cost: 2,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-stage-relevance",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    stage.cardId,
+    implemented.support,
+  );
+  const baseEffect = must(definition.effects[0], "base effect");
+  state.cardManifest.cards[stage.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+
+  state.cardManifest.effectDefinitions = {
+    "def-stage-relevance": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:stage-activate` as EffectDefinition["effects"][number]["id"],
+          category: "activate",
+          trigger: { type: "activateMain" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: { type: "custom", name: "unsupported-stage-activation" },
+        },
+      ],
+    },
+  };
+  assert.deepEqual(getSupportedPlayMetadata(state, stage), {
+    category: "stage",
+    printedCost: 2,
+  });
+
+  state.cardManifest.effectDefinitions = {
+    "def-stage-relevance": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:unsupported-on-play` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "onPlay" },
+          effect: { type: "custom", name: "unsupported-stage-on-play" },
+        },
+      ],
+    },
+  };
+  assert.equal(getSupportedPlayMetadata(state, stage), null);
+});
+
 test("getSupportedPlayMetadata accepts implemented-DSL Character metadata without generated effects", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

@@ -17,6 +17,7 @@ import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.j
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 import { hasUnsupportedSupportGateText } from "../battle/support.js";
 import { cardMatchesAnyName } from "../card-name-matching.js";
+import { playRelevantEffectBlocks } from "./effect-relevance.js";
 
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
@@ -351,12 +352,13 @@ export const getSupportedPlayMetadata = (
       const isDefinitionRuntimeAdmittedEffect = (
         effect: EffectDefinition["effects"][number],
       ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
-      const onPlayEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "onPlay",
+      const relevantEffects = playRelevantEffectBlocks(
+        resolved.category,
+        lookup.definition.effects,
       );
       if (
         !hasOnlySupportedRelevantEffects(
-          onPlayEffects,
+          relevantEffects,
           isDefinitionRuntimeAdmittedEffect,
           { requireAtLeastOne: false },
         )
@@ -372,12 +374,13 @@ export const getSupportedPlayMetadata = (
       const isDefinitionRuntimeAdmittedEffect = (
         effect: EffectDefinition["effects"][number],
       ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
-      const mainEffects = lookup.definition.effects.filter(
-        (effect) => effect.trigger.type === "main",
+      const relevantEffects = playRelevantEffectBlocks(
+        resolved.category,
+        lookup.definition.effects,
       );
       if (
         !hasOnlySupportedRelevantEffects(
-          mainEffects,
+          relevantEffects,
           isDefinitionRuntimeAdmittedEffect,
           {
             requireAtLeastOne: true,
@@ -395,7 +398,17 @@ export const getSupportedPlayMetadata = (
       const isDefinitionRuntimeAdmittedEffect = (
         effect: EffectDefinition["effects"][number],
       ): boolean => isRuntimeAdmittedEffect(effect, lookup.definition.effects);
-      if (!lookup.definition.effects.every(isDefinitionRuntimeAdmittedEffect)) {
+      const relevantEffects = playRelevantEffectBlocks(
+        resolved.category,
+        lookup.definition.effects,
+      );
+      if (
+        !hasOnlySupportedRelevantEffects(
+          relevantEffects,
+          isDefinitionRuntimeAdmittedEffect,
+          { requireAtLeastOne: false },
+        )
+      ) {
         return null;
       }
       return {
