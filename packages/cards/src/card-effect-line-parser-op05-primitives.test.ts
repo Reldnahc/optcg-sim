@@ -377,3 +377,91 @@ it("parses end-of-turn conditional all-rested K.O. then trash-self Stage", () =>
     ]),
   );
 });
+
+it("parses circled DON plus two rest costs before reusable trash-to-hand selection", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] ➀ (You may rest the specified number of DON!! cards in your cost area.) You may rest this Character and 1 of your Characters: Add up to 1 black Character card with a cost of 1 from your trash to your hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "sequence",
+                optional: true,
+                costs: [
+                  { type: "restDon", count: 1, chooser: "self" },
+                  { type: "restSelf" },
+                  {
+                    type: "restFromField",
+                    count: 1,
+                    chooser: "self",
+                    filter: { categories: ["character"] },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectCards",
+                    zone: "trash",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      categories: ["character"],
+                      colorsAny: ["black"],
+                      cost: { op: "eq", value: 1 },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "moveSelected",
+                    from: "trash",
+                    to: "hand",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:restDon",
+      "cost:restSelf",
+      "cost:restFromField",
+      "filter:category:character",
+      "instruction:moveSelected",
+      "zone:trash",
+      "destination:hand",
+      "filter:color",
+      "filter:cost",
+      "composition:entryExpression",
+    ]),
+  );
+});

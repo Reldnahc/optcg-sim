@@ -53,6 +53,47 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses adjacent circled DON, rest-self, and field-rest costs", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "➀ (You may rest the specified number of DON!! cards in your cost area.) You may rest this Character and 1 of your Characters",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "restDon", count: 1, chooser: "self" },
+          { type: "restSelf" },
+          {
+            type: "restFromField",
+            count: 1,
+            chooser: "self",
+            filter: { categories: ["character"] },
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:restDon",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "target:yourDonCards",
+        "player:self",
+        "chooser:self",
+        "cost:restSelf",
+        "target:thisCharacter",
+        "cost:restFromField",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "player:self",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses generic move-cards costs as source and destination primitives", () => {
     expect(
       parseOptionalCostSequence({

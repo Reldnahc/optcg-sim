@@ -73,13 +73,13 @@ export function parseOptionalCostSequence(
 
   const parsedCosts: CostParseResult[] = [];
   let inheritedAction: "rest" | undefined;
-  for (const [index, part] of parts.entries()) {
+  for (const part of parts) {
     const text = applyInheritedAction(part, inheritedAction);
     const parsed = parseCostPart(text);
     if (parsed === undefined || parsed.rest.length > 0) {
       return undefined;
     }
-    if (index === 0 && /^rest\b/i.test(part)) {
+    if (/^rest\b/i.test(part)) {
       inheritedAction = "rest";
     }
     parsedCosts.push(parsed);
