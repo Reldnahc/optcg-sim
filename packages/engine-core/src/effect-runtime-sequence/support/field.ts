@@ -43,7 +43,13 @@ export type SavedFieldObjectKoEffect = Extract<Effect, { type: "ko" }> & {
 export type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "all" }>;
 };
-export type KoEffect = SavedFieldObjectKoEffect | AllTargetKoEffect;
+export type SelfKoEffect = Extract<Effect, { type: "ko" }> & {
+  target: Extract<Target, { type: "self" }>;
+};
+export type KoEffect =
+  | SavedFieldObjectKoEffect
+  | AllTargetKoEffect
+  | SelfKoEffect;
 export type BounceEffect = Extract<Effect, { type: "bounce" }> & {
   target: Extract<Target, { type: "savedFieldObject" } | { type: "self" }>;
   destination: "deckBottom" | "hand" | "lifeTop" | "lifeBottom";
@@ -86,7 +92,8 @@ export const isSupportedKoSegment = (
   effect: SequenceSegmentEffect,
 ): effect is KoEffect =>
   effect.type === "ko" &&
-  (isSupportedSavedFieldObjectKoTarget(effect.target) ||
+  (effect.target.type === "self" ||
+    isSupportedSavedFieldObjectKoTarget(effect.target) ||
     (effect.target.type === "all" &&
       effect.target.zone === "characterArea" &&
       (effect.target.player === "self" ||

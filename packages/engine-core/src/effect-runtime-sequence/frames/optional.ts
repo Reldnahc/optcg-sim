@@ -15,6 +15,7 @@ import {
   stateWithPausedSequenceFrame,
 } from "../frame-decisions.js";
 import { applyDrawSegment, saveReference } from "../segments.js";
+import { applyFieldMutationSequenceSegment } from "../field-segments.js";
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import {
@@ -45,12 +46,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
   const { entry, frame, supportedBlock } = context;
   const pausedSegment =
     supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (
-    pausedSegment === undefined ||
-    (pausedSegment.effect.type !== "draw" &&
-      pausedSegment.effect.type !== "trashFromHand") ||
-    pausedSegment.optional !== true
-  ) {
+  if (pausedSegment === undefined || pausedSegment.optional !== true) {
     return {
       error: sequenceRuntimeError(
         entry.effectBlockId,
@@ -95,7 +91,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
       nextState = drawn.state;
       events = drawn.events;
       ledgers = drawn.ledgers;
-    } else {
+    } else if (pausedSegment.effect.type === "trashFromHand") {
       const decisionResult = createTrashDecision(
         nextState,
         entry,
@@ -137,6 +133,44 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           nextFrame,
         ),
       };
+    } else {
+      const mutation = applyFieldMutationSequenceSegment({
+        effectPath: frame.effectPath,
+        emptySegmentResult,
+        entry,
+        events: [],
+        index: frame.pendingDecision.resumeAtSegmentIndex,
+        ledgers: {
+          savedReferences: frame.savedReferences,
+          segmentResults: frame.segmentResults,
+        },
+        pausedLedgers: {
+          savedReferences: frame.savedReferences,
+          segmentResults: frame.segmentResults,
+        },
+        segment: pausedSegment,
+        segmentKey,
+        state: nextState,
+      });
+      if (!mutation.handled || !mutation.ok) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "unsupported-sequence-shape",
+          ),
+          ok: false,
+        };
+      }
+      if (mutation.kind === "paused") {
+        return {
+          events: mutation.events,
+          ok: true,
+          state: mutation.state,
+        };
+      }
+      nextState = mutation.state;
+      events = mutation.events;
+      ledgers = mutation.ledgers;
     }
   } else {
     const declinedResult: SequenceSegmentResult = {

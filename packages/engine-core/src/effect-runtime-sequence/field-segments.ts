@@ -38,12 +38,17 @@ import { restChooseTargetRequest } from "./target-decisions.js";
 import type { SupportedSequenceSegment } from "./support.js";
 import { isSupportedSavedTargetContinuousSegment } from "./support/continuous.js";
 import { getOpponentId } from "../actions/state.js";
+import { findCardInstance } from "../effect-runtime-trigger-source-lookup.js";
+import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type KoEffect = Extract<Effect, { type: "ko" }>;
 type TrashEffect = Extract<Effect, { type: "trash" }>;
 type AllTargetKoEffect = KoEffect & {
   target: Extract<Target, { type: "all" }>;
+};
+type SelfKoEffect = KoEffect & {
+  target: Extract<Target, { type: "self" }>;
 };
 type AllTargetTrashEffect = TrashEffect & {
   target: Extract<Target, { type: "all" }>;
@@ -70,9 +75,131 @@ type SegmentHandlerResult =
 const isAllTargetKoEffect = (effect: KoEffect): effect is AllTargetKoEffect =>
   effect.target.type === "all";
 
+const isSelfKoEffect = (effect: KoEffect): effect is SelfKoEffect =>
+  effect.target.type === "self";
+
 const isAllTargetTrashEffect = (
   effect: TrashEffect,
 ): effect is AllTargetTrashEffect => effect.target.type === "all";
+
+const applySelfKoSequenceSegment = (params: {
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SupportedSequenceSegment;
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const source = findCardInstance(
+    params.state,
+    params.entry.source.playerId,
+    params.entry.source.instanceId,
+  );
+  if (
+    source === undefined ||
+    source.cardId !== params.entry.source.cardId ||
+    source.zone.zone !== "characterArea"
+  ) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  const selectedTarget: CardRef = {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    playerId: params.entry.source.playerId,
+    zone: source.zone,
+  };
+  const resolvedKo = executeSelectedTargetEffectPrimitive(
+    params.state,
+    params.entry,
+    {
+      type: "ko",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    [selectedTarget],
+  );
+  if (resolvedKo.errors !== undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  if (resolvedKo.state.pendingDecision?.type === "chooseReplacement") {
+    return {
+      events: resolvedKo.events,
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: resolvedKo.state,
+    };
+  }
+  return {
+    events: resolvedKo.events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          changedState: resolvedKo.events.length > 0,
+          selectedTargets: [selectedTarget],
+          succeeded: true,
+        },
+      },
+    },
+    state: resolvedKo.state,
+  };
+};
 
 export const applyFieldMutationSequenceSegment = (params: {
   effectPath: readonly string[];
@@ -233,15 +360,25 @@ export const applyFieldMutationSequenceSegment = (params: {
           segmentKey,
           state,
         })
-      : applySavedFieldObjectKoSequenceSegment({
-          emptySegmentResult,
-          entry,
-          index,
-          ledgers,
-          segment,
-          segmentKey,
-          state,
-        });
+      : isSelfKoEffect(segment.effect)
+        ? applySelfKoSequenceSegment({
+            emptySegmentResult,
+            entry,
+            index,
+            ledgers,
+            segment,
+            segmentKey,
+            state,
+          })
+        : applySavedFieldObjectKoSequenceSegment({
+            emptySegmentResult,
+            entry,
+            index,
+            ledgers,
+            segment,
+            segmentKey,
+            state,
+          });
     const nextEvents = [...events, ...resolvedKo.events];
     if (resolvedKo.state.pendingDecision !== undefined) {
       const frame = frameForPausedSequenceDecision({

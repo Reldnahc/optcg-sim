@@ -49,6 +49,7 @@ export type EngineEventType =
   | "counterUsed"
   | "damageWouldBeDealt"
   | "damageDealt"
+  | "battleEnded"
   | "lifeTaken"
   | "triggerActivated"
   | "effectQueued"

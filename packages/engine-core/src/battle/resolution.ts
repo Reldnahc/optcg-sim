@@ -775,6 +775,24 @@ const finalizeSupportedEndOfBattleCleanup = ({
           immediateLosers,
         };
 
+  const battle = nextState.battle ?? state.battle;
+  if (battle !== undefined) {
+    events.push(
+      createEvent(
+        state,
+        events.length + 1,
+        "battleEnded",
+        {
+          attacker: battle.attacker,
+          target: battle.currentTarget,
+          originalTarget: battle.originalTarget,
+          ...(battle.blocker === undefined ? {} : { blocker: battle.blocker }),
+        },
+        { type: "public" },
+      ),
+    );
+  }
+
   let finalizedState: GameState;
   if (cleanupEventPosition === "beforeRuleProcessing") {
     events.push(

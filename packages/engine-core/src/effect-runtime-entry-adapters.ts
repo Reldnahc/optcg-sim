@@ -88,6 +88,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
   if (triggerType === "attackDeclared") {
     return autoAdapter("attackDeclared", ["mustRemainInSameZone"]);
   }
+  if (triggerType === "endOfBattle") {
+    return autoAdapter("endOfBattle", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "effectQueued") {
     return autoAdapter("effectQueued", ["mustRemainInSameZone"]);
   }

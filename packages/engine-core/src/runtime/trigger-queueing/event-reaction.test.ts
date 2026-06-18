@@ -5,13 +5,16 @@ import type {
   CardId,
   CardInstance,
   EffectDefinition,
+  GameState,
   Zone,
 } from "@optcg/types";
 
 import {
+  applyAction,
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   resolvedCard,
   reviewedOnPlayDrawDefinition,
@@ -193,6 +196,45 @@ const appendTriggerActivatedEvent = (
     createdAtStateSeq: state.seq,
   });
 };
+
+const appendBattleEndedEvent = (
+  state: ReturnType<typeof createActiveState>,
+  attacker: CardInstance,
+  target: CardInstance,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId(`event:${String(state.seq)}:1:battleEnded`),
+    seq: state.eventJournal.length + 1,
+    type: "battleEnded",
+    payload: {
+      attacker: {
+        instanceId: attacker.instanceId,
+        cardId: attacker.cardId,
+        playerId: attacker.controller,
+        zone: attacker.zone,
+      },
+      target: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: target.controller,
+        zone: target.zone,
+      },
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "battle-ended-reaction-test" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+const respondWithOptionalActivation = (
+  state: GameState,
+  choice: "activate" | "decline",
+) =>
+  applyAction(state, {
+    type: "respondToDecision",
+    decisionId: must(state.pendingDecision, "pending decision").id,
+    response: { type: "optionalActivation", choice },
+  });
 
 const setupCardPlayedReactionDefinition = (
   state: ReturnType<typeof createActiveState>,
@@ -909,4 +951,117 @@ test("event reactions queue trigger activation triggers through the canonical ma
     true,
   );
   assert.equal(entry.effectBlockId, "trigger-activated-draw");
+});
+
+test("end-of-battle reactions seed the battled counterpart for optional K.O. continuations", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const opponentTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "opponent target"),
+    zone: "characterArea",
+  });
+  const effectDefinitionId = "def-end-battle-counterpart-ko";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "end-battle-counterpart-ko-rules",
+      sourceTextHash: "end-battle-counterpart-ko-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const baseEffect = must(base.effects[0], "base effect");
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...baseEffect,
+        id: "end-battle-counterpart-ko" as EffectDefinition["effects"][number]["id"],
+        category: "auto",
+        trigger: {
+          type: "endOfBattle",
+          role: "attackerOrTarget",
+          player: "self",
+          filter: { categories: ["character"] },
+          counterpartPlayer: "opponent",
+          counterpartFilter: { categories: ["character"] },
+        },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              optional: true,
+              effect: {
+                type: "ko",
+                target: {
+                  type: "savedFieldObject",
+                  binding: {
+                    family: "producedObjects",
+                    saveResultAs: "trigger:battleCounterpart",
+                  },
+                  zone: "characterArea",
+                  player: "opponent",
+                  visibility: "publicOnly",
+                  onFailure: "failClosed",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: { type: "ko", target: { type: "self" } },
+            },
+          ],
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  state.cardManifest.cards[opponentTarget.cardId] = resolvedCard({
+    cardId: opponentTarget.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+  });
+  appendBattleEndedEvent(state, source, opponentTarget);
+
+  const queued = processEffectRuntime(state);
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+  const paused = processEffectRuntime(queued.state);
+  const decision = must(paused.state.pendingDecision, "optional decision");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseOptionalActivation");
+
+  const resolved = respondWithOptionalActivation(paused.state, "activate");
+  const nextP1 = must(resolved.state.players[p1], "p1 result");
+  const nextP2 = must(resolved.state.players[p2], "p2 result");
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === opponentTarget.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP1.trash.some((card) => card.instanceId === source.instanceId),
+    true,
+  );
 });

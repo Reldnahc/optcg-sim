@@ -50,6 +50,38 @@ export const parseKoInstruction: InstructionParser = (input) => {
     };
   }
 
+  if (/^this Character\.?$/iu.test(actionRest)) {
+    return {
+      effect: {
+        type: "ko",
+        target: { type: "self" },
+      },
+      evidence: ["instruction:ko", "target:thisCharacter"],
+      rest: "",
+    };
+  }
+
+  if (/^the opponent['’]s Character you battled with\.?$/iu.test(actionRest)) {
+    return {
+      effect: {
+        type: "ko",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "producedObjects",
+            saveResultAs: "trigger:battleCounterpart",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+      evidence: ["instruction:ko", "target:battleCounterpart"],
+      rest: "",
+    };
+  }
+
   const composed = parseComposedKoTargets(actionRest);
   if (composed !== undefined) {
     return composed;

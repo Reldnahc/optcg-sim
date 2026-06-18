@@ -16,6 +16,7 @@ import {
   type SupportedSequenceBlock,
 } from "../support.js";
 import { findCardInstance } from "../../effect-runtime-trigger-source-lookup.js";
+import { getOpponentId } from "../../actions/state.js";
 import {
   canAdmitOncePerTurnEffect,
   consumeOncePerTurnForQueueEntry,
@@ -79,30 +80,126 @@ const fieldObjectFromCardPlayedTrigger = (
   };
 };
 
+const cardRefFromPayload = (value: unknown): CardRef | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const playerId = value["playerId"];
+  const instanceId = value["instanceId"];
+  const cardId = value["cardId"];
+  if (
+    typeof playerId !== "string" ||
+    typeof instanceId !== "string" ||
+    typeof cardId !== "string"
+  ) {
+    return undefined;
+  }
+  return {
+    instanceId: instanceId as CardRef["instanceId"],
+    cardId: cardId as CardRef["cardId"],
+    playerId: playerId as PlayerId,
+  };
+};
+
+const fieldObjectFromBattleCounterpartTrigger = (
+  state: GameState,
+  entry: EffectQueueEntry,
+): CardRef | undefined => {
+  if (entry.triggerEventId === undefined) {
+    return undefined;
+  }
+  const event = state.eventJournal.find(
+    (candidate) => candidate.id === entry.triggerEventId,
+  );
+  if (
+    event?.type !== "battleEnded" ||
+    event.visibility.type !== "public" ||
+    !isRecord(event.payload)
+  ) {
+    return undefined;
+  }
+  const attacker = cardRefFromPayload(event.payload["attacker"]);
+  const target = cardRefFromPayload(event.payload["target"]);
+  const opponentId = getOpponentId(state, entry.controllerId);
+  const counterpart =
+    attacker?.instanceId === entry.source.instanceId &&
+    attacker.cardId === entry.source.cardId
+      ? target
+      : target?.instanceId === entry.source.instanceId &&
+          target.cardId === entry.source.cardId
+        ? attacker
+        : undefined;
+  if (counterpart === undefined || counterpart.playerId !== opponentId) {
+    return undefined;
+  }
+  const card = findCardInstance(
+    state,
+    counterpart.playerId,
+    counterpart.instanceId,
+  );
+  if (
+    card === undefined ||
+    card.cardId !== counterpart.cardId ||
+    card.zone.zone !== "characterArea"
+  ) {
+    return undefined;
+  }
+  return {
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    playerId: counterpart.playerId,
+    zone: card.zone,
+  };
+};
+
 const initialSavedReferences = (
   state: GameState,
   entry: EffectQueueEntry,
 ): SegmentLedgers["savedReferences"] => {
-  const object = fieldObjectFromCardPlayedTrigger(state, entry);
-  if (object === undefined) {
-    return {};
-  }
+  const cardPlayedObject = fieldObjectFromCardPlayedTrigger(state, entry);
+  const battleCounterpart = fieldObjectFromBattleCounterpartTrigger(
+    state,
+    entry,
+  );
   return {
-    "trigger:cardPlayed": {
-      kind: "producedObjects",
-      objects: [
-        {
-          binding: {
-            family: "producedObjects",
-            saveResultAs: "trigger:cardPlayed",
-            objectIndex: 0,
+    ...(cardPlayedObject === undefined
+      ? {}
+      : {
+          "trigger:cardPlayed": {
+            kind: "producedObjects" as const,
+            objects: [
+              {
+                binding: {
+                  family: "producedObjects" as const,
+                  saveResultAs: "trigger:cardPlayed",
+                  objectIndex: 0,
+                },
+                capturedAtStateSeq: state.seq,
+                object: cardPlayedObject,
+                visibility: "public" as const,
+              },
+            ],
           },
-          capturedAtStateSeq: state.seq,
-          object,
-          visibility: "public",
-        },
-      ],
-    },
+        }),
+    ...(battleCounterpart === undefined
+      ? {}
+      : {
+          "trigger:battleCounterpart": {
+            kind: "producedObjects" as const,
+            objects: [
+              {
+                binding: {
+                  family: "producedObjects" as const,
+                  saveResultAs: "trigger:battleCounterpart",
+                  objectIndex: 0,
+                },
+                capturedAtStateSeq: state.seq,
+                object: battleCounterpart,
+                visibility: "public" as const,
+              },
+            ],
+          },
+        }),
   };
 };
 

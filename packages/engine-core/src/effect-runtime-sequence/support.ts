@@ -190,6 +190,7 @@ const emptySequenceSupportState = (
 ): SequenceSupportState => {
   const initial: Record<string, readonly SavedReferenceCapability[]> = {
     "trigger:cardPlayed": [{ kind: "producedObjects" }],
+    "trigger:battleCounterpart": [{ kind: "producedObjects" }],
   };
   for (const selection of options.initialSavedSelectedTargets ?? []) {
     initial[selection] = [{ kind: "selectedTargets" }];

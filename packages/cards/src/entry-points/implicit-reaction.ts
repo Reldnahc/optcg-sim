@@ -3,7 +3,7 @@ import type { EntryPointParseResult, ParseInput } from "../types.js";
 export function parseImplicitReactionEntryPoint(
   input: ParseInput,
 ): EntryPointParseResult | undefined {
-  if (!/^When\b/u.test(input.text)) {
+  if (!/^(?:When|At)\b/u.test(input.text)) {
     return undefined;
   }
 

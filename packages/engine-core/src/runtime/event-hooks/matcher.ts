@@ -13,6 +13,7 @@ import type {
 
 import { cardMatchesSearchFilter, getOpponentId } from "../../actions/state.js";
 import { zoneRefFromUnknown } from "../../effect-runtime-trigger-source-lookup.js";
+import { matchBattleRoleEvent } from "./battle-role.js";
 
 export type EventReactionTriggerType =
   | "damageDealt"
@@ -22,6 +23,7 @@ export type EventReactionTriggerType =
   | "donReturned"
   | "donAttached"
   | "attackDeclared"
+  | "endOfBattle"
   | "onBlock"
   | "effectQueued"
   | "effectResolved"
@@ -509,118 +511,6 @@ const matchDonAttached = (
   );
 };
 
-const attackRoleRefPairs = (
-  payload: Record<string, unknown>,
-  role: Extract<Trigger, { type: "attackDeclared" }>["role"],
-): ReadonlyArray<{
-  readonly roleRef: CardRef;
-  readonly counterpart?: CardRef;
-}> => {
-  const attacker = flattenedCardRef(payload, "attacker");
-  const target = flattenedCardRef(payload, "target");
-  if (role === "attacker") {
-    return attacker === undefined
-      ? []
-      : [
-          {
-            roleRef: attacker,
-            ...(target === undefined ? {} : { counterpart: target }),
-          },
-        ];
-  }
-  if (role === "target") {
-    return target === undefined
-      ? []
-      : [
-          {
-            roleRef: target,
-            ...(attacker === undefined ? {} : { counterpart: attacker }),
-          },
-        ];
-  }
-  return [
-    ...(attacker === undefined
-      ? []
-      : [
-          {
-            roleRef: attacker,
-            ...(target === undefined ? {} : { counterpart: target }),
-          },
-        ]),
-    ...(target === undefined
-      ? []
-      : [
-          {
-            roleRef: target,
-            ...(attacker === undefined ? {} : { counterpart: attacker }),
-          },
-        ]),
-  ];
-};
-
-const attackTargetMatches = (
-  state: GameState,
-  source: CardInstance,
-  trigger: Extract<Trigger, { type: "attackDeclared" }>,
-  payload: Record<string, unknown>,
-): boolean => {
-  if (
-    trigger.targetPlayer === undefined &&
-    trigger.targetFilter === undefined
-  ) {
-    return true;
-  }
-  const target = flattenedCardRef(payload, "target");
-  if (target === undefined) {
-    return false;
-  }
-  return (
-    (trigger.targetPlayer === undefined ||
-      playerRefMatchesSource(
-        state,
-        source,
-        trigger.targetPlayer,
-        target.playerId,
-      )) &&
-    matchesResolvedFilter(
-      state,
-      resolvedCardForId(state, target.cardId),
-      trigger.targetFilter,
-    )
-  );
-};
-
-const attackCounterpartMatches = (
-  state: GameState,
-  source: CardInstance,
-  trigger: Extract<Trigger, { type: "attackDeclared" }>,
-  counterpart: CardRef | undefined,
-): boolean => {
-  if (
-    trigger.counterpartPlayer === undefined &&
-    trigger.counterpartFilter === undefined
-  ) {
-    return true;
-  }
-  if (counterpart === undefined) {
-    return false;
-  }
-  return (
-    (trigger.counterpartPlayer === undefined ||
-      playerRefMatchesSource(
-        state,
-        source,
-        trigger.counterpartPlayer,
-        counterpart.playerId,
-      )) &&
-    matchesResolvedFilter(
-      state,
-      resolvedCardForId(state, counterpart.cardId),
-      trigger.counterpartFilter,
-    )
-  );
-};
-
 const matchAttackDeclared = (
   state: GameState,
   source: CardInstance,
@@ -631,24 +521,36 @@ const matchAttackDeclared = (
   if (event.type !== "attackDeclared" || payload === undefined) {
     return false;
   }
-  return (
-    attackTargetMatches(state, source, trigger, payload) &&
-    attackRoleRefPairs(payload, trigger.role).some(
-      ({ roleRef, counterpart }) =>
-        playerRefMatchesSource(
-          state,
-          source,
-          trigger.player,
-          roleRef.playerId,
-        ) &&
-        matchesResolvedFilter(
-          state,
-          resolvedCardForId(state, roleRef.cardId),
-          trigger.filter,
-        ) &&
-        attackCounterpartMatches(state, source, trigger, counterpart),
-    )
-  );
+  return matchBattleRoleEvent({
+    payload,
+    source,
+    trigger,
+    matchesPlayerRef: (ref, playerId) =>
+      playerRefMatchesSource(state, source, ref, playerId),
+    matchesCard: (cardId, filter) =>
+      matchesResolvedFilter(state, resolvedCardForId(state, cardId), filter),
+  });
+};
+
+const matchEndOfBattle = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "endOfBattle" }>,
+  event: EngineEvent,
+): boolean => {
+  const payload = publicPayload(event);
+  if (event.type !== "battleEnded" || payload === undefined) {
+    return false;
+  }
+  return matchBattleRoleEvent({
+    payload,
+    source,
+    trigger,
+    matchesPlayerRef: (ref, playerId) =>
+      playerRefMatchesSource(state, source, ref, playerId),
+    matchesCard: (cardId, filter) =>
+      matchesResolvedFilter(state, resolvedCardForId(state, cardId), filter),
+  });
 };
 
 const matchOpponentAttack = (
@@ -909,6 +811,12 @@ const matchPrimitiveEventTrigger = (
     return primitiveMatch(
       "attackDeclared",
       matchAttackDeclared(state, source, trigger, event),
+    );
+  }
+  if (trigger.type === "endOfBattle") {
+    return primitiveMatch(
+      "endOfBattle",
+      matchEndOfBattle(state, source, trigger, event),
     );
   }
   if (trigger.type === "effectQueued") {

@@ -607,6 +607,63 @@ test("canonical event matcher matches attackDeclared counterpart constraints for
   );
 });
 
+test("canonical event matcher matches endOfBattle counterpart constraints for either battle role", () => {
+  const { state, source, character } = setupEventHookState();
+  const opponent = must(state.players[p2], "p2");
+  const opponentCharacter: CardInstance = {
+    instanceId: "p2-character:event-hook" as CardInstance["instanceId"],
+    cardId: toCardId("p2-character:event-hook"),
+    owner: p2,
+    controller: p2,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    },
+    state: "rested",
+    attachedDon: [],
+  };
+  opponent.characters = [opponentCharacter];
+  state.cardManifest.cards[opponentCharacter.cardId] = resolvedCard({
+    cardId: opponentCharacter.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+  });
+  const trigger: Trigger = {
+    type: "endOfBattle",
+    role: "attackerOrTarget",
+    player: "self",
+    filter: { categories: ["character"] },
+    counterpartPlayer: "opponent",
+    counterpartFilter: { categories: ["character"] },
+  };
+  const event = publicEvent(state, "battleEnded", {
+    attacker: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: p1,
+      zone: character.zone,
+    },
+    target: {
+      instanceId: opponentCharacter.instanceId,
+      cardId: opponentCharacter.cardId,
+      playerId: p2,
+      zone: opponentCharacter.zone,
+    },
+  });
+
+  assert.deepEqual(matchEventTrigger(state, character, trigger, event), {
+    matched: true,
+    triggerTypes: ["endOfBattle"],
+  });
+  assert.deepEqual(matchEventTrigger(state, source, trigger, event), {
+    matched: false,
+    triggerTypes: [],
+  });
+});
+
 test("canonical event matcher matches effectQueued entry point, category, and source filter evidence", () => {
   const { source, state } = setupEventHookState();
   const event = publicEvent(state, "effectQueued", {
