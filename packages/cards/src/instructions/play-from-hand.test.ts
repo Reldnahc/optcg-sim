@@ -122,6 +122,68 @@ describe("play from hand instruction parser", () => {
     );
   });
 
+  it("parses opponent up-to-one-each hand plays without falling back to self selection", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "your opponent plays up to 1 each of [Sabo] and [Portgas.D.Ace] with a cost of 2 from their hand.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "opponent",
+                    chooser: "opponent",
+                    filter: { names: ["Sabo"], cost: { op: "eq", value: 2 } },
+                  },
+                },
+                {
+                  effect: { type: "playSelected", player: "opponent" },
+                },
+              ],
+            },
+          },
+          {
+            effect: {
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "opponent",
+                    chooser: "opponent",
+                    filter: {
+                      names: ["Portgas.D.Ace"],
+                      cost: { op: "eq", value: 2 },
+                    },
+                  },
+                },
+                {
+                  effect: { type: "playSelected", player: "opponent" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "player:opponent",
+        "chooser:opponent",
+        "filter:name",
+        "filter:cost",
+      ]),
+    );
+  });
+
   it("parses post-source hand filters with dynamic self DON field count", () => {
     const result = parsePlayFromHandInstruction({
       text: "Play up to 1 {Shandian Warrior} type Character card from your hand with a cost equal to or less than the number of DON!! cards on your field.",

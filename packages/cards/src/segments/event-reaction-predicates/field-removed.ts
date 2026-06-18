@@ -45,24 +45,24 @@ const parseFieldRemovalSource = (
   text: string,
 ):
   | {
-      readonly trigger: Pick<
+      readonly triggers: readonly Pick<
         Extract<Trigger, { type: "fieldRemoved" }>,
         "sourceController" | "sourceKind" | "destination"
-      >;
+      >[];
       readonly evidence: readonly ExpressionParseResult["evidence"][number][];
     }
   | undefined => {
   if (text.toLowerCase() === "k.o.'d") {
-    return { trigger: { sourceKind: "ko" }, evidence: [] };
+    return { triggers: [{ sourceKind: "ko" }], evidence: [] };
   }
   if (text.toLowerCase() === "removed from the field") {
-    return { trigger: { sourceKind: "any" }, evidence: [] };
+    return { triggers: [{ sourceKind: "any" }], evidence: [] };
   }
   if (
     text.toLowerCase() === "removed from the field by your opponent's effect"
   ) {
     return {
-      trigger: { sourceController: "opponent", sourceKind: "effect" },
+      triggers: [{ sourceController: "opponent", sourceKind: "effect" }],
       evidence: ["replacementSource:opponent", "replacementSource:cardEffect"],
     };
   }
@@ -71,22 +71,48 @@ const parseFieldRemovalSource = (
     "removed from the field by your opponent's effect or k.o.'d"
   ) {
     return {
-      trigger: { sourceController: "opponent", sourceKind: "any" },
-      evidence: ["replacementSource:opponent"],
+      triggers: [
+        { sourceController: "opponent", sourceKind: "effect" },
+        { sourceKind: "ko" },
+      ],
+      evidence: [
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        "composition:triggerAnyOf",
+      ],
     };
   }
   if (text.toLowerCase() === "returned to the owner's hand by your effect") {
     return {
-      trigger: {
-        sourceController: "self",
-        sourceKind: "effect",
-        destination: "hand",
-      },
+      triggers: [
+        {
+          sourceController: "self",
+          sourceKind: "effect",
+          destination: "hand",
+        },
+      ],
       evidence: ["replacementSource:cardEffect", "destination:hand"],
     };
   }
   return undefined;
 };
+
+const composeFieldRemovedTrigger = (
+  base: Omit<Extract<Trigger, { type: "fieldRemoved" }>, "type">,
+  source: {
+    readonly triggers: readonly Pick<
+      Extract<Trigger, { type: "fieldRemoved" }>,
+      "sourceController" | "sourceKind" | "destination"
+    >[];
+  },
+): Trigger =>
+  anyOfTrigger(
+    source.triggers.map((trigger) => ({
+      type: "fieldRemoved",
+      ...base,
+      ...trigger,
+    })),
+  );
 
 export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
   text,
@@ -190,12 +216,13 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
       return undefined;
     }
     return {
-      trigger: {
-        type: "fieldRemoved",
-        player: "opponent",
-        filter: parsed.filter,
-        ...source.trigger,
-      },
+      trigger: composeFieldRemovedTrigger(
+        {
+          player: "opponent",
+          filter: parsed.filter,
+        },
+        source,
+      ),
       evidence: [
         "trigger:fieldRemoved",
         "player:opponent",
@@ -229,12 +256,13 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
   }
 
   return {
-    trigger: {
-      type: "fieldRemoved",
-      player: "self",
-      filter: parsed.filter,
-      ...source.trigger,
-    },
+    trigger: composeFieldRemovedTrigger(
+      {
+        player: "self",
+        filter: parsed.filter,
+      },
+      source,
+    ),
     evidence: [
       "trigger:fieldRemoved",
       "player:self",

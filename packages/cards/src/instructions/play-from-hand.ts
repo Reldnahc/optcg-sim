@@ -143,6 +143,7 @@ function parsePlayEachFromHand(
       effect: playSelectedFromZone({
         selection,
         zone: "hand",
+        player,
         visibility: "chooserOnly",
         filter: predicates.filter,
         min: 0,
@@ -449,6 +450,7 @@ function buildHandOrTrashChoice({
           effect: playSelectedFromZone({
             selection: handSelection,
             zone: "hand",
+            player: "self",
             visibility: "chooserOnly",
             filter,
             min: cardinality.min,
@@ -462,6 +464,7 @@ function buildHandOrTrashChoice({
           effect: playSelectedFromZone({
             selection: trashSelection,
             zone: "trash",
+            player: "self",
             visibility: "bothPlayers",
             filter,
             min: cardinality.min,
@@ -477,6 +480,7 @@ function buildHandOrTrashChoice({
 function playSelectedFromZone({
   selection,
   zone,
+  player,
   visibility,
   filter,
   min,
@@ -485,6 +489,7 @@ function playSelectedFromZone({
 }: {
   readonly selection: SelectionId;
   readonly zone: "hand" | "trash";
+  readonly player: "self" | "opponent";
   readonly visibility: "chooserOnly" | "bothPlayers";
   readonly filter: NonNullable<
     ReturnType<typeof parseCardFilterPredicates>
@@ -502,8 +507,8 @@ function playSelectedFromZone({
         effect: {
           type: "selectCards" as const,
           zone,
-          player: "self" as const,
-          chooser: "self" as const,
+          player,
+          chooser: player,
           min,
           max,
           filter,
@@ -517,6 +522,7 @@ function playSelectedFromZone({
           type: "playSelected" as const,
           selection,
           ignoreCost: true,
+          ...(player === "self" ? {} : { player }),
           ...(enterRested ? { enterRested: true } : {}),
         },
       },
