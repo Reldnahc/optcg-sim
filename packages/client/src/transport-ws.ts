@@ -6,6 +6,7 @@ import type {
   MatchLiveConnectionStatus,
   MatchLiveTransport,
   MatchRematchRequestMessage,
+  MatchServerShutdownMessage,
   MatchSessionTransitionMessage,
   MatchSetupSyncMessage,
   MatchStateSyncMessage,
@@ -78,6 +79,11 @@ const isRematchRequest = (
   value: unknown,
 ): value is MatchRematchRequestMessage =>
   isRecord(value) && value["type"] === "rematchRequest";
+
+const isServerShutdown = (
+  value: unknown,
+): value is MatchServerShutdownMessage =>
+  isRecord(value) && value["type"] === "serverShutdown";
 
 const isLobbySync = (value: unknown): value is LobbyStateSyncMessage =>
   isRecord(value) && value["type"] === "lobbySync";
@@ -191,6 +197,11 @@ export const createDevWebSocketMatchTransport = ({
 
       if (isRematchRequest(parsed)) {
         onRematchRequest(parsed);
+        return;
+      }
+
+      if (isServerShutdown(parsed)) {
+        emitConnectionStatus("reconnecting");
         return;
       }
 

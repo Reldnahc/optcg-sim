@@ -339,6 +339,48 @@ describe("dev WebSocket match transport", () => {
     connection.close();
   });
 
+  test("reports reconnecting immediately when the server announces shutdown", () => {
+    const recording = createRecordingWebSocket();
+    const statuses: MatchLiveConnectionStatus[] = [];
+    const transport = createDevWebSocketMatchTransport({
+      baseUrl: "http://localhost:3000",
+      WebSocket: recording.WebSocket,
+    });
+    const connection = transport.connect({
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+      sessionToken: "token-p1",
+      onStateSync() {},
+      onTimerSync() {},
+      onSetupSync() {},
+      onSessionTransition() {},
+      onRematchRequest() {},
+      onConnectionStatus(status) {
+        statuses.push(status);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    const socket = recording.sockets[0];
+    if (socket === undefined) {
+      throw new Error("Expected a WebSocket to be created.");
+    }
+
+    socket.open();
+    assert.deepEqual(statuses, ["connecting", "connected"]);
+    socket.receive({
+      type: "serverShutdown",
+      matchId: "match-1",
+      serverSeq: 2,
+      message:
+        "Lost connection. The server is shutting down. Your game will resume once reconnected.",
+    });
+
+    assert.deepEqual(statuses, ["connecting", "connected", "reconnecting"]);
+    connection.close();
+  });
+
   test("waits for a state sync at the accepted action state before resolving", async () => {
     const recording = createRecordingWebSocket();
     const transport = createDevWebSocketMatchTransport({

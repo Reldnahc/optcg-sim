@@ -84,6 +84,7 @@ import {
 import { createRedisClientForLobbyStore } from "./lobby-store.js";
 import { resolveRedisConfig } from "./redis-config.js";
 import { createRedisMatchPersistence } from "./redis-match-persistence.js";
+import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 import type { MatchPersistence } from "./session-types.js";
 
@@ -975,6 +976,7 @@ export const createMatchHttpServer = async (
       closePromise = (async () => {
         shuttingDown = true;
         clearInterval(matchTimerInterval);
+        broadcastServerShutdown(socketConnections, lobbySocketConnections);
         const serverClosed = new Promise<void>((resolve, reject) => {
           server.close((error) => {
             if (error === undefined) {

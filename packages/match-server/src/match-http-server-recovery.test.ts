@@ -39,6 +39,12 @@ interface StateSyncMessage {
   };
 }
 
+interface ServerShutdownMessage {
+  type?: string;
+  matchId?: string;
+  message?: string;
+}
+
 interface ControlledPersistence extends MatchPersistence {
   readonly base: MatchPersistence;
   readonly appendStarted: Promise<void>;
@@ -298,6 +304,13 @@ describe("match HTTP server active recovery", () => {
       await persistence.appendStarted;
 
       closePromise = server.close().then(() => "closed" as const);
+      const shutdownMessage = (await p1Socket.next()) as ServerShutdownMessage;
+      assert.equal(shutdownMessage.type, "serverShutdown");
+      assert.equal(shutdownMessage.matchId, created.matchId);
+      assert.match(
+        shutdownMessage.message ?? "",
+        /server is shutting down.*game will resume/iu,
+      );
       const earlyClose = await Promise.race([
         closePromise,
         delay(25).then(() => "pending" as const),

@@ -277,6 +277,13 @@ export interface MatchRematchRequestMessage {
   requestedBy: PlayerId;
 }
 
+export interface MatchServerShutdownMessage {
+  type: "serverShutdown";
+  matchId: MatchId;
+  serverSeq: number;
+  message: string;
+}
+
 export interface LobbyStateSyncMessage {
   type: "lobbySync";
   lobbyId: string;

@@ -33,7 +33,7 @@ describe("match reconnect screen", () => {
     assert.match(markup, /Lost connection/u);
     assert.match(
       markup,
-      /The server might be restarting\. Your game will resume once reconnected\./u,
+      /The server might be restarting or shutting down\. Please wait\. Your game will resume once reconnected\./u,
     );
   });
 

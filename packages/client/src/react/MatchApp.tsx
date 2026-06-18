@@ -91,7 +91,7 @@ const backgroundImageStyle = ({
 };
 
 const reconnectScreenMessage =
-  "The server might be restarting. Your game will resume once reconnected.";
+  "The server might be restarting or shutting down. Please wait. Your game will resume once reconnected.";
 
 export const MatchApp = ({
   accountSessionToken,
