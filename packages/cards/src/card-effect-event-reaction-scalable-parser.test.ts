@@ -287,6 +287,56 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses reversed Blocker-or-Event activation reactions with conditional optional deck trash", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] When your opponent activates [Blocker] or an Event, if your Leader has the {East Blue} type, you may trash 4 cards from the top of your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        trigger: {
+          type: "opponentActivated",
+          activations: ["blocker", "event"],
+        },
+        effect: {
+          type: "conditional",
+          if: {
+            type: "hasCardInZone",
+            zone: "leaderArea",
+            player: "self",
+            filter: {
+              categories: ["leader"],
+              typesAny: ["East Blue"],
+            },
+          },
+          then: { type: "sequence" },
+        },
+      },
+    });
+    expect(
+      containsEffect(result, {
+        type: "moveCards",
+        count: 4,
+        from: { player: "self", zone: "deck", position: "top" },
+        to: { player: "self", zone: "trash" },
+      }),
+    ).toBe(true);
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:opponentActivated",
+        "activation:blocker",
+        "activation:event",
+        "expression:conditional",
+        "condition:leaderIdentity",
+        "instruction:moveCards",
+        "zone:deck",
+        "destination:trash",
+      ]),
+    );
+  });
+
   it("parses self Event activation reactions through canonical effect queue events", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] [Once Per Turn] When you activate an Event, add up to 1 DON!! card from your DON!! deck and set it as active.",
