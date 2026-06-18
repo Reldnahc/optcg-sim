@@ -198,4 +198,53 @@ describe("life movement instruction parser", () => {
       rest: "",
     });
   });
+
+  it("parses arbitrary opponent Life trash as hidden Life select-then-trash primitives", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "Trash up to 1 of your opponent's Life cards.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "selectCards",
+              zone: "life",
+              player: "opponent",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              saveAs: "lifeSelection:opponent-life-to-trash",
+              visibility: "chooserOnly",
+            },
+            saveResultAs: "lifeSelection:opponent-life-to-trash",
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "moveSelected",
+              selection: "lifeSelection:opponent-life-to-trash",
+              from: "life",
+              to: "trash",
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:opponent",
+        "zone:life",
+        "destination:trash",
+        "chooser:self:upTo",
+        "composition:selectThenMove",
+      ],
+      rest: "",
+    });
+  });
 });

@@ -14,6 +14,8 @@ import type {
 
 const handToLifeSelection =
   "handSelection:self-hand-to-life-placement" as SelectionId;
+const opponentLifeTrashSelection =
+  "lifeSelection:opponent-life-to-trash" as SelectionId;
 
 export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
   {
@@ -189,6 +191,61 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
           ],
           rest: "",
         }),
+      },
+      {
+        id: "trash-n-cards-from-opponent-life-selection",
+        pattern:
+          /^trash (?<upTo>up to )?(?<count>[1-9]\d*) (?:(?:cards? )?from |of )?your opponent's Life cards\.?$/i,
+        build: (groups) => {
+          const count = Number.parseInt(groups["count"] ?? "", 10);
+          const min = groups["upTo"] === undefined ? count : 0;
+          return {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: opponentLifeTrashSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "life",
+                    player: "opponent",
+                    chooser: "self",
+                    min,
+                    max: count,
+                    saveAs: opponentLifeTrashSelection,
+                    visibility: "chooserOnly",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "moveSelected",
+                    selection: opponentLifeTrashSelection,
+                    from: "life",
+                    to: "trash",
+                  },
+                },
+              ],
+            },
+            evidence: [
+              "instruction:selectCards",
+              "instruction:moveSelected",
+              ...(groups["upTo"] === undefined
+                ? []
+                : (["cardinality:upTo"] as const)),
+              "count:positiveInteger",
+              "player:opponent",
+              "zone:life",
+              "destination:trash",
+              ...(groups["upTo"] === undefined
+                ? []
+                : (["chooser:self:upTo"] as const)),
+              "composition:selectThenMove",
+            ],
+            rest: "",
+          };
+        },
       },
       {
         id: "trash-n-cards-from-top-of-each-players-life",

@@ -150,13 +150,40 @@ const toPublicDecisionCausedBy = (
   return causedBy;
 };
 
+const hiddenLifeCardId = "__hidden_life_card__" as CardRef["cardId"];
+
+const isFaceDownLifeCardRef = (state: GameState, ref: CardRef): boolean => {
+  if (ref.zone?.zone !== "life") {
+    return false;
+  }
+  const player = state.players[ref.playerId];
+  if (player === undefined) {
+    return false;
+  }
+  const lifeCard = player.life.find(
+    (candidate) => candidate.card.instanceId === ref.instanceId,
+  );
+  return lifeCard !== undefined && !lifeCard.faceUp;
+};
+
+const toPublicSelectableCardRef = (state: GameState, ref: CardRef): CardRef =>
+  isFaceDownLifeCardRef(state, ref)
+    ? {
+        ...ref,
+        cardId: hiddenLifeCardId,
+      }
+    : ref;
+
 const toPublicCardCandidates = (
+  state: GameState,
   candidates: readonly CardSelectionCandidate[],
   playerId: PlayerId,
 ): Array<Pick<CardSelectionCandidate, "card">> =>
   candidates
     .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
-    .map((candidate) => ({ card: candidate.card }));
+    .map((candidate) => ({
+      card: toPublicSelectableCardRef(state, candidate.card),
+    }));
 
 const revealRecordForSelectionSet = (state: GameState, setId: string) => {
   for (let index = state.revealedCards.length - 1; index >= 0; index -= 1) {
@@ -190,7 +217,7 @@ const visibleChoiceCardsForSelectDecision = (
   }
   return pending.candidates
     .filter((candidate) => isVisibleToPlayer(candidate.visibility, playerId))
-    .map((candidate) => candidate.card);
+    .map((candidate) => toPublicSelectableCardRef(state, candidate.card));
 };
 
 const toPublicCardChoices = (
@@ -310,7 +337,7 @@ const toPublicDecision = (
       type: "selectCards",
       min: pending.request.min,
       max: pending.request.max,
-      candidates: toPublicCardCandidates(pending.candidates, playerId),
+      candidates: toPublicCardCandidates(state, pending.candidates, playerId),
       choices: toPublicCardChoices(state, playerId, pending),
       ...(() => {
         const selectionConstraint = toPublicSelectCardsSelectionConstraint(
@@ -328,7 +355,7 @@ const toPublicDecision = (
       type: "selectTargets",
       min: pending.request.min,
       max: pending.request.max,
-      candidates: toPublicCardCandidates(pending.candidates, playerId),
+      candidates: toPublicCardCandidates(state, pending.candidates, playerId),
     };
   }
   if (pending.type === "orderCards") {

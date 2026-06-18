@@ -228,6 +228,7 @@ test("sequence segments can declare explicit save-result metadata", () => {
   const kinds: readonly SequenceSaveResultKind[] = [
     "selectedCards:hand",
     "selectedCards:trash",
+    "selectedCards:life",
     "selectedCards:don",
     "selectedCards:set",
     "selectedTargets",

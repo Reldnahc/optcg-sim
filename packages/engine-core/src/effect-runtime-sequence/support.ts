@@ -212,6 +212,7 @@ const selectedCardKinds: readonly SavedSelectedCardsKind[] = [
   "hand",
   "deck",
   "trash",
+  "life",
   "don",
   "set",
 ];
@@ -293,6 +294,8 @@ const isSupportedMoveSelectedWithSavedResults = (
 ): boolean =>
   (isSupportedMoveSelectedSegment(effect, "trash") &&
     canConsumeSelectedCards(state.savedResults, effect.selection, ["trash"])) ||
+  (isSupportedMoveSelectedSegment(effect, "life") &&
+    canConsumeSelectedCards(state.savedResults, effect.selection, ["life"])) ||
   (isSupportedMoveSelectedSegment(
     effect,
     "hand",

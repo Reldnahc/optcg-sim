@@ -33,6 +33,7 @@ type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 const handDecisionIdPrefix = "decision:selectCards:hand-selection:";
 const deckDecisionIdPrefix = "decision:selectCards:deck-selection:";
 const trashDecisionIdPrefix = "decision:selectCards:trash-selection:";
+const lifeDecisionIdPrefix = "decision:selectCards:life-selection:";
 const costAreaDecisionIdPrefix = "decision:selectCards:cost-area-selection:";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -63,6 +64,21 @@ const isSupportedSequenceTrashSelectCardsEffect = (
   (effect.chooser === "self" || effect.chooser === "opponent") &&
   effect.visibility === "bothPlayers" &&
   String(effect.saveAs).startsWith("trashSelection:") &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
+const isSupportedSequenceLifeSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zone === "life" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  (effect.chooser === "self" || effect.chooser === "opponent") &&
+  effect.visibility === "chooserOnly" &&
+  String(effect.saveAs).startsWith("lifeSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
   Number.isInteger(effect.min) &&
   Number.isInteger(effect.max) &&
@@ -104,6 +120,7 @@ export const isSupportedSequenceSelectCardsEffect = (
   isSupportedSequenceHandSelectCardsEffect(effect) ||
   isSupportedSequenceDeckSelectCardsEffect(effect) ||
   isSupportedSequenceTrashSelectCardsEffect(effect) ||
+  isSupportedSequenceLifeSelectCardsEffect(effect) ||
   isSupportedSequenceCostAreaSelectCardsEffect(effect);
 
 const isSupportedRelativePlayer = (
@@ -138,6 +155,13 @@ const cardRefMatches = (left: CardRef, right: CardRef): boolean =>
       right.zone !== undefined &&
       zonesEqual(left.zone, right.zone)));
 
+const hiddenLifeCardRefMatches = (left: CardRef, right: CardRef): boolean =>
+  left.instanceId === right.instanceId &&
+  left.playerId === right.playerId &&
+  left.zone !== undefined &&
+  right.zone !== undefined &&
+  zonesEqual(left.zone, right.zone);
+
 const hasDuplicateInstanceIds = (cards: readonly CardRef[]): boolean =>
   new Set(cards.map((card) => card.instanceId)).size !== cards.length;
 
@@ -170,6 +194,13 @@ const isSupportedSelectCardsDecision = (
       decision.request.allowFewerIfUnavailable &&
       decision.request.visibility === "public" &&
       decision.visibility.type === "public") ||
+    (String(decision.id).startsWith(lifeDecisionIdPrefix) &&
+      decision.request.zone === "life" &&
+      isSupportedRelativePlayer(decision.request.player) &&
+      decision.request.allowFewerIfUnavailable &&
+      decision.request.visibility === "privateToChooser" &&
+      decision.visibility.type === "private" &&
+      decision.visibility.playerId === decision.playerId) ||
     (String(decision.id).startsWith(costAreaDecisionIdPrefix) &&
       decision.request.zone === "costArea" &&
       decision.request.chooser === "self" &&
@@ -231,9 +262,11 @@ const cardsInPlayerZone = (
       ? player.deck
       : zone === "trash"
         ? player.trash
-        : zone === "costArea"
-          ? player.costArea
-          : undefined;
+        : zone === "life"
+          ? player.life.map((lifeCard) => lifeCard.card)
+          : zone === "costArea"
+            ? player.costArea
+            : undefined;
 };
 
 const currentCandidateRefsForDecision = (
@@ -318,7 +351,9 @@ const findCurrentCards = (
   const selectedRefs: CardRef[] = [];
   for (const ref of selected) {
     const match = candidateRefs.find((candidate) =>
-      cardRefMatches(ref, candidate),
+      decision.request.zone === "life"
+        ? hiddenLifeCardRefMatches(ref, candidate)
+        : cardRefMatches(ref, candidate),
     );
     if (match === undefined) {
       return null;
@@ -417,7 +452,9 @@ export const createSupportedHandSelectionChoiceDecision = (
         ? zoneOwner.deck
         : effect.zone === "trash"
           ? zoneOwner.trash
-          : zoneOwner.costArea;
+          : effect.zone === "life"
+            ? zoneOwner.life.map((lifeCard) => lifeCard.card)
+            : zoneOwner.costArea;
   const candidateVisibility =
     effect.zone === "trash" || effect.zone === "costArea"
       ? { type: "public" as const }
@@ -457,11 +494,13 @@ export const createSupportedHandSelectionChoiceDecision = (
   const idPrefix =
     effect.zone === "trash"
       ? trashDecisionIdPrefix
-      : effect.zone === "costArea"
-        ? costAreaDecisionIdPrefix
-        : effect.zone === "deck"
-          ? deckDecisionIdPrefix
-          : handDecisionIdPrefix;
+      : effect.zone === "life"
+        ? lifeDecisionIdPrefix
+        : effect.zone === "costArea"
+          ? costAreaDecisionIdPrefix
+          : effect.zone === "deck"
+            ? deckDecisionIdPrefix
+            : handDecisionIdPrefix;
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
@@ -469,9 +508,11 @@ export const createSupportedHandSelectionChoiceDecision = (
     prompt:
       effect.zone === "trash"
         ? "Choose cards from trash."
-        : effect.zone === "costArea"
-          ? "Choose DON!! cards."
-          : "Choose cards from hand.",
+        : effect.zone === "life"
+          ? "Choose Life cards."
+          : effect.zone === "costArea"
+            ? "Choose DON!! cards."
+            : "Choose cards from hand.",
     causedBy,
     visibility,
     request: {
@@ -482,7 +523,9 @@ export const createSupportedHandSelectionChoiceDecision = (
       min: effect.min,
       max: effect.max,
       allowFewerIfUnavailable:
-        effect.zone === "trash" || effect.zone === "costArea",
+        effect.zone === "trash" ||
+        effect.zone === "life" ||
+        effect.zone === "costArea",
       visibility:
         effect.zone === "trash" || effect.zone === "costArea"
           ? "public"

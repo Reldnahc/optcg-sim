@@ -27,7 +27,13 @@ export type PlaceSetRemainderEffect = Extract<
   Effect,
   { type: "placeSetRemainder" }
 >;
-export type SavedSelectedCardsKind = "hand" | "deck" | "trash" | "don" | "set";
+export type SavedSelectedCardsKind =
+  | "hand"
+  | "deck"
+  | "trash"
+  | "life"
+  | "don"
+  | "set";
 
 const zoneNames = new Set<string>([
   "hand",
@@ -81,6 +87,14 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
     effect.visibility === "bothPlayers"
   ) {
     return "trash";
+  }
+  if (
+    effect.zone === "life" &&
+    (effect.player === "self" || effect.player === "opponent") &&
+    (effect.chooser === "self" || effect.chooser === "opponent") &&
+    effect.visibility === "chooserOnly"
+  ) {
+    return "life";
   }
   if (
     effect.zone === "costArea" &&
@@ -165,6 +179,11 @@ export const isSupportedMoveSelectedSegment = (
       effect.position === "bottom" &&
       effect.destinationFaceUp === undefined &&
       selectionKind === "trash") ||
+    (effect.from === "life" &&
+      effect.to === "trash" &&
+      effect.position === undefined &&
+      effect.destinationFaceUp === undefined &&
+      selectionKind === "life") ||
     (effect.from === "hand" &&
       effect.to === "deck" &&
       (effect.position === "top" ||

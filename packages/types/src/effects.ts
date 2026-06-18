@@ -420,6 +420,7 @@ export type SequenceSaveResultKind =
   | "selectedCards:hand"
   | "selectedCards:deck"
   | "selectedCards:trash"
+  | "selectedCards:life"
   | "selectedCards:don"
   | "selectedCards:set"
   | "selectedTargets"

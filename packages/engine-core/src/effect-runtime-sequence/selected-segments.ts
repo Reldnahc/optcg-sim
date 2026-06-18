@@ -19,6 +19,7 @@ import {
 } from "../actions/state.js";
 import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
 import { applyDonAttachment } from "../runtime/primitives/don-attachment.js";
+import { moveConcreteCardsToTrash } from "../movement/concrete-card-movement.js";
 import {
   applySetToLifeSelectedCardMoveSegment,
   applyTrashToLifeSelectedCardMoveSegment,
@@ -404,6 +405,13 @@ export const applySelectedCardMoveSegment = (
     return applyTrashToDeckBottomSelectedCardMoveSegment(params, selected);
   }
   if (
+    params.effect.from === "life" &&
+    params.effect.to === "trash" &&
+    params.effect.position === undefined
+  ) {
+    return applyLifeToTrashSelectedCardMoveSegment(params, selected);
+  }
+  if (
     params.effect.from === "hand" &&
     params.effect.to === "deck" &&
     (params.effect.position === "top" ||
@@ -435,6 +443,98 @@ export const applySelectedCardMoveSegment = (
     return applySetToLifeSelectedCardMoveSegment(params, selected);
   }
   return { ok: false };
+};
+
+const applyLifeToTrashSelectedCardMoveSegment = (
+  params: SelectedCardMoveSegmentParams,
+  selected: readonly CardRef[],
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      paused?: false;
+      state: GameState;
+    }
+  | { ok: false } => {
+  if (selected.length === 0) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: false,
+            selectedCards: [],
+          },
+        },
+      },
+      ok: true,
+      state: params.state,
+    };
+  }
+  const playerId = selectedRefsPlayerId(selected);
+  const player = playerId === null ? undefined : params.state.players[playerId];
+  if (playerId === null || player === undefined) {
+    return { ok: false };
+  }
+
+  const movedCards: CardInstance[] = [];
+  for (const selectedCard of selected) {
+    const current = player.life
+      .map((lifeCard) => lifeCard.card)
+      .find(
+        (card) =>
+          card.instanceId === selectedCard.instanceId &&
+          card.cardId === selectedCard.cardId,
+      );
+    if (current === undefined) {
+      return { ok: false };
+    }
+    movedCards.push(current);
+  }
+
+  const events: EngineEvent[] = [];
+  const moved = moveConcreteCardsToTrash(params.state, events, movedCards, {
+    cardMovedPayloadShape: "zoneRefs",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    causedBy: {
+      type: "effect",
+      queueEntryId: params.entry.id,
+      effectId: params.entry.effectBlockId,
+    },
+    emitCardTrashed: true,
+    includeCardIdentityInCardMoved: true,
+    playerId,
+    reason: "moveCards",
+    sourceZone: "life",
+  });
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: movedCards.length > 0,
+          selectedCards: [...selected],
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...moved.state,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
 };
 
 const applyTrashToDeckBottomSelectedCardMoveSegment = (
