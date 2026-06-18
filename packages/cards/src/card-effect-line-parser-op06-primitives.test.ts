@@ -299,4 +299,76 @@ describe("OP06 primitive parser support", () => {
       },
     });
   });
+
+  it("parses K.O. any-number selected targets into selected-count leader power", () => {
+    const result = parseCardEffectLine(
+      "[Main]/[Counter] Your Leader gains +1000 power during this turn. Then, you may K.O. any number of your {Thriller Bark Pirates} type Characters with a cost of 2 or less. Your Leader gains an additional +1000 power during this turn for every Character K.O.'d.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                value: 1000,
+                duration: { type: "thisTurn" },
+              },
+            },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    saveResultAs: "selected:ko-target",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zone: "characterArea",
+                        min: 0,
+                        max: 5,
+                        filter: {
+                          categories: ["character"],
+                          typesAny: ["Thriller Bark Pirates"],
+                          cost: { max: 2 },
+                        },
+                      },
+                    },
+                  },
+                  { effect: { type: "ko" } },
+                ],
+              },
+            },
+            {
+              effect: {
+                type: "modifyPower",
+                target: { type: "myLeader" },
+                value: {
+                  type: "selectedCardCount",
+                  selection: "selected:ko-target",
+                  multiplier: 1000,
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:modifyPower",
+        "instruction:ko",
+        "count:anyNumber",
+        "filter:type",
+        "filter:cost",
+        "value:dynamic:selectedCardCount",
+        "count:selectedCardCount",
+      ]),
+    );
+  });
 });

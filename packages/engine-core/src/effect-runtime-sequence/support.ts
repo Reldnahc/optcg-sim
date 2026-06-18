@@ -260,10 +260,9 @@ const canResolveMoveCardsCount = (
   typeof effect.count === "number" ||
   effect.count.type === "countMatchingZoneCards" ||
   (effect.count.type === "selectedCardCount" &&
-    canConsumeSelectedCards(
+    canConsumeSelectedCardCountReference(
       state.savedResults,
       effect.count.selection,
-      selectedCardKinds,
     ));
 
 const hasSavedSelectedTargets = (
@@ -308,10 +307,9 @@ const canResolveDynamicNumberValueReference = (
     return true;
   }
   if (value.type === "selectedCardCount") {
-    return canConsumeSelectedCards(
+    return canConsumeSelectedCardCountReference(
       state.savedResults,
       value.selection,
-      selectedCardKinds,
     );
   }
   if (value.type === "sumSelectedCardCosts") {
@@ -329,6 +327,13 @@ const canResolveDynamicNumberValueReference = (
   }
   return true;
 };
+
+const canConsumeSelectedCardCountReference = (
+  state: SequenceSupportState["savedResults"],
+  selection: unknown,
+): boolean =>
+  canConsumeSelectedCards(state, selection, selectedCardKinds) ||
+  canConsumeSavedFieldObject(state, "selectedTargets", String(selection));
 
 const canResolveContinuousDynamicValues = (
   state: SequenceSupportState,

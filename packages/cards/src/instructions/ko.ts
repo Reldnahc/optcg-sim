@@ -1,4 +1,9 @@
-import type { Effect, Target, TargetPlayerRef } from "@optcg/types";
+import type {
+  Effect,
+  SelectionId,
+  Target,
+  TargetPlayerRef,
+} from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
@@ -16,7 +21,7 @@ import {
   type PublicFieldSelectionZone,
 } from "./effect-builders.js";
 
-const koTargetSelectionId = "selected:ko-target";
+export const koTargetSelectionId = "selected:ko-target" as SelectionId;
 const koOrReturnSelectionId = "selected:ko-or-return-target";
 const koOrRestSelectionId = "selected:ko-or-rest-target";
 
@@ -30,7 +35,7 @@ export const koInstructionPrimitive = {
 } as const;
 
 export const parseKoInstruction: InstructionParser = (input) => {
-  const actionMatch = /^K\.O\.\s+(?<rest>.*)$/i.exec(input.text);
+  const actionMatch = /^(?:you may\s+)?K\.O\.\s+(?<rest>.*)$/i.exec(input.text);
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
@@ -160,6 +165,28 @@ export const parseKoInstruction: InstructionParser = (input) => {
     };
   }
 
+  const anyNumberTarget = parseAnyNumberSelfCharacterKoTarget(actionRest);
+  if (anyNumberTarget !== undefined) {
+    return {
+      effect: selectThenApplyKoEffect({
+        min: 0,
+        max: 5,
+        player: "self",
+        filter: anyNumberTarget.filter,
+        zone: "characterArea",
+        selectionId: koTargetSelectionId,
+      }),
+      evidence: [
+        "instruction:ko",
+        "count:anyNumber",
+        "chooser:self",
+        ...anyNumberTarget.evidence,
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const cardinality = parseUpToCardinality({ text: actionRest });
   if (cardinality === undefined) {
     return undefined;
@@ -208,6 +235,33 @@ export const parseKoInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseAnyNumberSelfCharacterKoTarget(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: TargetFilter;
+    }
+  | undefined {
+  const match = /^any number (?<target>of your .+?)\.?$/iu.exec(text);
+  const targetText = match?.groups?.["target"];
+  if (targetText === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates({
+    text: targetText.replace(/^of your\s+/iu, ""),
+  });
+  if (
+    predicates === undefined ||
+    predicates.rest.length > 0 ||
+    !predicates.filter.categories?.includes("character")
+  ) {
+    return undefined;
+  }
+  return {
+    evidence: ["player:self", ...predicates.evidence],
+    filter: predicates.filter,
+  };
+}
 
 function parseTotalStatLimitedKoTarget(text: string):
   | {

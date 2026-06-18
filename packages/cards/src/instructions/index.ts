@@ -31,7 +31,7 @@ export {
   parseSetDonActiveInstruction,
 } from "./don-movement.js";
 export { parseInvalidateEffectsInstruction } from "./invalidate-effects.js";
-export { parseKoInstruction } from "./ko.js";
+export { koTargetSelectionId, parseKoInstruction } from "./ko.js";
 export { parseLifeMovementInstruction } from "./life-movement.js";
 export { parseLifeStateInstruction } from "./life-state.js";
 export { parseModifyPowerInstruction } from "./modify-power.js";

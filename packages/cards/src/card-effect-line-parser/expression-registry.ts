@@ -50,6 +50,7 @@ import {
   eventTimedDelayedSegmentParser,
   implicitEventReactionExpressionParser,
   instructionExpressionSegmentParser,
+  koCountPowerContinuationExpressionParser,
   lookPlayFromTopExpressionParser,
   opponentOptionalCostExpressionParser,
   opponentOptionalCostSegmentParser,
@@ -329,6 +330,7 @@ const costedExpressions = [
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
   selectedRefreshLockExpressionParser,
+  koCountPowerContinuationExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser({
     conditions: conditionParsers,
   }),
@@ -460,6 +462,7 @@ const conditionalBlockBodyExpressions = () =>
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedAttackRetargetExpressionParser,
     selectedRefreshLockExpressionParser,
+    koCountPowerContinuationExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
     }),
@@ -531,6 +534,7 @@ const rootExpressionParsers = () =>
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedRefreshLockExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
+    koCountPowerContinuationExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
     }),

@@ -16,6 +16,8 @@ const ownerDeckBottomTrashSelection =
   "trashSelection:owner-deck-bottom" as SelectionId;
 const selfTrashDeckPlacementSelection =
   "trashSelection:self-trash-to-deck-placement" as SelectionId;
+const selectedFieldTargetsSelection =
+  "selectedTargets:self-field-count" as SelectionId;
 
 const reindexTrash = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
@@ -97,6 +99,46 @@ const selectedCountPowerSequence = (): Extract<
           type: "selectedCardCount",
           selection: selfTrashDeckPlacementSelection,
           per: 3,
+          multiplier: 1000,
+        },
+        duration: { type: "thisTurn" },
+      },
+    },
+  ],
+});
+
+const selectedTargetCountPowerSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      saveResultAs: selectedFieldTargetsSelection,
+      effect: {
+        type: "selectTargets",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zone: "characterArea",
+          filter: { categories: ["character"], cost: { max: 2 } },
+          min: 0,
+          max: 3,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+        },
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: {
+          type: "selectedCardCount",
+          selection: selectedFieldTargetsSelection,
           multiplier: 1000,
         },
         duration: { type: "thisTurn" },
@@ -190,4 +232,65 @@ test("selectedCardCount power value groups selected cards by per count", () => {
   );
   assert.equal(modifier.layer, "powerAdd");
   assert.deepEqual(modifier.operation, { type: "addPower", value: 1000 });
+});
+
+test("selectedCardCount power value counts saved selected field targets", () => {
+  const { state } = sequenceQueueState(selectedTargetCountPowerSequence(), 0);
+  const player = must(state.players[p1], "p1");
+  const sourceCharacter = must(player.characters[0], "source character");
+  const firstCharacter = must(player.hand[0], "first character");
+  const secondCharacter = must(player.hand[1], "second character");
+  player.hand = player.hand.slice(2);
+  player.characters = [
+    sourceCharacter,
+    {
+      ...firstCharacter,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 1,
+      },
+    },
+    {
+      ...secondCharacter,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 2,
+      },
+    },
+  ];
+  for (const card of [firstCharacter, secondCharacter]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 2,
+    });
+  }
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectTargets");
+  assert.equal(decision.candidates.length, 2);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "targets",
+      targets: decision.candidates.map((candidate) => candidate.card),
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const modifier = must(
+    resolved.state.continuousEffects.at(-1)?.modifier,
+    "power modifier",
+  );
+  assert.equal(modifier.layer, "powerAdd");
+  assert.deepEqual(modifier.operation, { type: "addPower", value: 2000 });
 });

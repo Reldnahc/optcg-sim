@@ -447,11 +447,18 @@ export const resolveDynamicNumberValue = (
   }
   if (value.type === "selectedCardCount") {
     const reference = context?.savedReferences?.[value.selection];
-    if (reference?.kind !== "selectedCards") {
+    if (
+      reference?.kind !== "selectedCards" &&
+      reference?.kind !== "selectedTargets"
+    ) {
       return null;
     }
     const per = value.per ?? 1;
-    return Math.floor(reference.cards.length / per) * value.multiplier;
+    const count =
+      reference.kind === "selectedCards"
+        ? reference.cards.length
+        : reference.targets.length;
+    return Math.floor(count / per) * value.multiplier;
   }
   const reference = context?.savedReferences?.[value.selection];
   if (reference?.kind !== "selectedCards") {
