@@ -31,6 +31,21 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
   if (rest === undefined) {
     return undefined;
   }
+  if (/^this Character$/iu.test(rest.trim())) {
+    return {
+      effect: {
+        type: "bounce",
+        target: { type: "self" },
+        destination: "hand",
+      },
+      evidence: [
+        "instruction:returnToOwnerHand",
+        "target:thisCharacter",
+        "destination:ownerHand",
+      ],
+      rest: "",
+    };
+  }
 
   const cardinality = parseReturnCardinality(rest);
   if (cardinality === undefined) {
