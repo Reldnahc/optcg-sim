@@ -21,6 +21,11 @@ export const preventOpponentCharactersAttackPrimitive = {
 
 export const parsePreventOpponentCharactersAttackInstruction: InstructionParser =
   (input) => {
+    const opponentLeader = parseOpponentLeaderAttackRestriction(input);
+    if (opponentLeader !== undefined) {
+      return opponentLeader;
+    }
+
     const mixedLeaderOrCharacter =
       parseOpponentRestedLeaderOrCharacterAttackRestriction(input);
     if (mixedLeaderOrCharacter !== undefined) {
@@ -82,6 +87,71 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
       rest: "",
     };
   };
+
+const parseOpponentLeaderAttackRestriction: InstructionParser = (input) => {
+  const cardinality = parseUpToCardinality({ text: input.text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const match =
+    /^of your opponent's (?<state>active|rested)?\s*Leader cannot attack (?<durationText>.+)$/iu.exec(
+      cardinality.rest,
+    );
+  const state = match?.groups?.["state"]?.toLowerCase();
+  const durationText = match?.groups?.["durationText"];
+  if (
+    (state !== undefined && state !== "active" && state !== "rested") ||
+    durationText === undefined
+  ) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    attackRestrictionDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  const parsedDuration = duration.duration;
+
+  return {
+    effect: selectThenApplyFieldTarget({
+      selectionId: thatCharacterSelectionId,
+      selectId: "select:cannot-attack",
+      player: "opponent",
+      zones: ["leaderArea"],
+      filter: {
+        categories: ["leader"],
+        ...(state === undefined ? {} : { state }),
+      },
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      apply: (target) => ({
+        type: "cannotAttack",
+        target,
+        duration: parsedDuration,
+      }),
+    }),
+    evidence: [
+      "instruction:preventActivation",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      "target:opponentLeader",
+      "player:opponent",
+      "filter:category:leader",
+      ...(state === undefined ? [] : ([`filter:state:${state}`] as const)),
+      ...duration.evidence,
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
 
 const parseOpponentRestedLeaderOrCharacterAttackRestriction: InstructionParser =
   (input) => {
