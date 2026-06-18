@@ -39,6 +39,22 @@ Then, if you have a {Celestial Dragons} type Character, draw 1 card.`,
     ]);
   });
 
+  it("groups choose-one headers with hyphen bullets", () => {
+    const lines = gameplayLinesFromTextParts([
+      `[On Play] Your opponent chooses one:
+- Trash 1 card from the top of your opponent's Life cards.
+- Add 1 card from the top of your deck to the top of your Life cards.
+[Main] Draw 1 card.`,
+    ]);
+
+    assert.deepEqual(lines, [
+      `[On Play] Your opponent chooses one:
+- Trash 1 card from the top of your opponent's Life cards.
+- Add 1 card from the top of your deck to the top of your Life cards.`,
+      "[Main] Draw 1 card.",
+    ]);
+  });
+
   it("groups apply-each headers with their bullet effects", () => {
     const lines = gameplayLinesFromTextParts([
       `Apply each of the following effects based on the number of cards in your trash:

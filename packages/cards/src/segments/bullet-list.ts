@@ -15,7 +15,10 @@ export function parseBulletListPayload(
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
-    if (line === undefined || !line.startsWith("\u2022")) {
+    if (
+      line === undefined ||
+      (!line.startsWith("\u2022") && !line.startsWith("-"))
+    ) {
       break;
     }
     const item = line.slice(1).trim();

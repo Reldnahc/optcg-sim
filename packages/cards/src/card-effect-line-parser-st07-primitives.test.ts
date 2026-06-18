@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import {
+  parseCardEffectLine,
+  parseCardEffectLinesDetailed,
+} from "./card-effect-line-parser.js";
 
 it("parses On Play top-Life inspect placement with yours-or-opponent wording", () => {
   const result = parseCardEffectLine(
@@ -33,3 +36,43 @@ it("parses On Play top-Life inspect placement with yours-or-opponent wording", (
     ]),
   );
 });
+
+it.each(["On Play", "Main"])(
+  "parses %s opponent-chosen Life trash or Life add choice with hyphen bullets",
+  (entry) => {
+    const result =
+      parseCardEffectLinesDetailed(`[${entry}] Your opponent chooses one:
+- Trash 1 card from the top of your opponent's Life cards.
+- Add 1 card from the top of your deck to the top of your Life cards.`);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error(result.diagnostic.reason);
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || parsed.kind === "metadata") {
+      throw new Error("expected parsed runtime effect line");
+    }
+    expect(parsed.block.category).toBe("auto");
+    expect(parsed.block.effect).toMatchObject({
+      type: "choice",
+      chooser: "opponent",
+      min: 1,
+      max: 1,
+      options: [
+        { effect: { type: "moveCards", to: { zone: "trash" } } },
+        { effect: { type: "moveCards", to: { zone: "life" } } },
+      ],
+    });
+    expect(parsed.evidence).toEqual(
+      expect.arrayContaining([
+        "expression:choice",
+        "composition:chooseOne",
+        "chooser:opponent",
+        "choice:option",
+        "instruction:moveCards",
+        "zone:life",
+      ]),
+    );
+  },
+);

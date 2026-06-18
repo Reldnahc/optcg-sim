@@ -144,7 +144,7 @@ const groupBulletBlockSlices = (
     index += 1;
     while (index < lines.length) {
       const bulletLine = lines[index];
-      if (bulletLine === undefined || !bulletLine.text.startsWith("\u2022")) {
+      if (bulletLine === undefined || !isBulletLine(bulletLine.text)) {
         break;
       }
       block.push(bulletLine);
@@ -182,6 +182,9 @@ const parseBulletBlockHeader = (
   }
   return undefined;
 };
+
+const isBulletLine = (line: string): boolean =>
+  line.startsWith("\u2022") || line.startsWith("-");
 
 const joinSlices = (
   slices: readonly SourceSlice[],

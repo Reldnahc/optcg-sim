@@ -192,24 +192,32 @@ function parseChooseOneBody(
     return undefined;
   }
 
-  return {
-    chooser,
-    ...(condition === undefined ? {} : { condition }),
-    options: payload.items.map((item, index) => {
-      const parsed = parseOptionEffect(item, expressionParsers);
-      return {
+  const parsedOptions = payload.items.map((item, index) => {
+    const parsed = parseOptionEffect(item, expressionParsers);
+    return {
+      option: {
         id: `choice:${String(index + 1)}`,
         label: item,
         effect: parsed?.effect ?? {
-          type: "custom",
+          type: "custom" as const,
           handler: "unsupported:chooseOneOption",
         },
-      };
-    }),
+      },
+      evidence: parsed?.evidence ?? [],
+    };
+  });
+
+  return {
+    chooser,
+    ...(condition === undefined ? {} : { condition }),
+    options: parsedOptions.map((option) => option.option),
     ...(payload.trailingThen === undefined
       ? {}
       : { trailingThen: payload.trailingThen }),
-    evidence: payload.items.map(() => "choice:option"),
+    evidence: parsedOptions.flatMap((option) => [
+      "choice:option" as const,
+      ...option.evidence,
+    ]),
     presentationSpans: choicePresentationSpans(source),
   };
 }
@@ -283,7 +291,7 @@ function choicePresentationSpans(
     return [];
   }
 
-  const optionLines = lines.filter((line) => line.text.startsWith("\u2022"));
+  const optionLines = lines.filter((line) => isChoiceBulletLine(line.text));
   return [
     sourceSpan("span:choice", "choice", header, ["composition:chooseOne"]),
     ...optionLines.flatMap(
@@ -307,7 +315,7 @@ function choicePresentationSpans(
 }
 
 function choiceOptionBodySource(source: SourceSlice): SourceSlice {
-  const bulletMatch = /^\u2022\s*/u.exec(source.rawText);
+  const bulletMatch = /^(?:\u2022|-)\s*/u.exec(source.rawText);
   if (bulletMatch === null) {
     return source;
   }
@@ -318,6 +326,10 @@ function choiceOptionBodySource(source: SourceSlice): SourceSlice {
     start: source.start + bulletMatch[0].length,
     end: source.end,
   };
+}
+
+function isChoiceBulletLine(text: string): boolean {
+  return text.startsWith("\u2022") || text.startsWith("-");
 }
 
 function sourceLines(source: SourceSlice): readonly SourceSlice[] {
