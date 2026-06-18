@@ -2,6 +2,7 @@ import type { Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
+  parseAllFieldTarget,
   parseOpponentCardsTarget,
   parseOpponentCharactersOrDonCardsTarget,
   parseOpponentCharactersTarget,
@@ -68,6 +69,28 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
   const actionRest = actionMatch?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
+  }
+
+  const allTarget = parseAllFieldTarget({ text: actionRest });
+  if (
+    allTarget !== undefined &&
+    allTarget.target.type === "all" &&
+    allTarget.target.player === "opponent" &&
+    (allTarget.rest.length === 0 || allTarget.rest === ".")
+  ) {
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: { type: "rest", target: allTarget.target },
+          },
+        ],
+      },
+      evidence: ["instruction:rest", ...allTarget.evidence],
+      rest: "",
+    };
   }
 
   const cardinality = parseUpToCardinality({ text: actionRest });

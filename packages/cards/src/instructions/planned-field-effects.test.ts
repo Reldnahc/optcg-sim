@@ -348,6 +348,40 @@ describe("planned field-effect instruction parsers", () => {
     });
   });
 
+  it("parses rest all opponent Characters through the reusable all-field target", () => {
+    expect(
+      parseRestOpponentCharactersInstruction({
+        text: "Rest all of your opponent's Characters.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "rest",
+              target: {
+                type: "all",
+                zone: "characterArea",
+                player: "opponent",
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:rest",
+        "cardinality:all",
+        "player:opponent",
+        "zone:characterArea",
+        "filter:category:character",
+      ],
+      rest: "",
+    });
+  });
+
   it("keeps wording variants inside the same rest primitive", () => {
     const plural = parseRestOpponentCharactersInstruction({
       text: "Rest up to 1 of your opponent's Characters",

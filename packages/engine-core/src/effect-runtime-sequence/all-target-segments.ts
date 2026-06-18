@@ -28,6 +28,9 @@ type AllTargetTrashEffect = Extract<Effect, { type: "trash" }> & {
 type AllTargetKoEffect = Extract<Effect, { type: "ko" }> & {
   target: Extract<Target, { type: "all" }>;
 };
+type AllTargetRestEffect = Extract<Effect, { type: "rest" }> & {
+  target: Extract<Target, { type: "all" }>;
+};
 type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -205,7 +208,7 @@ const withoutCurrentPowerFilter = (filter: CardFilter): CardFilter => {
   return rest;
 };
 
-const cardMatchesAllKoFilter = (
+const cardMatchesAllFieldFilter = (
   state: GameState,
   playerId: CardRef["playerId"],
   card: CardInstance,
@@ -301,7 +304,7 @@ export const applyAllTargetKoSequenceSegment = (params: {
     }
     return player.characters
       .filter((card) =>
-        cardMatchesAllKoFilter(
+        cardMatchesAllFieldFilter(
           params.state,
           targetPlayerId,
           card,
@@ -380,5 +383,132 @@ export const applyAllTargetKoSequenceSegment = (params: {
       },
     },
     state: resolvedKo.state,
+  };
+};
+
+export const applyAllTargetRestSequenceSegment = (params: {
+  effect: AllTargetRestEffect;
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SequenceEffect["effects"][number];
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const targetPlayerIds = targetPlayersForAllTarget(
+    params.state,
+    params.entry,
+    params.effect.target.player,
+  );
+  if (targetPlayerIds.length === 0) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  const selectedTargets = targetPlayerIds.flatMap((targetPlayerId) => {
+    const player = params.state.players[targetPlayerId];
+    if (player === undefined) {
+      return [];
+    }
+    return player.characters
+      .filter((card) =>
+        cardMatchesAllFieldFilter(
+          params.state,
+          targetPlayerId,
+          card,
+          params.entry.source,
+          params.effect.target.filter,
+        ),
+      )
+      .map((card) => toCardRef(card, targetPlayerId));
+  });
+  const resolvedRest = executeSelectedTargetEffectPrimitive(
+    params.state,
+    params.entry,
+    {
+      type: "rest",
+      target: {
+        type: "choose",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: params.effect.target.player,
+          zone: "characterArea",
+          min: selectedTargets.length,
+          max: selectedTargets.length,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+        },
+      },
+    },
+    selectedTargets,
+  );
+  if (resolvedRest.errors !== undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+  if (resolvedRest.state.pendingDecision?.type === "chooseReplacement") {
+    return {
+      events: resolvedRest.events,
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: resolvedRest.state,
+    };
+  }
+  return {
+    events: resolvedRest.events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          changedState: resolvedRest.events.length > 0,
+          selectedTargets,
+          succeeded: true,
+        },
+      },
+    },
+    state: resolvedRest.state,
   };
 };

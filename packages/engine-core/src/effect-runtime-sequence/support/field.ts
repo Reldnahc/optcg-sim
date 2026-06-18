@@ -25,6 +25,7 @@ export type RestEffect = Extract<Effect, { type: "rest" }> & {
     | { type: "chooseFromZones" }
     | { type: "opponentLeader" }
     | { type: "self" }
+    | { type: "all" }
     | { type: "savedFieldObject" }
   >;
 };
@@ -176,6 +177,12 @@ export const isSupportedRestSegment = (
   effect.type === "rest" &&
   (effect.target.type === "opponentLeader" ||
     effect.target.type === "self" ||
+    (effect.target.type === "all" &&
+      effect.target.zone === "characterArea" &&
+      (effect.target.player === "self" ||
+        effect.target.player === "opponent" ||
+        effect.target.player === "anyPlayer") &&
+      isSupportedPublicFieldTargetFilter(effect.target.filter)) ||
     isSupportedSavedFieldObjectKoTarget(effect.target) ||
     ((effect.target.type === "choose" ||
       effect.target.type === "chooseFromZones") &&

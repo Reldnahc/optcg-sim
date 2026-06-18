@@ -11,6 +11,7 @@ import type {
 import { createSequenceSelectTargetsPause } from "./target-decisions.js";
 import {
   applyAllTargetKoSequenceSegment,
+  applyAllTargetRestSequenceSegment,
   applyAllTargetTrashSequenceSegment,
 } from "./all-target-segments.js";
 import {
@@ -53,6 +54,10 @@ type SelfKoEffect = KoEffect & {
 type AllTargetTrashEffect = TrashEffect & {
   target: Extract<Target, { type: "all" }>;
 };
+type RestEffect = Extract<Effect, { type: "rest" }>;
+type AllTargetRestEffect = RestEffect & {
+  target: Extract<Target, { type: "all" }>;
+};
 type SegmentHandlerResult =
   | {
       events: EngineEvent[];
@@ -81,6 +86,10 @@ const isSelfKoEffect = (effect: KoEffect): effect is SelfKoEffect =>
 const isAllTargetTrashEffect = (
   effect: TrashEffect,
 ): effect is AllTargetTrashEffect => effect.target.type === "all";
+
+const isAllTargetRestEffect = (
+  effect: RestEffect,
+): effect is AllTargetRestEffect => effect.target.type === "all";
 
 const applySelfKoSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
@@ -477,6 +486,45 @@ export const applyFieldMutationSequenceSegment = (params: {
         kind: "paused",
         ok: true,
         state: paused.state,
+      };
+    }
+    if (isAllTargetRestEffect(segment.effect)) {
+      const rested = applyAllTargetRestSequenceSegment({
+        effect: segment.effect,
+        emptySegmentResult,
+        entry,
+        index,
+        ledgers,
+        segment,
+        segmentKey,
+        state,
+      });
+      const nextEvents = [...events, ...rested.events];
+      if (rested.state.pendingDecision?.type === "chooseReplacement") {
+        const frame = frameForPausedSequenceDecision({
+          decision: rested.state.pendingDecision,
+          entry,
+          effectPath: [...effectPath],
+          index,
+          savedReferences: rested.ledgers.savedReferences,
+          segmentResults: rested.ledgers.segmentResults,
+          state: rested.state,
+        });
+        return {
+          events: nextEvents,
+          handled: true,
+          kind: "paused",
+          ok: true,
+          state: stateWithPausedSequenceFrame(rested.state, entry, frame),
+        };
+      }
+      return {
+        events: nextEvents,
+        handled: true,
+        kind: "continue",
+        ledgers: rested.ledgers,
+        ok: true,
+        state: rested.state,
       };
     }
     if (segment.effect.target.type === "opponentLeader") {
