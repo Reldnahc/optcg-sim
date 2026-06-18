@@ -4,6 +4,7 @@ import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import {
   parseSelectedLeaderFilter,
+  parseYourNamedCardsTarget,
   parseYourLeaderOrCharacterCardsTarget,
 } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
@@ -173,6 +174,63 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
         ...quantity.evidence,
         "chooser:self:upTo",
         ...leaderOrCharacterTarget.evidence,
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
+  const namedCardsTarget = parseYourNamedCardsTarget({ text: quantity.rest });
+  if (
+    namedCardsTarget !== undefined &&
+    namedCardsTarget.target?.type === "chooseFromZones" &&
+    (namedCardsTarget.rest.length === 0 || namedCardsTarget.rest === ".")
+  ) {
+    const zones = ["leaderArea", "characterArea"] as const;
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select:field-to-activate",
+            connector: "always",
+            saveResultAs: fieldActivationTarget,
+            effect: {
+              type: "selectTargets",
+              request: {
+                ...namedCardsTarget.target.request,
+                min: quantity.cardinality.min,
+                max: quantity.cardinality.max,
+                allowFewerIfUnavailable: true,
+              },
+            },
+          },
+          {
+            id: "activate:selected-field",
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: fieldActivationTarget,
+                },
+                zones,
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        ...quantity.evidence,
+        "chooser:self:upTo",
+        ...namedCardsTarget.evidence,
         "state:active",
         "composition:selectThenApply",
       ],

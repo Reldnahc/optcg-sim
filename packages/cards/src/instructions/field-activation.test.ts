@@ -331,6 +331,55 @@ describe("field activation instruction parser", () => {
     });
   });
 
+  it("parses named field-card activation as a reusable saved target", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "set up to 1 of your [Foxy] cards as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 0,
+                max: 1,
+                filter: { names: ["Foxy"] },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:yourNamedCards",
+        "player:self",
+        "filter:name",
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses compound Character and DON activation through reusable activation primitives", () => {
     const result = parseSetFieldActiveInstruction({
       text: "Set up to 1 of your {Fish-Man} or {Merfolk} type Characters and up to 1 of your DON!! cards as active.",

@@ -428,3 +428,61 @@ it("parses rest-DON cost with reveal top play rested and bottom cleanup", () => 
     ]),
   );
 });
+
+it("parses DON-count condition with named field-card activation", () => {
+  const result = parseCardEffectLine(
+    "[Main] If the number of DON!! cards on your field is equal to or less than the number on your opponent's field, set up to 1 of your [Foxy] cards as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      condition: {
+        type: "fieldCountDifference",
+        minuend: { player: "opponent", filter: { categories: ["don"] } },
+        subtrahend: { player: "self", filter: { categories: ["don"] } },
+        op: "gte",
+        value: 0,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                min: 0,
+                max: 1,
+                filter: { names: ["Foxy"] },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "condition:fieldCountDifference",
+      "filter:category:don",
+      "instruction:activate",
+      "target:yourNamedCards",
+      "filter:name",
+      "state:active",
+    ]),
+  );
+});
