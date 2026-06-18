@@ -51,23 +51,29 @@ describe("Life state instruction parser", () => {
     });
   });
 
-  it("parses own Life inspect and reorder as the same private reorder primitive", () => {
-    expect(
-      parseLifeStateInstruction({
-        text: "Look at all of your Life cards and place them back in your Life area in any order.",
-      }),
-    ).toEqual({
-      effect: { type: "reorderLife", player: "self", viewer: "self" },
-      evidence: [
-        "instruction:reorder",
-        "player:self",
-        "zone:life",
-        "visibility:private",
-        "order:anyOrder",
-      ],
-      rest: "",
-    });
-  });
+  it.each([
+    "Look at all of your Life cards and place them back in your Life area in any order.",
+    "Look at all your Life cards and place them back in your Life area in any order.",
+  ])(
+    "parses own Life inspect and reorder as the same private reorder primitive: %s",
+    (text) => {
+      expect(
+        parseLifeStateInstruction({
+          text,
+        }),
+      ).toEqual({
+        effect: { type: "reorderLife", player: "self", viewer: "self" },
+        evidence: [
+          "instruction:reorder",
+          "player:self",
+          "zone:life",
+          "visibility:private",
+          "order:anyOrder",
+        ],
+        rest: "",
+      });
+    },
+  );
 
   it("parses turning all own Life face-down as a reusable Life state primitive", () => {
     expect(

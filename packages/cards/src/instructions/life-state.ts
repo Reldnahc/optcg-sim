@@ -29,7 +29,7 @@ export const parseLifeStateInstruction: InstructionParser = (input) => {
   }
 
   if (
-    /^look at all of your Life cards and place them back in your Life area in any order\.?$/iu.test(
+    /^look at all (?:of )?your Life cards and place them back in your Life area in any order\.?$/iu.test(
       input.text,
     )
   ) {

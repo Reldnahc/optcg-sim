@@ -148,3 +148,53 @@ it("parses face-up Life add-to-hand rules replacement as a permanent replacement
     ]),
   );
 });
+
+it("parses Counter power followed by private Life reorder", () => {
+  const result = parseCardEffectLine(
+    "[Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, look at all your Life cards and place them back in your Life area in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "counter" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "modifyPower",
+              target: { type: "chooseFromZones" },
+              value: 4000,
+              duration: { type: "thisBattle" },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "reorderLife",
+              player: "self",
+              viewer: "self",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventCounter",
+      "instruction:modifyPower",
+      "target:yourLeaderOrCharacters",
+      "duration:thisBattle",
+      "instruction:reorder",
+      "zone:life",
+      "visibility:private",
+      "order:anyOrder",
+      "expression:sequence",
+      "composition:entryExpression",
+    ]),
+  );
+});
