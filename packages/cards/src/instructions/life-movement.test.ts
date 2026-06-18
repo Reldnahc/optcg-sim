@@ -148,6 +148,68 @@ describe("life movement instruction parser", () => {
     });
   });
 
+  it("parses hand-or-trash to Life placement as one multi-zone select-then-current-zone move", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "Add up to 2 Character cards with a cost of 5 from your hand or trash to the top of your Life cards face-up.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "selectCards",
+              zones: ["hand", "trash"],
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 2,
+              saveAs: "cardSelection:self-hand-or-trash-to-life-placement",
+              visibility: "chooserOnly",
+              filter: {
+                categories: ["character"],
+                cost: { op: "eq", value: 5 },
+              },
+            },
+            saveResultAs: "cardSelection:self-hand-or-trash-to-life-placement",
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "moveSelected",
+              selection: "cardSelection:self-hand-or-trash-to-life-placement",
+              from: "currentZone",
+              to: "life",
+              position: "top",
+              destinationFaceUp: true,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:selectCards",
+        "instruction:moveSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+        "zone:hand",
+        "zone:trash",
+        "destination:life",
+        "position:top",
+        "destination:faceUp",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "chooser:self:upTo",
+        "composition:selectThenMove",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses top-or-bottom Life to hand as a reusable choice between moveCards bodies", () => {
     expect(
       parseLifeMovementInstruction({

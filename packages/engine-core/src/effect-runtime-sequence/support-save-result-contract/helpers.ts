@@ -113,6 +113,24 @@ export const selectTrash = (selection: SelectionId): SequenceSegment => ({
   },
 });
 
+export const selectHandOrTrash = (
+  selection: SelectionId,
+  max = 2,
+): SequenceSegment => ({
+  connector: "always",
+  saveResultAs: selection,
+  effect: {
+    type: "selectCards",
+    player: "self",
+    zones: ["hand", "trash"],
+    chooser: "self",
+    visibility: "chooserOnly",
+    min: 0,
+    max,
+    saveAs: selection,
+  },
+});
+
 export const selectCostAreaDonCards = (
   selection: SelectionId,
 ): SequenceSegment => ({

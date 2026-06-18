@@ -299,13 +299,13 @@ const isSupportedMoveSelectedWithSavedResults = (
   state: SequenceSupportState,
   effect: MoveSelectedEffect,
 ): boolean =>
-  (isSupportedMoveSelectedSegment(effect, "trash") &&
+  (isSupportedMoveSelectedSegment(effect, ["trash"]) &&
     canConsumeSelectedCards(state.savedResults, effect.selection, ["trash"])) ||
-  (isSupportedMoveSelectedSegment(effect, "life") &&
+  (isSupportedMoveSelectedSegment(effect, ["life"]) &&
     canConsumeSelectedCards(state.savedResults, effect.selection, ["life"])) ||
   (isSupportedMoveSelectedSegment(
     effect,
-    "hand",
+    ["hand"],
     effect.to === "life" ? 1 : undefined,
   ) &&
     canConsumeSelectedCards(
@@ -314,7 +314,13 @@ const isSupportedMoveSelectedWithSavedResults = (
       ["hand"],
       effect.to === "life" ? { max: 1 } : {},
     )) ||
-  (isSupportedMoveSelectedSegment(effect, "set", undefined, true) &&
+  (isSupportedMoveSelectedSegment(effect, ["hand", "trash"]) &&
+    effect.from === "currentZone" &&
+    canConsumeSelectedCards(state.savedResults, effect.selection, [
+      "hand",
+      "trash",
+    ])) ||
+  (isSupportedMoveSelectedSegment(effect, ["set"], undefined, true) &&
     canConsumeTransientSet(state.savedResults, effect.from) &&
     canConsumeSelectedCards(state.savedResults, effect.selection, ["set"]));
 

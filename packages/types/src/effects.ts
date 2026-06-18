@@ -219,6 +219,7 @@ export interface CardSelectionRequest {
   chooser: PlayerRef;
   player?: PlayerRef;
   zone?: Zone;
+  zones?: readonly Zone[];
   set?: SelectionSetId;
   filter?: CardFilter;
   min: number;
@@ -566,17 +567,31 @@ export type SequenceSavedResultReference =
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
-export interface SelectCardsEffect {
-  type: "selectCards";
-  zone: Zone;
-  player: PlayerRef;
-  chooser: PlayerRef;
-  min: number;
-  max: number;
-  filter?: CardFilter;
-  saveAs: SelectionId;
-  visibility: Visibility;
-}
+export type SelectCardsEffect =
+  | {
+      type: "selectCards";
+      zone: Zone;
+      zones?: never;
+      player: PlayerRef;
+      chooser: PlayerRef;
+      min: number;
+      max: number;
+      filter?: CardFilter;
+      saveAs: SelectionId;
+      visibility: Visibility;
+    }
+  | {
+      type: "selectCards";
+      zone?: never;
+      zones: readonly Zone[];
+      player: PlayerRef;
+      chooser: PlayerRef;
+      min: number;
+      max: number;
+      filter?: CardFilter;
+      saveAs: SelectionId;
+      visibility: Visibility;
+    };
 
 export interface SelectTargetsEffect {
   type: "selectTargets";
@@ -755,7 +770,7 @@ export type Effect =
   | {
       type: "moveSelected";
       selection: SelectionId;
-      from: Zone | SelectionSetId;
+      from: Zone | SelectionSetId | "currentZone";
       to: Zone;
       position?: "top" | "bottom" | "topOrBottom";
       destinationFaceUp?: boolean;

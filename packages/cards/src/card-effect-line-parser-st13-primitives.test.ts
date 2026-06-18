@@ -606,3 +606,97 @@ it("parses arbitrary face-up Life face-down cost before conditional opponent Lif
     ]),
   );
 });
+
+it("parses zero-Life conditional hand-or-trash Character placement to face-up Life", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x2] [Activate: Main] [Once Per Turn] You may trash 1 card from your hand: If you have 0 Life cards, add up to 2 Character cards with a cost of 5 from your hand or trash to the top of your Life cards face-up.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      condition: {
+        type: "attachedDonCount",
+        target: { type: "self" },
+        op: "gte",
+        value: 2,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "trashFromHand",
+                chooser: "self",
+                count: 1,
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: {
+                type: "lifeCount",
+                player: "self",
+                op: "eq",
+                value: 0,
+              },
+              then: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zones: ["hand", "trash"],
+                      player: "self",
+                      chooser: "self",
+                      min: 0,
+                      max: 2,
+                      filter: {
+                        categories: ["character"],
+                        cost: { op: "eq", value: 5 },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "moveSelected",
+                      from: "currentZone",
+                      to: "life",
+                      position: "top",
+                      destinationFaceUp: true,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:attachedDon",
+      "marker:oncePerTurn",
+      "cost:trashFromHand",
+      "condition:lifeCount",
+      "instruction:selectCards",
+      "instruction:moveSelected",
+      "zone:hand",
+      "zone:trash",
+      "destination:life",
+      "destination:faceUp",
+      "filter:category:character",
+      "filter:cost",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});

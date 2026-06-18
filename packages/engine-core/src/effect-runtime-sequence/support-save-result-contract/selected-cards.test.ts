@@ -9,6 +9,7 @@ import {
   selectCostAreaDonCards,
   selectCostAreaDonTargets,
   selectHand,
+  selectHandOrTrash,
   selectLeaderTarget,
   selectTrash,
 } from "./helpers.js";
@@ -374,6 +375,25 @@ test("selectedCards matrix accepts trash selection moved to life", () => {
   ]);
 });
 
+test("selectedCards matrix accepts hand-or-trash selection moved from current zones to life", () => {
+  const selection = "saved-result:hand-or-trash-to-life" as SelectionId;
+
+  assertSupported([
+    selectHandOrTrash(selection),
+    {
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection,
+        from: "currentZone",
+        to: "life",
+        position: "top",
+        destinationFaceUp: true,
+      },
+    },
+  ]);
+});
+
 test("selectedCards matrix accepts set selection moved to life", () => {
   const set = "saved-result:set-to-life" as SelectionSetId;
   const selection = "saved-result:set-to-life-selection" as SelectionId;
@@ -495,6 +515,25 @@ test("selectedCards matrix rejects hand selection moved through trash-to-life pa
         from: "trash",
         to: "life",
         position: "bottom",
+      },
+    },
+  ]);
+});
+
+test("selectedCards matrix rejects hand-or-trash selection moved through hand-only path", () => {
+  const selection =
+    "saved-result:hand-or-trash-hand-life-rejected" as SelectionId;
+
+  assertUnsupported([
+    selectHandOrTrash(selection),
+    {
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection,
+        from: "hand",
+        to: "life",
+        position: "top",
       },
     },
   ]);

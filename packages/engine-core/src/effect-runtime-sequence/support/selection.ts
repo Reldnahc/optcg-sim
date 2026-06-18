@@ -49,7 +49,58 @@ const zoneNames = new Set<string>([
 ]);
 
 const isSelectionSetSource = (source: MoveSelectedEffect["from"]): boolean =>
-  !zoneNames.has(source);
+  source !== "currentZone" && !zoneNames.has(source);
+
+const savedSelectedCardsKindForZone = (
+  zone: SelectCardsEffect["zone"],
+): SavedSelectedCardsKind | undefined => {
+  if (zone === "hand") {
+    return "hand";
+  }
+  if (zone === "deck") {
+    return "deck";
+  }
+  if (zone === "trash") {
+    return "trash";
+  }
+  if (zone === "life") {
+    return "life";
+  }
+  if (zone === "costArea") {
+    return "don";
+  }
+  return undefined;
+};
+
+export const savedSelectedCardsKindsForSelectCardsSegment = (
+  effect: SequenceSegmentEffect,
+): readonly SavedSelectedCardsKind[] | undefined => {
+  const singleKind = savedSelectedCardsKindForSelectCardsSegment(effect);
+  if (singleKind !== undefined) {
+    return [singleKind];
+  }
+  if (
+    effect.type !== "selectCards" ||
+    effect.zones === undefined ||
+    effect.zones.length === 0 ||
+    !isSupportedHandSelectionCardFilter(effect.filter) ||
+    !Number.isInteger(effect.min) ||
+    !Number.isInteger(effect.max) ||
+    effect.min < 0 ||
+    effect.max < effect.min ||
+    effect.player !== effect.chooser ||
+    (effect.player !== "self" && effect.player !== "opponent") ||
+    (effect.visibility !== "chooserOnly" && effect.visibility !== "bothPlayers")
+  ) {
+    return undefined;
+  }
+  const kinds = effect.zones.map(savedSelectedCardsKindForZone);
+  return kinds.every(
+    (kind): kind is SavedSelectedCardsKind => kind !== undefined,
+  )
+    ? [...new Set(kinds)]
+    : undefined;
+};
 
 export const savedSelectedCardsKindForSelectCardsSegment = (
   effect: SequenceSegmentEffect,
@@ -114,7 +165,7 @@ export const isSupportedSequenceSelectCardsSegment = (
   ) => boolean = () => false,
 ): effect is SelectCardsEffect =>
   effect.type === "selectCards" &&
-  savedSelectedCardsKindForSelectCardsSegment(effect) !== undefined &&
+  savedSelectedCardsKindsForSelectCardsSegment(effect) !== undefined &&
   hasSupportedSavedColorRelations(effect.filter, canConsumeSavedFieldObject);
 
 const hasSupportedSavedColorRelations = (
@@ -160,7 +211,7 @@ export const savedSelectedCardsKindForSelectTargetsSegment = (
 
 export const isSupportedMoveSelectedSegment = (
   effect: SequenceSegmentEffect,
-  selectionKind?: SavedSelectedCardsKind,
+  selectionKinds: readonly SavedSelectedCardsKind[] = [],
   selectionMax?: number,
   hasSourceSet = false,
 ): effect is MoveSelectedEffect =>
@@ -169,47 +220,54 @@ export const isSupportedMoveSelectedSegment = (
     effect.to === "hand" &&
     effect.position === undefined &&
     effect.destinationFaceUp === undefined &&
-    selectionKind === "trash") ||
+    selectionKinds.includes("trash")) ||
     (effect.from === "trash" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
-      selectionKind === "trash") ||
+      selectionKinds.includes("trash")) ||
     (effect.from === "trash" &&
       effect.to === "deck" &&
       effect.position === "bottom" &&
       effect.destinationFaceUp === undefined &&
-      selectionKind === "trash") ||
+      selectionKinds.includes("trash")) ||
     (effect.from === "life" &&
       effect.to === "trash" &&
       effect.position === undefined &&
       effect.destinationFaceUp === undefined &&
-      selectionKind === "life") ||
+      selectionKinds.includes("life")) ||
     (effect.from === "hand" &&
       effect.to === "deck" &&
       (effect.position === "top" ||
         effect.position === "bottom" ||
         effect.position === "topOrBottom") &&
       effect.destinationFaceUp === undefined &&
-      selectionKind === "hand") ||
+      selectionKinds.includes("hand")) ||
     (effect.from === "hand" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
       (effect.destinationFaceUp === undefined ||
         typeof effect.destinationFaceUp === "boolean") &&
-      selectionKind === "hand" &&
+      selectionKinds.includes("hand") &&
       selectionMax === 1) ||
+    (effect.from === "currentZone" &&
+      effect.to === "life" &&
+      (effect.position === "top" || effect.position === "bottom") &&
+      (effect.destinationFaceUp === undefined ||
+        typeof effect.destinationFaceUp === "boolean") &&
+      selectionKinds.length > 0 &&
+      selectionKinds.every((kind) => kind === "hand" || kind === "trash")) ||
     (isSelectionSetSource(effect.from) &&
       effect.to === "hand" &&
       effect.position === undefined &&
       effect.destinationFaceUp === undefined &&
-      selectionKind === "set" &&
+      selectionKinds.includes("set") &&
       hasSourceSet) ||
     (isSelectionSetSource(effect.from) &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
       (effect.destinationFaceUp === undefined ||
         typeof effect.destinationFaceUp === "boolean") &&
-      selectionKind === "set" &&
+      selectionKinds.includes("set") &&
       hasSourceSet));
 
 export const isSupportedAttachSelectedDonSegment = (

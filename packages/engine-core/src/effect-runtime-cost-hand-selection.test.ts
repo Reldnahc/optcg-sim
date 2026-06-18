@@ -921,7 +921,7 @@ test("unsupported hand-selection shapes fail closed for zone/chooser-visibility/
   const unsupportedEffects: Array<Extract<Effect, { type: "selectCards" }>> = [
     {
       type: "selectCards",
-      zone: "life",
+      zone: "characterArea",
       player: "self",
       chooser: "self",
       min: 1,

@@ -14,6 +14,8 @@ import type {
 
 const handToLifeSelection =
   "handSelection:self-hand-to-life-placement" as SelectionId;
+const handOrTrashToLifeSelection =
+  "cardSelection:self-hand-or-trash-to-life-placement" as SelectionId;
 const opponentLifeTrashSelection =
   "lifeSelection:opponent-life-to-trash" as SelectionId;
 
@@ -455,6 +457,13 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
   if (cardinality === undefined) {
     return undefined;
   }
+  const handOrTrashToLife = parseHandOrTrashToLifeInstruction({
+    text: cardinality.rest,
+    cardinality,
+  });
+  if (handOrTrashToLife !== undefined) {
+    return handOrTrashToLife;
+  }
   if (
     /^cards? from your hand to the top of your Life cards\.?$/i.test(
       cardinality.rest,
@@ -490,6 +499,81 @@ const parseHandToLifeInstruction: InstructionParser = (input) => {
     selectionVisibility: "chooserOnly",
   });
 };
+
+function parseHandOrTrashToLifeInstruction({
+  cardinality,
+  text,
+}: {
+  readonly cardinality: NonNullable<ReturnType<typeof parseUpToCardinality>>;
+  readonly text: string;
+}): InstructionParseResult | undefined {
+  const match =
+    /^(?<filter>.+?) from your hand or trash to the (?<position>top|bottom) of your Life cards(?<faceUp> face-up)?\.?$/iu.exec(
+      text,
+    );
+  const filterText = match?.groups?.["filter"];
+  const position = match?.groups?.["position"];
+  if (
+    filterText === undefined ||
+    (position !== "top" && position !== "bottom")
+  ) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates({ text: filterText });
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  const destinationFaceUp = match?.groups?.["faceUp"] !== undefined;
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: handOrTrashToLifeSelection,
+          effect: {
+            type: "selectCards",
+            zones: ["hand", "trash"],
+            player: "self",
+            chooser: "self",
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            filter: predicates.filter,
+            saveAs: handOrTrashToLifeSelection,
+            visibility: "chooserOnly",
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection: handOrTrashToLifeSelection,
+            from: "currentZone",
+            to: "life",
+            position,
+            ...(destinationFaceUp ? { destinationFaceUp: true } : {}),
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectCards",
+      "instruction:moveSelected",
+      ...cardinality.evidence,
+      "player:self",
+      "zone:hand",
+      "zone:trash",
+      "destination:life",
+      position === "top" ? "position:top" : "position:bottom",
+      ...(destinationFaceUp ? (["destination:faceUp"] as const) : []),
+      ...predicates.evidence,
+      "chooser:self:upTo",
+      "composition:selectThenMove",
+    ],
+    rest: "",
+  };
+}
 
 function buildHandToLifeInstruction({
   cardinality,

@@ -5,7 +5,7 @@ import type {
 } from "@optcg/types";
 
 import {
-  savedSelectedCardsKindForSelectCardsSegment,
+  savedSelectedCardsKindsForSelectCardsSegment,
   savedSelectedCardsKindForSelectTargetsSegment,
   type SavedSelectedCardsKind,
 } from "./selection.js";
@@ -15,7 +15,7 @@ export type SequenceSegment = SequenceEffect["effects"][number];
 
 export type SelectedCardsCapability = {
   readonly kind: "selectedCards";
-  readonly cardKind: SavedSelectedCardsKind;
+  readonly cardKinds: readonly SavedSelectedCardsKind[];
   readonly max?: number;
 };
 
@@ -63,7 +63,8 @@ const sameCapability = (
   a.kind === b.kind &&
   (a.kind !== "selectedCards" ||
     (b.kind === "selectedCards" &&
-      a.cardKind === b.cardKind &&
+      a.cardKinds.length === b.cardKinds.length &&
+      a.cardKinds.every((kind) => b.cardKinds.includes(kind)) &&
       a.max === b.max));
 
 export const addCapability = (
@@ -111,17 +112,29 @@ const selectedCardsKindToSaveResultKind = (
   kind: SavedSelectedCardsKind,
 ): SequenceSaveResultKind => `selectedCards:${kind}`;
 
+const selectedCardsKindsToCapability = ({
+  kinds,
+  max,
+}: {
+  readonly kinds: readonly SavedSelectedCardsKind[];
+  readonly max?: number;
+}): SelectedCardsCapability => ({
+  kind: "selectedCards",
+  cardKinds: [...new Set(kinds)],
+  ...(max === undefined ? {} : { max }),
+});
+
 const inferredSaveResultKindsForSegment = (
   segment: SequenceSegment,
 ): readonly SequenceSaveResultKind[] | null => {
   const kinds: SequenceSaveResultKind[] = [];
   const saveResultAs = segment.saveResultAs;
   if (segment.effect.type === "selectCards") {
-    const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
+    const selectedCardsKinds = savedSelectedCardsKindsForSelectCardsSegment(
       segment.effect,
     );
-    if (selectedCardsKind !== undefined) {
-      kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
+    if (selectedCardsKinds !== undefined) {
+      kinds.push(...selectedCardsKinds.map(selectedCardsKindToSaveResultKind));
     } else {
       return null;
     }
@@ -212,16 +225,19 @@ const recordSaveResultAsProducer = (
   segment: SequenceSegment,
 ): StaticSavedResultState | null => {
   if (segment.effect.type === "selectCards") {
-    const selectedCardsKind = savedSelectedCardsKindForSelectCardsSegment(
+    const selectedCardsKinds = savedSelectedCardsKindsForSelectCardsSegment(
       segment.effect,
     );
-    return selectedCardsKind === undefined
+    return selectedCardsKinds === undefined
       ? null
-      : addCapability(state, segment.effect.saveAs, {
-          kind: "selectedCards",
-          cardKind: selectedCardsKind,
-          max: segment.effect.max,
-        });
+      : addCapability(
+          state,
+          segment.effect.saveAs,
+          selectedCardsKindsToCapability({
+            kinds: selectedCardsKinds,
+            max: segment.effect.max,
+          }),
+        );
   }
 
   const saveResultAs = segment.saveResultAs;
@@ -238,7 +254,7 @@ const recordSaveResultAsProducer = (
     if (selectedTargetsCardsKind !== undefined) {
       selectedTargetsCapabilities.push({
         kind: "selectedCards",
-        cardKind: selectedTargetsCardsKind,
+        cardKinds: [selectedTargetsCardsKind],
         max: segment.effect.request.max,
       });
     }
@@ -274,11 +290,10 @@ const recordSaveResultAsProducer = (
     if (maxCount !== undefined && typeof maxCount !== "number") {
       return null;
     }
-    const capability: SelectedCardsCapability = {
-      kind: "selectedCards",
-      cardKind: "hand",
+    const capability = selectedCardsKindsToCapability({
+      kinds: ["hand"],
       ...(maxCount === undefined ? {} : { max: maxCount }),
-    };
+    });
     return addCapability(state, saveResultAs, capability);
   }
   if (
@@ -310,7 +325,7 @@ export const recordProducer = (
     return addTransientSet(
       addCapability(saveResultState, saveAs, {
         kind: "selectedCards",
-        cardKind: "set",
+        cardKinds: ["set"],
       }),
       saveAs,
     );
@@ -318,7 +333,7 @@ export const recordProducer = (
   if (segment.effect.type === "selectFromSet") {
     return addCapability(saveResultState, segment.effect.saveAs, {
       kind: "selectedCards",
-      cardKind: "set",
+      cardKinds: ["set"],
       max: segment.effect.max,
     });
   }
@@ -352,7 +367,7 @@ export const canConsumeSelectedCards = (
     selection,
     (capability) =>
       capability.kind === "selectedCards" &&
-      allowed.includes(capability.cardKind) &&
+      capability.cardKinds.every((cardKind) => allowed.includes(cardKind)) &&
       (options.max === undefined ||
         (capability.max !== undefined && capability.max <= options.max)),
   );

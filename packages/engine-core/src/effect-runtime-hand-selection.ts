@@ -35,6 +35,7 @@ const deckDecisionIdPrefix = "decision:selectCards:deck-selection:";
 const trashDecisionIdPrefix = "decision:selectCards:trash-selection:";
 const lifeDecisionIdPrefix = "decision:selectCards:life-selection:";
 const costAreaDecisionIdPrefix = "decision:selectCards:cost-area-selection:";
+const multiZoneDecisionIdPrefix = "decision:selectCards:multi-zone-selection:";
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
@@ -114,6 +115,23 @@ const isSupportedSequenceCostAreaSelectCardsEffect = (
   effect.min >= 0 &&
   effect.max >= effect.min;
 
+const isSupportedSequenceMultiZoneSelectCardsEffect = (
+  effect: Effect,
+): effect is SequenceSelectCardsEffect =>
+  effect.type === "selectCards" &&
+  effect.zones !== undefined &&
+  effect.zones.length > 0 &&
+  effect.zones.every((zone) => zone === "hand" || zone === "trash") &&
+  effect.player === effect.chooser &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  (effect.visibility === "chooserOnly" ||
+    effect.visibility === "bothPlayers") &&
+  isSupportedHandSelectionCardFilter(effect.filter) &&
+  Number.isInteger(effect.min) &&
+  Number.isInteger(effect.max) &&
+  effect.min >= 0 &&
+  effect.max >= effect.min;
+
 export const isSupportedSequenceSelectCardsEffect = (
   effect: Effect,
 ): effect is SequenceSelectCardsEffect =>
@@ -121,7 +139,8 @@ export const isSupportedSequenceSelectCardsEffect = (
   isSupportedSequenceDeckSelectCardsEffect(effect) ||
   isSupportedSequenceTrashSelectCardsEffect(effect) ||
   isSupportedSequenceLifeSelectCardsEffect(effect) ||
-  isSupportedSequenceCostAreaSelectCardsEffect(effect);
+  isSupportedSequenceCostAreaSelectCardsEffect(effect) ||
+  isSupportedSequenceMultiZoneSelectCardsEffect(effect);
 
 const isSupportedRelativePlayer = (
   player: SelectCardsDecision["request"]["player"],
@@ -207,7 +226,19 @@ const isSupportedSelectCardsDecision = (
       decision.request.player === "self" &&
       decision.request.allowFewerIfUnavailable &&
       decision.request.visibility === "public" &&
-      decision.visibility.type === "public"));
+      decision.visibility.type === "public") ||
+    (String(decision.id).startsWith(multiZoneDecisionIdPrefix) &&
+      decision.request.zone === undefined &&
+      decision.request.zones !== undefined &&
+      decision.request.zones.length > 0 &&
+      decision.request.zones.every(
+        (zone) => zone === "hand" || zone === "trash",
+      ) &&
+      decision.request.player === decision.request.chooser &&
+      !decision.request.allowFewerIfUnavailable &&
+      decision.request.visibility === "privateToChooser" &&
+      decision.visibility.type === "private" &&
+      decision.visibility.playerId === decision.playerId));
 
 const hasMalformedRespondToDecisionPlayerId = (
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -250,7 +281,7 @@ export const isHandSelectionSelectCardsDecision = (
 const cardsInPlayerZone = (
   state: GameState,
   playerId: CardRef["playerId"],
-  zone: SelectCardsDecision["request"]["zone"],
+  zone: NonNullable<SelectCardsDecision["request"]["zone"]>,
 ) => {
   const player = state.players[playerId];
   if (player === undefined) {
@@ -269,16 +300,33 @@ const cardsInPlayerZone = (
             : undefined;
 };
 
+const requestZones = (
+  request: SelectCardsDecision["request"],
+): readonly NonNullable<SelectCardsDecision["request"]["zone"]>[] | null => {
+  if (request.zones !== undefined) {
+    return request.zones;
+  }
+  return request.zone === undefined ? null : [request.zone];
+};
+
 const currentCandidateRefsForDecision = (
   state: GameState,
   decision: SelectCardsDecision,
 ): CardRef[] | null => {
+  const zones = requestZones(decision.request);
+  if (zones === null) {
+    return null;
+  }
   const currentRefs: CardRef[] = [];
   for (const candidate of decision.candidates) {
+    const candidateZone = candidate.card.zone?.zone;
+    if (candidateZone === undefined || !zones.includes(candidateZone)) {
+      return null;
+    }
     const cards = cardsInPlayerZone(
       state,
       candidate.card.playerId,
-      decision.request.zone,
+      candidateZone,
     );
     if (cards === null || cards === undefined) {
       return null;
@@ -306,10 +354,11 @@ const currentCandidateRefsForDecision = (
 
 const candidateVisibilityForDecision = (
   decision: SelectCardsDecision,
+  candidate: CardRef,
 ): SelectCardsDecision["candidates"][number]["visibility"] =>
-  decision.request.zone === "trash"
+  candidate.zone?.zone === "trash"
     ? { type: "public" }
-    : decision.request.zone === "costArea"
+    : candidate.zone?.zone === "costArea"
       ? { type: "public" }
       : { type: "private", playerId: decision.playerId };
 
@@ -324,9 +373,12 @@ const hasCurrentCandidateEnvelope = (
   if (decision.candidates.length !== filteredCards.length) {
     return false;
   }
-  const expectedVisibility = candidateVisibilityForDecision(decision);
   return decision.candidates.every((candidate, index) => {
     const current = filteredCards[index];
+    const expectedVisibility = candidateVisibilityForDecision(
+      decision,
+      candidate.card,
+    );
     return (
       current !== undefined &&
       candidate.visibility.type === expectedVisibility.type &&
@@ -351,7 +403,7 @@ const findCurrentCards = (
   const selectedRefs: CardRef[] = [];
   for (const ref of selected) {
     const match = candidateRefs.find((candidate) =>
-      decision.request.zone === "life"
+      candidate.zone?.zone === "life"
         ? hiddenLifeCardRefMatches(ref, candidate)
         : cardRefMatches(ref, candidate),
     );
@@ -445,29 +497,41 @@ export const createSupportedHandSelectionChoiceDecision = (
     };
   }
 
-  const cards =
-    effect.zone === "hand"
-      ? zoneOwner.hand
-      : effect.zone === "deck"
-        ? zoneOwner.deck
-        : effect.zone === "trash"
-          ? zoneOwner.trash
-          : effect.zone === "life"
-            ? zoneOwner.life.map((lifeCard) => lifeCard.card)
-            : zoneOwner.costArea;
-  const candidateVisibility =
-    effect.zone === "trash" || effect.zone === "costArea"
+  const zones =
+    effect.zones === undefined ? [effect.zone] : [...new Set(effect.zones)];
+  const candidateVisibilityForZone = (
+    zone: NonNullable<SequenceSelectCardsEffect["zone"]>,
+  ) =>
+    zone === "trash" || zone === "costArea"
       ? { type: "public" as const }
       : ({ type: "private" as const, playerId: chooserId } as const);
 
-  const candidates = cards
-    .filter((card) =>
-      cardMatchesHandSelectionFilter(state, zoneOwnerId, card, resolvedFilter),
-    )
-    .map((card) => ({
-      card: toCardRef(card, zoneOwnerId),
-      visibility: candidateVisibility,
-    }));
+  const candidates = zones.flatMap((zone) => {
+    const cards =
+      zone === "hand"
+        ? zoneOwner.hand
+        : zone === "deck"
+          ? zoneOwner.deck
+          : zone === "trash"
+            ? zoneOwner.trash
+            : zone === "life"
+              ? zoneOwner.life.map((lifeCard) => lifeCard.card)
+              : zoneOwner.costArea;
+    const candidateVisibility = candidateVisibilityForZone(zone);
+    return cards
+      .filter((card) =>
+        cardMatchesHandSelectionFilter(
+          state,
+          zoneOwnerId,
+          card,
+          resolvedFilter,
+        ),
+      )
+      .map((card) => ({
+        card: toCardRef(card, zoneOwnerId),
+        visibility: candidateVisibility,
+      }));
+  });
 
   if (candidates.length < effect.min) {
     return {
@@ -488,46 +552,56 @@ export const createSupportedHandSelectionChoiceDecision = (
     effectId: entry.effectBlockId,
   } as const;
   const visibility =
-    effect.zone === "trash" || effect.zone === "costArea"
-      ? ({ type: "public" } as const)
-      : ({ type: "private", playerId: chooserId } as const);
+    effect.zones !== undefined
+      ? ({ type: "private", playerId: chooserId } as const)
+      : effect.zone === "trash" || effect.zone === "costArea"
+        ? ({ type: "public" } as const)
+        : ({ type: "private", playerId: chooserId } as const);
   const idPrefix =
-    effect.zone === "trash"
-      ? trashDecisionIdPrefix
-      : effect.zone === "life"
-        ? lifeDecisionIdPrefix
-        : effect.zone === "costArea"
-          ? costAreaDecisionIdPrefix
-          : effect.zone === "deck"
-            ? deckDecisionIdPrefix
-            : handDecisionIdPrefix;
+    effect.zones !== undefined
+      ? multiZoneDecisionIdPrefix
+      : effect.zone === "trash"
+        ? trashDecisionIdPrefix
+        : effect.zone === "life"
+          ? lifeDecisionIdPrefix
+          : effect.zone === "costArea"
+            ? costAreaDecisionIdPrefix
+            : effect.zone === "deck"
+              ? deckDecisionIdPrefix
+              : handDecisionIdPrefix;
   const pendingDecision: SelectCardsDecision = {
     id: toDecisionId(`${idPrefix}${String(entry.id)}:${String(segmentIndex)}`),
     type: "selectCards",
     playerId: chooserId,
     prompt:
-      effect.zone === "trash"
-        ? "Choose cards from trash."
-        : effect.zone === "life"
-          ? "Choose Life cards."
-          : effect.zone === "costArea"
-            ? "Choose DON!! cards."
-            : "Choose cards from hand.",
+      effect.zones !== undefined
+        ? "Choose cards."
+        : effect.zone === "trash"
+          ? "Choose cards from trash."
+          : effect.zone === "life"
+            ? "Choose Life cards."
+            : effect.zone === "costArea"
+              ? "Choose DON!! cards."
+              : "Choose cards from hand.",
     causedBy,
     visibility,
     request: {
       timing: "onResolution",
       chooser: effect.chooser,
       player: effect.player,
-      zone: effect.zone,
+      ...(effect.zones === undefined
+        ? { zone: effect.zone }
+        : { zones: effect.zones }),
       min: effect.min,
       max: effect.max,
       allowFewerIfUnavailable:
-        effect.zone === "trash" ||
-        effect.zone === "life" ||
-        effect.zone === "costArea",
+        effect.zones === undefined &&
+        (effect.zone === "trash" ||
+          effect.zone === "life" ||
+          effect.zone === "costArea"),
       visibility:
-        effect.zone === "trash" || effect.zone === "costArea"
+        effect.zones === undefined &&
+        (effect.zone === "trash" || effect.zone === "costArea")
           ? "public"
           : "privateToChooser",
       ...(resolvedFilter === undefined ? {} : { filter: resolvedFilter }),

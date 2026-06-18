@@ -25,6 +25,7 @@ import {
   applyTrashToLifeSelectedCardMoveSegment,
 } from "./selected-trash-to-life.js";
 import { applyHandToLifeSelectedCardMoveSegment } from "./selected-hand-to-life.js";
+import { applyCurrentZoneToLifeSelectedCardMoveSegment } from "./selected-current-to-life.js";
 import {
   applySetToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
@@ -426,6 +427,13 @@ export const applySelectedCardMoveSegment = (
     (params.effect.position === "top" || params.effect.position === "bottom")
   ) {
     return applyHandToLifeSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    params.effect.from === "currentZone" &&
+    params.effect.to === "life" &&
+    (params.effect.position === "top" || params.effect.position === "bottom")
+  ) {
+    return applyCurrentZoneToLifeSelectedCardMoveSegment(params, selected);
   }
   if (
     isSelectionSetSource(params.effect.from) &&
