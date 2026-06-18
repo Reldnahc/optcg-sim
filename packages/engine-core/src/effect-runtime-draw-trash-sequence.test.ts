@@ -452,7 +452,7 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
       effects: [
         {
           connector: "always",
-          effect: { type: "draw", player: "opponent", count: 1 },
+          effect: { type: "draw", player: "owner", count: 1 },
         },
         {
           connector: "then",

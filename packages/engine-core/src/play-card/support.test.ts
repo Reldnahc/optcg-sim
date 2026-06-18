@@ -755,7 +755,7 @@ test("getSupportedPlayMetadata rejects unsupported reusable sequence legal-actio
                 },
                 {
                   connector: "ifPossible",
-                  effect: { type: "draw", count: 1, player: "opponent" },
+                  effect: { type: "draw", count: 1, player: "owner" },
                 },
               ],
             },

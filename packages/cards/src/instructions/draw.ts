@@ -26,6 +26,23 @@ export const drawPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
         }),
       },
       {
+        id: "opponent-draws-n-cards",
+        pattern: /^your opponent draws (?<count>[1-9]\d*) cards?\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "draw",
+            count: Number.parseInt(groups["count"] ?? "", 10),
+            player: "opponent",
+          },
+          evidence: [
+            "instruction:draw",
+            "count:positiveInteger",
+            "player:opponent",
+          ],
+          rest: "",
+        }),
+      },
+      {
         id: "draw-per-trigger-hand-trash",
         pattern: /^Draw cards equal to the number of cards trashed\.?$/i,
         build: () => ({

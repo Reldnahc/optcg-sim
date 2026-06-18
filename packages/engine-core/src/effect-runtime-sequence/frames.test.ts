@@ -69,7 +69,7 @@ const unsupportedSequence = (): Extract<Effect, { type: "sequence" }> => ({
     },
     {
       connector: "ifYouDo",
-      effect: { type: "draw", player: "opponent", count: 1 },
+      effect: { type: "draw", player: "owner", count: 1 },
     },
   ],
 });

@@ -35,6 +35,7 @@ import {
   isSupportedMoveMatchingLifeCardsSegment,
   isSupportedPlaceTopLifeCardSegment,
   isSupportedPlaceTopDeckCardsSegment,
+  isSupportedRevealFromZoneSegment,
   isSupportedReorderLifeSegment,
   isSupportedReturnDonSegment,
   isSupportedSetLifeFaceUpSegment,
@@ -49,6 +50,7 @@ import {
   type MoveMatchingLifeCardsEffect,
   type PlaceTopLifeCardEffect,
   type PlaceTopDeckCardsEffect,
+  type RevealFromZoneEffect,
   type ReorderLifeEffect,
   type ReturnDonEffect,
   type SetLifeFaceUpEffect,
@@ -144,6 +146,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | TrashFromHandEffect
     | TrashFromHandUntilCountEffect
     | PlaceTopDeckCardsEffect
+    | RevealFromZoneEffect
     | PayCostEffect
     | ChooseNumberEffect
     | SelectCardsEffect
@@ -584,6 +587,9 @@ const isSupportedSequenceBlockWithState = (
       }
       if (isSupportedPlaceTopDeckCardsSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
+        return recordSupportedProducer(supportState, segment);
+      }
+      if (isSupportedRevealFromZoneSegment(segment.effect)) {
         return recordSupportedProducer(supportState, segment);
       }
       if (segment.effect.type === "sequence") {

@@ -36,6 +36,7 @@ type MoveMatchingLifeCardsEffect = Extract<
   { type: "moveMatchingLifeCards" }
 >;
 type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
+type RevealFromZoneEffect = Extract<Effect, { type: "revealFromZone" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
 
@@ -89,6 +90,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveCardsEffect
     | MoveMatchingLifeCardsEffect
     | ReturnDonEffect
+    | RevealFromZoneEffect
     | RevealTopEffect
     | ShuffleDeckEffect
     | Extract<Effect, { type: "trashFromHand" }>
@@ -502,6 +504,91 @@ export const applyRevealTopSequenceSegment = (
     emptySegmentResult,
     segmentKey,
   );
+
+export const applyRevealFromZoneSequenceSegment = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  segment: SupportedSequenceSegment & { effect: RevealFromZoneEffect },
+  index: number,
+  ledgers: SegmentLedgers,
+  emptySegmentResult: () => SequenceSegmentResult,
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string,
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  const revealedPlayerId = resolvePlayerId(state, entry, segment.effect.player);
+  if (
+    revealedPlayerId === undefined ||
+    segment.effect.zone !== "hand" ||
+    segment.effect.count !== undefined ||
+    segment.effect.filter !== undefined
+  ) {
+    return { ok: false };
+  }
+  const player = state.players[revealedPlayerId];
+  if (player === undefined) {
+    return { ok: false };
+  }
+  const revealedCards = player.hand.map((card) =>
+    toCardRef(card, revealedPlayerId),
+  );
+  const events: EngineEvent[] = [];
+  if (revealedCards.length > 0) {
+    appendEvent(
+      state,
+      events,
+      "cardRevealed",
+      {
+        revealId: `reveal:zone:${String(entry.id)}:${String(index)}`,
+        cards: revealedCards,
+        origin: { zone: "hand", playerId: revealedPlayerId },
+      },
+      { type: "public" },
+    );
+    const event = events[0];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: entry.id,
+        effectId: entry.effectBlockId,
+      };
+    }
+  }
+  const nextState =
+    events.length === 0
+      ? state
+      : {
+          ...state,
+          seq: toStateSeq(state.seq + 1),
+          eventJournal: [...state.eventJournal, ...events],
+        };
+  return {
+    events,
+    ledgers: {
+      ...ledgers,
+      segmentResults: {
+        ...ledgers.segmentResults,
+        [segmentKey(segment, index)]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: events.length > 0,
+          selectedCards: revealedCards,
+        },
+      },
+    },
+    ok: true,
+    state: nextState,
+  };
+};
 
 export const applyShuffleDeckSegment = (
   state: GameState,

@@ -51,6 +51,7 @@ export {
 } from "./prevent-draw.js";
 export { parsePreventPlayByEffectsInstruction } from "./prevent-play-by-effects.js";
 export { parsePreventPlayInstruction } from "./prevent-play.js";
+export { parseRevealFromZoneInstruction } from "./reveal-from-zone.js";
 export { parseRevealTopInstruction, revealedTopLifeSet } from "./reveal-top.js";
 export { parseSelectFromTrashChoiceInstruction } from "./select-from-trash-choice.js";
 export { parseSelectTargetsInstruction } from "./select-targets.js";

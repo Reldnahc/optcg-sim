@@ -38,6 +38,7 @@ export type PlaceTopDeckCardsEffect = Extract<
   { type: "placeTopDeckCards" }
 >;
 export type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
+export type RevealFromZoneEffect = Extract<Effect, { type: "revealFromZone" }>;
 
 const isSupportedFieldCountValue = (
   count: number | DynamicNumberValue,
@@ -74,7 +75,7 @@ export const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
 ): effect is DrawEffect =>
   effect.type === "draw" &&
-  effect.player === "self" &&
+  (effect.player === "self" || effect.player === "opponent") &&
   isSupportedSegmentCount(effect.count, { positive: false });
 
 export const isSupportedDrawUpToSegment = (
@@ -166,3 +167,13 @@ export const isSupportedShuffleDeckSegment = (
 ): effect is ShuffleDeckEffect =>
   effect.type === "shuffleDeck" &&
   (effect.player === "self" || effect.player === "opponent");
+
+export const isSupportedRevealFromZoneSegment = (
+  effect: SequenceSegmentEffect,
+): effect is RevealFromZoneEffect =>
+  effect.type === "revealFromZone" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  effect.zone === "hand" &&
+  effect.count === undefined &&
+  effect.filter === undefined &&
+  effect.to === "bothPlayers";

@@ -35,7 +35,6 @@ import {
   applyDrawSegment,
   applyMoveCardsSegment,
   applyNoOpReturnDonSegment,
-  applyRevealTopSequenceSegment,
   applyShuffleDeckSegment,
   previousSegmentCompleted,
   shouldAttemptSegment,
@@ -61,6 +60,7 @@ import { getOpponentId } from "../../actions/state.js";
 import { getReturnDonEligibleCount } from "../../runtime/primitives/return-don.js";
 import { pauseSequenceForPendingDecision } from "./pause.js";
 import { applyLifeStateNoDecisionSegment } from "./life-state-segments.js";
+import { applyRevealNoDecisionSegment } from "./reveal-segments.js";
 import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
 import { applyForEachSavedTargetSegment } from "./for-each-saved-target.js";
 import { applySelectAllTargetsSegment } from "./select-all-targets-segment.js";
@@ -386,45 +386,24 @@ export const continueNoDecisionSegments = (
         state: quantityDecision.state,
       });
     }
-    if (segment.effect.type === "revealTop") {
-      if (
-        segment.effect.min !== undefined &&
-        segment.effect.min < segment.effect.count
-      ) {
-        const quantityDecision = createChooseQuantityDecisionForSequenceSegment(
-          nextState,
-          entry,
-          index,
-          segment.effect,
-          segment.effect.count,
-        );
-        return pauseSequenceForPendingDecision({
-          decisionEvents: quantityDecision.events,
-          entry,
-          effectPath: [...effectPath],
-          events,
-          index,
-          ledgers: nextLedgers,
-          state: quantityDecision.state,
-        });
+    const reveal = applyRevealNoDecisionSegment({
+      effectPath,
+      emptySegmentResult,
+      entry,
+      events,
+      index,
+      ledgers: nextLedgers,
+      segment,
+      segmentKey: ledgerKey,
+      state: nextState,
+    });
+    if (reveal.handled) {
+      if (!reveal.result.ok || reveal.result.kind === "paused") {
+        return reveal.result;
       }
-      const revealed = applyRevealTopSequenceSegment(
-        nextState,
-        entry,
-        segment as SupportedSequenceSegment & {
-          effect: Extract<Effect, { type: "revealTop" }>;
-        },
-        index,
-        nextLedgers,
-        emptySegmentResult,
-        ledgerKey,
-      );
-      if (!revealed.ok) {
-        return { ok: false };
-      }
-      nextState = revealed.state;
-      nextLedgers = revealed.ledgers;
-      events.push(...revealed.events);
+      nextState = reveal.result.state;
+      nextLedgers = reveal.result.ledgers;
+      events.push(...reveal.result.events);
       continue;
     }
     if (segment.effect.type === "shuffleDeck") {

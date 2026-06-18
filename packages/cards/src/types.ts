@@ -152,6 +152,7 @@ export type PrimitiveEvidence =
   | "instruction:playSource"
   | "instruction:moveSelected"
   | "instruction:chooseNumber"
+  | "instruction:revealFromZone"
   | "instruction:revealTop"
   | "instruction:selectFromSet"
   | "instruction:revealSelected"

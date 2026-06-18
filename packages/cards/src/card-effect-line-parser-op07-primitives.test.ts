@@ -800,3 +800,67 @@ it("parses trash-to-bottom cost before opponent hand trash and opponent trash cl
     ]),
   );
 });
+
+it("parses opponent hand trash, hand reveal, and opponent draw as separate primitives", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Your opponent trashes 1 card from their hand and reveals their hand. Then, your opponent draws 1 card.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "trashFromHand",
+                    player: "opponent",
+                    chooser: "opponent",
+                    count: 1,
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "revealFromZone",
+                    player: "opponent",
+                    zone: "hand",
+                    to: "bothPlayers",
+                  },
+                },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "draw",
+              player: "opponent",
+              count: 1,
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:trashFromHand",
+      "instruction:revealFromZone",
+      "instruction:draw",
+      "player:opponent",
+      "zone:hand",
+      "reveal:bothPlayers",
+      "composition:entryExpression",
+    ]),
+  );
+});
