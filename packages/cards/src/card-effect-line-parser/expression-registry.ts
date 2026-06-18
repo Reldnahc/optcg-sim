@@ -62,6 +62,7 @@ import {
   replacementInsteadExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
   revealedHandPlayExpressionParser,
+  revealTopAddToHandExpressionParser,
   revealTopConditionalExpressionParser,
   revealTopPlayExpressionParser,
   revealTopPlayRestedExpressionParser,
@@ -213,7 +214,9 @@ function generalExpressionParser(input: ParseInput) {
         };
       },
       (segmentInput) => {
-        const parsed = revealTopPlayExpressionParser(segmentInput);
+        const parsed =
+          revealTopAddToHandExpressionParser(segmentInput) ??
+          revealTopPlayExpressionParser(segmentInput);
         if (parsed === undefined) {
           return undefined;
         }
@@ -292,6 +295,7 @@ const costedExpressions = [
   }),
   lookPlayFromTopExpressionParser,
   playFromDeckExpressionParser,
+  revealTopAddToHandExpressionParser,
   revealTopPlayExpressionParser,
   revealTopConditionalExpressionParser({
     instructions: instructionParsers,
@@ -352,6 +356,7 @@ const topLevelChooseOneExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
@@ -388,6 +393,7 @@ const implicitEventReactionBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     conditionalBlockExpressionParser({
       conditions: conditionParsers,
@@ -406,6 +412,7 @@ const conditionalBlockBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,
@@ -502,6 +509,7 @@ const rootExpressionParsers = () =>
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
       instructions: instructionParsers,

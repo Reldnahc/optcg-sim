@@ -31,6 +31,7 @@ export {
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
 export { lookPlayFromTopExpressionParser } from "./look-play-from-top.js";
 export { revealTopConditionalExpressionParser } from "./reveal-top-conditional.js";
+export { revealTopAddToHandExpressionParser } from "./reveal-top-add-to-hand.js";
 export { revealedHandPlayExpressionParser } from "./revealed-hand-play.js";
 export { revealTopPlayExpressionParser } from "./reveal-top-play.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
