@@ -75,3 +75,87 @@ it("parses reveal-top add-to-hand with bottom remainder under when-attacking", (
     ]),
   );
 });
+
+it("parses search reveal with bottom remainder and DON activation continuation", () => {
+  const result = parseCardEffectLine(
+    "[Main] If your Leader is [Uta], look at 3 cards from the top of your deck; reveal up to 1 {FILM} type card other than [New Genesis] and add it to your hand. Then, place the rest at the bottom of your deck in any order and set up to 1 of your DON!! cards as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      condition: {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          { effect: { type: "revealTop", count: 3 } },
+          {
+            effect: {
+              type: "selectFromSet",
+              filter: {
+                typesAny: ["FILM"],
+                nameNot: ["New Genesis"],
+              },
+            },
+          },
+          { effect: { type: "revealSelected", visibility: "bothPlayers" } },
+          { effect: { type: "moveSelected", to: "hand" } },
+          {
+            effect: {
+              type: "placeSetRemainder",
+              destination: "deck",
+              position: "bottom",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      zone: "costArea",
+                      player: "self",
+                      max: 1,
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "activate",
+                    target: {
+                      type: "savedFieldObject",
+                      zone: "costArea",
+                      player: "self",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "condition:leaderIdentity",
+      "instruction:revealTop",
+      "instruction:selectFromSet",
+      "filter:type",
+      "filter:nameNot",
+      "instruction:placeSetRemainder",
+      "instruction:activate",
+      "target:yourDonCards",
+      "filter:category:don",
+    ]),
+  );
+});

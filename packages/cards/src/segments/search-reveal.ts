@@ -21,6 +21,7 @@ import { parseExpression } from "../expression-parser.js";
 import { parseThenConnector } from "../connectors/index.js";
 import {
   parsePlayFromHandInstruction,
+  parseSetDonActiveInstruction,
   parseTrashFromHandInstruction,
 } from "../instructions/index.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
@@ -76,6 +77,7 @@ export function searchRevealExpressionParser(
     segments: [
       syntheticInstructionSegmentParser([parseTrashFromHandInstruction]),
       syntheticInstructionSegmentParser([parsePlayFromHandInstruction]),
+      syntheticInstructionSegmentParser([parseSetDonActiveInstruction]),
     ],
   });
   if (trailing === undefined || trailing.rest.length > 0) {
