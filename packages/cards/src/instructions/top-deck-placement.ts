@@ -43,7 +43,7 @@ const parsePlacementText = (
     }
   | undefined => {
   if (
-    /^place them at the top or bottom of (?:your|the) deck in any order\.?$/i.test(
+    /^(?:place them at|return them to) the top or bottom of (?:your|the) deck in any order\.?$/i.test(
       text,
     )
   ) {
