@@ -261,6 +261,11 @@ function composeReactionTriggers(triggers: readonly Trigger[]): Trigger {
 
 const parseLifeRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
+  const lifeCountTransition = parseLifeCountTransitionPredicate(normalized);
+  if (lifeCountTransition !== undefined) {
+    return lifeCountTransition;
+  }
+
   const addedToHand = /^a card is added to your hand from your Life$/iu.exec(
     normalized,
   );
@@ -284,6 +289,36 @@ const parseLifeRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   return {
     trigger: lifeRemovedTrigger(parsedOwner.players),
     evidence: ["trigger:lifeRemoved", ...parsedOwner.evidence],
+  };
+};
+
+const parseLifeCountTransitionPredicate = (
+  normalized: string,
+): ReactionPredicateResult | undefined => {
+  const match =
+    /^(?<owner>your|your opponent's) number of Life cards becomes (?<count>\d+)$/iu.exec(
+      normalized,
+    );
+  const owner = match?.groups?.["owner"];
+  const countText = match?.groups?.["count"];
+  if (owner === undefined || countText === undefined) {
+    return undefined;
+  }
+
+  const count = Number.parseInt(countText, 10);
+  const player = owner.toLowerCase() === "your" ? "self" : "opponent";
+  return {
+    trigger: lifeRemovedTrigger([player]),
+    condition: { type: "lifeCount", player, op: "eq", value: count },
+    evidence: [
+      "trigger:lifeRemoved",
+      `player:${player}`,
+      "condition:lifeCount",
+      "condition:comparator:eq",
+      count === 0
+        ? "condition:threshold:nonNegativeInteger"
+        : "condition:threshold:positiveInteger",
+    ],
   };
 };
 
@@ -684,14 +719,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
 
 const implicitReactionPredicates = (
   text: string,
-):
-  | {
-      trigger: Trigger;
-      evidence: ExpressionParseResult["evidence"];
-      allowBodyBlockPatch?: boolean;
-      sourcePresencePolicy?: SourcePresencePolicy;
-    }
-  | undefined => {
+): ReactionPredicateResult | undefined => {
   const predicates = text
     .split(/\s+or\s+(?=(?:you|your)\b(?!\s+opponent's\b))/iu)
     .map((part) =>
@@ -724,6 +752,9 @@ const implicitReactionPredicates = (
   }
   return {
     trigger: anyOfTrigger(parsed.map((predicate) => predicate.trigger)),
+    ...(parsed.length === 1 && parsed[0]?.condition !== undefined
+      ? { condition: parsed[0].condition }
+      : {}),
     ...(parsed.some((predicate) => predicate.allowBodyBlockPatch === true)
       ? { allowBodyBlockPatch: true }
       : {}),
@@ -834,6 +865,9 @@ export function implicitEventReactionExpressionParser(options: {
           ...parsed.blockPatch,
           category: "auto",
           trigger: predicate.trigger,
+          ...(predicate.condition === undefined
+            ? {}
+            : { condition: predicate.condition }),
           ...(predicate.sourcePresencePolicy === undefined
             ? {}
             : { sourcePresencePolicy: predicate.sourcePresencePolicy }),

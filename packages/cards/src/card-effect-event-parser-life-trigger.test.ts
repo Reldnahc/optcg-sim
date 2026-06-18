@@ -487,4 +487,63 @@ describe("card effect event parser life trigger and reaction cases", () => {
     );
     expect(result?.evidence).not.toContain("activation:event");
   });
+
+  it("parses Life-zero transition reactions as lifeRemoved plus Life-count condition", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] [Once Per Turn] When your number of Life cards becomes 0, add 1 card from the top of your deck to the top of your Life cards. Then, trash 1 card from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "lifeRemoved", players: ["self"] },
+        oncePerTurn: true,
+        condition: {
+          type: "and",
+          conditions: [
+            { type: "opponentTurn" },
+            { type: "lifeCount", player: "self", op: "eq", value: 0 },
+          ],
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "self", zone: "deck", position: "top" },
+                to: { player: "self", zone: "life", position: "top" },
+                order: "original",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "trashFromHand",
+                count: 1,
+                player: "self",
+                chooser: "self",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:opponentTurn",
+        "marker:oncePerTurn",
+        "trigger:lifeRemoved",
+        "condition:lifeCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "instruction:moveCards",
+        "destination:life",
+        "instruction:trashFromHand",
+        "composition:entryExpression",
+      ]),
+    );
+  });
 });
