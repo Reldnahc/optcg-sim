@@ -1,5 +1,5 @@
 import type { InstructionParser } from "../types.js";
-import { supportedEntryPoints } from "../entry-point-definitions.js";
+import { parseReferencedEffectEntryPointText } from "../references/effect-entry-point.js";
 
 export const activateReferencedEffectInstructionPrimitive = {
   primitiveId: "instruction:activateReferencedEffect",
@@ -9,37 +9,27 @@ export const activateReferencedEffectInstructionPrimitive = {
 export const parseActivateReferencedEffectInstruction: InstructionParser = (
   input,
 ) => {
-  const match = /^Activate this card's (?<entry>\[[^\]]+\]) effect\.?$/i.exec(
-    input.text,
-  );
-  const entryText = match?.groups?.["entry"];
-  if (entryText === undefined) {
+  const match = /^Activate this card's (?<reference>.+)$/i.exec(input.text);
+  const referenceText = match?.groups?.["reference"];
+  if (referenceText === undefined) {
     return undefined;
   }
 
-  const entryPoint = supportedEntryPoints.find(
-    (candidate) => candidate.text.toLowerCase() === entryText.toLowerCase(),
-  );
-  if (entryPoint === undefined) {
+  const reference = parseReferencedEffectEntryPointText(referenceText);
+  if (reference === undefined || reference.rest.length > 0) {
     return undefined;
   }
-
-  const referenceEvidence =
-    entryPoint.trigger.type === "main"
-      ? (["reference:eventMain"] as const)
-      : ([] as const);
 
   return {
     effect: {
       type: "activateReferencedEffect",
       source: { type: "triggerCard" },
-      trigger: entryPoint.trigger,
+      trigger: reference.trigger,
     },
     evidence: [
       "instruction:activateReferencedEffect",
       "target:triggerCard",
-      "reference:effectEntryPoint",
-      ...referenceEvidence,
+      ...reference.evidence,
     ],
     rest: "",
   };

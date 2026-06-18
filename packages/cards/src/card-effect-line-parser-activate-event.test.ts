@@ -139,4 +139,55 @@ describe("selected Event activation parsing", () => {
       ]),
     );
   });
+
+  it("parses explicit referenced Event entry points without treating Main as the only supported reference", () => {
+    const result = parseCardEffectLine(
+      "[On Play] activate the [Counter] effect of up to 1 Event card with a cost of 2 or less from your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectCards",
+                zone: "hand",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["event"],
+                  cost: { max: 2 },
+                },
+                saveAs: "handSelection:activate-event",
+                visibility: "chooserOnly",
+              },
+            },
+            {
+              effect: {
+                type: "activateSelectedEvent",
+                selection: "handSelection:activate-event",
+                trigger: { type: "counter" },
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:activateSelectedEvent",
+        "reference:effectEntryPoint",
+        "composition:selectThenActivate",
+      ]),
+    );
+    expect(result?.evidence).not.toContain("reference:eventMain");
+  });
 });

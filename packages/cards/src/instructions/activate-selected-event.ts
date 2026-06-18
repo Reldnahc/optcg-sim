@@ -2,6 +2,7 @@ import type { HandSelectionId, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { parseReferencedEffectEntryPointText } from "../references/effect-entry-point.js";
 import type { InstructionParser } from "../types.js";
 
 const handEventActivationSelection =
@@ -18,8 +19,9 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
     return undefined;
   }
 
-  const mainEffectPrefix = /^the\s+\[Main\]\s+effect\s+of\s+/iu;
-  const sourceText = afterActivate.replace(mainEffectPrefix, "");
+  const referencedEntryPoint =
+    parseReferencedEffectEntryPointText(afterActivate);
+  const sourceText = referencedEntryPoint?.rest ?? afterActivate;
   const cardinality = parseUpToCardinality({ text: sourceText });
   if (cardinality === undefined) {
     return undefined;
@@ -59,7 +61,7 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
             ...(source.zone === "trash"
               ? { sourceZone: "trash" as const }
               : {}),
-            trigger: { type: "main" },
+            trigger: referencedEntryPoint?.trigger ?? { type: "main" },
             ignoreCost: true,
           },
         },
@@ -72,7 +74,7 @@ export const parseActivateSelectedEventInstruction: InstructionParser = (
       "player:self",
       "chooser:self:upTo",
       ...source.evidence,
-      "reference:eventMain",
+      ...(referencedEntryPoint?.evidence ?? ["reference:eventMain"]),
       "composition:selectThenActivate",
     ],
     rest: "",
