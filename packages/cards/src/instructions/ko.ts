@@ -1,6 +1,7 @@
-import type { Effect, Target } from "@optcg/types";
+import type { Effect, Target, TargetPlayerRef } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
+import { parseCardFilterPredicates } from "../filters/index.js";
 import {
   allFieldTargetParsers,
   opponentFieldTargetParsers,
@@ -171,17 +172,27 @@ export const parseKoInstruction: InstructionParser = (input) => {
       { text: cardinality.rest },
       opponentFieldTargetParsers(),
     );
-  if (target === undefined || (target.rest.length > 0 && target.rest !== ".")) {
+  const anyPlayerTarget =
+    target === undefined
+      ? parseAnyPlayerCharacterKoTarget(cardinality.rest)
+      : undefined;
+  const parsedTarget = target ?? anyPlayerTarget;
+  if (
+    parsedTarget === undefined ||
+    (parsedTarget.rest.length > 0 && parsedTarget.rest !== ".")
+  ) {
     return undefined;
   }
-  const category = target.filter?.categories?.[0];
+  const category = parsedTarget.filter?.categories?.[0];
   const zone = fieldZoneForCategory(category) ?? "characterArea";
+  const player = anyPlayerTarget?.player ?? "opponent";
 
   return {
     effect: selectThenApplyKoEffect({
       min: cardinality.cardinality.min,
       max: cardinality.cardinality.max,
-      filter: target.filter ?? { categories: ["character"] },
+      player,
+      filter: parsedTarget.filter ?? { categories: ["character"] },
       selectionConstraints: totalStatTarget?.selectionConstraints,
       zone,
       selectionId: koTargetSelectionId,
@@ -190,7 +201,7 @@ export const parseKoInstruction: InstructionParser = (input) => {
       "instruction:ko",
       ...cardinality.evidence,
       "chooser:self:upTo",
-      ...target.evidence,
+      ...parsedTarget.evidence,
       ...(totalStatTarget?.evidence ?? []),
       "composition:selectThenApply",
     ],
@@ -257,6 +268,33 @@ function parseTotalStatLimitedKoTarget(text: string):
       op === "lte" ? "condition:comparator:lte" : "condition:comparator:gte",
       "condition:threshold:positiveInteger",
     ],
+  };
+}
+
+function parseAnyPlayerCharacterKoTarget(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: TargetFilter;
+      readonly player: "anyPlayer";
+      readonly rest: string;
+    }
+  | undefined {
+  const predicates = parseCardFilterPredicates(
+    { text },
+    { powerSemantics: "current" },
+  );
+  if (predicates === undefined) {
+    return undefined;
+  }
+  const category = predicates.filter.categories?.[0];
+  if (category !== "character") {
+    return undefined;
+  }
+  return {
+    evidence: ["player:any", ...predicates.evidence],
+    filter: predicates.filter,
+    player: "anyPlayer",
+    rest: predicates.rest.trim(),
   };
 }
 
@@ -506,6 +544,7 @@ function parseKoTargetPart(
 function selectThenApplyKoEffect(options: {
   readonly min: number;
   readonly max: number;
+  readonly player?: TargetPlayerRef;
   readonly filter: TargetFilter;
   readonly selectionConstraints?: Extract<
     Effect,
@@ -517,7 +556,7 @@ function selectThenApplyKoEffect(options: {
   return selectThenApplyFieldTarget({
     selectionId: options.selectionId,
     selectId: `select:ko-target:${options.selectionId}`,
-    player: "opponent",
+    player: options.player ?? "opponent",
     zone: options.zone,
     min: options.min,
     max: options.max,

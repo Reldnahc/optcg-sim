@@ -23,7 +23,7 @@ export const parseMoveCardsCost = (
     return lifeTopToTrash;
   }
 
-  const actionMatch = /^place\s+(?<rest>.+)$/i.exec(input.text);
+  const actionMatch = /^(?:place|return)\s+(?<rest>.+)$/i.exec(input.text);
   const afterAction = actionMatch?.groups?.["rest"];
   if (afterAction === undefined) {
     return undefined;
@@ -283,7 +283,7 @@ function parseTrashToBottomDeckCostRoute(text: string):
     }
   | undefined {
   if (
-    /^cards? from your trash at the bottom of your deck(?: in any order)?$/i.test(
+    /^cards? from your trash (?:at|to) the bottom of your deck(?: in any order)?$/i.test(
       text,
     )
   ) {
@@ -291,7 +291,7 @@ function parseTrashToBottomDeckCostRoute(text: string):
   }
 
   const filterBeforeCardMatch =
-    /^(?<filter>.+?\s+cards?)\s+from your trash at the bottom of your deck in any order$/i.exec(
+    /^(?<filter>.+?\s+cards?)\s+from your trash (?:at|to) the bottom of your deck in any order$/i.exec(
       text,
     );
   const filterBeforeCardText = filterBeforeCardMatch?.groups?.["filter"];
@@ -306,12 +306,12 @@ function parseTrashToBottomDeckCostRoute(text: string):
   }
 
   const filteredMatch =
-    /^cards?\s+(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/i.exec(
+    /^cards?\s+(?<filter>.+?)\s+from your trash (?:at|to) the bottom of your deck in any order$/i.exec(
       text,
     );
   const filterText =
     filteredMatch?.groups?.["filter"] ??
-    /^(?<filter>.+?)\s+from your trash at the bottom of your deck in any order$/iu.exec(
+    /^(?<filter>.+?)\s+from your trash (?:at|to) the bottom of your deck in any order$/iu.exec(
       text,
     )?.groups?.["filter"];
   if (filterText === undefined) {
