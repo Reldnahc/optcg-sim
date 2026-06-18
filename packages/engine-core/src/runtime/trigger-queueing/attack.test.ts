@@ -261,6 +261,38 @@ test("queues supported When Attacking effect from a multi-effect definition with
   );
 });
 
+test("When Attacking queueing ignores unsupported dormant On K.O. sibling", () => {
+  const { state, definition } = attackQueueingState();
+  const whenAttackingEffect = must(
+    definition.effects[0],
+    "whenAttacking effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-when-attacking": {
+      ...definition,
+      effects: [
+        whenAttackingEffect,
+        {
+          ...whenAttackingEffect,
+          id: `${String(whenAttackingEffect.id)}:unsupported-on-ko` as typeof whenAttackingEffect.id,
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(
+    result.state.effectQueue[0]?.effectBlockId,
+    whenAttackingEffect.id,
+  );
+});
+
 test("queued When Attacking effects carry active text presentation from parser spans", () => {
   const { state, attacker, definition } = attackQueueingState();
   const whenAttackingEffect = must(
@@ -373,6 +405,40 @@ test("queues supported On Your Opponent's Attack effect from a multi-effect defi
 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.effectQueue.length, 0);
+  const queuedEvent = result.events.find(
+    (event) => event.type === "effectQueued",
+  );
+  const payload = queuedEvent?.payload as
+    | { effectBlockId?: unknown }
+    | undefined;
+  assert.equal(payload?.effectBlockId, onOpponentAttackEffect.id);
+});
+
+test("On Opponent Attack queueing ignores unsupported dormant On Play sibling", () => {
+  const { state, definition } = opponentAttackQueueingState();
+  const onOpponentAttackEffect = must(
+    definition.effects[0],
+    "onOpponentAttack effect",
+  );
+  state.cardManifest.effectDefinitions = {
+    "def-on-opponent-attack": {
+      ...definition,
+      effects: [
+        onOpponentAttackEffect,
+        {
+          ...onOpponentAttackEffect,
+          id: `${String(onOpponentAttackEffect.id)}:unsupported-on-play` as typeof onOpponentAttackEffect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const result = processDefenderOpponentAttackTiming(state);
+
+  assert.equal(result.errors, undefined);
   const queuedEvent = result.events.find(
     (event) => event.type === "effectQueued",
   );

@@ -176,6 +176,36 @@ test("queues supported Main Event effect from a multi-effect definition with unr
   );
 });
 
+test("Main Event queueing ignores unsupported dormant On K.O. sibling", () => {
+  const { state } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        mainEffect,
+        {
+          ...mainEffect,
+          id: `${String(mainEffect.id)}:unsupported-on-ko` as typeof mainEffect.id,
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(result.state.effectQueue[0]?.effectBlockId, mainEffect.id);
+});
+
 test("queues every supported same-entrypoint Main Event effect block", () => {
   const { state } = setupMainEventQueueingState();
   const definition = must(

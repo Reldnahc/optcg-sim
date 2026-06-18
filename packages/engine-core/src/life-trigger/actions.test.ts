@@ -201,6 +201,53 @@ test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for optional tr
   assert.deepEqual(decision.options, ["activateTrigger", "addToHand"]);
 });
 
+test("getSupportedLifeTriggerDecision ignores unsupported dormant On K.O. sibling", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-dormant-on-ko-sibling");
+  const definition = supportedLifeTriggerDefinition(cardId);
+  const triggerEffect = must(definition.effects[0], "trigger effect");
+  const supported = {
+    ...definition,
+    effects: [
+      triggerEffect,
+      {
+        ...triggerEffect,
+        id: `${String(triggerEffect.id)}:unsupported-on-ko` as typeof triggerEffect.id,
+        trigger: { type: "onKO" },
+        sourcePresencePolicy: "resolveFromDestinationZone" as const,
+        cost: { type: "restDon", count: 1 },
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: draw 1",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-trigger-dormant-on-ko-sibling",
+      rulesVersion: supported.metadata.rulesVersion,
+      sourceTextHash: supported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-trigger-dormant-on-ko-sibling": supported,
+  };
+
+  const decision = getSupportedLifeTriggerDecision(state, p2, topLife.card);
+
+  assert.ok(decision);
+  assert.equal(decision.type, "confirmLifeTrigger");
+  assert.equal(decision.card.cardId, cardId);
+});
+
 test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for generic reusable trigger bodies", () => {
   const state = setupAttackState();
   const p2State = must(state.players[p2], "p2");

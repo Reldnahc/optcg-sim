@@ -182,6 +182,43 @@ test("queues supported On Play effect from a multi-effect definition with unrela
   );
 });
 
+test("On Play queueing ignores unsupported dormant On K.O. sibling", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const onPlayEffect = must(definition.effects[0], "onPlay effect");
+  setupOnPlayDefinition(
+    state,
+    played,
+    {
+      ...definition,
+      effects: [
+        onPlayEffect,
+        {
+          ...onPlayEffect,
+          id: `${String(onPlayEffect.id)}:unsupported-on-ko` as typeof onPlayEffect.id,
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+    "def-on-play-with-dormant-on-ko",
+  );
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 1);
+  assert.equal(result.state.effectQueue[0]?.effectBlockId, onPlayEffect.id);
+});
+
 test("queues every supported same-entrypoint On Play effect block", () => {
   const { state, played } = queueingState();
   const supportCard = resolvedCard({

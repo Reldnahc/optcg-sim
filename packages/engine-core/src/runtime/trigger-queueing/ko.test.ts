@@ -263,6 +263,35 @@ test("detects supported On K.O. candidate from a multi-effect definition with un
   assert.deepEqual(state, before);
 });
 
+test("On K.O. queueing ignores unsupported dormant On Play sibling", () => {
+  const { state, source, definition, events } = koQueueingState();
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        onKOEffect,
+        {
+          ...onKOEffect,
+          id: `${String(onKOEffect.id)}:unsupported-on-play` as typeof onKOEffect.id,
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.candidates.length, 1);
+  const candidate = must(result.candidates[0], "On K.O. candidate");
+  assert.equal(candidate.effectBlockId, onKOEffect.id);
+  assert.equal(candidate.source.instanceId, source.instanceId);
+});
+
 test("queues supported On K.O. candidates with deterministic queue metadata and public event", () => {
   const { state, source, trashedSource, definition, events } =
     koQueueingState();

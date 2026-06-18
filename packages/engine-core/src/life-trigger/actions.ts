@@ -85,7 +85,9 @@ const selectSupportedTriggerEffects = (
     return undefined;
   }
   if (
-    triggerEffects.some((effect) => !isSupportedTriggerEffect(effect, effects))
+    triggerEffects.some(
+      (effect) => !isSupportedTriggerEffect(effect, triggerEffects),
+    )
   ) {
     return undefined;
   }
