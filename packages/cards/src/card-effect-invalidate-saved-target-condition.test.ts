@@ -88,4 +88,94 @@ describe("invalidate-effects saved target continuation parser", () => {
       },
     });
   });
+
+  it("parses conditional K.O. of the invalidated Character by current power", () => {
+    const result = parseCardEffectLine(
+      "[Main] Negate the effect of up to 1 of your opponent's Characters during this turn. Then, if that Character has 5000 power or less, K.O. it.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "selectTargets" } },
+            { effect: { type: "invalidateEffects" } },
+            {
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "cardStatComparison",
+                  stat: "currentPower",
+                  op: "lte",
+                  value: 5000,
+                },
+                then: { type: "ko" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:invalidateEffects",
+        "condition:cardStatComparison",
+        "condition:stat:currentPower",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:savedTargetCondition",
+        "instruction:ko",
+      ]),
+    );
+  });
+
+  it("parses return-DON cost into invalidated-target current-power K.O.", () => {
+    const result = parseCardEffectLine(
+      "[On Play] DON!! −1 (You may return the specified number of DON!! cards from your field to your DON!! deck.): Negate the effect of up to 1 of your opponent's Characters during this turn. Then, if that Character has 5000 power or less, K.O. it.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1 },
+              },
+            },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  { effect: { type: "selectTargets" } },
+                  { effect: { type: "invalidateEffects" } },
+                  {
+                    effect: {
+                      type: "conditional",
+                      if: { type: "cardStatComparison", stat: "currentPower" },
+                      then: { type: "ko" },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "cost:returnDon",
+        "instruction:invalidateEffects",
+        "condition:stat:currentPower",
+        "composition:savedTargetCondition",
+      ]),
+    );
+  });
 });

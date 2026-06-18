@@ -627,11 +627,13 @@ function parseThatCharacterCostConditionalKo(text: string):
     }
   | undefined {
   const match =
-    /^(?<duration>.+?)\.\s+Then,\s+if that Character has a cost of (?<value>[1-9]\d*) (?<comparison>or less|or more),\s*K\.O\. it\.?$/iu.exec(
+    /^(?<duration>.+?)\.\s+Then,\s+if that Character has (?:(?:a )?cost of (?<cost>[1-9]\d*)|(?<power>[1-9]\d*) power) (?<comparison>or less|or more),\s*K\.O\. it\.?$/iu.exec(
       text,
     );
   const durationText = match?.groups?.["duration"];
-  const valueText = match?.groups?.["value"];
+  const costText = match?.groups?.["cost"];
+  const powerText = match?.groups?.["power"];
+  const valueText = costText ?? powerText;
   const comparisonText = match?.groups?.["comparison"];
   if (
     durationText === undefined ||
@@ -651,12 +653,13 @@ function parseThatCharacterCostConditionalKo(text: string):
 
   const target = selectedInvalidateEffectsTarget(["characterArea"]);
   const op = comparisonText.toLowerCase() === "or less" ? "lte" : "gte";
+  const stat = powerText === undefined ? "cost" : "currentPower";
   return {
     duration: duration.duration,
     evidence: [
       ...duration.evidence,
       "condition:cardStatComparison",
-      "condition:stat:cost",
+      stat === "cost" ? "condition:stat:cost" : "condition:stat:currentPower",
       op === "lte" ? "condition:comparator:lte" : "condition:comparator:gte",
       "condition:threshold:positiveInteger",
       "composition:savedTargetCondition",
@@ -668,7 +671,7 @@ function parseThatCharacterCostConditionalKo(text: string):
         if: {
           type: "cardStatComparison",
           target,
-          stat: "cost",
+          stat,
           op,
           value: Number.parseInt(valueText, 10),
         },
