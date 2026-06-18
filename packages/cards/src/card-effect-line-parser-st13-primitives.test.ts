@@ -198,3 +198,157 @@ it("parses Counter power followed by private Life reorder", () => {
     ]),
   );
 });
+
+it("parses top-or-bottom Life trash cost before opponent Character K.O.", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may trash 1 card from the top or bottom of your Life cards: K.O. up to 1 of your opponent's Characters with a cost of 5 or less.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 1,
+                chooser: "self",
+                from: {
+                  player: "self",
+                  zone: "life",
+                  position: "topOrBottom",
+                },
+                to: { player: "self", zone: "trash" },
+                order: "chooserChoice",
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zone: "characterArea",
+                      max: 1,
+                      filter: { categories: ["character"], cost: { max: 5 } },
+                    },
+                  },
+                },
+                { connector: "then", effect: { type: "ko" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "cost:moveCards",
+      "zone:life",
+      "position:top",
+      "position:bottom",
+      "destination:trash",
+      "instruction:ko",
+      "target:opponentCharacters",
+      "filter:cost",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});
+
+it("parses top-or-bottom Life trash cost before revealed hand-to-Life placement", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may trash 1 card from the top or bottom of your Life cards: Reveal up to 1 Character card with a cost of 5 from your hand and add it to the top of your Life cards face-down.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                from: {
+                  player: "self",
+                  zone: "life",
+                  position: "topOrBottom",
+                },
+                to: { player: "self", zone: "trash" },
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    filter: {
+                      categories: ["character"],
+                      cost: { op: "eq", value: 5 },
+                    },
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "moveSelected",
+                    from: "hand",
+                    to: "life",
+                    position: "top",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "cost:moveCards",
+      "zone:life",
+      "position:top",
+      "position:bottom",
+      "destination:trash",
+      "instruction:selectCards",
+      "instruction:moveSelected",
+      "zone:hand",
+      "destination:life",
+      "reveal:bothPlayers",
+      "filter:category:character",
+      "filter:cost",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});

@@ -232,19 +232,28 @@ const parseLifeTopToTrashCost = (
   input: ParseInput,
 ): CostParseResult | undefined => {
   const match =
-    /^trash (?<count>[1-9]\d*) cards? from the top of your Life cards$/i.exec(
+    /^trash (?<count>[1-9]\d*) cards? from the (?<position>top|bottom|top or bottom) of your Life cards$/i.exec(
       input.text,
     );
   const countText = match?.groups?.["count"];
-  if (countText === undefined) {
+  const positionText = match?.groups?.["position"];
+  if (countText === undefined || positionText === undefined) {
     return undefined;
   }
+  const position =
+    positionText.toLowerCase() === "top or bottom"
+      ? "topOrBottom"
+      : (positionText.toLowerCase() as "top" | "bottom");
+  const positionEvidence: PrimitiveEvidence[] =
+    position === "topOrBottom"
+      ? ["position:top", "position:bottom"]
+      : [position === "top" ? "position:top" : "position:bottom"];
   return {
     cost: {
       type: "moveCards",
       count: Number.parseInt(countText, 10),
       chooser: "self",
-      from: { player: "self", zone: "life", position: "top" },
+      from: { player: "self", zone: "life", position },
       to: { player: "self", zone: "trash" },
       order: "chooserChoice",
       optional: true,
@@ -255,7 +264,7 @@ const parseLifeTopToTrashCost = (
       "count:positiveInteger",
       "player:self",
       "zone:life",
-      "position:top",
+      ...positionEvidence,
       "destination:trash",
       "order:original",
     ],

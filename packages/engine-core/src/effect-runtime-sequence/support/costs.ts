@@ -204,7 +204,9 @@ const isSupportedMoveCardsCostRoute = (
   }
   if (
     cost.from.zone === "life" &&
-    cost.from.position === "top" &&
+    (cost.from.position === "top" ||
+      cost.from.position === "bottom" ||
+      cost.from.position === "topOrBottom") &&
     cost.to.zone === "trash" &&
     cost.to.position === undefined
   ) {
