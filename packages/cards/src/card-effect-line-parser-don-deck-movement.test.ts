@@ -34,6 +34,107 @@ it("parses explicit rested DON movement from DON deck as a reusable move primiti
   );
 });
 
+it("parses exact rested DON movement from DON deck as a reusable move primitive", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Add 2 DON!! cards from your DON!! deck and rest them.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "moveCards",
+        min: 2,
+        count: 2,
+        from: { player: "self", zone: "donDeck", position: "top" },
+        to: { player: "self", zone: "costArea" },
+        order: "original",
+        destinationState: "rested",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:moveCards",
+      "cardinality:exact",
+      "zone:donDeck",
+      "destination:costArea",
+      "state:rested",
+      "filter:category:don",
+    ]),
+  );
+});
+
+it("composes exact DON deck movement after reusable optional costs and DON count condition", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may rest this Character and trash 1 {FILM} type card from your hand: If your opponent has more DON!! cards on their field than you, add 2 DON!! cards from your DON!! deck and rest them.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "sequence",
+                costs: [
+                  { type: "restSelf" },
+                  {
+                    type: "trashFromHand",
+                    count: 1,
+                    filter: { typesAny: ["FILM"] },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: { type: "fieldCountDifference" },
+              then: {
+                type: "moveCards",
+                min: 2,
+                count: 2,
+                from: { player: "self", zone: "donDeck", position: "top" },
+                to: { player: "self", zone: "costArea" },
+                destinationState: "rested",
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:restSelf",
+      "cost:trashFromHand",
+      "filter:type",
+      "expression:conditional",
+      "condition:fieldCountDifference",
+      "cardinality:exact",
+      "instruction:moveCards",
+      "zone:donDeck",
+      "state:rested",
+    ]),
+  );
+});
+
 it("parses plural active DON movement from DON deck under another entry point", () => {
   const result = parseCardEffectLine(
     "[When Attacking] Add up to 2 DON!! cards from your DON!! deck and set them as active.",

@@ -1,5 +1,12 @@
-import { parseUpToCardinality } from "../../cardinality/index.js";
-import type { InstructionParser, InstructionParseResult } from "../../types.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../../cardinality/index.js";
+import type {
+  InstructionParser,
+  InstructionParseResult,
+  PrimitiveEvidence,
+} from "../../types.js";
 
 type DonDeckMoveOwner = "self" | "opponent";
 
@@ -26,7 +33,7 @@ const parseDonDeckMovePrefix = (
   }
 
   const self =
-    /^add (?<quantity>up to [1-9]\d*) (?:(?<additional>additional) )?DON!! cards?(?<source> from your DON!! deck)?$/iu.exec(
+    /^add (?<quantity>(?:up to )?[1-9]\d*) (?:(?<additional>additional) )?DON!! cards?(?<source> from your DON!! deck)?$/iu.exec(
       text,
     );
   const quantityText = self?.groups?.["quantity"];
@@ -39,6 +46,36 @@ const parseDonDeckMovePrefix = (
     return undefined;
   }
   return { owner: "self", quantityText };
+};
+
+const parseDonDeckMoveQuantity = (
+  text: string,
+):
+  | {
+      readonly min: number;
+      readonly count: number;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const upTo = parseUpToCardinality({ text });
+  if (upTo !== undefined && upTo.rest.length === 0) {
+    return {
+      min: upTo.cardinality.min,
+      count: upTo.cardinality.max,
+      evidence: upTo.evidence,
+    };
+  }
+
+  const exact = parseExactCardinality({ text });
+  if (exact !== undefined && exact.rest.length === 0) {
+    return {
+      min: exact.count,
+      count: exact.count,
+      evidence: exact.evidence,
+    };
+  }
+
+  return undefined;
 };
 
 function parseAddDonFromDonDeckInstruction(
@@ -62,8 +99,8 @@ function parseAddDonFromDonDeckInstruction(
     return undefined;
   }
   const delayed = match?.groups?.["delayed"] !== undefined;
-  const quantity = parseUpToCardinality({ text: prefix.quantityText });
-  if (quantity === undefined || quantity.rest.length > 0) {
+  const quantity = parseDonDeckMoveQuantity(prefix.quantityText);
+  if (quantity === undefined) {
     return undefined;
   }
 
@@ -74,8 +111,8 @@ function parseAddDonFromDonDeckInstruction(
           timing: { type: "endOfTurn", turn: "current" },
           effect: {
             type: "moveCards",
-            min: quantity.cardinality.min,
-            count: quantity.cardinality.max,
+            min: quantity.min,
+            count: quantity.count,
             ...(prefix.chooser === undefined
               ? {}
               : { chooser: prefix.chooser }),
@@ -87,8 +124,8 @@ function parseAddDonFromDonDeckInstruction(
         }
       : {
           type: "moveCards",
-          min: quantity.cardinality.min,
-          count: quantity.cardinality.max,
+          min: quantity.min,
+          count: quantity.count,
           ...(prefix.chooser === undefined ? {} : { chooser: prefix.chooser }),
           from: { player: prefix.owner, zone: "donDeck", position: "top" },
           to: { player: prefix.owner, zone: "costArea" },
