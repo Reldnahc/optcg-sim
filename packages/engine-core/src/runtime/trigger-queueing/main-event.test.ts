@@ -176,6 +176,39 @@ test("queues supported Main Event effect from a multi-effect definition with unr
   );
 });
 
+test("queues every supported same-entrypoint Main Event effect block", () => {
+  const { state } = setupMainEventQueueingState();
+  const definition = must(
+    state.cardManifest.effectDefinitions?.["def-main-event-draw"],
+    "main event definition",
+  );
+  const mainEffect = must(definition.effects[0], "main effect");
+  state.cardManifest.effectDefinitions = {
+    "def-main-event-draw": {
+      ...definition,
+      effects: [
+        mainEffect,
+        {
+          ...mainEffect,
+          id: `${String(mainEffect.id)}:second` as typeof mainEffect.id,
+        },
+      ],
+    },
+  };
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.state.effectQueue.map((entry) => entry.effectBlockId),
+    [mainEffect.id, `${String(mainEffect.id)}:second`],
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued", "effectQueued"],
+  );
+});
+
 test("unsupported same-entrypoint Main Event effect fails closed beside a supported Main Event effect", () => {
   const { state } = setupMainEventQueueingState();
   const definition = must(

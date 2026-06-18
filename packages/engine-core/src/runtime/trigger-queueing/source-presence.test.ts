@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type {
-  CardId,
-  CardInstance,
-  EffectDefinition,
-  EffectId,
-} from "@optcg/types";
+import type { CardId, CardInstance, EffectDefinition } from "@optcg/types";
 
 import {
   createActiveState,
@@ -78,9 +73,7 @@ test("missing, stale, or mismatched source presence fails closed without queue m
 test("unsupported effect metadata and shapes fail closed without partial mutation or events", () => {
   const cases: Array<{
     name: string;
-    expectedReason:
-      | "unsupported-on-play-definition"
-      | "multiple-on-play-effects";
+    expectedReason: "unsupported-on-play-definition";
     definition: (d: EffectDefinition) => EffectDefinition;
   }> = [
     {
@@ -114,20 +107,6 @@ test("unsupported effect metadata and shapes fail closed without partial mutatio
           },
         ],
       }),
-    },
-    {
-      name: "multiple-on-play",
-      expectedReason: "multiple-on-play-effects",
-      definition: (d) => {
-        const first = must(d.effects[0], "onPlay effect");
-        return {
-          ...d,
-          effects: [
-            first,
-            { ...first, id: "OP01-015:auto-on-play-2" as EffectId },
-          ],
-        };
-      },
     },
   ];
 

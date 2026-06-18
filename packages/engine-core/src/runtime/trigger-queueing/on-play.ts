@@ -194,14 +194,6 @@ export const createOnPlayTriggerQueueing = (
           options,
         );
       }
-      if (matching.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [onPlayTriggerQueueingError("multiple-on-play-effects")],
-          options,
-        );
-      }
       for (const effectBlock of matching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId

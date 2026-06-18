@@ -868,37 +868,39 @@ test("conditioned optional On K.O. draw queues and routes through chooseOptional
   assert.equal(paused.state.effectQueue.length, 1);
 });
 
-test("rejects multiple On K.O. effects before queueing", () => {
+test("detects and queues every supported same-entrypoint On K.O. effect block", () => {
   const { state, definition, events } = koQueueingState();
   const effect = must(definition.effects[0], "onKO effect");
+  const secondEffect = {
+    ...effect,
+    id: `${String(effect.id)}:second` as EffectDefinition["effects"][number]["id"],
+  };
   state.cardManifest.effectDefinitions = {
     ...state.cardManifest.effectDefinitions,
     "def-on-ko": {
       ...definition,
-      effects: [
-        effect,
-        {
-          ...effect,
-          id: `${String(effect.id)}:second` as EffectDefinition["effects"][number]["id"],
-        },
-      ],
+      effects: [effect, secondEffect],
     },
   };
-  const before = structuredClone(state);
 
-  const result = detectBattleKOTriggerCandidates(state, events);
+  const detected = detectBattleKOTriggerCandidates(state, events);
+  const queuedEvents = [...events];
+  const queued = queueBattleKOTriggers(state, state, queuedEvents);
 
-  assert.deepEqual(result, {
-    ok: false,
-    error: {
-      type: "effectRuntimeError",
-      effectId: "on-ko-trigger-candidate-detection",
-      details: {
-        reason: "multiple-on-ko-effects",
-      },
-    },
-  });
-  assert.deepEqual(state, before);
+  assert.equal(detected.ok, true);
+  assert.deepEqual(
+    detected.candidates.map((candidate) => candidate.effectBlockId),
+    [effect.id, secondEffect.id],
+  );
+  assert.equal(queued.ok, true);
+  assert.deepEqual(
+    queued.state.effectQueue.map((entry) => entry.effectBlockId),
+    [effect.id, secondEffect.id],
+  );
+  assert.equal(
+    queuedEvents.filter((event) => event.type === "effectQueued").length,
+    2,
+  );
 });
 
 test("On K.O. reusable draw-then-trash sequence queues and reaches sequence decision flow", () => {

@@ -23,36 +23,31 @@ export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
   | "source-presence-failed"
   | "missing-card-definition"
-  | "unsupported-on-play-definition"
-  | "multiple-on-play-effects";
+  | "unsupported-on-play-definition";
 
 export type WhenAttackingTriggerQueueingFailureReason =
   | "invalid-attack-declared-event"
   | "source-presence-failed"
   | "missing-card-definition"
-  | "unsupported-when-attacking-definition"
-  | "multiple-when-attacking-effects";
+  | "unsupported-when-attacking-definition";
 
 export type OnOpponentAttackTriggerQueueingFailureReason =
   | "invalid-attack-declared-event"
   | "source-presence-failed"
   | "missing-card-definition"
-  | "unsupported-on-opponent-attack-definition"
-  | "multiple-on-opponent-attack-effects";
+  | "unsupported-on-opponent-attack-definition";
 
 export type OnKOTriggerCandidateDetectionFailureReason =
   | "invalid-ko-event-batch"
   | "source-presence-failed"
   | "missing-card-definition"
-  | "unsupported-on-ko-definition"
-  | "multiple-on-ko-effects";
+  | "unsupported-on-ko-definition";
 
 export type MainEventTriggerQueueingFailureReason =
   | "invalid-card-played-event"
   | "source-presence-failed"
   | "missing-card-definition"
-  | "unsupported-main-event-definition"
-  | "multiple-main-event-effects";
+  | "unsupported-main-event-definition";
 
 export type HandTrashedByEffectTriggerQueueingFailureReason =
   | "invalid-hand-trashed-by-effect-event"

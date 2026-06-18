@@ -174,58 +174,46 @@ export const createKOTriggerQueueing = (
           ),
         };
       }
-      if (matching.length !== 1) {
-        return {
-          ok: false,
-          error: onKOTriggerCandidateDetectionError("multiple-on-ko-effects"),
-        };
-      }
 
-      const effectBlock = matching[0];
-      if (effectBlock === undefined) {
-        return {
-          ok: false,
-          error: onKOTriggerCandidateDetectionError(
-            "unsupported-on-ko-definition",
-          ),
-        };
+      for (const effectBlock of matching) {
+        const candidateSource =
+          effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
+            ? { ...source, zone: origin }
+            : source;
+        const candidatePresentation =
+          activeEffectTextPresentationForEffectBlock({
+            effectBlock,
+            resolvedCard: resolved,
+            source: {
+              instanceId: candidateSource.instanceId,
+              cardId: candidateSource.cardId,
+              playerId: payload.playerId,
+              zone: candidateSource.zone,
+            },
+          });
+        candidates.push({
+          effectBlockId: effectBlock.id,
+          effectBlock,
+          resolvedCard: resolved,
+          controllerId: candidateSource.controller,
+          source: {
+            instanceId: candidateSource.instanceId,
+            cardId: candidateSource.cardId,
+            playerId: payload.playerId,
+            zone: candidateSource.zone,
+          },
+          sourceSnapshot: toSnapshot(candidateSource, resolved),
+          triggerEventId: event.id,
+          sourcePresencePolicy: effectBlock.sourcePresencePolicy,
+          ...(candidatePresentation === undefined
+            ? {}
+            : { presentation: candidatePresentation }),
+          causedBy: {
+            type: "ruleProcess",
+            name: "effectRuntime:onKOTriggerCandidateDetection",
+          },
+        });
       }
-      const candidateSource =
-        effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
-          ? { ...source, zone: origin }
-          : source;
-      const candidatePresentation = activeEffectTextPresentationForEffectBlock({
-        effectBlock,
-        resolvedCard: resolved,
-        source: {
-          instanceId: candidateSource.instanceId,
-          cardId: candidateSource.cardId,
-          playerId: payload.playerId,
-          zone: candidateSource.zone,
-        },
-      });
-      candidates.push({
-        effectBlockId: effectBlock.id,
-        effectBlock,
-        resolvedCard: resolved,
-        controllerId: candidateSource.controller,
-        source: {
-          instanceId: candidateSource.instanceId,
-          cardId: candidateSource.cardId,
-          playerId: payload.playerId,
-          zone: candidateSource.zone,
-        },
-        sourceSnapshot: toSnapshot(candidateSource, resolved),
-        triggerEventId: event.id,
-        sourcePresencePolicy: effectBlock.sourcePresencePolicy,
-        ...(candidatePresentation === undefined
-          ? {}
-          : { presentation: candidatePresentation }),
-        causedBy: {
-          type: "ruleProcess",
-          name: "effectRuntime:onKOTriggerCandidateDetection",
-        },
-      });
     }
 
     return { ok: true, candidates };
@@ -370,19 +358,6 @@ export const createKOTriggerQueueing = (
       );
       if (matching.length === 0) {
         continue;
-      }
-      if (matching.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [
-            dependencies.createUnsupportedPendingRuntimeWorkError({
-              kind: "effectQueue",
-              count: state.effectQueue.length,
-            }),
-          ],
-          options,
-        );
       }
 
       for (const effectBlock of matching) {

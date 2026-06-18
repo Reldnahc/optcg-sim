@@ -182,7 +182,7 @@ test("queues supported On Play effect from a multi-effect definition with unrela
   );
 });
 
-test("duplicate matching On Play effects still fail closed without mutation", () => {
+test("queues every supported same-entrypoint On Play effect block", () => {
   const { state, played } = queueingState();
   const supportCard = resolvedCard({
     cardId: played.cardId,
@@ -213,19 +213,18 @@ test("duplicate matching On Play effects still fail closed without mutation", ()
     },
     "def-duplicate-on-play",
   );
-  const before = structuredClone(state);
 
   const result = processEffectRuntime(state);
 
-  assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "on-play-trigger-queueing",
-      details: { reason: "multiple-on-play-effects" },
-    },
-  ]);
-  assert.deepEqual(result.state, before);
+  assert.equal(result.errors, undefined);
+  assert.deepEqual(
+    result.state.effectQueue.map((entry) => entry.effectBlockId),
+    [onPlayEffect.id, `${String(onPlayEffect.id)}:duplicate`],
+  );
+  assert.deepEqual(
+    result.events.map((event) => event.type),
+    ["effectQueued", "effectQueued"],
+  );
 });
 
 test("unsupported relevant On Play effect still fails closed with unrelated supported effects", () => {

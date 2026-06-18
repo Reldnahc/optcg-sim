@@ -349,7 +349,7 @@ test("cross-entry-point body matrix supports no-choice and sequence bodies only 
   assert.equal(paused.state.pendingDecision?.type, "chooseQuantity");
 });
 
-test("negative adapter/body matrix fails closed for unsupported wrappers, unsupported body, and duplicate same-entrypoint ambiguity", () => {
+test("negative adapter/body matrix fails closed for unsupported wrappers and unsupported bodies", () => {
   const attacking = attackQueueingState();
   const base = must(attacking.definition.effects[0], "whenAttacking effect");
   attacking.state.cardManifest.effectDefinitions = {
@@ -368,42 +368,6 @@ test("negative adapter/body matrix fails closed for unsupported wrappers, unsupp
   const unsupportedBody = processEffectRuntime(attacking.state);
   assert.deepEqual(unsupportedBody.events, []);
   assert.equal(unsupportedBody.errors?.[0]?.type, "effectRuntimeError");
-
-  const ambiguous = queueingState();
-  const ambiguousCard = resolvedCard({
-    cardId: ambiguous.played.cardId,
-    category: "character",
-  });
-  const ambiguousDef = effectDefinition(ambiguous.played.cardId, {
-    type: "onPlay",
-  });
-  const ambiguousEffect = must(ambiguousDef.effects[0], "onPlay");
-  setupOnPlayDefinition(
-    ambiguous.state,
-    ambiguous.played,
-    {
-      ...ambiguousDef,
-      effects: [
-        ambiguousEffect,
-        {
-          ...ambiguousEffect,
-          id: "matrix:duplicate-on-play" as typeof ambiguousEffect.id,
-        },
-      ],
-    },
-    "def-ambiguous-on-play",
-  );
-  ambiguous.state.cardManifest.cards[ambiguous.played.cardId] = {
-    ...ambiguousCard,
-    support: {
-      ...ambiguousCard.support,
-      status: "implemented-dsl",
-      effectDefinitionId: "def-ambiguous-on-play",
-    },
-  };
-  const ambiguousResult = processEffectRuntime(ambiguous.state);
-  assert.deepEqual(ambiguousResult.events, []);
-  assert.equal(ambiguousResult.errors?.[0]?.type, "effectRuntimeError");
 
   const unsupportedAdapter = queueingState();
   const unsupportedAdapterCard = resolvedCard({
@@ -755,6 +719,7 @@ test("runtime production source keeps anti-shape/card-specific authorization bra
     /external card list/i,
     /printed text/i,
     fullDefinitionSizeAuthorizationPattern,
+    /matching\.length\s*!==\s*1/,
     /OP\d{2}-\d{3}/,
   ];
   for (const relative of sourceFiles) {

@@ -206,14 +206,6 @@ export const createMainEventTriggerQueueing = (
           options,
         );
       }
-      if (matching.length !== 1) {
-        return toEngineResult(
-          state,
-          [],
-          [mainEventTriggerQueueingError("multiple-main-event-effects")],
-          options,
-        );
-      }
       for (const effectBlock of matching) {
         const orderingGroup =
           source.zone.playerId === state.turn.turnPlayerId
