@@ -110,6 +110,8 @@ export type Trigger =
       filter?: CardFilter;
       targetPlayer?: PlayerRef;
       targetFilter?: CardFilter;
+      counterpartPlayer?: PlayerRef;
+      counterpartFilter?: CardFilter;
     }
   | {
       type: "effectQueued";

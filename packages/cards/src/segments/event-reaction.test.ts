@@ -54,6 +54,27 @@ describe("event reaction predicate routing", () => {
     },
   );
 
+  it("parses this-card battles filtered Characters as an attack-declared counterpart predicate", () => {
+    expect(
+      parseReactionPredicateFromSet(
+        { text: "this Character battles ＜Strike＞ attribute Characters" },
+        implicitReactionPredicateParsers,
+      ),
+    ).toMatchObject({
+      trigger: {
+        type: "attackDeclared",
+        role: "attackerOrTarget",
+        player: "self",
+        filter: { categories: ["character"] },
+        counterpartPlayer: "opponent",
+        counterpartFilter: {
+          categories: ["character"],
+          attributesAny: ["strike"],
+        },
+      },
+    });
+  });
+
   it.each([
     {
       text: "a DON!! card on your field is returned to your DON!! deck",

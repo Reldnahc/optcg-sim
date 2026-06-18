@@ -509,19 +509,53 @@ const matchDonAttached = (
   );
 };
 
-const attackRoleRefs = (
+const attackRoleRefPairs = (
   payload: Record<string, unknown>,
   role: Extract<Trigger, { type: "attackDeclared" }>["role"],
-): readonly CardRef[] => {
+): ReadonlyArray<{
+  readonly roleRef: CardRef;
+  readonly counterpart?: CardRef;
+}> => {
   const attacker = flattenedCardRef(payload, "attacker");
   const target = flattenedCardRef(payload, "target");
   if (role === "attacker") {
-    return attacker === undefined ? [] : [attacker];
+    return attacker === undefined
+      ? []
+      : [
+          {
+            roleRef: attacker,
+            ...(target === undefined ? {} : { counterpart: target }),
+          },
+        ];
   }
   if (role === "target") {
-    return target === undefined ? [] : [target];
+    return target === undefined
+      ? []
+      : [
+          {
+            roleRef: target,
+            ...(attacker === undefined ? {} : { counterpart: attacker }),
+          },
+        ];
   }
-  return [attacker, target].filter((ref): ref is CardRef => ref !== undefined);
+  return [
+    ...(attacker === undefined
+      ? []
+      : [
+          {
+            roleRef: attacker,
+            ...(target === undefined ? {} : { counterpart: target }),
+          },
+        ]),
+    ...(target === undefined
+      ? []
+      : [
+          {
+            roleRef: target,
+            ...(attacker === undefined ? {} : { counterpart: attacker }),
+          },
+        ]),
+  ];
 };
 
 const attackTargetMatches = (
@@ -556,6 +590,37 @@ const attackTargetMatches = (
   );
 };
 
+const attackCounterpartMatches = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "attackDeclared" }>,
+  counterpart: CardRef | undefined,
+): boolean => {
+  if (
+    trigger.counterpartPlayer === undefined &&
+    trigger.counterpartFilter === undefined
+  ) {
+    return true;
+  }
+  if (counterpart === undefined) {
+    return false;
+  }
+  return (
+    (trigger.counterpartPlayer === undefined ||
+      playerRefMatchesSource(
+        state,
+        source,
+        trigger.counterpartPlayer,
+        counterpart.playerId,
+      )) &&
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, counterpart.cardId),
+      trigger.counterpartFilter,
+    )
+  );
+};
+
 const matchAttackDeclared = (
   state: GameState,
   source: CardInstance,
@@ -568,14 +633,20 @@ const matchAttackDeclared = (
   }
   return (
     attackTargetMatches(state, source, trigger, payload) &&
-    attackRoleRefs(payload, trigger.role).some(
-      (ref) =>
-        playerRefMatchesSource(state, source, trigger.player, ref.playerId) &&
+    attackRoleRefPairs(payload, trigger.role).some(
+      ({ roleRef, counterpart }) =>
+        playerRefMatchesSource(
+          state,
+          source,
+          trigger.player,
+          roleRef.playerId,
+        ) &&
         matchesResolvedFilter(
           state,
-          resolvedCardForId(state, ref.cardId),
+          resolvedCardForId(state, roleRef.cardId),
           trigger.filter,
-        ),
+        ) &&
+        attackCounterpartMatches(state, source, trigger, counterpart),
     )
   );
 };

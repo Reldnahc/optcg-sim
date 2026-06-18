@@ -493,6 +493,120 @@ test("canonical event matcher matches attackDeclared target constraints", () => 
   });
 });
 
+test("canonical event matcher matches attackDeclared counterpart constraints for either battle role", () => {
+  const { state, character } = setupEventHookState();
+  const opponent = must(state.players[p2], "p2");
+  const strikeCharacter: CardInstance = {
+    instanceId: "p2-character:strike" as CardInstance["instanceId"],
+    cardId: toCardId("p2-character:strike"),
+    owner: p2,
+    controller: p2,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    },
+    state: "active",
+    attachedDon: [],
+  };
+  const specialCharacter: CardInstance = {
+    ...strikeCharacter,
+    instanceId: "p2-character:special" as CardInstance["instanceId"],
+    cardId: toCardId("p2-character:special"),
+    zone: { ...strikeCharacter.zone, index: 1 },
+  };
+  opponent.characters = [strikeCharacter, specialCharacter];
+  state.cardManifest.cards[strikeCharacter.cardId] = resolvedCard({
+    cardId: strikeCharacter.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+  });
+  must(
+    state.cardManifest.cards[strikeCharacter.cardId],
+    "strike character manifest",
+  ).attributes = ["strike"];
+  state.cardManifest.cards[specialCharacter.cardId] = resolvedCard({
+    cardId: specialCharacter.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+  });
+  must(
+    state.cardManifest.cards[specialCharacter.cardId],
+    "special character manifest",
+  ).attributes = ["special"];
+
+  const trigger: Trigger = {
+    type: "attackDeclared",
+    role: "attackerOrTarget",
+    player: "self",
+    filter: { categories: ["character"] },
+    counterpartPlayer: "opponent",
+    counterpartFilter: {
+      categories: ["character"],
+      attributesAny: ["strike"],
+    },
+  };
+
+  const sourceAttacksStrike = publicEvent(state, "attackDeclared", {
+    attacker: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: character.controller,
+      zone: character.zone,
+    },
+    target: {
+      instanceId: strikeCharacter.instanceId,
+      cardId: strikeCharacter.cardId,
+      playerId: strikeCharacter.controller,
+      zone: strikeCharacter.zone,
+    },
+  });
+  const strikeAttacksSource = publicEvent(state, "attackDeclared", {
+    attacker: {
+      instanceId: strikeCharacter.instanceId,
+      cardId: strikeCharacter.cardId,
+      playerId: strikeCharacter.controller,
+      zone: strikeCharacter.zone,
+    },
+    target: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: character.controller,
+      zone: character.zone,
+    },
+  });
+  const specialAttacksSource = publicEvent(state, "attackDeclared", {
+    attacker: {
+      instanceId: specialCharacter.instanceId,
+      cardId: specialCharacter.cardId,
+      playerId: specialCharacter.controller,
+      zone: specialCharacter.zone,
+    },
+    target: {
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+      playerId: character.controller,
+      zone: character.zone,
+    },
+  });
+
+  assert.deepEqual(
+    matchEventTrigger(state, character, trigger, sourceAttacksStrike),
+    { matched: true, triggerTypes: ["attackDeclared"] },
+  );
+  assert.deepEqual(
+    matchEventTrigger(state, character, trigger, strikeAttacksSource),
+    { matched: true, triggerTypes: ["attackDeclared"] },
+  );
+  assert.deepEqual(
+    matchEventTrigger(state, character, trigger, specialAttacksSource),
+    { matched: false, triggerTypes: [] },
+  );
+});
+
 test("canonical event matcher matches effectQueued entry point, category, and source filter evidence", () => {
   const { source, state } = setupEventHookState();
   const event = publicEvent(state, "effectQueued", {
