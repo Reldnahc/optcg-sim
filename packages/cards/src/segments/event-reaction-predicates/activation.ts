@@ -50,7 +50,7 @@ export const parseActivationPredicate: ReactionPredicateParser = ({ text }) => {
   }
 
   const opponentActivation =
-    /^your opponent activates (?<activation>an Event(?: or \[(?:Blocker|Trigger)\])?|\[Blocker\])$/iu.exec(
+    /^your opponent activates (?<activation>an Event(?: or \[(?:Blocker|Trigger)\])?|(?:a\s+)?\[Blocker\])$/iu.exec(
       normalized,
     );
   const activationText = opponentActivation?.groups?.["activation"];
@@ -96,7 +96,7 @@ const parseOpponentActivationKinds = (
       allowBodyBlockPatch: true,
     };
   }
-  if (normalized === "[blocker]") {
+  if (normalized === "[blocker]" || normalized === "a [blocker]") {
     return {
       activations: ["blocker"],
       evidence: ["activation:blocker"],

@@ -46,3 +46,52 @@ it("parses activate-main DON ramp with reusable shared-subject OR DON count cond
     ]),
   );
 });
+
+it("parses opponent blocker activation reactions with reusable K.O. body primitives", () => {
+  const result = parseCardEffectLine(
+    "[Once Per Turn] When your opponent activates a [Blocker], K.O. up to 1 of your opponent's Characters with 8000 power or less.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: {
+        type: "opponentActivated",
+        activations: ["blocker"],
+      },
+      oncePerTurn: true,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  currentPower: { max: 8000 },
+                },
+              },
+            },
+          },
+          { connector: "then", effect: { type: "ko" } },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:implicitReaction",
+      "marker:oncePerTurn",
+      "trigger:opponentActivated",
+      "activation:blocker",
+      "instruction:ko",
+      "filter:currentPower",
+      "condition:comparator:lte",
+    ]),
+  );
+});
