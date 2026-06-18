@@ -7,6 +7,7 @@ import {
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseOpponentCharactersTarget } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import { selectThenApplyFieldTarget } from "./effect-builders.js";
 
 const fieldToLifeSelectionId = "selected:field-to-life" as SelectionId &
   "selected:field-to-life";
@@ -15,32 +16,19 @@ type CharacterFilter = NonNullable<
   Extract<Target, { type: "choose" }>["request"]["filter"]
 >;
 
-const savedFieldToLifeTarget = (player: "opponent" | "anyPlayer") =>
-  ({
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: fieldToLifeSelectionId,
-    },
-    zone: "characterArea",
-    player,
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  }) as const;
-
 const fieldToLifeMove = (
-  player: "opponent" | "anyPlayer",
+  target: Target,
   position: "top" | "bottom",
   faceUp: boolean,
 ): Effect => ({
   type: "bounce",
   destination: position === "top" ? "lifeTop" : "lifeBottom",
   ...(faceUp ? { destinationFaceUp: true } : {}),
-  target: savedFieldToLifeTarget(player),
+  target,
 });
 
 const fieldToLifeBody = (
-  player: "opponent" | "anyPlayer",
+  target: Target,
   position: "top" | "bottom" | "topOrBottom",
   faceUp: boolean,
 ): Effect =>
@@ -54,16 +42,16 @@ const fieldToLifeBody = (
           {
             id: "life-placement:top",
             label: "Top of Life",
-            effect: fieldToLifeMove(player, "top", faceUp),
+            effect: fieldToLifeMove(target, "top", faceUp),
           },
           {
             id: "life-placement:bottom",
             label: "Bottom of Life",
-            effect: fieldToLifeMove(player, "bottom", faceUp),
+            effect: fieldToLifeMove(target, "bottom", faceUp),
           },
         ],
       }
-    : fieldToLifeMove(player, position, faceUp);
+    : fieldToLifeMove(target, position, faceUp);
 
 const selectThenPlaceAtOwnerLife = (
   player: "opponent" | "anyPlayer",
@@ -72,35 +60,18 @@ const selectThenPlaceAtOwnerLife = (
   filter: CharacterFilter,
   position: "top" | "bottom" | "topOrBottom",
   faceUp: boolean,
-): Effect => ({
-  type: "sequence",
-  effects: [
-    {
-      id: "select:field-to-life",
-      connector: "always",
-      saveResultAs: fieldToLifeSelectionId,
-      effect: {
-        type: "selectTargets",
-        request: {
-          timing: "onResolution",
-          chooser: "self",
-          player,
-          zone: "characterArea",
-          min,
-          max,
-          allowFewerIfUnavailable: true,
-          visibility: "public",
-          filter,
-        },
-      },
-    },
-    {
-      id: "place:field-to-life",
-      connector: "then",
-      effect: fieldToLifeBody(player, position, faceUp),
-    },
-  ],
-});
+): Effect =>
+  selectThenApplyFieldTarget({
+    selectionId: fieldToLifeSelectionId,
+    selectId: "select:field-to-life",
+    applyId: "place:field-to-life",
+    player,
+    zone: "characterArea",
+    min,
+    max,
+    filter,
+    apply: (target) => fieldToLifeBody(target, position, faceUp),
+  });
 
 const parseAnyCharacterTarget = (text: string) => {
   const predicates = parseCardFilterPredicates(

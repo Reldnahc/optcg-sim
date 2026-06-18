@@ -1,7 +1,9 @@
-import type { Effect, Target } from "@optcg/types";
-
 import { parseUpToCardinality } from "../cardinality/index.js";
 import type { InstructionParseResult, InstructionParser } from "../types.js";
+import {
+  fieldZoneForCategory,
+  selectThenApplyFieldTarget,
+} from "./effect-builders.js";
 import {
   parseAllFieldTarget,
   parseOpponentFieldTarget,
@@ -39,15 +41,19 @@ export const parseTrashInstruction: InstructionParser = (input) => {
     return undefined;
   }
   const category = selectedTarget.filter?.categories?.[0];
-  const zone = category === "stage" ? "stageArea" : "characterArea";
+  const zone = fieldZoneForCategory(category) ?? "characterArea";
 
   return {
-    effect: selectThenApplyTrashEffect(
-      cardinality.cardinality.min,
-      cardinality.cardinality.max,
-      selectedTarget.filter ?? { categories: ["character"] },
+    effect: selectThenApplyFieldTarget({
+      selectionId: trashTargetSelectionId,
+      selectId: "select:trash-target",
+      player: "opponent",
       zone,
-    ),
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      filter: selectedTarget.filter ?? { categories: ["character"] },
+      apply: (target) => ({ type: "trash", target }),
+    }),
     evidence: [
       "instruction:trash",
       ...cardinality.evidence,
@@ -60,60 +66,3 @@ export const parseTrashInstruction: InstructionParser = (input) => {
 };
 
 export const parseTrashAllYourCharactersInstruction = parseTrashInstruction;
-
-function selectThenApplyTrashEffect(
-  min: number,
-  max: number,
-  filter: TargetFilter,
-  zone: "characterArea" | "stageArea",
-): Effect {
-  return {
-    type: "sequence",
-    effects: [
-      {
-        id: "select:trash-target",
-        connector: "always",
-        saveResultAs: trashTargetSelectionId,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "opponent",
-            zone,
-            min,
-            max,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-            filter,
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "trash",
-          target: selectedTrashTarget(zone),
-        },
-      },
-    ],
-  };
-}
-
-function selectedTrashTarget(zone: "characterArea" | "stageArea"): Target {
-  return {
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: trashTargetSelectionId,
-    },
-    zone,
-    player: "opponent",
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  };
-}
-
-type TargetFilter = NonNullable<
-  Extract<Target, { type: "choose" }>["request"]["filter"]
->;

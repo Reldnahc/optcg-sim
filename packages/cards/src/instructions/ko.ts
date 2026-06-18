@@ -9,6 +9,11 @@ import {
 import { chosenCharacterTarget } from "../targets/chosen-character.js";
 import type { FieldTargetParseResult } from "../targets/field-targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import {
+  fieldZoneForCategory,
+  selectThenApplyFieldTarget,
+  type PublicFieldSelectionZone,
+} from "./effect-builders.js";
 
 const koTargetSelectionId = "selected:ko-target";
 const koOrReturnSelectionId = "selected:ko-or-return-target";
@@ -138,7 +143,7 @@ export const parseKoInstruction: InstructionParser = (input) => {
     return undefined;
   }
   const category = target.filter?.categories?.[0];
-  const zone = category === "stage" ? "stageArea" : "characterArea";
+  const zone = fieldZoneForCategory(category) ?? "characterArea";
 
   return {
     effect: selectThenApplyKoEffect({
@@ -262,62 +267,43 @@ function parseKoOrRest(actionRest: string): ReturnType<InstructionParser> {
     return undefined;
   }
   const category = target.filter?.categories?.[0];
-  const zone = category === "stage" ? "stageArea" : "characterArea";
-  const selectedTarget = selectedKoTarget(zone, koOrRestSelectionId);
+  const zone = fieldZoneForCategory(category) ?? "characterArea";
 
   return {
-    effect: {
-      type: "sequence",
-      effects: [
-        {
-          id: `select:ko-or-rest-target:${koOrRestSelectionId}`,
-          connector: "always",
-          saveResultAs: koOrRestSelectionId,
-          effect: {
-            type: "selectTargets",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone,
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              allowFewerIfUnavailable: true,
-              visibility: "public",
-              filter: target.filter ?? { categories: ["character"] },
+    effect: selectThenApplyFieldTarget({
+      selectionId: koOrRestSelectionId,
+      selectId: `select:ko-or-rest-target:${koOrRestSelectionId}`,
+      applyId: "choose:ko-or-rest-target",
+      player: "opponent",
+      zone,
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      filter: target.filter ?? { categories: ["character"] },
+      apply: (selectedTarget) => ({
+        type: "choice",
+        chooser: "self",
+        min: 1,
+        max: 1,
+        options: [
+          {
+            id: "choice:ko",
+            label: "K.O. the selected card.",
+            effect: {
+              type: "ko",
+              target: selectedTarget,
             },
           },
-        },
-        {
-          id: "choose:ko-or-rest-target",
-          connector: "then",
-          effect: {
-            type: "choice",
-            chooser: "self",
-            min: 1,
-            max: 1,
-            options: [
-              {
-                id: "choice:ko",
-                label: "K.O. the selected card.",
-                effect: {
-                  type: "ko",
-                  target: selectedTarget,
-                },
-              },
-              {
-                id: "choice:rest",
-                label: "Rest the selected card.",
-                effect: {
-                  type: "rest",
-                  target: selectedTarget,
-                },
-              },
-            ],
+          {
+            id: "choice:rest",
+            label: "Rest the selected card.",
+            effect: {
+              type: "rest",
+              target: selectedTarget,
+            },
           },
-        },
-      ],
-    },
+        ],
+      }),
+    }),
     evidence: [
       "instruction:ko",
       ...cardinality.evidence,
@@ -355,63 +341,44 @@ function parseKoOrReturnToOwnerHand(
     return undefined;
   }
   const category = target.filter?.categories?.[0];
-  const zone = category === "stage" ? "stageArea" : "characterArea";
-  const selectedTarget = selectedKoTarget(zone, koOrReturnSelectionId);
+  const zone = fieldZoneForCategory(category) ?? "characterArea";
 
   return {
-    effect: {
-      type: "sequence",
-      effects: [
-        {
-          id: `select:ko-or-return-target:${koOrReturnSelectionId}`,
-          connector: "always",
-          saveResultAs: koOrReturnSelectionId,
-          effect: {
-            type: "selectTargets",
-            request: {
-              timing: "onResolution",
-              chooser: "self",
-              player: "opponent",
-              zone,
-              min: cardinality.cardinality.min,
-              max: cardinality.cardinality.max,
-              allowFewerIfUnavailable: true,
-              visibility: "public",
-              filter: target.filter ?? { categories: ["character"] },
+    effect: selectThenApplyFieldTarget({
+      selectionId: koOrReturnSelectionId,
+      selectId: `select:ko-or-return-target:${koOrReturnSelectionId}`,
+      applyId: "choose:ko-or-return-target",
+      player: "opponent",
+      zone,
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      filter: target.filter ?? { categories: ["character"] },
+      apply: (selectedTarget) => ({
+        type: "choice",
+        chooser: "self",
+        min: 1,
+        max: 1,
+        options: [
+          {
+            id: "choice:ko",
+            label: "K.O. the selected card.",
+            effect: {
+              type: "ko",
+              target: selectedTarget,
             },
           },
-        },
-        {
-          id: "choose:ko-or-return-target",
-          connector: "then",
-          effect: {
-            type: "choice",
-            chooser: "self",
-            min: 1,
-            max: 1,
-            options: [
-              {
-                id: "choice:ko",
-                label: "K.O. the selected card.",
-                effect: {
-                  type: "ko",
-                  target: selectedTarget,
-                },
-              },
-              {
-                id: "choice:return-to-owner-hand",
-                label: "Return the selected card to the owner's hand.",
-                effect: {
-                  type: "bounce",
-                  destination: "hand",
-                  target: selectedTarget,
-                },
-              },
-            ],
+          {
+            id: "choice:return-to-owner-hand",
+            label: "Return the selected card to the owner's hand.",
+            effect: {
+              type: "bounce",
+              destination: "hand",
+              target: selectedTarget,
+            },
           },
-        },
-      ],
-    },
+        ],
+      }),
+    }),
     evidence: [
       "instruction:ko",
       ...cardinality.evidence,
@@ -486,7 +453,7 @@ function parseKoTargetPart(
     return undefined;
   }
   const category = target.filter?.categories?.[0];
-  const zone = category === "stage" ? "stageArea" : "characterArea";
+  const zone = fieldZoneForCategory(category) ?? "characterArea";
   return {
     effect: selectThenApplyKoEffect({
       min: cardinality.cardinality.min,
@@ -512,60 +479,22 @@ function selectThenApplyKoEffect(options: {
     Effect,
     { type: "selectTargets" }
   >["request"]["selectionConstraints"];
-  readonly zone: "characterArea" | "stageArea";
+  readonly zone: PublicFieldSelectionZone;
   readonly selectionId: string;
 }): Effect {
-  return {
-    type: "sequence",
-    effects: [
-      {
-        id: `select:ko-target:${options.selectionId}`,
-        connector: "always",
-        saveResultAs: options.selectionId,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser: "self",
-            player: "opponent",
-            zone: options.zone,
-            min: options.min,
-            max: options.max,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-            filter: options.filter,
-            ...(options.selectionConstraints === undefined
-              ? {}
-              : { selectionConstraints: options.selectionConstraints }),
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "ko",
-          target: selectedKoTarget(options.zone, options.selectionId),
-        },
-      },
-    ],
-  };
-}
-
-function selectedKoTarget(
-  zone: "characterArea" | "stageArea",
-  selectionId: string,
-): Target {
-  return {
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: selectionId,
-    },
-    zone,
+  return selectThenApplyFieldTarget({
+    selectionId: options.selectionId,
+    selectId: `select:ko-target:${options.selectionId}`,
     player: "opponent",
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  };
+    zone: options.zone,
+    min: options.min,
+    max: options.max,
+    filter: options.filter,
+    ...(options.selectionConstraints === undefined
+      ? {}
+      : { selectionConstraints: options.selectionConstraints }),
+    apply: (target) => ({ type: "ko", target }),
+  });
 }
 
 type TargetFilter = NonNullable<

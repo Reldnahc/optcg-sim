@@ -10,6 +10,11 @@ import {
   parseYourCharactersTarget,
 } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import {
+  fieldZoneForCategory,
+  selectThenApplyFieldTarget,
+  type PublicFieldSelectionZone,
+} from "./effect-builders.js";
 
 export const returnToOwnerHandSelectionId = "selected:return-to-owner-hand";
 
@@ -38,13 +43,14 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     (opponentTarget.rest.length === 0 || opponentTarget.rest === ".")
   ) {
     const category = opponentTarget.filter?.categories?.[0];
+    const zone = fieldZoneForCategory(category) ?? "characterArea";
     return {
       effect: selectThenReturnToOwnerHand(
         "opponent",
         cardinality.min,
         cardinality.max,
         opponentTarget.filter ?? { categories: ["character"] },
-        category === "stage" ? "stageArea" : "characterArea",
+        zone,
       ),
       evidence: [
         "instruction:returnToOwnerHand",
@@ -97,9 +103,8 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
       cardinality.min,
       cardinality.max,
       predicates.filter,
-      predicates.filter.categories?.[0] === "stage"
-        ? "stageArea"
-        : "characterArea",
+      fieldZoneForCategory(predicates.filter.categories?.[0]) ??
+        "characterArea",
     ),
     evidence: [
       "instruction:returnToOwnerHand",
@@ -118,51 +123,24 @@ export function selectThenReturnToOwnerHand(
   min: number,
   max: number,
   filter: NonNullable<Extract<Target, { type: "choose" }>["request"]["filter"]>,
-  zone: "characterArea" | "stageArea" = "characterArea",
+  zone: PublicFieldSelectionZone = "characterArea",
   chooser: "self" | "opponent" = "self",
 ): Effect {
-  return {
-    type: "sequence",
-    effects: [
-      {
-        id: "select:return-to-owner-hand",
-        connector: "always",
-        saveResultAs: returnToOwnerHandSelectionId,
-        effect: {
-          type: "selectTargets",
-          request: {
-            timing: "onResolution",
-            chooser,
-            player,
-            zone,
-            min,
-            max,
-            allowFewerIfUnavailable: true,
-            visibility: "public",
-            filter,
-          },
-        },
-      },
-      {
-        connector: "then",
-        effect: {
-          type: "bounce",
-          destination: "hand",
-          target: {
-            type: "savedFieldObject",
-            binding: {
-              family: "selectedTargets",
-              saveResultAs: returnToOwnerHandSelectionId,
-            },
-            zone,
-            player,
-            visibility: "publicOnly",
-            onFailure: "failClosed",
-          },
-        },
-      },
-    ],
-  };
+  return selectThenApplyFieldTarget({
+    selectionId: returnToOwnerHandSelectionId,
+    selectId: "select:return-to-owner-hand",
+    player,
+    chooser,
+    zone,
+    min,
+    max,
+    filter,
+    apply: (target) => ({
+      type: "bounce",
+      destination: "hand",
+      target,
+    }),
+  });
 }
 
 const parseOpponentChosenReturnToOwnerHand = (
