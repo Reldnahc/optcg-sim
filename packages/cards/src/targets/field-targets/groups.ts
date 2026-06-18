@@ -42,6 +42,7 @@ export const yourFieldEffectTargetParsers = (
 ): readonly FieldTargetParser[] =>
   [
     parseYourSelectedLeaderTarget,
+    parseYourLeaderOrCharacterCardsTarget,
     (input) => parseCompoundYourCharactersTarget(input, cardinality),
     parseYourCharactersTarget,
     parseYourNamedCardsTarget,
