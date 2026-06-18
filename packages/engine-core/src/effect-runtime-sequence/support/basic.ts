@@ -38,6 +38,7 @@ export type PlaceTopDeckCardsEffect = Extract<
   { type: "placeTopDeckCards" }
 >;
 export type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
+export type TakeExtraTurnEffect = Extract<Effect, { type: "takeExtraTurn" }>;
 export type RevealFromZoneEffect = Extract<Effect, { type: "revealFromZone" }>;
 
 const isSupportedFieldCountValue = (
@@ -166,6 +167,12 @@ export const isSupportedShuffleDeckSegment = (
   effect: SequenceSegmentEffect,
 ): effect is ShuffleDeckEffect =>
   effect.type === "shuffleDeck" &&
+  (effect.player === "self" || effect.player === "opponent");
+
+export const isSupportedTakeExtraTurnSegment = (
+  effect: SequenceSegmentEffect,
+): effect is TakeExtraTurnEffect =>
+  effect.type === "takeExtraTurn" &&
   (effect.player === "self" || effect.player === "opponent");
 
 export const isSupportedRevealFromZoneSegment = (

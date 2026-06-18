@@ -772,6 +772,7 @@ export type Effect =
       order: "chooser" | "owner" | "original" | "random";
     }
   | { type: "shuffleDeck"; player: PlayerRef }
+  | { type: "takeExtraTurn"; player: PlayerRef }
   | {
       type: "bounce";
       target: Target;

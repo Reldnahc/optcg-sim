@@ -41,6 +41,7 @@ import {
   isSupportedReturnDonSegment,
   isSupportedSetLifeFaceUpSegment,
   isSupportedShuffleDeckSegment,
+  isSupportedTakeExtraTurnSegment,
   isSupportedTrashFromHandSegment,
   isSupportedTrashFromHandUntilCountSegment,
   type DamageEffect,
@@ -56,6 +57,7 @@ import {
   type ReturnDonEffect,
   type SetLifeFaceUpEffect,
   type ShuffleDeckEffect,
+  type TakeExtraTurnEffect,
   type TrashFromHandEffect,
   type TrashFromHandUntilCountEffect,
 } from "./support/basic.js";
@@ -141,6 +143,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | MoveMatchingLifeCardsEffect
     | ReturnDonEffect
     | ShuffleDeckEffect
+    | TakeExtraTurnEffect
     | ReorderLifeEffect
     | PlaceTopLifeCardEffect
     | SetLifeFaceUpEffect
@@ -614,6 +617,9 @@ const isSupportedSequenceBlockWithState = (
         return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedShuffleDeckSegment(segment.effect)) {
+        return recordSupportedProducer(supportState, segment);
+      }
+      if (isSupportedTakeExtraTurnSegment(segment.effect)) {
         return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedReorderLifeSegment(segment.effect)) {

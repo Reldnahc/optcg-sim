@@ -454,6 +454,21 @@ test("end-phase turn handoff and sequence/hash changes", () => {
   assert.notEqual(ended.stateHash, "");
 });
 
+test("end phase consumes queued extra turn before normal turn handoff", () => {
+  const state = createActiveState();
+  state.turn.phase = "end";
+  state.turn.extraTurnPlayerIds = [p1];
+
+  const ended = advanceEndPhase(state);
+
+  assert.equal(ended.state.turn.phase, "refresh");
+  assert.equal(ended.state.turn.turnPlayerId, p1);
+  assert.equal(ended.state.turn.globalTurn, 2);
+  assert.equal(ended.state.turn.playerTurnCounts[p1], 2);
+  assert.equal(must(ended.state.players[p1], "p1").turnCount, 2);
+  assert.equal(ended.state.turn.extraTurnPlayerIds, undefined);
+});
+
 test("refresh phase does not emit a duplicate start after end-phase handoff", () => {
   const state = createActiveState();
   state.turn.phase = "end";

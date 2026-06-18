@@ -20,9 +20,10 @@ export const parseCardNameContainsPredicate: PredicateParser = (
 };
 
 export const parseSelfExclusionPredicate: PredicateParser = (text, current) => {
-  const match = /^other than this (?:Character|card)\b\s*(?<rest>.*)$/i.exec(
-    text,
-  );
+  const match =
+    /^(?:other than|except) this (?:Character|card)\b\s*(?<rest>.*)$/i.exec(
+      text,
+    );
   if (match === null) {
     return undefined;
   }

@@ -40,6 +40,7 @@ import {
   parseDamageInstruction,
   parseDrawInstruction,
   parseDonPhasePlacementInstruction,
+  parseTakeExtraTurnInstruction,
   parseExplicitDurationProtectionInstruction,
   parseExplicitProtectionInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,
@@ -112,6 +113,7 @@ import {
 export const instructionParsers = [
   parseDrawInstruction,
   parseDamageInstruction,
+  parseTakeExtraTurnInstruction,
   parseActivateReferencedEffectInstruction,
   parseActivateSelectedEventInstruction,
   parseAddFromTrashToHandInstruction,

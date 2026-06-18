@@ -119,6 +119,7 @@ export type PrimitiveEvidence =
   | "condition:stat:currentPower"
   | "instruction:draw"
   | "instruction:lookAt"
+  | "instruction:takeExtraTurn"
   | "instruction:preventDraw"
   | "instruction:preventLifeToHand"
   | "instruction:preventDonActivation"

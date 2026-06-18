@@ -53,3 +53,7 @@ export {
   isSupportedWinGameBody,
 } from "./win-game.js";
 export { executeDamagePrimitive, isSupportedDamageEffect } from "./damage.js";
+export {
+  executeTakeExtraTurnPrimitive,
+  isSupportedTakeExtraTurnBody,
+} from "./extra-turn.js";

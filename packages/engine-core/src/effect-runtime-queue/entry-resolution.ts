@@ -31,6 +31,7 @@ import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/
 import {
   executeDrawPrimitiveForResolvedQuantity,
   executeNoChoiceEffectPrimitive,
+  executeTakeExtraTurnPrimitive,
   executeWinGamePrimitive,
 } from "../runtime/primitives/execute.js";
 import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
@@ -365,6 +366,10 @@ export const createQueueEntryResolver = (
         primitiveBody?.kind === "winGame" ? primitiveBody.effect : undefined;
       const damageEffect =
         primitiveBody?.kind === "damage" ? primitiveBody.effect : undefined;
+      const takeExtraTurnEffect =
+        primitiveBody?.kind === "takeExtraTurn"
+          ? primitiveBody.effect
+          : undefined;
       const queuedContinuousEffect =
         queuedEffectResolvers.resolveQueuedContinuousEffect(
           nextState,
@@ -473,6 +478,7 @@ export const createQueueEntryResolver = (
           playSourceEffect === undefined &&
           winGameEffect === undefined &&
           damageEffect === undefined &&
+          takeExtraTurnEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
           return unsupportedEffectQueueResult(originalState, {
@@ -638,6 +644,24 @@ export const createQueueEntryResolver = (
         }
         if (resolution.status === "pendingDecision") {
           return resolution.result;
+        }
+        nextState = resolution.state;
+        allEvents.push(...resolution.events);
+        resolutionEventsForTrigger = [...resolution.events];
+      }
+      if (takeExtraTurnEffect !== undefined) {
+        const resolution = executeTakeExtraTurnPrimitive(
+          nextState,
+          resolvingEntry,
+          takeExtraTurnEffect,
+        );
+        if (resolution.errors !== undefined) {
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-take-extra-turn",
+          });
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);

@@ -65,6 +65,7 @@ import { pauseForOptionalSequenceSegment } from "./optional-segment.js";
 import { applyForEachSavedTargetSegment } from "./for-each-saved-target.js";
 import { applySelectAllTargetsSegment } from "./select-all-targets-segment.js";
 import { applyConditionalSequenceSegment } from "./conditional-segment.js";
+import { applyTakeExtraTurnStateChange } from "../../runtime/primitives/extra-turn.js";
 import {
   pauseForTrashFromHandSegment,
   pauseForTrashFromHandUntilCountSegment,
@@ -350,6 +351,29 @@ export const continueNoDecisionSegments = (
         ledgers: nextLedgers,
         state: decisionResult.state,
       });
+    }
+    if (segment.effect.type === "takeExtraTurn") {
+      const playerId =
+        segment.effect.player === "self"
+          ? entry.controllerId
+          : getOpponentId(nextState, entry.controllerId);
+      if (playerId === null) {
+        return { ok: false };
+      }
+      nextState = applyTakeExtraTurnStateChange(nextState, playerId);
+      nextLedgers = {
+        ...nextLedgers,
+        segmentResults: {
+          ...nextLedgers.segmentResults,
+          [ledgerKey(segment, index)]: {
+            ...emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            changedState: true,
+          },
+        },
+      };
+      continue;
     }
     if (segment.effect.type === "drawUpTo") {
       const quantityDecision = createChooseQuantityDecisionForSequenceSegment(

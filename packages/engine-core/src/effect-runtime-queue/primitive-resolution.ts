@@ -10,6 +10,7 @@ import {
   isSupportedDamageEffect,
   isSupportedDrawBody,
   isSupportedQueuedWinGameEffectForEntry,
+  isSupportedTakeExtraTurnBody,
   isSupportedWinGameBody,
 } from "../runtime/primitives/execute.js";
 import { isSupportedTrashFromHandUntilCountBody } from "../runtime/primitives/trash-from-hand-until.js";
@@ -31,6 +32,10 @@ export type QueuedPrimitiveBody =
       effect: Extract<Effect, { type: "placeTopDeckCards" }>;
     }
   | { kind: "damage"; effect: Extract<Effect, { type: "damage" }> }
+  | {
+      kind: "takeExtraTurn";
+      effect: Extract<Effect, { type: "takeExtraTurn" }>;
+    }
   | { kind: "winGame"; effect: Extract<Effect, { type: "winGame" }> };
 
 export const resolveQueuedPrimitiveBody = (
@@ -66,6 +71,9 @@ export const resolveQueuedPrimitiveBody = (
   }
   if (isSupportedDamageEffect(effect)) {
     return { kind: "damage", effect };
+  }
+  if (isSupportedTakeExtraTurnBody(effect)) {
+    return { kind: "takeExtraTurn", effect };
   }
   if (
     isSupportedWinGameBody(effect) &&

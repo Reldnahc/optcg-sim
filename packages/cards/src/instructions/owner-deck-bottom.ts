@@ -175,13 +175,17 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
   const match =
-    /^(?:place|return)\s+(?<selection>.+?)\s+(?:at|to) the bottom of the owner's deck(?<order>\s+in any order)?\.?$/iu.exec(
+    /^(?:place|return)\s+(?<selection>.+?)\s+(?:at|to) the bottom of (?<deck>the owner's|your) deck(?<order>\s+in any order)?\.?$/iu.exec(
       input.text,
     );
-  const selectionText = match?.groups?.["selection"];
+  if (match === null) {
+    return undefined;
+  }
+  const selectionText = match.groups?.["selection"];
   if (selectionText === undefined) {
     return undefined;
   }
+  const deckOwnerText = match.groups?.["deck"];
 
   if (/^this Character$/iu.test(selectionText)) {
     return {
@@ -202,6 +206,12 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
 
   const allTarget = parseAllFieldTarget({ text: selectionText });
   if (allTarget !== undefined && allTarget.rest.length === 0) {
+    if (
+      deckOwnerText === "your" &&
+      (allTarget.target.type !== "all" || allTarget.target.player !== "self")
+    ) {
+      return undefined;
+    }
     return {
       effect: {
         type: "bounce",
@@ -223,7 +233,7 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     return undefined;
   }
   const orderEvidence: readonly PrimitiveEvidence[] =
-    match?.groups?.["order"] === undefined ? [] : ["order:anyOrder"];
+    match.groups?.["order"] === undefined ? [] : ["order:anyOrder"];
 
   const trashSource = parseTrashSource(cardinality.rest);
   if (trashSource !== undefined) {

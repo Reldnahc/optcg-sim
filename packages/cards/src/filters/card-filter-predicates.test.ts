@@ -443,6 +443,18 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses except-this self exclusion as a reusable filter predicate", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "Characters except this Character",
+      }),
+    ).toEqual({
+      filter: { categories: ["character"], excludeSelf: true },
+      evidence: ["filter:category:character", "filter:excludeSelf"],
+      rest: "",
+    });
+  });
+
   it("parses color plus type plus category predicates for searches", () => {
     expect(
       parseCardFilterPredicates({

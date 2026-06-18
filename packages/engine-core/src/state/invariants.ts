@@ -426,6 +426,16 @@ export const collectGameStateInvariantViolations = (
       });
     }
   }
+  for (const playerId of state.turn.extraTurnPlayerIds ?? []) {
+    if (!Object.hasOwn(state.players, playerId)) {
+      violations.push({
+        invariant: "turn.validPlayerRef",
+        message:
+          "turn.extraTurnPlayerIds entries must reference existing players",
+        details: { playerId },
+      });
+    }
+  }
 
   type OncePerTurnTurnNumber = GameState["oncePerTurn"][number]["turnNumber"];
   type OncePerTurnEffectUsage = Map<string, Set<OncePerTurnTurnNumber>>;

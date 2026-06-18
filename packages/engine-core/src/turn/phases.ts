@@ -816,7 +816,10 @@ export const advanceEndPhase = (
     return invalidPhaseTransition(state, "end");
   }
   const currentTurnPlayerId = state.turn.turnPlayerId;
-  const nextTurnPlayerId = secondPlayerId(state, currentTurnPlayerId);
+  const [extraTurnPlayerId, ...remainingExtraTurnPlayerIds] =
+    state.turn.extraTurnPlayerIds ?? [];
+  const nextTurnPlayerId =
+    extraTurnPlayerId ?? secondPlayerId(state, currentTurnPlayerId);
   const nextPlayerTurnCount = state.turn.playerTurnCounts[nextTurnPlayerId];
   const nextTurnPlayer = state.players[nextTurnPlayerId];
   if (nextPlayerTurnCount === undefined) {
@@ -838,6 +841,8 @@ export const advanceEndPhase = (
     ...state.turn.playerTurnCounts,
     [nextTurnPlayerId]: incrementedNextTurnCount,
   };
+  const nextTurnBase = { ...state.turn };
+  delete nextTurnBase.extraTurnPlayerIds;
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
@@ -849,11 +854,14 @@ export const advanceEndPhase = (
       },
     },
     turn: {
-      ...state.turn,
+      ...nextTurnBase,
       globalTurn: state.turn.globalTurn + 1,
       playerTurnCounts: nextCounts,
       turnPlayerId: nextTurnPlayerId,
       phase: "refresh",
+      ...(remainingExtraTurnPlayerIds.length === 0
+        ? {}
+        : { extraTurnPlayerIds: remainingExtraTurnPlayerIds }),
     },
   };
   const nextStateWithExpiry = expireTurnBoundaryContinuousEffects(
