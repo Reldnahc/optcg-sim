@@ -101,3 +101,45 @@ it("parses counter return-DON cost with split opponent Leader and Character powe
     ]),
   );
 });
+
+it("parses opponent rested Character or DON refresh lock as mixed public-zone selection", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Up to 1 of your opponent's rested Character or DON!! cards will not become active in your opponent's next Refresh Phase.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            player: "opponent",
+            zones: ["characterArea", "costArea"],
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character", "don"],
+              state: "rested",
+            },
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:preventActivation",
+      "target:opponentRestedCards",
+      "zone:characterArea",
+      "zone:costArea",
+      "filter:category:character",
+      "filter:category:don",
+      "filter:state:rested",
+      "duration:opponentNextRefreshPhase",
+    ]),
+  );
+});

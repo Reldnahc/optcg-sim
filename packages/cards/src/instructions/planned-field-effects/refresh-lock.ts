@@ -198,6 +198,23 @@ const parseOpponentRefreshLockTarget = (
         rest: restedDon.rest,
       };
     }
+    const restedCharactersOrDon =
+      parseOpponentRestedCharactersOrDonRefreshLockTarget(
+        cardinality.rest,
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+      );
+    if (restedCharactersOrDon !== undefined) {
+      return {
+        target: restedCharactersOrDon.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...restedCharactersOrDon.evidence,
+        ],
+        rest: restedCharactersOrDon.rest,
+      };
+    }
     const restedCards = parseOpponentRestedCardsRefreshLockTarget(
       cardinality.rest,
       cardinality.cardinality.min,
@@ -343,6 +360,27 @@ const parseOpponentRestedCharactersOrStagesRefreshLockTarget = (
       "zone:stageArea",
       "filter:category:character",
       "filter:category:stage",
+      "filter:state:rested",
+    ],
+  });
+
+const parseOpponentRestedCharactersOrDonRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+): RefreshLockTargetParseResult | undefined =>
+  parseOpponentRestedChooseFromZonesRefreshLockTarget(text, min, max, {
+    pattern:
+      /^of your opponent's rested Characters? or DON!! cards?\b\s*(?<rest>.*)$/iu,
+    zones: ["characterArea", "costArea"],
+    categories: ["character", "don"],
+    evidence: [
+      "target:opponentRestedCards",
+      "player:opponent",
+      "zone:characterArea",
+      "zone:costArea",
+      "filter:category:character",
+      "filter:category:don",
       "filter:state:rested",
     ],
   });
