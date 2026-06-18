@@ -12,7 +12,10 @@ import {
   reviewedOnPlayDrawDefinition,
   toEngineEventId,
 } from "./action-test-fixtures.js";
-import { detectBattleKOTriggerCandidates } from "./effect-runtime.js";
+import {
+  detectBattleKOTriggerCandidates,
+  queueBattleKOTriggers,
+} from "./effect-runtime.js";
 
 const withCardInZone = (params: {
   state: ReturnType<typeof createActiveState>;
@@ -208,6 +211,62 @@ test("detects one supported On K.O. candidate from a battle K.O. event batch", (
     },
   ]);
   assert.deepEqual(state, before);
+});
+
+test("ignores already queued On K.O. event batches when the source later leaves trash", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  setupOnKODefinition(state, source);
+  const trashedSource: CardInstance = {
+    ...source,
+    zone: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [trashedSource];
+  const queuedEvents = [...appendBattleKOEvents(state, source)];
+  const queued = queueBattleKOTriggers(state, state, queuedEvents);
+  assert.equal(queued.ok, true);
+
+  const queuedP2State = must(queued.state.players[p2], "queued p2");
+  const sourceInHand: CardInstance = {
+    ...trashedSource,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  const replayState = {
+    ...queued.state,
+    effectQueue: [],
+    eventJournal: [...state.eventJournal, ...queuedEvents],
+    players: {
+      ...queued.state.players,
+      [p2]: {
+        ...queuedP2State,
+        hand: [
+          sourceInHand,
+          ...queuedP2State.hand.map((card, index) => ({
+            ...card,
+            zone: {
+              zone: "hand" as const,
+              playerId: p2,
+              slot: "hand" as const,
+              index: index + 1,
+            },
+          })),
+        ],
+        trash: [],
+      },
+    },
+  };
+
+  const result = detectBattleKOTriggerCandidates(replayState, queuedEvents);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.candidates, []);
 });
 
 test("detects last-known On K.O. candidates with the field source snapshot", () => {

@@ -60,6 +60,26 @@ const onKOAutoAdapter = {
   triggerType: "onKO" as const,
 };
 
+const queuedOnKOTriggerEventIds = (
+  state: GameState,
+  events: readonly EngineEvent[],
+): Set<string> =>
+  new Set(
+    [...state.eventJournal, ...events].flatMap((event) => {
+      if (event.type !== "effectQueued") {
+        return [];
+      }
+      const payload = event.payload as {
+        entryPoint?: { type?: unknown };
+        triggerEventId?: unknown;
+      };
+      return typeof payload.triggerEventId === "string" &&
+        payload.entryPoint?.type === "onKO"
+        ? [payload.triggerEventId]
+        : [];
+    }),
+  );
+
 export const isSupportedOnKOCompatibleQueuedEffect = (
   effect: EffectDefinition["effects"][number],
 ): effect is EffectDefinition["effects"][number] & {
@@ -94,7 +114,11 @@ export const createKOTriggerQueueing = (
     events: readonly EngineEvent[],
   ): DetectBattleKOTriggerCandidatesResult => {
     const candidates: BattleKOTriggerCandidate[] = [];
-    const koEvents = events.filter((event) => event.type === "cardKOd");
+    const queuedTriggerEventIds = queuedOnKOTriggerEventIds(state, events);
+    const koEvents = events.filter(
+      (event) =>
+        event.type === "cardKOd" && !queuedTriggerEventIds.has(event.id),
+    );
 
     for (const event of koEvents) {
       const payload = event.payload as {
