@@ -100,6 +100,7 @@ export type PrimitiveEvidence =
   | "condition:donFieldCount"
   | "condition:attachedDonCount"
   | "condition:cardState"
+  | "condition:cardMatches"
   | "condition:cardStatComparison"
   | "condition:fieldCountDifference"
   | "condition:fieldStatTotal"

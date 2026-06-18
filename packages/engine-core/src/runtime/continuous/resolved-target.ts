@@ -14,6 +14,8 @@ type ResolvedTargetContinuousCandidate = Extract<
       | "setBasePower"
       | "modifyCost"
       | "invalidateEffects"
+      | "giveProtection"
+      | "protectFromKO"
       | "cannotBecomeActive"
       | "cannotAttack"
       | "cannotAttackTarget"
@@ -38,6 +40,8 @@ const isResolvedTargetContinuousCandidate = (
   effect.type === "setBasePower" ||
   effect.type === "modifyCost" ||
   effect.type === "invalidateEffects" ||
+  effect.type === "giveProtection" ||
+  effect.type === "protectFromKO" ||
   effect.type === "cannotBecomeActive" ||
   effect.type === "cannotAttack" ||
   effect.type === "cannotAttackTarget" ||

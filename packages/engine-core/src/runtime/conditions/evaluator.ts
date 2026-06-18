@@ -47,6 +47,10 @@ import {
   type ConditionEvaluationContext,
 } from "./card-stat-comparison.js";
 import {
+  evaluateCardMatches,
+  isSupportedCardMatchesCondition,
+} from "./card-matches.js";
+import {
   evaluateFieldStatTotal,
   isSupportedFieldStatTotalCondition,
 } from "./field-stat-total.js";
@@ -734,6 +738,8 @@ const evaluateCondition = (
       return evaluateAttachedDonCount(state, entry, condition);
     case "cardStatComparison":
       return evaluateCardStatComparison(state, entry, condition, context);
+    case "cardMatches":
+      return evaluateCardMatches(state, entry, condition, context);
     case "sourcePlayedThisTurn":
       return evaluateSourcePlayedThisTurn(state, entry);
     case "leaderColorCount":
@@ -903,6 +909,8 @@ export const isSupportedQueuedEffectConditionShape = (
       );
     case "cardStatComparison":
       return isSupportedCardStatComparisonCondition(condition);
+    case "cardMatches":
+      return isSupportedCardMatchesCondition(condition);
     case "sourcePlayedThisTurn":
       return true;
     case "leaderColorCount":

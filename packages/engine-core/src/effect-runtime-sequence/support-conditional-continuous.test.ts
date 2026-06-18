@@ -85,3 +85,86 @@ test("sequence support accepts direct conditional continuous keyword bodies", ()
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts conditional continuous protection for a saved selected target", () => {
+  const savedTarget =
+    "selected:conditional-continuous-protection-target" as const;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "conditional-continuous-support-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "counter" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: savedTarget,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["leaderArea", "characterArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["leader", "character"] },
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "cardMatches",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: savedTarget,
+                },
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+              filter: { categories: ["character"] },
+            },
+            then: {
+              type: "protectFromKO",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: savedTarget,
+                },
+                zones: ["leaderArea", "characterArea"],
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+              duration: { type: "thisTurn" },
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    isSupportedSequenceBlock(
+      {
+        ...syntheticEntry(),
+        sourcePresencePolicy: "resolveFromDestinationZone",
+      },
+      effectBlock,
+    ),
+    true,
+  );
+});

@@ -170,4 +170,66 @@ describe("selected power continuation expression parser", () => {
       ]),
     );
   });
+
+  it("saves a selected power target and conditionally protects that card from K.O. if it is a Character", () => {
+    const result = selectedPowerContinuationExpressionParser({
+      text: "Up to 1 of your {FILM} type Leader or Character cards gains +4000 power during this battle. If that card is a Character, that Character cannot be K.O.'d during this turn.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:power-continuation-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zones: ["leaderArea", "characterArea"],
+                filter: {
+                  categories: ["leader", "character"],
+                  typesAny: ["FILM"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              value: 4000,
+              duration: { type: "thisBattle" },
+            },
+          },
+          {
+            effect: {
+              type: "conditional",
+              if: {
+                type: "cardMatches",
+                filter: { categories: ["character"] },
+              },
+              then: {
+                type: "protectFromKO",
+                duration: { type: "thisTurn" },
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:modifyPower",
+        "instruction:giveProtection",
+        "composition:selectThenApply",
+        "composition:savedTargetCondition",
+        "condition:cardMatches",
+        "filter:category:character",
+        "protectionProcess:ko",
+        "duration:thisBattle",
+        "duration:thisTurn",
+      ]),
+    );
+  });
 });
