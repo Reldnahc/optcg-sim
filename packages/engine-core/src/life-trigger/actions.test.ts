@@ -208,18 +208,16 @@ test("getSupportedLifeTriggerDecision ignores unsupported dormant On K.O. siblin
   const cardId = toCardId("trigger-life-dormant-on-ko-sibling");
   const definition = supportedLifeTriggerDefinition(cardId);
   const triggerEffect = must(definition.effects[0], "trigger effect");
+  const unsupportedOnKOEffect: EffectBlock = {
+    ...triggerEffect,
+    id: `${String(triggerEffect.id)}:unsupported-on-ko` as typeof triggerEffect.id,
+    trigger: { type: "onKO" },
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    cost: { type: "restDon", count: 1 },
+  };
   const supported = {
     ...definition,
-    effects: [
-      triggerEffect,
-      {
-        ...triggerEffect,
-        id: `${String(triggerEffect.id)}:unsupported-on-ko` as typeof triggerEffect.id,
-        trigger: { type: "onKO" },
-        sourcePresencePolicy: "resolveFromDestinationZone" as const,
-        cost: { type: "restDon", count: 1 },
-      },
-    ],
+    effects: [triggerEffect, unsupportedOnKOEffect],
   };
 
   topLife.card.cardId = cardId;
@@ -270,19 +268,16 @@ test("getSupportedLifeTriggerDecision preserves referenced sibling while ignorin
     sourcePresencePolicy: "resolveFromDestinationZone",
     effect: { type: "draw", count: 1, player: "self" },
   };
+  const unsupportedOnKOEffect: EffectBlock = {
+    ...triggerEffect,
+    id: `${String(triggerEffect.id)}:unsupported-on-ko` as typeof triggerEffect.id,
+    trigger: { type: "onKO" },
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    cost: { type: "restDon", count: 1 },
+  };
   const supported = {
     ...definition,
-    effects: [
-      triggerEffect,
-      referencedMainEffect,
-      {
-        ...triggerEffect,
-        id: `${String(triggerEffect.id)}:unsupported-on-ko` as typeof triggerEffect.id,
-        trigger: { type: "onKO" },
-        sourcePresencePolicy: "resolveFromDestinationZone" as const,
-        cost: { type: "restDon", count: 1 },
-      },
-    ],
+    effects: [triggerEffect, referencedMainEffect, unsupportedOnKOEffect],
   };
 
   topLife.card.cardId = cardId;
