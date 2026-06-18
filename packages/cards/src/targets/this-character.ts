@@ -33,6 +33,15 @@ export function parseThisCharacterTarget(
     };
   }
 
+  const thisCardMatch = /^this card\b\s*/iu.exec(input.text);
+  if (thisCardMatch !== null) {
+    return {
+      target: { type: "self" },
+      evidence: ["target:thisCard"],
+      rest: input.text.slice(thisCardMatch[0].length).trim(),
+    };
+  }
+
   if (input.allowImplicit === true) {
     return {
       target: { type: "self" },
