@@ -486,3 +486,83 @@ it("parses DON-count condition with named field-card activation", () => {
     ]),
   );
 });
+
+it("parses rest-DON cost with hand play-or-Life branch choice", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may rest 1 of your DON!! cards: Select up to 1 {Egghead} type card with a cost of 5 or less from your hand and play it or add it to the top of your Life cards face-up.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: { type: "restDon", count: 1, optional: true },
+            },
+          },
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  saveResultAs: "handSelection:choose-destination",
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    visibility: "chooserOnly",
+                    filter: {
+                      typesAny: ["Egghead"],
+                      cost: { max: 5 },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "choice",
+                    options: [
+                      { effect: { type: "playSelected" } },
+                      {
+                        effect: {
+                          type: "moveSelected",
+                          from: "hand",
+                          to: "life",
+                          position: "top",
+                          destinationFaceUp: true,
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "cost:restDon",
+      "instruction:selectCards",
+      "instruction:playSelected",
+      "instruction:moveSelected",
+      "zone:hand",
+      "destination:life",
+      "destination:faceUp",
+      "filter:type",
+      "filter:cost",
+      "composition:optionalCostedEffect",
+      "composition:chooseOne",
+    ]),
+  );
+});
