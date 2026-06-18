@@ -7,6 +7,7 @@ import type {
   CardRef,
   Effect,
   EffectDefinition,
+  EffectQueueEntry,
   EngineResult,
   GameState,
 } from "@optcg/types";
@@ -148,7 +149,7 @@ const createTrashDecision = (
 const respondWithCards = (
   state: GameState,
   cards: readonly CardRef[],
-  playerId?: typeof p1,
+  playerId?: EffectQueueEntry["controllerId"],
 ): EngineResult =>
   applyAction(state, {
     type: "respondToDecision",
@@ -361,6 +362,46 @@ test("trashFromHandUntilCount delegates excess hand cards to the hand-trash deci
   assert.equal(afterP1.hand.length, 3);
   assert.deepEqual(
     afterP1.trash.slice(0, selected.length).map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+});
+
+test("trashFromHandUntilCount delegates opponent excess hand cards to the same hand-trash decision", () => {
+  const { state } = trashFromHandQueueState({
+    type: "trashFromHandUntilCount",
+    player: "opponent",
+    chooser: "opponent",
+    handCount: 3,
+  });
+  const beforeP2 = must(state.players[p2], "p2 before");
+  assert.ok(beforeP2.hand.length > 3);
+
+  const decisionResult = processEffectRuntime(state);
+  const decision = must(
+    decisionResult.state.pendingDecision,
+    "pending decision",
+  );
+  assert.equal(decisionResult.errors, undefined);
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p2);
+  assert.equal(decision.request.chooser, "opponent");
+  assert.equal(decision.request.player, "opponent");
+  assert.equal(decision.request.zone, "hand");
+  assert.equal(decision.request.min, beforeP2.hand.length - 3);
+  assert.equal(decision.request.max, beforeP2.hand.length - 3);
+
+  const selected = beforeP2.hand
+    .slice(0, decision.request.min)
+    .map((card) => handRef(card, p2));
+  const result = respondWithCards(decisionResult.state, selected, p2);
+  const afterP2 = must(result.state.players[p2], "p2 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(afterP2.hand.length, 3);
+  assert.deepEqual(
+    afterP2.trash.slice(0, selected.length).map((card) => card.instanceId),
     selected.map((card) => card.instanceId),
   );
 });

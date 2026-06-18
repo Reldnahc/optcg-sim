@@ -130,6 +130,51 @@ export const trashFromHandPrimitive: PrimitivePatternDefinition<InstructionParse
         }),
       },
       {
+        id: "both-players-trash-from-hand-until-count",
+        pattern:
+          /^you and your opponent trash cards from your hands until you each have (?<count>\d+) cards in your hands\.?$/i,
+        build: (groups) => {
+          const handCount = Number.parseInt(groups["count"] ?? "", 10);
+          return {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "trashFromHandUntilCount",
+                    player: "self",
+                    chooser: "self",
+                    handCount,
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "trashFromHandUntilCount",
+                    player: "opponent",
+                    chooser: "opponent",
+                    handCount,
+                  },
+                },
+              ],
+            },
+            evidence: [
+              "instruction:trashFromHandUntilCount",
+              "composition:sequence",
+              "condition:handCount",
+              "condition:comparator:eq",
+              "condition:threshold:nonNegativeInteger",
+              "player:self",
+              "chooser:self",
+              "player:opponent",
+              "chooser:opponent",
+            ],
+            rest: "",
+          };
+        },
+      },
+      {
         id: "trash-from-hand-until-count",
         pattern:
           /^trash cards from your hand until you have (?<count>\d+) cards in your hand\.?$/i,

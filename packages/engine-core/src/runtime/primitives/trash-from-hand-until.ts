@@ -23,8 +23,8 @@ const isSupportedTrashFromHandUntilCountShape = (
   effect: Effect,
 ): effect is TrashFromHandUntilCountEffect =>
   effect.type === "trashFromHandUntilCount" &&
-  effect.player === "self" &&
-  effect.chooser === "self" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  effect.chooser === effect.player &&
   Number.isInteger(effect.handCount) &&
   effect.handCount >= 0;
 

@@ -58,3 +58,72 @@ it("parses all Characters owner deck-bottom placement as all-target bounce", () 
     ]),
   );
 });
+
+it("parses all-target deck-bottom placement followed by both players trashing down to a hand count", () => {
+  const result = parseCardEffectLine(
+    "[Main] Place all Characters with a cost of 3 or less at the bottom of the owner's deck. Then, you and your opponent trash cards from your hands until you each have 5 cards in your hands.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "main" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "bounce",
+              destination: "deckBottom",
+              target: {
+                type: "all",
+                player: "anyPlayer",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 3 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "trashFromHandUntilCount",
+                    player: "self",
+                    chooser: "self",
+                    handCount: 5,
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "trashFromHandUntilCount",
+                    player: "opponent",
+                    chooser: "opponent",
+                    handCount: 5,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "instruction:bounce",
+      "cardinality:all",
+      "instruction:trashFromHandUntilCount",
+      "player:self",
+      "player:opponent",
+    ]),
+  );
+});
