@@ -56,6 +56,22 @@ const syntheticEntry = (
   causedBy: { type: "ruleProcess", name: "runtime-support-gate-parity" },
 });
 
+const assertAdmissionAndSequencePreflightAgree = (
+  name: string,
+  block: EffectDefinition["effects"][number],
+  entry: EffectQueueEntry = syntheticEntry(block.sourcePresencePolicy),
+): void => {
+  const admission = evaluateEffectBlockRuntimeSupport(block);
+  const sequenceBlock = toSupportedSequenceBlock(entry, block);
+  assert.equal(
+    sequenceBlock !== undefined,
+    admission.supported,
+    `${name}: admission.supported=${String(
+      admission.supported,
+    )} sequenceBlock=${String(sequenceBlock !== undefined)}`,
+  );
+};
+
 const conditionedOptionalDonAttachBlock =
   (): EffectDefinition["effects"][number] => {
     const donSelection = "selected-don-for-parity-attach" as SelectionId;
@@ -136,11 +152,165 @@ const conditionedOptionalDonAttachBlock =
     };
   };
 
-test("canonical support and sequence execution preflight agree for conditioned sequence blocks", () => {
-  const block = conditionedOptionalDonAttachBlock();
+const supportedSequenceParityCases: readonly {
+  readonly name: string;
+  readonly block: EffectDefinition["effects"][number];
+}[] = [
+  {
+    name: "conditioned optional DON attach sequence",
+    block: conditionedOptionalDonAttachBlock(),
+  },
+  {
+    name: "draw then trash hand sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-draw-trash" as EffectDefinition["effects"][number]["id"],
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: { type: "draw", count: 2, player: "self" },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "trashFromHand",
+              count: 1,
+              min: 1,
+              player: "self",
+              chooser: "self",
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    name: "target selection then power modification sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-target-power" as EffectDefinition["effects"][number]["id"],
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select-target",
+            connector: "always",
+            saveResultAs: "savedTarget",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            id: "power-saved-target",
+            connector: "then",
+            effect: {
+              type: "modifyPower",
+              value: -2000,
+              duration: { type: "thisTurn" },
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "savedTarget",
+                },
+                zone: "characterArea",
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    name: "trash selection then playSelected sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-play-selected" as EffectDefinition["effects"][number]["id"],
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected-trash-for-parity-play",
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                names: ["Generic Body"],
+                colorsAny: ["black"],
+                cost: { op: "eq", value: 8 },
+              },
+              saveAs: "selected-trash-for-parity-play" as SelectionId,
+              visibility: "bothPlayers",
+            },
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "playSelected",
+              selection: "selected-trash-for-parity-play" as SelectionId,
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    name: "play source sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-play-source" as EffectDefinition["effects"][number]["id"],
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "playSource",
+              source: { type: "triggerCard" },
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+    },
+  },
+];
 
-  assert.equal(evaluateEffectBlockRuntimeSupport(block).supported, true);
-  assert.notEqual(toSupportedSequenceBlock(syntheticEntry(), block), undefined);
+for (const testCase of supportedSequenceParityCases) {
+  test(`canonical support and sequence preflight agree for ${testCase.name}`, () => {
+    assertAdmissionAndSequencePreflightAgree(testCase.name, testCase.block);
+  });
+}
+
+test("canonical support and sequence execution preflight agree for conditioned sequence blocks", () => {
+  assertAdmissionAndSequencePreflightAgree(
+    "conditioned sequence",
+    conditionedOptionalDonAttachBlock(),
+  );
 });
 
 test("canonical support and sequence execution preflight both reject unsupported conditions", () => {
