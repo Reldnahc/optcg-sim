@@ -531,6 +531,8 @@ const handleWebSocketUpgrade = async (
   socketIdleTimeoutMs: number,
   rematchLobbyDisconnectGraceMs: number,
   onMatchTimerError: (error: unknown) => void,
+  trackSocketOperation: (operation: Promise<void>) => void,
+  isShuttingDown: () => boolean,
 ): Promise<void> => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const lobbyRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(
@@ -792,7 +794,10 @@ const handleWebSocketUpgrade = async (
     }
   };
   socket.on("data", (chunk: Buffer) => {
-    void handleMatchSocketData(chunk);
+    if (isShuttingDown()) {
+      return;
+    }
+    trackSocketOperation(handleMatchSocketData(chunk));
   });
 };
 
@@ -845,6 +850,22 @@ export const createMatchHttpServer = async (
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
   const staticAssetsDirectory = options.staticAssetsDirectory;
   const onMatchTimerError = options.onMatchTimerError ?? (() => undefined);
+  let shuttingDown = false;
+  let closePromise: Promise<void> | undefined;
+  const activeSocketOperations = new Set<Promise<void>>();
+  const trackSocketOperation = (operation: Promise<void>): void => {
+    let tracked: Promise<void> = Promise.resolve();
+    tracked = operation.finally(() => {
+      activeSocketOperations.delete(tracked);
+    });
+    activeSocketOperations.add(tracked);
+    void tracked.catch(onMatchTimerError);
+  };
+  const waitForActiveSocketOperations = async (): Promise<void> => {
+    while (activeSocketOperations.size > 0) {
+      await Promise.allSettled([...activeSocketOperations]);
+    }
+  };
   const simHandoffVerifier =
     options.simHandoffVerifier ??
     createPoneglyphSimHandoffVerifier({
@@ -930,6 +951,8 @@ export const createMatchHttpServer = async (
       socketIdleTimeoutMs,
       rematchLobbyDisconnectGraceMs,
       onMatchTimerError,
+      trackSocketOperation,
+      () => shuttingDown,
     ).catch(() => {
       socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     });
@@ -946,28 +969,37 @@ export const createMatchHttpServer = async (
       });
     },
     close: async () => {
-      clearInterval(matchTimerInterval);
-      for (const connection of socketConnections) {
-        clearConnectionHeartbeat(connection);
-        clearConnectionIdleTimeout(connection);
-        connection.socket.destroy();
+      if (closePromise !== undefined) {
+        return closePromise;
       }
-      socketConnections.clear();
-      for (const connection of lobbySocketConnections) {
-        clearConnectionHeartbeat(connection);
-        clearConnectionIdleTimeout(connection);
-        connection.socket.destroy();
-      }
-      lobbySocketConnections.clear();
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => {
-          if (error === undefined) {
-            resolve();
-            return;
-          }
-          reject(error);
+      closePromise = (async () => {
+        shuttingDown = true;
+        clearInterval(matchTimerInterval);
+        const serverClosed = new Promise<void>((resolve, reject) => {
+          server.close((error) => {
+            if (error === undefined) {
+              resolve();
+              return;
+            }
+            reject(error);
+          });
         });
-      });
+        await waitForActiveSocketOperations();
+        for (const connection of socketConnections) {
+          clearConnectionHeartbeat(connection);
+          clearConnectionIdleTimeout(connection);
+          connection.socket.destroy();
+        }
+        socketConnections.clear();
+        for (const connection of lobbySocketConnections) {
+          clearConnectionHeartbeat(connection);
+          clearConnectionIdleTimeout(connection);
+          connection.socket.destroy();
+        }
+        lobbySocketConnections.clear();
+        await serverClosed;
+      })();
+      return closePromise;
     },
     url: () => {
       const address = server.address();

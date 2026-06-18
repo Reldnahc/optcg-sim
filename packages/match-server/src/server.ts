@@ -1,4 +1,5 @@
 import { createMatchHttpServer } from "./match-http-server.js";
+import { installMatchServerShutdownHandlers } from "./server-shutdown.js";
 
 const commaSeparatedEnvironmentList = (value: string | undefined): string[] =>
   value
@@ -23,4 +24,5 @@ const server = await createMatchHttpServer({
 });
 
 await server.listen(port, host);
+installMatchServerShutdownHandlers({ server });
 process.stdout.write(`OPTCG match server listening at ${server.url()}\n`);

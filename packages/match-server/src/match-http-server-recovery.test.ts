@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import {
   createDefaultDevFixtureFetch,
@@ -7,6 +8,7 @@ import {
 } from "./default-dev-fixture-fetch.test-support.js";
 import { createMatchHttpServer } from "./match-http-server.js";
 import { createInMemoryMatchPersistence } from "./match-persistence.js";
+import { requestHash } from "./action-envelope.js";
 import type { MatchHttpServer } from "./match-http-server.js";
 import type { MatchPersistence } from "./session-types.js";
 
@@ -37,10 +39,48 @@ interface StateSyncMessage {
   };
 }
 
+interface ControlledPersistence extends MatchPersistence {
+  readonly base: MatchPersistence;
+  readonly appendStarted: Promise<void>;
+  readonly releaseAppend: () => void;
+}
+
 interface TestSocket {
   readonly socket: WebSocket;
   readonly next: () => Promise<unknown>;
 }
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const createAppendBlockedPersistence = (): ControlledPersistence => {
+  const base = createInMemoryMatchPersistence();
+  let appendStartedResolve: () => void = () => undefined;
+  let releaseAppendResolve: () => void = () => undefined;
+  let blocked = false;
+  const appendStarted = new Promise<void>((resolve) => {
+    appendStartedResolve = resolve;
+  });
+  const releaseAppendPromise = new Promise<void>((resolve) => {
+    releaseAppendResolve = resolve;
+  });
+  return {
+    ...base,
+    base,
+    appendStarted,
+    releaseAppend: releaseAppendResolve,
+    async appendAction(input) {
+      if (!blocked) {
+        blocked = true;
+        appendStartedResolve();
+        await releaseAppendPromise;
+      }
+      await base.appendAction(input);
+    },
+  };
+};
 
 const createFixtureMatchHttpServer = async (
   matchPersistence: MatchPersistence,
@@ -217,6 +257,71 @@ describe("match HTTP server active recovery", () => {
         socket.close();
       }
       await secondServer.close();
+    }
+  });
+
+  test("waits for in-flight action persistence before closing", async () => {
+    const persistence = createAppendBlockedPersistence();
+    const server = await createFixtureMatchHttpServer(persistence);
+    await server.listen(0, "127.0.0.1");
+    let closePromise: Promise<"closed"> | undefined;
+    const sockets: WebSocket[] = [];
+    try {
+      const created = await createReadyDevMatch(server);
+      const p1Token = await claimDevSeat(server, created.matchId, "p1");
+      const p1Socket = await openSocket(
+        webSocketUrl(server, created.matchId, "p1", p1Token),
+      );
+      sockets.push(p1Socket.socket);
+      const p1Initial = (await p1Socket.next()) as StateSyncMessage;
+      const expectedStateSeq = p1Initial.snapshot?.stateSeq;
+      if (expectedStateSeq === undefined) {
+        throw new Error("Initial state sync was missing stateSeq.");
+      }
+
+      p1Socket.socket.send(
+        JSON.stringify({
+          type: "submitAction",
+          matchId: created.matchId,
+          playerId: "p1",
+          clientActionId: "close-drain-action",
+          actionIndex: 0,
+          expectedStateSeq,
+          requestHash: requestHash({
+            type: "submitAction",
+            playerId: "p1" as PlayerId,
+            actionIndex: 0,
+            expectedStateSeq,
+          }),
+        }),
+      );
+      await persistence.appendStarted;
+
+      closePromise = server.close().then(() => "closed" as const);
+      const earlyClose = await Promise.race([
+        closePromise,
+        delay(25).then(() => "pending" as const),
+      ]);
+
+      assert.equal(earlyClose, "pending");
+
+      persistence.releaseAppend();
+      await closePromise;
+      const recovered = await persistence.base.loadSnapshot(
+        created.matchId as MatchId,
+      );
+
+      assert.equal(recovered?.actions.length, 1);
+    } finally {
+      persistence.releaseAppend();
+      for (const socket of sockets) {
+        socket.close();
+      }
+      if (closePromise === undefined) {
+        await server.close();
+      } else {
+        await closePromise;
+      }
     }
   });
 });
