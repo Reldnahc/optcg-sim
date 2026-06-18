@@ -6,6 +6,7 @@ import {
   parseModifierFromSet,
 } from "../../modifiers/index.js";
 import type { InstructionParseResult, PrimitiveEvidence } from "../../types.js";
+import { effectSequence } from "../effect-builders.js";
 import { parseMatchingZoneCardsScaledSuffix } from "../../values/dynamic-number.js";
 import {
   continuousDuration,
@@ -130,20 +131,10 @@ export function parseContinuousModifierListForTarget({
     return undefined;
   }
 
-  const firstEffect = effects[0];
-  if (firstEffect === undefined) {
+  const effect = effectSequence(effects);
+  if (effect === undefined) {
     return undefined;
   }
-  const effect: Effect =
-    effects.length === 1
-      ? firstEffect
-      : {
-          type: "sequence",
-          effects: effects.map((sequenceEffect) => ({
-            connector: "always" as const,
-            effect: sequenceEffect,
-          })),
-        };
 
   return {
     effect,

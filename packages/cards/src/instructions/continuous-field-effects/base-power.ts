@@ -4,6 +4,7 @@ import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseAllFieldTarget } from "../../targets/index.js";
 import { parseYourLeaderOrCharacterCardsTarget } from "../../targets/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
+import { effectSequence } from "../effect-builders.js";
 import {
   continuousDuration,
   continuousDurationEvidence,
@@ -271,20 +272,10 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
         continuousDurationForSubject(subject, context.condition),
     ),
   );
-  const singleEffect = effects[0];
-  if (singleEffect === undefined) {
+  const effect = effectSequence(effects);
+  if (effect === undefined) {
     return undefined;
   }
-  const effect: Effect =
-    effects.length === 1
-      ? singleEffect
-      : {
-          type: "sequence",
-          effects: effects.map((sequenceEffect) => ({
-            connector: "always" as const,
-            effect: sequenceEffect,
-          })),
-        };
 
   return {
     effect,
@@ -362,22 +353,13 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
         continuousDurationForSubject(subject, context.condition),
     ),
   );
-  const singleEffect = effects[0];
-  if (singleEffect === undefined) {
+  const effect = effectSequence(effects);
+  if (effect === undefined) {
     return undefined;
   }
 
   return {
-    effect:
-      effects.length === 1
-        ? singleEffect
-        : {
-            type: "sequence",
-            effects: effects.map((sequenceEffect) => ({
-              connector: "always" as const,
-              effect: sequenceEffect,
-            })),
-          },
+    effect,
     evidence: [
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),

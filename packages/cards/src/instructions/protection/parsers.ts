@@ -17,6 +17,7 @@ import type {
   PrimitiveEvidence,
 } from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
+import { effectSequence } from "../effect-builders.js";
 import { buildProtectionEffectWithTarget } from "./builders.js";
 
 export const protectionInstructionPrimitive = {
@@ -81,20 +82,10 @@ export const parseProtectionInstruction: ContinuousInstructionParser = (
       target: target.target,
     }),
   );
-  const firstEffect = effects[0];
-  if (firstEffect === undefined) {
+  const effect = effectSequence(effects, "then");
+  if (effect === undefined) {
     return undefined;
   }
-  const effect =
-    effects.length === 1
-      ? firstEffect
-      : ({
-          type: "sequence",
-          effects: effects.map((parsedEffect, index) => ({
-            connector: index === 0 ? ("always" as const) : ("then" as const),
-            effect: parsedEffect,
-          })),
-        } as const);
 
   return {
     effect,

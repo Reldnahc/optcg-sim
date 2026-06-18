@@ -11,6 +11,7 @@ import {
   parseFieldEffectDuration,
   type ContinuousInstructionContext,
 } from "../shared.js";
+import { effectSequence } from "../../effect-builders.js";
 
 export const parseKeywordGrantForTarget = ({
   target,
@@ -193,17 +194,4 @@ const stripTerminalPeriod = (text: string): string =>
 
 export const keywordSequence = (
   effects: readonly Effect[],
-): Effect | undefined => {
-  const first = effects[0];
-  return effects.length === 0
-    ? undefined
-    : effects.length === 1
-      ? first
-      : {
-          type: "sequence",
-          effects: effects.map((effect) => ({
-            connector: "always" as const,
-            effect,
-          })),
-        };
-};
+): Effect | undefined => effectSequence(effects);
