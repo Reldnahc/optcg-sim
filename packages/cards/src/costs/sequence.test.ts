@@ -380,6 +380,33 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses plural top-Life visibility costs through the same primitive", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "turn 2 cards from the top of your Life cards face-up",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "turnLifeFaceUp",
+        count: 2,
+        player: "self",
+        position: "top",
+        optional: true,
+      },
+      evidence: [
+        "cost:turnLifeFaceUp",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:life",
+        "position:top",
+        "destination:faceUp",
+        "reveal:bothPlayers",
+      ],
+      rest: "",
+    });
+  });
+
   it("does not inherit rest into explicit Life-to-hand add costs", () => {
     expect(
       parseOptionalCostSequence({

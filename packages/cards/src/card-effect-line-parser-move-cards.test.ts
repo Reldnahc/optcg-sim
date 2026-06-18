@@ -495,6 +495,59 @@ describe("card effect line parser move-cards costs", () => {
     );
   });
 
+  it("parses plural turn-Life-face-up costs before reusable DON deck movement", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] You may turn 2 cards from the top of your Life cards face-up: Add up to 1 DON!! card from your DON!! deck and rest it.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "whenAttacking" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "turnLifeFaceUp",
+                  count: 2,
+                  player: "self",
+                  position: "top",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "moveCards",
+                min: 0,
+                count: 1,
+                from: { player: "self", zone: "donDeck", position: "top" },
+                to: { player: "self", zone: "costArea" },
+                destinationState: "rested",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "composition:optionalCostedEffect",
+        "cost:turnLifeFaceUp",
+        "zone:life",
+        "position:top",
+        "reveal:bothPlayers",
+        "instruction:moveCards",
+        "zone:donDeck",
+        "destination:costArea",
+        "state:rested",
+      ]),
+    );
+  });
+
   it("parses optional Life-to-hand cost before hand-to-Life-top movement", () => {
     const result = parseCardEffectLine(
       "[On Play] You may add 1 card from the top or bottom of your Life cards to your hand: Add up to 1 card from your hand to the top of your Life cards.",

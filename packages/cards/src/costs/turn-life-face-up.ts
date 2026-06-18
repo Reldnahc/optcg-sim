@@ -62,7 +62,7 @@ export const parseTurnLifeFaceUpCost = (
     };
   }
   const routeMatch =
-    /^card from the (?<position>top|bottom) of your Life cards face-(?<face>up|down)$/i.exec(
+    /^cards? from the (?<position>top|bottom) of your Life cards face-(?<face>up|down)$/i.exec(
       cardinality.rest,
     );
   const positionText = routeMatch?.groups?.["position"];
