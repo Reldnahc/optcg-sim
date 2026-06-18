@@ -4,9 +4,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
-import type { CardId, CardInstance, MatchCardManifest } from "@optcg/types";
+import type {
+  CardId,
+  CardInstance,
+  MatchCardManifest,
+  SelectionId,
+} from "@optcg/types";
 
-import { must, p1, p2 } from "./action-test-fixtures.js";
+import { must, p1, p2, resolvedCard } from "./action-test-fixtures.js";
+import {
+  installActivateMainDrawDefinition,
+  makeMainPhaseLegalActionState,
+  toEffectId,
+} from "./action-dispatcher-test-support.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import { applyDeclareAttack } from "./battle/actions.js";
 import {
@@ -19,7 +29,10 @@ import {
   processEffectRuntime,
   resolveImplementedDslEffectDefinition,
 } from "./effect-runtime.js";
-import { targetSelectionQueueState } from "./effect-runtime-queue/test-support.js";
+import {
+  reviewedOnPlayDrawDefinition,
+  targetSelectionQueueState,
+} from "./effect-runtime-queue/test-support.js";
 import {
   applyPlayCard,
   applyPlayCardDecisionResponse,
@@ -34,6 +47,143 @@ const repoRoot = path.resolve(
 const plainDataClone = <T>(value: T): T =>
   JSON.parse(JSON.stringify(value)) as T;
 const toCardId = (value: string): CardId => value as CardId;
+
+const setupActivateMainTrashSelfPlayFromTrashState = (
+  params: {
+    readonly targetName: string;
+    readonly targetCardId: CardId;
+    readonly targetEffectDefinitionId: string;
+  } = {
+    targetName: "Yamato",
+    targetCardId: toCardId("black-yamato-eight"),
+    targetEffectDefinitionId: "def-yamato-on-play-draw",
+  },
+): {
+  effectId: ReturnType<typeof toEffectId>;
+  source: CardInstance;
+  state: ReturnType<typeof makeMainPhaseLegalActionState>;
+  trashTarget: CardInstance;
+} => {
+  const { targetCardId, targetEffectDefinitionId, targetName } = params;
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source character");
+  source.cardId = toCardId("self-trash-source");
+  const effectId = toEffectId("activate-main-self-trash-play");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: source.cardId,
+    category: "character",
+    definitionId: "def-activate-main-self-trash-play",
+    effectId,
+  });
+  const trashSelectionId = "trashSelection:target" as SelectionId;
+  const effectBlock = must(definition.effects[0], "activate effect");
+  effectBlock.effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "pay-trash-self",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: { type: "trashSelf", optional: true },
+        },
+      },
+      {
+        id: "select-target-from-trash",
+        connector: "ifYouDo",
+        saveResultAs: trashSelectionId,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {
+            categories: ["character"],
+            names: [targetName],
+            colorsAny: ["black"],
+            cost: { op: "eq", value: 8 },
+          },
+          saveAs: trashSelectionId,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        id: "play-selected-target",
+        connector: "ifPossible",
+        effect: {
+          type: "playSelected",
+          selection: trashSelectionId,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+
+  const trashTarget = {
+    ...must(p1State.deck[0], "trash target"),
+    cardId: targetCardId,
+    zone: {
+      zone: "trash" as const,
+      playerId: p1,
+      slot: "trash" as const,
+      index: 0,
+    },
+  };
+  p1State.deck = p1State.deck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "deck", playerId: p1, slot: "deck", index },
+  }));
+  p1State.trash = [trashTarget];
+
+  const targetSupport = {
+    cardId: trashTarget.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    effectDefinitionId: targetEffectDefinitionId,
+    rulesVersion: "activate-main-trash-play-parity-rules",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "activate-main-trash-play-parity-source",
+    behaviorHash: "activate-main-trash-play-parity-behavior",
+  };
+  const targetCard = resolvedCard({
+    cardId: trashTarget.cardId,
+    category: "character",
+    cost: 8,
+    power: 8000,
+    support: targetSupport,
+  });
+  state.cardManifest.cards[trashTarget.cardId] = {
+    ...targetCard,
+    colors: ["black"],
+    name: targetName,
+  };
+  const targetDefinition = reviewedOnPlayDrawDefinition(
+    trashTarget.cardId,
+    targetSupport,
+  );
+  const targetBaseEffect = must(targetDefinition.effects[0], "target effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [targetSupport.effectDefinitionId]: {
+      ...targetDefinition,
+      effects: [
+        {
+          ...targetBaseEffect,
+          id: toEffectId("target-on-play-draw"),
+          trigger: { type: "onPlay" },
+          sourcePresencePolicy: "mustRemainInSameZone",
+        },
+      ],
+    },
+  };
+
+  return { effectId, source, state, trashTarget };
+};
 
 const loadPlainRealCardManifest = async (): Promise<MatchCardManifest> => {
   const manifestFixturePath = path.join(
@@ -557,6 +707,74 @@ test("loads OP10-045 from plain manifest data and queues draw-before-trash on de
   assert.equal(resolvedP1.trash[0]?.instanceId, secondDrawn.instanceId);
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
+
+test.each([
+  {
+    label: "Yamato reported shape",
+    targetName: "Yamato",
+    targetCardId: toCardId("black-yamato-eight"),
+    targetEffectDefinitionId: "def-yamato-on-play-draw",
+  },
+  {
+    label: "generic reusable shape",
+    targetName: "Generic Body",
+    targetCardId: toCardId("black-generic-eight"),
+    targetEffectDefinitionId: "def-generic-body-on-play-draw",
+  },
+])(
+  "probe-supported activate-main trash play from trash does not hit generic runtime gates: $label",
+  ({ targetCardId, targetEffectDefinitionId, targetName }) => {
+    const { effectId, source, state, trashTarget } =
+      setupActivateMainTrashSelfPlayFromTrashState({
+        targetName,
+        targetCardId,
+        targetEffectDefinitionId,
+      });
+
+    const activated = applyAction(state, {
+      type: "activateEffect",
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      effectId,
+    });
+    const trashSelfDecision = must(
+      activated.state.pendingDecision,
+      "trash-self decision",
+    );
+    assert.equal(activated.errors, undefined);
+    assert.equal(trashSelfDecision.type, "payCost");
+
+    const paid = applyAction(activated.state, {
+      type: "respondToDecision",
+      decisionId: trashSelfDecision.id,
+      response: { type: "payment", optionId: "trashSelf" },
+    });
+    const selection = must(paid.state.pendingDecision, "trash selection");
+    assert.equal(paid.errors, undefined);
+    assert.equal(selection.type, "selectCards");
+
+    const selected = applyAction(paid.state, {
+      type: "respondToDecision",
+      decisionId: selection.id,
+      response: {
+        type: "cards",
+        cards: selection.candidates.map((candidate) => candidate.card),
+      },
+    });
+
+    assert.equal(selected.errors, undefined);
+    assert.equal(
+      must(selected.state.players[p1], "p1").characters.some(
+        (card) => card.instanceId === trashTarget.instanceId,
+      ),
+      true,
+    );
+  },
+);
 
 const unsupportedRealCardFailClosedCases = [
   {

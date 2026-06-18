@@ -4,6 +4,11 @@ import { parseCardEffectLine } from "@optcg/cards";
 import { createSupportProbeReport } from "./support-probe-report.js";
 
 describe("text-only support probe parser backend", () => {
+  const activateMainTrashPlayProbeTexts = [
+    "[Activate: Main] You may trash this Character: Play up to 1 black [Yamato] with a cost of 8 from your trash.",
+    "[Activate: Main] You may trash this Character: Play up to 1 black [Generic Body] with a cost of 8 from your trash.",
+  ];
+
   it("parses text without requiring card IDs or fixtures", () => {
     expect(parseCardEffectLine("[On Play] Draw 1 card.")).toMatchObject({
       block: {
@@ -22,6 +27,24 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Parse: passed");
     expect(report.lines).toContain("Engine runtime: passed");
   });
+
+  it.each(activateMainTrashPlayProbeTexts)(
+    "reports activate-main trash-self playSelected support for %s",
+    async (text) => {
+      const report = await createSupportProbeReport({ text });
+
+      expect(report.exitCode).toBe(0);
+      expect(report.lines).toContain("Line 1 primitive parser: passed");
+      expect(report.lines).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("parser entryPoint:activateMain"),
+          expect.stringContaining("parser cost:trashSelf"),
+          expect.stringContaining("parser body:playSelected"),
+          expect.stringContaining("runtime body:sequence"),
+        ]),
+      );
+    },
+  );
 
   it("reports source span diagnostics for parsed text reports", async () => {
     const report = await createSupportProbeReport({

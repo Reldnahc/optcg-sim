@@ -763,12 +763,12 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   if (!lineReport.runtimeSupported) {
     lines.push(`Engine runtime reason: ${runtimeReason(lineReport)}`);
   }
-  lines.push(
-    ...formatPrimitiveSupportSections({
-      parserCertificate: lineReport.parserCertificate,
-      runtimeReports: lineReport.runtimeReports,
-    }),
-  );
+  const primitiveSupportLines = formatPrimitiveSupportSections({
+    parserCertificate: lineReport.parserCertificate,
+    runtimeReports: lineReport.runtimeReports,
+  });
+  lines.push(...primitiveSupportLines);
+  lines.push(...prefixPrimitiveSupportLines("Line 1 ", primitiveSupportLines));
   lines.push("Diagnostics:");
   lines.push("Parser evidence diagnostics:");
   for (const evidence of uniqueEvidence(lineReport.values)) {
