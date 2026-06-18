@@ -63,17 +63,20 @@ const createMoveCardsReplacementPayCost = (
   if (player === undefined) {
     return undefined;
   }
-  const [paymentOption] = expandMoveCardsCostRoutes(cost);
-  if (paymentOption === undefined) {
+  const paymentOptions = expandMoveCardsCostRoutes(cost);
+  if (paymentOptions.length === 0) {
     return undefined;
   }
-  const selectable = selectableMoveCardsCostIds(
-    state,
-    candidate.controllerId,
-    player,
-    paymentOption,
-  );
-  if (selectable === undefined || selectable.length < paymentOption.count) {
+  const legalOptions = paymentOptions.filter((option) => {
+    const selectable = selectableMoveCardsCostIds(
+      state,
+      candidate.controllerId,
+      player,
+      option,
+    );
+    return selectable !== undefined && selectable.length >= option.count;
+  });
+  if (legalOptions.length === 0) {
     return undefined;
   }
   return {
@@ -82,16 +85,36 @@ const createMoveCardsReplacementPayCost = (
     ),
     type: "payCost",
     playerId: candidate.controllerId,
-    prompt: `Place ${String(cost.count)} ${plural(
-      cost.count,
-      "card",
-      "cards",
-    )} from trash at the bottom of your deck instead.`,
+    prompt: replacementMoveCardsCostPrompt(cost),
     causedBy: { type: "replacement", replacementId: candidate.id },
     visibility: { type: "public" },
     cost,
-    paymentOptions: [paymentOption],
+    paymentOptions: legalOptions,
   };
+};
+
+const replacementMoveCardsCostPrompt = (
+  cost: Extract<OptionalCost, { type: "moveCards" }>,
+): string => {
+  if (cost.from.zone === "life" && cost.to.zone === "trash") {
+    return `Trash ${String(cost.count)} ${plural(
+      cost.count,
+      "card",
+      "cards",
+    )} from Life instead.`;
+  }
+  if (cost.from.zone === "trash" && cost.to.zone === "deck") {
+    return `Place ${String(cost.count)} ${plural(
+      cost.count,
+      "card",
+      "cards",
+    )} from trash at the bottom of your deck instead.`;
+  }
+  return `Pay ${String(cost.count)} ${plural(
+    cost.count,
+    "card",
+    "cards",
+  )} instead.`;
 };
 
 export const createReplacementPayCostDecision = (

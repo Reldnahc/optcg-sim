@@ -55,3 +55,53 @@ test("runtime admission accepts KO replacement with reusable Life-to-trash body"
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts KO replacement with reusable top-or-bottom Life-to-trash payment body", () => {
+  const when: ReplacementTrigger = {
+    type: "wouldBeKOd",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "any",
+    target: { type: "self" },
+  };
+
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      oncePerTurn: true,
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "moveCards",
+                  count: 1,
+                  chooser: "self",
+                  from: {
+                    player: "self",
+                    zone: "life",
+                    position: "topOrBottom",
+                  },
+                  to: { player: "self", zone: "trash" },
+                  order: "chooserChoice",
+                  optional: true,
+                },
+              },
+            },
+          ],
+        },
+      },
+    }),
+  );
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});

@@ -1,52 +1,51 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { it } from "vitest";
 
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
-test("parses K.O.-by-effect replacement that trashes top Life as a reusable move primitive", () => {
+it("parses top-or-bottom Life trash replacement into reusable move-card payment primitives", () => {
   const result = parseCardEffectLine(
-    "[Once Per Turn] If this Character would be K.O.'d by an effect, you may trash 1 card from the top of your Life cards instead.",
+    "[Once Per Turn] If this Character would be K.O.'d, you may trash 1 card from the top or bottom of your Life cards instead.",
   );
   if (result === undefined || !("block" in result)) {
     assert.fail("expected parsed replacement effect block");
   }
 
-  const when = {
-    type: "wouldBeKOd",
-    sourceControllerRelation: "any",
-    sourceKind: "cardEffect",
-    target: { type: "self" },
-  } as const;
+  const effect = result.block.effect;
+  if (effect.type !== "replacement") {
+    assert.fail("expected replacement effect");
+  }
 
-  assert.deepEqual(result.block, {
-    category: "replacement",
-    trigger: { type: "replacement", replacement: when },
-    oncePerTurn: true,
-    optional: true,
-    sourcePresencePolicy: "resolveFromLastKnownInformation",
-    effect: {
-      type: "replacement",
-      when,
-      instead: {
-        type: "moveCards",
-        count: 1,
-        from: { player: "self", zone: "life", position: "top" },
-        to: { player: "self", zone: "trash" },
-        order: "original",
+  assert.deepEqual(effect.instead, {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "moveCards",
+            count: 1,
+            chooser: "self",
+            from: { player: "self", zone: "life", position: "topOrBottom" },
+            to: { player: "self", zone: "trash" },
+            order: "chooserChoice",
+            optional: true,
+          },
+        },
       },
-    },
+    ],
   });
   for (const evidence of [
-    "marker:oncePerTurn",
     "entry:replacement",
+    "marker:oncePerTurn",
     "replacement:wouldBeKOd",
-    "replacementSource:cardEffect",
-    "target:thisCharacter",
     "instruction:moveCards",
+    "cost:moveCards",
     "zone:life",
-    "position:top",
     "destination:trash",
-    "composition:replacementInstead",
+    "position:top",
+    "position:bottom",
   ] as const) {
     assert.equal(result.evidence.includes(evidence), true, evidence);
   }

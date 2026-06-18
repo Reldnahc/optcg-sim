@@ -279,11 +279,18 @@ export const supportedReplacementPayCostInstead = (
     (cost.type === "moveCards" &&
       cost.chooser === "self" &&
       cost.from.player === "self" &&
-      cost.from.zone === "trash" &&
-      cost.from.position === undefined &&
+      ((cost.from.zone === "trash" && cost.from.position === undefined) ||
+        (cost.from.zone === "life" &&
+          (cost.from.position === "top" ||
+            cost.from.position === "bottom" ||
+            cost.from.position === "topOrBottom"))) &&
       cost.to.player === "self" &&
-      cost.to.zone === "deck" &&
-      cost.to.position === "bottom")
+      ((cost.from.zone === "trash" &&
+        cost.to.zone === "deck" &&
+        cost.to.position === "bottom") ||
+        (cost.from.zone === "life" &&
+          cost.to.zone === "trash" &&
+          cost.to.position === undefined)))
   ) {
     return segment.effect;
   }

@@ -208,3 +208,50 @@ test("moveCards payment can place a selected field character on deck bottom", ()
   );
   assert.equal(events[0]?.type, "cardMoved");
 });
+
+test("moveCards payment can trash selected bottom Life", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const selected = must(player.life.at(-1), "bottom Life").card;
+  const originalTopLife = must(player.life[0], "top Life").card;
+  const option: MoveCardsPaymentOption = {
+    id: "moveCards:bottom",
+    type: "moveCards",
+    count: 1,
+    from: { player: "self", zone: "life", position: "bottom" },
+    to: { player: "self", zone: "trash" },
+  };
+  const events: EngineEvent[] = [];
+
+  assert.equal(isSupportedMoveCardsPaymentRoute(option), true);
+
+  const updated = applyMoveCardsPayment({
+    decisionId: "decision:life-bottom-to-trash" as DecisionId,
+    events,
+    player,
+    playerId: p1,
+    selected: [selected.instanceId],
+    selectedOption: option,
+    state,
+  });
+
+  assert.ok(updated);
+  assert.equal(
+    updated.life.some(
+      (lifeCard) => lifeCard.card.instanceId === selected.instanceId,
+    ),
+    false,
+  );
+  assert.equal(
+    must(updated.life[0], "remaining top Life").card.instanceId,
+    originalTopLife.instanceId,
+  );
+  assert.equal(
+    must(updated.trash[0], "trashed Life").instanceId,
+    selected.instanceId,
+  );
+  assert.deepEqual(
+    events.map((event) => event.type),
+    ["cardMoved", "cardTrashed"],
+  );
+});

@@ -60,7 +60,7 @@ export const isSupportedMoveCardsPaymentRoute = (
       option.to.zone === "trash" &&
       option.to.position === undefined) ||
     (option.from.zone === "life" &&
-      option.from.position === "top" &&
+      (option.from.position === "top" || option.from.position === "bottom") &&
       option.to.zone === "trash" &&
       option.to.position === undefined) ||
     (option.from.zone === "life" &&
@@ -391,11 +391,15 @@ export const applyMoveCardsPayment = (params: {
 
   if (
     params.selectedOption.from.zone === "life" &&
-    params.selectedOption.from.position === "top" &&
+    (params.selectedOption.from.position === "top" ||
+      params.selectedOption.from.position === "bottom") &&
     params.selectedOption.to.zone === "trash" &&
     params.selectedOption.to.position === undefined
   ) {
-    const selectedLife = params.player.life.slice(0, params.selected.length);
+    const fromBottom = params.selectedOption.from.position === "bottom";
+    const selectedLife = fromBottom
+      ? params.player.life.slice(-params.selected.length)
+      : params.player.life.slice(0, params.selected.length);
     if (
       selectedLife.length !== params.selectedOption.count ||
       selectedLife.some(

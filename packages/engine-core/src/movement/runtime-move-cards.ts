@@ -141,7 +141,7 @@ export const isSupportedLifeTopToTrashEffect = (
         isSupportedZoneCardCount(effect.count)))) &&
   (effect.from.player === "self" || effect.from.player === "opponent") &&
   effect.from.zone === "life" &&
-  effect.from.position === "top" &&
+  (effect.from.position === "top" || effect.from.position === "bottom") &&
   effect.to.player === effect.from.player &&
   effect.to.zone === "trash" &&
   effect.to.position === undefined;
@@ -336,7 +336,7 @@ export const executeMoveCardsPrimitive = (
     );
   }
   if (isSupportedLifeTopToTrashEffect(resolvedEffect)) {
-    return executeLifeTopToTrashMove(
+    return executeLifeToTrashMove(
       state,
       entry,
       resolvedEffect,
@@ -678,7 +678,7 @@ const executeLifeToHandMove = (
   );
 };
 
-const executeLifeTopToTrashMove = (
+const executeLifeToTrashMove = (
   state: GameState,
   entry: EffectQueueEntry,
   effect: MoveCardsEffect & { count: number },
@@ -700,10 +700,15 @@ const executeLifeTopToTrashMove = (
   }
 
   const events: EngineEvent[] = [];
+  const movedLife = lifeCardsForPosition(
+    player.life,
+    movedCount,
+    effect.from.position === "bottom" ? "bottom" : "top",
+  );
   const movedResult = moveConcreteCardsToTrash(
     state,
     events,
-    player.life.slice(0, movedCount).map((lifeCard) => lifeCard.card),
+    movedLife.map((lifeCard) => lifeCard.card),
     {
       cardMovedPayloadShape: "zoneRefs",
       cardMovedVisibility: { type: "public" },

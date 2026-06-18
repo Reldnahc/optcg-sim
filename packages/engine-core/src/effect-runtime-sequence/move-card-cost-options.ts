@@ -132,7 +132,7 @@ export const expandMoveCardsCostRoutes = (
   }
   if (
     cost.from.zone !== "life" ||
-    cost.to.zone !== "hand" ||
+    (cost.to.zone !== "hand" && cost.to.zone !== "trash") ||
     cost.to.position !== undefined
   ) {
     return [];
@@ -261,7 +261,7 @@ export const selectableMoveCardsCostIds = (
   }
   if (
     option.from.zone === "life" &&
-    option.to.zone === "hand" &&
+    (option.to.zone === "hand" || option.to.zone === "trash") &&
     option.to.position === undefined
   ) {
     if (option.from.position === "top") {

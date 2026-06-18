@@ -228,7 +228,17 @@ export const applyReplacementPayCostDecisionResponse = (
       ),
     };
   }
-  if (action.response.optionId !== cost.type) {
+  const paymentOptionId = action.response.optionId;
+  const selectedMoveCardsOption =
+    cost.type === "moveCards"
+      ? expandMoveCardsCostRoutes(cost).find(
+          (option) => option.id === paymentOptionId,
+        )
+      : undefined;
+  if (
+    (cost.type === "returnDon" && paymentOptionId !== cost.type) ||
+    (cost.type === "moveCards" && selectedMoveCardsOption === undefined)
+  ) {
     return {
       completedPayload: undefined,
       result: toEngineResult(
@@ -307,7 +317,7 @@ export const applyReplacementPayCostDecisionResponse = (
       selectedDonInstanceIds: selected,
     };
   } else {
-    const [selectedOption] = expandMoveCardsCostRoutes(cost);
+    const selectedOption = selectedMoveCardsOption;
     const selected = action.response.selectedCardInstanceIds;
     if (
       selectedOption === undefined ||
