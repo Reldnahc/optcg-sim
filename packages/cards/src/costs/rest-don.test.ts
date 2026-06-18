@@ -81,4 +81,24 @@ describe("rest DON cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses bare Unicode circled rest-DON shorthand as the same cost primitive", () => {
+    expect(parseRestDonCost({ text: "\u2460" })).toEqual({
+      cost: {
+        type: "restDon",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      evidence: [
+        "cost:restDon",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "target:yourDonCards",
+        "player:self",
+        "chooser:self",
+      ],
+      rest: "",
+    });
+  });
 });

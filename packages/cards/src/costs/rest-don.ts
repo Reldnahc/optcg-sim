@@ -124,7 +124,7 @@ function parseCircledRestDonCost(
     /^\(You may rest the specified number of DON!! cards in your cost area\.\)\s*$/iu.exec(
       rest,
     );
-  if (reminderMatch === null) {
+  if (rest.length > 0 && reminderMatch === null) {
     return undefined;
   }
 

@@ -70,3 +70,48 @@ it("parses end-of-turn return-DON cost into self activation and keyword grant", 
     ]),
   );
 });
+
+it("parses bare circled DON end-of-turn cost into self activation", () => {
+  const result = parseCardEffectLine(
+    "[End of Your Turn] \u2460: Set this Character as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "endOfYourTurn" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "restDon",
+                count: 1,
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "activate",
+              target: { type: "self" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:endOfYourTurn",
+      "cost:restDon",
+      "instruction:activate",
+      "target:thisCharacter",
+      "state:active",
+    ]),
+  );
+});
