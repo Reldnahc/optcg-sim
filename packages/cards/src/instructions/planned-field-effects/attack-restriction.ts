@@ -15,6 +15,7 @@ export const preventOpponentCharactersAttackPrimitive = {
     "cardinality:upTo",
     "target:opponentCharacters",
     "duration:opponentNextEndPhase",
+    "duration:selfNextTurnStart",
     "duration:thisTurn",
   ],
 } as const;

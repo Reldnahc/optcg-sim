@@ -125,6 +125,105 @@ it("parses selected opponent rested Leader attack restrictions", () => {
   );
 });
 
+it("parses selected opponent Character attack restrictions until the start of your next turn", () => {
+  const parsed = parsePreventOpponentCharactersAttackInstruction({
+    text: "Up to 1 of your opponent's Characters with a cost of 7 or less cannot attack until the start of your next turn.",
+  });
+
+  expect(parsed).toMatchObject({
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          saveResultAs: "selected:thatCharacter",
+          effect: {
+            type: "selectTargets",
+            request: {
+              player: "opponent",
+              zone: "characterArea",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                cost: { max: 7 },
+              },
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "cannotAttack",
+            target: {
+              type: "savedFieldObject",
+              player: "opponent",
+              zone: "characterArea",
+            },
+            duration: { type: "untilStartOfNextTurn", player: "self" },
+          },
+        },
+      ],
+    },
+    rest: "",
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:preventActivation",
+      "cardinality:upTo",
+      "target:opponentCharacters",
+      "filter:cost",
+      "duration:selfNextTurnStart",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
+it("parses On Play selected opponent Character attack restrictions until the start of your next turn", () => {
+  const parsed = parseCardEffectLine(
+    "[On Play] Up to 1 of your opponent's Characters with a cost of 7 or less cannot attack until the start of your next turn.",
+  );
+
+  expect(parsed).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zone: "characterArea",
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 7 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "cannotAttack",
+              duration: { type: "untilStartOfNextTurn", player: "self" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:preventActivation",
+      "duration:selfNextTurnStart",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
 it("parses optional hand-trash cost into selected opponent rested Leader attack restrictions", () => {
   const parsed = parseCardEffectLine(
     "[On Play] You may trash 1 card from your hand: Up to 1 of your opponent's rested Leader cannot attack until the end of your opponent's next turn.",

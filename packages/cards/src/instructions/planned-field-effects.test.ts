@@ -89,6 +89,7 @@ describe("planned field-effect instruction parsers", () => {
         "cardinality:upTo",
         "target:opponentCharacters",
         "duration:opponentNextEndPhase",
+        "duration:selfNextTurnStart",
         "duration:thisTurn",
       ],
     });

@@ -211,6 +211,7 @@ export const restrictionDurationParsers = [
 
 export const attackRestrictionDurationParsers = [
   parseOpponentNextEndPhaseDuration,
+  parseSelfNextTurnStartDuration,
   parseThisTurnDuration,
 ] as const;
 
