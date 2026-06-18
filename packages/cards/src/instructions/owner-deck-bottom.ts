@@ -1,6 +1,9 @@
-import type { Effect, SelectionId, Target } from "@optcg/types";
+import type { Effect, SelectCardMax, SelectionId, Target } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseAnyNumberCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseOpponentCharactersTarget } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
@@ -43,7 +46,7 @@ const selectThenPlaceAtOwnerDeckBottom = (
 const selectTrashThenPlaceAtOwnerDeckBottom = (
   player: "self" | "opponent",
   min: number,
-  max: number,
+  max: SelectCardMax,
   filter?: CardFilter,
 ): Effect => ({
   type: "sequence",
@@ -162,6 +165,9 @@ const parseTrashSource = (
       };
 };
 
+const parseTrashDeckBottomCardinality = (text: string) =>
+  parseUpToCardinality({ text }) ?? parseAnyNumberCardinality({ text });
+
 export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
@@ -191,10 +197,12 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     };
   }
 
-  const cardinality = parseUpToCardinality({ text: selectionText });
+  const cardinality = parseTrashDeckBottomCardinality(selectionText);
   if (cardinality === undefined) {
     return undefined;
   }
+  const orderEvidence: readonly PrimitiveEvidence[] =
+    match?.groups?.["order"] === undefined ? [] : ["order:anyOrder"];
 
   const trashSource = parseTrashSource(cardinality.rest);
   if (trashSource !== undefined) {
@@ -214,6 +222,7 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
         ...trashSource.evidence,
         "destination:deck",
         "position:bottom",
+        ...orderEvidence,
         "composition:selectThenMove",
       ],
       rest: "",
@@ -225,13 +234,14 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     return repeatedTargets;
   }
 
+  if (cardinality.cardinality.mode !== "upTo") {
+    return undefined;
+  }
+
   const target = parseOwnerDeckBottomTarget(cardinality.rest);
   if (target === undefined || target.rest.length > 0) {
     return undefined;
   }
-
-  const orderEvidence: readonly PrimitiveEvidence[] =
-    match?.groups?.["order"] === undefined ? [] : ["order:anyOrder"];
 
   return {
     effect: selectThenPlaceAtOwnerDeckBottom(

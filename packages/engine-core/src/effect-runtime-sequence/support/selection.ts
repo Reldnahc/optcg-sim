@@ -2,6 +2,7 @@ import type {
   Effect,
   CardFilter,
   SavedFieldObjectTargetBinding,
+  SelectCardMax,
   SelectCardsEffect,
   SelectTargetsEffect,
   Target,
@@ -51,6 +52,15 @@ const zoneNames = new Set<string>([
 const isSelectionSetSource = (source: MoveSelectedEffect["from"]): boolean =>
   source !== "currentZone" && !zoneNames.has(source);
 
+const hasSupportedSelectionCardinality = (
+  min: number,
+  max: SelectCardMax,
+): boolean =>
+  Number.isInteger(min) &&
+  (max === "available" || Number.isInteger(max)) &&
+  min >= 0 &&
+  (max === "available" || max >= min);
+
 const savedSelectedCardsKindForZone = (
   zone: SelectCardsEffect["zone"],
 ): SavedSelectedCardsKind | undefined => {
@@ -84,10 +94,7 @@ export const savedSelectedCardsKindsForSelectCardsSegment = (
     effect.zones === undefined ||
     effect.zones.length === 0 ||
     !isSupportedHandSelectionCardFilter(effect.filter) ||
-    !Number.isInteger(effect.min) ||
-    !Number.isInteger(effect.max) ||
-    effect.min < 0 ||
-    effect.max < effect.min ||
+    !hasSupportedSelectionCardinality(effect.min, effect.max) ||
     effect.player !== effect.chooser ||
     (effect.player !== "self" && effect.player !== "opponent") ||
     (effect.visibility !== "chooserOnly" && effect.visibility !== "bothPlayers")
@@ -108,10 +115,7 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
   if (
     effect.type !== "selectCards" ||
     !isSupportedHandSelectionCardFilter(effect.filter) ||
-    !Number.isInteger(effect.min) ||
-    !Number.isInteger(effect.max) ||
-    effect.min < 0 ||
-    effect.max < effect.min
+    !hasSupportedSelectionCardinality(effect.min, effect.max)
   ) {
     return undefined;
   }

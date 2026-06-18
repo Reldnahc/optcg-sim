@@ -1,6 +1,7 @@
-import type { CardFilter, SelectionId } from "@optcg/types";
+import type { CardFilter, SelectCardMax, SelectionId } from "@optcg/types";
 
 import {
+  parseAnyNumberCardinality,
   parseExactCardinality,
   parseUpToCardinality,
 } from "../cardinality/index.js";
@@ -35,7 +36,7 @@ const deckPlacementEvidence = (
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?:(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
+    /^(?:(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?<order>\s+in any order)?\.?$/i.exec(
       input.text,
     );
   const selectionText = match?.groups?.["selection"]?.trim();
@@ -44,6 +45,8 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const zoneText = match?.groups?.["zone"]?.toLowerCase();
   const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
   const placementText = match?.groups?.["placement"]?.toLowerCase();
+  const orderEvidence: readonly PrimitiveEvidence[] =
+    match?.groups?.["order"] === undefined ? [] : ["order:anyOrder"];
   if (
     selectionText === undefined ||
     possessive === undefined ||
@@ -116,13 +119,13 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
     evidence: [
       "instruction:moveSelected",
       ...cardinality.evidence,
-      "count:positiveInteger",
       ...selectionFilter.evidence,
       `zone:${zone}`,
       player === "opponent" ? "player:opponent" : "player:self",
       chooser === "opponent" ? "chooser:opponent" : "chooser:self",
       "zone:deck",
       ...deckPlacementEvidence(placement),
+      ...orderEvidence,
       "composition:selectThenMove",
     ],
     rest: "",
@@ -134,11 +137,20 @@ const parseDeckPlacementCardinality = (
 ):
   | {
       readonly min: number;
-      readonly max: number;
+      readonly max: SelectCardMax;
       readonly rest: string;
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined => {
+  const anyNumber = parseAnyNumberCardinality({ text });
+  if (anyNumber !== undefined && anyNumber.rest.length > 0) {
+    return {
+      min: anyNumber.cardinality.min,
+      max: anyNumber.cardinality.max,
+      rest: anyNumber.rest,
+      evidence: anyNumber.evidence,
+    };
+  }
   const upTo = parseUpToCardinality({ text });
   if (upTo !== undefined && upTo.rest.length > 0) {
     return {

@@ -256,7 +256,9 @@ const recordSaveResultAsProducer = (
           segment.effect.saveAs,
           selectedCardsKindsToCapability({
             kinds: selectedCardsKinds,
-            max: segment.effect.max,
+            ...(typeof segment.effect.max === "number"
+              ? { max: segment.effect.max }
+              : {}),
           }),
         );
   }

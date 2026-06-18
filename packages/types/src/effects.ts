@@ -516,6 +516,8 @@ export type SequenceSavedResultReference =
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
+export type SelectCardMax = number | "available";
+
 export type SelectCardsEffect =
   | {
       type: "selectCards";
@@ -524,7 +526,7 @@ export type SelectCardsEffect =
       player: PlayerRef;
       chooser: PlayerRef;
       min: number;
-      max: number;
+      max: SelectCardMax;
       filter?: CardFilter;
       saveAs: SelectionId;
       visibility: Visibility;
@@ -536,7 +538,7 @@ export type SelectCardsEffect =
       player: PlayerRef;
       chooser: PlayerRef;
       min: number;
-      max: number;
+      max: SelectCardMax;
       filter?: CardFilter;
       saveAs: SelectionId;
       visibility: Visibility;

@@ -8,6 +8,7 @@ import type {
   EngineResult,
   GameState,
   LegalAction,
+  SelectCardMax,
   SelectCardsDecision,
 } from "@optcg/types";
 
@@ -41,6 +42,23 @@ const invalidDecision = (reason: string): readonly [EngineError] => [
   { type: "invalidDecisionResponse", reason },
 ];
 
+const isSupportedSelectionMax = (max: SelectCardMax): boolean =>
+  max === "available" || Number.isInteger(max);
+
+const selectionMaxValue = (
+  max: SelectCardMax,
+  candidates: readonly unknown[],
+): number => (max === "available" ? candidates.length : max);
+
+const hasSupportedSelectionCardinality = (
+  min: number,
+  max: SelectCardMax,
+): boolean =>
+  Number.isInteger(min) &&
+  isSupportedSelectionMax(max) &&
+  min >= 0 &&
+  (max === "available" || max >= min);
+
 export const isSupportedSequenceHandSelectCardsEffect = (
   effect: Effect,
 ): effect is SequenceSelectCardsEffect =>
@@ -51,10 +69,7 @@ export const isSupportedSequenceHandSelectCardsEffect = (
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("handSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 const isSupportedSequenceTrashSelectCardsEffect = (
   effect: Effect,
@@ -66,10 +81,7 @@ const isSupportedSequenceTrashSelectCardsEffect = (
   effect.visibility === "bothPlayers" &&
   String(effect.saveAs).startsWith("trashSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 const isSupportedSequenceLifeSelectCardsEffect = (
   effect: Effect,
@@ -81,10 +93,7 @@ const isSupportedSequenceLifeSelectCardsEffect = (
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("lifeSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 const isSupportedSequenceDeckSelectCardsEffect = (
   effect: Effect,
@@ -95,10 +104,7 @@ const isSupportedSequenceDeckSelectCardsEffect = (
   effect.player === "self" &&
   effect.visibility === "chooserOnly" &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 const isSupportedSequenceCostAreaSelectCardsEffect = (
   effect: Effect,
@@ -110,10 +116,7 @@ const isSupportedSequenceCostAreaSelectCardsEffect = (
   effect.visibility === "bothPlayers" &&
   String(effect.saveAs).startsWith("donSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 const isSupportedSequenceMultiZoneSelectCardsEffect = (
   effect: Effect,
@@ -127,10 +130,7 @@ const isSupportedSequenceMultiZoneSelectCardsEffect = (
   (effect.visibility === "chooserOnly" ||
     effect.visibility === "bothPlayers") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
-  Number.isInteger(effect.min) &&
-  Number.isInteger(effect.max) &&
-  effect.min >= 0 &&
-  effect.max >= effect.min;
+  hasSupportedSelectionCardinality(effect.min, effect.max);
 
 export const isSupportedSequenceSelectCardsEffect = (
   effect: Effect,
@@ -458,12 +458,7 @@ export const createSupportedHandSelectionChoiceDecision = (
     };
   }
   const resolvedFilter = effect.filter;
-  if (
-    !Number.isInteger(effect.min) ||
-    !Number.isInteger(effect.max) ||
-    effect.min < 0 ||
-    effect.max < effect.min
-  ) {
+  if (!hasSupportedSelectionCardinality(effect.min, effect.max)) {
     return {
       error: {
         type: "effectRuntimeError",
@@ -545,6 +540,7 @@ export const createSupportedHandSelectionChoiceDecision = (
       state,
     };
   }
+  const max = selectionMaxValue(effect.max, candidates);
 
   const causedBy = {
     type: "effect",
@@ -593,7 +589,7 @@ export const createSupportedHandSelectionChoiceDecision = (
         ? { zone: effect.zone }
         : { zones: effect.zones }),
       min: effect.min,
-      max: effect.max,
+      max,
       allowFewerIfUnavailable:
         effect.zones === undefined &&
         (effect.zone === "trash" ||

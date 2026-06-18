@@ -170,6 +170,7 @@ export type PrimitiveEvidence =
   | "instruction:synthetic:B"
   | "instructionSupport:planned"
   | "cardinality:all"
+  | "cardinality:anyNumber"
   | "cardinality:upTo"
   | "cardinality:exact"
   | "cost:restSelf"
