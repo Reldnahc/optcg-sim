@@ -29,6 +29,9 @@ export function parseReturnDonCost(
   const match =
     /^DON!!\s*[-\u2212](?<count>[1-9]\d*)(?:\s*\([^)]*\))?:\s*(?<rest>[\s\S]*)$/iu.exec(
       input.text,
+    ) ??
+    /^DON!!\s*[-\u2212](?<count>[1-9]\d*)\s*\([^)]*\)\s+(?<rest>[\s\S]+)$/iu.exec(
+      input.text,
     );
   const countText = match?.groups?.["count"];
   const restText = match?.groups?.["rest"];
@@ -37,14 +40,15 @@ export function parseReturnDonCost(
   }
   const evidence = ["cost:returnDon", "count:positiveInteger"] as const;
   const rest = restText?.trim() ?? "";
+  const costText = costTextForReturnDon(input.text, rest);
   const costSource =
     input.source === undefined
       ? undefined
       : trimSource({
-          text: input.text.slice(0, input.text.indexOf(":") + 1),
-          rawText: input.text.slice(0, input.text.indexOf(":") + 1),
+          text: costText,
+          rawText: costText,
           start: input.source.start,
-          end: input.source.start + input.text.indexOf(":") + 1,
+          end: input.source.start + costText.length,
         });
   const restSource = sourceForRest(input.source, input.text, rest);
 
@@ -61,6 +65,16 @@ export function parseReturnDonCost(
           ],
         }),
   };
+}
+
+function costTextForReturnDon(currentText: string, restText: string): string {
+  const restIndex =
+    restText.length === 0 ? -1 : currentText.lastIndexOf(restText);
+  if (restIndex >= 0) {
+    return currentText.slice(0, restIndex);
+  }
+  const colonIndex = currentText.indexOf(":");
+  return colonIndex >= 0 ? currentText.slice(0, colonIndex + 1) : currentText;
 }
 
 export function parseReturnDonSequenceCost(
