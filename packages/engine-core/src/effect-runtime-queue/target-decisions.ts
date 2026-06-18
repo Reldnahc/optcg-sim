@@ -49,23 +49,10 @@ import {
 } from "../rules/once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
-import { canExposeQueueEntryIdentity } from "./unsupported.js";
-
-export type UnsupportedPendingRuntimeWorkGate =
-  | "queue-ordering"
-  | "queue-entry-resolution"
-  | "queue-source-presence"
-  | "queue-effect-definition"
-  | "deferred-trigger-release";
-
-export interface EffectQueuePendingRuntimeWork {
-  kind: "effectQueue";
-  count: number;
-  gate?: UnsupportedPendingRuntimeWorkGate;
-  queueEntryId?: string;
-  effectId?: string;
-  queueReason?: string;
-}
+import {
+  createUnsupportedEffectQueueWork,
+  type EffectQueuePendingRuntimeWork,
+} from "./diagnostics.js";
 
 export type CreateUnsupportedPendingRuntimeWorkError = (
   work: EffectQueuePendingRuntimeWork,
@@ -353,18 +340,23 @@ export const createEffectRuntimeQueueTargetDecisions = (
   const unsupportedTargetRequestWork = (
     entry: EffectQueueEntry,
     count: number,
-  ): EffectQueuePendingRuntimeWork => ({
-    kind: "effectQueue",
-    count,
-    gate: "queue-entry-resolution",
-    queueReason: "unsupported-target-request",
-    ...(canExposeQueueEntryIdentity(entry)
-      ? {
-          queueEntryId: String(entry.id),
-          effectId: String(entry.effectBlockId),
-        }
-      : {}),
-  });
+  ): EffectQueuePendingRuntimeWork =>
+    createUnsupportedEffectQueueWork(count, {
+      gate: "queue-entry-resolution",
+      entry,
+      exposeEntryIdentity: true,
+      queueReason: "unsupported-target-request",
+    });
+
+  const unsupportedTargetContinuationWork = (
+    count: number,
+    entry?: EffectQueueEntry,
+  ): EffectQueuePendingRuntimeWork =>
+    createUnsupportedEffectQueueWork(count, {
+      gate: "queue-entry-resolution",
+      ...(entry === undefined ? {} : { entry, exposeEntryIdentity: true }),
+      queueReason: "unsupported-target-continuation",
+    });
 
   const failUnsupportedTargetEffectContinuation = (
     state: GameState,
@@ -374,10 +366,9 @@ export const createEffectRuntimeQueueTargetDecisions = (
       state,
       [],
       [
-        dependencies.createUnsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: state.effectQueue.length,
-        }),
+        dependencies.createUnsupportedPendingRuntimeWorkError(
+          unsupportedTargetContinuationWork(state.effectQueue.length),
+        ),
       ],
       options,
     );
@@ -456,15 +447,15 @@ export const createEffectRuntimeQueueTargetDecisions = (
   const unsupportedContinuationResult = (
     state: GameState,
     options: EngineResultOptions,
+    entry?: EffectQueueEntry,
   ): EngineResult =>
     toEngineResult(
       state,
       [],
       [
-        dependencies.createUnsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: state.effectQueue.length,
-        }),
+        dependencies.createUnsupportedPendingRuntimeWorkError(
+          unsupportedTargetContinuationWork(state.effectQueue.length, entry),
+        ),
       ],
       options,
     );
@@ -578,12 +569,18 @@ export const createEffectRuntimeQueueTargetDecisions = (
     (state, decision, selectedTargets, options = {}) => {
       const resolved = resolveSelectedTargetEffect(state, decision);
       if (!resolved.ok) {
-        return unsupportedContinuationResult(state, options);
+        const causedBy = decision.causedBy;
+        const entry = isEffectQueueCausality(causedBy)
+          ? state.effectQueue.find(
+              (candidate) => candidate.id === causedBy.queueEntryId,
+            )
+          : undefined;
+        return unsupportedContinuationResult(state, options, entry);
       }
       let nextState = state;
       if (resolved.oncePerTurn) {
         if (!canAdmitOncePerTurnEffect(nextState, resolved.entry, resolved)) {
-          return unsupportedContinuationResult(state, options);
+          return unsupportedContinuationResult(state, options, resolved.entry);
         }
         nextState = consumeOncePerTurnForQueueEntry(
           nextState,
@@ -614,7 +611,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
           selectedTargets,
         );
         if (records === null) {
-          return unsupportedContinuationResult(state, options);
+          return unsupportedContinuationResult(state, options, resolved.entry);
         }
         nextState = {
           ...queueRemovedState,
@@ -655,7 +652,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         selectedTargets,
       );
       if (primitive.errors !== undefined) {
-        return unsupportedContinuationResult(state, options);
+        return unsupportedContinuationResult(state, options, resolved.entry);
       }
       if (primitive.state.pendingDecision?.type === "chooseReplacement") {
         return toEngineResult(

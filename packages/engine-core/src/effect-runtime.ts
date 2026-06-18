@@ -24,6 +24,7 @@ import {
 } from "./action-results.js";
 import { reifyCardRef } from "./actions/state.js";
 import { createEffectRuntimeQueueProcessing } from "./effect-runtime-queue/processing.js";
+import type { UnsupportedPendingRuntimeWorkGate } from "./effect-runtime-queue/diagnostics.js";
 import { isSupportedEffectResolvedCustomEffect } from "./effect-runtime-custom-trigger-support.js";
 import { resumeSequenceFrameAfterChooseQuantity } from "./effect-runtime-sequence/frames.js";
 import { createEffectRuntimeTriggerQueueing } from "./runtime/trigger-queueing/core.js";
@@ -81,12 +82,7 @@ export interface PendingRuntimeWork {
 
 export interface UnsupportedPendingRuntimeWorkDetails extends PendingRuntimeWork {
   reason: "unsupported-pending-runtime-work";
-  gate?:
-    | "queue-ordering"
-    | "queue-entry-resolution"
-    | "queue-source-presence"
-    | "queue-effect-definition"
-    | "deferred-trigger-release";
+  gate?: UnsupportedPendingRuntimeWorkGate;
   queueEntryId?: string;
   effectId?: string;
   queueReason?: string;

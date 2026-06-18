@@ -1,31 +1,13 @@
-import type { EffectQueueEntry, EngineResult, GameState } from "@optcg/types";
+import type { EngineResult, GameState } from "@optcg/types";
 
 import { type EngineResultOptions, toEngineResult } from "../action-results.js";
+import {
+  createUnsupportedEffectQueueWork,
+  type UnsupportedEffectQueueContext,
+} from "./diagnostics.js";
 import type { CreateUnsupportedPendingRuntimeWorkError } from "./target-decisions.js";
 
-export interface UnsupportedEffectQueueContext {
-  readonly gate:
-    | "queue-ordering"
-    | "queue-entry-resolution"
-    | "queue-source-presence"
-    | "queue-effect-definition"
-    | "deferred-trigger-release";
-  readonly entry?: EffectQueueEntry;
-  readonly exposeEntryIdentity?: boolean;
-  readonly queueReason?: string;
-}
-
-const publicQueueIdentityZones = new Set([
-  "leaderArea",
-  "characterArea",
-  "stageArea",
-  "trash",
-  "costArea",
-]);
-
-export const canExposeQueueEntryIdentity = (entry: EffectQueueEntry): boolean =>
-  entry.source.zone !== undefined &&
-  publicQueueIdentityZones.has(entry.source.zone.zone);
+export type { UnsupportedEffectQueueContext } from "./diagnostics.js";
 
 export const createUnsupportedEffectQueueResult = (
   state: GameState,
@@ -37,22 +19,9 @@ export const createUnsupportedEffectQueueResult = (
     state,
     [],
     [
-      createUnsupportedPendingRuntimeWorkError({
-        kind: "effectQueue",
-        count: state.effectQueue.length,
-        ...(context?.gate === undefined ? {} : { gate: context.gate }),
-        ...(context?.entry === undefined ||
-        context.exposeEntryIdentity !== true ||
-        !canExposeQueueEntryIdentity(context.entry)
-          ? {}
-          : {
-              queueEntryId: String(context.entry.id),
-              effectId: String(context.entry.effectBlockId),
-            }),
-        ...(context?.queueReason === undefined
-          ? {}
-          : { queueReason: context.queueReason }),
-      }),
+      createUnsupportedPendingRuntimeWorkError(
+        createUnsupportedEffectQueueWork(state.effectQueue.length, context),
+      ),
     ],
     options,
   );

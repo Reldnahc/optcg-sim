@@ -18,6 +18,7 @@ import { createOpponentActivationTriggerQueueing } from "./opponent-activation.j
 import { createEndOfTurnTriggerQueueing } from "./end-turn.js";
 import { createHandTrashedByEffectTriggerQueueing } from "./hand-trash.js";
 import { createEventReactionTriggerQueueing } from "./event-reaction.js";
+import type { EffectQueuePendingRuntimeWork } from "../../effect-runtime-queue/diagnostics.js";
 
 export type OnPlayTriggerQueueingFailureReason =
   | "invalid-card-played-event"
@@ -132,10 +133,9 @@ export type ResolveImplementedDslEffectDefinition = (
 
 export interface EffectRuntimeTriggerQueueingDependencies {
   resolveImplementedDslEffectDefinition: ResolveImplementedDslEffectDefinition;
-  createUnsupportedPendingRuntimeWorkError: (work: {
-    kind: "effectQueue";
-    count: number;
-  }) => EngineError;
+  createUnsupportedPendingRuntimeWorkError: (
+    work: EffectQueuePendingRuntimeWork,
+  ) => EngineError;
 }
 
 export interface EffectRuntimeTriggerQueueingHelpers {

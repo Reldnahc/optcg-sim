@@ -159,13 +159,13 @@ test("non-empty effect queue fails closed with deterministic unsupported details
         kind: "effectQueue",
         count: 1,
         gate: "queue-effect-definition",
-        queueReason: "missing-effect-definition",
+        queueReason: "missing-card-definition",
       },
     },
   ]);
 });
 
-test("unsupported queue errors include effect definition context when lookup fails", () => {
+test("unsupported queue errors include effect definition context when card lookup fails", () => {
   const state = createActiveState();
   state.effectQueue.push(queuedEffect());
 
@@ -186,6 +186,58 @@ test("unsupported queue errors include effect definition context when lookup fai
     JSON.stringify(result.errors).includes("hidden-effect-block"),
     false,
   );
+});
+
+test("unsupported queue errors distinguish missing effect block", () => {
+  const { state, played } = queueingState();
+  const definitionId = "def-missing-effect-block";
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+      rulesVersion: "0.1.0",
+      sourceTextHash: "source-hash",
+    },
+  });
+  setupOnPlayDefinition(
+    state,
+    played,
+    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
+    definitionId,
+  );
+  state.effectQueue = [
+    {
+      ...queuedEffect(played.cardId),
+      effectBlockId: toEffectId("missing-effect-block"),
+      source: {
+        ...queuedEffect(played.cardId).source,
+        zone: played.zone,
+      },
+      sourceSnapshot: {
+        ...queuedEffect(played.cardId).sourceSnapshot,
+        zone: played.zone,
+        category: "character",
+      },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+    },
+  ];
+
+  const result = processEffectRuntime(state);
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          gate?: string;
+          queueReason?: string;
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.equal(firstError.details.gate, "queue-effect-definition");
+  assert.equal(firstError.details.queueReason, "missing-effect-block");
 });
 
 test("unsupported queue diagnostics expose public queue identity", () => {

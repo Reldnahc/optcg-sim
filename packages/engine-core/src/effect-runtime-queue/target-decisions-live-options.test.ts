@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { TargetRequest } from "@optcg/types";
+import type {
+  EffectQueueEntry,
+  SelectTargetsDecision,
+  TargetRequest,
+} from "@optcg/types";
 
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime-definition-lookup.js";
 import {
@@ -120,6 +124,125 @@ test("target request failure includes unsupported queue diagnostics", () => {
   assert.equal(
     firstError.details.work.queueReason,
     "unsupported-target-request",
+  );
+  assert.equal(firstError.details.work.queueEntryId, String(entry.id));
+  assert.equal(firstError.details.work.effectId, String(entry.effectBlockId));
+});
+
+test("target request fallback redacts hidden source queue identity", () => {
+  const { state, entry, request } = targetSelectionQueueState();
+  const targetDecisions = createTargetDecisions();
+  const hiddenEntry: EffectQueueEntry = {
+    ...entry,
+    source: {
+      ...entry.source,
+      zone: {
+        zone: "life" as const,
+        playerId: entry.controllerId,
+        slot: "life" as const,
+        index: 0,
+      },
+    },
+  };
+  const invalidRequest: TargetRequest = {
+    ...request,
+    chooser: "unsupported-chooser" as TargetRequest["chooser"],
+  };
+
+  const result = targetDecisions.createSelectTargetsDecisionForQueuedEffect(
+    state,
+    hiddenEntry,
+    invalidRequest,
+    {
+      rollbackState: state,
+      priorEvents: [],
+      errorCount: state.effectQueue.length,
+      ...liveOptions,
+    },
+  );
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          work?: {
+            queueEntryId?: string;
+            effectId?: string;
+          };
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.ok(firstError.details.work !== undefined);
+  assert.equal(firstError.details.work.queueEntryId, undefined);
+  assert.equal(firstError.details.work.effectId, undefined);
+});
+
+test("unsupported target continuation includes queue diagnostics", () => {
+  const { state } = targetSelectionQueueState();
+  const targetDecisions = createTargetDecisions();
+
+  const result = targetDecisions.failUnsupportedTargetEffectContinuation(state);
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          work?: {
+            gate?: string;
+            queueReason?: string;
+          };
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.ok(firstError.details.work !== undefined);
+  assert.equal(firstError.details.work.gate, "queue-entry-resolution");
+  assert.equal(
+    firstError.details.work.queueReason,
+    "unsupported-target-continuation",
+  );
+});
+
+test("failed selected target continuation includes safe queue identity", () => {
+  const { state, entry } = targetSelectionQueueState();
+  const targetDecisions = createTargetDecisions();
+  const paused = processEffectRuntime(state);
+  const decision = must(
+    paused.state.pendingDecision,
+    "selectTargets decision",
+  ) as SelectTargetsDecision;
+  const mismatchedDecision: SelectTargetsDecision = {
+    ...decision,
+    request: {
+      ...decision.request,
+      min: decision.request.min + 1,
+    },
+  };
+
+  const result = targetDecisions.continueSelectedTargetEffect(
+    paused.state,
+    mismatchedDecision,
+    [],
+  );
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          work?: {
+            queueReason?: string;
+            queueEntryId?: string;
+            effectId?: string;
+          };
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.ok(firstError.details.work !== undefined);
+  assert.equal(
+    firstError.details.work.queueReason,
+    "unsupported-target-continuation",
   );
   assert.equal(firstError.details.work.queueEntryId, String(entry.id));
   assert.equal(firstError.details.work.effectId, String(entry.effectBlockId));

@@ -56,6 +56,7 @@ import {
   queueBattleKOTriggers,
   releaseDamageDeferredEffectQueue,
 } from "../effect-runtime.js";
+import { createUnsupportedEffectQueueWork } from "../effect-runtime-queue/diagnostics.js";
 import { continueRuntimeUntilIdle } from "../effect-runtime-decision-continuation.js";
 import {
   buildFieldRemovalKoReplacementProcess,
@@ -863,6 +864,13 @@ const finalizeSupportedEndOfBattleCleanup = ({
 
   const releasedState = releaseDamageDeferredEffectQueue(finalizedState);
   if (releasedState === null) {
+    const work = createUnsupportedEffectQueueWork(
+      finalizedState.effectQueue.length,
+      {
+        gate: "deferred-trigger-release",
+        queueReason: "invalid-damage-deferred-queue",
+      },
+    );
     return toEngineResult(
       state,
       [],
@@ -872,8 +880,7 @@ const finalizeSupportedEndOfBattleCleanup = ({
           effectId: "unsupported-effect-queue",
           details: {
             reason: "unsupported-pending-runtime-work",
-            kind: "effectQueue",
-            count: finalizedState.effectQueue.length,
+            ...work,
           },
         },
       ],

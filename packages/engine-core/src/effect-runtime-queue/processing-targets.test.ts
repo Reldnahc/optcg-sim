@@ -363,6 +363,10 @@ test("unsupported queued target request fails closed without mutating state", ()
         reason: "unsupported-pending-runtime-work",
         kind: "effectQueue",
         count: 1,
+        gate: "queue-entry-resolution",
+        queueEntryId: "queue-entry-target-selection",
+        effectId: "target-selection-effect",
+        queueReason: "unsupported-target-request",
       },
     },
   ]);
@@ -524,6 +528,10 @@ test("unsupported target after chosen draw reports the remaining unsupported que
         reason: "unsupported-pending-runtime-work",
         kind: "effectQueue",
         count: 1,
+        gate: "queue-entry-resolution",
+        queueEntryId: "queue-entry-mixed-target",
+        effectId: "target-selection-effect",
+        queueReason: "unsupported-target-request",
       },
     },
   ]);

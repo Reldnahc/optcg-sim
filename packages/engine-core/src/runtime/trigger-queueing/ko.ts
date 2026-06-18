@@ -52,6 +52,7 @@ import {
   lifeTriggerQueueOrigin,
 } from "../../life-trigger/queue-origin.js";
 import { canAdmitTriggerQueueEntry } from "./admission.js";
+import { createUnsupportedEffectQueueWork } from "../../effect-runtime-queue/diagnostics.js";
 
 const onKOAutoAdapter = {
   category: "auto" as const,
@@ -477,8 +478,16 @@ export const createKOTriggerQueueing = (
         [],
         [
           dependencies.createUnsupportedPendingRuntimeWorkError({
-            kind: "effectQueue",
-            count: state.effectQueue.length + appended.length,
+            ...createUnsupportedEffectQueueWork(
+              state.effectQueue.length + appended.length,
+              {
+                gate: "deferred-trigger-release",
+                ...(appended[0]?.entry === undefined
+                  ? {}
+                  : { entry: appended[0].entry, exposeEntryIdentity: true }),
+                queueReason: "invalid-damage-deferred-queue",
+              },
+            ),
           }),
         ],
         options,
@@ -493,8 +502,10 @@ export const createKOTriggerQueueing = (
           [],
           [
             dependencies.createUnsupportedPendingRuntimeWorkError({
-              kind: "effectQueue",
-              count: state.effectQueue.length,
+              ...createUnsupportedEffectQueueWork(state.effectQueue.length, {
+                gate: "deferred-trigger-release",
+                queueReason: "invalid-damage-deferred-queue",
+              }),
             }),
           ],
           options,

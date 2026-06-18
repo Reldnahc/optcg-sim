@@ -89,6 +89,36 @@ export const createQueueEntryResolver = (
         options,
         context,
       );
+    const queuedEffectDefinitionFailureReason = (
+      state: GameState,
+      entry: EffectQueueEntry,
+    ): string => {
+      if (entry.effectBlockOverride !== undefined) {
+        return "missing-effect-definition";
+      }
+      const resolved = state.cardManifest.cards[entry.source.cardId];
+      if (resolved === undefined) {
+        return "missing-card-definition";
+      }
+      const lookup = dependencies.resolveImplementedDslEffectDefinition(
+        resolved,
+        state.cardManifest,
+      );
+      if (!lookup.ok) {
+        const reason =
+          "details" in lookup.error
+            ? (lookup.error.details as { reason?: unknown }).reason
+            : undefined;
+        return typeof reason === "string"
+          ? reason
+          : "effect-definition-lookup-failed";
+      }
+      return lookup.definition.effects.some(
+        (effect) => effect.id === entry.effectBlockId,
+      )
+        ? "missing-effect-definition"
+        : "missing-effect-block";
+    };
     let nextState = state;
     const allEvents: EngineEvent[] = [];
     for (const selected of entries) {
@@ -113,7 +143,7 @@ export const createQueueEntryResolver = (
           gate: "queue-effect-definition",
           entry: selected,
           exposeEntryIdentity: true,
-          queueReason: "missing-effect-definition",
+          queueReason: queuedEffectDefinitionFailureReason(nextState, selected),
         });
       }
       if (queuedEffect.conditionTiming !== undefined) {

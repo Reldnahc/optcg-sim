@@ -12,6 +12,7 @@ import {
   toStateSeq,
 } from "./action-results.js";
 import { cleanupResolvedLifeTrigger } from "./effect-runtime-life-trigger-cleanup.js";
+import { createUnsupportedEffectQueueWork } from "./effect-runtime-queue/diagnostics.js";
 import type { CreateUnsupportedPendingRuntimeWorkError } from "./effect-runtime-queue/target-decisions.js";
 import type { QueueEffectResolvedCustomTriggers } from "./effect-runtime-queue/results-types.js";
 
@@ -49,10 +50,12 @@ export const resumePlaySourceOverflowDecision = (params: {
       originalState,
       [],
       [
-        createUnsupportedPendingRuntimeWorkError({
-          kind: "effectQueue",
-          count: originalState.effectQueue.length,
-        }),
+        createUnsupportedPendingRuntimeWorkError(
+          createUnsupportedEffectQueueWork(originalState.effectQueue.length, {
+            gate: "queue-entry-resolution",
+            queueReason: "play-source-overflow-entry-missing",
+          }),
+        ),
       ],
       options,
     );

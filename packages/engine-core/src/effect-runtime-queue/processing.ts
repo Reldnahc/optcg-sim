@@ -18,10 +18,8 @@ import {
   replaceEngineResultEvents,
 } from "../action-results.js";
 import { createEffectRuntimeQueueResults } from "./results.js";
-import type {
-  EffectQueuePendingRuntimeWork,
-  EffectRuntimeQueueTargetDecisionDependencies,
-} from "./target-decisions.js";
+import type { EffectQueuePendingRuntimeWork } from "./diagnostics.js";
+import type { EffectRuntimeQueueTargetDecisionDependencies } from "./target-decisions.js";
 import { createEffectRuntimeQueueTargetDecisions } from "./target-decisions.js";
 
 type ResolveImplementedDslEffectDefinition = (
