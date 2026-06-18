@@ -55,6 +55,39 @@ describe("replacement instead-effect parser groups", () => {
     });
   });
 
+  it("reuses rest-Characters instead for opponent-owned targets", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may rest 1 of your opponent's Characters instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zones: ["characterArea"],
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "target:opponentCharacters",
+        "zone:characterArea",
+        "cardinality:exact",
+        "count:positiveInteger",
+      ],
+    });
+  });
+
   it("parses replacement-subject Life placement instead as a bounce primitive", () => {
     expect(
       parseReplacementInsteadFromSet(

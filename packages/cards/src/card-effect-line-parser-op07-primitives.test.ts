@@ -566,3 +566,137 @@ it("parses rest-DON cost with hand play-or-Life branch choice", () => {
     ]),
   );
 });
+
+it("parses self field-removal replacement into opponent Character rest instead", () => {
+  const result = parseCardEffectLine(
+    "[Once Per Turn] If this Character would be removed from the field by your opponent's effect, you may rest 1 of your opponent's Characters instead.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      oncePerTurn: true,
+      optional: true,
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldMoveZone",
+          from: "characterArea",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+          target: { type: "self" },
+        },
+      },
+      effect: {
+        type: "replacement",
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              player: "opponent",
+              zones: ["characterArea"],
+              min: 1,
+              max: 1,
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:replacement",
+      "marker:oncePerTurn",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:thisCharacter",
+      "instruction:rest",
+      "target:opponentCharacters",
+      "zone:characterArea",
+    ]),
+  );
+});
+
+it("parses leader-typed self field-removal replacement with owner deck-bottom instead", () => {
+  const result = parseCardEffectLine(
+    "[Once Per Turn] If your Leader has the {The Seven Warlords of the Sea} type and this Character would be removed from the field by your opponent's effect, you may place 1 of your Characters other than [Gecko Moria] at the bottom of the owner's deck instead.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "replacement",
+      oncePerTurn: true,
+      optional: true,
+      condition: {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: {
+          categories: ["leader"],
+          typesAny: ["The Seven Warlords of the Sea"],
+        },
+      },
+      trigger: {
+        type: "replacement",
+        replacement: {
+          type: "wouldMoveZone",
+          from: "characterArea",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+          target: { type: "self" },
+        },
+      },
+      effect: {
+        type: "replacement",
+        instead: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "selectTargets",
+                request: {
+                  player: "self",
+                  zone: "characterArea",
+                  min: 1,
+                  max: 1,
+                  filter: {
+                    categories: ["character"],
+                    nameNot: ["Gecko Moria"],
+                  },
+                },
+              },
+            },
+            {
+              effect: {
+                type: "bounce",
+                destination: "deckBottom",
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:replacement",
+      "marker:oncePerTurn",
+      "expression:conditional",
+      "condition:leaderIdentity",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:thisCharacter",
+      "target:yourCharacters",
+      "instruction:moveSelected",
+      "filter:nameNot",
+      "destination:deck",
+      "position:bottom",
+      "composition:selectThenApply",
+    ]),
+  );
+});

@@ -1,4 +1,4 @@
-import type { CardFilter, Zone } from "@optcg/types";
+import type { CardFilter, PlayerRef, Zone } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../../../filters/index.js";
 import type { PrimitiveEvidence } from "../../../types.js";
@@ -13,15 +13,24 @@ export function parseRestCardsInstead(
   }
 
   const match =
-    /^you may rest (?<count>[1-9]\d*) of your (?<target>cards|Characters) instead\.?$/i.exec(
+    /^you may rest (?<count>[1-9]\d*) of (?<owner>your|your opponent's) (?<target>cards|Characters) instead\.?$/i.exec(
       text.trim(),
     );
   const countText = match?.groups?.["count"];
+  const ownerText = match?.groups?.["owner"];
   const targetText = match?.groups?.["target"];
-  if (countText === undefined || targetText === undefined) {
+  if (
+    countText === undefined ||
+    ownerText === undefined ||
+    targetText === undefined
+  ) {
     return parseFilteredRestInstead(text);
   }
   const count = Number.parseInt(countText, 10);
+  const owner = parseRestOwner(ownerText);
+  if (owner === undefined) {
+    return undefined;
+  }
   const target = targetText.toLowerCase();
   const zones: Zone[] =
     target === "characters"
@@ -36,7 +45,7 @@ export function parseRestCardsInstead(
         request: {
           timing: "onResolution",
           chooser: "self",
-          player: "self",
+          player: owner.player,
           zones,
           min: count,
           max: count,
@@ -47,7 +56,7 @@ export function parseRestCardsInstead(
     },
     evidence: [
       "instruction:rest",
-      target === "characters" ? "target:yourCharacters" : "target:yourCards",
+      target === "characters" ? owner.characterEvidence : owner.cardEvidence,
       ...(target === "characters" ? [] : (["zone:leaderArea"] as const)),
       "zone:characterArea",
       ...(target === "characters"
@@ -63,16 +72,26 @@ function parseFilteredRestInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
   const match =
-    /^you may rest (?<count>[1-9]\d*) of your (?<target>.+?) instead\.?$/iu.exec(
+    /^you may rest (?<count>[1-9]\d*) of (?<owner>your|your opponent's) (?<target>.+?) instead\.?$/iu.exec(
       text.trim(),
     );
   const countText = match?.groups?.["count"];
+  const ownerText = match?.groups?.["owner"];
   const targetText = match?.groups?.["target"];
-  if (countText === undefined || targetText === undefined) {
+  if (
+    countText === undefined ||
+    ownerText === undefined ||
+    targetText === undefined
+  ) {
     return undefined;
   }
 
-  const parsedTarget = parseRestTargetFilter(targetText);
+  const owner = parseRestOwner(ownerText);
+  if (owner === undefined) {
+    return undefined;
+  }
+
+  const parsedTarget = parseRestTargetFilter(targetText, owner);
   if (parsedTarget === undefined) {
     return undefined;
   }
@@ -86,7 +105,7 @@ function parseFilteredRestInstead(
         request: {
           timing: "onResolution",
           chooser: "self",
-          player: "self",
+          player: owner.player,
           zones: parsedTarget.zones,
           min: count,
           max: count,
@@ -105,7 +124,10 @@ function parseFilteredRestInstead(
   };
 }
 
-function parseRestTargetFilter(text: string):
+function parseRestTargetFilter(
+  text: string,
+  owner: RestOwner,
+):
   | {
       readonly filter: CardFilter;
       readonly evidence: readonly PrimitiveEvidence[];
@@ -117,7 +139,7 @@ function parseRestTargetFilter(text: string):
     return {
       filter: { categories: ["character"], excludeSelf: true },
       evidence: [
-        "target:yourCharacters",
+        owner.characterEvidence,
         "zone:characterArea",
         "filter:category:character",
         "filter:excludeSelf",
@@ -132,7 +154,7 @@ function parseRestTargetFilter(text: string):
     return {
       filter: { categories: ["don"], state: donState },
       evidence: [
-        "target:yourDonCards",
+        owner.donEvidence,
         "zone:costArea",
         "filter:category:don",
         donState === "active" ? "filter:state:active" : "filter:state:rested",
@@ -153,12 +175,49 @@ function parseRestTargetFilter(text: string):
   return {
     filter: predicates.filter,
     evidence: [
-      "target:yourCharacters",
+      owner.characterEvidence,
       "zone:characterArea",
       ...predicates.evidence,
     ],
     zones: ["characterArea"],
   };
+}
+
+type RestOwner = {
+  readonly player: Extract<PlayerRef, "self" | "opponent">;
+  readonly characterEvidence: Extract<
+    PrimitiveEvidence,
+    "target:yourCharacters" | "target:opponentCharacters"
+  >;
+  readonly cardEvidence: Extract<
+    PrimitiveEvidence,
+    "target:yourCards" | "target:opponentCards"
+  >;
+  readonly donEvidence: Extract<
+    PrimitiveEvidence,
+    "target:yourDonCards" | "target:opponentDonCards"
+  >;
+};
+
+function parseRestOwner(text: string): RestOwner | undefined {
+  const normalized = text.toLowerCase();
+  if (normalized === "your") {
+    return {
+      player: "self",
+      characterEvidence: "target:yourCharacters",
+      cardEvidence: "target:yourCards",
+      donEvidence: "target:yourDonCards",
+    };
+  }
+  if (normalized === "your opponent's") {
+    return {
+      player: "opponent",
+      characterEvidence: "target:opponentCharacters",
+      cardEvidence: "target:opponentCards",
+      donEvidence: "target:opponentDonCards",
+    };
+  }
+  return undefined;
 }
 
 function parseNamedLeaderRestInstead(

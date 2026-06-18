@@ -77,26 +77,39 @@ const parseReplacementTrigger = (
 const parseConditionalReplacement = (
   text: string,
 ): ParsedReplacement | undefined => {
-  const match =
-    /^If (?<condition>your Leader's type includes\s+(?:"[^"]+"|[^,]+?)) and (?<replacement>.+)$/iu.exec(
-      text.trim(),
-    );
-  const conditionText = match?.groups?.["condition"];
-  const replacementText = match?.groups?.["replacement"];
-  if (conditionText === undefined || replacementText === undefined) {
+  const bodyText = /^If (?<body>.+)$/iu.exec(text.trim())?.groups?.["body"];
+  if (bodyText === undefined) {
     return undefined;
   }
-  const condition = parseLeaderNameCondition({ text: conditionText });
-  if (condition === undefined || condition.rest.length > 0) {
-    return undefined;
+
+  for (const split of leaderConditionReplacementSplits(bodyText)) {
+    const condition = parseLeaderNameCondition({ text: split.conditionText });
+    if (condition === undefined || condition.rest.length > 0) {
+      continue;
+    }
+    const replacement = parseReplacementTrigger(`If ${split.replacementText}`);
+    if (replacement === undefined) {
+      continue;
+    }
+    return {
+      ...replacement,
+      condition: condition.condition,
+      conditionEvidence: ["expression:conditional", ...condition.evidence],
+    };
   }
-  const replacement = parseReplacementTrigger(`If ${replacementText}`);
-  if (replacement === undefined) {
-    return undefined;
-  }
-  return {
-    ...replacement,
-    condition: condition.condition,
-    conditionEvidence: ["expression:conditional", ...condition.evidence],
-  };
+
+  return undefined;
 };
+
+function* leaderConditionReplacementSplits(text: string): Iterable<{
+  readonly conditionText: string;
+  readonly replacementText: string;
+}> {
+  const separator = /\s+and\s+/giu;
+  for (const match of text.matchAll(separator)) {
+    yield {
+      conditionText: text.slice(0, match.index).trim(),
+      replacementText: text.slice(match.index + match[0].length).trim(),
+    };
+  }
+}

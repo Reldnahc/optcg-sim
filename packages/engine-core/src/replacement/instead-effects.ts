@@ -36,7 +36,7 @@ export const plural = (
   pluralLabel: string,
 ): string => (count === 1 ? singular : pluralLabel);
 
-export const isSupportedRestOwnCardsInsteadEffect = (
+export const isSupportedRestCardsInsteadEffect = (
   effect: ReplacementInstead,
 ): effect is Extract<ReplacementInstead, { type: "rest" }> & {
   target: Extract<
@@ -48,12 +48,16 @@ export const isSupportedRestOwnCardsInsteadEffect = (
   effect.target.type === "chooseFromZones" &&
   effect.target.request.timing === "onResolution" &&
   effect.target.request.chooser === "self" &&
-  effect.target.request.player === "self" &&
+  (effect.target.request.player === "self" ||
+    effect.target.request.player === "opponent") &&
   isSupportedHandSelectionCardFilter(effect.target.request.filter) &&
   effect.target.request.min === effect.target.request.max &&
   effect.target.request.min > 0 &&
   !effect.target.request.allowFewerIfUnavailable &&
   effect.target.request.visibility === "public";
+
+export const isSupportedRestOwnCardsInsteadEffect =
+  isSupportedRestCardsInsteadEffect;
 
 export const isSupportedRestSelfInsteadEffect = (
   effect: ReplacementInstead,
@@ -441,7 +445,7 @@ export const replacementOptionLabel = (
   if (isSupportedReplacementTargetLifeInsteadEffect(instead)) {
     return `Add that card to ${instead.destination === "lifeTop" ? "top" : "bottom"} Life instead`;
   }
-  if (isSupportedRestOwnCardsInsteadEffect(instead)) {
+  if (isSupportedRestCardsInsteadEffect(instead)) {
     return `Rest ${String(instead.target.request.min)} ${plural(
       instead.target.request.min,
       "card",

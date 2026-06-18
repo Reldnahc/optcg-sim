@@ -71,7 +71,8 @@ const returnSelfToHandInstead = (): Extract<Effect, { type: "bounce" }> => ({
   target: { type: "self" },
 });
 
-const restOwnCardsInstead = (
+const restCardsInstead = (
+  player: "self" | "opponent",
   filter?: Extract<
     Extract<Effect, { type: "rest" }>["target"],
     { type: "chooseFromZones" }
@@ -83,7 +84,7 @@ const restOwnCardsInstead = (
     request: {
       timing: "onResolution",
       chooser: "self",
-      player: "self",
+      player,
       zones: ["leaderArea", "characterArea", "stageArea", "costArea"],
       min: 2,
       max: 2,
@@ -93,6 +94,13 @@ const restOwnCardsInstead = (
     },
   },
 });
+
+const restOwnCardsInstead = (
+  filter?: Extract<
+    Extract<Effect, { type: "rest" }>["target"],
+    { type: "chooseFromZones" }
+  >["request"]["filter"],
+): Extract<Effect, { type: "rest" }> => restCardsInstead("self", filter);
 
 const returnDonInstead = (): Extract<Effect, { type: "returnDon" }> => ({
   type: "returnDon",
@@ -303,6 +311,16 @@ test("replacement support admits filtered rest-own-cards instead primitives", ()
       categories: ["leader"],
       names: ["Fish-Man Island", "Shirahoshi"],
     }),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support admits rest-cards instead for opponent-owned targets", () => {
+  const block = replacementBlock(
+    "replacement-ko-rest-opponent-cards",
+    wouldMoveFromCharacterArea(),
+    restCardsInstead("opponent", { categories: ["character"] }),
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);
