@@ -60,6 +60,51 @@ it("parses conditional battle KO protection and self power gain as continuous pr
   );
 });
 
+it("parses opponent Leader or Character presence before battle KO protection", () => {
+  const result = parseCardEffectLine(
+    "If your opponent has a Leader or Character with a base power of 6000 or more, this Character cannot be K.O.'d in battle.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "protectFromKO",
+        target: { type: "self" },
+        sourceKind: "battle",
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "fieldCount",
+            player: "opponent",
+            filter: {
+              categories: ["leader", "character"],
+              power: { min: 6000 },
+            },
+            op: "gte",
+            value: 1,
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:implicitPermanent",
+      "expression:conditionalContinuous",
+      "condition:opponentFieldCount",
+      "filter:category:leader",
+      "filter:category:character",
+      "filter:power",
+      "instruction:giveProtection",
+      "protectionProcess:ko",
+      "protectionSource:battle",
+      "duration:whileConditionTrue",
+    ]),
+  );
+});
+
 it("parses active-source conditional protection for filtered own Characters", () => {
   const result = parseCardEffectLine(
     "If this Character is active, your {Minks} type Characters with a cost of 3 or less other than [Pekoms] cannot be K.O.'d by effects.",

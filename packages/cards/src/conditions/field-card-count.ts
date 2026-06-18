@@ -159,6 +159,56 @@ const parseComparedFieldPresence = (
   };
 };
 
+function parseLeaderOrCharacterPresence(
+  input: string,
+  player: "self" | "opponent",
+): ConditionParseResult | undefined {
+  const ownerText = player === "opponent" ? "your opponent has" : "you have";
+  const match = new RegExp(
+    `^${ownerText} an? Leader or Character\\b(?<rest>.*)$`,
+    "iu",
+  ).exec(input);
+  const rest = match?.groups?.["rest"]?.trim() ?? "";
+  if (match === null) {
+    return undefined;
+  }
+  const predicates = parseFieldPredicates(`Character ${rest}`);
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+  const filter = withLeaderOrCharacterCategories(predicates.filter);
+  return {
+    condition: {
+      type: "fieldCount",
+      player,
+      filter,
+      op: "gte",
+      value: 1,
+    },
+    evidence: fieldCountEvidence(
+      player,
+      ["condition:comparator:gte", "condition:threshold:positiveInteger"],
+      [
+        "filter:category:leader",
+        "filter:category:character",
+        ...predicates.evidence.filter(
+          (evidence) => evidence !== "filter:category:character",
+        ),
+      ],
+    ),
+    rest: "",
+  };
+}
+
+function withLeaderOrCharacterCategories(filter: CardFilter): CardFilter {
+  const next = { ...filter };
+  delete next.categories;
+  return {
+    categories: ["leader", "character"],
+    ...next,
+  };
+}
+
 export const parseFieldCardCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
@@ -241,6 +291,14 @@ export const parseFieldCardCountCondition: ConditionParser = (
     return characterCountDifferenceCondition(1);
   }
 
+  const opponentLeaderOrCharacterPresence = parseLeaderOrCharacterPresence(
+    input.text,
+    "opponent",
+  );
+  if (opponentLeaderOrCharacterPresence !== undefined) {
+    return opponentLeaderOrCharacterPresence;
+  }
+
   const opponentPresence =
     /^your opponent has an?\s+(?<predicate>Character(?: card)?s?\b.*)$/i.exec(
       input.text,
@@ -285,6 +343,13 @@ export const parseFieldCardCountCondition: ConditionParser = (
 
   const selfPresence = /^you have an?\s+(?<predicate>.+)$/i.exec(input.text);
   const selfPresencePredicate = selfPresence?.groups?.["predicate"];
+  const selfLeaderOrCharacterPresence = parseLeaderOrCharacterPresence(
+    input.text,
+    "self",
+  );
+  if (selfLeaderOrCharacterPresence !== undefined) {
+    return selfLeaderOrCharacterPresence;
+  }
   if (selfPresencePredicate !== undefined) {
     const predicates = parseFieldPredicates(selfPresencePredicate);
     if (predicates === undefined || predicates.rest.trim().length > 0) {

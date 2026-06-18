@@ -61,6 +61,37 @@ describe("field card count condition parser", () => {
     });
   });
 
+  it("parses opponent Leader or Character presence through reusable filters", () => {
+    expect(
+      parseFieldCardCountCondition({
+        text: "your opponent has a Leader or Character with a base power of 6000 or more",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "opponent",
+        filter: {
+          categories: ["leader", "character"],
+          power: { min: 6000 },
+        },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:opponentFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "player:opponent",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:power",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("shares trailing Character category over named field-count alternatives", () => {
     expect(
       parseFieldCardCountCondition({

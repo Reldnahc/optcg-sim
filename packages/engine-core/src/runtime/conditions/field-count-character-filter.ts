@@ -39,13 +39,24 @@ export const isSupportedCharacterFieldCountFilter = (
   filter: CardFilter | undefined,
 ): filter is CharacterFieldCountFilter => {
   return isSupportedCharacterFieldCountFilterShape(filter, {
-    requireCharacterCategory: true,
+    categoryMode: "character",
   });
+};
+
+export const isSupportedLeaderOrCharacterFieldCountFilter = (
+  filter: CardFilter | undefined,
+): filter is CharacterFieldCountFilter => {
+  return (
+    isLeaderOrCharacterCategoryFilter(filter) &&
+    isSupportedCharacterFieldCountFilterShape(filter, {
+      categoryMode: "leaderOrCharacter",
+    })
+  );
 };
 
 const isSupportedCharacterFieldCountFilterShape = (
   filter: CardFilter | undefined,
-  options: { readonly requireCharacterCategory: boolean },
+  options: { readonly categoryMode: "character" | "leaderOrCharacter" | "any" },
 ): filter is CharacterFieldCountFilter => {
   if (filter === undefined) {
     return false;
@@ -74,10 +85,7 @@ const isSupportedCharacterFieldCountFilterShape = (
       return false;
     }
   }
-  if (options.requireCharacterCategory && !isCharacterCategoryFilter(filter)) {
-    return false;
-  }
-  if (filter.categories !== undefined && !isCharacterCategoryFilter(filter)) {
+  if (!hasSupportedCategoryFilter(filter, options.categoryMode)) {
     return false;
   }
   return (
@@ -85,7 +93,7 @@ const isSupportedCharacterFieldCountFilterShape = (
       (filter.anyOf.length > 0 &&
         filter.anyOf.every((child) =>
           isSupportedCharacterFieldCountFilterShape(child, {
-            requireCharacterCategory: false,
+            categoryMode: "any",
           }),
         ))) &&
     isSupportedFieldState(filter.state) &&
@@ -225,6 +233,34 @@ const isCharacterCategoryFilter = (filter: CardFilter): boolean =>
   Array.isArray(filter.categories) &&
   filter.categories.length === 1 &&
   filter.categories[0] === "character";
+
+const hasSupportedCategoryFilter = (
+  filter: CardFilter,
+  categoryMode: "character" | "leaderOrCharacter" | "any",
+): boolean => {
+  if (categoryMode === "character") {
+    return isCharacterCategoryFilter(filter);
+  }
+  if (filter.categories === undefined) {
+    return true;
+  }
+  if (isCharacterCategoryFilter(filter)) {
+    return true;
+  }
+  return (
+    categoryMode === "leaderOrCharacter" &&
+    isLeaderOrCharacterCategoryFilter(filter)
+  );
+};
+
+const isLeaderOrCharacterCategoryFilter = (
+  filter: CardFilter | undefined,
+): filter is CardFilter =>
+  filter !== undefined &&
+  Array.isArray(filter.categories) &&
+  filter.categories.length === 2 &&
+  filter.categories.includes("leader") &&
+  filter.categories.includes("character");
 
 const isNonEmptyStringArray = (value: unknown): boolean =>
   value === undefined ||
