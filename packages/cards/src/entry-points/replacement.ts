@@ -27,8 +27,8 @@ export function parseReplacementEntryPoint(
 
 function isReplacementEntryText(text: string): boolean {
   return [
-    /^If .+? would be removed from the field\b[^,]*(?:\s+or\s+(?:would be\s+)?K\.O\.'d)?\s*,\s*/i,
-    /^If .+? would be K\.O\.'d\b[^,]*(?:\s+or\s+would be removed from the field\b[^,]*)?\s*,\s*/i,
+    /^If .+? would (?:be removed from|leave) the field\b[^,]*(?:\s+or\s+(?:would be\s+)?K\.O\.'d)?\s*,\s*/i,
+    /^If .+? would be K\.O\.'d\b[^,]*(?:\s+or\s+would (?:be removed from|leave) the field\b[^,]*)?\s*,\s*/i,
     /^If .+? would be rested\b[^,]*,\s*/i,
   ].some((pattern) => pattern.test(text));
 }

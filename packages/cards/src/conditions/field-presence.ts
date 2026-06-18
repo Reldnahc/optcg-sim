@@ -54,26 +54,30 @@ export const parseFieldPresenceCondition: ConditionParser = (
 };
 
 const parsePresenceSubject = (text: string): PresenceSubject | undefined => {
-  const anyPlayer = /^there is an?\s+(?<predicate>Character\b.+)$/iu.exec(text);
+  const anyPlayer = /^there is an?\s+(?<predicate>.+)$/iu.exec(text);
   const anyPlayerPredicate = anyPlayer?.groups?.["predicate"];
-  if (anyPlayerPredicate !== undefined) {
+  if (isCharacterPresencePredicate(anyPlayerPredicate)) {
     return { players: ["self", "opponent"], predicate: anyPlayerPredicate };
   }
 
-  const opponent =
-    /^your opponent has an?\s+(?<predicate>Character\b.+)$/iu.exec(text);
+  const opponent = /^your opponent has an?\s+(?<predicate>.+)$/iu.exec(text);
   const opponentPredicate = opponent?.groups?.["predicate"];
-  if (opponentPredicate !== undefined) {
+  if (isCharacterPresencePredicate(opponentPredicate)) {
     return { players: ["opponent"], predicate: opponentPredicate };
   }
 
-  const self = /^you have an?\s+(?<predicate>Character\b.+)$/iu.exec(text);
+  const self = /^you have an?\s+(?<predicate>.+)$/iu.exec(text);
   const selfPredicate = self?.groups?.["predicate"];
-  if (selfPredicate === undefined) {
+  if (!isCharacterPresencePredicate(selfPredicate)) {
     return undefined;
   }
   return { players: ["self"], predicate: selfPredicate };
 };
+
+const isCharacterPresencePredicate = (
+  predicate: string | undefined,
+): predicate is string =>
+  predicate !== undefined && /\bCharacters?(?:\s+cards?)?\b/iu.test(predicate);
 
 const normalizePredicate = (text: string): string =>
   text.replace(/^a\s+/iu, "").trim();

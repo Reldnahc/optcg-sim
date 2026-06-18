@@ -1,5 +1,10 @@
+import type { Condition } from "@optcg/types";
+
 import type { ExpressionParseResult, ParseInput } from "../../types.js";
-import { parseLeaderNameCondition } from "../../conditions/index.js";
+import {
+  parseFieldPresenceCondition,
+  parseLeaderNameCondition,
+} from "../../conditions/index.js";
 import { sourceSpan } from "../../source-slices.js";
 import {
   parseAnyFieldRemovalReplacement,
@@ -29,6 +34,7 @@ export function replacementInsteadExpressionParser(
 
   const parsed: ParsedReplacement | undefined =
     parseConditionalReplacement(input.text) ??
+    parseNegatedPresenceReplacement(input.text) ??
     parseReplacementTrigger(input.text);
   if (parsed === undefined) {
     return undefined;
@@ -100,6 +106,79 @@ const parseConditionalReplacement = (
 
   return undefined;
 };
+
+const parseNegatedPresenceReplacement = (
+  text: string,
+): ParsedReplacement | undefined => {
+  const split = splitNegatedPresenceSuffix(text);
+  if (split === undefined) {
+    return undefined;
+  }
+
+  const replacement: ParsedReplacement | undefined =
+    parseConditionalReplacement(split.replacementText) ??
+    parseReplacementTrigger(split.replacementText);
+  if (replacement === undefined) {
+    return undefined;
+  }
+
+  const presence = parseFieldPresenceCondition({
+    text: split.presenceConditionText,
+  });
+  if (presence === undefined || presence.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    ...replacement,
+    condition: combineConditions(replacement.condition, {
+      type: "not",
+      condition: presence.condition,
+    }),
+    conditionEvidence: [
+      "expression:conditional",
+      "composition:conditionNot",
+      ...presence.evidence,
+    ],
+  };
+};
+
+function splitNegatedPresenceSuffix(
+  text: string,
+):
+  | { readonly replacementText: string; readonly presenceConditionText: string }
+  | undefined {
+  const match =
+    /^(?<replacementText>.+?)\.\s+If (?<presenceConditionText>.+?),\s*this effect is negated\.?$/iu.exec(
+      text.trim(),
+    );
+  const replacementText = match?.groups?.["replacementText"]?.trim();
+  const presenceConditionText =
+    match?.groups?.["presenceConditionText"]?.trim();
+  if (
+    replacementText === undefined ||
+    presenceConditionText === undefined ||
+    replacementText.length === 0 ||
+    presenceConditionText.length === 0
+  ) {
+    return undefined;
+  }
+
+  return { replacementText, presenceConditionText };
+}
+
+function combineConditions(
+  left: Condition | undefined,
+  right: Condition,
+): Condition {
+  if (left === undefined) {
+    return right;
+  }
+  if (left.type === "and") {
+    return { type: "and", conditions: [...left.conditions, right] };
+  }
+  return { type: "and", conditions: [left, right] };
+}
 
 function* leaderConditionReplacementSplits(text: string): Iterable<{
   readonly conditionText: string;

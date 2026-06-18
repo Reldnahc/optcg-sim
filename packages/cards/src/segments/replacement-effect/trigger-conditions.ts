@@ -10,10 +10,10 @@ export function parseCombinedKoOrFieldRemovalReplacement(
 ): ReplacementTriggerParseResult | undefined {
   const trimmed = text.trim();
   const match =
-    /^If (?<target>.+?) would be K\.O\.'d or would be removed from the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would be K\.O\.'d or would (?:be removed from|leave) the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
       trimmed,
     ) ??
-    /^If (?<target>.+?) would be removed from the field by your opponent(?<effectOnly>'s effects?)? or (?:would be )?K\.O\.'d,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would (?:be removed from|leave) the field by your opponent(?<effectOnly>'s effects?)? or (?:would be )?K\.O\.'d,\s*(?<body>.+)$/i.exec(
       trimmed,
     );
   const targetText = match?.groups?.["target"];
@@ -196,7 +196,7 @@ export function parseOpponentFieldRemovalReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {
   const match =
-    /^If (?<target>.+?) would be removed from the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would (?:be removed from|leave) the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];
@@ -235,7 +235,7 @@ export function parseAnyFieldRemovalReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {
   const match =
-    /^If (?<target>.+?) would be removed from the field,\s*(?<body>.+)$/i.exec(
+    /^If (?<target>.+?) would (?:be removed from|leave) the field,\s*(?<body>.+)$/i.exec(
       text.trim(),
     );
   const targetText = match?.groups?.["target"];

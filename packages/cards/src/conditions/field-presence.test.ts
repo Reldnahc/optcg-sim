@@ -45,6 +45,50 @@ it("parses any-player field presence as reusable self or opponent field counts",
   );
 });
 
+it("parses named any-player field presence as reusable self or opponent field counts", () => {
+  const result = parseFieldPresenceCondition({
+    text: "there is a [Monkey.D.Luffy] Character",
+  });
+
+  expect(result).toMatchObject({
+    condition: {
+      type: "or",
+      conditions: [
+        {
+          type: "fieldCount",
+          player: "self",
+          filter: {
+            categories: ["character"],
+            names: ["Monkey.D.Luffy"],
+          },
+          op: "gte",
+          value: 1,
+        },
+        {
+          type: "fieldCount",
+          player: "opponent",
+          filter: {
+            categories: ["character"],
+            names: ["Monkey.D.Luffy"],
+          },
+          op: "gte",
+          value: 1,
+        },
+      ],
+    },
+    rest: "",
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "composition:conditionOr",
+      "condition:fieldCount",
+      "condition:opponentFieldCount",
+      "filter:name",
+      "filter:category:character",
+    ]),
+  );
+});
+
 it("distributes cost alternatives into reusable field-count branches", () => {
   const result = parseFieldPresenceCondition({
     text: "there is a Character with a cost of 0 or with a cost of 8 or more",
