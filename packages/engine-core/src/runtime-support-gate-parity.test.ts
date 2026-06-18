@@ -60,16 +60,24 @@ const assertAdmissionAndSequencePreflightAgree = (
   name: string,
   block: EffectDefinition["effects"][number],
   entry: EffectQueueEntry = syntheticEntry(block.sourcePresencePolicy),
-): void => {
+): {
+  readonly admissionSupported: boolean;
+  readonly sequenceBlockSupported: boolean;
+} => {
   const admission = evaluateEffectBlockRuntimeSupport(block);
   const sequenceBlock = toSupportedSequenceBlock(entry, block);
+  const sequenceBlockSupported = sequenceBlock !== undefined;
   assert.equal(
-    sequenceBlock !== undefined,
+    sequenceBlockSupported,
     admission.supported,
     `${name}: admission.supported=${String(
       admission.supported,
-    )} sequenceBlock=${String(sequenceBlock !== undefined)}`,
+    )} sequenceBlock=${String(sequenceBlockSupported)}`,
   );
+  return {
+    admissionSupported: admission.supported,
+    sequenceBlockSupported,
+  };
 };
 
 const conditionedOptionalDonAttachBlock =
@@ -301,27 +309,24 @@ const supportedSequenceParityCases: readonly {
 ];
 
 for (const testCase of supportedSequenceParityCases) {
-  test(`canonical support and sequence preflight agree for ${testCase.name}`, () => {
-    assertAdmissionAndSequencePreflightAgree(testCase.name, testCase.block);
+  test(`canonical support and sequence preflight both support ${testCase.name}`, () => {
+    const result = assertAdmissionAndSequencePreflightAgree(
+      testCase.name,
+      testCase.block,
+    );
+
+    assert.equal(
+      result.admissionSupported,
+      true,
+      `${testCase.name}: admission must support canonical supported case`,
+    );
+    assert.equal(
+      result.sequenceBlockSupported,
+      true,
+      `${testCase.name}: sequence preflight must support canonical supported case`,
+    );
   });
 }
-
-test("canonical support and sequence execution preflight agree for conditioned sequence blocks", () => {
-  assertAdmissionAndSequencePreflightAgree(
-    "conditioned sequence",
-    conditionedOptionalDonAttachBlock(),
-  );
-});
-
-test("canonical support and sequence execution preflight both reject unsupported conditions", () => {
-  const block: EffectDefinition["effects"][number] = {
-    ...conditionedOptionalDonAttachBlock(),
-    condition: { type: "custom", check: "unsupported-condition" },
-  };
-
-  assert.equal(evaluateEffectBlockRuntimeSupport(block).supported, false);
-  assert.equal(toSupportedSequenceBlock(syntheticEntry(), block), undefined);
-});
 
 const unsupportedEnvelopeCases: readonly {
   readonly name: string;
