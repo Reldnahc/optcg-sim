@@ -37,6 +37,7 @@ import type {
 } from "./core.js";
 import {
   fieldTriggerSources,
+  findCardInstance,
   findCardInstanceInTrash,
   findMatchingKOMoveEvent,
   toSnapshot,
@@ -183,21 +184,6 @@ export const createKOTriggerQueueing = (
         continue;
       }
 
-      const source = findCardInstanceInTrash(
-        state,
-        payload.playerId,
-        payload.instanceId,
-      );
-      if (
-        source === undefined ||
-        source.zone.zone !== "trash" ||
-        !zonesEqual(source.zone, destination)
-      ) {
-        return {
-          ok: false,
-          error: onKOTriggerCandidateDetectionError("source-presence-failed"),
-        };
-      }
       const matching = onKOEffects.filter((effect) =>
         isSupportedOnKOCompatibleQueuedEffect(effect),
       );
@@ -210,7 +196,31 @@ export const createKOTriggerQueueing = (
         };
       }
 
+      const liveSource = findCardInstance(
+        state,
+        payload.playerId,
+        payload.instanceId,
+      );
       for (const effectBlock of matching) {
+        const source =
+          effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
+            ? liveSource
+            : findCardInstanceInTrash(
+                state,
+                payload.playerId,
+                payload.instanceId,
+              );
+        if (
+          source === undefined ||
+          source.cardId !== movedPayload.cardId ||
+          (effectBlock.sourcePresencePolicy === "resolveFromDestinationZone" &&
+            !zonesEqual(source.zone, destination))
+        ) {
+          return {
+            ok: false,
+            error: onKOTriggerCandidateDetectionError("source-presence-failed"),
+          };
+        }
         const candidateSource =
           effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
             ? { ...source, zone: origin }

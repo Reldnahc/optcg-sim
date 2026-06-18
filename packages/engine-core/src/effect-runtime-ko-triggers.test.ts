@@ -376,6 +376,88 @@ test("detects last-known On K.O. candidates with the field source snapshot", () 
   assert.deepEqual(state, before);
 });
 
+test("detects last-known On K.O. candidates after the source leaves trash", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const source = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "K.O. source"),
+    zone: "characterArea",
+  });
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  const definition = setupOnKODefinition(state, source);
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-on-ko": {
+      ...definition,
+      effects: [
+        {
+          ...onKOEffect,
+          sourcePresencePolicy: "resolveFromLastKnownInformation",
+        },
+      ],
+    },
+  };
+  const movedSource: CardInstance = {
+    ...source,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index: 0 },
+  };
+  p2State.characters = [];
+  p2State.trash = [];
+  p2State.hand = [
+    movedSource,
+    ...p2State.hand.map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "hand" as const,
+        playerId: p2,
+        slot: "hand" as const,
+        index: index + 1,
+      },
+    })),
+  ];
+  const events = appendBattleKOEvents(state, source);
+  const lastKnownEffect = {
+    ...onKOEffect,
+    sourcePresencePolicy: "resolveFromLastKnownInformation" as const,
+  };
+
+  const result = detectBattleKOTriggerCandidates(state, events);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(
+    result.candidates.map((candidate) => ({
+      effectBlock: candidate.effectBlock,
+      source: candidate.source,
+      sourceSnapshot: candidate.sourceSnapshot,
+      sourcePresencePolicy: candidate.sourcePresencePolicy,
+      triggerEventId: candidate.triggerEventId,
+    })),
+    [
+      {
+        effectBlock: lastKnownEffect,
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p2,
+          zone: source.zone,
+        },
+        sourceSnapshot: {
+          ...toSourceSnapshot(source, p2, p2),
+          power: 3000,
+        },
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+        triggerEventId: events[0].id,
+      },
+    ],
+  );
+});
+
 test("rejects battle K.O. event batches whose move event lacks the K.O.'d card identity", () => {
   const state = createActiveState();
   const p2State = must(state.players[p2], "p2");

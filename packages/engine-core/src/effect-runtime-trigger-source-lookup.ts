@@ -27,6 +27,7 @@ export const findCardInstance = (
     ...player.trash,
     ...player.costArea,
     ...player.donDeck,
+    ...player.life.map((lifeCard) => lifeCard.card),
   ];
   return zoneCards.find((card) => card?.instanceId === instanceId);
 };
