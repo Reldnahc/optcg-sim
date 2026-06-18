@@ -4,6 +4,7 @@ import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseOpponentCharactersTarget } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import { selectThenApplyFieldTarget } from "./effect-builders.js";
 
 const ownerDeckBottomSelectionId = "selected:owner-deck-bottom";
 const ownerDeckBottomTrashSelectionId =
@@ -17,60 +18,27 @@ type CardFilter = NonNullable<
 >["filter"];
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
-const savedOwnerDeckBottomTarget = (
-  player: "opponent" | "anyPlayer",
-  selectionId: string = ownerDeckBottomSelectionId,
-) =>
-  ({
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: selectionId,
-    },
-    zone: "characterArea",
-    player,
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  }) as const;
-
 const selectThenPlaceAtOwnerDeckBottom = (
   player: "opponent" | "anyPlayer",
   min: number,
   max: number,
   filter: CharacterFilter,
   selectionId: string = ownerDeckBottomSelectionId,
-): Effect => ({
-  type: "sequence",
-  effects: [
-    {
-      id: `select:owner-deck-bottom:${selectionId}`,
-      connector: "always",
-      saveResultAs: selectionId,
-      effect: {
-        type: "selectTargets",
-        request: {
-          timing: "onResolution",
-          chooser: "self",
-          player,
-          zone: "characterArea",
-          min,
-          max,
-          allowFewerIfUnavailable: true,
-          visibility: "public",
-          filter,
-        },
-      },
-    },
-    {
-      connector: "then",
-      effect: {
-        type: "bounce",
-        destination: "deckBottom",
-        target: savedOwnerDeckBottomTarget(player, selectionId),
-      },
-    },
-  ],
-});
+): Effect =>
+  selectThenApplyFieldTarget({
+    selectionId,
+    selectId: `select:owner-deck-bottom:${selectionId}`,
+    player,
+    zone: "characterArea",
+    filter,
+    min,
+    max,
+    apply: (target) => ({
+      type: "bounce",
+      destination: "deckBottom",
+      target,
+    }),
+  });
 
 const selectTrashThenPlaceAtOwnerDeckBottom = (
   player: "self" | "opponent",

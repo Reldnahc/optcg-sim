@@ -3,6 +3,7 @@ import type { Effect, Target } from "@optcg/types";
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser } from "../types.js";
+import { selectThenApplyFieldTarget } from "./effect-builders.js";
 
 const returnOrDeckBottomSelectionId = "selected:return-or-deck-bottom";
 
@@ -10,77 +11,48 @@ type CharacterFilter = NonNullable<
   Extract<Target, { type: "choose" }>["request"]["filter"]
 >;
 
-const savedReturnOrDeckBottomTarget = (player: "opponent" | "anyPlayer") =>
-  ({
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: returnOrDeckBottomSelectionId,
-    },
-    zone: "characterArea",
-    player,
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  }) as const;
-
 const selectThenChooseReturnOrDeckBottom = (
   player: "opponent" | "anyPlayer",
   min: number,
   max: number,
   filter: CharacterFilter,
-): Effect => ({
-  type: "sequence",
-  effects: [
-    {
-      id: "select:return-or-deck-bottom",
-      connector: "always",
-      saveResultAs: returnOrDeckBottomSelectionId,
-      effect: {
-        type: "selectTargets",
-        request: {
-          timing: "onResolution",
-          chooser: "self",
-          player,
-          zone: "characterArea",
-          min,
-          max,
-          allowFewerIfUnavailable: true,
-          visibility: "public",
-          filter,
+): Effect =>
+  selectThenApplyFieldTarget({
+    selectionId: returnOrDeckBottomSelectionId,
+    selectId: "select:return-or-deck-bottom",
+    player,
+    zone: "characterArea",
+    filter,
+    min,
+    max,
+    applyConnector: "ifPreviousSucceeded",
+    apply: (target) => ({
+      type: "choice",
+      chooser: "self",
+      min: 1,
+      max: 1,
+      options: [
+        {
+          id: "selected:return-to-owner-hand",
+          label: "Return the selected card to the owner's hand.",
+          effect: {
+            type: "bounce",
+            destination: "hand",
+            target,
+          },
         },
-      },
-    },
-    {
-      connector: "ifPreviousSucceeded",
-      effect: {
-        type: "choice",
-        chooser: "self",
-        min: 1,
-        max: 1,
-        options: [
-          {
-            id: "selected:return-to-owner-hand",
-            label: "Return the selected card to the owner's hand.",
-            effect: {
-              type: "bounce",
-              destination: "hand",
-              target: savedReturnOrDeckBottomTarget(player),
-            },
+        {
+          id: "selected:owner-deck-bottom",
+          label: "Place the selected card at the bottom of the owner's deck.",
+          effect: {
+            type: "bounce",
+            destination: "deckBottom",
+            target,
           },
-          {
-            id: "selected:owner-deck-bottom",
-            label: "Place the selected card at the bottom of the owner's deck.",
-            effect: {
-              type: "bounce",
-              destination: "deckBottom",
-              target: savedReturnOrDeckBottomTarget(player),
-            },
-          },
-        ],
-      },
-    },
-  ],
-});
+        },
+      ],
+    }),
+  });
 
 export const parseReturnOrDeckBottomInstruction: InstructionParser = (
   input,
