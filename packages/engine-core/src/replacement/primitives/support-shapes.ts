@@ -109,7 +109,7 @@ const isSupportedReplacementEnvelope = (
 ): effect is SupportedReplacementEffectBlock =>
   effect.category === "replacement" &&
   effect.trigger.type === "replacement" &&
-  effect.optional === true &&
+  (effect.optional === true || effect.optional === false) &&
   effect.sourcePresencePolicy === "resolveFromLastKnownInformation" &&
   effect.conditionTiming === undefined &&
   isSupportedQueuedEffectConditionShape(effect.condition) &&

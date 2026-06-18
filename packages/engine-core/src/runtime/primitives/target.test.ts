@@ -406,6 +406,35 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
   assert.equal(hashCanonicalStateValue(state), beforeHash);
 });
 
+test("detects mandatory would-be-KOd self replacement candidate as non-declinable", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  const effectBlock = setupReviewedKoReplacementDefinition(state, targetA, {
+    optional: false,
+  });
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    must(refs[0], "target A ref"),
+    0,
+  );
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, {
+    ok: true,
+    candidate: {
+      id: `${String(targetA.instanceId)}:${String(effectBlock.id)}`,
+      effectBlockId: effectBlock.id,
+      controllerId: p2,
+      mandatory: true,
+      source: process.target,
+      replacementEffect: effectBlock.effect,
+    },
+  });
+});
+
 test("targeted KO primitive pauses on a private chooseReplacement decision for supported optional KO replacement", () => {
   const { result, entry, effectBlock, refs, targetA } =
     pauseForReplacementDecision();
@@ -677,10 +706,6 @@ test("fails closed without mutation for KO replacement support metadata with cus
 });
 
 test.each([
-  {
-    name: "mandatory metadata",
-    overrides: { optional: false },
-  },
   {
     name: "wrong replacement trigger",
     overrides: {

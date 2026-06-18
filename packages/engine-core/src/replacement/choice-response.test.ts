@@ -56,6 +56,7 @@ const cardRef = (card: CardInstance, playerId: PlayerId): CardRef => ({
 const attachReviewedKoReplacementDefinition = (
   state: ReturnType<typeof createActiveState>,
   target: CardInstance,
+  options: { readonly optional?: boolean } = {},
 ): EffectDefinition["effects"][number] => {
   const support = {
     cardId: target.cardId,
@@ -80,7 +81,7 @@ const attachReviewedKoReplacementDefinition = (
       type: "replacement",
       replacement: { type: "wouldBeKOd", target: { type: "self" } },
     },
-    optional: true,
+    optional: options.optional ?? true,
     sourcePresencePolicy: "resolveFromLastKnownInformation",
     effect: {
       type: "replacement",
@@ -196,6 +197,78 @@ const pauseForReplacementDecision = () => {
   };
 };
 
+const pauseForMandatoryReplacementDecision = () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const sourceSeed = must(p1State.hand[0], "source seed");
+  const targetSeed = must(p2State.hand[0], "target seed");
+  const source: CardInstance = {
+    ...sourceSeed,
+    cardId: toCardId("mandatory-ko-source"),
+    zone: { zone: "characterArea", playerId: p1, slot: "character", index: 0 },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  const target: CardInstance = {
+    ...targetSeed,
+    cardId: toCardId("mandatory-ko-target"),
+    zone: { zone: "characterArea", playerId: p2, slot: "character", index: 0 },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: 1,
+  };
+  p1State.characters = [source];
+  p1State.hand = p1State.hand.slice(1);
+  p2State.characters = [target];
+  p2State.hand = p2State.hand.slice(1);
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    power: 5000,
+  });
+  const effectBlock = attachReviewedKoReplacementDefinition(state, target, {
+    optional: false,
+  });
+  const entry: EffectQueueEntry = {
+    id: toQueueEntryId("queue-entry-mandatory-ko-targets"),
+    state: "pending",
+    timingWindowId: "window-mandatory-ko-targets" as TimingWindowId,
+    generation: 0,
+    controllerId: p1,
+    source: cardRef(source, p1),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: p1,
+      controllerId: p1,
+      zone: source.zone,
+      category: "character",
+      colors: ["red"],
+      keywords: [],
+      power: 5000,
+    },
+    effectBlockId: toEffectId("mandatory-ko-targets-effect"),
+    orderingGroup: "turnPlayer",
+    createdAtEventSeq: 1,
+    queuedAtStateSeq: state.seq,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    causedBy: { type: "ruleProcess", name: "mandatory-ko-target-test" },
+  };
+  const result = executeSelectedTargetEffectPrimitive(
+    state,
+    entry,
+    koChooseEffect(),
+    [cardRef(target, p2)],
+  );
+  return {
+    result,
+    effectBlock,
+    replacementId: `${String(target.instanceId)}:${String(effectBlock.id)}`,
+  };
+};
+
 const mustChooseReplacementDecision = (
   decision: ReturnType<
     typeof pauseForReplacementDecision
@@ -226,6 +299,21 @@ test("chooseReplacement legal actions expose accept and decline only to the deci
   ]);
   assert.deepEqual(getLegalActions(result.state, p1), [
     { type: "concede", playerId: p1 },
+  ]);
+});
+
+test("mandatory replacement decisions expose no decline action", () => {
+  const { result, replacementId } = pauseForMandatoryReplacementDecision();
+  const decision = mustChooseReplacementDecision(result.state.pendingDecision);
+
+  assert.equal(decision.mandatory, true);
+  assert.deepEqual(getLegalActions(result.state, p2), [
+    { type: "concede", playerId: p2 },
+    {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "replacement", replacementId },
+    },
   ]);
 });
 

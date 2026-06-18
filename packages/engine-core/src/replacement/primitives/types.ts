@@ -41,6 +41,7 @@ export interface SelectedTargetKoReplacementCandidate {
   effectBlockId: EffectQueueEntry["effectBlockId"];
   controllerId: PlayerId;
   oncePerTurn?: true;
+  mandatory?: true;
   source: CardRef;
   coveredTargets?: readonly CardRef[];
   replacementEffect: Extract<Effect, { type: "replacement" }>;

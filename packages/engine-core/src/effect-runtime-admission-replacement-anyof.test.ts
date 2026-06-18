@@ -65,3 +65,51 @@ test("runtime admission accepts any-of K.O. or field-removal replacement with re
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts mandatory any-of replacement with reusable no-decision sequence body", () => {
+  const koWhen = {
+    type: "wouldBeKOd",
+    sourceControllerRelation: "any",
+    target: { type: "self" },
+  } as const;
+  const fieldRemovalWhen = {
+    type: "wouldMoveZone",
+    from: "characterArea",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+    target: { type: "self" },
+  } as const;
+  const when = {
+    type: "anyOf",
+    replacements: [koWhen, fieldRemovalWhen],
+  } as unknown as ReplacementTrigger;
+
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      optional: false,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "trash", target: { type: "self" } },
+            },
+            {
+              connector: "then",
+              effect: { type: "draw", count: 1, player: "self" },
+            },
+          ],
+        },
+      },
+    }),
+  );
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});

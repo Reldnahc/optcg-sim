@@ -8,10 +8,12 @@ export const replacementOwnerDeckBottomSelectionId =
 export interface ReplacementTriggerParseResult {
   readonly when: Extract<Effect, { type: "replacement" }>["when"];
   readonly instead: Effect;
+  readonly optional: boolean;
   readonly evidence: ExpressionParseResult["evidence"];
 }
 
 export interface ReplacementInsteadParseResult {
   readonly effect: Effect;
+  readonly optional?: boolean;
   readonly evidence: ExpressionParseResult["evidence"];
 }

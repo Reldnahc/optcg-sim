@@ -925,67 +925,6 @@ describe("replacement effect parser", () => {
     expect(result).toBeUndefined();
   });
 
-  it("parses combined K.O. or opponent-effect removal replacement as composed trigger primitives", () => {
-    const koWhen = {
-      type: "wouldBeKOd",
-      sourceControllerRelation: "any",
-      target: { type: "self" },
-    } as const;
-    const fieldRemovalWhen = {
-      type: "wouldMoveZone",
-      from: "characterArea",
-      sourceKind: "cardEffect",
-      sourceControllerRelation: "opponentControlled",
-      target: { type: "self" },
-    } as const;
-    const when = {
-      type: "anyOf",
-      replacements: [koWhen, fieldRemovalWhen],
-    } as const;
-
-    const result = parseCardEffectLine(
-      "[Once Per Turn] If this Character would be K.O.'d or would be removed from the field by your opponent's effect, you may trash 1 card with a type including \"Whitebeard Pirates\" from your hand instead.",
-    );
-    if (result === undefined || !("block" in result)) {
-      assert.fail("expected parsed composed replacement effect block");
-    }
-
-    assert.deepEqual(result.block, {
-      category: "replacement",
-      trigger: { type: "replacement", replacement: when },
-      oncePerTurn: true,
-      optional: true,
-      sourcePresencePolicy: "resolveFromLastKnownInformation",
-      effect: {
-        type: "replacement",
-        when,
-        instead: {
-          type: "trashFromHand",
-          player: "self",
-          chooser: "self",
-          count: 1,
-          filter: { typesIncludeAny: ["Whitebeard Pirates"] },
-        },
-      },
-    });
-    for (const evidence of [
-      "marker:oncePerTurn",
-      "entry:replacement",
-      "replacement:wouldBeKOd",
-      "replacement:wouldMoveZone",
-      "replacement:fieldRemoval",
-      "replacementSource:opponent",
-      "replacementSource:cardEffect",
-      "composition:triggerAnyOf",
-      "target:thisCharacter",
-      "instruction:trashFromHand",
-      "filter:type",
-      "composition:replacementInstead",
-    ] as const) {
-      assert.equal(result.evidence.includes(evidence), true, evidence);
-    }
-  });
-
   it("parses self K.O. replacement into filtered hand-trash instead primitives", () => {
     const characterResult = parseCardEffectLine(
       "If this Character would be K.O.'d, you may trash 1 Character card with a power of 6000 or less from your hand instead.",

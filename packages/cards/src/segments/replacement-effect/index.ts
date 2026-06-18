@@ -56,7 +56,7 @@ export function replacementInsteadExpressionParser(
     rest: "",
     blockPatch: {
       category: "replacement",
-      optional: true,
+      optional: parsed.optional,
       ...(parsed.condition === undefined
         ? {}
         : { condition: parsed.condition }),

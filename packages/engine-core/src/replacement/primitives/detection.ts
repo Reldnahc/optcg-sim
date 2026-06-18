@@ -276,6 +276,7 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
           effectBlockId: effect.id,
           controllerId: source.card.controller,
           ...(effect.oncePerTurn === true ? { oncePerTurn: true } : {}),
+          ...(effect.optional === true ? {} : { mandatory: true }),
           source: source.ref,
           ...(needsCoveredTargets ? { coveredTargets } : {}),
           replacementEffect: effect.effect,

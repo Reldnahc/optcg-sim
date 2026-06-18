@@ -8,9 +8,13 @@ import type { ReplacementTriggerParseResult } from "./shared.js";
 export function parseCombinedKoOrFieldRemovalReplacement(
   text: string,
 ): ReplacementTriggerParseResult | undefined {
+  const trimmed = text.trim();
   const match =
     /^If (?<target>.+?) would be K\.O\.'d or would be removed from the field by your opponent(?<effectOnly>'s effects?)?,\s*(?<body>.+)$/i.exec(
-      text.trim(),
+      trimmed,
+    ) ??
+    /^If (?<target>.+?) would be removed from the field by your opponent(?<effectOnly>'s effects?)? or (?:would be )?K\.O\.'d,\s*(?<body>.+)$/i.exec(
+      trimmed,
     );
   const targetText = match?.groups?.["target"];
   const effectOnlyText = match?.groups?.["effectOnly"];
@@ -148,6 +152,7 @@ export function parseOpponentRestReplacement(
       target: { type: "self" },
     },
     instead: instead.effect,
+    optional: instead.optional ?? true,
     evidence: [
       "replacement:wouldBeRested",
       "replacementSource:opponent",
@@ -267,6 +272,7 @@ type FieldReplacementTarget =
 interface FieldReplacementParts {
   readonly target: FieldReplacementTarget;
   readonly instead: Effect;
+  readonly optional: boolean;
   readonly targetEvidence: readonly PrimitiveEvidence[];
   readonly insteadEvidence: readonly PrimitiveEvidence[];
 }
@@ -294,6 +300,7 @@ function parseFieldReplacementParts(
   return {
     target: target.target,
     instead: instead.effect,
+    optional: instead.optional ?? true,
     targetEvidence: target.evidence,
     insteadEvidence: instead.evidence,
   };
@@ -307,6 +314,7 @@ function buildReplacementTriggerResult(options: {
   return {
     when: options.when,
     instead: options.parts.instead,
+    optional: options.parts.optional,
     evidence: [
       ...options.evidence,
       ...options.parts.targetEvidence,

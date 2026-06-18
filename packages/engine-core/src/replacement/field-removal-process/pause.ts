@@ -48,7 +48,7 @@ export const pauseSelectedTargetKoReplacementProcess = (
       label: replacementOptionLabel(candidate),
       source: candidate.source,
     })),
-    mandatory: false,
+    mandatory: candidates.some((candidate) => candidate.mandatory === true),
   };
   appendEvent(
     state,

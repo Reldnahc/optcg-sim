@@ -57,10 +57,35 @@ export function parseReplacementInsteadFromSet(
 export function parseInsteadEffect(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
-  return (
-    parseSequencedInsteadEffect(text) ??
-    parseReplacementInsteadFromSet(text, replacementInsteadBodyParsers)
-  );
+  const normalized = normalizeInsteadText(text);
+  if (normalized === undefined) {
+    return undefined;
+  }
+
+  const parsed =
+    parseSequencedInsteadEffect(normalized.text) ??
+    parseReplacementInsteadFromSet(
+      normalized.text,
+      replacementInsteadBodyParsers,
+    );
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  return { ...parsed, optional: normalized.optional };
+}
+
+function normalizeInsteadText(
+  text: string,
+): { readonly text: string; readonly optional: boolean } | undefined {
+  const trimmed = text.trim();
+  if (/^you may\b/iu.test(trimmed)) {
+    return { text: trimmed, optional: true };
+  }
+  if (!/\binstead\.?$/iu.test(trimmed)) {
+    return undefined;
+  }
+  return { text: `you may ${trimmed}`, optional: false };
 }
 
 function parseSequencedInsteadEffect(
