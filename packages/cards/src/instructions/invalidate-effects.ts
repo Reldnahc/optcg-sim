@@ -20,6 +20,10 @@ import {
   parseOpponentLeaderOrCharacterCardsTarget,
 } from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
+import {
+  savedFieldObjectTarget,
+  selectThenApplyFieldTarget,
+} from "./effect-builders.js";
 
 const invalidateEffectsTargetSelectionId = "selected:invalidate-effects-target";
 
@@ -454,93 +458,49 @@ function selectThenApplyInvalidateEffects(
   },
 ): Effect {
   const selectionId = options.selectionId ?? invalidateEffectsTargetSelectionId;
-  const savedTarget = selectedInvalidateEffectsTarget(
-    options.zones,
+  const zoneOptions =
+    options.zones.length === 1
+      ? { zone: options.zones[0] }
+      : { zones: options.zones };
+
+  return selectThenApplyFieldTarget({
     selectionId,
-  );
-  const effects: Extract<Effect, { type: "sequence" }>["effects"] = [
-    {
-      id: `select:invalidate-effects-target:${selectionId}`,
-      connector: "always",
-      saveResultAs: selectionId,
-      effect: {
-        type: "selectTargets",
-        request:
-          options.zones.length === 1
-            ? {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zone: options.zones[0],
-                min,
-                max,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-                filter,
-              }
-            : {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zones: ["leaderArea", "characterArea"],
-                min,
-                max,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-                filter,
-              },
-      },
-    },
-    {
-      connector: "then",
-      effect: {
-        type: "invalidateEffects",
-        target: savedTarget,
-        duration,
-      },
-    },
-  ];
-
-  for (const followup of options.followupEffects ?? []) {
-    effects.push({
-      connector: "then",
-      effect: followup,
-    });
-  }
-
-  if (options.followupPowerModifier !== undefined) {
-    effects.push({
-      connector: "then",
-      effect: {
-        type: "modifyPower",
-        target: savedTarget,
-        value: options.followupPowerModifier,
-        duration,
-      },
-    });
-  }
-
-  return {
-    type: "sequence",
-    effects,
-  };
+    selectId: `select:invalidate-effects-target:${selectionId}`,
+    player: "opponent",
+    ...zoneOptions,
+    filter,
+    min,
+    max,
+    apply: (target) => ({
+      type: "invalidateEffects",
+      target,
+      duration,
+    }),
+    then: (target) => [
+      ...(options.followupEffects ?? []),
+      ...(options.followupPowerModifier === undefined
+        ? []
+        : [
+            {
+              type: "modifyPower",
+              target,
+              value: options.followupPowerModifier,
+              duration,
+            } as const,
+          ]),
+    ],
+  });
 }
 
 function selectedInvalidateEffectsTarget(
   zones: readonly [SavedFieldObjectZone, ...SavedFieldObjectZone[]],
   selectionId = invalidateEffectsTargetSelectionId,
 ): Target {
-  return {
-    type: "savedFieldObject",
-    binding: {
-      family: "selectedTargets",
-      saveResultAs: selectionId,
-    },
-    ...(zones.length === 1 ? { zone: zones[0] } : { zones }),
+  return savedFieldObjectTarget({
+    selectionId,
     player: "opponent",
-    visibility: "publicOnly",
-    onFailure: "failClosed",
-  };
+    ...(zones.length === 1 ? { zone: zones[0] } : { zones }),
+  });
 }
 
 function parseOptionalThatCardPowerModifier(text: string):

@@ -77,6 +77,7 @@ export function selectThenApplyFieldTarget(options: {
   readonly max: number;
   readonly selectionConstraints?: readonly TargetSelectionConstraint[];
   readonly apply: (target: Target) => Effect;
+  readonly then?: (target: Target) => readonly Effect[];
 }): Effect {
   const savedTarget = savedFieldObjectTarget({
     selectionId: options.selectionId,
@@ -113,6 +114,10 @@ export function selectThenApplyFieldTarget(options: {
         connector: "then",
         effect: options.apply(savedTarget),
       },
+      ...(options.then?.(savedTarget).map((effect) => ({
+        connector: "then" as const,
+        effect,
+      })) ?? []),
     ],
   };
 }
