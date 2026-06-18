@@ -1,6 +1,5 @@
-import type { Condition } from "@optcg/types";
+import type { Comparator, Condition } from "@optcg/types";
 
-import { parseFieldCardCountCondition } from "../../conditions/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import {
@@ -121,6 +120,89 @@ const parseAnyPlayerFieldPresenceCondition = (
   };
 };
 
+const parseLeadingCountComparison = (
+  text: string,
+):
+  | {
+      readonly op: Comparator;
+      readonly value: number;
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly rest: string;
+    }
+  | undefined => {
+  const match =
+    /^(?<value>[1-9]\d*)(?: (?<direction>or more|or less))?\b\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  const valueText = match?.groups?.["value"];
+  const direction = match?.groups?.["direction"];
+  const restText = match?.groups?.["rest"];
+  if (valueText === undefined) {
+    return undefined;
+  }
+  const op: Comparator =
+    direction === undefined
+      ? "eq"
+      : direction.toLowerCase() === "or more"
+        ? "gte"
+        : "lte";
+  const comparatorEvidence =
+    op === "gte"
+      ? "condition:comparator:gte"
+      : op === "lte"
+        ? "condition:comparator:lte"
+        : "condition:comparator:eq";
+  return {
+    op,
+    value: Number.parseInt(valueText, 10),
+    evidence: [comparatorEvidence, "condition:threshold:positiveInteger"],
+    rest: restText?.trim() ?? "",
+  };
+};
+
+const parseOpponentFieldCountCondition = (
+  text: string,
+):
+  | {
+      readonly condition: Condition;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const match = /^your opponent has\s+(?<comparison>.+)$/iu.exec(text);
+  const comparisonText = match?.groups?.["comparison"];
+  if (comparisonText === undefined) {
+    return undefined;
+  }
+  const comparison = parseLeadingCountComparison(comparisonText);
+  if (comparison === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text: comparison.rest },
+    { powerSemantics: "current" },
+  );
+  if (predicates === undefined || predicates.rest.trim().length > 0) {
+    return undefined;
+  }
+
+  return {
+    condition: {
+      type: "fieldCount",
+      player: "opponent",
+      filter: predicates.filter,
+      op: comparison.op,
+      value: comparison.value,
+    },
+    evidence: [
+      "condition:opponentFieldCount",
+      ...comparison.evidence,
+      "player:opponent",
+      ...predicates.evidence,
+    ],
+  };
+};
+
 const parseUnlessCondition = (
   text: string,
 ):
@@ -129,9 +211,9 @@ const parseUnlessCondition = (
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined => {
-  const fieldCount = parseFieldCardCountCondition({ text });
-  if (fieldCount !== undefined && fieldCount.rest.length === 0) {
-    return { condition: fieldCount.condition, evidence: fieldCount.evidence };
+  const opponentFieldCount = parseOpponentFieldCountCondition(text);
+  if (opponentFieldCount !== undefined) {
+    return opponentFieldCount;
   }
   return parseAnyPlayerFieldPresenceCondition(text);
 };
