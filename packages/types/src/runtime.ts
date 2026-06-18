@@ -36,8 +36,6 @@ export interface PlayerDisconnectTimer {
   playerId: PlayerId;
   remainingMs: number;
   isRunning: boolean;
-  currentDisconnectElapsedMs?: number;
-  disconnectStartedRemainingMs?: number;
 }
 
 export interface TimerState {
