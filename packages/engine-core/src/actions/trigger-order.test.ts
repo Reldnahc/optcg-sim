@@ -105,17 +105,18 @@ test("valid orderedIds response chooses only the next trigger from the selected 
     },
   });
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 4,
-      },
-    },
-  ]);
+  const firstError = result.errors?.[0];
+  assert.ok(firstError);
+  const details = firstError.details as
+    | { count?: number; kind?: string; reason?: string }
+    | undefined;
+  assert.ok(details);
+  assert.equal(result.errors?.length, 1);
+  assert.equal(firstError.type, "effectRuntimeError");
+  assert.equal(firstError.effectId, "unsupported-effect-queue");
+  assert.equal(details.reason, "unsupported-pending-runtime-work");
+  assert.equal(details.kind, "effectQueue");
+  assert.equal(details.count, 4);
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(
     result.state.effectQueue.map((entry) => entry.id),

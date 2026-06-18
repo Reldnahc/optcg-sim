@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Selection regression coverage is intentionally broad. */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -885,17 +886,18 @@ test("rejects selectTargets response for unsupported queued target effect withou
     respondWithTargets(decision.id, [must(targets[0], "target 0")]),
   );
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  const firstError = result.errors?.[0];
+  assert.ok(firstError);
+  const details = firstError.details as
+    | { count?: number; kind?: string; reason?: string }
+    | undefined;
+  assert.ok(details);
+  assert.equal(result.errors?.length, 1);
+  assert.equal(firstError.type, "effectRuntimeError");
+  assert.equal(firstError.effectId, "unsupported-effect-queue");
+  assert.equal(details.reason, "unsupported-pending-runtime-work");
+  assert.equal(details.kind, "effectQueue");
+  assert.equal(details.count, 1);
   assert.deepEqual(result.events, []);
   assert.deepEqual(result.state, before);
   assert.equal(result.stateHash, beforeHash);

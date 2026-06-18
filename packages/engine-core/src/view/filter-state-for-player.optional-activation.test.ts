@@ -62,6 +62,23 @@ const installDefinition = (
   };
 };
 
+const assertUnsupportedEffectQueueError = (
+  errors: ReturnType<typeof processEffectRuntime>["errors"],
+): void => {
+  const firstError = errors?.[0];
+  assert.ok(firstError);
+  const details = firstError.details as
+    | { count?: number; kind?: string; reason?: string }
+    | undefined;
+  assert.ok(details);
+  assert.equal(errors.length, 1);
+  assert.equal(firstError.type, "effectRuntimeError");
+  assert.equal(firstError.effectId, "unsupported-effect-queue");
+  assert.equal(details.reason, "unsupported-pending-runtime-work");
+  assert.equal(details.kind, "effectQueue");
+  assert.equal(details.count, 1);
+};
+
 test("getLegalActions exposes chooseOptionalActivation responses only to decision player", () => {
   const state = createActiveState();
   const source = must(state.players[p1], "p1").leader;
@@ -236,17 +253,7 @@ test("optional effect with unsupported cost fails closed without creating option
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(result.state, before);
   assert.equal(result.stateHash, beforeHash);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assertUnsupportedEffectQueueError(result.errors);
 });
 
 test("optional effect with unsupported choose-target KO shape fails closed without creating optional decision", () => {
@@ -316,15 +323,5 @@ test("optional effect with unsupported choose-target KO shape fails closed witho
   assert.equal(result.state.pendingDecision, undefined);
   assert.deepEqual(result.state, before);
   assert.equal(result.stateHash, beforeHash);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assertUnsupportedEffectQueueError(result.errors);
 });

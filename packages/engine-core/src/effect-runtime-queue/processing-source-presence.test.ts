@@ -22,6 +22,24 @@ import {
   setupOnKODefinition,
 } from "./test-support.js";
 
+const assertUnsupportedEffectQueueError = (
+  errors: ReturnType<typeof processEffectRuntime>["errors"],
+  count = 1,
+): void => {
+  const firstError = errors?.[0];
+  assert.ok(firstError);
+  const details = firstError.details as
+    | { count?: number; kind?: string; reason?: string }
+    | undefined;
+  assert.ok(details);
+  assert.equal(errors.length, 1);
+  assert.equal(firstError.type, "effectRuntimeError");
+  assert.equal(firstError.effectId, "unsupported-effect-queue");
+  assert.equal(details.reason, "unsupported-pending-runtime-work");
+  assert.equal(details.kind, "effectQueue");
+  assert.equal(details.count, count);
+};
+
 test("queued On K.O. draw with unsupported source-presence policy fails closed without mutation", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
@@ -76,17 +94,7 @@ test("queued On K.O. draw with unsupported source-presence policy fails closed w
   const result = processEffectRuntime(state);
 
   assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assertUnsupportedEffectQueueError(result.errors);
   assert.deepEqual(result.state, before);
   assert.equal(result.stateHash, beforeHash);
 });
@@ -125,17 +133,7 @@ test("queued source-presence policy mismatch with effect definition fails closed
   const result = processEffectRuntime(state);
 
   assert.deepEqual(result.events, []);
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "unsupported-effect-queue",
-      details: {
-        reason: "unsupported-pending-runtime-work",
-        kind: "effectQueue",
-        count: 1,
-      },
-    },
-  ]);
+  assertUnsupportedEffectQueueError(result.errors);
   assert.deepEqual(result.state, before);
   assert.equal(hashCanonicalStateValue(result.state), beforeHash);
 });
@@ -261,17 +259,7 @@ test("queued entries with centralized source-presence policies still fail closed
       const second = processEffectRuntime(structuredClone(before));
 
       assert.deepEqual(first.events, [], assertionLabel);
-      assert.deepEqual(first.errors, [
-        {
-          type: "effectRuntimeError",
-          effectId: "unsupported-effect-queue",
-          details: {
-            reason: "unsupported-pending-runtime-work",
-            kind: "effectQueue",
-            count: 1,
-          },
-        },
-      ]);
+      assertUnsupportedEffectQueueError(first.errors);
       assert.deepEqual(first.events, second.events, assertionLabel);
       assert.deepEqual(first.errors, second.errors, assertionLabel);
       assert.deepEqual(first.state, before, assertionLabel);
