@@ -57,6 +57,8 @@ import {
   optionalActionEffectSegmentParser,
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
+  optionalPlayCostedEffectExpressionParser,
+  optionalPlayCostedEffectSegmentParser,
   playFromDeckExpressionParser,
   playStageFromDeckExpressionParser,
   playedObjectDelayedDeckBottomExpressionParser,
@@ -157,6 +159,10 @@ function generalExpressionParser(input: ParseInput) {
     ],
     segments: [
       optionalCostedEffectSegmentParser({
+        instructions: instructionParsers,
+        expressions: costedExpressions,
+      }),
+      optionalPlayCostedEffectSegmentParser({
         instructions: instructionParsers,
         expressions: costedExpressions,
       }),
@@ -371,6 +377,10 @@ const conditionalCostedBlockExpressions = () =>
       instructions: instructionParsers,
       expressions: costedExpressions,
     }),
+    optionalPlayCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
   ] as const;
 
 const topLevelChooseOneExpressions = () =>
@@ -425,6 +435,10 @@ const implicitEventReactionBodyExpressions = () =>
       instructions: instructionParsers,
     }),
     optionalCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
+    optionalPlayCostedEffectExpressionParser({
       instructions: instructionParsers,
       expressions: costedExpressions,
     }),
@@ -519,6 +533,10 @@ const rootExpressionParsers = () =>
       expressions: costedExpressions,
     }),
     optionalCostedEffectExpressionParser({
+      instructions: instructionParsers,
+      expressions: costedExpressions,
+    }),
+    optionalPlayCostedEffectExpressionParser({
       instructions: instructionParsers,
       expressions: costedExpressions,
     }),

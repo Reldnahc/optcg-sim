@@ -16,6 +16,10 @@ export {
   optionalCostedEffectExpressionParser,
   optionalCostedEffectSegmentParser,
 } from "./optional-costed-effect.js";
+export {
+  optionalPlayCostedEffectExpressionParser,
+  optionalPlayCostedEffectSegmentParser,
+} from "./optional-play-costed-effect.js";
 export { optionalActionEffectSegmentParser } from "./optional-action-effect.js";
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export {

@@ -1,6 +1,9 @@
 import type { CardFilter, HandSelectionId, SelectionId } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { returnToOwnerHandSelectionId } from "./return-to-owner-hand.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
@@ -46,7 +49,12 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     return eachFromHand;
   }
 
-  const cardinality = parseUpToCardinality({ text: afterPlay });
+  const upToCardinality = parseUpToCardinality({ text: afterPlay });
+  const exactCardinality =
+    upToCardinality === undefined
+      ? parseExactCardinality({ text: afterPlay })
+      : undefined;
+  const cardinality = upToCardinality ?? exactCardinality;
   if (cardinality === undefined) {
     return undefined;
   }
@@ -69,8 +77,14 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
             zone: "hand",
             player,
             chooser: player,
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
+            min:
+              "count" in cardinality
+                ? cardinality.count
+                : cardinality.cardinality.min,
+            max:
+              "count" in cardinality
+                ? cardinality.count
+                : cardinality.cardinality.max,
             filter: source.filter,
             saveAs: handPlaySelection,
             visibility: "chooserOnly",
@@ -94,7 +108,11 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
       ...cardinality.evidence,
       "zone:hand",
       player === "self" ? "player:self" : "player:opponent",
-      player === "self" ? "chooser:self:upTo" : "chooser:opponent",
+      player === "self" && "count" in cardinality
+        ? "chooser:self"
+        : player === "self"
+          ? "chooser:self:upTo"
+          : "chooser:opponent",
       ...source.evidence,
       ...(source.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",

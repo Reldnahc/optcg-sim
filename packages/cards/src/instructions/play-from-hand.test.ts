@@ -3,6 +3,49 @@ import { describe, expect, it } from "vitest";
 import { parsePlayFromHandInstruction } from "./play-from-hand.js";
 
 describe("play from hand instruction parser", () => {
+  it("parses exact play from hand as exact selection plus playSelected", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "Play 1 [Kotori] from your hand.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "hand",
+              player: "self",
+              chooser: "self",
+              min: 1,
+              max: 1,
+              filter: { names: ["Kotori"] },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "handSelection:play-from-hand",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "zone:hand",
+        "filter:name",
+        "chooser:self",
+      ]),
+    );
+  });
+
   it("parses play from hand as source-zone plus shared predicates", () => {
     expect(
       parsePlayFromHandInstruction({
