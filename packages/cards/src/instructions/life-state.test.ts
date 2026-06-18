@@ -3,6 +3,36 @@ import { describe, expect, it } from "vitest";
 import { parseLifeStateInstruction } from "./life-state.js";
 
 describe("Life state instruction parser", () => {
+  it.each(["your", "yours"])(
+    "parses top Life inspect placement for %s or opponent wording",
+    (selfPossessive) => {
+      expect(
+        parseLifeStateInstruction({
+          text: `Look at up to 1 card from the top of ${selfPossessive} or your opponent's Life cards, and place it at the top or bottom of the Life cards.`,
+        }),
+      ).toEqual({
+        effect: {
+          type: "placeTopLifeCard",
+          players: ["self", "opponent"],
+          viewer: "self",
+          position: "topOrBottom",
+        },
+        evidence: [
+          "instruction:lookAt",
+          "zone:life",
+          "cardinality:upTo",
+          "count:positiveInteger",
+          "player:self",
+          "player:opponent",
+          "visibility:private",
+          "position:top",
+          "position:bottom",
+        ],
+        rest: "",
+      });
+    },
+  );
+
   it("parses opponent Life inspect and reorder as a private reorder primitive", () => {
     expect(
       parseLifeStateInstruction({
