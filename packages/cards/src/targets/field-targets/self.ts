@@ -173,13 +173,17 @@ export function parseYourLeaderOrCharacterCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const typedMatch =
-    /^of your\s+(?<predicateText>.+?Leader or Character cards?\b.*)$/i.exec(
+    /^(?:of your\s+)?(?<predicateText>.+?Leader or Character cards?\b.*)$/i.exec(
       input.text,
     );
   const typedPredicateText = typedMatch?.groups?.["predicateText"]?.trim();
   if (typedPredicateText !== undefined && typedPredicateText.length > 0) {
+    const normalizedPredicateText = typedPredicateText.replace(
+      /\bLeader or Character cards?\s+on your field\b/iu,
+      "Leader or Character cards",
+    );
     const predicates = parseCardFilterPredicates(
-      { text: typedPredicateText },
+      { text: normalizedPredicateText },
       { powerSemantics: "current" },
     );
     if (predicates !== undefined) {

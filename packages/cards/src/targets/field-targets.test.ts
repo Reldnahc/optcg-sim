@@ -200,6 +200,40 @@ describe("field target parsers", () => {
     });
   });
 
+  it("parses typed own Leader or Character card target with explicit field wording", () => {
+    expect(
+      parseYourLeaderOrCharacterCardsTarget({
+        text: "{Straw Hat Crew} type Leader or Character card on your field gains +1000 power during this turn.",
+      }),
+    ).toEqual({
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            categories: ["leader", "character"],
+            typesAny: ["Straw Hat Crew"],
+          },
+        },
+      },
+      evidence: [
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "filter:type",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+      rest: "gains +1000 power during this turn.",
+    });
+  });
+
   it("parses typed own Leader or Character cards target with reusable cost predicates", () => {
     expect(
       parseYourLeaderOrCharacterCardsTarget({
