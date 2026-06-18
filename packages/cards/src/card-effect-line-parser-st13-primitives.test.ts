@@ -538,3 +538,71 @@ it("parses Life reveal named play with if-you-do Leader power continuation", () 
     ]),
   );
 });
+
+it("parses arbitrary face-up Life face-down cost before conditional opponent Life trash", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may turn 1 of your face-up Life cards face-down: If your opponent has 7 or more cards in their hand, trash up to 1 card from the top of your opponent's Life cards.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "setLifeFaceUp",
+                count: 1,
+                player: "self",
+                position: "anyMatching",
+                faceUp: false,
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: {
+                type: "handCount",
+                player: "opponent",
+                op: "gte",
+                value: 7,
+              },
+              then: {
+                type: "moveCards",
+                min: 0,
+                count: 1,
+                from: {
+                  player: "opponent",
+                  zone: "life",
+                  position: "top",
+                },
+                to: { player: "opponent", zone: "trash" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "cost:setLifeFaceUp",
+      "visibility:faceUp",
+      "destination:faceDown",
+      "condition:handCount",
+      "player:opponent",
+      "instruction:moveCards",
+      "zone:life",
+      "destination:trash",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});

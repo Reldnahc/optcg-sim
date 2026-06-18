@@ -29,6 +29,11 @@ export const canSetLifeFaceUp = (
   ) {
     return false;
   }
+  if (option.position === "anyMatching") {
+    return (
+      selectableLifeVisibilityCardIds(player, option).length >= option.count
+    );
+  }
   const selected =
     option.position === "top"
       ? player.life.slice(0, option.count)
@@ -38,6 +43,14 @@ export const canSetLifeFaceUp = (
     selected.every((lifeCard) => lifeCard.faceUp !== targetLifeFaceUp(option))
   );
 };
+
+export const selectableLifeVisibilityCardIds = (
+  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
+  option: LifeFaceUpPaymentOption,
+) =>
+  player.life
+    .filter((lifeCard) => lifeCard.faceUp !== targetLifeFaceUp(option))
+    .map((lifeCard) => lifeCard.card.instanceId);
 
 export const turnLifeFaceUpPaymentOption = (
   cost: Extract<OptionalPayCostDecision["cost"], { type: "turnLifeFaceUp" }>,

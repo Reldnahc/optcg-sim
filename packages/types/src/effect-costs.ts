@@ -5,14 +5,14 @@ export type TurnLifeFaceUpCost = {
   type: "turnLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom";
+  position: "top" | "bottom" | "anyMatching";
 };
 
 export type SetLifeFaceUpCost = {
   type: "setLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom";
+  position: "top" | "bottom" | "anyMatching";
   faceUp: boolean;
 };
 

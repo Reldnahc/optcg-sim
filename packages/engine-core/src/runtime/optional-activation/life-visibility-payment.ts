@@ -1,6 +1,7 @@
 import type {
   EngineEvent,
   GameState,
+  InstanceId,
   PaymentOption,
   PaymentResponse,
   PlayerId,
@@ -22,14 +23,16 @@ export type LifeVisibilityCostPaidPayload =
       playerId: PlayerId;
       optionId: "turnLifeFaceUp";
       count: number;
-      position: "top" | "bottom";
+      position: "top" | "bottom" | "anyMatching";
+      selectedCardInstanceIds?: readonly InstanceId[];
     }
   | {
       playerId: PlayerId;
       optionId: "setLifeFaceUp";
       count: number;
-      position: "top" | "bottom";
+      position: "top" | "bottom" | "anyMatching";
       faceUp: boolean;
+      selectedCardInstanceIds?: readonly InstanceId[];
     };
 
 export const applyLifeVisibilityPayment = (params: {
@@ -47,10 +50,7 @@ export const applyLifeVisibilityPayment = (params: {
       costPaidPayload: LifeVisibilityCostPaidPayload;
     }
   | { ok: false; message: string } => {
-  if (
-    params.paymentResponse.selectedCardInstanceIds !== undefined ||
-    params.paymentResponse.selectedDonInstanceIds !== undefined
-  ) {
+  if (params.paymentResponse.selectedDonInstanceIds !== undefined) {
     return {
       ok: false,
       message: "Payment Life visibility selection is invalid.",
@@ -63,6 +63,12 @@ export const applyLifeVisibilityPayment = (params: {
           events: params.events,
           player: params.player,
           playerId: params.playerId,
+          ...(params.paymentResponse.selectedCardInstanceIds === undefined
+            ? {}
+            : {
+                selectedCardInstanceIds:
+                  params.paymentResponse.selectedCardInstanceIds,
+              }),
           selectedOption: params.selectedOption,
           state: params.state,
         })
@@ -71,6 +77,12 @@ export const applyLifeVisibilityPayment = (params: {
           events: params.events,
           player: params.player,
           playerId: params.playerId,
+          ...(params.paymentResponse.selectedCardInstanceIds === undefined
+            ? {}
+            : {
+                selectedCardInstanceIds:
+                  params.paymentResponse.selectedCardInstanceIds,
+              }),
           selectedOption: params.selectedOption,
           state: params.state,
         });
@@ -90,6 +102,12 @@ export const applyLifeVisibilityPayment = (params: {
             optionId: "turnLifeFaceUp",
             count: params.selectedOption.count,
             position: params.selectedOption.position,
+            ...(params.paymentResponse.selectedCardInstanceIds === undefined
+              ? {}
+              : {
+                  selectedCardInstanceIds:
+                    params.paymentResponse.selectedCardInstanceIds,
+                }),
           }
         : {
             playerId: params.playerId,
@@ -97,6 +115,12 @@ export const applyLifeVisibilityPayment = (params: {
             count: params.selectedOption.count,
             position: params.selectedOption.position,
             faceUp: params.selectedOption.faceUp,
+            ...(params.paymentResponse.selectedCardInstanceIds === undefined
+              ? {}
+              : {
+                  selectedCardInstanceIds:
+                    params.paymentResponse.selectedCardInstanceIds,
+                }),
           },
   };
 };

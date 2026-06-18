@@ -16,6 +16,51 @@ export const parseTurnLifeFaceUpCost = (
   if (cardinality === undefined) {
     return undefined;
   }
+  const matchingRoute =
+    /^of your face-(?<sourceFace>up|down) Life cards face-(?<face>up|down)$/i.exec(
+      cardinality.rest,
+    );
+  const sourceFaceText = matchingRoute?.groups?.["sourceFace"];
+  const matchingFaceText = matchingRoute?.groups?.["face"];
+  if (sourceFaceText !== undefined && matchingFaceText !== undefined) {
+    const faceUp = matchingFaceText.toLowerCase() === "up";
+    const sourceFaceUp = sourceFaceText.toLowerCase() === "up";
+    if (sourceFaceUp === faceUp) {
+      return undefined;
+    }
+    const cost: Extract<
+      OptionalCost,
+      { type: "turnLifeFaceUp" | "setLifeFaceUp" }
+    > = faceUp
+      ? {
+          type: "turnLifeFaceUp",
+          count: cardinality.count,
+          player: "self",
+          position: "anyMatching",
+          optional: true,
+        }
+      : {
+          type: "setLifeFaceUp",
+          count: cardinality.count,
+          player: "self",
+          position: "anyMatching",
+          faceUp,
+          optional: true,
+        };
+    return {
+      cost,
+      evidence: [
+        faceUp ? "cost:turnLifeFaceUp" : "cost:setLifeFaceUp",
+        ...cardinality.evidence,
+        "player:self",
+        "zone:life",
+        sourceFaceUp ? "visibility:faceUp" : "visibility:faceDown",
+        faceUp ? "destination:faceUp" : "destination:faceDown",
+        ...(faceUp ? (["reveal:bothPlayers"] as const) : []),
+      ],
+      rest: "",
+    };
+  }
   const routeMatch =
     /^card from the (?<position>top|bottom) of your Life cards face-(?<face>up|down)$/i.exec(
       cardinality.rest,

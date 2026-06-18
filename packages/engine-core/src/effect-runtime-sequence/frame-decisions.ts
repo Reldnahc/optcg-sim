@@ -42,6 +42,7 @@ import {
 } from "./rest-from-field-cost-options.js";
 import {
   canSetLifeFaceUp,
+  selectableLifeVisibilityCardIds,
   setLifeFaceUpPaymentOption,
   turnLifeFaceUpPaymentOption,
   type SetLifeFaceUpPaymentOption,
@@ -606,6 +607,24 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "turnLifeFaceUp" || option.type === "setLifeFaceUp") {
+      if (option.position === "anyMatching") {
+        const selectableCardIds = selectableLifeVisibilityCardIds(
+          player,
+          option,
+        );
+        legalPayments.push(
+          ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "payment" as const,
+              optionId: option.id,
+              selectedCardInstanceIds: combo,
+            },
+          })),
+        );
+        continue;
+      }
       if (canSetLifeFaceUp(player, option)) {
         legalPayments.push({
           type: "respondToDecision",

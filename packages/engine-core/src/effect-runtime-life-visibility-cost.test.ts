@@ -13,6 +13,7 @@ import {
   applyAction,
   createActiveState,
   filterStateForPlayer,
+  getLegalActions,
   must,
   p1,
   p2,
@@ -202,4 +203,84 @@ test("optional setLifeFaceUp cost can turn Life face-down and resumes the sequen
     ),
     ["costPaid", "cardDrawn"],
   );
+});
+
+test("optional setLifeFaceUp cost can choose any matching face-up Life card", () => {
+  const { state } = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        id: "turn-any-face-up-life-face-down",
+        connector: "always",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "setLifeFaceUp",
+            count: 1,
+            player: "self",
+            position: "anyMatching",
+            faceUp: false,
+            optional: true,
+          },
+        },
+      },
+      {
+        id: "draw-if-paid",
+        connector: "ifYouDo",
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    ],
+  });
+  const before = must(state.players[p1], "before p1");
+  const hiddenTopLife = must(before.life[0], "hidden top Life");
+  const selectedLife = must(before.life[1], "selected face-up Life");
+  hiddenTopLife.faceUp = false;
+  selectedLife.faceUp = true;
+  const beforeHandCount = before.hand.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "pay cost decision");
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.cost.type, "setLifeFaceUp");
+  assert.deepEqual(decision.paymentOptions, [
+    {
+      id: "setLifeFaceUp:anyMatching:false",
+      type: "setLifeFaceUp",
+      count: 1,
+      player: "self",
+      position: "anyMatching",
+      faceUp: false,
+    },
+  ]);
+
+  const legalPayment = getLegalActions(paused.state, p1).find(
+    (action) =>
+      action.type === "respondToDecision" &&
+      action.response.type === "payment" &&
+      action.response.optionId === "setLifeFaceUp:anyMatching:false",
+  );
+  assert.deepEqual(
+    legalPayment?.type === "respondToDecision" &&
+      legalPayment.response.type === "payment"
+      ? legalPayment.response.selectedCardInstanceIds
+      : undefined,
+    [selectedLife.card.instanceId],
+  );
+
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "setLifeFaceUp:anyMatching:false",
+      selectedCardInstanceIds: [selectedLife.card.instanceId],
+    },
+  });
+  const after = must(paid.state.players[p1], "after p1");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(must(after.life[0], "after top Life").faceUp, false);
+  assert.equal(must(after.life[1], "after selected Life").faceUp, false);
+  assert.equal(after.hand.length, beforeHandCount + 1);
 });
