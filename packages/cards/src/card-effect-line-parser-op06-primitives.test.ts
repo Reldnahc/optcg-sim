@@ -71,4 +71,74 @@ describe("OP06 primitive parser support", () => {
       ]),
     );
   });
+
+  it("parses conditional battle protection and power gain followed by Life movement", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] If your Leader has the {New Fish-Man Pirates} type, this Character cannot be K.O.'d in battle and gains +2000 power until the start of your next turn. Then, add 1 card from the top of your Life cards to your hand.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "whenAttacking" },
+        condition: {
+          type: "hasCardInZone",
+          player: "self",
+          zone: "leaderArea",
+          filter: {
+            categories: ["leader"],
+            typesAny: ["New Fish-Man Pirates"],
+          },
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "protectFromKO",
+                      target: { type: "self" },
+                      sourceKind: "battle",
+                      duration: { type: "untilStartOfNextTurn" },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "modifyPower",
+                      target: { type: "self" },
+                      value: 2000,
+                      duration: { type: "untilStartOfNextTurn" },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "self", zone: "life", position: "top" },
+                to: { player: "self", zone: "hand" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "expression:conditional",
+        "instruction:giveProtection",
+        "protectionSource:battle",
+        "instruction:modifyPower",
+        "instruction:moveCards",
+      ]),
+    );
+  });
 });

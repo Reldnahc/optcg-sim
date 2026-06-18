@@ -1,3 +1,5 @@
+import type { Duration, Effect } from "@optcg/types";
+
 import {
   fieldEffectDurationParsers,
   parseDurationFromSet,
@@ -17,6 +19,7 @@ import type {
   PrimitiveEvidence,
 } from "../../types.js";
 import type { ContinuousInstructionParser } from "../continuous-field-effects.js";
+import { parseContinuousModifierListForTarget } from "../continuous-field-effects/modifier-list.js";
 import { effectSequence } from "../effect-builders.js";
 import { buildProtectionEffectWithTarget } from "./builders.js";
 
@@ -230,6 +233,11 @@ export const parseExplicitProtectionInstruction: InstructionParser = (
 export const parseExplicitDurationProtectionInstruction: InstructionParser = (
   input,
 ): InstructionParseResult | undefined => {
+  const protectionAndModifier = parseProtectionAndModifierInstruction(input);
+  if (protectionAndModifier !== undefined) {
+    return protectionAndModifier;
+  }
+
   const result = parseProtectionInstruction(input, { condition: undefined });
   if (
     result === undefined ||
@@ -241,3 +249,135 @@ export const parseExplicitDurationProtectionInstruction: InstructionParser = (
   }
   return result;
 };
+
+const parseProtectionAndModifierInstruction: InstructionParser = (
+  input,
+): InstructionParseResult | undefined => {
+  const target = parseProtectionTarget(input);
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const parsedProcesses = parseProtectionProcesses(target.rest);
+  if (parsedProcesses === undefined) {
+    return undefined;
+  }
+
+  const split = splitProtectionSourceAndModifier(parsedProcesses.rest);
+  if (split === undefined) {
+    return undefined;
+  }
+
+  const source = parseProtectionSource({ text: split.sourceText });
+  if (source === undefined || source.rest.length > 0) {
+    return undefined;
+  }
+
+  const modifier = parseContinuousModifierListForTarget({
+    target: target.target,
+    targetEvidence: target.evidence,
+    text: split.modifierText,
+    context: { condition: undefined },
+  });
+  const duration = modifierDuration(modifier?.effect);
+  if (modifier === undefined || duration === undefined) {
+    return undefined;
+  }
+
+  const protectionEffects = parsedProcesses.processes.map((process) =>
+    buildProtectionEffectWithTarget({
+      duration,
+      process: process.type,
+      sourceCardCategories: source.source.cardCategories,
+      sourceCardFilter: source.source.cardFilter,
+      sourceKind: source.source.kind,
+      sourceControllerRelation: source.source.controllerRelation,
+      target: target.target,
+    }),
+  );
+  const effect = effectSequence(
+    [...protectionEffects, ...flattenEffect(modifier.effect)],
+    "then",
+  );
+  if (effect === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect,
+    evidence: [
+      "instruction:giveProtection",
+      ...target.evidence,
+      ...parsedProcesses.evidence,
+      ...source.evidence,
+      ...modifier.evidence,
+    ],
+    rest: "",
+  };
+};
+
+function splitProtectionSourceAndModifier(
+  text: string,
+): { readonly sourceText: string; readonly modifierText: string } | undefined {
+  const match = /^(?<source>.+?)\s+and\s+gains?\s+(?<modifier>.+)$/iu.exec(
+    text,
+  );
+  const sourceText = match?.groups?.["source"]?.trim();
+  const modifierText = match?.groups?.["modifier"]?.trim();
+  return sourceText === undefined ||
+    sourceText.length === 0 ||
+    modifierText === undefined ||
+    modifierText.length === 0
+    ? undefined
+    : { sourceText, modifierText };
+}
+
+function modifierDuration(effect: Effect | undefined): Duration | undefined {
+  if (effect === undefined) {
+    return undefined;
+  }
+  if (
+    effect.type === "modifyPower" ||
+    effect.type === "modifyCost" ||
+    effect.type === "giveKeyword"
+  ) {
+    return effect.duration;
+  }
+  if (effect.type !== "sequence") {
+    return undefined;
+  }
+
+  const durations = effect.effects
+    .map((segment) =>
+      segment.effect.type === "payCost"
+        ? undefined
+        : modifierDuration(segment.effect),
+    )
+    .filter((duration): duration is Duration => duration !== undefined);
+  const first = durations[0];
+  if (first === undefined || durations.length !== effect.effects.length) {
+    return undefined;
+  }
+  return durations.every((duration) => sameDuration(duration, first))
+    ? first
+    : undefined;
+}
+
+function sameDuration(left: Duration, right: Duration): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function flattenEffect(effect: Effect): readonly Effect[] {
+  if (effect.type !== "sequence") {
+    return [effect];
+  }
+
+  const effects: Effect[] = [];
+  for (const segment of effect.effects) {
+    if (segment.effect.type === "payCost") {
+      return [effect];
+    }
+    effects.push(segment.effect);
+  }
+  return effects;
+}
