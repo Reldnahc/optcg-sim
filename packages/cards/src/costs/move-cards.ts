@@ -99,7 +99,7 @@ export const parseMoveCardsCost = (
       type: "moveCards",
       count: cardinality.count,
       chooser: "self",
-      from: { player: "self", zone: "characterArea" },
+      from: { player: "self", zone: fieldToOwnerDeckBottom.zone },
       to: { player: "self", zone: "deck", position: "bottom" },
       order: "chooserChoice",
       filter: fieldToOwnerDeckBottom.filter,
@@ -109,7 +109,9 @@ export const parseMoveCardsCost = (
       "cost:moveCards",
       ...cardinality.evidence,
       "player:self",
-      "zone:characterArea",
+      fieldToOwnerDeckBottom.zone === "stageArea"
+        ? "zone:stageArea"
+        : "zone:characterArea",
       "destination:deck",
       "position:bottom",
       ...fieldToOwnerDeckBottom.evidence,
@@ -329,10 +331,11 @@ function parseFieldToOwnerDeckBottomCostRoute(text: string):
       readonly filter: NonNullable<
         ReturnType<typeof parseCardFilterPredicates>
       >["filter"];
+      readonly zone: "characterArea" | "stageArea";
     }
   | undefined {
   const match =
-    /^of your (?<target>.+?) at the bottom of (?:the owner's|your) deck$/iu.exec(
+    /^(?:of your\s+)?(?<target>.+?) at the bottom of (?:the owner's|your) deck$/iu.exec(
       text,
     );
   const targetText = match?.groups?.["target"];
@@ -343,14 +346,18 @@ function parseFieldToOwnerDeckBottomCostRoute(text: string):
     { text: targetText },
     { powerSemantics: "current" },
   );
-  if (
-    predicates === undefined ||
-    predicates.rest.length > 0 ||
-    predicates.filter.categories?.[0] !== "character"
-  ) {
+  if (predicates === undefined || predicates.rest.length > 0) {
     return undefined;
   }
-  return { filter: predicates.filter, evidence: predicates.evidence };
+  const category = predicates.filter.categories?.[0];
+  if (category !== "character" && category !== "stage") {
+    return undefined;
+  }
+  return {
+    filter: predicates.filter,
+    evidence: predicates.evidence,
+    zone: category === "stage" ? "stageArea" : "characterArea",
+  };
 }
 
 function parseThisStageToOwnerDeckBottomCostRoute(

@@ -114,3 +114,128 @@ it("parses this Character owner-deck-bottom movement as an optional cost into a 
     ]),
   );
 });
+
+it("parses filtered Stage owner-deck-bottom movement as an optional cost into K.O.", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may place 1 Stage with a cost of 1 at the bottom of the owner's deck: K.O. up to 1 of your opponent's Characters with a cost of 2 or less.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 1,
+                chooser: "self",
+                from: { player: "self", zone: "stageArea" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+                filter: { categories: ["stage"], cost: { op: "eq", value: 1 } },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      player: "opponent",
+                      zone: "characterArea",
+                      min: 0,
+                      max: 1,
+                      filter: { categories: ["character"], cost: { max: 2 } },
+                    },
+                  },
+                },
+                { effect: { type: "ko" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:moveCards",
+      "zone:stageArea",
+      "filter:category:stage",
+      "filter:cost",
+      "destination:deck",
+      "position:bottom",
+      "instruction:ko",
+      "target:opponentCharacters",
+    ]),
+  );
+});
+
+it("reuses filtered Stage owner-deck-bottom cost before a search body", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may place 1 Stage with a cost of 1 at the bottom of the owner's deck: Look at 5 cards from the top of your deck; reveal up to 1 [Upper Yard] or {Shandian Warrior} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 1,
+                from: { player: "self", zone: "stageArea" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+                filter: { categories: ["stage"], cost: { op: "eq", value: 1 } },
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                { effect: { type: "revealTop", count: 5 } },
+                { effect: { type: "selectFromSet", min: 0, max: 1 } },
+                { effect: { type: "revealSelected" } },
+                { effect: { type: "moveSelected", to: "hand" } },
+                { effect: { type: "placeSetRemainder" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "cost:moveCards",
+      "zone:stageArea",
+      "filter:category:stage",
+      "instruction:revealTop",
+      "look:topDeck",
+      "instruction:revealSelected",
+      "instruction:placeSetRemainder",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});
