@@ -287,4 +287,59 @@ describe("card effect line parser hand to deck-bottom movement", () => {
       ]),
     );
   });
+
+  it("parses self-chosen opponent trash bottom-deck placement with up-to cardinality", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may place up to 1 card from your opponent's trash at the bottom of their deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "trashSelection:opponent-trash-to-deck-bottom",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                player: "opponent",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                saveAs: "trashSelection:opponent-trash-to-deck-bottom",
+                visibility: "bothPlayers",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "moveSelected",
+                selection: "trashSelection:opponent-trash-to-deck-bottom",
+                from: "trash",
+                to: "deck",
+                position: "bottom",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:moveSelected",
+        "cardinality:upTo",
+        "zone:trash",
+        "player:opponent",
+        "chooser:self",
+        "zone:deck",
+        "position:bottom",
+        "composition:selectThenMove",
+      ]),
+    );
+  });
 });

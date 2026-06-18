@@ -700,3 +700,103 @@ it("parses leader-typed self field-removal replacement with owner deck-bottom in
     ]),
   );
 });
+
+it("parses trash-to-bottom cost before opponent hand trash and opponent trash cleanup", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may place 3 cards from your trash at the bottom of your deck in any order: Your opponent trashes 1 card from their hand. Then, you may place up to 1 card from your opponent's trash at the bottom of their deck.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 3,
+                from: { player: "self", zone: "trash" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "trashFromHand",
+                    player: "opponent",
+                    chooser: "opponent",
+                    count: 1,
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "sequence",
+                    effects: [
+                      {
+                        id: "optional-action",
+                        optional: true,
+                        effect: {
+                          type: "sequence",
+                          effects: [
+                            {
+                              saveResultAs:
+                                "trashSelection:opponent-trash-to-deck-bottom",
+                              effect: {
+                                type: "selectCards",
+                                zone: "trash",
+                                player: "opponent",
+                                chooser: "self",
+                                min: 0,
+                                max: 1,
+                              },
+                            },
+                            {
+                              effect: {
+                                type: "moveSelected",
+                                from: "trash",
+                                to: "deck",
+                                position: "bottom",
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "cost:moveCards",
+      "instruction:trashFromHand",
+      "instruction:moveSelected",
+      "zone:trash",
+      "player:opponent",
+      "chooser:self",
+      "destination:deck",
+      "position:bottom",
+      "composition:optionalCostedEffect",
+      "composition:selectThenMove",
+    ]),
+  );
+});

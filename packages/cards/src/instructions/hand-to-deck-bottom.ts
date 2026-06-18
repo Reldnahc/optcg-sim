@@ -1,5 +1,9 @@
 import type { CardFilter, SelectionId } from "@optcg/types";
 
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
@@ -31,18 +35,16 @@ const deckPlacementEvidence = (
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   const match =
-    /^(?:(?<player>your opponent|you|they) places?|place) (?<count>\d+) (?<selection>.+?) from (?<possessive>their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
+    /^(?:(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?: in any order)?\.?$/i.exec(
       input.text,
     );
-  const countText = match?.groups?.["count"];
   const selectionText = match?.groups?.["selection"]?.trim();
-  const playerText = match?.groups?.["player"]?.toLowerCase() ?? "you";
+  const actorText = match?.groups?.["actor"]?.toLowerCase() ?? "you";
   const possessive = match?.groups?.["possessive"]?.toLowerCase();
   const zoneText = match?.groups?.["zone"]?.toLowerCase();
   const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
   const placementText = match?.groups?.["placement"]?.toLowerCase();
   if (
-    countText === undefined ||
     selectionText === undefined ||
     possessive === undefined ||
     zoneText === undefined ||
@@ -51,8 +53,9 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   ) {
     return undefined;
   }
-  const count = Number.parseInt(countText, 10);
-  if (!Number.isSafeInteger(count) || count <= 0) {
+
+  const cardinality = parseDeckPlacementCardinality(selectionText);
+  if (cardinality === undefined) {
     return undefined;
   }
   const placement = parseDeckPlacement(placementText);
@@ -63,19 +66,15 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   if (zone === undefined) {
     return undefined;
   }
-  const selectionFilter = parseSelectionFilter(selectionText);
+  const selectionFilter = parseSelectionFilter(cardinality.rest);
   if (selectionFilter === undefined) {
     return undefined;
   }
-  const player =
-    playerText === "your opponent" || playerText === "they"
-      ? "opponent"
-      : "self";
-  const expectedPossessive = player === "opponent" ? "their" : "your";
-  if (
-    possessive !== expectedPossessive ||
-    deckPossessive !== expectedPossessive
-  ) {
+  const chooser =
+    actorText === "your opponent" || actorText === "they" ? "opponent" : "self";
+  const player = ownerFromPossessive(possessive);
+  const deckOwner = ownerFromDeckPossessive(deckPossessive);
+  if (player === undefined || deckOwner === undefined || player !== deckOwner) {
     return undefined;
   }
   const selection = selectionFor(player, zone);
@@ -92,9 +91,9 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
             type: "selectCards",
             zone,
             player,
-            chooser: player,
-            min: count,
-            max: count,
+            chooser,
+            min: cardinality.min,
+            max: cardinality.max,
             ...(selectionFilter.filter === undefined
               ? {}
               : { filter: selectionFilter.filter }),
@@ -116,18 +115,63 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
     },
     evidence: [
       "instruction:moveSelected",
-      "cardinality:exact",
+      ...cardinality.evidence,
       "count:positiveInteger",
       ...selectionFilter.evidence,
       `zone:${zone}`,
       player === "opponent" ? "player:opponent" : "player:self",
-      player === "opponent" ? "chooser:opponent" : "chooser:self",
+      chooser === "opponent" ? "chooser:opponent" : "chooser:self",
       "zone:deck",
       ...deckPlacementEvidence(placement),
       "composition:selectThenMove",
     ],
     rest: "",
   };
+};
+
+const parseDeckPlacementCardinality = (
+  text: string,
+):
+  | {
+      readonly min: number;
+      readonly max: number;
+      readonly rest: string;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const upTo = parseUpToCardinality({ text });
+  if (upTo !== undefined && upTo.rest.length > 0) {
+    return {
+      min: upTo.cardinality.min,
+      max: upTo.cardinality.max,
+      rest: upTo.rest,
+      evidence: upTo.evidence,
+    };
+  }
+  const exact = parseExactCardinality({ text });
+  if (exact === undefined || exact.rest.length === 0) {
+    return undefined;
+  }
+  return {
+    min: exact.count,
+    max: exact.count,
+    rest: exact.rest,
+    evidence: exact.evidence,
+  };
+};
+
+const ownerFromPossessive = (text: string): "self" | "opponent" | undefined => {
+  if (text === "your") return "self";
+  if (text === "their" || text === "your opponent's") return "opponent";
+  return undefined;
+};
+
+const ownerFromDeckPossessive = (
+  text: string,
+): "self" | "opponent" | undefined => {
+  if (text === "your") return "self";
+  if (text === "their") return "opponent";
+  return undefined;
 };
 
 const parseSelectionFilter = (
