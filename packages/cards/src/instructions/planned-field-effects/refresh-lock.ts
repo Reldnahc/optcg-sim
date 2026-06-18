@@ -1,9 +1,17 @@
-import type { CardCategory, CardFilter, Target, Zone } from "@optcg/types";
+import type {
+  CardCategory,
+  CardFilter,
+  PlayerRef,
+  Target,
+  TargetPlayerRef,
+  Zone,
+} from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
 import {
   attackRestrictionDurationParsers,
+  type DurationParseResult,
   parseDurationFromSet,
   refreshRestrictionDurationParsers,
 } from "../../durations/index.js";
@@ -63,9 +71,9 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
     return undefined;
   }
 
-  const duration = parseDurationFromSet(
-    { text: durationText },
-    refreshRestrictionDurationParsers,
+  const duration = parseRefreshRestrictionDurationForTarget(
+    durationText,
+    thatCharacterSavedTarget,
   );
   if (
     duration === undefined ||
@@ -104,9 +112,9 @@ export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser
       return undefined;
     }
 
-    const duration = parseDurationFromSet(
-      { text: durationText },
-      refreshRestrictionDurationParsers,
+    const duration = parseRefreshRestrictionDurationForTarget(
+      durationText,
+      parsedTarget.target,
     );
     if (
       duration === undefined ||
@@ -324,6 +332,71 @@ const parseOpponentRefreshLockTarget = (
     rest: allTarget.rest.trim(),
   };
 };
+
+function parseRefreshRestrictionDurationForTarget(
+  text: string,
+  target: Target,
+): DurationParseResult | undefined {
+  const explicit = parseDurationFromSet(
+    { text },
+    refreshRestrictionDurationParsers,
+  );
+  if (explicit !== undefined) {
+    return explicit;
+  }
+
+  if (!/^in the next Refresh Phase\.?$/iu.test(text)) {
+    return undefined;
+  }
+
+  const player = concreteTargetPlayer(target);
+  if (player === undefined) {
+    return undefined;
+  }
+
+  return {
+    duration: { type: "untilStartOfNextTurn", player },
+    evidence: [
+      player === "opponent"
+        ? "duration:opponentNextRefreshPhase"
+        : "duration:selfNextRefreshPhase",
+    ],
+    rest: "",
+  };
+}
+
+function concreteTargetPlayer(target: Target): PlayerRef | undefined {
+  switch (target.type) {
+    case "all":
+      return concretePlayerRef(target.player);
+    case "choose":
+      return concretePlayerRef(target.request.player);
+    case "chooseFromZones":
+      return concretePlayerRef(target.request.player);
+    case "savedFieldObject":
+      return concretePlayerRef(target.player);
+    case "myLeader":
+    case "self":
+      return "self";
+    case "opponentLeader":
+      return "opponent";
+    case "affectedCard":
+    case "attacker":
+    case "attackTarget":
+    case "blocker":
+    case "player":
+    case "replacementTarget":
+    case "savedSelectedCard":
+    case "triggerCard":
+      return undefined;
+  }
+}
+
+function concretePlayerRef(
+  player: TargetPlayerRef | undefined,
+): PlayerRef | undefined {
+  return player === "self" || player === "opponent" ? player : undefined;
+}
 
 const parseOpponentRestedDonRefreshLockTarget = (
   text: string,

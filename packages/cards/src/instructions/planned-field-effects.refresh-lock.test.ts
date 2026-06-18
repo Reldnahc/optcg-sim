@@ -83,6 +83,46 @@ describe("planned refresh-lock field-effect instruction parser", () => {
     });
   });
 
+  it("resolves unqualified next Refresh Phase against concrete opponent targets", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "up to 1 of your opponent's Characters with a cost of 0 will not become active in the next Refresh Phase.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "choose",
+          request: {
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              cost: { op: "eq", value: 0 },
+            },
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "player:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses direct opponent Character refresh locks during this turn", () => {
     expect(
       parsePreventOpponentCharactersRefreshInstruction({

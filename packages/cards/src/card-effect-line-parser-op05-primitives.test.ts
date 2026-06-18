@@ -465,3 +465,74 @@ it("parses circled DON plus two rest costs before reusable trash-to-hand selecti
     ]),
   );
 });
+
+it("parses cost reduction followed by unqualified next-refresh activation lock", () => {
+  const result = parseCardEffectLine(
+    "[Main] Give up to 1 of your opponent's Characters −3 cost during this turn. Then, up to 1 of your opponent's Characters with a cost of 0 will not become active in the next Refresh Phase.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "modifyCost",
+              target: {
+                type: "choose",
+                request: {
+                  player: "opponent",
+                  zone: "characterArea",
+                  min: 0,
+                  max: 1,
+                  filter: { categories: ["character"] },
+                },
+              },
+              value: -3,
+              duration: { type: "thisTurn" },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "cannotBecomeActive",
+              target: {
+                type: "choose",
+                request: {
+                  player: "opponent",
+                  zone: "characterArea",
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    categories: ["character"],
+                    cost: { op: "eq", value: 0 },
+                  },
+                },
+              },
+              duration: { type: "untilStartOfNextTurn", player: "opponent" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "instruction:modifyCost",
+      "modifier:costReduction",
+      "duration:thisTurn",
+      "connector:then",
+      "instruction:preventActivation",
+      "target:opponentCharacters",
+      "filter:cost",
+      "duration:opponentNextRefreshPhase",
+      "composition:entryExpression",
+    ]),
+  );
+});
