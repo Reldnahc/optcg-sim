@@ -90,7 +90,8 @@ export const isSupportedKoSegment = (
     (effect.target.type === "all" &&
       effect.target.zone === "characterArea" &&
       (effect.target.player === "self" ||
-        effect.target.player === "opponent") &&
+        effect.target.player === "opponent" ||
+        effect.target.player === "anyPlayer") &&
       isSupportedPublicFieldTargetFilter(effect.target.filter)));
 
 export const isSupportedBounceSegment = (

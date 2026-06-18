@@ -158,7 +158,7 @@ function parseNamedCardsFilter(text: string):
 
 function parseFieldTargetOwnership(text: string):
   | {
-      readonly player: "self" | "opponent";
+      readonly player: "self" | "opponent" | "anyPlayer";
       readonly evidence: readonly PrimitiveEvidence[];
       readonly rest: string;
     }
@@ -176,7 +176,16 @@ function parseFieldTargetOwnership(text: string):
   const match = /^of your\s+(?<rest>.+)$/i.exec(text);
   const rest = match?.groups?.["rest"];
   if (rest === undefined) {
-    return undefined;
+    const anyPlayerMatch = /^(?<rest>Characters?\b.+)$/iu.exec(text);
+    const anyPlayerRest = anyPlayerMatch?.groups?.["rest"];
+    if (anyPlayerRest === undefined) {
+      return undefined;
+    }
+    return {
+      player: "anyPlayer",
+      evidence: ["player:any"],
+      rest: anyPlayerRest.trim(),
+    };
   }
 
   return {

@@ -306,7 +306,7 @@ export type Target =
   | { type: "triggerCard" }
   | { type: "replacementTarget" }
   | { type: "player"; player: PlayerRef }
-  | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
+  | { type: "all"; zone: Zone; player: TargetPlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }
   | { type: "chooseFromZones"; request: MultiZoneTargetRequest }
   | SavedFieldObjectTarget;

@@ -74,4 +74,32 @@ describe("all field target parser", () => {
       rest: "",
     });
   });
+
+  it("parses ownerless all Characters as an any-player field target", () => {
+    expect(
+      parseAllFieldTarget({
+        text: "all Characters with a cost of 1 or less",
+      }),
+    ).toMatchObject({
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "anyPlayer",
+        filter: {
+          categories: ["character"],
+          cost: { max: 1 },
+        },
+      },
+      evidence: [
+        "cardinality:all",
+        "player:any",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
 });

@@ -284,6 +284,99 @@ test("all-target K.O. sequence filters against current computed power", () => {
   );
 });
 
+test("all-target K.O. can target matching Characters on both fields", () => {
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "ko",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "anyPlayer",
+            filter: { categories: ["character"], cost: { max: 1 } },
+          },
+        },
+      },
+    ],
+  });
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const source = must(p1State.characters[0], "source");
+  const selfTarget = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[1], "self low-cost target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const opponentTarget = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "opponent low-cost target"),
+    zone: "characterArea",
+    index: 0,
+  });
+  const opponentSurvivor = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "opponent high-cost target"),
+    zone: "characterArea",
+    index: 1,
+  });
+  const sourceSupportCard = must(
+    state.cardManifest.cards[source.cardId],
+    "source support card",
+  );
+  state.cardManifest.cards[source.cardId] = {
+    ...sourceSupportCard,
+    category: "character",
+    cost: 5,
+    power: 5000,
+  };
+  for (const card of [selfTarget, opponentTarget]) {
+    state.cardManifest.cards[card.cardId] = resolvedCard({
+      cardId: card.cardId,
+      category: "character",
+      cost: 1,
+      power: 5000,
+    });
+  }
+  state.cardManifest.cards[opponentSurvivor.cardId] = resolvedCard({
+    cardId: opponentSurvivor.cardId,
+    category: "character",
+    cost: 2,
+    power: 5000,
+  });
+
+  const result = processEffectRuntime(state);
+  const nextP1 = must(result.state.players[p1], "p1 result");
+  const nextP2 = must(result.state.players[p2], "p2 result");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    nextP1.characters.some((card) => card.instanceId === source.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP1.trash.some((card) => card.instanceId === selfTarget.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.trash.some((card) => card.instanceId === opponentTarget.instanceId),
+    true,
+  );
+  assert.equal(
+    nextP2.characters.some(
+      (card) => card.instanceId === opponentSurvivor.instanceId,
+    ),
+    true,
+  );
+});
+
 test("optional-cost nested all-target K.O. sequence filters against current computed power", () => {
   assertZeroPowerKoAfterLifeFaceUpCost(
     optionalCostThenNestedReduceOpponentPowerThenKoZeroPowerSequence(),

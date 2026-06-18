@@ -253,7 +253,7 @@ const targetPlayersForAllTarget = (
     const opponentId = getOpponentId(state, entry.controllerId);
     return opponentId === null ? [] : [opponentId];
   }
-  return [];
+  return Object.keys(state.players) as CardRef["playerId"][];
 };
 
 export const applyAllTargetKoSequenceSegment = (params: {

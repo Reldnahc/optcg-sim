@@ -35,6 +35,38 @@ describe("K.O. instruction parser", () => {
     });
   });
 
+  it("parses ownerless all Character K.O. as an any-player all target", () => {
+    expect(
+      parseKoInstruction({
+        text: "K.O. all Characters with a cost of 1 or less.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "ko",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "anyPlayer",
+          filter: {
+            categories: ["character"],
+            cost: { max: 1 },
+          },
+        },
+      },
+      evidence: [
+        "instruction:ko",
+        "cardinality:all",
+        "player:any",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses K.O. as an action consuming a reusable selected field target request", () => {
     expect(
       parseKoInstruction({
