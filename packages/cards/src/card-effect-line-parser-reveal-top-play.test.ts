@@ -140,4 +140,103 @@ describe("card effect line parser reveal-top play effects", () => {
       ]),
     );
   });
+
+  it("parses revealed top-deck play rested with top-or-bottom remainder", () => {
+    const result = parseCardEffectLine(
+      "[When Attacking] Reveal 1 card from the top of your deck and play up to 1 Character card with a cost of 2 rested. Then, place the rest at the top or bottom of your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", visibility: "bothPlayers" } },
+            {
+              effect: {
+                type: "selectFromSet",
+                filter: {
+                  categories: ["character"],
+                  cost: { op: "eq", value: 2 },
+                },
+              },
+            },
+            { effect: { type: "playSelected", enterRested: true } },
+            { effect: { type: "placeSetRemainder", position: "topOrBottom" } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "instruction:playSelected",
+        "state:rested",
+        "instruction:placeSetRemainder",
+      ]),
+    );
+  });
+
+  it("parses comma-separated revealed top-deck play with top-or-bottom remainder", () => {
+    const result = parseCardEffectLine(
+      "[Counter] Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, reveal 1 card from the top of your deck, play up to 1 Character card with a cost of 2, and place the rest at the top or bottom of your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "modifyPower",
+                duration: { type: "thisBattle" },
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  { effect: { type: "revealTop" } },
+                  {
+                    effect: {
+                      type: "selectFromSet",
+                      filter: {
+                        categories: ["character"],
+                        cost: { op: "eq", value: 2 },
+                      },
+                    },
+                  },
+                  { effect: { type: "playSelected" } },
+                  {
+                    effect: {
+                      type: "placeSetRemainder",
+                      position: "topOrBottom",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventCounter",
+        "instruction:modifyPower",
+        "duration:thisBattle",
+        "instruction:revealTop",
+        "instruction:playSelected",
+        "instruction:placeSetRemainder",
+      ]),
+    );
+  });
 });

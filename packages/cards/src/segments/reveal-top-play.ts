@@ -51,6 +51,7 @@ export function revealTopPlayExpressionParser(
   return {
     effect: createRevealedSetPlaySequence({
       filter: play.filter,
+      enterRested: play.enterRested,
       max: play.max,
     }),
     evidence,
@@ -70,18 +71,20 @@ export function revealTopPlayExpressionParser(
 function parseRevealTopPlaySelection(input: ParseInput):
   | {
       readonly filter: CardFilter;
+      readonly enterRested: boolean;
       readonly max: number;
       readonly evidence: readonly PrimitiveEvidence[];
       readonly rest: string;
     }
   | undefined {
   const match =
-    /^Reveal 1 card from the top of your deck and play up to (?<max>[1-9]\d*) (?<filterText>.+?)(?:\.\s+Then,\s+)(?<remainingText>place the rest.+)$/iu.exec(
+    /^Reveal 1 card from the top of your deck(?:\s+and|,)\s+play up to (?<max>[1-9]\d*) (?<filterText>.+?)(?<rested>\s+rested)?(?:\.\s+Then,\s+|,\s+and\s+)(?<remainingText>place the rest.+)$/iu.exec(
       input.text,
     );
   const maxText = match?.groups?.["max"];
   const filterText = match?.groups?.["filterText"];
   const remainingText = match?.groups?.["remainingText"];
+  const restedText = match?.groups?.["rested"];
   if (
     maxText === undefined ||
     filterText === undefined ||
@@ -97,16 +100,23 @@ function parseRevealTopPlaySelection(input: ParseInput):
 
   return {
     filter: predicates.filter,
+    enterRested: restedText !== undefined,
     max: Number.parseInt(maxText, 10),
-    evidence: ["cardinality:upTo", ...predicates.evidence],
+    evidence: [
+      "cardinality:upTo",
+      ...predicates.evidence,
+      ...(restedText === undefined ? [] : (["state:rested"] as const)),
+    ],
     rest: `Then, ${remainingText}`,
   };
 }
 
 function createRevealedSetPlaySequence({
+  enterRested,
   filter,
   max,
 }: {
+  readonly enterRested: boolean;
   readonly filter: CardFilter;
   readonly max: number;
 }): Extract<Effect, { type: "sequence" }> {
@@ -141,6 +151,7 @@ function createRevealedSetPlaySequence({
         effect: {
           type: "playSelected",
           selection: revealedPlaySelection,
+          ...(enterRested ? { enterRested } : {}),
           ignoreCost: true,
         },
       },
