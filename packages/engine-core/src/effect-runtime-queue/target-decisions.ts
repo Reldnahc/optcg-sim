@@ -49,11 +49,23 @@ import {
 } from "../rules/once-per-turn.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
+import { canExposeQueueEntryIdentity } from "./unsupported.js";
 
-export type EffectQueuePendingRuntimeWork = {
+export type UnsupportedPendingRuntimeWorkGate =
+  | "queue-ordering"
+  | "queue-entry-resolution"
+  | "queue-source-presence"
+  | "queue-effect-definition"
+  | "deferred-trigger-release";
+
+export interface EffectQueuePendingRuntimeWork {
   kind: "effectQueue";
   count: number;
-};
+  gate?: UnsupportedPendingRuntimeWorkGate;
+  queueEntryId?: string;
+  effectId?: string;
+  queueReason?: string;
+}
 
 export type CreateUnsupportedPendingRuntimeWorkError = (
   work: EffectQueuePendingRuntimeWork,
@@ -338,6 +350,22 @@ export const isUnsupportedSelectTargetsDecision = (
 export const createEffectRuntimeQueueTargetDecisions = (
   dependencies: EffectRuntimeQueueTargetDecisionDependencies,
 ): EffectRuntimeQueueTargetDecisions => {
+  const unsupportedTargetRequestWork = (
+    entry: EffectQueueEntry,
+    count: number,
+  ): EffectQueuePendingRuntimeWork => ({
+    kind: "effectQueue",
+    count,
+    gate: "queue-entry-resolution",
+    queueReason: "unsupported-target-request",
+    ...(canExposeQueueEntryIdentity(entry)
+      ? {
+          queueEntryId: String(entry.id),
+          effectId: String(entry.effectBlockId),
+        }
+      : {}),
+  });
+
   const failUnsupportedTargetEffectContinuation = (
     state: GameState,
     options: EngineResultOptions = {},
@@ -671,8 +699,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
         [],
         [
           dependencies.createUnsupportedPendingRuntimeWorkError({
-            kind: "effectQueue",
-            count: options.errorCount,
+            ...unsupportedTargetRequestWork(entry, options.errorCount),
           }),
         ],
       );

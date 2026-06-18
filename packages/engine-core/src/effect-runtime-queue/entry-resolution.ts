@@ -108,7 +108,15 @@ export const createQueueEntryResolver = (
         nextState,
         selected,
       );
-      if (queuedEffect?.conditionTiming !== undefined) {
+      if (queuedEffect === undefined) {
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-effect-definition",
+          entry: selected,
+          exposeEntryIdentity: true,
+          queueReason: "missing-effect-definition",
+        });
+      }
+      if (queuedEffect.conditionTiming !== undefined) {
         return unsupportedEffectQueueResult(originalState, {
           gate: "queue-entry-resolution",
           entry: selected,
@@ -119,7 +127,7 @@ export const createQueueEntryResolver = (
       const conditionResult = evaluateQueuedEffectCondition(
         nextState,
         selected,
-        queuedEffect?.condition,
+        queuedEffect.condition,
       );
       if (!conditionResult.supported) {
         return unsupportedEffectQueueResult(originalState, {
@@ -150,7 +158,7 @@ export const createQueueEntryResolver = (
       let queuedEffectForBodyResolution = queuedEffect;
       let selectedForBodyResolution = selected;
       let drawEffect: Extract<Effect, { type: "draw" }> | undefined;
-      if (queuedEffect?.optional === true) {
+      if (queuedEffect.optional === true) {
         const optionalSupportShape =
           queuedEffectResolvers.withoutConditionFields(queuedEffect);
         if (
@@ -445,27 +453,25 @@ export const createQueueEntryResolver = (
           });
         }
       }
-      if (queuedEffect !== undefined) {
-        if (
-          !canAdmitOncePerTurnEffect(
-            nextState,
-            selectedForBodyResolution,
-            queuedEffect,
-          )
-        ) {
-          return unsupportedEffectQueueResult(originalState, {
-            gate: "queue-entry-resolution",
-            entry: selectedForBodyResolution,
-            exposeEntryIdentity: true,
-            queueReason: "once-per-turn-admission-failed",
-          });
-        }
-        nextState = consumeOncePerTurnForQueueEntry(
+      if (
+        !canAdmitOncePerTurnEffect(
           nextState,
           selectedForBodyResolution,
           queuedEffect,
-        );
+        )
+      ) {
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-entry-resolution",
+          entry: selectedForBodyResolution,
+          exposeEntryIdentity: true,
+          queueReason: "once-per-turn-admission-failed",
+        });
       }
+      nextState = consumeOncePerTurnForQueueEntry(
+        nextState,
+        selectedForBodyResolution,
+        queuedEffect,
+      );
 
       const resolvingEntry: EffectQueueEntry = {
         ...selectedForBodyResolution,

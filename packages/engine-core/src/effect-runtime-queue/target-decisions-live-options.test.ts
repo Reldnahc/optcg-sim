@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { TargetRequest } from "@optcg/types";
+
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime-definition-lookup.js";
 import {
   applyAction,
@@ -77,4 +79,48 @@ test("live target decision response preserves omitted state hash", () => {
     result.events.some((event) => event.type === "effectResolved"),
     true,
   );
+});
+
+test("target request failure includes unsupported queue diagnostics", () => {
+  const { state, entry, request } = targetSelectionQueueState();
+  const targetDecisions = createTargetDecisions();
+  const invalidRequest: TargetRequest = {
+    ...request,
+    chooser: "unsupported-chooser" as TargetRequest["chooser"],
+  };
+
+  const result = targetDecisions.createSelectTargetsDecisionForQueuedEffect(
+    state,
+    entry,
+    invalidRequest,
+    {
+      rollbackState: state,
+      priorEvents: [],
+      errorCount: state.effectQueue.length,
+      ...liveOptions,
+    },
+  );
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          work?: {
+            gate?: string;
+            queueReason?: string;
+            queueEntryId?: string;
+            effectId?: string;
+          };
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.ok(firstError.details.work !== undefined);
+  assert.equal(firstError.details.work.gate, "queue-entry-resolution");
+  assert.equal(
+    firstError.details.work.queueReason,
+    "unsupported-target-request",
+  );
+  assert.equal(firstError.details.work.queueEntryId, String(entry.id));
+  assert.equal(firstError.details.work.effectId, String(entry.effectBlockId));
 });

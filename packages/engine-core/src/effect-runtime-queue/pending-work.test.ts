@@ -158,14 +158,14 @@ test("non-empty effect queue fails closed with deterministic unsupported details
         reason: "unsupported-pending-runtime-work",
         kind: "effectQueue",
         count: 1,
-        gate: "queue-entry-resolution",
-        queueReason: "unsupported-body",
+        gate: "queue-effect-definition",
+        queueReason: "missing-effect-definition",
       },
     },
   ]);
 });
 
-test("unsupported queue errors include current gate context when available", () => {
+test("unsupported queue errors include effect definition context when lookup fails", () => {
   const state = createActiveState();
   state.effectQueue.push(queuedEffect());
 
@@ -181,11 +181,54 @@ test("unsupported queue errors include current gate context when available", () 
   assert.ok(firstError !== undefined);
   assert.equal(firstError.type, "effectRuntimeError");
   assert.equal(firstError.effectId, "unsupported-effect-queue");
-  assert.equal(firstError.details?.gate, "queue-entry-resolution");
+  assert.equal(firstError.details?.gate, "queue-effect-definition");
   assert.equal(
     JSON.stringify(result.errors).includes("hidden-effect-block"),
     false,
   );
+});
+
+test("unsupported queue diagnostics expose public queue identity", () => {
+  const state = createActiveState();
+  const publicEntry: EffectQueueEntry = {
+    ...queuedEffect(),
+    id: toQueueEntryId("public-queue-entry"),
+    source: {
+      ...queuedEffect().source,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+    },
+    sourceSnapshot: {
+      ...queuedEffect().sourceSnapshot,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+    },
+    effectBlockId: toEffectId("public-effect-block"),
+  };
+  state.effectQueue.push(publicEntry);
+
+  const result = processEffectRuntime(state);
+  const firstError = result.errors?.[0] as
+    | {
+        details?: {
+          queueEntryId?: string;
+          effectId?: string;
+        };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.ok(firstError.details !== undefined);
+  assert.equal(firstError.details.queueEntryId, "public-queue-entry");
+  assert.equal(firstError.details.effectId, "public-effect-block");
 });
 
 test("non-empty deferred triggers fail closed with deterministic unsupported details", () => {
