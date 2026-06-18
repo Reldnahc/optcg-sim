@@ -1,6 +1,7 @@
 import {
   parseAndConnector,
   parseCommaBeforeLookConnector,
+  parseMixedSequenceConnector,
   parseSentenceConnector,
   parseThenConnector,
 } from "../connectors/index.js";
@@ -151,6 +152,7 @@ function generalExpressionParser(input: ParseInput) {
       parseThenConnector,
       parseSentenceConnector,
       parseAndConnector,
+      parseMixedSequenceConnector,
     ],
     segments: [
       optionalCostedEffectSegmentParser({

@@ -14,7 +14,7 @@ const selfHandToDeckPlacementSelection =
   "handSelection:self-hand-to-deck-placement" as SelectionId;
 const opponentTrashToDeckBottomSelection =
   "trashSelection:opponent-trash-to-deck-bottom" as SelectionId;
-const selfTrashToDeckPlacementSelection =
+export const selfTrashToDeckPlacementSelection =
   "trashSelection:self-trash-to-deck-placement" as SelectionId;
 
 type DeckPlacement = "top" | "bottom" | "topOrBottom";

@@ -258,6 +258,7 @@ export type PrimitiveEvidence =
   | "value:basePower:snapshotCurrentPower"
   | "value:basePower:snapshotBasePower"
   | "value:dynamic:selectedCardCost"
+  | "value:dynamic:selectedCardCount"
   | "value:dynamic:paidCostCardCount"
   | "value:dynamic:attachedDonCount"
   | "value:dynamic:distinctFieldNames"

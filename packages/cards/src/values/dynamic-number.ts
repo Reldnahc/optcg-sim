@@ -5,6 +5,7 @@ import {
   parseDurationFromSet,
 } from "../durations/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { selfTrashToDeckPlacementSelection } from "../instructions/hand-to-deck-bottom.js";
 import type { PrimitiveEvidence } from "../types.js";
 
 export function parseAttachedDonScaledValue(
@@ -145,5 +146,48 @@ export function parseMatchingZoneCardsScaledSuffix(
       multiplier,
     },
     evidence,
+  };
+}
+
+export function parseSelectedCardCountScaledValue(
+  multiplier: number,
+  text: string,
+):
+  | {
+      readonly duration: Duration;
+      readonly value: DynamicNumberValue;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match =
+    /^(?<duration>[\s\S]+?)\s+for every (?<per>[1-9]\d*) cards? placed at the bottom of your deck\.?$/iu.exec(
+      text.trim(),
+    );
+  const durationText = match?.groups?.["duration"];
+  const perText = match?.groups?.["per"];
+  if (durationText === undefined || perText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    fieldEffectDurationParsers,
+  );
+  if (duration?.duration === undefined || duration.rest.length > 0) {
+    return undefined;
+  }
+
+  return {
+    duration: duration.duration,
+    value: {
+      type: "selectedCardCount",
+      selection: selfTrashToDeckPlacementSelection,
+      per: Number.parseInt(perText, 10),
+      multiplier,
+    },
+    evidence: [
+      ...duration.evidence,
+      "value:dynamic:selectedCardCount",
+      "count:selectedCardCount",
+    ],
   };
 }

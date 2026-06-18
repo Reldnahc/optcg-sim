@@ -2,6 +2,7 @@ import type { EffectTextSpan, SequencedEffect } from "@optcg/types";
 
 import type {
   ConnectorParser,
+  ConnectorParseResult,
   ExpressionParseResult,
   ParseInput,
   PrimitiveEvidence,
@@ -20,7 +21,27 @@ export function parseExpression(
   registry: ExpressionParserRegistry,
 ): ExpressionParseResult | undefined {
   const parseInput = typeof input === "string" ? { text: input } : input;
-  const connectorParse = parseConnectors(parseInput, registry.connectors);
+  for (const connectorParse of connectorParseAttempts(
+    parseInput,
+    registry.connectors,
+  )) {
+    const parsed = parseExpressionWithConnectorParse(
+      parseInput,
+      registry,
+      connectorParse,
+    );
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function parseExpressionWithConnectorParse(
+  parseInput: ParseInput,
+  registry: ExpressionParserRegistry,
+  connectorParse: ConnectorParseResult | undefined,
+): ExpressionParseResult | undefined {
   const segmentTexts = connectorParse?.segments ?? [parseInput.text];
   const segmentSources =
     connectorParse?.sourceSegments ??
@@ -129,18 +150,19 @@ function parseSegment(
   return undefined;
 }
 
-function parseConnectors(
+function connectorParseAttempts(
   input: ParseInput,
   parsers: readonly ConnectorParser[],
-) {
+): readonly (ConnectorParseResult | undefined)[] {
+  const attempts: (ConnectorParseResult | undefined)[] = [];
   for (const parser of parsers) {
     const result = parser(input);
     if (result !== undefined) {
-      return result;
+      attempts.push(result);
     }
   }
-
-  return undefined;
+  attempts.push(undefined);
+  return attempts;
 }
 
 function rewriteSequenceSpanIds(

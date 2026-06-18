@@ -262,6 +262,11 @@ const isSupportedModifierValue = (
         value.cost.length > 0 &&
         Number.isSafeInteger(value.multiplier) &&
         value.multiplier > 0) ||
+      (value.type === "selectedCardCount" &&
+        Number.isSafeInteger(value.per ?? 1) &&
+        (value.per ?? 1) > 0 &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier !== 0) ||
       (value.type === "countDistinctMatchingFieldNames" &&
         value.player === "self" &&
         value.filter.custom === "differentNames" &&

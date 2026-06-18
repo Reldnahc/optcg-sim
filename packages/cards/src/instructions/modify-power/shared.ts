@@ -5,7 +5,10 @@ import {
   parseDurationFromSet,
 } from "../../durations/index.js";
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
-import { parseAttachedDonScaledValue } from "../../values/dynamic-number.js";
+import {
+  parseAttachedDonScaledValue,
+  parseSelectedCardCountScaledValue,
+} from "../../values/dynamic-number.js";
 
 export const modifyPowerInstructionPrimitive = {
   primitiveId: "instruction:modifyPower",
@@ -47,7 +50,8 @@ export function parseGainsPositivePower(target: Target, text: string) {
   );
   const dynamicDuration =
     typeof modifier.value === "number"
-      ? parseAttachedDonScaledValue(modifier.value, modifier.rest)
+      ? (parseAttachedDonScaledValue(modifier.value, modifier.rest) ??
+        parseSelectedCardCountScaledValue(modifier.value, modifier.rest))
       : undefined;
   const parsedDuration = dynamicDuration ?? duration;
   if (parsedDuration?.duration === undefined) {

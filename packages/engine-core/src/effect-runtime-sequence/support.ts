@@ -1,5 +1,6 @@
 import type {
   Condition,
+  DynamicNumberValue,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -298,6 +299,46 @@ const canConsumeSavedFieldObjectBinding = (
     binding.family,
     binding.saveResultAs,
   );
+
+const canResolveDynamicNumberValueReference = (
+  state: SequenceSupportState,
+  value: number | DynamicNumberValue,
+): boolean => {
+  if (typeof value === "number") {
+    return true;
+  }
+  if (value.type === "selectedCardCount") {
+    return canConsumeSelectedCards(
+      state.savedResults,
+      value.selection,
+      selectedCardKinds,
+    );
+  }
+  if (value.type === "sumSelectedCardCosts") {
+    return hasSavedSelectedCardSet(state, value.selection);
+  }
+  if (value.type === "savedNumber") {
+    return hasSavedNumber(state, value.selection);
+  }
+  if (value.type === "paidCostCardCount") {
+    return canConsumeSavedFieldObject(
+      state.savedResults,
+      "paidCost",
+      value.cost,
+    );
+  }
+  return true;
+};
+
+const canResolveContinuousDynamicValues = (
+  state: SequenceSupportState,
+  effect: SequenceSegmentEffect,
+): boolean => {
+  if (effect.type === "modifyPower" || effect.type === "modifyCost") {
+    return canResolveDynamicNumberValueReference(state, effect.value);
+  }
+  return true;
+};
 
 const canConsumeConditionSavedReferences = (
   state: SequenceSupportState,
@@ -716,6 +757,9 @@ const isSupportedSequenceBlockWithState = (
           entry.sourcePresencePolicy,
         )
       ) {
+        if (!canResolveContinuousDynamicValues(supportState, segment.effect)) {
+          return false;
+        }
         if (
           "target" in segment.effect &&
           segment.effect.target.type === "choose"

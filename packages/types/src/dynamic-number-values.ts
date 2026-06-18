@@ -9,6 +9,7 @@ export type DynamicNumberValue =
   | {
       type: "selectedCardCount";
       selection: SelectionId;
+      per?: number;
       multiplier: number;
     }
   | {
