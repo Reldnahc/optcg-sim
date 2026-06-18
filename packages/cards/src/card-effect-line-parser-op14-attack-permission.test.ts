@@ -104,4 +104,45 @@ describe("OP14 attack permission parser support", () => {
       ]),
     );
   });
+
+  it("parses self active Character attack permission under attached DON conditions", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x2] This Character can also attack your opponent's active Characters.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 2,
+        },
+        effect: {
+          type: "allowAttackActiveCharacters",
+          target: { type: "self" },
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "attachedDonCount",
+              target: { type: "self" },
+              op: "gte",
+              value: 2,
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "condition:attachedDonCount",
+        "instruction:allowAttackActiveCharacters",
+        "target:thisCharacter",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
 });

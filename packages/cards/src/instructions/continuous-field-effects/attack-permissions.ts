@@ -1,14 +1,30 @@
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import {
   parseTargetFromSet,
+  parseThisCharacterTarget,
   selectedPowerGainTargetParsers,
 } from "../../targets/index.js";
-import type { InstructionParser } from "../../types.js";
-import { parseFieldEffectDuration } from "./shared.js";
+import type { InstructionParseResult, ParseInput } from "../../types.js";
+import {
+  continuousDuration,
+  continuousDurationEvidence,
+  parseFieldEffectDuration,
+  type ContinuousInstructionContext,
+} from "./shared.js";
 
-export const parseAllowAttackActiveCharactersInstruction: InstructionParser = (
-  input,
-) => {
+const activeCharactersPermissionPattern =
+  /^can also attack (?:your opponent's )?active Characters\s*(?<rest>.*)$/iu;
+
+export const parseAllowAttackActiveCharactersInstruction = (
+  input: ParseInput,
+  context?: ContinuousInstructionContext,
+): InstructionParseResult | undefined =>
+  parseSelectedAttackPermission(input) ??
+  parseSelfAttackPermission(input, context);
+
+const parseSelectedAttackPermission = (
+  input: ParseInput,
+): InstructionParseResult | undefined => {
   const cardinality = parseUpToCardinality(input);
   if (cardinality === undefined) {
     return undefined;
@@ -23,8 +39,8 @@ export const parseAllowAttackActiveCharactersInstruction: InstructionParser = (
   }
 
   const permissionText =
-    /^can also attack active Characters\s*(?<rest>.*)$/iu.exec(target.rest)
-      ?.groups?.["rest"] ?? undefined;
+    activeCharactersPermissionPattern.exec(target.rest)?.groups?.["rest"] ??
+    undefined;
   if (permissionText === undefined) {
     return undefined;
   }
@@ -50,6 +66,43 @@ export const parseAllowAttackActiveCharactersInstruction: InstructionParser = (
       "chooser:self:upTo",
       ...target.evidence,
       ...duration.evidence,
+    ],
+    rest: "",
+  };
+};
+
+const parseSelfAttackPermission = (
+  input: ParseInput,
+  context: ContinuousInstructionContext | undefined,
+): InstructionParseResult | undefined => {
+  if (context === undefined) {
+    return undefined;
+  }
+
+  const target = parseThisCharacterTarget({
+    text: input.text,
+    allowImplicit: true,
+  });
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const permissionMatch = activeCharactersPermissionPattern.exec(target.rest);
+  const rest = permissionMatch?.groups?.["rest"]?.trim();
+  if (rest === undefined || (rest.length > 0 && rest !== ".")) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "allowAttackActiveCharacters",
+      target: { type: "self" },
+      duration: continuousDuration(context.condition),
+    },
+    evidence: [
+      "instruction:allowAttackActiveCharacters",
+      ...target.evidence,
+      continuousDurationEvidence(context.condition),
     ],
     rest: "",
   };
