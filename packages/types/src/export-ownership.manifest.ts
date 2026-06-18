@@ -220,6 +220,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   SavedFieldObjectReferenceFailure: "TYP-009B",
   SavedFieldObjectZone: "TYP-009B",
   SavedFieldObjectTarget: "TYP-009B",
+  SavedSelectedCardTarget: "TYP-007B",
   SavedSelectedCardsReference: "TYP-007B",
   SavedSelectedTargetsReference: "TYP-009B",
   SavedPaidCostReference: "TYP-007B",
