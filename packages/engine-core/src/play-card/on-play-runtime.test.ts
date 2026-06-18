@@ -604,20 +604,6 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
         ],
       }),
     },
-    {
-      name: "custom-timing-trigger",
-      mutate: (
-        definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
-      ) => ({
-        ...definition,
-        effects: [
-          {
-            ...must(definition.effects[0], "effect"),
-            trigger: { type: "custom", event: "unsupported-play-test" },
-          },
-        ],
-      }),
-    },
   ];
 
   for (const testCase of cases) {
@@ -653,6 +639,46 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
     assert.equal(JSON.stringify(state), before, testCase.name);
     assert.equal(JSON.stringify(result.state), before, testCase.name);
   }
+
+  const futureTriggerState = setupMainPlayState();
+  const futureTriggerP1 = must(
+    futureTriggerState.players[p1],
+    "future trigger p1",
+  );
+  const futureTriggerCharacter = must(
+    futureTriggerP1.hand[0],
+    "future trigger character",
+  );
+  const futureTriggerDefinition = setupImplementedDslOnPlayDraw(
+    futureTriggerState,
+    futureTriggerCharacter,
+    "def-battle-timing-trigger",
+  );
+  futureTriggerState.cardManifest.effectDefinitions = {
+    "def-battle-timing-trigger": {
+      ...futureTriggerDefinition,
+      effects: [
+        {
+          ...must(futureTriggerDefinition.effects[0], "effect"),
+          trigger: { type: "endOfBattle" },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    hasPlayCardAction(
+      getPlayCardLegalActions(futureTriggerState, p1),
+      futureTriggerCharacter,
+    ),
+    true,
+  );
+  const futureTriggerResult = applyPlayCardTestAction(futureTriggerState, {
+    type: "playCard",
+    cardInstanceId: futureTriggerCharacter.instanceId,
+  });
+  assert.equal(futureTriggerResult.errors, undefined);
+  assert.equal(futureTriggerResult.state.pendingDecision, undefined);
 
   const eventState = setupMainPlayState();
   const eventP1 = must(eventState.players[p1], "event p1");

@@ -128,6 +128,53 @@ test("getSupportedPlayMetadata accepts implemented-DSL Character with multiple s
   });
 });
 
+test("getSupportedPlayMetadata accepts playable Characters with unsupported future triggers", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "implemented character");
+  const implemented = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-character-unsupported-future-trigger",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    character.cardId,
+    implemented.support,
+  );
+  const baseEffect = must(definition.effects[0], "base effect");
+  state.cardManifest.cards[character.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-character-unsupported-future-trigger": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:unsupported-on-ko` as EffectDefinition["effects"][number]["id"],
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+    category: "character",
+    printedCost: 3,
+  });
+  assert.deepEqual(
+    getPlayableHandCards(state, p1).map((card) => card.instanceId),
+    [character.instanceId],
+  );
+});
+
 test("getSupportedPlayMetadata accepts implemented-DSL Character metadata without generated effects", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

@@ -359,10 +359,7 @@ export const getSupportedPlayMetadata = (
           onPlayEffects,
           isDefinitionRuntimeAdmittedEffect,
           { requireAtLeastOne: false },
-        ) ||
-        !lookup.definition.effects
-          .filter((effect) => effect.trigger.type !== "onPlay")
-          .every(isDefinitionRuntimeAdmittedEffect)
+        )
       ) {
         return null;
       }

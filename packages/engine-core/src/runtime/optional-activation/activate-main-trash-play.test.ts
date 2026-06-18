@@ -364,3 +364,172 @@ test("activate main trash playSelected queues simultaneous On Play triggers for 
   assert.equal(triggerOrder.type, "chooseTriggerOrder");
   assert.equal(triggerOrder.triggerIds.length, 2);
 });
+
+test("activate main self-trash can play a trash Character with unsupported future triggers", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const fieldCharacter = must(p1State.characters[0], "field character");
+  fieldCharacter.cardId = toCardId("self-trash-source");
+  const effectId = toEffectId("activate-main-self-trash-play-yamato");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: fieldCharacter.cardId,
+    category: "character",
+    definitionId: "def-activate-main-self-trash-play-yamato",
+    effectId,
+  });
+  const trashSelectionId = "trashSelection:yamato" as SelectionId;
+  const effectBlock = must(definition.effects[0], "activate effect");
+  effectBlock.effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "pay-trash-self",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: { type: "trashSelf", optional: true },
+        },
+      },
+      {
+        id: "select-yamato-from-trash",
+        connector: "ifYouDo",
+        saveResultAs: trashSelectionId,
+        effect: {
+          type: "selectCards",
+          zone: "trash",
+          player: "self",
+          chooser: "self",
+          min: 0,
+          max: 1,
+          filter: {
+            categories: ["character"],
+            names: ["Yamato"],
+            colorsAny: ["black"],
+            cost: { op: "eq", value: 8 },
+          },
+          saveAs: trashSelectionId,
+          visibility: "bothPlayers",
+        },
+      },
+      {
+        id: "play-selected-yamato",
+        connector: "ifPossible",
+        effect: {
+          type: "playSelected",
+          selection: trashSelectionId,
+          ignoreCost: true,
+        },
+      },
+    ],
+  };
+
+  const yamato = {
+    ...must(p1State.deck[0], "trash yamato"),
+    cardId: toCardId("black-yamato-eight"),
+    zone: {
+      zone: "trash" as const,
+      playerId: p1,
+      slot: "trash" as const,
+      index: 0,
+    },
+  };
+  p1State.deck = p1State.deck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "deck", playerId: p1, slot: "deck", index },
+  }));
+  p1State.trash = [yamato];
+  const yamatoSupport = {
+    cardId: yamato.cardId,
+    status: "implemented-dsl" as const,
+    tested: true,
+    effectDefinitionId: "def-yamato-unsupported-future-on-ko",
+    rulesVersion: "yamato-future-trigger-rules",
+    cardDataVersion: state.cardManifest.cardDataVersion,
+    sourceTextHash: "yamato-future-trigger-source",
+    behaviorHash: "yamato-future-trigger-behavior",
+  };
+  const yamatoCard = resolvedCard({
+    cardId: yamato.cardId,
+    category: "character",
+    cost: 8,
+    power: 8000,
+    support: yamatoSupport,
+  });
+  state.cardManifest.cards[yamato.cardId] = {
+    ...yamatoCard,
+    colors: ["black"],
+    name: "Yamato",
+  };
+  const yamatoDefinition = reviewedOnPlayDrawDefinition(
+    yamato.cardId,
+    yamatoSupport,
+  );
+  const yamatoBaseEffect = must(yamatoDefinition.effects[0], "yamato effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [yamatoSupport.effectDefinitionId]: {
+      ...yamatoDefinition,
+      effects: [
+        {
+          ...yamatoBaseEffect,
+          id: toEffectId("yamato-unsupported-future-on-ko"),
+          trigger: { type: "onKO" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          cost: { type: "restDon", count: 1 },
+        },
+      ],
+    },
+  };
+
+  const activated = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: fieldCharacter.instanceId,
+      cardId: fieldCharacter.cardId,
+      playerId: p1,
+      zone: fieldCharacter.zone,
+    },
+    effectId,
+  });
+  assert.equal(activated.errors, undefined);
+  const trashSelfDecision = must(
+    activated.state.pendingDecision,
+    "trash-self decision",
+  );
+  assert.equal(trashSelfDecision.type, "payCost");
+
+  const paid = applyAction(activated.state, {
+    type: "respondToDecision",
+    decisionId: trashSelfDecision.id,
+    response: { type: "payment", optionId: "trashSelf" },
+  });
+  assert.equal(paid.errors, undefined);
+  const trashSelection = must(paid.state.pendingDecision, "trash selection");
+  assert.equal(trashSelection.type, "selectCards");
+  assert.deepEqual(
+    trashSelection.candidates.map((candidate) => candidate.card.instanceId),
+    [yamato.instanceId],
+  );
+
+  const selected = applyAction(paid.state, {
+    type: "respondToDecision",
+    decisionId: trashSelection.id,
+    response: {
+      type: "cards",
+      cards: trashSelection.candidates.map((candidate) => candidate.card),
+    },
+  });
+  const afterP1 = must(selected.state.players[p1], "after p1");
+
+  assert.equal(selected.errors, undefined);
+  assert.equal(
+    afterP1.trash.some((card) => card.instanceId === fieldCharacter.instanceId),
+    true,
+  );
+  assert.equal(
+    afterP1.characters.some((card) => card.instanceId === yamato.instanceId),
+    true,
+  );
+});
