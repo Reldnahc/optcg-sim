@@ -81,16 +81,20 @@ This plan is not a blanket removal of fail-closed behavior. It removes or narrow
 
 ### Trigger Queueing Gates
 
-| Gate site                                                                                                                   | Current behavior                                                                                                                 | Change in this plan                                                                                                                                                                                                     | Why                                                                                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `runtime/trigger-queueing/on-play.ts` with `unsupported-on-play-definition`                                                 | Looks only at current On Play candidates and rejects if any current On Play block is unsupported.                                | Keep the fail-closed behavior for current On Play blocks. Add sibling tests proving dormant On K.O. blocks do not matter.                                                                                               | This gate is conceptually right; tests make the boundary explicit.                                                                        |
-| `runtime/trigger-queueing/main-event.ts` with `unsupported-main-event-definition`                                           | Looks only at current Main Event candidates, but referenced-effect support uses sibling context from the full definition.        | Keep current Main-only gating. Ensure sibling context is used only to prove a referenced target block exists, not to reject unrelated dormant effects.                                                                  | Main Event effects are current work; unrelated On Play, On K.O., Trigger, or Activate blocks must not block them.                         |
-| `runtime/trigger-queueing/attack.ts` with `unsupported-when-attacking-definition`                                           | Looks at current When Attacking candidates for the attack event.                                                                 | Keep. Add regression that a dormant On K.O. sibling does not matter.                                                                                                                                                    | When Attacking is current timing. Dormant future text should not gate it.                                                                 |
-| `runtime/trigger-queueing/attack.ts` with `unsupported-on-opponent-attack-definition`                                       | Scans defender field sources and treats matched On Opponent Attack auto blocks plus matched activated reactions as current work. | Keep current-timing rejection, but make tests prove non-matching On Play/On K.O./Activate Main siblings are ignored. If needed, split matched activated reactions from unrelated activate blocks before support checks. | Retarget and attack-reaction support should fail on the reaction being offered, not on other text on the same card.                       |
-| `runtime/trigger-queueing/ko.ts#detectBattleKOTriggerCandidates` with `unsupported-on-ko-definition`                        | Looks only at current On K.O. candidates from the KO event batch.                                                                | Keep current On K.O. fail-closed behavior. Add sibling test proving dormant On Play text is ignored.                                                                                                                    | On K.O. is current work; unrelated siblings are not.                                                                                      |
-| `runtime/trigger-queueing/ko.ts#detectBattleKOTriggerCandidates` with `source-presence-failed`                              | Fails if the current KO source cannot be proven in the expected destination or last-known-information location.                  | Keep the gate, but diagnostics should identify it as source presence rather than generic unsupported runtime work. Do not make old unrelated trash cards trigger this path.                                             | Source presence protects trigger legality and hidden/known-zone semantics. It is not the same bug as unsupported effect support.          |
-| `runtime/trigger-queueing/hand-trash.ts`, `opponent-activation.ts`, `event-reaction.ts`, and `end-turn.ts` definition gates | Reject unsupported current timing definitions for their own event families.                                                      | Inventory during Task 2 with the same rule: support-check only event-matched current candidates. Add a regression if any of these adapters currently support-check full definitions.                                    | These are less visible in the reported bugs, but the same false-gate pattern must not remain in a sibling adapter.                        |
-| `runtime/trigger-queueing/admission.ts#hasPendingTriggerRuntimeWork`                                                        | Prevents new trigger queueing while runtime work is already pending.                                                             | Keep. Do not use this as proof that the pending work is unsupported. Pending supported work must be settled by queue processing.                                                                                        | Queue ordering must remain deterministic. The false gate is later generic unsupported handling, not the existence of pending work itself. |
+| Gate site                                                                                            | Current behavior                                                                                                                                              | Change in this plan                                                                                                                                                                                                     | Why                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `runtime/trigger-queueing/on-play.ts` with `unsupported-on-play-definition`                          | Looks only at current On Play candidates and rejects if any current On Play block is unsupported.                                                             | Keep the fail-closed behavior for current On Play blocks. Add sibling tests proving dormant On K.O. blocks do not matter.                                                                                               | This gate is conceptually right; tests make the boundary explicit.                                                                        |
+| `runtime/trigger-queueing/main-event.ts` with `unsupported-main-event-definition`                    | Looks only at current Main Event candidates, but referenced-effect support uses sibling context from the full definition.                                     | Keep current Main-only gating. Ensure sibling context is used only to prove a referenced target block exists, not to reject unrelated dormant effects.                                                                  | Main Event effects are current work; unrelated On Play, On K.O., Trigger, or Activate blocks must not block them.                         |
+| `runtime/trigger-queueing/attack.ts` with `unsupported-when-attacking-definition`                    | Looks at current When Attacking candidates for the attack event.                                                                                              | Keep. Add regression that a dormant On K.O. sibling does not matter.                                                                                                                                                    | When Attacking is current timing. Dormant future text should not gate it.                                                                 |
+| `runtime/trigger-queueing/attack.ts` with `unsupported-on-opponent-attack-definition`                | Scans defender field sources and treats matched On Opponent Attack auto blocks plus matched activated reactions as current work.                              | Keep current-timing rejection, but make tests prove non-matching On Play/On K.O./Activate Main siblings are ignored. If needed, split matched activated reactions from unrelated activate blocks before support checks. | Retarget and attack-reaction support should fail on the reaction being offered, not on other text on the same card.                       |
+| `runtime/trigger-queueing/ko.ts#detectBattleKOTriggerCandidates` with `unsupported-on-ko-definition` | Looks only at current On K.O. candidates from the KO event batch.                                                                                             | Keep current On K.O. fail-closed behavior. Add sibling test proving dormant On Play text is ignored.                                                                                                                    | On K.O. is current work; unrelated siblings are not.                                                                                      |
+| `runtime/trigger-queueing/ko.ts#detectBattleKOTriggerCandidates` with `source-presence-failed`       | Fails if the current KO source cannot be proven in the expected destination or last-known-information location.                                               | Keep the gate, but diagnostics should identify it as source presence rather than generic unsupported runtime work. Do not make old unrelated trash cards trigger this path.                                             | Source presence protects trigger legality and hidden/known-zone semantics. It is not the same bug as unsupported effect support.          |
+| `runtime/trigger-queueing/hand-trash.ts` with `unsupported-hand-trashed-by-effect-definition`        | Rejects unsupported current hand-trashed-by-effect definitions.                                                                                               | Keep if it support-checks only hand-trash event-matched candidates. Add a sibling regression if it checks full definitions.                                                                                             | Hand-trash triggers are current work only when their event matcher fires.                                                                 |
+| `runtime/trigger-queueing/opponent-activation.ts` with `unsupported-opponent-activation-definition`  | Rejects unsupported current opponent-activation definitions.                                                                                                  | Keep if it support-checks only opponent-activation event-matched candidates. Add a sibling regression if it checks full definitions.                                                                                    | Opponent activation reactions should not be blocked by unrelated text on the same source.                                                 |
+| `runtime/trigger-queueing/event-reaction.ts` with `unsupported-event-reaction-definition`            | Rejects unsupported current event-reaction definitions.                                                                                                       | Keep if it support-checks only event-reaction candidates whose trigger matcher fired. Add a sibling regression if it checks full definitions.                                                                           | Event reactions are timing-specific; unrelated activate or future trigger blocks are not current work.                                    |
+| `runtime/trigger-queueing/end-turn.ts` with `unsupported-end-of-your-turn-definition`                | Rejects unsupported current end-of-turn definitions.                                                                                                          | Keep if it support-checks only end-of-turn candidates. Add a sibling regression if it checks full definitions.                                                                                                          | End-of-turn triggers should fail on current end-of-turn text, not other card text.                                                        |
+| `life-trigger/actions.ts#selectSupportedTriggerEffects`                                              | Filters trigger effects, rejects activation when any current life-trigger block is unsupported, and falls back to add-to-hand when activation is unsupported. | Keep current trigger-only admission and add a regression proving dormant non-trigger siblings do not remove an otherwise supported `activateTrigger` option.                                                            | Life triggers are a separate trigger admission path and must be explicit in this plan.                                                    |
+| `runtime/trigger-queueing/admission.ts#hasPendingTriggerRuntimeWork`                                 | Prevents new trigger queueing while runtime work is already pending.                                                                                          | Keep. Do not use this as proof that the pending work is unsupported. Pending supported work must be settled by queue processing.                                                                                        | Queue ordering must remain deterministic. The false gate is later generic unsupported handling, not the existence of pending work itself. |
 
 ### Effect Queue And Runtime Continuation Gates
 
@@ -121,6 +125,13 @@ This plan is not a blanket removal of fail-closed behavior. It removes or narrow
 | `battle/counter-window-support.ts#getUnsupportedCounterWindowReason`                                     | Fails only when defender is missing or a hand card has no manifest metadata.                                                                                                                | Keep. This is not the whitelist pattern that blocked supported effects.                                                                                                                               | Missing metadata makes legal counter choices unknowable.                                                           |
 | `battle/damage-step-continuation.ts#getUnsupportedDamageStepContinuationReason`                          | Blocks unsupported battle envelope, pending runtime work, replacement state, stale blocker, unsupported combat view, and unsupported double-attack leader damage mismatch.                  | Keep battle envelope/replacement/combat gates. Treat pending runtime work as a continuation bug upstream.                                                                                             | Damage resolution mutates life/KO state and must stay conservative.                                                |
 
+### Turn And Phase Gates
+
+| Gate site                                                                         | Current behavior                                                                                                          | Change in this plan                                                                                                                          | Why                                                                                                                         |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `turn/phases.ts#enterMainPhase` pending runtime branch                            | If pending runtime work exists while entering main phase, calls `processEffectRuntime(state)` instead of advancing phase. | Keep and classify as runtime processing, not a support failure. Add a regression if Task 5 changes continuation behavior around phase entry. | Entering main phase is a legitimate place to settle automatic work before phase actions resume.                             |
+| `turn/phases.ts#materializeBoardContinuousEffects` and `donPhasePlacementRecords` | Fail closed when implemented-DSL continuous effects cannot be materialized at phase boundaries.                           | Keep. Do not replace with sibling relevance logic in this plan.                                                                              | Continuous materialization affects public board state and turn flow; unsupported continuous shapes must remain fail-closed. |
+
 ### Gates That Must Not Be Removed By This Plan
 
 - Primitive execution gates in `runtime/primitives/*` for unsupported player refs, chooser refs, target policies, counts, stale decisions, and hidden-zone shapes.
@@ -137,6 +148,19 @@ During execution, every changed gate must satisfy one of these outcomes:
 - **Narrowed:** The gate remains, but it now filters to current timing, current queue entry, current sequence segment, or current event-matched candidate before checking support.
 - **Reclassified:** The gate remains as legal-action suppression or diagnostics, not as evidence that the current effect is unsupported.
 - **Kept:** The gate protects hidden information, stale causality, malformed decisions, battle invariants, replacement semantics, primitive support, or an actually unsupported current operation.
+
+Before the final verification task, rerun both inventory commands and reconcile every hit into this plan's tables:
+
+| Inventory family                                                                   | Required resolution                                                                                                                          |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Play/support admission hits                                                        | Removed, narrowed, or kept in **Play And Support Admission Gates**.                                                                          |
+| Trigger queueing `unsupported-.*definition` hits                                   | Kept or narrowed in **Trigger Queueing Gates**, including life triggers.                                                                     |
+| `detectPendingRuntimeWork` and `unsupported-pending-runtime-work` hits             | Kept, reclassified, or changed in **Effect Queue And Runtime Continuation Gates**, **Action And Battle Gates**, or **Turn And Phase Gates**. |
+| `createUnsupportedEffectQueueResult` and local `unsupportedEffectQueueResult` hits | Given explicit context in Task 4's queue-exit checklist, or replaced by a more specific non-queue error.                                     |
+| Battle/counter/damage continuation support hits                                    | Kept or reclassified in **Action And Battle Gates** with tests that prove the safety gate still exists.                                      |
+| Parser/probe/runtime support-report hits                                           | Covered by Task 6 probe/live parity or explicitly left unchanged as reporting-only.                                                          |
+
+If a new inventory hit appears during implementation, add a row to the appropriate gate table before changing code. Do not leave it as an unclassified "similar gate."
 
 Do not commit a runtime-gate change unless the commit message or test name makes the outcome clear. Examples:
 
@@ -417,6 +441,7 @@ git commit -m "Clarify play-time effect gate relevance"
 - Inspect: `packages/engine-core/src/runtime/trigger-queueing/opponent-activation.ts`
 - Inspect: `packages/engine-core/src/runtime/trigger-queueing/event-reaction.ts`
 - Inspect: `packages/engine-core/src/runtime/trigger-queueing/end-turn.ts`
+- Inspect: `packages/engine-core/src/life-trigger/actions.ts`
 - Potential implementation target: `packages/engine-core/src/runtime/trigger-queueing/on-play.ts`
 - Potential implementation target: `packages/engine-core/src/runtime/trigger-queueing/main-event.ts`
 - Potential implementation target: `packages/engine-core/src/runtime/trigger-queueing/attack.ts`
@@ -641,15 +666,23 @@ if (supportedCurrentTimingEffects.length !== currentTimingEffects.length) {
 
 Do not inspect unrelated `lookup.definition.effects` for this decision.
 
-- [ ] **Step 7: Inventory the lower-traffic trigger adapters**
+- [ ] **Step 7: Inventory the lower-traffic trigger adapters and life triggers**
 
 Run:
 
 ```bash
-rg "lookup\.definition\.effects|unsupported-.*definition|evaluateEffectBlockRuntimeSupport|isSupported.*Effect" packages/engine-core/src/runtime/trigger-queueing/hand-trash.ts packages/engine-core/src/runtime/trigger-queueing/opponent-activation.ts packages/engine-core/src/runtime/trigger-queueing/event-reaction.ts packages/engine-core/src/runtime/trigger-queueing/end-turn.ts -n
+rg "lookup\.definition\.effects|unsupported-.*definition|evaluateEffectBlockRuntimeSupport|isSupported.*Effect|selectSupportedTriggerEffects" packages/engine-core/src/runtime/trigger-queueing/hand-trash.ts packages/engine-core/src/runtime/trigger-queueing/opponent-activation.ts packages/engine-core/src/runtime/trigger-queueing/event-reaction.ts packages/engine-core/src/runtime/trigger-queueing/end-turn.ts packages/engine-core/src/life-trigger/actions.ts -n
 ```
 
-Expected: every support check in those files is preceded by an event/timing match for that adapter. If a file checks the whole definition, add a sibling regression in the nearest existing test file and narrow it with the same current-candidate pattern from Step 6.
+Expected:
+
+- `hand-trash.ts` checks only hand-trashed-by-effect event candidates before support checks.
+- `opponent-activation.ts` checks only opponent-activation event candidates before support checks.
+- `event-reaction.ts` checks only matched event-reaction candidates before support checks.
+- `end-turn.ts` checks only end-of-your-turn candidates before support checks.
+- `life-trigger/actions.ts#selectSupportedTriggerEffects` checks only `trigger.type === "trigger"` blocks before support checks and ignores dormant non-trigger siblings.
+
+If a file checks the whole definition, add a sibling regression in the nearest existing test file and narrow it with the same current-candidate pattern from Step 6.
 
 - [ ] **Step 8: Commit**
 
@@ -737,6 +770,118 @@ const supportedSequenceParityCases: readonly {
       },
     },
   },
+  {
+    name: "target selection then power modification sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-target-power" as EffectDefinition["effects"][number]["id"],
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            id: "select-target",
+            connector: "always",
+            saveResultAs: "savedTarget",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            id: "power-saved-target",
+            connector: "then",
+            effect: {
+              type: "modifyPower",
+              value: -2000,
+              duration: { type: "thisTurn" },
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "savedTarget",
+                },
+                zone: "characterArea",
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    name: "trash selection then playSelected sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-play-selected" as EffectDefinition["effects"][number]["id"],
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected-trash-for-parity-play" as SelectionId,
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                names: ["Generic Body"],
+                colorsAny: ["black"],
+                cost: { op: "eq", value: 8 },
+              },
+              saveAs: "selected-trash-for-parity-play" as SelectionId,
+              visibility: "bothPlayers",
+            },
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "playSelected",
+              selection: "selected-trash-for-parity-play" as SelectionId,
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    name: "play source sequence",
+    block: {
+      ...conditionedOptionalDonAttachBlock(),
+      id: "runtime-support-gate-parity-play-source" as EffectDefinition["effects"][number]["id"],
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "playSource",
+              source: { type: "triggerCard" },
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+    },
+  },
 ];
 
 for (const testCase of supportedSequenceParityCases) {
@@ -745,6 +890,10 @@ for (const testCase of supportedSequenceParityCases) {
   });
 }
 ```
+
+If `SelectionId` is not already imported in this file, add it from `@optcg/types`.
+
+This table intentionally covers the families that previously drifted between admission and runtime preflight: target selection, continuous/power modification, play-selected from a saved selection, play-source, and multi-step draw/trash sequencing. Deferred damage-trigger release is not an `EffectBlock` admission/preflight pair, so Task 4 owns its diagnostics and queue-shape regression instead of forcing it into this helper.
 
 - [ ] **Step 3: Replace duplicate one-off assertions with the helper**
 
@@ -856,6 +1005,18 @@ export interface UnsupportedEffectQueueContext {
   readonly queueReason?: string;
 }
 
+const publicQueueIdentityZones = new Set([
+  "leaderArea",
+  "characterArea",
+  "stageArea",
+  "trash",
+  "costArea",
+]);
+
+export const canExposeQueueEntryIdentity = (entry: EffectQueueEntry): boolean =>
+  entry.source.zone !== undefined &&
+  publicQueueIdentityZones.has(entry.source.zone.zone);
+
 export const createUnsupportedEffectQueueResult = (
   state: GameState,
   createUnsupportedPendingRuntimeWorkError: CreateUnsupportedPendingRuntimeWorkError,
@@ -870,7 +1031,9 @@ export const createUnsupportedEffectQueueResult = (
         kind: "effectQueue",
         count: state.effectQueue.length,
         ...(context?.gate === undefined ? {} : { gate: context.gate }),
-        ...(context?.entry === undefined || context.exposeEntryIdentity !== true
+        ...(context?.entry === undefined ||
+        context.exposeEntryIdentity !== true ||
+        !canExposeQueueEntryIdentity(context.entry)
           ? {}
           : {
               queueEntryId: String(context.entry.id),
@@ -919,7 +1082,7 @@ For missing unsupported body resolution:
 return unsupportedEffectQueueResult(originalState, {
   gate: "queue-entry-resolution",
   entry: selectedForBodyResolution,
-  exposeEntryIdentity: selectedForBodyResolution.source.zone?.zone !== "life",
+  exposeEntryIdentity: true,
   queueReason: "unsupported-body",
 });
 ```
@@ -939,7 +1102,37 @@ if (!ordering.ok) {
 
 If the local helper signature differs, update it to accept and forward `UnsupportedEffectQueueContext`.
 
-- [ ] **Step 5: Add diagnostics tests**
+- [ ] **Step 5: Assign context to every unsupported queue exit**
+
+Use this checklist while replacing `unsupportedEffectQueueResult(...)` calls:
+
+| File                                           | Failure path                                                                              | Required context                                                                                                                                                                             |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `effect-runtime-queue/no-choice-processing.ts` | active double-attack damage deferred queue is not exact                                   | `{ gate: "deferred-trigger-release", queueReason: "invalid-damage-deferred-queue" }`                                                                                                         |
+| `effect-runtime-queue/no-choice-processing.ts` | `evaluateQueueOrdering` fails                                                             | `{ gate: "queue-ordering", queueReason: "invalid-ordering" }`                                                                                                                                |
+| `effect-runtime-queue/no-choice-processing.ts` | accepted optional entry id is missing from the current queue                              | `{ gate: "queue-ordering", queueReason: "accepted-optional-entry-missing" }`                                                                                                                 |
+| `effect-runtime-queue/no-choice-processing.ts` | ordered current choice ids fail validation                                                | `{ gate: "queue-ordering", queueReason: "invalid-choice-order" }`                                                                                                                            |
+| `effect-runtime-queue/no-choice-processing.ts` | `orderNoChoiceQueueEntries` fails                                                         | `{ gate: "queue-ordering", queueReason: "invalid-no-choice-order" }`                                                                                                                         |
+| `effect-runtime-queue/entry-resolution.ts`     | source presence fails for selected entry                                                  | `{ gate: "queue-source-presence", entry: selected, exposeEntryIdentity: false, queueReason: "source-presence-failed" }`                                                                      |
+| `effect-runtime-queue/entry-resolution.ts`     | queued definition has `conditionTiming`                                                   | `{ gate: "queue-entry-resolution", entry: selected, exposeEntryIdentity: true, queueReason: "unsupported-condition-timing" }`                                                                |
+| `effect-runtime-queue/entry-resolution.ts`     | queued condition shape unsupported                                                        | `{ gate: "queue-entry-resolution", entry: selected, exposeEntryIdentity: true, queueReason: "unsupported-condition" }`                                                                       |
+| `effect-runtime-queue/entry-resolution.ts`     | optional support shape unsupported                                                        | `{ gate: "queue-entry-resolution", entry: selected, exposeEntryIdentity: true, queueReason: "unsupported-optional-shape" }`                                                                  |
+| `effect-runtime-queue/entry-resolution.ts`     | once-per-turn admission fails                                                             | `{ gate: "queue-entry-resolution", entry: selectedForBodyResolution, exposeEntryIdentity: true, queueReason: "once-per-turn-admission-failed" }`                                             |
+| `effect-runtime-queue/entry-resolution.ts`     | sequence frame returns unsupported without a concrete error                               | `{ gate: "queue-entry-resolution", entry: selectedForBodyResolution, exposeEntryIdentity: true, queueReason: "unsupported-sequence-frame" }`                                                 |
+| `effect-runtime-queue/entry-resolution.ts`     | target request decision cannot be created                                                 | let the target decision helper return its specific error; do not wrap it in generic unsupported queue unless it lacks an error, then use `queueReason: "unsupported-target-request"`         |
+| `effect-runtime-queue/entry-resolution.ts`     | trash-from-hand resolver returns unsupported                                              | `{ gate: "queue-entry-resolution", entry: selectedForBodyResolution, exposeEntryIdentity: true, queueReason: "unsupported-trash-from-hand" }`                                                |
+| `effect-runtime-queue/entry-resolution.ts`     | no primitive body resolver matches the current entry                                      | `{ gate: "queue-entry-resolution", entry: selectedForBodyResolution, exposeEntryIdentity: true, queueReason: "unsupported-body" }`                                                           |
+| `effect-runtime-queue/entry-resolution.ts`     | draw, moveCards, playSource, winGame, damage, or continuous primitive returns errors/null | use `queueReason: "unsupported-draw"`, `"unsupported-move-cards"`, `"unsupported-play-source"`, `"unsupported-win-game"`, `"unsupported-damage"`, or `"unsupported-continuous"` respectively |
+
+Expected after this step:
+
+```bash
+rg "unsupportedEffectQueueResult\\((originalState|state)(, options)?\\)" packages/engine-core/src/effect-runtime-queue -n
+```
+
+The command should return no bare unsupported queue calls. Every call should pass an `UnsupportedEffectQueueContext`, except calls that have been replaced by a more specific non-queue error.
+
+- [ ] **Step 6: Add diagnostics tests**
 
 In `packages/engine-core/src/effect-runtime-queue/pending-work.test.ts`, add:
 
@@ -963,7 +1156,46 @@ test("unsupported queue errors include current gate context when available", () 
 });
 ```
 
-- [ ] **Step 6: Run queue diagnostics tests**
+Add this hidden-zone redaction matrix in the same file:
+
+```ts
+test.each([
+  {
+    name: "life",
+    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+  },
+  {
+    name: "hand",
+    zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+  },
+  {
+    name: "deck",
+    zone: { zone: "deck", playerId: p1, slot: "deck", index: 0 },
+  },
+] as const)(
+  "unsupported queue diagnostics redact $name queue identity",
+  ({ zone }) => {
+    const state = createActiveState();
+    const hiddenEntry = {
+      ...queuedEffect(),
+      source: { ...queuedEffect().source, zone },
+      effectBlockId: "hidden-effect-block" as ReturnType<
+        typeof queuedEffect
+      >["effectBlockId"],
+    };
+    state.effectQueue.push(hiddenEntry);
+
+    const result = processEffectRuntime(state);
+    const serialized = JSON.stringify(result.errors);
+
+    assert.equal(result.errors?.[0]?.effectId, "unsupported-effect-queue");
+    assert.equal(serialized.includes("hidden-effect-block"), false);
+    assert.equal(serialized.includes("queueEntryId"), false);
+  },
+);
+```
+
+- [ ] **Step 7: Run queue diagnostics tests**
 
 Run:
 
@@ -973,7 +1205,7 @@ corepack pnpm vitest run packages/engine-core/src/effect-runtime-queue/pending-w
 
 Expected: all tests pass and existing assertions that only check `reason`, `kind`, and `count` still pass because the new fields are additive.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 Run:
 
@@ -999,34 +1231,100 @@ git commit -m "Add precise unsupported queue diagnostics"
 
 - [ ] **Step 1: Add an actions-level supported-runtime-work regression**
 
-In `packages/engine-core/src/actions-pending-decision.test.ts`, change the existing effect-runtime import from:
+In `packages/engine-core/src/actions-pending-decision.test.ts`, add an `applyAction` continuation regression. Do not replace this with a direct `processEffectRuntime(...)` assertion; the bug class is that a completed decision can leave supported work pending and later trip generic action gates.
 
-```ts
-import { createChooseQuantityDecisionForQueuedEffect } from "./effect-runtime.js";
-```
-
-to:
+Update imports as needed:
 
 ```ts
 import {
   createChooseQuantityDecisionForQueuedEffect,
   processEffectRuntime,
 } from "./effect-runtime.js";
+import {
+  setupOnPlayDefinition,
+  queueDrawForP1,
+  queueingState,
+} from "./effect-runtime-queue/test-support.js";
 ```
 
-Add this test near the existing pending-runtime tests:
+If `reviewedOnPlayDrawDefinition` is not already imported from `./action-test-fixtures.js`, add it.
+
+Add this test near the existing effect-originated `chooseQuantity` tests. It uses the same real drawUpTo runtime shape as `packages/engine-core/src/runtime/primitives/draw.test.ts`, then verifies that `respondToDecision` settles the queue before legal actions are exposed:
 
 ```ts
-test("supported pending runtime work settles before generic action gates", () => {
-  const state = createActiveState();
-  state.turn.phase = "main";
-  state.effectQueue = [queueDrawForP1()];
+test("respondToDecision settles supported effect runtime before generic action gates", () => {
+  const { state, played } = queueingState();
+  const supportCard = resolvedCard({
+    cardId: played.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-action-gate-draw-up-to",
+      rulesVersion: "action-gate-draw-up-to-rules",
+      sourceTextHash: "action-gate-draw-up-to-source",
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    played.cardId,
+    supportCard.support,
+  );
+  const effect = {
+    ...must(definition.effects[0], "draw effect"),
+    effect: { type: "drawUpTo" as const, count: 2, player: "self" as const },
+  };
+  setupOnPlayDefinition(
+    state,
+    played,
+    { ...definition, effects: [effect] },
+    "def-action-gate-draw-up-to",
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-action-gate-draw-up-to"),
+      source: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        playerId: p1,
+        zone: played.zone,
+      },
+      sourceSnapshot: {
+        instanceId: played.instanceId,
+        cardId: played.cardId,
+        ownerId: p1,
+        controllerId: p1,
+        zone: played.zone,
+        category: "character",
+        colors: ["red"],
+        cost: 1,
+        power: 3000,
+        keywords: [],
+      },
+      effectBlockId: effect.id,
+      sourcePresencePolicy:
+        effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+    },
+  ];
 
-  const runtime = processEffectRuntime(state);
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "quantity decision");
+  assert.equal(decision.type, "chooseQuantity");
 
-  assert.equal(runtime.errors, undefined);
-  assert.equal(runtime.state.effectQueue.length, 0);
-  assert.equal(runtime.state.pendingDecision, undefined);
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "chooseQuantity", quantity: 1 },
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    getLegalActions(result.state, p1).some(
+      (action) => action.type === "endMainPhase",
+    ),
+    true,
+  );
 });
 ```
 
@@ -1105,11 +1403,13 @@ git commit -m "Settle supported runtime work before action gates"
 
 - [ ] **Step 1: Add probe output assertion for current-entry support**
 
-In `packages/card-support/src/support-probe.test.ts`, add a text-only probe case for:
+In `packages/card-support/src/support-probe.test.ts`, add text-only probe cases for both the reported shape and a non-Yamato synthetic variant:
 
 ```ts
-const text =
-  "[Activate: Main] You may trash this Character: Play up to 1 black [Yamato] with a cost of 8 from your trash.";
+const activateMainTrashPlayProbeTexts = [
+  "[Activate: Main] You may trash this Character: Play up to 1 black [Yamato] with a cost of 8 from your trash.",
+  "[Activate: Main] You may trash this Character: Play up to 1 black [Generic Body] with a cost of 8 from your trash.",
+];
 ```
 
 Assert parser support and runtime support both report the activate-main sequence primitives:
@@ -1150,28 +1450,39 @@ import {
 } from "./effect-runtime-queue/test-support.js";
 ```
 
-Add this helper below `toCardId`:
+Add this parameterized helper below `toCardId`. The helper must take at least `targetName`, `targetCardId`, and `targetEffectDefinitionId`; do not leave the live runtime parity test hardcoded to one card name.
 
 ```ts
-const setupActivateMainTrashSelfPlayFromTrashState = (): {
+const setupActivateMainTrashSelfPlayFromTrashState = (
+  params: {
+    readonly targetName: string;
+    readonly targetCardId: CardId;
+    readonly targetEffectDefinitionId: string;
+  } = {
+    targetName: "Yamato",
+    targetCardId: toCardId("black-yamato-eight"),
+    targetEffectDefinitionId: "def-yamato-on-play-draw",
+  },
+): {
   effectId: ReturnType<typeof toEffectId>;
   source: CardInstance;
   state: ReturnType<typeof makeMainPhaseLegalActionState>;
   trashTarget: CardInstance;
 } => {
+  const { targetCardId, targetEffectDefinitionId, targetName } = params;
   const state = makeMainPhaseLegalActionState();
   const p1State = must(state.players[p1], "p1");
   const source = must(p1State.characters[0], "source character");
   source.cardId = toCardId("self-trash-source");
-  const effectId = toEffectId("activate-main-self-trash-play-yamato");
+  const effectId = toEffectId("activate-main-self-trash-play");
   const definition = installActivateMainDrawDefinition({
     state,
     sourceCardId: source.cardId,
     category: "character",
-    definitionId: "def-activate-main-self-trash-play-yamato",
+    definitionId: "def-activate-main-self-trash-play",
     effectId,
   });
-  const trashSelectionId = "trashSelection:yamato" as SelectionId;
+  const trashSelectionId = "trashSelection:target" as SelectionId;
   const effectBlock = must(definition.effects[0], "activate effect");
   effectBlock.effect = {
     type: "sequence",
@@ -1186,7 +1497,7 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
         },
       },
       {
-        id: "select-yamato-from-trash",
+        id: "select-target-from-trash",
         connector: "ifYouDo",
         saveResultAs: trashSelectionId,
         effect: {
@@ -1198,7 +1509,7 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
           max: 1,
           filter: {
             categories: ["character"],
-            names: ["Yamato"],
+            names: [targetName],
             colorsAny: ["black"],
             cost: { op: "eq", value: 8 },
           },
@@ -1207,7 +1518,7 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
         },
       },
       {
-        id: "play-selected-yamato",
+        id: "play-selected-target",
         connector: "ifPossible",
         effect: {
           type: "playSelected",
@@ -1219,8 +1530,8 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
   };
 
   const trashTarget = {
-    ...must(p1State.deck[0], "trash Yamato"),
-    cardId: toCardId("black-yamato-eight"),
+    ...must(p1State.deck[0], "trash target"),
+    cardId: targetCardId,
     zone: {
       zone: "trash" as const,
       playerId: p1,
@@ -1234,41 +1545,41 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
   }));
   p1State.trash = [trashTarget];
 
-  const yamatoSupport = {
+  const targetSupport = {
     cardId: trashTarget.cardId,
     status: "implemented-dsl" as const,
     tested: true,
-    effectDefinitionId: "def-yamato-on-play-draw",
+    effectDefinitionId: targetEffectDefinitionId,
     rulesVersion: "activate-main-trash-play-parity-rules",
     cardDataVersion: state.cardManifest.cardDataVersion,
     sourceTextHash: "activate-main-trash-play-parity-source",
     behaviorHash: "activate-main-trash-play-parity-behavior",
   };
-  const yamatoCard = resolvedCard({
+  const targetCard = resolvedCard({
     cardId: trashTarget.cardId,
     category: "character",
     cost: 8,
     power: 8000,
-    support: yamatoSupport,
+    support: targetSupport,
   });
   state.cardManifest.cards[trashTarget.cardId] = {
-    ...yamatoCard,
+    ...targetCard,
     colors: ["black"],
-    name: "Yamato",
+    name: targetName,
   };
-  const yamatoDefinition = reviewedOnPlayDrawDefinition(
+  const targetDefinition = reviewedOnPlayDrawDefinition(
     trashTarget.cardId,
-    yamatoSupport,
+    targetSupport,
   );
-  const yamatoBaseEffect = must(yamatoDefinition.effects[0], "Yamato effect");
+  const targetBaseEffect = must(targetDefinition.effects[0], "target effect");
   state.cardManifest.effectDefinitions = {
     ...state.cardManifest.effectDefinitions,
-    [yamatoSupport.effectDefinitionId]: {
-      ...yamatoDefinition,
+    [targetSupport.effectDefinitionId]: {
+      ...targetDefinition,
       effects: [
         {
-          ...yamatoBaseEffect,
-          id: toEffectId("yamato-on-play-draw"),
+          ...targetBaseEffect,
+          id: toEffectId("target-on-play-draw"),
           trigger: { type: "onPlay" },
           sourcePresencePolicy: "mustRemainInSameZone",
         },
@@ -1280,52 +1591,72 @@ const setupActivateMainTrashSelfPlayFromTrashState = (): {
 };
 ```
 
-Add this test that uses the helper and asserts the live engine does not produce `unsupported-effect-queue`:
+Add this test matrix that uses the helper and asserts the live engine does not produce `unsupported-effect-queue` for either the reported Yamato shape or the generic variant:
 
 ```ts
-test("probe-supported activate-main trash play from trash does not hit generic runtime gates", () => {
-  const { effectId, source, state, trashTarget } =
-    setupActivateMainTrashSelfPlayFromTrashState();
+test.each([
+  {
+    label: "Yamato reported shape",
+    targetName: "Yamato",
+    targetCardId: toCardId("black-yamato-eight"),
+    targetEffectDefinitionId: "def-yamato-on-play-draw",
+  },
+  {
+    label: "generic reusable shape",
+    targetName: "Generic Body",
+    targetCardId: toCardId("black-generic-eight"),
+    targetEffectDefinitionId: "def-generic-body-on-play-draw",
+  },
+])(
+  "probe-supported activate-main trash play from trash does not hit generic runtime gates: $label",
+  ({ targetCardId, targetEffectDefinitionId, targetName }) => {
+    const { effectId, source, state, trashTarget } =
+      setupActivateMainTrashSelfPlayFromTrashState({
+        targetName,
+        targetCardId,
+        targetEffectDefinitionId,
+      });
 
-  const activated = applyAction(state, {
-    type: "activateEffect",
-    source: {
-      instanceId: source.instanceId,
-      cardId: source.cardId,
-      playerId: p1,
-      zone: source.zone,
-    },
-    effectId,
-  });
-  const trashSelfDecision = must(
-    activated.state.pendingDecision,
-    "trash-self decision",
-  );
-  const paid = applyAction(activated.state, {
-    type: "respondToDecision",
-    decisionId: trashSelfDecision.id,
-    response: { type: "payment", optionId: "trashSelf" },
-  });
-  const selection = must(paid.state.pendingDecision, "trash selection");
-  assert.equal(selection.type, "selectCards");
+    const activated = applyAction(state, {
+      type: "activateEffect",
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      effectId,
+    });
+    const trashSelfDecision = must(
+      activated.state.pendingDecision,
+      "trash-self decision",
+    );
+    const paid = applyAction(activated.state, {
+      type: "respondToDecision",
+      decisionId: trashSelfDecision.id,
+      response: { type: "payment", optionId: "trashSelf" },
+    });
+    const selection = must(paid.state.pendingDecision, "trash selection");
+    assert.equal(selection.type, "selectCards");
 
-  const selected = applyAction(paid.state, {
-    type: "respondToDecision",
-    decisionId: selection.id,
-    response: {
-      type: "cards",
-      cards: selection.candidates.map((candidate) => candidate.card),
-    },
-  });
+    const selected = applyAction(paid.state, {
+      type: "respondToDecision",
+      decisionId: selection.id,
+      response: {
+        type: "cards",
+        cards: selection.candidates.map((candidate) => candidate.card),
+      },
+    });
 
-  assert.equal(selected.errors, undefined);
-  assert.equal(
-    must(selected.state.players[p1], "p1").characters.some(
-      (card) => card.instanceId === trashTarget.instanceId,
-    ),
-    true,
-  );
-});
+    assert.equal(selected.errors, undefined);
+    assert.equal(
+      must(selected.state.players[p1], "p1").characters.some(
+        (card) => card.instanceId === trashTarget.instanceId,
+      ),
+      true,
+    );
+  },
+);
 ```
 
 - [ ] **Step 3: Run probe and runtime parity tests**
