@@ -47,6 +47,38 @@ const loadRealCardManifest = async (): Promise<MatchCardManifest> => {
   );
 };
 
+const setupImplementedDslPlaySupport = (params: {
+  readonly category: "character" | "stage" | "event";
+  readonly cost: number;
+  readonly effectDefinitionId: string;
+  readonly handIndex: number;
+  readonly label: string;
+  readonly power?: number;
+}) => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const card = must(p1State.hand[params.handIndex], params.label);
+  const implemented = resolvedCard({
+    cardId: card.cardId,
+    category: params.category,
+    cost: params.cost,
+    ...(params.power === undefined ? {} : { power: params.power }),
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: params.effectDefinitionId,
+    },
+  });
+  const definition = reviewedOnPlayDrawDefinition(
+    card.cardId,
+    implemented.support,
+  );
+  const baseEffect = must(definition.effects[0], "base effect");
+  state.cardManifest.cards[card.cardId] = implemented;
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  return { state, card, definition, baseEffect };
+};
+
 test("getSupportedPlayMetadata accepts supported vanilla Character, Stage, and exact Main Event", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");
@@ -176,27 +208,15 @@ test("getSupportedPlayMetadata accepts playable Characters with unsupported futu
 });
 
 test("getSupportedPlayMetadata rejects unsupported always-on Character blocks but accepts dormant triggers", () => {
-  const state = setupMainPlayState();
-  const p1State = must(state.players[p1], "p1");
-  const character = must(p1State.hand[0], "implemented character");
-  const implemented = resolvedCard({
-    cardId: character.cardId,
-    category: "character",
-    cost: 3,
-    power: 5000,
-    support: {
-      status: "implemented-dsl",
+  const { state, card, definition, baseEffect } =
+    setupImplementedDslPlaySupport({
+      category: "character",
+      cost: 3,
       effectDefinitionId: "def-character-relevance",
-    },
-  });
-  const definition = reviewedOnPlayDrawDefinition(
-    character.cardId,
-    implemented.support,
-  );
-  const baseEffect = must(definition.effects[0], "base effect");
-  state.cardManifest.cards[character.cardId] = implemented;
-  state.cardManifest.effectDefinitionsVersion =
-    definition.metadata.effectDefinitionsVersion;
+      handIndex: 0,
+      label: "implemented character",
+      power: 5000,
+    });
 
   state.cardManifest.effectDefinitions = {
     "def-character-relevance": {
@@ -212,7 +232,7 @@ test("getSupportedPlayMetadata rejects unsupported always-on Character blocks bu
       ],
     },
   };
-  assert.deepEqual(getSupportedPlayMetadata(state, character), {
+  assert.deepEqual(getSupportedPlayMetadata(state, card), {
     category: "character",
     printedCost: 3,
   });
@@ -232,30 +252,18 @@ test("getSupportedPlayMetadata rejects unsupported always-on Character blocks bu
       ],
     },
   };
-  assert.equal(getSupportedPlayMetadata(state, character), null);
+  assert.equal(getSupportedPlayMetadata(state, card), null);
 });
 
 test("getSupportedPlayMetadata accepts dormant Stage activations but rejects unsupported Stage On Play", () => {
-  const state = setupMainPlayState();
-  const p1State = must(state.players[p1], "p1");
-  const stage = must(p1State.hand[1], "implemented stage");
-  const implemented = resolvedCard({
-    cardId: stage.cardId,
-    category: "stage",
-    cost: 2,
-    support: {
-      status: "implemented-dsl",
+  const { state, card, definition, baseEffect } =
+    setupImplementedDslPlaySupport({
+      category: "stage",
+      cost: 2,
       effectDefinitionId: "def-stage-relevance",
-    },
-  });
-  const definition = reviewedOnPlayDrawDefinition(
-    stage.cardId,
-    implemented.support,
-  );
-  const baseEffect = must(definition.effects[0], "base effect");
-  state.cardManifest.cards[stage.cardId] = implemented;
-  state.cardManifest.effectDefinitionsVersion =
-    definition.metadata.effectDefinitionsVersion;
+      handIndex: 1,
+      label: "implemented stage",
+    });
 
   state.cardManifest.effectDefinitions = {
     "def-stage-relevance": {
@@ -272,7 +280,7 @@ test("getSupportedPlayMetadata accepts dormant Stage activations but rejects uns
       ],
     },
   };
-  assert.deepEqual(getSupportedPlayMetadata(state, stage), {
+  assert.deepEqual(getSupportedPlayMetadata(state, card), {
     category: "stage",
     printedCost: 2,
   });
@@ -290,7 +298,76 @@ test("getSupportedPlayMetadata accepts dormant Stage activations but rejects uns
       ],
     },
   };
-  assert.equal(getSupportedPlayMetadata(state, stage), null);
+  assert.equal(getSupportedPlayMetadata(state, card), null);
+});
+
+test("getSupportedPlayMetadata rejects unsupported wrapped On Play blocks for Characters and Stages", () => {
+  for (const category of ["character", "stage"] as const) {
+    const { state, card, definition, baseEffect } =
+      setupImplementedDslPlaySupport({
+        category,
+        cost: category === "character" ? 3 : 2,
+        effectDefinitionId: `def-${category}-wrapped-on-play-relevance`,
+        handIndex: category === "character" ? 0 : 1,
+        label: `implemented ${category}`,
+        ...(category === "character" ? { power: 5000 } : {}),
+      });
+
+    state.cardManifest.effectDefinitions = {
+      [`def-${category}-wrapped-on-play-relevance`]: {
+        ...definition,
+        effects: [
+          {
+            ...baseEffect,
+            id: `${String(baseEffect.id)}:${category}-wrapped-unsupported-on-play` as EffectDefinition["effects"][number]["id"],
+            trigger: {
+              type: "anyOf",
+              triggers: [{ type: "onPlay" }, { type: "onKO" }],
+            },
+            effect: {
+              type: "custom",
+              name: `${category}-wrapped-unsupported-on-play`,
+            },
+          },
+        ],
+      },
+    };
+
+    assert.equal(getSupportedPlayMetadata(state, card), null);
+  }
+});
+
+test("getSupportedPlayMetadata accepts supported wrapped Event Main blocks", () => {
+  const { state, card, definition, baseEffect } =
+    setupImplementedDslPlaySupport({
+      category: "event",
+      cost: 1,
+      effectDefinitionId: "def-event-wrapped-main-relevance",
+      handIndex: 2,
+      label: "implemented event",
+    });
+  state.cardManifest.effectDefinitions = {
+    "def-event-wrapped-main-relevance": {
+      ...definition,
+      effects: [
+        {
+          ...baseEffect,
+          id: `${String(baseEffect.id)}:event-wrapped-main` as EffectDefinition["effects"][number]["id"],
+          trigger: {
+            type: "eventCount",
+            count: { op: "gte", value: 1 },
+            trigger: { type: "main" },
+          },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+        },
+      ],
+    },
+  };
+
+  assert.deepEqual(getSupportedPlayMetadata(state, card), {
+    category: "event",
+    printedCost: 1,
+  });
 });
 
 test("getSupportedPlayMetadata accepts implemented-DSL Character metadata without generated effects", () => {
