@@ -79,6 +79,32 @@ describe("composed expression segment parsers", () => {
     );
   });
 
+  it("parses shared-tail count disjunction conditions without coupling to one threshold", () => {
+    const result = parseConditionExpression(
+      "you have 0 or 3 or more DON!! cards on your field",
+      [parseDonFieldCountCondition],
+    );
+
+    expect(result).toMatchObject({
+      condition: {
+        type: "or",
+        conditions: [
+          { type: "fieldCount", player: "self", op: "eq", value: 0 },
+          { type: "fieldCount", player: "self", op: "gte", value: 3 },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:conditionOr",
+        "condition:donFieldCount",
+        "condition:threshold:nonNegativeInteger",
+        "condition:threshold:positiveInteger",
+      ]),
+    );
+  });
+
   it("parses comma-and conjunction conditions without binding to one body", () => {
     const result = parseConditionExpression(
       "your Leader has the {Blackbeard Pirates} type, and this Character was played on this turn",

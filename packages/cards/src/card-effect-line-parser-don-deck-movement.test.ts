@@ -135,6 +135,70 @@ it("composes exact DON deck movement after reusable optional costs and DON count
   );
 });
 
+it("composes active DON movement after reusable life cost and compact DON count condition", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] You may add 1 card from the top of your Life cards to your hand: If you have 0 or 3 or more DON!! cards on your field, add up to 1 DON!! card from your DON!! deck and set it as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                from: { player: "self", zone: "life", position: "top" },
+                to: { player: "self", zone: "hand" },
+                count: 1,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "conditional",
+              if: {
+                type: "or",
+                conditions: [
+                  { type: "fieldCount", player: "self", op: "eq", value: 0 },
+                  { type: "fieldCount", player: "self", op: "gte", value: 3 },
+                ],
+              },
+              then: {
+                type: "moveCards",
+                min: 0,
+                count: 1,
+                from: { player: "self", zone: "donDeck", position: "top" },
+                to: { player: "self", zone: "costArea" },
+                destinationState: "active",
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "cost:moveCards",
+      "zone:life",
+      "destination:hand",
+      "composition:conditionOr",
+      "condition:donFieldCount",
+      "zone:donDeck",
+      "destination:costArea",
+      "state:active",
+    ]),
+  );
+});
+
 it("parses plural active DON movement from DON deck under another entry point", () => {
   const result = parseCardEffectLine(
     "[When Attacking] Add up to 2 DON!! cards from your DON!! deck and set them as active.",

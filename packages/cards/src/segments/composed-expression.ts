@@ -698,8 +698,25 @@ function expandSharedCountSubjectDisjunction(
   if (subject === undefined || verb === undefined) {
     return [...parts];
   }
+  const sharedTail = parts
+    .slice(1)
+    .map((part) =>
+      /^[0-9]\d*(?:\s+or\s+(?:more|less))?\s+(?<tail>\S[\s\S]*)$/iu.exec(part),
+    )
+    .find((match) => match?.groups?.["tail"] !== undefined)?.groups?.["tail"];
 
   return parts.map((part, index) => {
+    const bareFirstCount =
+      index === 0
+        ? new RegExp(
+            `^(?:${subject}) (?:${verb})\\s+(?<count>[0-9]\\d*)$`,
+            "iu",
+          ).exec(part)
+        : undefined;
+    const count = bareFirstCount?.groups?.["count"];
+    if (count !== undefined && sharedTail !== undefined) {
+      return `${subject} ${verb} ${count} ${sharedTail}`;
+    }
     if (
       index === 0 ||
       /^(?:you|your opponent) (?:have|has)\b/iu.test(part) ||
