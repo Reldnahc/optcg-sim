@@ -215,6 +215,65 @@ describe("field activation instruction parser", () => {
     }
   });
 
+  it("parses cardinality named Leader activation as a reusable saved target", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "Set up to 1 of your [Uta] Leader as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                zone: "leaderArea",
+                player: "self",
+                filter: {
+                  categories: ["leader"],
+                  names: ["Uta"],
+                },
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zone: "leaderArea",
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+        "chooser:self:upTo",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:name",
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses compound Character and DON activation through reusable activation primitives", () => {
     const result = parseSetFieldActiveInstruction({
       text: "Set up to 1 of your {Fish-Man} or {Merfolk} type Characters and up to 1 of your DON!! cards as active.",

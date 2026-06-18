@@ -99,7 +99,7 @@ export function parseYourSelectedLeaderTarget(
   };
 }
 
-function parseSelectedLeaderFilter(text: string):
+export function parseSelectedLeaderFilter(text: string):
   | {
       readonly filter: CardFilter;
       readonly evidence: readonly PrimitiveEvidence[];

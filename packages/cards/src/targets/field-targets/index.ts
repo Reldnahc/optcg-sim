@@ -35,6 +35,7 @@ export {
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
+  parseSelectedLeaderFilter,
   parseYourSelectedLeaderTarget,
 } from "./self.js";
 export type { FieldTargetParseResult } from "./types.js";

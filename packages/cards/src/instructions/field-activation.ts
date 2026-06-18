@@ -2,7 +2,10 @@ import type { CardFilter, SelectionId } from "@optcg/types";
 
 import { parseUpToCardinality } from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
-import { parseYourLeaderOrCharacterCardsTarget } from "../targets/index.js";
+import {
+  parseSelectedLeaderFilter,
+  parseYourLeaderOrCharacterCardsTarget,
+} from "../targets/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 import { parseSetDonActiveInstruction } from "./don-movement/set-active.js";
 
@@ -291,6 +294,14 @@ function parseYourLeaderSelectionTarget(text: string):
   if (predicateText === undefined) {
     return undefined;
   }
+  const selectedLeader = parseSelectedLeaderFilter(predicateText);
+  if (selectedLeader !== undefined) {
+    return {
+      filter: selectedLeader.filter,
+      evidence: ["filter:category:leader", ...selectedLeader.evidence],
+    };
+  }
+
   const predicates = parseCardFilterPredicates(
     { text: predicateText },
     { powerSemantics: "current" },

@@ -23,6 +23,7 @@ export {
   parseYourLeaderOrCharacterCardsTarget,
   parseYourLeaderTarget,
   parseYourNamedCardsTarget,
+  parseSelectedLeaderFilter,
   parseYourSelectedLeaderTarget,
   yourFieldEffectTargetParsers,
   yourCharactersTargetPrimitive,

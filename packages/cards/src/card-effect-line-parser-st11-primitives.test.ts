@@ -159,3 +159,68 @@ it("parses search reveal with bottom remainder and DON activation continuation",
     ]),
   );
 });
+
+it("parses main named Leader activation with cardinality", () => {
+  const result = parseCardEffectLine(
+    "[Main] Set up to 1 of your [Uta] Leader as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                zone: "leaderArea",
+                player: "self",
+                filter: {
+                  categories: ["leader"],
+                  names: ["Uta"],
+                },
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zone: "leaderArea",
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "instruction:activate",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "player:self",
+      "chooser:self:upTo",
+      "zone:leaderArea",
+      "filter:category:leader",
+      "filter:name",
+      "state:active",
+      "composition:selectThenApply",
+    ]),
+  );
+});
