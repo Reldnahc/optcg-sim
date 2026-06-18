@@ -54,6 +54,36 @@ const opponentReturnDonDeclineSequence = (): Extract<
   ],
 });
 
+const opponentLifeTrashDeclineSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "opponent-trash-life",
+      connector: "always",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "moveCards",
+          count: 1,
+          chooser: "opponent",
+          from: { player: "opponent", zone: "life", position: "top" },
+          to: { player: "opponent", zone: "trash" },
+          order: "chooserChoice",
+          optional: true,
+        },
+      },
+    },
+    {
+      id: "draw-if-opponent-does-not",
+      connector: "ifPreviousNotSucceeded",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+  ],
+});
+
 const placeActiveDon = (
   state: GameState,
   playerId: PlayerId,
@@ -209,6 +239,76 @@ test("opponent optional return-DON payment skips the decline branch", () => {
   assert.equal(afterP1.hand.length, beforeHandCount);
   assert.equal(
     afterP2.donDeck.some((card) => card.instanceId === don.instanceId),
+    true,
+  );
+});
+
+test("opponent optional Life trash cost asks the opponent and runs decline branch", () => {
+  const state = sequenceQueueState(opponentLifeTrashDeclineSequence());
+  const beforeP1 = must(state.players[p1], "before p1");
+  const beforeDeckCount = beforeP1.deck.length;
+  const beforeHandCount = beforeP1.hand.length;
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "move Life decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.playerId, p2);
+  assert.equal(decision.cost.type, "moveCards");
+  assert.equal(decision.cost.chooser, "opponent");
+  assert.deepEqual(decision.paymentOptions, [
+    {
+      id: "moveCards:top",
+      type: "moveCards",
+      count: 1,
+      from: { player: "opponent", zone: "life", position: "top" },
+      to: { player: "opponent", zone: "trash" },
+    },
+  ]);
+
+  const declined = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "paymentDeclined" },
+  });
+  const afterP1 = must(declined.state.players[p1], "after p1");
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.equal(afterP1.deck.length, beforeDeckCount - 1);
+  assert.equal(afterP1.hand.length, beforeHandCount + 1);
+});
+
+test("opponent optional Life trash payment skips the decline branch", () => {
+  const state = sequenceQueueState(opponentLifeTrashDeclineSequence());
+  const beforeP1 = must(state.players[p1], "before p1");
+  const beforeP2 = must(state.players[p2], "before p2");
+  const beforeDeckCount = beforeP1.deck.length;
+  const beforeHandCount = beforeP1.hand.length;
+  const lifeCard = must(beforeP2.life[0]?.card, "top Life");
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "move Life decision");
+  const paid = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "moveCards:top",
+      selectedCardInstanceIds: [lifeCard.instanceId],
+    },
+  });
+  const afterP1 = must(paid.state.players[p1], "after p1");
+  const afterP2 = must(paid.state.players[p2], "after p2");
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(paid.state.pendingDecision, undefined);
+  assert.equal(afterP1.deck.length, beforeDeckCount);
+  assert.equal(afterP1.hand.length, beforeHandCount);
+  assert.equal(afterP2.life.length, beforeP2.life.length - 1);
+  assert.equal(
+    afterP2.trash.some((card) => card.instanceId === lifeCard.instanceId),
     true,
   );
 });

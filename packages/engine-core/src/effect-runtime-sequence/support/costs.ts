@@ -137,6 +137,9 @@ const isSupportedCostChooser = (
   if (cost.type === "restDon") {
     return cost.chooser === undefined || cost.chooser === "self";
   }
+  if (cost.type === "moveCards") {
+    return cost.chooser === "self" || cost.chooser === "opponent";
+  }
   if ("chooser" in cost) {
     return cost.chooser === "self";
   }
@@ -162,7 +165,7 @@ const isSupportedCostCount = (cost: CountedCost): boolean => {
 const isSupportedMoveCardsCostRoute = (
   cost: Extract<Cost, { type: "moveCards" }>,
 ): boolean => {
-  if (cost.from.player !== "self" || cost.to.player !== "self") {
+  if (!isMoveCardsCostRouteOwnedByChooser(cost)) {
     return false;
   }
   if (
@@ -223,6 +226,18 @@ const isSupportedMoveCardsCostRoute = (
     cost.to.zone === "hand" &&
     cost.to.position === undefined
   );
+};
+
+const isMoveCardsCostRouteOwnedByChooser = (
+  cost: Extract<Cost, { type: "moveCards" }>,
+): boolean => {
+  if (
+    cost.from.player !== cost.to.player ||
+    (cost.from.player !== "self" && cost.from.player !== "opponent")
+  ) {
+    return false;
+  }
+  return cost.chooser === cost.from.player;
 };
 
 const isSupportedAttachDonCostTarget = (target: Target): boolean => {

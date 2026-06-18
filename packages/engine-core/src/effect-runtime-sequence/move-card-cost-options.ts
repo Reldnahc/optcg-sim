@@ -24,8 +24,7 @@ export const expandMoveCardsCostRoutes = (
   sourceInstanceId?: InstanceId,
 ): MoveCardsPaymentOption[] => {
   if (
-    cost.from.player !== "self" ||
-    cost.to.player !== "self" ||
+    !isMoveCardsCostRouteOwnedByChooser(cost) ||
     !Number.isInteger(cost.count) ||
     cost.count <= 0
   ) {
@@ -158,11 +157,7 @@ export const selectableMoveCardsCostIds = (
   player: PlayerState,
   option: MoveCardsPaymentOption,
 ): CardInstance["instanceId"][] | undefined => {
-  if (
-    option.from.player !== "self" ||
-    option.to.player !== "self" ||
-    option.count <= 0
-  ) {
+  if (!isConcreteSamePlayerRoute(option) || option.count <= 0) {
     return undefined;
   }
   if (
@@ -275,3 +270,20 @@ export const selectableMoveCardsCostIds = (
   }
   return undefined;
 };
+
+const isMoveCardsCostRouteOwnedByChooser = (
+  cost: Extract<OptionalCost, { type: "moveCards" }>,
+): boolean =>
+  isConcreteSamePlayerRoute(cost) && cost.chooser === cost.from.player;
+
+const isConcreteSamePlayerRoute = (route: {
+  readonly from: { readonly player: OptionalCostPlayerRef };
+  readonly to: { readonly player: OptionalCostPlayerRef };
+}): boolean =>
+  route.from.player === route.to.player &&
+  (route.from.player === "self" || route.from.player === "opponent");
+
+type OptionalCostPlayerRef = Extract<
+  OptionalCost,
+  { type: "moveCards" }
+>["from"]["player"];

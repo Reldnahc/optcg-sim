@@ -23,7 +23,7 @@ export type MoveCardsPaymentOption = Extract<
 export const isSupportedMoveCardsPaymentRoute = (
   option: MoveCardsPaymentOption,
 ): boolean => {
-  if (option.from.player !== "self" || option.to.player !== "self") {
+  if (!isConcreteSamePlayerRoute(option)) {
     return false;
   }
   if (
@@ -69,6 +69,10 @@ export const isSupportedMoveCardsPaymentRoute = (
       option.to.position === undefined)
   );
 };
+
+const isConcreteSamePlayerRoute = (option: MoveCardsPaymentOption): boolean =>
+  option.from.player === option.to.player &&
+  (option.from.player === "self" || option.from.player === "opponent");
 
 export const applyMoveCardsPayment = (params: {
   decisionId: NonNullable<GameState["pendingDecision"]>["id"];

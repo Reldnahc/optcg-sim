@@ -106,3 +106,79 @@ it("reuses the opponent optional return-DON branch without an outer cost wrapper
     },
   });
 });
+
+it("parses opponent optional Life-trash costs before reusable decline bodies", () => {
+  const result = parseCardEffectLine(
+    "[On Your Opponent's Attack] You may rest this Character: Your opponent may trash 1 card from the top of their Life cards. If they do not, give up to 1 of your opponent's Leader or Character cards -2000 power during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onOpponentAttack" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: { type: "restSelf", optional: true },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  effect: {
+                    type: "payCost",
+                    cost: {
+                      type: "moveCards",
+                      count: 1,
+                      chooser: "opponent",
+                      from: {
+                        player: "opponent",
+                        zone: "life",
+                        position: "top",
+                      },
+                      to: { player: "opponent", zone: "trash" },
+                      order: "chooserChoice",
+                      optional: true,
+                    },
+                  },
+                },
+                {
+                  connector: "ifPreviousNotSucceeded",
+                  effect: {
+                    type: "modifyPower",
+                    value: -2000,
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onOpponentAttack",
+      "composition:optionalCostedEffect",
+      "cost:restSelf",
+      "composition:opponentOptionalCost",
+      "cost:moveCards",
+      "chooser:opponent",
+      "zone:life",
+      "position:top",
+      "destination:trash",
+      "connector:ifPreviousNotSucceeded",
+      "instruction:modifyPower",
+      "target:opponentLeaderOrCharacters",
+      "duration:thisTurn",
+    ]),
+  );
+});

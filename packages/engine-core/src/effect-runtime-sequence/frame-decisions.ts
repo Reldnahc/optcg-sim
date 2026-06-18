@@ -838,9 +838,6 @@ export const getSequenceOptionalPayCostOptions = (
     return paymentOptions;
   }
   if (cost.type === "moveCards") {
-    if (cost.chooser !== "self") {
-      return paymentOptions;
-    }
     for (const route of expandMoveCardsCostRoutes(
       cost,
       entry.source.instanceId,

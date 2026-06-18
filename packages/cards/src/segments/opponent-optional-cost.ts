@@ -1,3 +1,5 @@
+import type { OptionalCost } from "@optcg/types";
+
 import { parseExpression } from "../expression-parser.js";
 import type {
   ExpressionParseResult,
@@ -8,6 +10,11 @@ import type {
 import type { SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
+type OpponentOptionalCost = Extract<
+  OptionalCost,
+  { type: "returnDon" | "moveCards" }
+>;
+
 export function opponentOptionalCostExpressionParser(options: {
   readonly instructions: readonly InstructionParser[];
   readonly expressions?: readonly ((
@@ -15,7 +22,7 @@ export function opponentOptionalCostExpressionParser(options: {
   ) => ExpressionParseResult | undefined)[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const parsed = parseOpponentReturnDonDeclineText(input);
+    const parsed = parseOpponentOptionalCostDeclineText(input);
     if (parsed === undefined) {
       return undefined;
     }
@@ -30,17 +37,11 @@ export function opponentOptionalCostExpressionParser(options: {
         type: "sequence",
         effects: [
           {
-            id: "cost:opponent-return-don",
+            id: `cost:opponent-${parsed.cost.type}`,
             connector: "always",
             effect: {
               type: "payCost",
-              cost: {
-                type: "returnDon",
-                count: parsed.count,
-                chooser: "opponent",
-                sourceState: "active",
-                optional: true,
-              },
+              cost: parsed.cost,
             },
           },
           {
@@ -52,10 +53,7 @@ export function opponentOptionalCostExpressionParser(options: {
       },
       evidence: [
         "composition:opponentOptionalCost",
-        "cost:returnDon",
-        "count:positiveInteger",
-        "chooser:opponent",
-        "state:active",
+        ...parsed.evidence,
         "connector:ifPreviousNotSucceeded",
         ...body.evidence,
       ],
@@ -89,21 +87,30 @@ export function opponentOptionalCostSegmentParser(options: {
   };
 }
 
-function parseOpponentReturnDonDeclineText(
-  input: ParseInput,
-): { count: number; bodyText: string; bodySource?: SourceSlice } | undefined {
+function parseOpponentOptionalCostDeclineText(input: ParseInput):
+  | {
+      cost: OpponentOptionalCost;
+      evidence: readonly ExpressionParseResult["evidence"][number][];
+      bodyText: string;
+      bodySource?: SourceSlice;
+    }
+  | undefined {
   const match =
-    /^Your opponent may return (?<count>[1-9]\d*) of their active DON!! cards? to their DON!! deck\.\s+If they do not,\s+(?<body>[\s\S]+)$/iu.exec(
+    /^Your opponent may (?<cost>[\s\S]+?)\.\s+If they do not,\s+(?<body>[\s\S]+)$/iu.exec(
       input.text,
     );
-  const countText = match?.groups?.["count"];
+  const costText = match?.groups?.["cost"]?.trim();
   const bodyText = match?.groups?.["body"]?.trim();
-  if (countText === undefined || bodyText === undefined) {
+  if (costText === undefined || bodyText === undefined) {
+    return undefined;
+  }
+  const parsedCost = parseOpponentOptionalCost(costText);
+  if (parsedCost === undefined) {
     return undefined;
   }
   const bodyStart = input.text.lastIndexOf(bodyText);
   return {
-    count: Number.parseInt(countText, 10),
+    ...parsedCost,
     bodyText,
     ...(input.source === undefined || bodyStart < 0
       ? {}
@@ -115,6 +122,67 @@ function parseOpponentReturnDonDeclineText(
             end: input.source.end,
           },
         }),
+  };
+}
+
+function parseOpponentOptionalCost(text: string):
+  | {
+      readonly cost: OpponentOptionalCost;
+      readonly evidence: readonly ExpressionParseResult["evidence"][number][];
+    }
+  | undefined {
+  const returnDon =
+    /^return (?<count>[1-9]\d*) of their active DON!! cards? to their DON!! deck$/iu.exec(
+      text,
+    );
+  const returnDonCount = returnDon?.groups?.["count"];
+  if (returnDonCount !== undefined) {
+    return {
+      cost: {
+        type: "returnDon",
+        count: Number.parseInt(returnDonCount, 10),
+        chooser: "opponent",
+        sourceState: "active",
+        optional: true,
+      },
+      evidence: [
+        "cost:returnDon",
+        "count:positiveInteger",
+        "chooser:opponent",
+        "state:active",
+      ],
+    };
+  }
+
+  const trashLife =
+    /^trash (?<count>[1-9]\d*) cards? from the top of their Life cards$/iu.exec(
+      text,
+    );
+  const trashLifeCount = trashLife?.groups?.["count"];
+  if (trashLifeCount === undefined) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "moveCards",
+      count: Number.parseInt(trashLifeCount, 10),
+      chooser: "opponent",
+      from: { player: "opponent", zone: "life", position: "top" },
+      to: { player: "opponent", zone: "trash" },
+      order: "chooserChoice",
+      optional: true,
+    },
+    evidence: [
+      "cost:moveCards",
+      "count:positiveInteger",
+      "chooser:opponent",
+      "player:opponent",
+      "zone:life",
+      "position:top",
+      "destination:trash",
+      "order:original",
+    ],
   };
 }
 
