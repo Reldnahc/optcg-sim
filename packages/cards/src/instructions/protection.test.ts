@@ -391,4 +391,36 @@ describe("continuous protection instruction parser", () => {
       ]),
     );
   });
+
+  it("parses source-less none-of-your K.O. protection with an explicit duration", () => {
+    const result = parseExplicitProtectionInstruction({
+      text: "None of your Characters can be K.O.'d during this turn.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+          },
+        },
+        duration: { type: "thisTurn" },
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveProtection",
+        "cardinality:all",
+        "player:self",
+        "filter:category:character",
+        "protectionProcess:ko",
+        "duration:thisTurn",
+      ]),
+    );
+  });
 });

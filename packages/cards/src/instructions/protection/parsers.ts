@@ -172,7 +172,31 @@ export const parseExplicitProtectionInstruction: InstructionParser = (
   }
   const source = parseProtectionSource({ text: process.rest });
   if (source === undefined) {
-    return undefined;
+    const duration = parseDurationFromSet(
+      { text: process.rest },
+      fieldEffectDurationParsers,
+    );
+    if (
+      process.process.type !== "ko" ||
+      duration?.duration === undefined ||
+      duration.rest.length > 0
+    ) {
+      return undefined;
+    }
+    return {
+      effect: {
+        type: "protectFromKO",
+        target: target.target,
+        duration: duration.duration,
+      },
+      evidence: [
+        "instruction:giveProtection",
+        ...target.evidence,
+        ...process.evidence,
+        ...duration.evidence,
+      ],
+      rest: "",
+    };
   }
   const duration = parseDurationFromSet(
     { text: source.rest },
