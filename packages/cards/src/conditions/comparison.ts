@@ -13,7 +13,7 @@ export function parseLeadingCountComparison(
   input: ParseInput,
 ): CountComparisonParseResult | undefined {
   const match =
-    /^(?<value>[1-9]\d*)(?: (?<direction>or more|or less))?\b\s*(?<rest>.*)$/i.exec(
+    /^(?<value>[0-9]\d*)(?: (?<direction>or more|or less))?\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   const valueText = match?.groups?.["value"];
@@ -36,10 +36,16 @@ export function parseLeadingCountComparison(
         ? "condition:comparator:lte"
         : "condition:comparator:eq";
 
+  const value = Number.parseInt(valueText, 10);
   return {
     op,
-    value: Number.parseInt(valueText, 10),
-    evidence: [comparatorEvidence, "condition:threshold:positiveInteger"],
+    value,
+    evidence: [
+      comparatorEvidence,
+      value === 0
+        ? "condition:threshold:nonNegativeInteger"
+        : "condition:threshold:positiveInteger",
+    ],
     rest: restText?.trim() ?? "",
   };
 }

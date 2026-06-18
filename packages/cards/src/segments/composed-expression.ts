@@ -590,9 +590,11 @@ export function parseConditionExpression(
   }
 
   const disjunctionParts = expandSharedLeaderSubjectDisjunction(
-    splitConditionDisjunction(text)
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0),
+    expandSharedCountSubjectDisjunction(
+      splitConditionDisjunction(text)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0),
+    ),
   );
   if (disjunctionParts.length >= 2) {
     const parsedParts: ConditionParseResult[] = [];
@@ -652,15 +654,61 @@ export function parseConditionExpression(
 
 function splitConditionDisjunction(text: string): string[] {
   const protectedSubject = "__condition_subject_your_or_opponents__";
+  const protectedComparators: string[] = [];
   return text
     .replace(/\byour or your opponent's\b/giu, protectedSubject)
+    .replace(/\b[0-9]\d*\s+or\s+(?:more|less)\b/giu, (match) => {
+      const token = `__condition_count_comparator_${String(
+        protectedComparators.length,
+      )}__`;
+      protectedComparators.push(match);
+      return token;
+    })
     .split(/\s+or\s+/iu)
     .map((part) =>
       part.replace(
         new RegExp(protectedSubject, "gu"),
         "your or your opponent's",
       ),
+    )
+    .map((part) =>
+      protectedComparators.reduce(
+        (restored, comparator, index) =>
+          restored.replace(
+            new RegExp(`__condition_count_comparator_${String(index)}__`, "gu"),
+            comparator,
+          ),
+        part,
+      ),
     );
+}
+
+function expandSharedCountSubjectDisjunction(
+  parts: readonly string[],
+): string[] {
+  const first = parts[0];
+  if (first === undefined || parts.length < 2) {
+    return [...parts];
+  }
+
+  const subjectMatch =
+    /^(?<subject>you|your opponent) (?<verb>have|has)\s+.+$/iu.exec(first);
+  const subject = subjectMatch?.groups?.["subject"];
+  const verb = subjectMatch?.groups?.["verb"];
+  if (subject === undefined || verb === undefined) {
+    return [...parts];
+  }
+
+  return parts.map((part, index) => {
+    if (
+      index === 0 ||
+      /^(?:you|your opponent) (?:have|has)\b/iu.test(part) ||
+      !/^[0-9]\d*(?:\s+or\s+(?:more|less))?\s+\S+/iu.test(part)
+    ) {
+      return part;
+    }
+    return `${subject} ${verb} ${part}`;
+  });
 }
 
 function splitConditionConjunction(text: string): string[] {

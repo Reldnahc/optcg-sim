@@ -121,6 +121,30 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses exact zero DON field thresholds as non-negative counts", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "you have 0 DON!! cards on your field",
+      }),
+    ).toEqual({
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: { categories: ["don"] },
+        op: "eq",
+        value: 0,
+      },
+      evidence: [
+        "condition:donFieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "player:self",
+        "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses active DON field-count conditions as state-filtered DON counts", () => {
     expect(
       parseDonFieldCountCondition({
