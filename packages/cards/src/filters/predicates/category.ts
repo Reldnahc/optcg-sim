@@ -82,6 +82,36 @@ export const parseActiveCharacterPredicate: PredicateParser = (
   return parseFieldStateCharacterPredicate(text, current, "active");
 };
 
+export const parseFieldStateNamePredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^(?<state>active|rested)\s+\[(?<name>[^\]]+)\]\s*(?<rest>.*)$/iu.exec(
+      text,
+    );
+  const state = match?.groups?.["state"]?.toLowerCase();
+  const name = match?.groups?.["name"]?.trim();
+  const rest = match?.groups?.["rest"] ?? "";
+  if (
+    (state !== "active" && state !== "rested") ||
+    name === undefined ||
+    name.length === 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    filter: { ...current, categories: ["character"], names: [name], state },
+    evidence: [
+      `filter:state:${state}`,
+      "filter:category:character",
+      "filter:name",
+    ],
+    rest,
+  };
+};
+
 const categoryResult = (
   current: CardFilter,
   category: "character" | "stage" | "event",

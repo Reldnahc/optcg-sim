@@ -137,6 +137,7 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
         sourceController: "opponent",
         sourceKind: "effect",
       },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
       evidence: [
         "trigger:fieldRemoved",
         "target:thisCharacter",
@@ -144,6 +145,7 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
         "filter:category:character",
         "replacementSource:opponent",
         "replacementSource:cardEffect",
+        "sourcePresence:resolveFromLastKnownInformation",
       ],
     };
   }
@@ -159,12 +161,14 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
         filter: { categories: ["character"] },
         sourceKind: "effect",
       },
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
       evidence: [
         "trigger:fieldRemoved",
         "target:thisCharacter",
         "player:self",
         "filter:category:character",
         "replacementSource:cardEffect",
+        "sourcePresence:resolveFromLastKnownInformation",
       ],
     };
   }

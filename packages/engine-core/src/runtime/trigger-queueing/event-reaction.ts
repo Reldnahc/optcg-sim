@@ -22,7 +22,9 @@ import {
 } from "../../effect-runtime-block-support.js";
 import {
   fieldTriggerSources,
+  findCardInstance,
   toSnapshot,
+  zoneRefFromUnknown,
 } from "../../effect-runtime-trigger-source-lookup.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../effect-presentation.js";
 import {
@@ -68,7 +70,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const autoEventReactionAdapter = (triggerType: EventReactionTriggerType) => ({
   category: "auto" as const,
-  sourcePresencePolicies: ["mustRemainInSameZone"] as const,
+  sourcePresencePolicies: [
+    "mustRemainInSameZone",
+    "resolveFromLastKnownInformation",
+  ] as const,
   triggerType,
 });
 
@@ -77,6 +82,58 @@ const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
 
 const isRuntimeEffectEvent = (event: EngineEvent): boolean =>
   event.causedBy?.type === "effect" || event.causedBy?.type === "decision";
+
+interface EventReactionSourceCandidate {
+  readonly source: CardInstance;
+  readonly lastKnownZone?: CardInstance["zone"];
+}
+
+const isFieldZone = (zone: string): boolean =>
+  zone === "leaderArea" || zone === "characterArea" || zone === "stageArea";
+
+const removedFieldSourceCandidate = (
+  state: GameState,
+  event: EngineEvent,
+): EventReactionSourceCandidate | undefined => {
+  if (event.type !== "cardMoved" || !isRecord(event.payload)) {
+    return undefined;
+  }
+  const payload = event.payload;
+  const from = zoneRefFromUnknown(payload["from"]);
+  if (
+    from?.playerId === undefined ||
+    !isFieldZone(from.zone) ||
+    typeof payload["instanceId"] !== "string"
+  ) {
+    return undefined;
+  }
+  const source = findCardInstance(state, from.playerId, payload["instanceId"]);
+  if (
+    source === undefined ||
+    source.cardId !== payload["cardId"] ||
+    isFieldZone(source.zone.zone)
+  ) {
+    return undefined;
+  }
+  return { source, lastKnownZone: from };
+};
+
+const eventReactionSourceCandidates = (
+  state: GameState,
+  event: EngineEvent,
+): readonly EventReactionSourceCandidate[] => {
+  const liveSources = fieldTriggerSources(state).map((source) => ({ source }));
+  const removed = removedFieldSourceCandidate(state, event);
+  if (removed === undefined) {
+    return liveSources;
+  }
+  return [
+    ...liveSources.filter(
+      ({ source }) => source.instanceId !== removed.source.instanceId,
+    ),
+    removed,
+  ];
+};
 
 const sourceFieldEntryEventSeq = (
   state: GameState,
@@ -144,9 +201,9 @@ export const createEventReactionTriggerQueueing = (
       readonly effectBlock: EffectDefinition["effects"][number];
       readonly resolved: ResolvedCard;
     }> = [];
-    const sources = fieldTriggerSources(state);
     for (const event of reactionEvents) {
-      for (const source of sources) {
+      for (const candidate of eventReactionSourceCandidates(state, event)) {
+        const { source } = candidate;
         if (
           isCardEffectInvalidated(state, source) ||
           !didEventHappenAfterSourceEntered(state, event, source)
@@ -217,6 +274,12 @@ export const createEventReactionTriggerQueueing = (
           continue;
         }
         for (const { effect, triggerTypesForEvent } of matching) {
+          if (
+            candidate.lastKnownZone !== undefined &&
+            effect.sourcePresencePolicy !== "resolveFromLastKnownInformation"
+          ) {
+            continue;
+          }
           if (effect.sourcePresencePolicy === undefined) {
             return toEngineResult(
               state,
@@ -234,25 +297,29 @@ export const createEventReactionTriggerQueueing = (
               options,
             );
           }
+          const queueSource =
+            candidate.lastKnownZone === undefined
+              ? source
+              : { ...source, zone: candidate.lastKnownZone };
           const entrySource = {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: source.controller,
-            zone: source.zone,
+            instanceId: queueSource.instanceId,
+            cardId: queueSource.cardId,
+            playerId: queueSource.controller,
+            zone: queueSource.zone,
           };
           const entry: EffectQueueEntry = {
-            id: `queue-entry:${String(event.id)}:${triggerType}:${String(source.instanceId)}:${String(effect.id)}` as EffectQueueEntry["id"],
+            id: `queue-entry:${String(event.id)}:${triggerType}:${String(queueSource.instanceId)}:${String(effect.id)}` as EffectQueueEntry["id"],
             state: "pending",
             timingWindowId:
               `timing-window:${String(event.id)}:${triggerType}` as EffectQueueEntry["timingWindowId"],
             generation: 0,
-            controllerId: source.controller,
+            controllerId: queueSource.controller,
             source: entrySource,
-            sourceSnapshot: toSnapshot(source, resolved),
+            sourceSnapshot: toSnapshot(queueSource, resolved),
             triggerEventId: event.id,
             effectBlockId: effect.id,
             orderingGroup:
-              source.controller === state.turn.turnPlayerId
+              queueSource.controller === state.turn.turnPlayerId
                 ? "turnPlayer"
                 : "nonTurnPlayer",
             createdAtEventSeq: event.seq,

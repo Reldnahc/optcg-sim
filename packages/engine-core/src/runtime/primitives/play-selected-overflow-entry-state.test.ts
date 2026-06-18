@@ -270,30 +270,14 @@ test("hand-origin playSelected without enterRested stays active after overflow",
   assert.equal(played?.state, "active");
 });
 
-test("playSelected overflow without recoverable entry-state metadata does not invent rested entry", () => {
+test("playSelected overflow without decision entry-state metadata stays active", () => {
   const { played, result } = resolveOverflowingPlaySelected({
     mutateOverflowState: (state) => {
-      const player = must(state.players[p1], "p1");
-      const source = must(player.characters[0], "source");
-      const sourceMetadata = must(
-        state.cardManifest.cards[source.cardId],
-        "source metadata",
-      );
-      const definitionId = must(
-        sourceMetadata.support.effectDefinitionId,
-        "definition id",
-      );
-      const definition = must(
-        state.cardManifest.effectDefinitions?.[definitionId],
-        "definition",
-      );
-      state.cardManifest.effectDefinitions = {
-        ...state.cardManifest.effectDefinitions,
-        [definitionId]: {
-          ...definition,
-          implementationStatus: "unsupported",
-        },
-      };
+      const pendingDecision = must(state.pendingDecision, "overflow decision");
+      assert.equal(pendingDecision.type, "selectCards");
+      const decisionWithoutRuntime = { ...pendingDecision };
+      delete decisionWithoutRuntime.runtime;
+      state.pendingDecision = decisionWithoutRuntime;
     },
   });
 

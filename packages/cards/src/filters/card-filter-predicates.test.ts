@@ -307,6 +307,38 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses field-state bracketed names as reusable field filters", () => {
+    expect(parseCardFilterPredicates({ text: "rested [Uta]" })).toEqual({
+      filter: {
+        categories: ["character"],
+        names: ["Uta"],
+        state: "rested",
+      },
+      evidence: [
+        "filter:state:rested",
+        "filter:category:character",
+        "filter:name",
+      ],
+      rest: "",
+    });
+
+    expect(
+      parseCardFilterPredicates({ text: "active [Monkey.D.Luffy]" }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        names: ["Monkey.D.Luffy"],
+        state: "active",
+      },
+      evidence: [
+        "filter:state:active",
+        "filter:category:character",
+        "filter:name",
+      ],
+      rest: "",
+    });
+  });
+
   it.each([
     ["<Special> attribute Characters", "special"],
     ["＜Special＞ attribute Characters", "special"],

@@ -144,6 +144,7 @@ it("parses effect-caused self K.O. reactions as fieldRemoved triggers", () => {
   );
 
   expect(result.block).toMatchObject({
+    sourcePresencePolicy: "resolveFromLastKnownInformation",
     trigger: {
       type: "fieldRemoved",
       target: "self",
@@ -170,6 +171,7 @@ it("parses effect-caused self K.O. reactions as fieldRemoved triggers", () => {
       "trigger:fieldRemoved",
       "target:thisCharacter",
       "replacementSource:cardEffect",
+      "sourcePresence:resolveFromLastKnownInformation",
     ]),
   );
 });

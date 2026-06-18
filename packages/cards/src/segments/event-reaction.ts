@@ -1,4 +1,9 @@
-import type { Condition, PlayerRef, Trigger } from "@optcg/types";
+import type {
+  Condition,
+  PlayerRef,
+  SourcePresencePolicy,
+  Trigger,
+} from "@optcg/types";
 
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import type { SourceSlice } from "../source-slices.js";
@@ -133,6 +138,7 @@ export interface ReactionPredicateResult {
   readonly evidence: ExpressionParseResult["evidence"];
   readonly condition?: Condition;
   readonly allowBodyBlockPatch?: boolean;
+  readonly sourcePresencePolicy?: SourcePresencePolicy;
 }
 
 export type ReactionPredicateParser = (
@@ -191,6 +197,18 @@ function composeReactionPredicates(
   if (predicates.some((predicate) => predicate.condition !== undefined)) {
     return undefined;
   }
+  const sourcePresencePolicies = [
+    ...new Set(
+      predicates
+        .map((predicate) => predicate.sourcePresencePolicy)
+        .filter(
+          (policy): policy is SourcePresencePolicy => policy !== undefined,
+        ),
+    ),
+  ];
+  if (sourcePresencePolicies.length > 1) {
+    return undefined;
+  }
   return {
     trigger: composeReactionTriggers(
       predicates.map((predicate) => predicate.trigger),
@@ -202,6 +220,9 @@ function composeReactionPredicates(
     ...(predicates.some((predicate) => predicate.allowBodyBlockPatch === true)
       ? { allowBodyBlockPatch: true }
       : {}),
+    ...(sourcePresencePolicies[0] === undefined
+      ? {}
+      : { sourcePresencePolicy: sourcePresencePolicies[0] }),
   };
 }
 
@@ -649,6 +670,7 @@ const implicitReactionPredicates = (
       trigger: Trigger;
       evidence: ExpressionParseResult["evidence"];
       allowBodyBlockPatch?: boolean;
+      sourcePresencePolicy?: SourcePresencePolicy;
     }
   | undefined => {
   const predicates = text
@@ -669,11 +691,26 @@ const implicitReactionPredicates = (
   if (parsed.length === 0) {
     return undefined;
   }
+  const sourcePresencePolicies = [
+    ...new Set(
+      parsed
+        .map((predicate) => predicate.sourcePresencePolicy)
+        .filter(
+          (policy): policy is SourcePresencePolicy => policy !== undefined,
+        ),
+    ),
+  ];
+  if (sourcePresencePolicies.length > 1) {
+    return undefined;
+  }
   return {
     trigger: anyOfTrigger(parsed.map((predicate) => predicate.trigger)),
     ...(parsed.some((predicate) => predicate.allowBodyBlockPatch === true)
       ? { allowBodyBlockPatch: true }
       : {}),
+    ...(sourcePresencePolicies[0] === undefined
+      ? {}
+      : { sourcePresencePolicy: sourcePresencePolicies[0] }),
     evidence: [
       ...parsed.flatMap((predicate) => predicate.evidence),
       ...(parsed.length > 1 ? (["composition:triggerAnyOf"] as const) : []),
@@ -778,6 +815,9 @@ export function implicitEventReactionExpressionParser(options: {
           ...parsed.blockPatch,
           category: "auto",
           trigger: predicate.trigger,
+          ...(predicate.sourcePresencePolicy === undefined
+            ? {}
+            : { sourcePresencePolicy: predicate.sourcePresencePolicy }),
         },
         ...(parsed.presentationSpans === undefined
           ? {}

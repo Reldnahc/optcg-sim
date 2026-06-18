@@ -438,6 +438,7 @@ export interface ExpressionParseResult {
     readonly condition?: Condition;
     readonly cost?: EffectBlockCost;
     readonly optional?: boolean;
+    readonly sourcePresencePolicy?: SourcePresencePolicy;
     readonly trigger?: Trigger;
   };
 }

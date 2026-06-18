@@ -71,7 +71,10 @@ export const autoRuntimeEntryAdapterForTriggerType = (
     return autoAdapter("damageDealt", ["mustRemainInSameZone"]);
   }
   if (triggerType === "fieldRemoved") {
-    return autoAdapter("fieldRemoved", ["mustRemainInSameZone"]);
+    return autoAdapter("fieldRemoved", [
+      "mustRemainInSameZone",
+      "resolveFromLastKnownInformation",
+    ]);
   }
   if (triggerType === "cardPlayed") {
     return autoAdapter("cardPlayed", ["mustRemainInSameZone"]);

@@ -144,7 +144,9 @@ export function parseEffectLinesDetailed(
         ...(expression.blockPatch?.optional === undefined
           ? {}
           : { optional: expression.blockPatch.optional }),
-        sourcePresencePolicy: sourcePresencePolicy(entryPoint.evidence),
+        sourcePresencePolicy:
+          expression.blockPatch?.sourcePresencePolicy ??
+          sourcePresencePolicy(entryPoint.evidence),
         ...(leadingMarkerParse.patch.oncePerTurn === true
           ? { oncePerTurn: true as const }
           : {}),
