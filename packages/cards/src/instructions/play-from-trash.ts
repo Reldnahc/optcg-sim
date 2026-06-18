@@ -8,6 +8,12 @@ const trashPlaySelection = "trashSelection:play" as SelectionId;
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
 export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
+  const chooseThenPlay =
+    parseChooseThenPlayOtherRestedFromTrashInstruction(input);
+  if (chooseThenPlay !== undefined) {
+    return chooseThenPlay;
+  }
+
   const multiNamed = parseMultiNamedPlayFromTrashInstruction(input);
   if (multiNamed !== undefined) {
     return multiNamed;
@@ -78,6 +84,128 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
     ],
     rest: "",
   };
+};
+
+const parseChooseThenPlayOtherRestedFromTrashInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^choose\s+(?<first>up to [1-9]\d*\s+.+?)\s+and\s+(?<second>up to [1-9]\d*\s+.+?)\s+from your trash\.\s*play 1 card and play the other card rested\.?$/iu.exec(
+      input.text,
+    );
+  const firstText = match?.groups?.["first"];
+  const secondText = match?.groups?.["second"];
+  if (firstText === undefined || secondText === undefined) {
+    return undefined;
+  }
+
+  const firstSource = parseTrashSelectionSource(firstText);
+  const secondSource = parseTrashSelectionSource(secondText);
+  if (firstSource === undefined || secondSource === undefined) {
+    return undefined;
+  }
+
+  const firstSelection = "trashSelection:play:first" as SelectionId;
+  const secondSelection = "trashSelection:play:other-rested" as SelectionId;
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:trash-play:first",
+          connector: "always",
+          saveResultAs: firstSelection,
+          effect: {
+            type: "selectCards",
+            zone: "trash",
+            player: "self",
+            chooser: "self",
+            min: firstSource.cardinality.min,
+            max: firstSource.cardinality.max,
+            filter: firstSource.filter,
+            saveAs: firstSelection,
+            visibility: "bothPlayers",
+          },
+        },
+        {
+          id: "play:selected-from-trash:first",
+          connector: "ifPossible",
+          effect: {
+            type: "playSelected",
+            selection: firstSelection,
+            ignoreCost: true,
+          },
+        },
+        {
+          id: "select:trash-play:other-rested",
+          connector: "then",
+          saveResultAs: secondSelection,
+          effect: {
+            type: "selectCards",
+            zone: "trash",
+            player: "self",
+            chooser: "self",
+            min: secondSource.cardinality.min,
+            max: secondSource.cardinality.max,
+            filter: secondSource.filter,
+            saveAs: secondSelection,
+            visibility: "bothPlayers",
+          },
+        },
+        {
+          id: "play:selected-from-trash:other-rested",
+          connector: "ifPossible",
+          effect: {
+            type: "playSelected",
+            selection: secondSelection,
+            enterRested: true,
+            ignoreCost: true,
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectCards",
+      "instruction:playSelected",
+      "zone:trash",
+      "player:self",
+      "chooser:self:upTo",
+      ...firstSource.evidence,
+      ...secondSource.evidence,
+      "state:rested",
+      "composition:selectThenPlay",
+      "expression:sequence",
+    ],
+    rest: "",
+  };
+};
+
+const parseTrashSelectionSource = (
+  text: string,
+):
+  | {
+      readonly cardinality: { readonly min: number; readonly max: number };
+      readonly filter: NonNullable<
+        ReturnType<typeof parseCardFilterPredicates>
+      >["filter"];
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+  const predicates = parseCardFilterPredicates({
+    text: normalizeOwnedSourcePredicate(cardinality.rest),
+  });
+  return predicates === undefined || predicates.rest.length > 0
+    ? undefined
+    : {
+        cardinality: cardinality.cardinality,
+        filter: predicates.filter,
+        evidence: [...cardinality.evidence, ...predicates.evidence],
+      };
 };
 
 const parseRepeatedFilteredPlayFromTrashInstruction: InstructionParser = (

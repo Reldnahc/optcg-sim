@@ -202,4 +202,101 @@ describe("OP06 primitive parser support", () => {
       ]),
     );
   });
+
+  it("parses two trash Character selections into active and rested play primitives", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Choose up to 1 Character card with a cost of 4 or less and up to 1 Character card with a cost of 2 or less from your trash. Play 1 card and play the other card rested.",
+    );
+    const triggerResult = parseCardEffectLine(
+      "[Trigger] Choose up to 1 Character card with a cost of 4 or less and up to 1 Character card with a cost of 2 or less from your trash. Play 1 card and play the other card rested.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 4 },
+                },
+              },
+            },
+            {
+              connector: "ifPossible",
+              effect: {
+                type: "playSelected",
+                ignoreCost: true,
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "selectCards",
+                zone: "trash",
+                player: "self",
+                chooser: "self",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 2 },
+                },
+              },
+            },
+            {
+              connector: "ifPossible",
+              effect: {
+                type: "playSelected",
+                enterRested: true,
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:selectCards",
+        "instruction:playSelected",
+        "zone:trash",
+        "filter:category:character",
+        "filter:cost",
+        "state:rested",
+        "composition:selectThenPlay",
+      ]),
+    );
+    expect(triggerResult).toMatchObject({
+      block: {
+        trigger: { type: "trigger" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "selectCards" } },
+            { effect: { type: "playSelected", ignoreCost: true } },
+            { effect: { type: "selectCards" } },
+            {
+              effect: {
+                type: "playSelected",
+                enterRested: true,
+                ignoreCost: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+  });
 });
