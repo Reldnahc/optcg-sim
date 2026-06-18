@@ -26,4 +26,39 @@ describe("return DON instruction parser", () => {
       });
     },
   );
+
+  it("parses return-DON until your field count matches your opponent", () => {
+    expect(
+      parseForcedReturnDonInstruction({
+        text: "return DON!! cards from your field to your DON!! deck until you have the same number of DON!! cards on your field as your opponent.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "returnDon",
+        player: "self",
+        count: {
+          type: "fieldCountDifference",
+          minuend: {
+            player: "self",
+            zone: "costArea",
+            filter: { categories: ["don"] },
+          },
+          subtrahend: {
+            player: "opponent",
+            zone: "costArea",
+            filter: { categories: ["don"] },
+          },
+          minimum: 0,
+        },
+      },
+      evidence: [
+        "instruction:returnDon",
+        "player:self",
+        "condition:fieldCountDifference",
+        "filter:category:don",
+        "valueTransform:minimum",
+      ],
+      rest: "",
+    });
+  });
 });

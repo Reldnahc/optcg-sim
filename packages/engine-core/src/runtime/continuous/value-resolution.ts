@@ -231,6 +231,57 @@ const countMatchingZoneCardsAcrossPlayers = (
   );
 };
 
+const countFieldCountDifference = (
+  state: GameState,
+  controllerId: PlayerId,
+  value: Extract<DynamicNumberValue, { type: "fieldCountDifference" }>,
+): number | null => {
+  const minuend = countFieldCountDifferenceOperand(
+    state,
+    controllerId,
+    value.minuend,
+  );
+  const subtrahend = countFieldCountDifferenceOperand(
+    state,
+    controllerId,
+    value.subtrahend,
+  );
+  if (
+    minuend === null ||
+    subtrahend === null ||
+    (value.minimum !== undefined && !Number.isSafeInteger(value.minimum))
+  ) {
+    return null;
+  }
+  const difference = minuend - subtrahend;
+  return value.minimum === undefined
+    ? difference
+    : Math.max(value.minimum, difference);
+};
+
+const countFieldCountDifferenceOperand = (
+  state: GameState,
+  controllerId: PlayerId,
+  operand: Extract<
+    DynamicNumberValue,
+    { type: "fieldCountDifference" }
+  >["minuend"],
+): number | null => {
+  if (operand.player !== "self" && operand.player !== "opponent") {
+    return null;
+  }
+  const playerId = resolvePlayerRef(state, controllerId, operand.player);
+  const player = playerId === null ? undefined : state.players[playerId];
+  if (player === undefined) {
+    return null;
+  }
+  const filter = operand.filter;
+  return filter === undefined
+    ? player.costArea.length
+    : player.costArea.filter((card) => costAreaDonMatchesFilter(card, filter))
+        .length;
+};
+
 const applyDynamicZoneCountArithmetic = (
   baseValue: number,
   value:
@@ -364,6 +415,12 @@ export const resolveDynamicNumberValue = (
     return controllerId === undefined
       ? null
       : countMatchingZoneCardsAcrossPlayers(state, controllerId, value);
+  }
+  if (value.type === "fieldCountDifference") {
+    const controllerId = context?.controllerId;
+    return controllerId === undefined
+      ? null
+      : countFieldCountDifference(state, controllerId, value);
   }
   if (value.type === "countAttachedDon") {
     return countAttachedDon(state, value, context);

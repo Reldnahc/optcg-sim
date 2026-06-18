@@ -28,6 +28,7 @@ import { applyPlaySelectedSequenceSegment } from "../../runtime/primitives/play-
 import { applyActivateSelectedEventSequenceSegment } from "../../runtime/primitives/activate-selected-event.js";
 import { createContinuousRecordsForResolvedEffect } from "../../runtime/continuous/continuous.js";
 import { isSupportedContinuousQueueEffect } from "../../runtime/continuous/support.js";
+import { resolveDynamicNumberValue } from "../../runtime/continuous/value-resolution.js";
 import { applySelectTargetsSequenceSegment } from "../select-targets.js";
 import { createTopDeckPlacementDecision } from "../../effect-runtime-top-deck-placement.js";
 import {
@@ -283,15 +284,37 @@ export const continueNoDecisionSegments = (
         segment.effect.player === "self"
           ? entry.controllerId
           : getOpponentId(nextState, entry.controllerId);
-      if (playerId === null || segment.effect.count <= 0) {
+      const resolvedCount = resolveDynamicNumberValue(
+        nextState,
+        segment.effect.count,
+        { controllerId: entry.controllerId },
+      );
+      if (playerId === null || resolvedCount === null) {
         return { ok: false };
       }
       const player = nextState.players[playerId];
       if (player === undefined) {
         return { ok: false };
       }
+      if (resolvedCount <= 0) {
+        const returned = applyNoOpReturnDonSegment(
+          nextState,
+          segment as SupportedSequenceSegment & { effect: ReturnDonEffect },
+          index,
+          nextLedgers,
+          emptySegmentResult,
+          ledgerKey,
+        );
+        if (!returned.ok) {
+          return { ok: false };
+        }
+        nextState = returned.state;
+        nextLedgers = returned.ledgers;
+        events.push(...returned.events);
+        continue;
+      }
       const returnCount = Math.min(
-        segment.effect.count,
+        resolvedCount,
         getReturnDonEligibleCount(player),
       );
       if (returnCount === 0) {

@@ -177,3 +177,150 @@ test("returnDon body primitive lets the affected opponent choose returned DON", 
     ["donReturned"],
   );
 });
+
+const returnUntilCountsMatchEffect = (): Effect => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "return-until-don-counts-match",
+      connector: "always",
+      effect: {
+        type: "returnDon",
+        player: "self",
+        count: {
+          type: "fieldCountDifference",
+          minuend: {
+            player: "self",
+            zone: "costArea",
+            filter: { categories: ["don"] },
+          },
+          subtrahend: {
+            player: "opponent",
+            zone: "costArea",
+            filter: { categories: ["don"] },
+          },
+          minimum: 0,
+        },
+      },
+    },
+  ],
+});
+
+test("returnDon body resolves dynamic DON count differences before prompting", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const definition = setupSequenceDefinition(
+    state,
+    source,
+    returnUntilCountsMatchEffect(),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-return-don-dynamic"),
+      timingWindowId: toTimingWindowId("window-return-don-dynamic"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "return DON effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "return-don-dynamic-test" },
+    },
+  ];
+  placeActiveDon(state, p1);
+  placeActiveDon(state, p1);
+  placeActiveDon(state, p1);
+  placeActiveDon(state, p2);
+  const beforeP1 = must(state.players[p1], "before p1");
+  const returnedDon = beforeP1.costArea.slice(0, 2);
+
+  const paused = processEffectRuntime(state);
+  const decision = must(paused.state.pendingDecision, "return DON decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "payCost");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.cost.type, "returnDon");
+  assert.equal(decision.cost.count, 2);
+
+  const result = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: returnedDon.map((card) => card.instanceId),
+    },
+  });
+  const afterP1 = must(result.state.players[p1], "after p1");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(afterP1.costArea.length, 1);
+  assert.deepEqual(
+    result.events
+      .map((event) => event.type)
+      .filter((type) => type === "donReturned"),
+    ["donReturned", "donReturned"],
+  );
+});
+
+test("returnDon body treats zero resolved dynamic DON count as a completed no-op", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  const definition = setupSequenceDefinition(
+    state,
+    source,
+    returnUntilCountsMatchEffect(),
+  );
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-return-don-dynamic-zero"),
+      timingWindowId: toTimingWindowId("window-return-don-dynamic-zero"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "return DON effect").id,
+      sourcePresencePolicy: "noSourceRequired",
+      causedBy: { type: "ruleProcess", name: "return-don-dynamic-zero-test" },
+    },
+  ];
+  placeActiveDon(state, p1);
+  placeActiveDon(state, p2);
+  placeActiveDon(state, p2);
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.deepEqual(
+    result.events
+      .map((event) => event.type)
+      .filter((type) => type === "donReturned"),
+    [],
+  );
+});

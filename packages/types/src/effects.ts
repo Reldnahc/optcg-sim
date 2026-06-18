@@ -21,8 +21,10 @@ import type { OptionalCost } from "./effect-costs.js";
 import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
 import type { EffectEntryPointFilter, Trigger } from "./effect-triggers.js";
 import type { EffectDslProtection } from "./effect-protection.js";
+import type { DynamicNumberValue } from "./dynamic-number-values.js";
 
 export type { FailurePolicy, SourcePresencePolicy } from "./effect-policies.js";
+export type { DynamicNumberValue } from "./dynamic-number-values.js";
 
 export type {
   EffectCategory,
@@ -228,67 +230,6 @@ export interface CardSelectionRequest {
   visibility?: "public" | "privateToChooser";
   remainingCards?: RemainingCardsPlacement;
 }
-
-export type DynamicNumberValue =
-  | {
-      type: "savedNumber";
-      selection: SelectionId;
-    }
-  | {
-      type: "selectedCardCount";
-      selection: SelectionId;
-      multiplier: number;
-    }
-  | {
-      type: "sumSelectedCardCosts";
-      selection: SelectionSetId;
-      multiplier: number;
-    }
-  | {
-      type: "paidCostCardCount";
-      cost: string;
-      multiplier: number;
-    }
-  | {
-      type: "countDistinctMatchingFieldNames";
-      player: PlayerRef;
-      zone: "characterArea";
-      filter: CardFilter;
-      multiplier: number;
-    }
-  | {
-      type: "countMatchingFieldCards";
-      player: PlayerRef;
-      zone: "characterArea";
-      filter: CardFilter;
-      multiplier: number;
-    }
-  | {
-      type: "countMatchingZoneCards";
-      player: PlayerRef;
-      zone: "trash" | "life" | "costArea";
-      filter?: CardFilter;
-      per: number;
-      multiplier: number;
-      offset?: number;
-      minimum?: number;
-    }
-  | {
-      type: "countMatchingZoneCardsAcrossPlayers";
-      players: PlayerRef[];
-      zone: "life";
-      filter?: CardFilter;
-      per: number;
-      multiplier: number;
-      offset?: number;
-      minimum?: number;
-    }
-  | {
-      type: "countAttachedDon";
-      target: Target;
-      per: number;
-      multiplier: number;
-    };
 
 export type SnapshotNumberValue = {
   type: "snapshotCardStat";
@@ -947,7 +888,7 @@ export type Effect =
       target: Target;
       targetOwner?: "selectedDonOwner";
     }
-  | { type: "returnDon"; count: number; player: PlayerRef }
+  | { type: "returnDon"; count: number | DynamicNumberValue; player: PlayerRef }
   | { type: "winGame"; player: PlayerRef }
   | {
       type: "addLife";

@@ -621,6 +621,88 @@ it("parses main rest-DON cost with attached-DON condition and power reduction bo
   );
 });
 
+it("parses conditional add-rested DON followed by delayed return until DON counts match", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] If you have no other [Black Maria] Characters, add up to 5 DON!! cards from your DON!! deck and rest them. Then, at the end of this turn, return DON!! cards from your field to your DON!! deck until you have the same number of DON!! cards on your field as your opponent.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          names: ["Black Maria"],
+          excludeSelf: true,
+        },
+        op: "eq",
+        value: 0,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "moveCards",
+              min: 0,
+              count: 5,
+              from: { player: "self", zone: "donDeck", position: "top" },
+              to: { player: "self", zone: "costArea" },
+              destinationState: "rested",
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "delayed",
+              timing: { type: "endOfTurn", turn: "current" },
+              effect: {
+                type: "returnDon",
+                player: "self",
+                count: {
+                  type: "fieldCountDifference",
+                  minuend: {
+                    player: "self",
+                    zone: "costArea",
+                    filter: { categories: ["don"] },
+                  },
+                  subtrahend: {
+                    player: "opponent",
+                    zone: "costArea",
+                    filter: { categories: ["don"] },
+                  },
+                  minimum: 0,
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "condition:fieldCount",
+      "filter:name",
+      "filter:excludeSelf",
+      "instruction:moveCards",
+      "zone:donDeck",
+      "destination:costArea",
+      "state:rested",
+      "duration:endOfTurn",
+      "composition:delayed",
+      "instruction:returnDon",
+      "condition:fieldCountDifference",
+      "valueTransform:minimum",
+    ]),
+  );
+});
+
 it("parses conditional when-attacking top-deck top-or-bottom placement", () => {
   const result = parseCardEffectLine(
     "[When Attacking] If you have 6 or less DON!! cards on your field, look at 2 cards from the top of your deck and place them at the top or bottom of your deck in any order.",

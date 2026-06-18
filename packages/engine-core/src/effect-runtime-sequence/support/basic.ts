@@ -49,13 +49,26 @@ const isSupportedFieldCountValue = (
   count.multiplier >= 0 &&
   count.filter.categories?.includes("character") === true;
 
+const isSupportedFieldCountDifferenceValue = (
+  count: number | DynamicNumberValue,
+): boolean =>
+  typeof count === "object" &&
+  count.type === "fieldCountDifference" &&
+  (count.minuend.player === "self" || count.minuend.player === "opponent") &&
+  (count.subtrahend.player === "self" ||
+    count.subtrahend.player === "opponent") &&
+  count.minuend.filter?.categories?.includes("don") === true &&
+  count.subtrahend.filter?.categories?.includes("don") === true &&
+  (count.minimum === undefined || Number.isSafeInteger(count.minimum));
+
 const isSupportedSegmentCount = (
   count: number | DynamicNumberValue,
   options: { positive: boolean },
 ): boolean =>
   typeof count === "number"
     ? Number.isInteger(count) && (options.positive ? count > 0 : count >= 0)
-    : isSupportedFieldCountValue(count);
+    : isSupportedFieldCountValue(count) ||
+      isSupportedFieldCountDifferenceValue(count);
 
 export const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
@@ -113,8 +126,7 @@ export const isSupportedReturnDonSegment = (
 ): effect is ReturnDonEffect =>
   effect.type === "returnDon" &&
   (effect.player === "self" || effect.player === "opponent") &&
-  Number.isInteger(effect.count) &&
-  effect.count > 0;
+  isSupportedSegmentCount(effect.count, { positive: true });
 
 export const isSupportedReorderLifeSegment = (
   effect: SequenceSegmentEffect,

@@ -80,9 +80,12 @@ export const isSupportedTrashFromHandInsteadEffect = (
 
 export const isSupportedReturnDonInsteadEffect = (
   effect: ReplacementInstead,
-): effect is Extract<ReplacementInstead, { type: "returnDon" }> =>
+): effect is Extract<ReplacementInstead, { type: "returnDon" }> & {
+  count: number;
+} =>
   effect.type === "returnDon" &&
   effect.player === "self" &&
+  typeof effect.count === "number" &&
   Number.isInteger(effect.count) &&
   effect.count > 0;
 

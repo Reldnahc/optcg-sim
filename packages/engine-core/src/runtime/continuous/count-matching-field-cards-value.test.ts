@@ -6,6 +6,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   resolvedCard,
   toCardId,
   withCardInZone,
@@ -102,5 +103,48 @@ test("countMatchingZoneCards dynamic value counts rested cost-area DON", () => {
   assert.equal(
     resolveDynamicNumberValue(state, value, { controllerId: p1 }),
     2000,
+  );
+});
+
+test("fieldCountDifference dynamic value floors zone count differences", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const opponent = must(state.players[p2], "p2");
+  player.costArea = player.donDeck.slice(0, 3).map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index },
+  }));
+  opponent.costArea = opponent.donDeck.slice(0, 1).map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea", playerId: p2, slot: "cost", index },
+  }));
+  const value = {
+    type: "fieldCountDifference",
+    minuend: {
+      player: "self",
+      zone: "costArea",
+      filter: { categories: ["don"] },
+    },
+    subtrahend: {
+      player: "opponent",
+      zone: "costArea",
+      filter: { categories: ["don"] },
+    },
+    minimum: 0,
+  } as unknown as DynamicNumberValue;
+
+  assert.equal(
+    resolveDynamicNumberValue(state, value, { controllerId: p1 }),
+    2,
+  );
+
+  opponent.costArea = opponent.donDeck.slice(0, 7).map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea", playerId: p2, slot: "cost", index },
+  }));
+
+  assert.equal(
+    resolveDynamicNumberValue(state, value, { controllerId: p1 }),
+    0,
   );
 });
