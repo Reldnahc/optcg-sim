@@ -22,7 +22,7 @@ export function playFromDeckExpressionParser(
   }
 
   const destinationMatch =
-    /^(?<filterText>.+?)\s+from your deck\.\s+Then,\s+shuffle your deck\.?$/iu.exec(
+    /^(?<filterText>.+?)\s+from your deck(?:\.|,)\s+then,?\s+shuffle your deck\.?$/iu.exec(
       cardinality.rest,
     );
   const filterText = destinationMatch?.groups?.["filterText"];

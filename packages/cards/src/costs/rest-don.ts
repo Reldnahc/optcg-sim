@@ -113,7 +113,8 @@ function parseCircledRestDonCost(
   input: ParseInput,
 ): CostParseResult | undefined {
   const marker = input.text.trim().slice(0, 1);
-  const count = circledDonCounts.get(marker);
+  const count =
+    circledDonCounts.get(marker) ?? parseUnicodeCircledDonCount(marker);
   if (count === undefined) {
     return undefined;
   }
@@ -144,4 +145,18 @@ function parseCircledRestDonCost(
     ],
     rest: "",
   };
+}
+
+function parseUnicodeCircledDonCount(marker: string): number | undefined {
+  const codePoint = marker.codePointAt(0);
+  if (codePoint === undefined) {
+    return undefined;
+  }
+  if (codePoint >= 0x2780 && codePoint <= 0x2784) {
+    return codePoint - 0x277f;
+  }
+  if (codePoint >= 0x2460 && codePoint <= 0x2464) {
+    return codePoint - 0x245f;
+  }
+  return undefined;
 }

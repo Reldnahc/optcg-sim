@@ -57,4 +57,28 @@ describe("rest DON cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses Unicode circled rest-DON shorthand as a reusable cost primitive", () => {
+    expect(
+      parseRestDonCost({
+        text: "➁ (You may rest the specified number of DON!! cards in your cost area.)",
+      }),
+    ).toEqual({
+      cost: {
+        type: "restDon",
+        count: 2,
+        chooser: "self",
+        optional: true,
+      },
+      evidence: [
+        "cost:restDon",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "target:yourDonCards",
+        "player:self",
+        "chooser:self",
+      ],
+      rest: "",
+    });
+  });
 });
