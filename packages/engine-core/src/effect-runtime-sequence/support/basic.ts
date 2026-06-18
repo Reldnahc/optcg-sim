@@ -1,6 +1,7 @@
 import type { DynamicNumberValue, Effect } from "@optcg/types";
 
 import { isSupportedMoveCardsEffect } from "../../effect-runtime-move-cards.js";
+import { isSupportedMoveMatchingLifeCardsEffect } from "../matching-life-cards.js";
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import { isSupportedDamageEffect } from "../../runtime/primitives/execute.js";
 import { isSupportedTrashFromHandUntilCountBody } from "../../runtime/primitives/trash-from-hand-until.js";
@@ -12,6 +13,10 @@ export type DrawEffect = Extract<Effect, { type: "draw" }>;
 export type DrawUpToEffect = Extract<Effect, { type: "drawUpTo" }>;
 export type DamageEffect = Extract<Effect, { type: "damage" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+export type MoveMatchingLifeCardsEffect = Extract<
+  Effect,
+  { type: "moveMatchingLifeCards" }
+>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
 export type PlaceTopLifeCardEffect = Extract<
@@ -87,6 +92,12 @@ export const isSupportedMoveCardsSegment = (
   effect: SequenceSegmentEffect,
 ): effect is MoveCardsEffect =>
   effect.type === "moveCards" && isSupportedMoveCardsEffect(effect);
+
+export const isSupportedMoveMatchingLifeCardsSegment = (
+  effect: SequenceSegmentEffect,
+): effect is MoveMatchingLifeCardsEffect =>
+  effect.type === "moveMatchingLifeCards" &&
+  isSupportedMoveMatchingLifeCardsEffect(effect);
 
 export const isSupportedDamageSegment = (
   effect: SequenceSegmentEffect,

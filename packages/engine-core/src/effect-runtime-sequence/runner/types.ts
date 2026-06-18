@@ -12,6 +12,10 @@ export type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
 export type DamageEffect = Extract<Effect, { type: "damage" }>;
 export type DrawEffect = Extract<Effect, { type: "draw" }>;
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+export type MoveMatchingLifeCardsEffect = Extract<
+  Effect,
+  { type: "moveMatchingLifeCards" }
+>;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type TrashFromHandEffect = Extract<Effect, { type: "trashFromHand" }>;
 export type TrashFromHandUntilCountEffect = Extract<

@@ -31,6 +31,10 @@ import {
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
 type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
+type MoveMatchingLifeCardsEffect = Extract<
+  Effect,
+  { type: "moveMatchingLifeCards" }
+>;
 type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 type RevealTopEffect = Extract<Effect, { type: "revealTop" }>;
 type ShuffleDeckEffect = Extract<Effect, { type: "shuffleDeck" }>;
@@ -52,6 +56,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
   effect:
     | DrawEffect
     | MoveCardsEffect
+    | MoveMatchingLifeCardsEffect
     | ReturnDonEffect
     | RevealTopEffect
     | ShuffleDeckEffect

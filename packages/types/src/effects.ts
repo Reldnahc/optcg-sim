@@ -771,6 +771,15 @@ export type Effect =
       destinationFaceUp?: boolean;
     }
   | {
+      type: "moveMatchingLifeCards";
+      player: PlayerRef;
+      matcher: {
+        faceUp: boolean;
+      };
+      to: { player: PlayerRef; zone: "trash" };
+      order: "original";
+    }
+  | {
       type: "putRemaining";
       zone: Zone;
       position: "top" | "bottom";

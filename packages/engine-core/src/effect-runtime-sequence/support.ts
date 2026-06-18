@@ -30,6 +30,7 @@ import {
   isSupportedDrawUpToSegment,
   isSupportedDamageSegment,
   isSupportedMoveCardsSegment,
+  isSupportedMoveMatchingLifeCardsSegment,
   isSupportedPlaceTopLifeCardSegment,
   isSupportedPlaceTopDeckCardsSegment,
   isSupportedReorderLifeSegment,
@@ -42,6 +43,7 @@ import {
   type DrawEffect,
   type DrawUpToEffect,
   type MoveCardsEffect,
+  type MoveMatchingLifeCardsEffect,
   type PlaceTopLifeCardEffect,
   type PlaceTopDeckCardsEffect,
   type ReorderLifeEffect,
@@ -129,6 +131,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DrawUpToEffect
     | DamageEffect
     | MoveCardsEffect
+    | MoveMatchingLifeCardsEffect
     | ReturnDonEffect
     | ShuffleDeckEffect
     | ReorderLifeEffect
@@ -509,6 +512,9 @@ const isSupportedSequenceBlockWithState = (
           canResolveMoveCardsCount(supportState, segment.effect) &&
           recordSupportedProducer(supportState, segment)
         );
+      }
+      if (isSupportedMoveMatchingLifeCardsSegment(segment.effect)) {
+        return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedDamageSegment(segment.effect)) {
         return recordSupportedProducer(supportState, segment);

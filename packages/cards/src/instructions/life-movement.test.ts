@@ -199,6 +199,32 @@ describe("life movement instruction parser", () => {
     });
   });
 
+  it("parses all matching face-up Life to trash as a deterministic move primitive", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "Trash all your face-up Life cards.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "moveMatchingLifeCards",
+        player: "self",
+        matcher: { faceUp: true },
+        to: { player: "self", zone: "trash" },
+        order: "original",
+      },
+      evidence: [
+        "instruction:moveCards",
+        "cardinality:all",
+        "player:self",
+        "zone:life",
+        "visibility:faceUp",
+        "destination:trash",
+        "order:original",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses arbitrary opponent Life trash as hidden Life select-then-trash primitives", () => {
     expect(
       parseLifeMovementInstruction({

@@ -70,3 +70,35 @@ it("parses field-to-Life cost into next-turn power gain", () => {
     ]),
   );
 });
+
+it("parses end-of-turn face-up Life trash as a reusable matching Life movement", () => {
+  const result = parseCardEffectLine(
+    "[End of Your Turn] Trash all your face-up Life cards.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "endOfYourTurn" },
+      effect: {
+        type: "moveMatchingLifeCards",
+        player: "self",
+        matcher: { faceUp: true },
+        to: { player: "self", zone: "trash" },
+        order: "original",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:endOfYourTurn",
+      "instruction:moveCards",
+      "cardinality:all",
+      "player:self",
+      "zone:life",
+      "visibility:faceUp",
+      "destination:trash",
+      "order:original",
+    ]),
+  );
+});

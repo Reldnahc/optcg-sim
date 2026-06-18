@@ -39,6 +39,7 @@ import {
   previousSegmentCompleted,
   shouldAttemptSegment,
 } from "../segments.js";
+import { applyMoveMatchingLifeCardsSegment } from "../matching-life-cards.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import { applyRuntimePlaySource } from "../../play-card/core.js";
 import { executeDamagePrimitive } from "../../runtime/primitives/execute.js";
@@ -71,6 +72,7 @@ import type {
   CreateTrashFromHandSequenceDecision,
   DrawEffect,
   MoveCardsEffect,
+  MoveMatchingLifeCardsEffect,
   ReturnDonEffect,
   SegmentLedgers,
   SequenceEffect,
@@ -243,6 +245,26 @@ export const continueNoDecisionSegments = (
         nextState,
         entry,
         segment as SupportedSequenceSegment & { effect: MoveCardsEffect },
+        index,
+        nextLedgers,
+        emptySegmentResult,
+        ledgerKey,
+      );
+      if (!moved.ok) {
+        return { ok: false };
+      }
+      nextState = moved.state;
+      nextLedgers = moved.ledgers;
+      events.push(...moved.events);
+      continue;
+    }
+    if (segment.effect.type === "moveMatchingLifeCards") {
+      const moved = applyMoveMatchingLifeCardsSegment(
+        nextState,
+        entry,
+        segment as SupportedSequenceSegment & {
+          effect: MoveMatchingLifeCardsEffect;
+        },
         index,
         nextLedgers,
         emptySegmentResult,

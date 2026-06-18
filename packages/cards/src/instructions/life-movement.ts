@@ -299,6 +299,29 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
         },
       },
       {
+        id: "trash-all-matching-face-up-life",
+        pattern: /^trash all your face-up Life cards\.?$/i,
+        build: () => ({
+          effect: {
+            type: "moveMatchingLifeCards",
+            player: "self",
+            matcher: { faceUp: true },
+            to: { player: "self", zone: "trash" },
+            order: "original",
+          },
+          evidence: [
+            "instruction:moveCards",
+            "cardinality:all",
+            "player:self",
+            "zone:life",
+            "visibility:faceUp",
+            "destination:trash",
+            "order:original",
+          ],
+          rest: "",
+        }),
+      },
+      {
         id: "add-n-cards-from-life-to-hand",
         pattern:
           /^add (?<count>[1-9]\d*) cards? from the (?<position>top|bottom|top or bottom) of your Life cards to your hand\.?$/i,
