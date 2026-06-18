@@ -28,9 +28,11 @@ const assertUnsupportedEffectQueueError = (
 ): void => {
   const firstError = errors?.[0];
   assert.ok(firstError);
-  const details = firstError.details as
-    | { count?: number; kind?: string; reason?: string }
-    | undefined;
+  const details = (
+    firstError as {
+      details?: { count?: number; kind?: string; reason?: string };
+    }
+  ).details;
   assert.ok(details);
   assert.equal(errors.length, 1);
   assert.equal(firstError.type, "effectRuntimeError");
