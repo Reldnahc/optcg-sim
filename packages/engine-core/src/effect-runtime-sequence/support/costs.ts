@@ -1,7 +1,10 @@
 import type { CardFilter, Cost, Effect, Target } from "@optcg/types";
 
 import { isSupportedHandSelectionCardFilter } from "../../actions/state.js";
-import { isSupportedAttachDonTargetFilter } from "../support-filters.js";
+import {
+  isSupportedAttachDonTargetFilter,
+  isSupportedPublicFieldTargetFilter,
+} from "../support-filters.js";
 import { isSupportedSequenceContinuousDuration } from "./continuous.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -88,7 +91,7 @@ export const isSupportedPayCostSegment = (
       Number.isInteger(cost.count) &&
       cost.count > 0 &&
       (cost.faceUp === undefined || typeof cost.faceUp === "boolean") &&
-      isSupportedHandSelectionCardFilter(cost.filter)
+      isSupportedPublicFieldTargetFilter(cost.filter)
     );
   }
   return (

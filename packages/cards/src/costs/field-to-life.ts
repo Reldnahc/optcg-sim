@@ -23,7 +23,10 @@ export const parseFieldToLifeCost = (
     return undefined;
   }
 
-  const costText = input.text.slice(0, colonIndex).trim();
+  const costText = input.text
+    .slice(0, colonIndex)
+    .trim()
+    .replace(/^You may\s+/iu, "");
   const rest = input.text.slice(colonIndex + 1).trim();
   const parsed = parseFieldToLifeSequenceCost({ text: costText });
   if (parsed === undefined || parsed.cost.type !== "moveFieldToLife") {

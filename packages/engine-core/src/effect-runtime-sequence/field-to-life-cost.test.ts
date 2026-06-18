@@ -24,6 +24,7 @@ import {
   toTimingWindowId,
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
+import { moveFieldToLifeCandidateCards } from "../runtime/costs/move-field-to-life.js";
 
 const setupSequenceDefinition = (
   state: GameState,
@@ -199,4 +200,46 @@ test("field-to-Life cost moves selected opponent Character before opponent hand 
   assert.equal(topLife.faceUp, true);
   assert.equal(trashDecision.type, "selectCards");
   assert.equal(trashDecision.playerId, p2);
+});
+
+test("field-to-Life cost candidates support current power filters", () => {
+  const state = createActiveState();
+  const p2State = must(state.players[p2], "p2");
+  const lowPower = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[0], "low power target"),
+    zone: "characterArea",
+  });
+  const highPower = withCardInZone({
+    state,
+    playerId: p2,
+    card: must(p2State.hand[1], "high power target"),
+    zone: "characterArea",
+  });
+  state.cardManifest.cards[lowPower.cardId] = resolvedCard({
+    cardId: lowPower.cardId,
+    category: "character",
+    power: 5000,
+  });
+  state.cardManifest.cards[highPower.cardId] = resolvedCard({
+    cardId: highPower.cardId,
+    category: "character",
+    power: 7000,
+  });
+
+  const candidates = moveFieldToLifeCandidateCards(state, p1, {
+    id: "moveFieldToLife:top",
+    type: "moveFieldToLife",
+    count: 1,
+    player: "opponent",
+    filter: { categories: ["character"], currentPower: { min: 7000 } },
+    position: "top",
+    faceUp: true,
+  });
+
+  assert.deepEqual(
+    candidates.map((card) => card.instanceId),
+    [highPower.instanceId],
+  );
 });

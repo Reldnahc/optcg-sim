@@ -240,9 +240,9 @@ export const parsePlaceAtOwnerLifeInstruction: InstructionParser = (input) => {
 };
 
 const parseFieldToLifeWording = (text: string): RegExpExecArray | null =>
-  /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+  /^place\s+(?<selection>.+?)\s+at the (?<position>top|bottom|top or bottom) of (?:your|their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
     text,
   ) ??
-  /^add\s+(?<selection>.+?)\s+to the (?<position>top|bottom|top or bottom) of (?:their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
+  /^add\s+(?<selection>.+?)\s+to the (?<position>top|bottom|top or bottom) of (?:your|their|your opponent's|the owner's) Life cards(?:\s+(?<face>face-(?:up|down)))?\.?$/iu.exec(
     text,
   );

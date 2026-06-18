@@ -212,4 +212,57 @@ describe("field-to-Life instruction parser", () => {
       ]),
     );
   });
+
+  it("parses your Character placement to your Life cards face-up", () => {
+    const result = parsePlaceAtOwnerLifeInstruction({
+      text: "Add 1 of your Characters with a cost of 3 or more and 7000 power or more to the top of your Life cards face-up.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "selected:field-to-life",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { min: 3 },
+                  currentPower: { min: 7000 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "bounce",
+              destination: "lifeTop",
+              destinationFaceUp: true,
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:moveSelected",
+        "cardinality:exact",
+        "player:self",
+        "target:yourCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "filter:currentPower",
+        "destination:life",
+        "position:top",
+        "destination:faceUp",
+      ]),
+    );
+  });
 });

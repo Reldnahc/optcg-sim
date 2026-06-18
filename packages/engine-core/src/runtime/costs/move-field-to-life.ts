@@ -8,11 +8,9 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import {
-  cardMatchesHandSelectionFilter,
-  toCardRef,
-} from "../../actions/state.js";
+import { toCardRef } from "../../actions/state.js";
 import { moveFieldCardToOwnerLife } from "../../movement/field-to-life.js";
+import { resolvePublicTargetCandidates } from "../../selection/candidates.js";
 
 export type MoveFieldToLifePaymentOption = Extract<
   PaymentOption,
@@ -46,11 +44,35 @@ export const moveFieldToLifeCandidateCards = (
   chooserId: PlayerId,
   option: MoveFieldToLifePaymentOption,
 ): readonly CardInstance[] => {
+  const resolved = resolvePublicTargetCandidates(
+    state,
+    {
+      timing: "onResolution",
+      chooser: "self",
+      player: option.player,
+      zone: "characterArea",
+      min: 0,
+      max: option.count,
+      allowFewerIfUnavailable: true,
+      visibility: "public",
+      ...(option.filter === undefined ? {} : { filter: option.filter }),
+    },
+    { sourceControllerId: chooserId },
+  );
+  if (!resolved.ok) {
+    return [];
+  }
+  const candidateKeys = new Set(
+    resolved.candidates.map(
+      (candidate) =>
+        `${candidate.card.playerId}:${candidate.card.instanceId}` as const,
+    ),
+  );
   const players = moveFieldToLifeCandidatePlayers(state, chooserId, option);
   return players.flatMap(({ playerId, cards }) =>
     cards
       .filter((card) =>
-        cardMatchesHandSelectionFilter(state, chooserId, card, option.filter),
+        candidateKeys.has(`${playerId}:${card.instanceId}` as const),
       )
       .map((card) => ({ ...card, controller: playerId })),
   );
@@ -194,6 +216,11 @@ const locateMoveFieldToLifeCandidate = (
 ):
   | { card: CardInstance; playerId: PlayerId; zone: "characterArea" }
   | undefined => {
+  const candidateKeys = new Set(
+    moveFieldToLifeCandidateCards(state, chooserId, option).map(
+      (candidate) => `${candidate.controller}:${candidate.instanceId}`,
+    ),
+  );
   for (const { cards, playerId } of moveFieldToLifeCandidatePlayers(
     state,
     chooserId,
@@ -202,7 +229,7 @@ const locateMoveFieldToLifeCandidate = (
     const card = cards.find((candidate) => candidate.instanceId === instanceId);
     if (
       card !== undefined &&
-      cardMatchesHandSelectionFilter(state, chooserId, card, option.filter)
+      candidateKeys.has(`${playerId}:${card.instanceId}`)
     ) {
       return { card, playerId, zone: "characterArea" };
     }
