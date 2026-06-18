@@ -2,6 +2,7 @@ import type {
   CardInstance,
   CardFilter,
   CardRef,
+  CausalityRef,
   DecisionId,
   EngineEvent,
   GameState,
@@ -40,8 +41,8 @@ const findTrashableSourceCard = (
   return null;
 };
 
-export const applyTrashSelfPayment = (params: {
-  readonly decisionId: DecisionId;
+export const applyTrashSelfMove = (params: {
+  readonly causedBy?: CausalityRef;
   readonly events: EngineEvent[];
   readonly filter?: CardFilter;
   readonly player: PlayerState;
@@ -72,7 +73,7 @@ export const applyTrashSelfPayment = (params: {
       cardMovedPayloadShape: "publicZoneNames",
       cardMovedVisibility: { type: "public" },
       cardTrashedVisibility: { type: "public" },
-      causedBy: { type: "decision", decisionId: params.decisionId },
+      ...(params.causedBy === undefined ? {} : { causedBy: params.causedBy }),
       clearAttachedDon: true,
       emitCardTrashed: true,
       playerId: params.playerId,
@@ -98,11 +99,8 @@ export const applyTrashSelfPayment = (params: {
       { type: "replayOnly" },
     );
     const returnedDon = params.events[params.events.length - 1];
-    if (returnedDon !== undefined) {
-      returnedDon.causedBy = {
-        type: "decision",
-        decisionId: params.decisionId,
-      };
+    if (returnedDon !== undefined && params.causedBy !== undefined) {
+      returnedDon.causedBy = params.causedBy;
     }
   }
   return {
@@ -114,3 +112,17 @@ export const applyTrashSelfPayment = (params: {
     ),
   };
 };
+
+export const applyTrashSelfPayment = (params: {
+  readonly decisionId: DecisionId;
+  readonly events: EngineEvent[];
+  readonly filter?: CardFilter;
+  readonly player: PlayerState;
+  readonly playerId: PlayerId;
+  readonly source: CardRef;
+  readonly state: GameState;
+}): PlayerState | null =>
+  applyTrashSelfMove({
+    ...params,
+    causedBy: { type: "decision", decisionId: params.decisionId },
+  });

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardCategory,
   CardInstance,
   Effect,
   EffectDefinition,
@@ -73,11 +74,12 @@ const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
   effect: Effect,
+  category: CardCategory = "character",
 ): EffectDefinition => {
   const effectDefinitionId = "def-selected-trash-sequence";
   const supportCard = resolvedCard({
     cardId: source.cardId,
-    category: "character",
+    category,
     power: 5000,
     support: {
       status: "implemented-dsl",
@@ -218,5 +220,67 @@ test("selectTargets saved reference is consumed by later trash segment without K
   assert.equal(eventTypes.includes("cardTrashed"), true);
   assert.equal(eventTypes.includes("cardKOd"), false);
   assert.equal(eventTypes.at(-1), "effectResolved");
+  assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
+});
+
+test("self-target trash segment trashes the source Stage", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "stageArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const effect: Extract<Effect, { type: "sequence" }> = {
+    type: "sequence",
+    effects: [
+      {
+        id: "trash-self-stage",
+        connector: "always",
+        effect: {
+          type: "trash",
+          target: { type: "self" },
+        },
+      },
+    ],
+  };
+  const definition = setupSequenceDefinition(state, source, effect, "stage");
+  state.effectQueue = [
+    {
+      ...queueDrawForP1(),
+      id: toQueueEntryId("queue-entry-self-trash-stage"),
+      timingWindowId: toTimingWindowId("window-self-trash-stage"),
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId: must(definition.effects[0], "sequence effect").id,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "self-trash-stage-test" },
+    },
+  ];
+
+  const resolved = processEffectRuntime(state);
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(must(resolved.state.players[p1], "p1").stage, undefined);
+  assert.equal(
+    must(must(resolved.state.players[p1], "p1").trash[0], "top trash")
+      .instanceId,
+    source.instanceId,
+  );
+  const eventTypes = resolved.events.map((event) => event.type);
+  assert.equal(eventTypes.includes("cardTrashed"), true);
+  assert.equal(eventTypes.includes("cardKOd"), false);
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });

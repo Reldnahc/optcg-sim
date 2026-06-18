@@ -17,7 +17,13 @@ export type SavedFieldObjectTrashEffect = Extract<Effect, { type: "trash" }> & {
 export type AllTargetTrashEffect = Extract<Effect, { type: "trash" }> & {
   target: Extract<Target, { type: "all" }>;
 };
-export type TrashEffect = SavedFieldObjectTrashEffect | AllTargetTrashEffect;
+export type SelfTrashEffect = Extract<Effect, { type: "trash" }> & {
+  target: Extract<Target, { type: "self" }>;
+};
+export type TrashEffect =
+  | SavedFieldObjectTrashEffect
+  | AllTargetTrashEffect
+  | SelfTrashEffect;
 export type RestEffect = Extract<Effect, { type: "rest" }> & {
   target: Extract<
     Target,
@@ -178,7 +184,8 @@ export const isSupportedTrashSegment = (
   effect: SequenceSegmentEffect,
 ): effect is TrashEffect =>
   effect.type === "trash" &&
-  (isSupportedAllFieldTrashSegment(effect) ||
+  (effect.target.type === "self" ||
+    isSupportedAllFieldTrashSegment(effect) ||
     isSupportedSavedFieldObjectKoTarget(effect.target));
 
 export const isSupportedRestSegment = (

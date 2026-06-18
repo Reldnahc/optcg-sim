@@ -3,6 +3,21 @@ import { describe, expect, it } from "vitest";
 import { parseTrashInstruction } from "./trash-all-characters.js";
 
 describe("trash instruction parser", () => {
+  it("parses trash this Stage as a self-target trash body", () => {
+    expect(
+      parseTrashInstruction({
+        text: "Trash this Stage.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "trash",
+        target: { type: "self" },
+      },
+      evidence: ["instruction:trash", "target:thisStage"],
+      rest: "",
+    });
+  });
+
   it("parses trash all your Characters as a reusable target/action primitive", () => {
     expect(
       parseTrashInstruction({

@@ -41,6 +41,7 @@ import { isSupportedSavedTargetContinuousSegment } from "./support/continuous.js
 import { getOpponentId } from "../actions/state.js";
 import { findCardInstance } from "../effect-runtime-trigger-source-lookup.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
+import { applyTrashSelfMove } from "../runtime/primitives/trash-self-cost.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type KoEffect = Extract<Effect, { type: "ko" }>;
@@ -53,6 +54,9 @@ type SelfKoEffect = KoEffect & {
 };
 type AllTargetTrashEffect = TrashEffect & {
   target: Extract<Target, { type: "all" }>;
+};
+type SelfTrashEffect = TrashEffect & {
+  target: Extract<Target, { type: "self" }>;
 };
 type RestEffect = Extract<Effect, { type: "rest" }>;
 type AllTargetRestEffect = RestEffect & {
@@ -86,6 +90,9 @@ const isSelfKoEffect = (effect: KoEffect): effect is SelfKoEffect =>
 const isAllTargetTrashEffect = (
   effect: TrashEffect,
 ): effect is AllTargetTrashEffect => effect.target.type === "all";
+
+const isSelfTrashEffect = (effect: TrashEffect): effect is SelfTrashEffect =>
+  effect.target.type === "self";
 
 const isAllTargetRestEffect = (
   effect: RestEffect,
@@ -207,6 +214,96 @@ const applySelfKoSequenceSegment = (params: {
       },
     },
     state: resolvedKo.state,
+  };
+};
+
+const applySelfTrashSequenceSegment = (params: {
+  emptySegmentResult: () => SequenceSegmentResult;
+  entry: EffectQueueEntry;
+  index: number;
+  ledgers: SegmentLedgers;
+  segment: SupportedSequenceSegment;
+  segmentKey: (
+    segment: SequenceEffect["effects"][number],
+    index: number,
+  ) => string;
+  state: GameState;
+}): {
+  events: EngineEvent[];
+  ledgers: SegmentLedgers;
+  state: GameState;
+} => {
+  const player = params.state.players[params.entry.source.playerId];
+  if (player === undefined) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  const events: EngineEvent[] = [];
+  const nextPlayer = applyTrashSelfMove({
+    causedBy: {
+      type: "effect",
+      queueEntryId: params.entry.id,
+      effectId: params.entry.effectBlockId,
+    },
+    events,
+    player,
+    playerId: params.entry.source.playerId,
+    source: params.entry.source,
+    state: params.state,
+  });
+  if (nextPlayer === null) {
+    return {
+      events,
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+          },
+        },
+      },
+      state: params.state,
+    };
+  }
+
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          changedState: true,
+          selectedTargets: [params.entry.source],
+          succeeded: true,
+        },
+      },
+    },
+    state: {
+      ...params.state,
+      eventJournal: [...params.state.eventJournal, ...events],
+      players: {
+        ...params.state.players,
+        [params.entry.source.playerId]: nextPlayer,
+      },
+    },
   };
 };
 
@@ -429,6 +526,26 @@ export const applyFieldMutationSequenceSegment = (params: {
       segment,
       segmentKey,
       effect: segment.effect,
+      state,
+    });
+    return {
+      events: [...events, ...trashed.events],
+      handled: true,
+      kind: "continue",
+      ledgers: trashed.ledgers,
+      ok: true,
+      state: trashed.state,
+    };
+  }
+
+  if (segment.effect.type === "trash" && isSelfTrashEffect(segment.effect)) {
+    const trashed = applySelfTrashSequenceSegment({
+      emptySegmentResult,
+      entry,
+      index,
+      ledgers,
+      segment,
+      segmentKey,
       state,
     });
     return {

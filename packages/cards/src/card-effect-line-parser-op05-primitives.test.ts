@@ -315,3 +315,65 @@ it("parses conditional all-character refresh locks across both players", () => {
     ]),
   );
 });
+
+it("parses end-of-turn conditional all-rested K.O. then trash-self Stage", () => {
+  const result = parseCardEffectLine(
+    "[End of Your Turn] If you have 10 DON!! cards on your field, K.O. all rested Characters with a cost of 5 or less. Then, trash this Stage.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "endOfYourTurn" },
+      condition: {
+        type: "fieldCount",
+        player: "self",
+        op: "eq",
+        value: 10,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "ko",
+              target: {
+                type: "all",
+                player: "anyPlayer",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  state: "rested",
+                  cost: { max: 5 },
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "trash",
+              target: { type: "self" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:endOfYourTurn",
+      "expression:conditional",
+      "condition:donFieldCount",
+      "instruction:ko",
+      "cardinality:all",
+      "player:any",
+      "filter:state:rested",
+      "filter:cost",
+      "instruction:trash",
+      "target:thisStage",
+      "expression:sequence",
+    ]),
+  );
+});

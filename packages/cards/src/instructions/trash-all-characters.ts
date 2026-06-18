@@ -30,6 +30,27 @@ export const parseTrashInstruction: InstructionParser = (input) => {
   }
 
   const normalizedTargetText = targetText.replace(/\.$/, "");
+  const selfTarget = /^this (?<target>card|Character|Stage)$/iu.exec(
+    normalizedTargetText,
+  )?.groups?.["target"];
+  if (selfTarget !== undefined) {
+    return {
+      effect: {
+        type: "trash",
+        target: { type: "self" },
+      },
+      evidence: [
+        "instruction:trash",
+        selfTarget.toLowerCase() === "character"
+          ? "target:thisCharacter"
+          : selfTarget.toLowerCase() === "stage"
+            ? "target:thisStage"
+            : "target:thisCard",
+      ],
+      rest: "",
+    } satisfies InstructionParseResult;
+  }
+
   const target = parseAllFieldTarget({ text: normalizedTargetText });
   if (target !== undefined && target.rest.length === 0) {
     return {

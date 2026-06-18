@@ -176,7 +176,9 @@ function parseFieldTargetOwnership(text: string):
   const match = /^of your\s+(?<rest>.+)$/i.exec(text);
   const rest = match?.groups?.["rest"];
   if (rest === undefined) {
-    const anyPlayerMatch = /^(?<rest>Characters?\b.+)$/iu.exec(text);
+    const anyPlayerMatch = /^(?<rest>(?:rested\s+)?Characters?\b.*)$/iu.exec(
+      text,
+    );
     const anyPlayerRest = anyPlayerMatch?.groups?.["rest"];
     if (anyPlayerRest === undefined) {
       return undefined;

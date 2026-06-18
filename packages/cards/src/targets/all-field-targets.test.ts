@@ -102,4 +102,40 @@ describe("all field target parser", () => {
       rest: "",
     });
   });
+
+  it("preserves rested-state filters on ownerless all Character targets", () => {
+    expect(
+      parseAllFieldTarget({
+        text: "all rested Characters with a cost of 5 or less",
+      }),
+    ).toMatchObject({
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "anyPlayer",
+        filter: {
+          categories: ["character"],
+          state: "rested",
+          cost: { max: 5 },
+        },
+      },
+      rest: "",
+    });
+    expect(
+      parseAllFieldTarget({
+        text: "all rested Characters with a cost of 5 or less",
+      })?.evidence,
+    ).toEqual(
+      expect.arrayContaining([
+        "cardinality:all",
+        "player:any",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:state:rested",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ]),
+    );
+  });
 });
