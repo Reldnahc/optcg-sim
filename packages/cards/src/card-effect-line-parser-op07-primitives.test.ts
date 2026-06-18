@@ -248,3 +248,54 @@ it("parses conditional return-DON cost with selected Leader and Character refres
     ]),
   );
 });
+
+it("parses Trigger play from trash with owned filtered source wording", () => {
+  const result = parseCardEffectLine(
+    "[Trigger] Play up to 1 of your {Egghead} type Character cards with a cost of 5 or less from your trash.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "trigger" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "trashSelection:play",
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesAny: ["Egghead"],
+                cost: { max: 5 },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "trashSelection:play",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:lifeTrigger",
+      "instruction:playSelected",
+      "zone:trash",
+      "filter:type",
+      "filter:category:character",
+      "filter:cost",
+      "composition:selectThenPlay",
+    ]),
+  );
+});

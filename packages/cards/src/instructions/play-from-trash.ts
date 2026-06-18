@@ -113,7 +113,9 @@ const parseRepeatedFilteredPlayFromTrashInstruction: InstructionParser = (
     if (cardinality === undefined) {
       return undefined;
     }
-    const predicates = parseCardFilterPredicates({ text: cardinality.rest });
+    const predicates = parseCardFilterPredicates({
+      text: normalizeOwnedSourcePredicate(cardinality.rest),
+    });
     if (predicates === undefined || predicates.rest.length > 0) {
       return undefined;
     }
@@ -287,7 +289,9 @@ function parsePlaySource(text: string):
     return undefined;
   }
 
-  const predicates = parseCardFilterPredicates({ text: predicateText });
+  const predicates = parseCardFilterPredicates({
+    text: normalizeOwnedSourcePredicate(predicateText),
+  });
   return predicates === undefined || predicates.rest.length > 0
     ? undefined
     : {
@@ -296,3 +300,6 @@ function parsePlaySource(text: string):
         enterRested: sourceMatch?.groups?.["rested"] !== undefined,
       };
 }
+
+const normalizeOwnedSourcePredicate = (text: string): string =>
+  text.replace(/^of your\s+/iu, "").trim();

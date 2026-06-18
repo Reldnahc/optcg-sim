@@ -63,6 +63,58 @@ describe("play from trash instruction parser", () => {
     });
   });
 
+  it("parses owned filtered play from trash wording through the same selection primitive", () => {
+    expect(
+      parsePlayFromTrashInstruction({
+        text: "Play up to 1 of your {Egghead} type Character cards with a cost of 5 or less from your trash.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "trashSelection:play",
+            effect: {
+              type: "selectCards",
+              zone: "trash",
+              player: "self",
+              chooser: "self",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                typesAny: ["Egghead"],
+                cost: { max: 5 },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "playSelected",
+              selection: "trashSelection:play",
+              ignoreCost: true,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:playSelected",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "zone:trash",
+        "player:self",
+        "chooser:self:upTo",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "composition:selectThenPlay",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses independently quantified play selections sharing the trash source", () => {
     const result = parsePlayFromTrashInstruction({
       text: 'play up to 1 Character card with a type including "Baroque Works" and a cost of 4 or less and up to 1 Character card with a type including "Baroque Works" and a cost of 1 from your trash.',
