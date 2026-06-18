@@ -763,7 +763,11 @@ const parseRestedDonAttachmentTarget = (
       savedTargetZone: zoneTarget,
     };
   }
-  if (/^1 of your Leader or Character cards?\.?$/iu.test(targetText)) {
+  if (
+    /^(?:1 of your Leader or Character cards?|1 of your Leaders? or Characters?)\.?$/iu.test(
+      targetText,
+    )
+  ) {
     const zoneTarget = {
       zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
     };

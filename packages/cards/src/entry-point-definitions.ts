@@ -103,6 +103,18 @@ export const entryPointDefinitions: readonly EntryPointDefinition[] = [
     supportStatus: "supported",
   },
   {
+    text: "[On Opponent's Turn]",
+    trigger: { type: "permanent" },
+    category: "permanent",
+    condition: { type: "opponentTurn" },
+    evidence: [
+      "entry:opponentTurn",
+      "condition:opponentTurn",
+      "sourcePresence:mustRemain",
+    ],
+    supportStatus: "supported",
+  },
+  {
     text: "[On Block]",
     trigger: { type: "onBlock" },
     evidence: ["entry:onBlock", "sourcePresence:mustRemain"],

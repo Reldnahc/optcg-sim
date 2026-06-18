@@ -138,7 +138,7 @@ export function parseOpponentLeaderOrCharacterCardsTarget(
   input: ParseInput,
 ): FieldTargetParseResult | undefined {
   const match =
-    /^of your opponent's Leader or Character cards?\b\s*(?<rest>.*)$/i.exec(
+    /^of your opponent's (?:Leader or Character cards?|Leaders? or Characters?)\b\s*(?<rest>.*)$/i.exec(
       input.text,
     );
   if (match === null) {

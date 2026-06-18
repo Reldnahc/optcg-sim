@@ -14,6 +14,11 @@ import { selectThenApplyFieldTarget } from "../effect-builders.js";
 import { parseAttachedDonScaledDuration, withCardinality } from "./shared.js";
 
 export const parseNegativePowerInstruction: InstructionParser = (input) => {
+  const targetGains = parseTargetGainsNegativePowerInstruction(input.text);
+  if (targetGains !== undefined) {
+    return targetGains;
+  }
+
   const actionRest = /^give\s+(?<rest>.*)$/i.exec(input.text)?.groups?.["rest"];
   if (actionRest === undefined) {
     return undefined;
@@ -120,6 +125,61 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+function parseTargetGainsNegativePowerInstruction(
+  text: string,
+): ReturnType<InstructionParser> {
+  const cardinality = parseUpToCardinality({ text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentNegativePowerTargetParsers(),
+  );
+  if (target?.target === undefined) {
+    return undefined;
+  }
+
+  const modifierText = /^gains?\s+(?<rest>.*)$/iu.exec(target.rest)?.groups?.[
+    "rest"
+  ];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const modifier = parseNegativePowerModifier({ text: modifierText });
+  if (modifier === undefined) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: modifier.rest },
+    fieldEffectDurationParsers,
+  );
+  if (duration === undefined || duration.duration === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "modifyPower",
+      target: withCardinality(target.target, cardinality.cardinality),
+      value: modifier.value,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:modifyPower",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      ...modifier.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
 
 function parseOpponentLeaderAndAllCharactersNegativePowerInstruction(
   actionRest: string,

@@ -12,6 +12,7 @@ import type {
   PrimitiveEvidence,
 } from "./types.js";
 import { createSourceSlice, type SourceSlice } from "./source-slices.js";
+import { normalizeParserText } from "./text-normalization.js";
 
 export type EntryPointParser = (
   input: ParseInput,
@@ -46,9 +47,10 @@ export function parseEffectLinesDetailed(
 ):
   | { readonly ok: true; readonly value: readonly ParsedEffectLine[] }
   | { readonly ok: false; readonly diagnostic: ParseFailureDiagnostic } {
-  const rootSource = createSourceSlice(text);
+  const normalizedText = normalizeParserText(text);
+  const rootSource = createSourceSlice(normalizedText);
   const metadataLine = firstMetadataLineParse(registry.metadataLines ?? [], {
-    text,
+    text: normalizedText,
     source: rootSource,
   });
   if (metadataLine !== undefined) {
@@ -56,7 +58,7 @@ export function parseEffectLinesDetailed(
   }
 
   const leadingMarkerParse = parseMarkers(
-    { text, source: rootSource },
+    { text: normalizedText, source: rootSource },
     registry.markers ?? [],
   );
   const entryPoints = parseEntryPointAlternatives(registry.entryPoints, {
