@@ -33,7 +33,7 @@ export const parseAttackDeclaredPredicate: ReactionPredicateParser = ({
 }) => {
   const normalized = text.trim();
   const attack =
-    /^this (?<source>Leader|Character) attacks your opponent's (?<target>Leader|Character)$/iu.exec(
+    /^this (?<source>Leader|Character) (?:attacks|battles) your opponent's (?<target>Leader|Character)$/iu.exec(
       normalized,
     );
   const sourceCategoryText = attack?.groups?.["source"];
