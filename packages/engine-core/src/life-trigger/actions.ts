@@ -37,6 +37,7 @@ import {
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
+import { triggerContainsType } from "../effect-runtime-block-support.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
@@ -62,7 +63,8 @@ export const registerLifeTriggerDamageContinuationResolver = (
 
 const isSupportedTriggerEffect = (
   effect: EffectBlock,
-  siblingBlocks: readonly EffectBlock[],
+  effects: readonly EffectBlock[],
+  triggerEffects: readonly EffectBlock[],
 ): boolean => {
   if (effect.category !== "auto") return false;
   if (effect.trigger.type !== "trigger") return false;
@@ -72,7 +74,33 @@ const isSupportedTriggerEffect = (
   ) {
     return false;
   }
-  return evaluateEffectBlockRuntimeSupport(effect, { siblingBlocks }).supported;
+  return evaluateEffectBlockRuntimeSupport(effect, {
+    siblingBlocks: lifeTriggerSupportContext(effect, effects, triggerEffects),
+  }).supported;
+};
+
+const lifeTriggerSupportContext = (
+  effect: EffectBlock,
+  effects: readonly EffectBlock[],
+  triggerEffects: readonly EffectBlock[],
+): readonly EffectBlock[] => {
+  if (
+    effect.effect.type !== "activateReferencedEffect" ||
+    effect.effect.source.type !== "triggerCard" ||
+    effect.effect.trigger.type === "anyOf"
+  ) {
+    return triggerEffects;
+  }
+  const referencedTrigger = effect.effect.trigger;
+  return [
+    ...triggerEffects,
+    ...effects.filter(
+      (candidate) =>
+        candidate.id !== effect.id &&
+        candidate.effect.type !== "activateReferencedEffect" &&
+        triggerContainsType(candidate.trigger, referencedTrigger.type),
+    ),
+  ];
 };
 
 const selectSupportedTriggerEffects = (
@@ -86,7 +114,7 @@ const selectSupportedTriggerEffects = (
   }
   if (
     triggerEffects.some(
-      (effect) => !isSupportedTriggerEffect(effect, triggerEffects),
+      (effect) => !isSupportedTriggerEffect(effect, effects, triggerEffects),
     )
   ) {
     return undefined;
