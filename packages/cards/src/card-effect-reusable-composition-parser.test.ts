@@ -539,11 +539,22 @@ describe("card effect reusable parser compositions", () => {
       block: {
         category: "activate",
         trigger: {
-          type: "fieldRemoved",
-          player: "self",
-          filter: { categories: ["character"], typesAny: ["Example"] },
-          sourceController: "opponent",
-          sourceKind: "any",
+          type: "anyOf",
+          triggers: [
+            {
+              type: "fieldRemoved",
+              player: "self",
+              filter: { categories: ["character"], typesAny: ["Example"] },
+              sourceController: "opponent",
+              sourceKind: "effect",
+            },
+            {
+              type: "fieldRemoved",
+              player: "self",
+              filter: { categories: ["character"], typesAny: ["Example"] },
+              sourceKind: "ko",
+            },
+          ],
         },
         condition: { type: "opponentTurn" },
       },
@@ -553,6 +564,9 @@ describe("card effect reusable parser compositions", () => {
         "trigger:fieldRemoved",
         "player:self",
         "filter:type",
+        "replacementSource:opponent",
+        "replacementSource:cardEffect",
+        "composition:triggerAnyOf",
       ]),
     );
   });
