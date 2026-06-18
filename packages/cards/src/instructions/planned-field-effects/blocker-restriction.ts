@@ -148,6 +148,12 @@ function parseOpponentCannotActivateBlocker(
     return undefined;
   }
 
+  const matchingBlockers =
+    parseMatchingBlockerCharactersCannotBlock(selectionText);
+  if (matchingBlockers !== undefined) {
+    return matchingBlockers;
+  }
+
   const cardinality = parseUpToCardinality({ text: selectionText });
   if (cardinality === undefined) {
     return undefined;
@@ -211,6 +217,68 @@ function parseOpponentCannotActivateBlocker(
       ...duration.evidence,
       "activation:blocker",
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function parseMatchingBlockerCharactersCannotBlock(
+  text: string,
+): InstructionParseResult | undefined {
+  const match =
+    /^(?:a|any|all)?\s*\[Blocker\]\s+(?<predicate>.+?)\s+(?<duration>during this (?:turn|battle)\.?)$/iu.exec(
+      text,
+    );
+  const predicateText = match?.groups?.["predicate"]
+    ?.replace(/\bthat has\b/iu, "with")
+    .trim();
+  const durationText = match?.groups?.["duration"];
+  if (predicateText === undefined || durationText === undefined) {
+    return undefined;
+  }
+
+  const predicates = parseCardFilterPredicates(
+    { text: predicateText },
+    { powerSemantics: "current" },
+  );
+  if (
+    predicates === undefined ||
+    predicates.rest.trim().length > 0 ||
+    predicates.filter.categories?.includes("character") !== true
+  ) {
+    return undefined;
+  }
+
+  const duration =
+    parseDurationFromSet({ text: durationText }, battleDurationParsers) ??
+    parseDurationFromSet({ text: durationText }, thisTurnOnlyDurationParsers);
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotBlock",
+      target: {
+        type: "all",
+        player: "opponent",
+        zone: "characterArea",
+        filter: predicates.filter,
+      },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:cannotBlock",
+      "cardinality:all",
+      "player:opponent",
+      "target:opponentCharacters",
+      ...predicates.evidence,
+      ...duration.evidence,
+      "activation:blocker",
     ],
     rest: "",
   };

@@ -58,6 +58,44 @@ describe("card effect event parser blocker restrictions", () => {
     );
   });
 
+  it("parses battle-long opponent Blocker activation restriction for matching blocker Characters", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x2] [When Attacking] Your opponent cannot activate a [Blocker] Character that has 5000 or more power during this battle.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "whenAttacking" },
+        effect: {
+          type: "cannotBlock",
+          target: {
+            type: "all",
+            player: "opponent",
+            zone: "characterArea",
+            filter: {
+              categories: ["character"],
+              currentPower: { min: 5000 },
+            },
+          },
+          duration: { type: "thisBattle" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:whenAttacking",
+        "marker:attachedDon",
+        "instruction:cannotBlock",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "filter:currentPower",
+        "duration:thisBattle",
+        "activation:blocker",
+      ]),
+    );
+  });
+
   it("parses costed Activate Main opponent Character Blocker activation restriction", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] [Once Per Turn] DON!! −1: Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
