@@ -39,6 +39,38 @@ describe("life movement instruction parser", () => {
     });
   });
 
+  it("parses delayed deck top to Life top placement as timing around the same moveCards primitive", () => {
+    expect(
+      parseLifeMovementInstruction({
+        text: "Add 1 card from the top of your deck to the top of your Life cards at the end of this turn.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "delayed",
+        timing: { type: "endOfTurn", turn: "current" },
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "deck", position: "top" },
+          to: { player: "self", zone: "life", position: "top" },
+          order: "original",
+        },
+      },
+      evidence: [
+        "instruction:moveCards",
+        "count:positiveInteger",
+        "player:self",
+        "zone:deck",
+        "position:top",
+        "destination:life",
+        "order:original",
+        "duration:endOfTurn",
+        "composition:delayed",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses hand to Life top placement as select-then-move primitives", () => {
     expect(
       parseLifeMovementInstruction({

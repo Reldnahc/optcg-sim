@@ -26,9 +26,9 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
       {
         id: "add-up-to-n-cards-from-deck-top-to-life-top",
         pattern:
-          /^add (?<upTo>up to )?(?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards(?<faceUp> face-up)?\.?$/i,
-        build: (groups) => ({
-          effect: {
+          /^add (?<upTo>up to )?(?<count>[1-9]\d*) cards? from the top of your deck to the top of your Life cards(?<faceUp> face-up)?(?<delayed> at the end of this turn)?\.?$/i,
+        build: (groups) => {
+          const move = {
             type: "moveCards",
             count: Number.parseInt(groups["count"] ?? "", 10),
             from: { player: "self", zone: "deck", position: "top" },
@@ -38,21 +38,34 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
             ...(groups["faceUp"] === undefined
               ? {}
               : { destinationFaceUp: true }),
-          },
-          evidence: [
-            "instruction:moveCards",
-            ...(groups["upTo"] === undefined
-              ? []
-              : (["cardinality:upTo"] as const)),
-            "count:positiveInteger",
-            "player:self",
-            "zone:deck",
-            "position:top",
-            "destination:life",
-            "order:original",
-          ],
-          rest: "",
-        }),
+          } as const;
+          const delayed = groups["delayed"] !== undefined;
+          return {
+            effect: delayed
+              ? {
+                  type: "delayed",
+                  timing: { type: "endOfTurn", turn: "current" },
+                  effect: move,
+                }
+              : move,
+            evidence: [
+              "instruction:moveCards",
+              ...(groups["upTo"] === undefined
+                ? []
+                : (["cardinality:upTo"] as const)),
+              "count:positiveInteger",
+              "player:self",
+              "zone:deck",
+              "position:top",
+              "destination:life",
+              "order:original",
+              ...(delayed
+                ? (["duration:endOfTurn", "composition:delayed"] as const)
+                : []),
+            ],
+            rest: "",
+          };
+        },
       },
       {
         id: "add-up-to-n-cards-from-opponent-life-top-to-owner-hand",
