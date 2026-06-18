@@ -81,6 +81,15 @@ export interface PendingRuntimeWork {
 
 export interface UnsupportedPendingRuntimeWorkDetails extends PendingRuntimeWork {
   reason: "unsupported-pending-runtime-work";
+  gate?:
+    | "queue-ordering"
+    | "queue-entry-resolution"
+    | "queue-source-presence"
+    | "queue-effect-definition"
+    | "deferred-trigger-release";
+  queueEntryId?: string;
+  effectId?: string;
+  queueReason?: string;
 }
 
 export interface ChooseQuantityRuntimeDecisionRequest {
@@ -323,7 +332,7 @@ const unsupportedEffectIdByKind: Record<PendingRuntimeWorkKind, string> = {
 };
 
 const unsupportedPendingRuntimeWorkError = (
-  work: PendingRuntimeWork,
+  work: PendingRuntimeWork & Partial<UnsupportedPendingRuntimeWorkDetails>,
 ): EngineError => ({
   type: "effectRuntimeError",
   effectId: unsupportedEffectIdByKind[work.kind],
@@ -331,6 +340,14 @@ const unsupportedPendingRuntimeWorkError = (
     reason: "unsupported-pending-runtime-work",
     kind: work.kind,
     count: work.count,
+    ...(work.gate === undefined ? {} : { gate: work.gate }),
+    ...(work.queueEntryId === undefined
+      ? {}
+      : { queueEntryId: work.queueEntryId }),
+    ...(work.effectId === undefined ? {} : { effectId: work.effectId }),
+    ...(work.queueReason === undefined
+      ? {}
+      : { queueReason: work.queueReason }),
   } satisfies UnsupportedPendingRuntimeWorkDetails,
 });
 

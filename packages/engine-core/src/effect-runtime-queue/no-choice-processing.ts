@@ -19,7 +19,10 @@ import {
   orderNoChoiceQueueEntries,
 } from "./ordering.js";
 import type { EffectRuntimeQueueResultsDependencies } from "./results-types.js";
-import { createUnsupportedEffectQueueResult } from "./unsupported.js";
+import {
+  createUnsupportedEffectQueueResult,
+  type UnsupportedEffectQueueContext,
+} from "./unsupported.js";
 
 export interface NoChoiceEffectQueueProcessor {
   readonly processNoChoiceEffectQueue: (
@@ -42,11 +45,13 @@ export const createNoChoiceEffectQueueProcessor = (
   const unsupportedEffectQueueResult = (
     state: GameState,
     options: EngineResultOptions,
+    context: UnsupportedEffectQueueContext,
   ): EngineResult =>
     createUnsupportedEffectQueueResult(
       state,
       dependencies.createUnsupportedPendingRuntimeWorkError,
       options,
+      context,
     );
 
   const queuedEffectResolvers = createQueuedEffectResolvers(dependencies);
@@ -69,11 +74,17 @@ export const createNoChoiceEffectQueueProcessor = (
         queuedEffectResolvers.resolveQueuedEffectDefinition,
       )
         ? toEngineResult(state, [], undefined, options)
-        : unsupportedEffectQueueResult(state, options);
+        : unsupportedEffectQueueResult(state, options, {
+            gate: "deferred-trigger-release",
+            queueReason: "invalid-damage-deferred-queue",
+          });
     }
     const ordering = evaluateQueueOrdering(state.effectQueue);
     if (!ordering.ok) {
-      return unsupportedEffectQueueResult(state, options);
+      return unsupportedEffectQueueResult(state, options, {
+        gate: "queue-ordering",
+        queueReason: "invalid-ordering",
+      });
     }
 
     const earliestChoiceGroup = ordering.earliestChoiceGroup;
@@ -86,7 +97,10 @@ export const createNoChoiceEffectQueueProcessor = (
         acceptedOptionalIds.has(entry.id),
       );
       if (acceptedEntry === undefined) {
-        return unsupportedEffectQueueResult(state, options);
+        return unsupportedEffectQueueResult(state, options, {
+          gate: "queue-ordering",
+          queueReason: "accepted-optional-entry-missing",
+        });
       }
       const resolved = queueEntryResolver.resolveQueueEntriesInOrder(
         state,
@@ -123,7 +137,10 @@ export const createNoChoiceEffectQueueProcessor = (
             orderedCurrentChoiceGroupIds,
           )
         ) {
-          return unsupportedEffectQueueResult(state, options);
+          return unsupportedEffectQueueResult(state, options, {
+            gate: "queue-ordering",
+            queueReason: "invalid-choice-order",
+          });
         }
         const selectedById = new Map(
           earliestChoiceGroup.entries.map((entry) => [entry.id, entry]),
@@ -195,7 +212,10 @@ export const createNoChoiceEffectQueueProcessor = (
 
     const ordered = orderNoChoiceQueueEntries(ordering.groups);
     if (!ordered.ok) {
-      return unsupportedEffectQueueResult(state, options);
+      return unsupportedEffectQueueResult(state, options, {
+        gate: "queue-ordering",
+        queueReason: "invalid-no-choice-order",
+      });
     }
 
     const firstEntry = ordered.entries[0];

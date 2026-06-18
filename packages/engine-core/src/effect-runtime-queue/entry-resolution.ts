@@ -79,11 +79,15 @@ export const createQueueEntryResolver = (
     options: EngineResultOptions = {},
   ): EngineResult => {
     const originalState = state;
-    const unsupportedEffectQueueResult = (state: GameState): EngineResult =>
+    const unsupportedEffectQueueResult = (
+      state: GameState,
+      context?: Parameters<typeof createUnsupportedEffectQueueResult>[3],
+    ): EngineResult =>
       createUnsupportedEffectQueueResult(
         state,
         dependencies.createUnsupportedPendingRuntimeWorkError,
         options,
+        context,
       );
     let nextState = state;
     const allEvents: EngineEvent[] = [];
@@ -93,14 +97,24 @@ export const createQueueEntryResolver = (
         selected,
       );
       if (!sourcePresence.ok) {
-        return unsupportedEffectQueueResult(originalState);
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-source-presence",
+          entry: selected,
+          exposeEntryIdentity: false,
+          queueReason: "source-presence-failed",
+        });
       }
       const queuedEffect = queuedEffectResolvers.resolveQueuedEffectDefinition(
         nextState,
         selected,
       );
       if (queuedEffect?.conditionTiming !== undefined) {
-        return unsupportedEffectQueueResult(originalState);
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-entry-resolution",
+          entry: selected,
+          exposeEntryIdentity: true,
+          queueReason: "unsupported-condition-timing",
+        });
       }
       const conditionResult = evaluateQueuedEffectCondition(
         nextState,
@@ -108,7 +122,12 @@ export const createQueueEntryResolver = (
         queuedEffect?.condition,
       );
       if (!conditionResult.supported) {
-        return unsupportedEffectQueueResult(originalState);
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-entry-resolution",
+          entry: selected,
+          exposeEntryIdentity: true,
+          queueReason: "unsupported-condition",
+        });
       }
       if (!conditionResult.passed) {
         nextState = appendFailedConditionSpotlightEvent({
@@ -141,10 +160,20 @@ export const createQueueEntryResolver = (
             selected,
           )
         ) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selected,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-optional-shape",
+          });
         }
         if (!canAdmitOncePerTurnEffect(nextState, selected, queuedEffect)) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selected,
+            exposeEntryIdentity: true,
+            queueReason: "once-per-turn-admission-failed",
+          });
         }
         if (!acceptedOptionalQueueEntryIds.has(selected.id)) {
           const paused = createChooseOptionalActivationDecision(
@@ -224,7 +253,12 @@ export const createQueueEntryResolver = (
             )
           : sequenceFrame.error !== undefined
             ? toEngineResult(originalState, [], [sequenceFrame.error], options)
-            : unsupportedEffectQueueResult(originalState);
+            : unsupportedEffectQueueResult(originalState, {
+                gate: "queue-entry-resolution",
+                entry: selectedForBodyResolution,
+                exposeEntryIdentity: true,
+                queueReason: "unsupported-sequence-frame",
+              });
       }
       const primitiveBody = resolveQueuedPrimitiveBody(
         queuedEffectForBodyResolution,
@@ -246,7 +280,12 @@ export const createQueueEntryResolver = (
         queuedEffectForBodyResolution,
       );
       if (trashFromHandDecision?.kind === "unsupported") {
-        return unsupportedEffectQueueResult(originalState);
+        return unsupportedEffectQueueResult(originalState, {
+          gate: "queue-entry-resolution",
+          entry: selectedForBodyResolution,
+          exposeEntryIdentity: true,
+          queueReason: "unsupported-trash-from-hand",
+        });
       }
       if (trashFromHandDecision?.kind === "decision") {
         const trashDecision = createSupportedTrashFromHandChoiceDecision(
@@ -261,7 +300,12 @@ export const createQueueEntryResolver = (
               undefined,
               options,
             )
-          : unsupportedEffectQueueResult(originalState);
+          : unsupportedEffectQueueResult(originalState, {
+              gate: "queue-entry-resolution",
+              entry: selectedForBodyResolution,
+              exposeEntryIdentity: true,
+              queueReason: "unsupported-trash-from-hand",
+            });
       }
       let moveCardsEffect =
         primitiveBody?.kind === "moveCards" ? primitiveBody.effect : undefined;
@@ -355,7 +399,12 @@ export const createQueueEntryResolver = (
             resolvedQuantity,
           );
           if (resolution.errors !== undefined) {
-            return unsupportedEffectQueueResult(originalState);
+            return unsupportedEffectQueueResult(originalState, {
+              gate: "queue-entry-resolution",
+              entry: selectedForBodyResolution,
+              exposeEntryIdentity: true,
+              queueReason: "unsupported-draw",
+            });
           }
           nextState = resolution.state;
           allEvents.push(...resolution.events);
@@ -388,7 +437,12 @@ export const createQueueEntryResolver = (
           damageEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-body",
+          });
         }
       }
       if (queuedEffect !== undefined) {
@@ -399,7 +453,12 @@ export const createQueueEntryResolver = (
             queuedEffect,
           )
         ) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "once-per-turn-admission-failed",
+          });
         }
         nextState = consumeOncePerTurnForQueueEntry(
           nextState,
@@ -428,7 +487,12 @@ export const createQueueEntryResolver = (
           drawEffect,
         );
         if (resolution.errors !== undefined) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-draw",
+          });
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);
@@ -441,7 +505,12 @@ export const createQueueEntryResolver = (
           moveCardsEffect,
         );
         if (resolution.errors !== undefined) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-move-cards",
+          });
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);
@@ -455,7 +524,12 @@ export const createQueueEntryResolver = (
           ignoreCost: true,
         });
         if (resolution.errors !== undefined) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-play-source",
+          });
         }
         if (resolution.state.pendingDecision !== undefined) {
           if (
@@ -463,7 +537,12 @@ export const createQueueEntryResolver = (
             resolution.state.pendingDecision.runtime?.playSourceOverflow ===
               undefined
           ) {
-            return unsupportedEffectQueueResult(originalState);
+            return unsupportedEffectQueueResult(originalState, {
+              gate: "queue-entry-resolution",
+              entry: selectedForBodyResolution,
+              exposeEntryIdentity: true,
+              queueReason: "unsupported-play-source",
+            });
           }
           const pendingState = resolution.state.effectQueue.some(
             (entry) => entry.id === selectedForBodyResolution.id,
@@ -494,7 +573,12 @@ export const createQueueEntryResolver = (
           winGameEffect,
         );
         if (resolution.errors !== undefined) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-win-game",
+          });
         }
         nextState = resolution.state;
         allEvents.push(...resolution.events);
@@ -509,7 +593,12 @@ export const createQueueEntryResolver = (
           options,
         );
         if (resolution.status === "unsupported") {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-damage",
+          });
         }
         if (resolution.status === "pendingDecision") {
           return resolution.result;
@@ -525,7 +614,12 @@ export const createQueueEntryResolver = (
           queuedContinuousEffect,
         );
         if (records === null) {
-          return unsupportedEffectQueueResult(originalState);
+          return unsupportedEffectQueueResult(originalState, {
+            gate: "queue-entry-resolution",
+            entry: selectedForBodyResolution,
+            exposeEntryIdentity: true,
+            queueReason: "unsupported-continuous",
+          });
         }
         nextState = {
           ...nextState,

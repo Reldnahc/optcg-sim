@@ -158,9 +158,34 @@ test("non-empty effect queue fails closed with deterministic unsupported details
         reason: "unsupported-pending-runtime-work",
         kind: "effectQueue",
         count: 1,
+        gate: "queue-entry-resolution",
+        queueReason: "unsupported-body",
       },
     },
   ]);
+});
+
+test("unsupported queue errors include current gate context when available", () => {
+  const state = createActiveState();
+  state.effectQueue.push(queuedEffect());
+
+  const result = processEffectRuntime(state);
+  const firstError = result.errors?.[0] as
+    | {
+        type?: string;
+        effectId?: string;
+        details?: { gate?: string };
+      }
+    | undefined;
+
+  assert.ok(firstError !== undefined);
+  assert.equal(firstError.type, "effectRuntimeError");
+  assert.equal(firstError.effectId, "unsupported-effect-queue");
+  assert.equal(firstError.details?.gate, "queue-entry-resolution");
+  assert.equal(
+    JSON.stringify(result.errors).includes("hidden-effect-block"),
+    false,
+  );
 });
 
 test("non-empty deferred triggers fail closed with deterministic unsupported details", () => {
@@ -213,6 +238,43 @@ test("unsupported effect queue diagnostics do not expose hidden card contents", 
   assert.ok(!serialized.includes("hidden-instance-1"));
   assert.ok(!serialized.includes("hidden-effect-block"));
 });
+
+test.each([
+  {
+    name: "life",
+    zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+  },
+  {
+    name: "hand",
+    zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+  },
+  {
+    name: "deck",
+    zone: { zone: "deck", playerId: p1, slot: "deck", index: 0 },
+  },
+] as const)(
+  "unsupported queue diagnostics redact $name queue identity",
+  ({ zone }) => {
+    const state = createActiveState();
+    const hiddenEntry = {
+      ...queuedEffect(),
+      source: { ...queuedEffect().source, zone },
+      effectBlockId: "hidden-effect-block" as ReturnType<
+        typeof queuedEffect
+      >["effectBlockId"],
+    };
+    state.effectQueue.push(hiddenEntry);
+
+    const result = processEffectRuntime(state);
+    const serialized = JSON.stringify(result.errors);
+    const firstError = result.errors?.[0] as { effectId?: string } | undefined;
+
+    assert.ok(firstError !== undefined);
+    assert.equal(firstError.effectId, "unsupported-effect-queue");
+    assert.equal(serialized.includes("hidden-effect-block"), false);
+    assert.equal(serialized.includes("queueEntryId"), false);
+  },
+);
 
 test("unsupported deferred trigger diagnostics do not expose hidden card contents", () => {
   const state = createActiveState();
