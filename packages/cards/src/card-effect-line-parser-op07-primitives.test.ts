@@ -356,3 +356,75 @@ it("parses End of Your Turn conditional typed Character activation", () => {
     ]),
   );
 });
+
+it("parses rest-DON cost with reveal top play rested and bottom cleanup", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] \u2781 (You may rest the specified number of DON!! cards in your cost area.): Reveal 1 card from the top of your deck. If that card is a {The Seven Warlords of the Sea} type Character card with a cost of 4 or less, you may play that card rested. Then, place the rest at the bottom of your deck.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: { type: "restDon", count: 2 },
+            },
+          },
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                { effect: { type: "revealTop", player: "self", count: 1 } },
+                {
+                  effect: {
+                    type: "selectFromSet",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      categories: ["character"],
+                      typesAny: ["The Seven Warlords of the Sea"],
+                      cost: { max: 4 },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "playSelected",
+                    enterRested: true,
+                    ignoreCost: true,
+                  },
+                },
+                {
+                  effect: {
+                    type: "placeSetRemainder",
+                    destination: "deck",
+                    position: "bottom",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "cost:restDon",
+      "instruction:revealTop",
+      "instruction:playSelected",
+      "instruction:placeSetRemainder",
+      "filter:type",
+      "filter:category:character",
+      "filter:cost",
+      "state:rested",
+      "composition:optionalCostedEffect",
+    ]),
+  );
+});
