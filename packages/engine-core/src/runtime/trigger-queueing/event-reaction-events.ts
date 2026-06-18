@@ -5,6 +5,7 @@ import type { EventReactionTriggerType } from "../event-hooks/matcher.js";
 export const autoEventReactionTriggerTypes = [
   "damageDealt",
   "fieldRemoved",
+  "cardDrawn",
   "cardPlayed",
   "cardRested",
   "donReturned",
@@ -24,6 +25,7 @@ const autoEventReactionTriggerTypeSet: ReadonlySet<EventReactionTriggerType> =
 const autoEventReactionRuntimeEventTypes: ReadonlySet<EngineEvent["type"]> =
   new Set([
     "damageDealt",
+    "cardDrawn",
     "cardMoved",
     "cardPlayed",
     "cardRested",

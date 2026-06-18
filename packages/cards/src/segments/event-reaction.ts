@@ -430,6 +430,23 @@ function parsePlayedUsingSourceEffect(
     : { filterText, sourceFilterText };
 }
 
+const parseCardDrawnPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+  if (
+    normalized.toLowerCase() !== "you draw a card outside of your draw phase"
+  ) {
+    return undefined;
+  }
+  return {
+    trigger: {
+      type: "cardDrawn",
+      player: "self",
+      phase: { not: "draw" },
+    },
+    evidence: ["trigger:cardDrawn", "player:self", "condition:phase:notDraw"],
+  };
+};
+
 const parseCardRestedPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
 
@@ -609,6 +626,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
+    parseCardDrawnPredicate,
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,
@@ -654,6 +672,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,
+    parseCardDrawnPredicate,
     parseCardPlayedPredicate,
     parseActivationPredicate,
     parseCardRestedPredicate,

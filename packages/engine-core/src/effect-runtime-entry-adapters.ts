@@ -76,6 +76,9 @@ export const autoRuntimeEntryAdapterForTriggerType = (
       "resolveFromLastKnownInformation",
     ]);
   }
+  if (triggerType === "cardDrawn") {
+    return autoAdapter("cardDrawn", ["mustRemainInSameZone"]);
+  }
   if (triggerType === "cardPlayed") {
     return autoAdapter("cardPlayed", ["mustRemainInSameZone"]);
   }

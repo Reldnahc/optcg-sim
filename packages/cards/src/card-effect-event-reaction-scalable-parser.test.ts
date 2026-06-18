@@ -191,6 +191,40 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses draw outside Draw Phase reactions as reusable card-drawn hooks", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] [Once Per Turn] When you draw a card outside of your Draw Phase, this Character gains +2000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "cardDrawn",
+          player: "self",
+          phase: { not: "draw" },
+        },
+        effect: {
+          type: "modifyPower",
+          target: { type: "self" },
+          value: 2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:cardDrawn",
+        "player:self",
+        "condition:phase:notDraw",
+        "instruction:modifyPower",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
   it("parses opponent Event activation reactions with reusable all-character power grants", () => {
     const result = parseCardEffectLine(
       "[Your Turn] [Once Per Turn] When your opponent activates an Event, all of your Characters gain +2000 power during this turn.",

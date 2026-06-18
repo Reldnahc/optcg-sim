@@ -118,6 +118,48 @@ test("canonical event matcher matches cardRested triggers by player, self target
   assert.deepEqual(match, { matched: true, triggerTypes: ["cardRested"] });
 });
 
+test("canonical event matcher matches cardDrawn outside Draw Phase by player", () => {
+  const { source, state } = setupEventHookState();
+  state.turn.phase = "main";
+  const event = publicEvent(state, "cardDrawn", {
+    playerId: source.controller,
+  });
+
+  const match = matchEventTrigger(
+    state,
+    source,
+    {
+      type: "cardDrawn",
+      player: "self",
+      phase: { not: "draw" },
+    },
+    event,
+  );
+
+  assert.deepEqual(match, { matched: true, triggerTypes: ["cardDrawn"] });
+});
+
+test("canonical event matcher rejects cardDrawn phase exclusions", () => {
+  const { source, state } = setupEventHookState();
+  state.turn.phase = "draw";
+  const event = publicEvent(state, "cardDrawn", {
+    playerId: source.controller,
+  });
+
+  const match = matchEventTrigger(
+    state,
+    source,
+    {
+      type: "cardDrawn",
+      player: "self",
+      phase: { not: "draw" },
+    },
+    event,
+  );
+
+  assert.deepEqual(match, { matched: false, triggerTypes: [] });
+});
+
 test("canonical event matcher applies cardRested source-card filters", () => {
   const { character, source, state } = setupEventHookState();
   const event = publicEvent(state, "cardRested", {

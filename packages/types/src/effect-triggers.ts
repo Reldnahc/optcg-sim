@@ -16,6 +16,7 @@ export type EffectEntryPointFilter = {
     | "damageDealt"
     | "lifeRemoved"
     | "fieldRemoved"
+    | "cardDrawn"
     | "cardPlayed"
     | "cardRested"
     | "donReturned"
@@ -67,6 +68,11 @@ export type Trigger =
       sourceController?: PlayerRef;
       sourceKind?: "effect" | "ko" | "any";
       destination?: Zone;
+    }
+  | {
+      type: "cardDrawn";
+      player: PlayerRef;
+      phase?: { not: "draw" };
     }
   | {
       type: "cardPlayed";

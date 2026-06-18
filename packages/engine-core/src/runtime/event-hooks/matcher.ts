@@ -18,6 +18,7 @@ import { matchBattleRoleEvent } from "./battle-role.js";
 export type EventReactionTriggerType =
   | "damageDealt"
   | "fieldRemoved"
+  | "cardDrawn"
   | "cardPlayed"
   | "cardRested"
   | "donReturned"
@@ -366,6 +367,26 @@ const matchCardPlayed = (
     trigger.anyOf.some((branch) =>
       matchesCardPlayedBranch(state, payload, resolved, branch),
     )
+  );
+};
+
+const matchCardDrawn = (
+  state: GameState,
+  source: CardInstance,
+  trigger: Extract<Trigger, { type: "cardDrawn" }>,
+  event: EngineEvent,
+): boolean => {
+  const payload = publicPayload(event);
+  if (event.type !== "cardDrawn" || payload === undefined) {
+    return false;
+  }
+  if (trigger.phase?.not === state.turn.phase) {
+    return false;
+  }
+  const playerId = payload["playerId"];
+  return (
+    typeof playerId === "string" &&
+    playerRefMatchesSource(state, source, trigger.player, playerId as PlayerId)
   );
 };
 
@@ -787,6 +808,12 @@ const matchPrimitiveEventTrigger = (
     return primitiveMatch(
       "cardPlayed",
       matchCardPlayed(state, source, trigger, event),
+    );
+  }
+  if (trigger.type === "cardDrawn") {
+    return primitiveMatch(
+      "cardDrawn",
+      matchCardDrawn(state, source, trigger, event),
     );
   }
   if (trigger.type === "cardRested") {
