@@ -99,3 +99,73 @@ it("parses attached-DON battle trigger self card activation", () => {
     ]),
   );
 });
+
+it("parses attached-DON rested-state typed Leader and Character power gain", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [Your Turn] If this Character is rested, your {Supernovas} or {Navy} type Leaders and Characters gain +1000 power.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      condition: {
+        type: "and",
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "leaderArea",
+                filter: {
+                  categories: ["leader"],
+                  typesAny: ["Supernovas", "Navy"],
+                },
+              },
+              value: 1000,
+              duration: { type: "whileConditionTrue" },
+            },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "all",
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Supernovas", "Navy"],
+                },
+              },
+              value: 1000,
+              duration: { type: "whileConditionTrue" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "condition:attachedDonCount",
+      "entry:yourTurn",
+      "condition:cardState",
+      "instruction:modifyPower",
+      "cardinality:all",
+      "player:self",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:type",
+      "filter:category:leader",
+      "filter:category:character",
+      "modifier:positivePower",
+      "duration:whileConditionTrue",
+    ]),
+  );
+});

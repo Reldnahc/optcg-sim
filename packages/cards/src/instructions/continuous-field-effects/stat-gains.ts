@@ -276,7 +276,7 @@ const parseYourLeaderAndAllCharactersStatGainInstruction: ContinuousInstructionP
 const parseAllLeaderAndCharacterStatGainInstruction: ContinuousInstructionParser =
   (input, context) => {
     const match =
-      /^All of your (?<predicate>.+ Leader and Character cards?) gain (?<modifier>.+)$/iu.exec(
+      /^(?:All of )?your (?<predicate>.+ (?:Leader and Character cards?|Leaders and Characters)) gain (?<modifier>.+)$/iu.exec(
         input.text,
       );
     const predicateText = match?.groups?.["predicate"];
