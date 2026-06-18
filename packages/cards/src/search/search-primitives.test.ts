@@ -432,6 +432,22 @@ describe("search reveal primitives", () => {
     });
   });
 
+  it("parses bottom-only remainder policy without adding order choice", () => {
+    expect(
+      parseRestToBottomAnyOrder({
+        text: "Then, place the rest at the bottom of your deck.",
+      }),
+    ).toEqual({
+      evidence: ["remaining:rest", "remaining:bottomDeck"],
+      remainingCards: {
+        destination: "deck",
+        position: "bottom",
+        order: "original",
+      },
+      rest: "",
+    });
+  });
+
   it("parses rest-to-top-or-bottom remainder policy independently from search selection", () => {
     expect(
       parseRestToTopOrBottomAnyOrder({

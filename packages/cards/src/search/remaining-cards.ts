@@ -5,7 +5,7 @@ export interface RestBottomParseResult {
   readonly remainingCards: {
     readonly destination: "deck";
     readonly position: "bottom" | "topOrBottom";
-    readonly order: "ownerChoice";
+    readonly order: "ownerChoice" | "original";
   };
   readonly rest: string;
 }
@@ -22,19 +22,24 @@ export function parseRestToBottomAnyOrder(
   input: ParseInput,
 ): RestBottomParseResult | undefined {
   const match =
-    /^Then, place the rest at the bottom of your deck in any order(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
+    /^Then, place the rest at the bottom of your deck(?<order>\s+in any order)?(?:\.|,?\s+and\s+(?<rest>.+)|\.\s+Then,\s+(?<thenRest>.+))$/i.exec(
       input.text,
     );
   if (match === null) {
     return undefined;
   }
+  const anyOrder = match.groups?.["order"] !== undefined;
 
   return {
-    evidence: ["remaining:rest", "remaining:bottomDeck", "order:anyOrder"],
+    evidence: [
+      "remaining:rest",
+      "remaining:bottomDeck",
+      ...(anyOrder ? (["order:anyOrder"] as const) : []),
+    ],
     remainingCards: {
       destination: "deck",
       position: "bottom",
-      order: "ownerChoice",
+      order: anyOrder ? "ownerChoice" : "original",
     },
     rest: match.groups?.["rest"] ?? match.groups?.["thenRest"] ?? "",
   };

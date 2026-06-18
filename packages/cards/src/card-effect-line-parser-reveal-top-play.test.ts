@@ -181,6 +181,50 @@ describe("card effect line parser reveal-top play effects", () => {
     );
   });
 
+  it("parses revealed top-deck play with bottom-only remainder", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Reveal 1 card from the top of your deck and play up to 1 Character with a cost of 9 or less other than [Sanji]. Then, place the rest at the bottom of your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "revealTop", visibility: "bothPlayers" } },
+            {
+              effect: {
+                type: "selectFromSet",
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 9 },
+                  nameNot: ["Sanji"],
+                },
+              },
+            },
+            { effect: { type: "playSelected" } },
+            { effect: { type: "placeSetRemainder", position: "bottom" } },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:revealTop",
+        "instruction:selectFromSet",
+        "filter:category:character",
+        "filter:cost",
+        "filter:nameNot",
+        "instruction:playSelected",
+        "instruction:placeSetRemainder",
+        "remaining:bottomDeck",
+      ]),
+    );
+  });
+
   it("parses comma-separated revealed top-deck play with top-or-bottom remainder", () => {
     const result = parseCardEffectLine(
       "[Counter] Up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, reveal 1 card from the top of your deck, play up to 1 Character card with a cost of 2, and place the rest at the top or bottom of your deck.",

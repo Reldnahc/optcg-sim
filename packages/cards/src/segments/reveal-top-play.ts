@@ -7,7 +7,10 @@ import type {
 } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../filters/index.js";
-import { parseRestToTopOrBottomAnyOrder } from "../search/index.js";
+import {
+  parseRestToBottomAnyOrder,
+  parseRestToTopOrBottomAnyOrder,
+} from "../search/index.js";
 import type {
   ExpressionParseResult,
   ParseInput,
@@ -26,7 +29,9 @@ export function revealTopPlayExpressionParser(
     return undefined;
   }
 
-  const remaining = parseRestToTopOrBottomAnyOrder({ text: play.rest });
+  const remaining =
+    parseRestToTopOrBottomAnyOrder({ text: play.rest }) ??
+    parseRestToBottomAnyOrder({ text: play.rest });
   if (remaining === undefined || remaining.rest.length > 0) {
     return undefined;
   }
@@ -53,6 +58,11 @@ export function revealTopPlayExpressionParser(
       filter: play.filter,
       enterRested: play.enterRested,
       max: play.max,
+      position: remaining.remainingCards.position,
+      order:
+        remaining.remainingCards.order === "ownerChoice"
+          ? "chooser"
+          : "original",
     }),
     evidence,
     rest: "",
@@ -115,10 +125,14 @@ function createRevealedSetPlaySequence({
   enterRested,
   filter,
   max,
+  order,
+  position,
 }: {
   readonly enterRested: boolean;
   readonly filter: CardFilter;
   readonly max: number;
+  readonly order: "chooser" | "original";
+  readonly position: "bottom" | "topOrBottom";
 }): Extract<Effect, { type: "sequence" }> {
   return {
     type: "sequence",
@@ -162,8 +176,8 @@ function createRevealedSetPlaySequence({
           set: revealedPlaySet,
           owner: "self",
           destination: "deck",
-          position: "topOrBottom",
-          order: "chooser",
+          position,
+          order,
         },
       },
     ],
