@@ -58,6 +58,7 @@ export type Condition =
   | { type: "attachedDonCount"; target: Target; op: Comparator; value: number }
   // prettier-ignore
   | { type: "cardStatComparison"; target: Target; stat: CardStatComparison["stat"]; op: Comparator; value: number | DynamicNumberValue }
+  | { type: "cardMatches"; target: Target; filter: CardFilter }
   | { type: "yourTurn" }
   | { type: "turnCount"; player: PlayerRef; op: Comparator; value: number }
   | { type: "opponentTurn" }
@@ -218,6 +219,7 @@ export interface CardSelectionRequest {
   chooser: PlayerRef;
   player?: PlayerRef;
   zone?: Zone;
+  zones?: readonly Zone[];
   set?: SelectionSetId;
   filter?: CardFilter;
   min: number;
@@ -305,9 +307,10 @@ export type Target =
   | { type: "triggerCard" }
   | { type: "replacementTarget" }
   | { type: "player"; player: PlayerRef }
-  | { type: "all"; zone: Zone; player: PlayerRef; filter?: CardFilter }
+  | { type: "all"; zone: Zone; player: TargetPlayerRef; filter?: CardFilter }
   | { type: "choose"; request: TargetRequest }
   | { type: "chooseFromZones"; request: MultiZoneTargetRequest }
+  | SavedSelectedCardTarget
   | SavedFieldObjectTarget;
 
 export interface CardFilter {
@@ -404,6 +407,7 @@ export type ReplacementTrigger =
       type: "wouldMoveZone";
       from?: Zone;
       to?: Zone;
+      lifeMatcher?: { faceUp?: boolean };
       sourceKind?: "battle" | "cardEffect";
       sourceControllerRelation?: "any" | "opponentControlled";
       target: Target;
@@ -420,6 +424,7 @@ export type SequenceSaveResultKind =
   | "selectedCards:hand"
   | "selectedCards:deck"
   | "selectedCards:trash"
+  | "selectedCards:life"
   | "selectedCards:don"
   | "selectedCards:set"
   | "selectedTargets"
@@ -527,6 +532,13 @@ export interface SavedFieldObjectTarget {
   onFailure: "failClosed";
 }
 
+export interface SavedSelectedCardTarget {
+  type: "savedSelectedCard";
+  selection: string;
+  objectIndex?: number;
+  onFailure: "failClosed";
+}
+
 export interface SavedSelectedCardsReference {
   kind: "selectedCards";
   cards: CardRef[];
@@ -563,17 +575,31 @@ export type SequenceSavedResultReference =
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
-export interface SelectCardsEffect {
-  type: "selectCards";
-  zone: Zone;
-  player: PlayerRef;
-  chooser: PlayerRef;
-  min: number;
-  max: number;
-  filter?: CardFilter;
-  saveAs: SelectionId;
-  visibility: Visibility;
-}
+export type SelectCardsEffect =
+  | {
+      type: "selectCards";
+      zone: Zone;
+      zones?: never;
+      player: PlayerRef;
+      chooser: PlayerRef;
+      min: number;
+      max: number;
+      filter?: CardFilter;
+      saveAs: SelectionId;
+      visibility: Visibility;
+    }
+  | {
+      type: "selectCards";
+      zone?: never;
+      zones: readonly Zone[];
+      player: PlayerRef;
+      chooser: PlayerRef;
+      min: number;
+      max: number;
+      filter?: CardFilter;
+      saveAs: SelectionId;
+      visibility: Visibility;
+    };
 
 export interface SelectTargetsEffect {
   type: "selectTargets";
@@ -649,6 +675,12 @@ export type Effect =
       duration: Duration;
     }
   | {
+      type: "preventLifeToHand";
+      player: PlayerRef;
+      source: "ownEffects";
+      duration: Duration;
+    }
+  | {
       type: "preventDonActivation";
       player: PlayerRef;
       sourceCategories: CardCategory[];
@@ -689,6 +721,11 @@ export type Effect =
     }
   | {
       type: "reorderLife";
+      player: PlayerRef;
+      viewer: PlayerRef;
+    }
+  | {
+      type: "moveLifeToDeckTopAndReorderRest";
       player: PlayerRef;
       viewer: PlayerRef;
     }
@@ -747,7 +784,7 @@ export type Effect =
   | {
       type: "moveSelected";
       selection: SelectionId;
-      from: Zone | SelectionSetId;
+      from: Zone | SelectionSetId | "currentZone";
       to: Zone;
       position?: "top" | "bottom" | "topOrBottom";
       destinationFaceUp?: boolean;
@@ -767,6 +804,15 @@ export type Effect =
       order: "original";
       destinationState?: "active" | "rested";
       destinationFaceUp?: boolean;
+    }
+  | {
+      type: "moveMatchingLifeCards";
+      player: PlayerRef;
+      matcher: {
+        faceUp: boolean;
+      };
+      to: { player: PlayerRef; zone: "trash" };
+      order: "original";
     }
   | {
       type: "putRemaining";

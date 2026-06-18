@@ -110,6 +110,8 @@ export type Trigger =
       filter?: CardFilter;
       targetPlayer?: PlayerRef;
       targetFilter?: CardFilter;
+      counterpartPlayer?: PlayerRef;
+      counterpartFilter?: CardFilter;
     }
   | {
       type: "effectQueued";
@@ -147,5 +149,14 @@ export type Trigger =
   | { type: "startOfYourTurn" }
   | { type: "startOfOpponentTurn" }
   | { type: "startOfMainPhase" }
-  | { type: "endOfBattle" }
+  | {
+      type: "endOfBattle";
+      role?: "attacker" | "target" | "attackerOrTarget";
+      player?: PlayerRef;
+      filter?: CardFilter;
+      targetPlayer?: PlayerRef;
+      targetFilter?: CardFilter;
+      counterpartPlayer?: PlayerRef;
+      counterpartFilter?: CardFilter;
+    }
   | { type: "custom"; event: string };

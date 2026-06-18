@@ -5,14 +5,14 @@ export type TurnLifeFaceUpCost = {
   type: "turnLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom";
+  position: "top" | "bottom" | "anyMatching";
 };
 
 export type SetLifeFaceUpCost = {
   type: "setLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom";
+  position: "top" | "bottom" | "anyMatching";
   faceUp: boolean;
 };
 
@@ -88,7 +88,7 @@ export type Cost =
       type: "moveFieldToLife";
       count: number;
       chooser: "self";
-      player: "opponent" | "anyPlayer";
+      player: "self" | "opponent" | "anyPlayer";
       filter?: CardFilter;
       position: "top" | "bottom" | "topOrBottom";
       faceUp?: boolean;
@@ -163,7 +163,7 @@ export type OptionalMoveFieldToLifeCost = {
   type: "moveFieldToLife";
   count: number;
   chooser: "self";
-  player: "opponent" | "anyPlayer";
+  player: "self" | "opponent" | "anyPlayer";
   filter?: CardFilter;
   position: "top" | "bottom" | "topOrBottom";
   faceUp?: boolean;

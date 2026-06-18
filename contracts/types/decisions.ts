@@ -44,14 +44,14 @@ export type PaymentOption =
       type: "turnLifeFaceUp";
       count: number;
       player: PlayerRef;
-      position: "top" | "bottom";
+      position: "top" | "bottom" | "anyMatching";
     }
   | {
       id: string;
       type: "setLifeFaceUp";
       count: number;
       player: PlayerRef;
-      position: "top" | "bottom";
+      position: "top" | "bottom" | "anyMatching";
       faceUp: boolean;
     }
   | {
@@ -111,7 +111,7 @@ export type PaymentOption =
       id: string;
       type: "moveFieldToLife";
       count: number;
-      player: "opponent" | "anyPlayer";
+      player: "self" | "opponent" | "anyPlayer";
       filter?: CardFilter;
       position: "top" | "bottom";
       faceUp?: boolean;
@@ -243,6 +243,7 @@ export interface ConfirmLifeTriggerDecision extends BaseDecision {
   type: "confirmLifeTrigger";
   card: CardRef;
   options: Array<"activateTrigger" | "addToHand">;
+  sourceLifeFaceUp?: boolean;
 }
 
 export interface OrderCardsDecision extends BaseDecision {
