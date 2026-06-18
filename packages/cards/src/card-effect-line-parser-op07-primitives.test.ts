@@ -299,3 +299,60 @@ it("parses Trigger play from trash with owned filtered source wording", () => {
     ]),
   );
 });
+
+it("parses End of Your Turn conditional typed Character activation", () => {
+  const result = parseCardEffectLine(
+    "[End of Your Turn] If you have 3 or less Life cards, set up to 1 {Egghead} type Character with a cost of 5 or less as active.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "endOfYourTurn" },
+      condition: { type: "lifeCount", player: "self", op: "lte", value: 3 },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Egghead"],
+                  cost: { max: 5 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zone: "characterArea",
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:endOfYourTurn",
+      "condition:lifeCount",
+      "instruction:activate",
+      "filter:type",
+      "filter:category:character",
+      "filter:cost",
+      "state:active",
+      "composition:selectThenApply",
+    ]),
+  );
+});

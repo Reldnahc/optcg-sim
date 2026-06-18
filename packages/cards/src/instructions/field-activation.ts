@@ -670,11 +670,11 @@ function parseSetLeaderAndCharactersActive(
 }
 
 function parseSelfCharacterTargetText(text: string): string | undefined {
-  const match = /^of your (?<target>.+)$/i.exec(text.trim());
-  const targetText = match?.groups?.["target"]?.trim();
-  return targetText === undefined || targetText.length === 0
-    ? undefined
-    : targetText;
+  const targetText = text
+    .trim()
+    .replace(/^of your\s+/iu, "")
+    .trim();
+  return targetText.length === 0 ? undefined : targetText;
 }
 
 function isCharacterFilter(

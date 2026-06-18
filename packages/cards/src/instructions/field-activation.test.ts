@@ -152,6 +152,63 @@ describe("field activation instruction parser", () => {
     });
   });
 
+  it("parses typed Character activation without an explicit owner phrase", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "set up to 1 {Egghead} type Character with a cost of 5 or less as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Egghead"],
+                  cost: { max: 5 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zone: "characterArea",
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+        "chooser:self:upTo",
+        "zone:characterArea",
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses typed Leader activation as a filtered leader-area activate primitive", () => {
     expect(
       parseSetFieldActiveInstruction({
