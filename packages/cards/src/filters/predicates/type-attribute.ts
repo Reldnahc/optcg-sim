@@ -307,6 +307,34 @@ export const parseAttributeCategoryPredicate: PredicateParser = (
   };
 };
 
+export const parseSourceAttributeCategoryPredicate: PredicateParser = (
+  text,
+  current,
+) => {
+  const match =
+    /^attribute (?<category>Leader|Character|Stage|Event)(?: cards?|s)?\b\s*(?<rest>.*)$/i.exec(
+      text.trim(),
+    );
+  const categoryText = match?.groups?.["category"];
+  if (categoryText === undefined) {
+    return undefined;
+  }
+
+  return {
+    filter: {
+      ...current,
+      attributesFromSource: true,
+      categories: [categoryText.toLowerCase() as CardCategory],
+    },
+    evidence: [
+      "filter:attribute",
+      "valueSource:sourceAttribute",
+      categoryEvidence(categoryText),
+    ],
+    rest: match?.groups?.["rest"] ?? "",
+  };
+};
+
 export const parseAttributeCardPredicate: PredicateParser = (text, current) => {
   const match = new RegExp(
     `^(?<attribute>${angleAttributePattern}) attribute card\\b\\s*(?<rest>.*)$`,

@@ -28,6 +28,7 @@ const supportedPublicFieldTargetFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attachedDon",
   "attributesAny",
+  "attributesFromSource",
   "baseCost",
   "categories",
   "colorsAny",

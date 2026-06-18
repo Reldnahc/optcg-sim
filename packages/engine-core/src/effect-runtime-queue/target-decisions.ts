@@ -688,6 +688,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
   ): EngineResult => {
     const resolved = resolvePublicTargetCandidatesForRequest(state, request, {
       sourceControllerId: entry.controllerId,
+      source: entry.source,
     });
     const chooserId = resolvePlayerId(state, entry, request.chooser);
     if (!resolved.ok || chooserId === undefined) {

@@ -371,6 +371,29 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses source-relative attribute Character filters", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "attribute Characters with a cost of 4 or less",
+      }),
+    ).toEqual({
+      filter: {
+        attributesFromSource: true,
+        categories: ["character"],
+        cost: { max: 4 },
+      },
+      evidence: [
+        "filter:attribute",
+        "valueSource:sourceAttribute",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:lte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
+
   it.each([
     ["Characters without the <Special> attribute", "special"],
     ["Characters without the \uFF1CSpecial\uFF1E attribute", "special"],

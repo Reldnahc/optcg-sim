@@ -248,6 +248,7 @@ export type PrimitiveEvidence =
   | "filter:effectEntryPoint"
   | "filter:effectEntryPoint:with"
   | "filter:effectEntryPoint:without"
+  | "valueSource:sourceAttribute"
   | "valueSource:donFieldCount:self"
   | "valueSource:donFieldCount:opponent"
   | "valueSource:fieldCount"

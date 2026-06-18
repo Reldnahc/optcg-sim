@@ -22,6 +22,7 @@ import {
   isSupportedCostModifierEffect,
   isSupportedDerivedKeyword,
   isSupportedDuration,
+  isSupportedPlayerTarget,
   isSupportedTarget,
 } from "./support.js";
 import {
@@ -329,6 +330,10 @@ export const effectToDerivedModifier = (
         !(
           effect.type === "cannotAttackTarget" &&
           effect.target.type === "myLeader"
+        ) &&
+        !(
+          effect.type === "cannotAttackTarget" &&
+          isSupportedPlayerTarget(effect.target)
         ) &&
         !isSupportedTarget(effect.target)) ||
       !isSupportedDuration(effect.duration)

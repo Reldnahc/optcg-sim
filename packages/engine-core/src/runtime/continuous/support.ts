@@ -25,6 +25,7 @@ const supportedRestriction = new Set([
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attachedDon",
+  "attributesFromSource",
   "baseCost",
   "categories",
   "colorsAny",
@@ -85,6 +86,10 @@ const supportedDerivedKeywords = new Set<Keyword>([
 
 export const isSupportedDerivedKeyword = (keyword: Keyword): boolean =>
   supportedDerivedKeywords.has(keyword);
+
+export const isSupportedPlayerTarget = (
+  target: Target,
+): target is Extract<Target, { type: "player" }> => target.type === "player";
 
 export const isSupportedDuration = (duration: Duration): boolean => {
   if (
@@ -524,6 +529,10 @@ export const isSupportedContinuousQueueEffect = (
     ) &&
     !(
       effect.type === "cannotAttackTarget" && effect.target.type === "myLeader"
+    ) &&
+    !(
+      effect.type === "cannotAttackTarget" &&
+      isSupportedPlayerTarget(effect.target)
     ) &&
     !isSupportedTarget(effect.target)
   ) {

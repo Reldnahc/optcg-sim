@@ -4,6 +4,7 @@ import type {
   CardRef,
   ComputedCardView,
   ComputedGameView,
+  ContinuousEffectRecord,
   GameState,
   InstanceId,
   Keyword,
@@ -177,6 +178,44 @@ const playerRefMatchesCard = (
   }
 };
 
+const playerRefMatchesContinuousEffect = (
+  state: GameState,
+  effect: ContinuousEffectRecord,
+  ref: PlayerRef,
+  playerId: PlayerId,
+): boolean => {
+  switch (ref) {
+    case "self":
+    case "controller":
+      return playerId === effect.controller;
+    case "owner":
+      return playerId === effect.source.playerId;
+    case "opponent":
+      return playerId === getOpponentId(state, effect.controller);
+    case "turnPlayer":
+      return playerId === state.turn.turnPlayerId;
+    case "nonTurnPlayer":
+      return playerId === getOpponentId(state, state.turn.turnPlayerId);
+  }
+};
+
+const attackerMatchesTargetRestrictionSubject = (
+  state: GameState,
+  attacker: CardInstance,
+  effect: ContinuousEffectRecord,
+): boolean => {
+  const target = effect.modifier.target;
+  if (target.type === "player") {
+    return playerRefMatchesContinuousEffect(
+      state,
+      effect,
+      target.player,
+      attacker.controller,
+    );
+  }
+  return cardMatchesContinuousModifierTarget(state, attacker, effect);
+};
+
 const cardMatchesAttackTargetFilter = (
   resolved: ResolvedCard,
   filter: CardFilter | undefined,
@@ -196,7 +235,9 @@ const attackTargetRestricted = (
     if (effect.modifier.operation.restriction !== "cannotAttack") continue;
     if (!durationIsActive(state, effect)) continue;
     if (!continuousEffectConditionPasses(state, effect)) continue;
-    if (!cardMatchesContinuousModifierTarget(state, attacker, effect)) continue;
+    if (!attackerMatchesTargetRestrictionSubject(state, attacker, effect)) {
+      continue;
+    }
     const attackTarget = effect.modifier.operation.attackTarget;
     if (target.zone.zone !== attackTarget.zone) continue;
     if (

@@ -42,6 +42,7 @@ const publicCandidateVisibility = { type: "public" } as const;
 const supportedFilterKeys = new Set<keyof CardFilter>([
   "anyOf",
   "attributesAny",
+  "attributesFromSource",
   "attributesNotAny",
   "attachedDon",
   "baseCost",
@@ -537,6 +538,22 @@ const cardMatchesFilter = (
     )
   ) {
     return false;
+  }
+  if (filter.attributesFromSource === true) {
+    const sourceCardId = context.source?.cardId;
+    const source =
+      sourceCardId === undefined
+        ? undefined
+        : state.cardManifest.cards[sourceCardId];
+    if (
+      source === undefined ||
+      source.attributes.length === 0 ||
+      !source.attributes.some((attribute) =>
+        card.attributes.includes(attribute),
+      )
+    ) {
+      return false;
+    }
   }
   if (
     filter.attributesNotAny !== undefined &&

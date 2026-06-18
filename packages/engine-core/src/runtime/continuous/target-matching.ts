@@ -1,4 +1,5 @@
 import type {
+  Attribute,
   CardFilter,
   CardInstance,
   CardRef,
@@ -126,11 +127,14 @@ const cardMatchesAllFilter = (
   state: GameState,
   card: CardInstance,
   filter: CardFilter | undefined,
+  sourceAttributes?: readonly Attribute[],
 ): boolean => {
   if (filter === undefined) return true;
   if (
     filter.anyOf !== undefined &&
-    !filter.anyOf.some((child) => cardMatchesAllFilter(state, card, child))
+    !filter.anyOf.some((child) =>
+      cardMatchesAllFilter(state, card, child, sourceAttributes),
+    )
   ) {
     return false;
   }
@@ -172,6 +176,16 @@ const cardMatchesAllFilter = (
     !filter.attributesAny.some((attribute) =>
       metadata.attributes.includes(attribute),
     )
+  ) {
+    return false;
+  }
+  if (
+    filter.attributesFromSource === true &&
+    (sourceAttributes === undefined ||
+      sourceAttributes.length === 0 ||
+      !sourceAttributes.some((attribute) =>
+        metadata.attributes.includes(attribute),
+      ))
   ) {
     return false;
   }
@@ -232,7 +246,25 @@ const cardMatchesAllTarget = (
 ): boolean => {
   const target = effect.modifier.target;
   if (target.type !== "all") return false;
-  return cardMatchesAllTargetSpec(state, card, effect.controller, target);
+  if (target.zone !== card.zone.zone) return false;
+  const sourceMetadata = state.cardManifest.cards[effect.source.cardId];
+  if (
+    !cardMatchesAllFilter(
+      state,
+      card,
+      target.filter,
+      sourceMetadata?.attributes,
+    )
+  ) {
+    return false;
+  }
+  if (target.player === "self") {
+    return card.controller === effect.controller;
+  }
+  if (target.player === "opponent") {
+    return card.controller !== effect.controller;
+  }
+  return false;
 };
 
 export const cardMatchesContinuousModifierTarget = (

@@ -232,6 +232,7 @@ export const applySelectTargetsSequenceSegment = (params: {
     segment.effect.request,
     {
       sourceControllerId: entry.controllerId,
+      source: entry.source,
     },
   );
   const chooserId = resolvePlayerId(

@@ -371,4 +371,85 @@ describe("OP06 primitive parser support", () => {
       ]),
     );
   });
+
+  it("parses source-attribute activation followed by player attack-target restriction", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Set up to 1 of your  attribute Characters with a cost of 4 or less as active. Then, you cannot attack a Leader during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: "targetSelection:set-field-active",
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zone: "characterArea",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          attributesFromSource: true,
+                          categories: ["character"],
+                          cost: { max: 4 },
+                        },
+                      },
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "activate",
+                      target: {
+                        type: "savedFieldObject",
+                        binding: {
+                          family: "selectedTargets",
+                          saveResultAs: "targetSelection:set-field-active",
+                        },
+                        player: "self",
+                        zone: "characterArea",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "cannotAttackTarget",
+                target: { type: "player", player: "self" },
+                attackTarget: {
+                  player: "opponent",
+                  zone: "leaderArea",
+                  filter: { categories: ["leader"] },
+                },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:activate",
+        "filter:attribute",
+        "valueSource:sourceAttribute",
+        "instruction:cannotAttackTarget",
+        "zone:leaderArea",
+        "filter:category:leader",
+      ]),
+    );
+  });
 });

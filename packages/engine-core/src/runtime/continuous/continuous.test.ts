@@ -105,6 +105,45 @@ test("targeted cannotAttack restriction filters only matching attack targets", (
   ]);
 });
 
+test("player targeted cannotAttack restriction filters that player's attack targets", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  setMainTurnAfterFirstTurn(state);
+  p1State.characters = [withCharacter(p1, toCardId("char-rush"), 0)];
+  p2State.characters = [
+    withCharacter(p2, toCardId("char-vanilla"), 0, { state: "rested" }),
+  ];
+  const attacker = must(p1State.characters[0], "attacker");
+  const source = must(p1State.leader, "source");
+  state.continuousEffects = [
+    {
+      ...continuousPowerEffectRecord(state, { source }),
+      id: "restrict-player-leader-targets",
+      modifier: {
+        layer: "restriction",
+        target: { type: "player", player: "self" },
+        operation: {
+          type: "targetRestriction",
+          restriction: "cannotAttack",
+          attackTarget: {
+            player: "opponent",
+            zone: "leaderArea",
+            filter: { categories: ["leader"] },
+          },
+        },
+      },
+      duration: { type: "thisTurn" },
+    },
+  ];
+
+  const view = computeView(state);
+
+  assert.deepEqual(view.legalAttackTargets[attacker.instanceId], [
+    must(p2State.characters[0], "target").instanceId,
+  ]);
+});
+
 test("cannotBlock all-opponent-character restriction disables blocker", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");

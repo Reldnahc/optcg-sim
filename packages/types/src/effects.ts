@@ -276,6 +276,7 @@ export interface CardFilter {
   typesNotIncludeAny?: string[];
   typesAll?: string[];
   attributesAny?: Attribute[];
+  attributesFromSource?: true;
   attributesNotAny?: Attribute[];
   attributesAll?: Attribute[];
   baseCost?: { op: Comparator; value: number } | { min?: number; max?: number };

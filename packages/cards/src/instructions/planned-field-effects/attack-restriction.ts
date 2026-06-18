@@ -230,6 +230,52 @@ const parseOpponentRestedLeaderOrCharacterAttackRestriction: InstructionParser =
 export const parseSelfAttackTargetRestrictionInstruction: InstructionParser = (
   input,
 ) => {
+  const playerMatch =
+    /^you cannot attack (?<target>a Leader|your opponent's Leader)(?: cards?)? (?<duration>during this turn\.?)$/iu.exec(
+      input.text,
+    );
+  const playerTargetText = playerMatch?.groups?.["target"];
+  const playerDurationText = playerMatch?.groups?.["duration"];
+  const normalizedPlayerTargetText = playerTargetText?.toLowerCase();
+  if (
+    normalizedPlayerTargetText !== undefined &&
+    playerDurationText !== undefined &&
+    (normalizedPlayerTargetText === "a leader" ||
+      normalizedPlayerTargetText === "your opponent's leader")
+  ) {
+    const duration = parseDurationFromSet(
+      { text: playerDurationText },
+      attackRestrictionDurationParsers,
+    );
+    if (
+      duration !== undefined &&
+      duration.duration !== undefined &&
+      duration.rest.length === 0
+    ) {
+      return {
+        effect: {
+          type: "cannotAttackTarget",
+          target: { type: "player", player: "self" },
+          attackTarget: {
+            player: "opponent",
+            zone: "leaderArea",
+            filter: { categories: ["leader"] },
+          },
+          duration: duration.duration,
+        },
+        evidence: [
+          "instruction:cannotAttackTarget",
+          "player:self",
+          "player:opponent",
+          "zone:leaderArea",
+          "filter:category:leader",
+          ...duration.evidence,
+        ],
+        rest: "",
+      };
+    }
+  }
+
   const match =
     /^This (?<subject>Leader|Character) cannot attack (?<target>your opponent's .+?) (?<duration>during this turn\.?)$/iu.exec(
       input.text,

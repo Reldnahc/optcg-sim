@@ -678,6 +678,59 @@ describe("resolvePublicTargetCandidates", () => {
     expect(targetCards(result)).toEqual([refs[0]]);
   });
 
+  test("matches public target candidates through source-relative attribute filters", () => {
+    const state = createActiveState();
+    const sourceId = toCardId("source-slash");
+    const slashId = toCardId("slash-character");
+    const strikeId = toCardId("strike-character");
+    addManifestCard(state, {
+      cardId: sourceId,
+      category: "character",
+      cost: 5,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: slashId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    addManifestCard(state, {
+      cardId: strikeId,
+      category: "character",
+      cost: 4,
+      power: 5000,
+    });
+    state.cardManifest.cards[sourceId] = {
+      ...must(state.cardManifest.cards[sourceId], "source metadata"),
+      attributes: ["slash"],
+    };
+    state.cardManifest.cards[slashId] = {
+      ...must(state.cardManifest.cards[slashId], "slash metadata"),
+      attributes: ["slash"],
+    };
+    state.cardManifest.cards[strikeId] = {
+      ...must(state.cardManifest.cards[strikeId], "strike metadata"),
+      attributes: ["strike"],
+    };
+    const refs = placeCharacters(state, p1, [sourceId, slashId, strikeId]);
+    const source = must(must(state.players[p1], "p1").characters[0], "source");
+
+    const result = resolvePublicTargetCandidates(
+      state,
+      publicCharacterRequest({
+        filter: {
+          attributesFromSource: true,
+          categories: ["character"],
+          cost: { max: 4 },
+        },
+      }),
+      { sourceControllerId: p1, source: cardRef(source, p1) },
+    );
+
+    expect(targetCards(result)).toEqual([refs[1]]);
+  });
+
   test("matches public target candidates by printed card name", () => {
     const state = createActiveState();
     const named = toCardId("named-character");
