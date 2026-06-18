@@ -221,6 +221,21 @@ describe("event reaction predicate routing", () => {
       evidence: ["trigger:fieldRemoved", "player:self", "filter:type"],
     },
     {
+      text: "your {Example} type Character is removed from the field by an effect",
+      trigger: {
+        type: "fieldRemoved",
+        player: "self",
+        filter: { categories: ["character"], typesAny: ["Example"] },
+        sourceKind: "effect",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:self",
+        "filter:type",
+        "replacementSource:cardEffect",
+      ],
+    },
+    {
       text: "your {Example} type Character is removed from the field by your opponent's effect",
       trigger: {
         type: "fieldRemoved",

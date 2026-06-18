@@ -476,6 +476,74 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses controller-agnostic effect field-removal reactions with reusable follow-up bodies", () => {
+    const result = parseCardEffectLine(
+      '[Your Turn] [Once Per Turn] When your Character with a type including "Whitebeard Pirates" is removed from the field by an effect, draw 1 card. Then, place 1 card from your hand at the top or bottom of your deck.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        oncePerTurn: true,
+        trigger: {
+          type: "fieldRemoved",
+          player: "self",
+          sourceKind: "effect",
+          filter: {
+            categories: ["character"],
+            typesIncludeAny: ["Whitebeard Pirates"],
+          },
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            { effect: { type: "draw", player: "self", count: 1 } },
+            {
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 1,
+                      max: 1,
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "moveSelected",
+                      from: "hand",
+                      to: "deck",
+                      position: "topOrBottom",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:fieldRemoved",
+        "player:self",
+        "filter:type",
+        "replacementSource:cardEffect",
+        "instruction:draw",
+        "instruction:moveSelected",
+        "zone:hand",
+        "zone:deck",
+        "position:top",
+        "position:bottom",
+      ]),
+    );
+  });
+
   it("parses another opponent-effect field-removal reaction with the same reusable pieces", () => {
     const result = parseCardEffectLine(
       '[Once Per Turn] When your Character with a type including "Navy" is removed from the field by your opponent\'s effect, add up to 2 DON!! cards from your DON!! deck and rest them.',
