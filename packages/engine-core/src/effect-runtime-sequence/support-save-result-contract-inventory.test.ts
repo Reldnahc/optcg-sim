@@ -160,6 +160,11 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     reason: "selectAllTargets producer plumbing preserves existing references",
   },
   {
+    path: "packages/engine-core/src/effect-runtime-sequence/runner/trash-from-hand-segment.ts",
+    signals: ["savedReferences helper argument"],
+    reason: "trashFromHand dynamic count resolution reads saved references",
+  },
+  {
     path: "packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts",
     signals: ["savedReferences helper argument"],
     reason: "savedFieldObject resolution passes saved references to primitive",
