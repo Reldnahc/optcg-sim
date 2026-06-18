@@ -349,7 +349,6 @@ const applyDeclareAttackInternal = (
     }
   }
   if (detectPendingRuntimeWork(state) !== undefined) {
-    // Runtime work is resolved by the action/decision continuation path; legal actions stay hidden while it is pending.
     return illegalAction(
       state,
       "declareAttack requires no pending runtime work.",
@@ -869,7 +868,6 @@ export const continueAttackTimingBattleIfReady = (
     state.pendingDecision !== undefined ||
     detectPendingRuntimeWork(state) !== undefined
   ) {
-    // Runtime work is resolved by the action/decision continuation path; legal actions stay hidden while it is pending.
     return null;
   }
   const battle = state.battle;

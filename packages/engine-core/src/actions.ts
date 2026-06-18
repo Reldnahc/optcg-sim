@@ -993,7 +993,6 @@ export const applyAction = (
       );
     }
     if (detectPendingRuntimeWork(state) !== undefined) {
-      // Runtime work is resolved by the action/decision continuation path; legal actions stay hidden while it is pending.
       return illegalAction(
         state,
         "Phase actions are illegal while effect runtime work is pending.",

@@ -162,7 +162,6 @@ const hasUnsupportedBlockDecisionState = (
   battle: NonNullable<GameState["battle"]>,
   defenderId: PlayerId,
 ): boolean => {
-  // Runtime work is resolved by the action/decision continuation path; legal actions stay hidden while it is pending.
   if (
     detectPendingRuntimeWork(state) !== undefined ||
     state.replacementState.length > 0 ||
