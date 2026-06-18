@@ -41,6 +41,11 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     return alternativeSources;
   }
 
+  const eachFromHand = parsePlayEachFromHand(afterPlay, player);
+  if (eachFromHand !== undefined) {
+    return eachFromHand;
+  }
+
   const cardinality = parseUpToCardinality({ text: afterPlay });
   if (cardinality === undefined) {
     return undefined;
@@ -97,6 +102,83 @@ export const parsePlayFromHandInstruction: InstructionParser = (input) => {
     rest: "",
   };
 };
+
+const eachHandSelectionPrefix =
+  "handSelection:play-each-from-hand" as HandSelectionId;
+
+function parsePlayEachFromHand(
+  text: string,
+  player: "self" | "opponent",
+): ReturnType<InstructionParser> {
+  const sourceText = player === "self" ? "your hand" : "their hand";
+  const match = new RegExp(
+    `^up to 1 each of (?<names>.+?) (?<predicates>with .+?) from ${sourceText}\\.?$`,
+    "iu",
+  ).exec(text);
+  const namesText = match?.groups?.["names"];
+  const predicateTail = match?.groups?.["predicates"];
+  if (namesText === undefined || predicateTail === undefined) {
+    return undefined;
+  }
+  const names = Array.from(namesText.matchAll(/\[([^\]]+)\]/gu)).flatMap(
+    (entry) => {
+      const name = entry[1];
+      return name === undefined ? [] : [name];
+    },
+  );
+  if (names.length === 0) {
+    return undefined;
+  }
+  const parts = names.map((name, index) => {
+    const predicates = parseCardFilterPredicates({
+      text: `[${name}] ${predicateTail}`,
+    });
+    if (predicates === undefined || predicates.rest.length > 0) {
+      return undefined;
+    }
+    const selection =
+      `${eachHandSelectionPrefix}:${String(index)}` as HandSelectionId;
+    return {
+      evidence: predicates.evidence,
+      effect: playSelectedFromZone({
+        selection,
+        zone: "hand",
+        visibility: "chooserOnly",
+        filter: predicates.filter,
+        min: 0,
+        max: 1,
+        enterRested: false,
+      }),
+    };
+  });
+  if (parts.some((part) => part === undefined)) {
+    return undefined;
+  }
+  const definedParts = parts.filter(
+    (part): part is NonNullable<typeof part> => part !== undefined,
+  );
+  return {
+    effect: {
+      type: "sequence",
+      effects: definedParts.map((part, index) => ({
+        connector: index === 0 ? "always" : "then",
+        effect: part.effect,
+      })),
+    },
+    evidence: [
+      "instruction:playSelected",
+      "expression:sequence",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "zone:hand",
+      player === "self" ? "player:self" : "player:opponent",
+      player === "self" ? "chooser:self:upTo" : "chooser:opponent",
+      ...definedParts.flatMap((part) => part.evidence),
+      "composition:selectThenPlay",
+    ],
+    rest: "",
+  };
+}
 
 const parsePlayFromHandAlternativeSources = (
   text: string,

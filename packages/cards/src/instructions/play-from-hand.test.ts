@@ -706,4 +706,85 @@ describe("play from hand instruction parser", () => {
       ]),
     );
   });
+
+  it("parses each named hand play as independent optional play selections", () => {
+    const result = parsePlayFromHandInstruction({
+      text: "Play up to 1 each of [Sabo], [Portgas.D.Ace], and [Monkey.D.Luffy] with a cost of 2 from your hand.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    min: 0,
+                    max: 1,
+                    filter: { names: ["Sabo"], cost: { op: "eq", value: 2 } },
+                  },
+                },
+                { effect: { type: "playSelected", ignoreCost: true } },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      names: ["Portgas.D.Ace"],
+                      cost: { op: "eq", value: 2 },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected", ignoreCost: true } },
+              ],
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      names: ["Monkey.D.Luffy"],
+                      cost: { op: "eq", value: 2 },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected", ignoreCost: true } },
+              ],
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:playSelected",
+        "expression:sequence",
+        "cardinality:upTo",
+        "zone:hand",
+        "filter:name",
+        "filter:cost",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
 });
