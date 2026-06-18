@@ -52,6 +52,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
           id: "opponent-trashes-n-cards-from-their-hand",
         },
         {
+          id: "opponent-chooses-n-cards-from-their-hand-and-trashes-them",
+        },
+        {
           id: "trash-all-cards-from-your-hand",
         },
         {
@@ -146,6 +149,28 @@ describe("draw and trash-from-hand instruction parsers", () => {
         "count:positiveInteger",
         "player:self",
         "chooser:self",
+      ],
+      rest: "",
+    });
+  });
+
+  it("parses opponent chooses from their own hand as reusable opponent hand trash", () => {
+    expect(
+      parseTrashFromHandInstruction({
+        text: "Your opponent chooses 1 card from their hand and trashes it.",
+      }),
+    ).toEqual({
+      effect: {
+        type: "trashFromHand",
+        count: 1,
+        player: "opponent",
+        chooser: "opponent",
+      },
+      evidence: [
+        "instruction:trashFromHand",
+        "count:positiveInteger",
+        "player:opponent",
+        "chooser:opponent",
       ],
       rest: "",
     });
