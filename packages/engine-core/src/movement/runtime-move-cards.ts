@@ -23,6 +23,10 @@ import { moveConcreteCardsToTrash } from "./concrete-card-movement.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
 import { isScopedActivateMainQueueEntry } from "../runtime/optional-activation/activate-main-support.js";
 import { resolveDynamicNumberValue } from "../runtime/continuous/value-resolution.js";
+import {
+  executeHandToDeckMove,
+  isSupportedHandToDeckEffect,
+} from "./runtime-hand-to-deck.js";
 
 export type MoveCardsEffect = Extract<Effect, { type: "moveCards" }>;
 
@@ -186,7 +190,8 @@ export const isSupportedMoveCardsEffect = (
   isSupportedLifeBottomToHandEffect(effect) ||
   isSupportedLifeTopToTrashEffect(effect) ||
   isSupportedDeckTopToLifeTopEffect(effect) ||
-  isSupportedEffectSourceTrashToHandEffect(effect);
+  isSupportedEffectSourceTrashToHandEffect(effect) ||
+  isSupportedHandToDeckEffect(effect);
 
 const hasSupportedMoveCardsEffectEnvelope = (
   effect: EffectDefinition["effects"][number],
@@ -373,6 +378,16 @@ export const executeMoveCardsPrimitive = (
       state,
       entry,
       fromPlayerId,
+      options,
+    );
+  }
+  if (isSupportedHandToDeckEffect(resolvedEffect)) {
+    return executeHandToDeckMove(
+      state,
+      entry,
+      resolvedEffect,
+      fromPlayerId,
+      player,
       options,
     );
   }

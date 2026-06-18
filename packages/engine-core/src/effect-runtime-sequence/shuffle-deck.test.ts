@@ -12,6 +12,7 @@ import {
   createActiveState,
   must,
   p1,
+  p2,
   processEffectRuntime,
   queueDrawForP1,
   resolvedCard,
@@ -24,10 +25,22 @@ import {
   withCardInZone,
 } from "../effect-runtime-queue/test-support.js";
 
-const reindexDeck = (cards: readonly CardInstance[]): CardInstance[] =>
+const reindexDeck = (
+  cards: readonly CardInstance[],
+  playerId = p1,
+): CardInstance[] =>
   cards.map((card, index) => ({
     ...card,
-    zone: { zone: "deck", playerId: p1, slot: "deck", index },
+    zone: { zone: "deck", playerId, slot: "deck", index },
+  }));
+
+const reindexHand = (
+  cards: readonly CardInstance[],
+  playerId = p1,
+): CardInstance[] =>
+  cards.map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId, slot: "hand", index },
   }));
 
 const setupSequenceDefinition = (
@@ -146,6 +159,67 @@ test("shuffleDeck sequence segment deterministically shuffles and emits a public
         event.type === "deckShuffled" &&
         event.visibility.type === "public" &&
         (event.payload as { playerId?: unknown }).playerId === p1,
+    ),
+    true,
+  );
+});
+
+test("all hand cards can move to deck before a shuffle without a selection decision", () => {
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "moveCards",
+          count: {
+            type: "countMatchingZoneCards",
+            player: "opponent",
+            zone: "hand",
+            per: 1,
+            multiplier: 1,
+          },
+          from: { player: "opponent", zone: "hand" },
+          to: { player: "opponent", zone: "deck" },
+          order: "original",
+        },
+      },
+      {
+        connector: "then",
+        effect: { type: "shuffleDeck", player: "opponent" },
+      },
+    ],
+  });
+  const opponent = must(state.players[p2], "p2");
+  const handCards = reindexHand(opponent.hand.slice(0, 2), p2);
+  const baseDeckCard = must(opponent.deck[0], "p2 deck card");
+  const deckCards = reindexDeck(
+    Array.from({ length: 6 }, (_, index) => ({
+      ...baseDeckCard,
+      instanceId: toInstanceId(`opponent-shuffle-deck-card-${String(index)}`),
+    })),
+    p2,
+  );
+  opponent.hand = handCards;
+  opponent.deck = deckCards;
+
+  const result = processEffectRuntime(state);
+  const after = must(result.state.players[p2], "p2 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(after.hand.length, 0);
+  assert.equal(after.deck.length, deckCards.length + handCards.length);
+  assert.deepEqual(
+    [...after.deck.map((card) => card.instanceId)].sort(),
+    [...deckCards, ...handCards].map((card) => card.instanceId).sort(),
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "deckShuffled" &&
+        event.visibility.type === "public" &&
+        (event.payload as { playerId?: unknown }).playerId === p2,
     ),
     true,
   );

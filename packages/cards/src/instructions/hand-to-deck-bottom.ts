@@ -35,6 +35,16 @@ const deckPlacementEvidence = (
     : [`position:${placement}`];
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
+  const handReset = parseReturnAllHandToDeckInstruction(input);
+  if (handReset !== undefined) {
+    return handReset;
+  }
+
+  const shuffle = parseShuffleDeckInstruction(input);
+  if (shuffle !== undefined) {
+    return shuffle;
+  }
+
   const match =
     /^(?:(?<actor>your opponent|you|they) places?|(?<youMay>you may place)|place) (?<selection>.+?) from (?<possessive>your opponent's|their|your) (?<zone>hand|trash) at the (?<placement>top|bottom|top or bottom) of (?<deckPossessive>their|your) deck(?<order>\s+in any order)?\.?$/i.exec(
       input.text,
@@ -132,6 +142,98 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
   };
 };
 
+export const parseReturnAllHandToDeckInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^(?<actor>your opponent|you) returns? all cards in (?<handPossessive>their|your) hand to (?<deckPossessive>their|your) deck and shuffles? (?<shufflePossessive>their|your) deck\.?$/iu.exec(
+      input.text,
+    );
+  const actorText = match?.groups?.["actor"]?.toLowerCase();
+  const handPossessive = match?.groups?.["handPossessive"]?.toLowerCase();
+  const deckPossessive = match?.groups?.["deckPossessive"]?.toLowerCase();
+  const shufflePossessive = match?.groups?.["shufflePossessive"]?.toLowerCase();
+  if (
+    actorText === undefined ||
+    handPossessive === undefined ||
+    deckPossessive === undefined ||
+    shufflePossessive === undefined
+  ) {
+    return undefined;
+  }
+
+  const player = actorText === "your opponent" ? "opponent" : "self";
+  if (
+    handPossessive !== possessiveForPlayer(player) ||
+    deckPossessive !== possessiveForPlayer(player) ||
+    shufflePossessive !== possessiveForPlayer(player)
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "moveCards",
+            count: {
+              type: "countMatchingZoneCards",
+              player,
+              zone: "hand",
+              per: 1,
+              multiplier: 1,
+            },
+            from: { player, zone: "hand" },
+            to: { player, zone: "deck" },
+            order: "original",
+          },
+        },
+        {
+          connector: "then",
+          effect: { type: "shuffleDeck", player },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:moveCards",
+      "cardinality:all",
+      "value:dynamic:matchingZoneCards",
+      "zone:hand",
+      "zone:deck",
+      player === "opponent" ? "player:opponent" : "player:self",
+      "instruction:shuffleDeck",
+      "composition:sequence",
+    ],
+    rest: "",
+  };
+};
+
+export const parseShuffleDeckInstruction: InstructionParser = (input) => {
+  const normalized = input.text.replace(/\.$/u, "").trim().toLowerCase();
+  const player =
+    normalized === "shuffle your deck" || normalized === "you shuffle your deck"
+      ? "self"
+      : normalized === "your opponent shuffles their deck"
+        ? "opponent"
+        : undefined;
+  if (player === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: { type: "shuffleDeck", player },
+    evidence: [
+      "instruction:shuffleDeck",
+      "zone:deck",
+      player === "opponent" ? "player:opponent" : "player:self",
+    ],
+    rest: "",
+  };
+};
+
 const parseDeckPlacementCardinality = (
   text: string,
 ):
@@ -185,6 +287,9 @@ const ownerFromDeckPossessive = (
   if (text === "their") return "opponent";
   return undefined;
 };
+
+const possessiveForPlayer = (player: "self" | "opponent"): "your" | "their" =>
+  player === "self" ? "your" : "their";
 
 const parseSelectionFilter = (
   text: string,

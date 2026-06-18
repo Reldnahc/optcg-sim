@@ -141,4 +141,65 @@ describe("OP06 primitive parser support", () => {
       ]),
     );
   });
+
+  it("parses opponent hand reset to deck shuffle followed by draw", () => {
+    const result = parseCardEffectLine(
+      "[On Play] Your opponent returns all cards in their hand to their deck and shuffles their deck. Then, your opponent draws 5 cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: {
+                      type: "moveCards",
+                      count: {
+                        type: "countMatchingZoneCards",
+                        player: "opponent",
+                        zone: "hand",
+                        per: 1,
+                        multiplier: 1,
+                      },
+                      from: { player: "opponent", zone: "hand" },
+                      to: { player: "opponent", zone: "deck" },
+                      order: "original",
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: { type: "shuffleDeck", player: "opponent" },
+                  },
+                ],
+              },
+            },
+            {
+              connector: "then",
+              effect: { type: "draw", player: "opponent", count: 5 },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:moveCards",
+        "cardinality:all",
+        "value:dynamic:matchingZoneCards",
+        "zone:hand",
+        "zone:deck",
+        "instruction:shuffleDeck",
+        "instruction:draw",
+      ]),
+    );
+  });
 });

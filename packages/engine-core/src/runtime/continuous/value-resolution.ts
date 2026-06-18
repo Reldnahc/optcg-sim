@@ -172,7 +172,12 @@ const countMatchingZoneCards = (
         )
       : null;
   }
-  const zoneCards = value.zone === "costArea" ? player.costArea : player.trash;
+  const zoneCards =
+    value.zone === "costArea"
+      ? player.costArea
+      : value.zone === "hand"
+        ? player.hand
+        : player.trash;
   const matchingCount =
     filter === undefined
       ? zoneCards.length
