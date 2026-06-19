@@ -475,3 +475,71 @@ it("parses opponent hand-count gated opponent Life area to hand", () => {
     ]),
   );
 });
+
+it("parses optional hand trash cost before opponent-selected owner deck bottom placement", () => {
+  const result = parseCardEffectLine(
+    "[On Play] You may trash 2 cards from your hand: Your opponent places 1 of their Characters at the bottom of the owner's deck.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "trashFromHand",
+                count: 2,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      chooser: "opponent",
+                      player: "opponent",
+                      zone: "characterArea",
+                      min: 1,
+                      max: 1,
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "bounce",
+                    destination: "deckBottom",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "composition:optionalCostedEffect",
+      "cost:trashFromHand",
+      "instruction:moveSelected",
+      "cardinality:exact",
+      "chooser:opponent",
+      "target:opponentCharacters",
+      "destination:deck",
+      "position:bottom",
+      "composition:selectThenApply",
+    ]),
+  );
+});

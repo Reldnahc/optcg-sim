@@ -26,6 +26,7 @@ type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 
 const selectThenPlaceAtOwnerDeckBottom = (
   player: "opponent" | "anyPlayer",
+  chooser: "self" | "opponent",
   min: number,
   max: number,
   filter: CharacterFilter,
@@ -35,6 +36,7 @@ const selectThenPlaceAtOwnerDeckBottom = (
     selectionId,
     selectId: `select:owner-deck-bottom:${selectionId}`,
     player,
+    chooser,
     zone: "characterArea",
     filter,
     min,
@@ -174,6 +176,36 @@ const parseTrashDeckBottomCardinality = (text: string) =>
 export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
+  const opponentPlacesMatch =
+    /^your opponent places (?<count>[1-9]\d*) of their Characters at the bottom of the owner's deck\.?$/iu.exec(
+      input.text,
+    );
+  const opponentPlacesCount = opponentPlacesMatch?.groups?.["count"];
+  if (opponentPlacesCount !== undefined) {
+    const count = Number.parseInt(opponentPlacesCount, 10);
+    return {
+      effect: selectThenPlaceAtOwnerDeckBottom(
+        "opponent",
+        "opponent",
+        count,
+        count,
+        { categories: ["character"] },
+      ),
+      evidence: [
+        "instruction:moveSelected",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:opponent",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "destination:deck",
+        "position:bottom",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^(?:place|return)\s+(?<selection>.+?)\s+(?:at|to) the bottom of (?<deck>the owner's|your) deck(?<order>\s+in any order)?\.?$/iu.exec(
       input.text,
@@ -277,6 +309,7 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
   return {
     effect: selectThenPlaceAtOwnerDeckBottom(
       target.player,
+      "self",
       cardinality.cardinality.min,
       cardinality.cardinality.max,
       target.filter,
@@ -327,6 +360,7 @@ const parseRepeatedOwnerDeckBottomTargets = (
       connector: index === 0 ? "always" : "then",
       effect: selectThenPlaceAtOwnerDeckBottom(
         target.player,
+        "self",
         cardinality.cardinality.min,
         cardinality.cardinality.max,
         target.filter,
