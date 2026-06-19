@@ -12,6 +12,7 @@ import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseTrashFromHandInstruction } from "../instructions/index.js";
 import {
   parseRestToBottomAnyOrder,
+  parseRestToTrash,
   parseSearchCardFilter,
   parseSearchSelectionVerb,
   parseTopDeckLook,
@@ -38,7 +39,9 @@ export function lookPlayFromTopExpressionParser(
 
   const play = parseLookedSetPlaySelection({ text: look.rest });
   if (play !== undefined) {
-    const remaining = parseRestToBottomAnyOrder({ text: play.rest });
+    const remaining =
+      parseRestToBottomAnyOrder({ text: play.rest }) ??
+      parseRestToTrash({ text: play.rest });
     if (remaining === undefined) {
       return undefined;
     }
@@ -71,6 +74,7 @@ export function lookPlayFromTopExpressionParser(
         enterRested: play.enterRested,
         filter: play.filter,
         max: play.max,
+        remainingCards: remaining.remainingCards,
         ...(continuation === undefined ? {} : { continuation }),
       }),
       evidence,
@@ -204,7 +208,7 @@ function parseLookedSetPlaySelection(input: ParseInput):
     }
   | undefined {
   const match =
-    /^play up to (?<max>[1-9]\d*) (?<filterText>.+?)(?:\.\s+Then,\s+)(?<remainingText>place the rest.+)$/iu.exec(
+    /^play up to (?<max>[1-9]\d*) (?<filterText>.+?)(?:\.\s+Then,\s+)(?<remainingText>(?:place|trash) the rest.+)$/iu.exec(
       input.text,
     );
   const maxText = match?.groups?.["max"];
@@ -328,6 +332,7 @@ function createLookedSetPlaySequence({
   enterRested,
   filter,
   max,
+  remainingCards,
 }: {
   readonly count: number;
   readonly continuation?: {
@@ -337,6 +342,15 @@ function createLookedSetPlaySequence({
   readonly enterRested: boolean;
   readonly filter: CardFilter;
   readonly max: number;
+  readonly remainingCards:
+    | {
+        readonly destination: "deck";
+        readonly position: "bottom" | "topOrBottom";
+        readonly order: "ownerChoice" | "original";
+      }
+    | {
+        readonly destination: "trash";
+      };
 }): Extract<Effect, { type: "sequence" }> {
   return {
     type: "sequence",
@@ -379,9 +393,17 @@ function createLookedSetPlaySequence({
           type: "placeSetRemainder",
           set: lookedPlaySet,
           owner: "self",
-          destination: "deck",
-          position: "bottom",
-          order: "chooser",
+          destination: remainingCards.destination,
+          position:
+            remainingCards.destination === "deck"
+              ? remainingCards.position
+              : "bottom",
+          order:
+            remainingCards.destination === "deck"
+              ? remainingCards.order === "ownerChoice"
+                ? "chooser"
+                : remainingCards.order
+              : "original",
         },
       },
       ...(continuation === undefined
