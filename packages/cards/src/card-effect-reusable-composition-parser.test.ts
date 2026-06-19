@@ -254,6 +254,47 @@ describe("card effect reusable parser compositions", () => {
     );
   });
 
+  it("parses plain self K.O. reactions with reusable field-removal predicates", () => {
+    const result = parseCardEffectLine(
+      "[Opponent's Turn] When this Character is K.O.'d, give up to 1 of your opponent's Leader or Character cards −2000 power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "opponentTurn" },
+        trigger: {
+          type: "fieldRemoved",
+          target: "self",
+          player: "self",
+          filter: { categories: ["character"] },
+          sourceKind: "ko",
+        },
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              player: "opponent",
+              zones: ["leaderArea", "characterArea"],
+            },
+          },
+          value: -2000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "condition:opponentTurn",
+        "trigger:fieldRemoved",
+        "target:thisCharacter",
+        "instruction:modifyPower",
+        "target:opponentLeaderOrCharacters",
+      ]),
+    );
+  });
+
   it("parses generic self character-played reactions independently from turn windows", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] When you play a Character, draw 1 card.",

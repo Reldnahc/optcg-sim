@@ -300,6 +300,22 @@ describe("event reaction predicate routing", () => {
         "replacementSource:cardEffect",
       ],
     },
+    {
+      text: "this Character is K.O.'d",
+      trigger: {
+        type: "fieldRemoved",
+        target: "self",
+        player: "self",
+        filter: { categories: ["character"] },
+        sourceKind: "ko",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+      ],
+    },
   ] satisfies Array<{
     readonly text: string;
     readonly trigger: Trigger;
