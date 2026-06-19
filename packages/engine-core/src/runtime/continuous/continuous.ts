@@ -41,6 +41,7 @@ import {
 } from "./value-resolution.js";
 import { durationForDerivedEffect } from "./derived-duration.js";
 import { sourceSnapshotForContinuousCard } from "./source-snapshot.js";
+import { toBaseCostSetModifier } from "./base-cost.js";
 import {
   costModifierTargetForEffect,
   effectToDerivedModifier,
@@ -136,6 +137,9 @@ const mapEffectToModifier = (
       target,
       operation: { type: "setBasePower", value },
     };
+  }
+  if (effect.type === "setBaseCost") {
+    return toBaseCostSetModifier(effect, target);
   }
   if (effect.type === "preventDraw") {
     return {
@@ -695,6 +699,14 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
   }
   if (effect.type === "setBasePower") {
     return isSupportedPermanentBasePowerEffect(effect);
+  }
+  if (effect.type === "setBaseCost") {
+    return (
+      Number.isSafeInteger(effect.value) &&
+      effect.value >= 0 &&
+      isSupportedDuration(effect.duration) &&
+      isSupportedTarget(effect.target)
+    );
   }
   if (effect.type === "modifyCost") {
     return isSupportedCostModifierEffect(effect);

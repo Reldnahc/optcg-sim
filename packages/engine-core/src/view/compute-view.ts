@@ -21,6 +21,10 @@ import {
   isSupportedContinuousKeywordModifier,
   recordConditionPasses,
 } from "./compute-view-continuous.js";
+import {
+  continuousBaseCostForCard,
+  continuousCostBonusForCard,
+} from "./cost-projection.js";
 import { fieldRemovalProtectionsForCard } from "../replacement/field-removal-protection.js";
 import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import { cardMatchesSearchFilter, getOpponentId } from "../actions/state.js";
@@ -104,26 +108,6 @@ const continuousBasePowerForCard = (
   }
 
   return basePower;
-};
-
-const continuousCostBonusForCard = (
-  state: GameState,
-  card: CardInstance,
-): number => {
-  let costBonus = 0;
-  const effects = allContinuousEffects(state);
-
-  for (const effect of effects) {
-    if (effect.modifier.layer !== "costAdd") continue;
-    if (effect.modifier.operation.type !== "addCost") continue;
-    if (!durationIsActive(state, effect)) continue;
-    if (!recordConditionPasses(state, effect)) continue;
-    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
-
-    costBonus += effect.modifier.operation.value;
-  }
-
-  return costBonus;
 };
 
 const hasRestriction = (
@@ -529,7 +513,8 @@ const computeCardView = (
   const metadata = resolveCombatMetadata(state, card, options);
   const printedBasePower = metadata.power;
   const basePower = continuousBasePowerForCard(state, card) ?? printedBasePower;
-  const baseCost = metadata.cost;
+  const printedBaseCost = metadata.cost;
+  const baseCost = continuousBaseCostForCard(state, card) ?? printedBaseCost;
   const continuousCostBonus = continuousCostBonusForCard(state, card);
   const donBonus =
     card.controller === state.turn.turnPlayerId

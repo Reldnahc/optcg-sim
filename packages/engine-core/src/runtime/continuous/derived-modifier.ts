@@ -175,6 +175,28 @@ export const effectToDerivedModifier = (
       unsupportedDerivedMessage,
     );
   }
+  if (effect.type === "setBaseCost") {
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base cost duration"),
+      );
+    }
+    if (!isSupportedTarget(effect.target)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base cost target"),
+      );
+    }
+    if (!Number.isSafeInteger(effect.value) || effect.value < 0) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported base cost value"),
+      );
+    }
+    return {
+      layer: "baseCostSet",
+      target: effect.target,
+      operation: { type: "setBaseCost", value: effect.value },
+    };
+  }
   if (effect.type === "modifyCost") {
     if (!isSupportedCostModifierEffect(effect)) {
       throw new TypeError(

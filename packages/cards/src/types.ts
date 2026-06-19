@@ -147,6 +147,7 @@ export type PrimitiveEvidence =
   | "instruction:allowAttackActiveCharacters"
   | "instruction:invalidateEffects"
   | "instruction:setBasePower"
+  | "instruction:setBaseCost"
   | "instruction:swapBasePower"
   | "instruction:placeTopDeckCards"
   | "instruction:reorder"

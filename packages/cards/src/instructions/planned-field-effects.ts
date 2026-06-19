@@ -13,6 +13,7 @@ export {
   parseRestOpponentLeaderOrCharactersInstruction,
   parseRestThisCharacterInstruction,
   parseRestThisCharacterAndOpponentCharactersInstruction,
+  parseSetBaseCostInstruction,
   parseSetPowerToZeroInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   preventOpponentCharactersAttackPrimitive,

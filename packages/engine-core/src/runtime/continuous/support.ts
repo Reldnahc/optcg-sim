@@ -389,6 +389,7 @@ export const isSupportedContinuousQueueEffect = (
     effect.type !== "giveAttribute" &&
     effect.type !== "setPowerToZero" &&
     effect.type !== "setBasePower" &&
+    effect.type !== "setBaseCost" &&
     effect.type !== "modifyCost" &&
     effect.type !== "modifyCounter" &&
     effect.type !== "preventDraw" &&
@@ -462,6 +463,14 @@ export const isSupportedContinuousQueueEffect = (
           (effect.target.player === "self" ||
             effect.target.player === "opponent") &&
           isSupportedBasePowerSetFilter(effect.target.filter)))
+    );
+  }
+  if (effect.type === "setBaseCost") {
+    return (
+      Number.isSafeInteger(effect.value) &&
+      effect.value >= 0 &&
+      isSupportedDuration(effect.duration) &&
+      isSupportedTarget(effect.target)
     );
   }
   if (effect.type === "modifyCost") {

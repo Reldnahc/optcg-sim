@@ -12,6 +12,7 @@ type ResolvedTargetContinuousCandidate = Extract<
       | "giveAttribute"
       | "setPowerToZero"
       | "setBasePower"
+      | "setBaseCost"
       | "modifyCost"
       | "invalidateEffects"
       | "giveProtection"
@@ -38,6 +39,7 @@ const isResolvedTargetContinuousCandidate = (
   effect.type === "giveAttribute" ||
   effect.type === "setPowerToZero" ||
   effect.type === "setBasePower" ||
+  effect.type === "setBaseCost" ||
   effect.type === "modifyCost" ||
   effect.type === "invalidateEffects" ||
   effect.type === "giveProtection" ||

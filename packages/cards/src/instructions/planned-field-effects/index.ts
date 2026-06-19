@@ -21,6 +21,7 @@ export {
   preventThatCharacterRefreshPrimitive,
 } from "./refresh-lock.js";
 export { parseSetPowerToZeroInstruction } from "./set-power-zero.js";
+export { parseSetBaseCostInstruction } from "./set-base-cost.js";
 export {
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersInstruction,

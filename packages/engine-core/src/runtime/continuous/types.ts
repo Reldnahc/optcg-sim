@@ -10,6 +10,7 @@ export type ContinuousQueueEffect = Extract<
       | "giveAttribute"
       | "setPowerToZero"
       | "setBasePower"
+      | "setBaseCost"
       | "modifyCost"
       | "modifyCounter"
       | "preventDraw"

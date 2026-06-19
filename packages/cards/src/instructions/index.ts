@@ -74,6 +74,7 @@ export {
   parseRestOpponentCharactersInstruction,
   parseRestThisCharacterInstruction,
   parseRestThisCharacterAndOpponentCharactersInstruction,
+  parseSetBaseCostInstruction,
   parseSetPowerToZeroInstruction,
   parseYourLeaderPowerOpponentNextEndInstruction,
   selectedAttackRetargetExpressionParser,
