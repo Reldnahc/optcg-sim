@@ -168,7 +168,8 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
   {
     path: "packages/engine-core/src/effect-runtime-sequence/runner/trash-from-hand-segment.ts",
     signals: ["savedReferences helper argument"],
-    reason: "trashFromHand dynamic count resolution reads saved references",
+    reason:
+      "trashFromHand runner preserves existing saved references while dynamic count resolution reads them",
   },
   {
     path: "packages/engine-core/src/effect-runtime-sequence/saved-field-object/saved-target-resolution.ts",
