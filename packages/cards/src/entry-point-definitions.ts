@@ -42,6 +42,12 @@ export const entryPointDefinitions: readonly EntryPointDefinition[] = [
     supportStatus: "supported",
   },
   {
+    text: "This effect can be activated when your opponent attacks.",
+    trigger: { type: "onOpponentAttack" },
+    evidence: ["entry:onOpponentAttack", "sourcePresence:mustRemain"],
+    supportStatus: "supported",
+  },
+  {
     text: "[On K.O.]",
     trigger: { type: "onKO" },
     evidence: ["entry:onKO", "sourcePresence:resolveFromDestination"],
