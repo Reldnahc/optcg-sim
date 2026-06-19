@@ -40,6 +40,11 @@ import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.j
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
+import {
+  applyLifeRuleDeckBottomReplacement,
+  findLifeRuleAddToHandReplacement,
+} from "./life-rule-replacement.js";
 import { lifeTriggerQueueOrigin } from "./queue-origin.js";
 
 export const hasLifeTriggerText = (triggerText: string | undefined): boolean =>
@@ -173,6 +178,7 @@ export const getSupportedLifeTriggerDecision = (
   state: GameState,
   damagedPlayerId: PlayerId,
   card: CardInstance,
+  sourceLifeFaceUp = false,
 ): ConfirmLifeTriggerDecision | undefined => {
   if (
     resolveSupportedLifeTriggerEffect(state, {
@@ -198,6 +204,7 @@ export const getSupportedLifeTriggerDecision = (
       playerId: damagedPlayerId,
     },
     options: ["activateTrigger", "addToHand"],
+    ...(sourceLifeFaceUp ? { sourceLifeFaceUp } : {}),
   };
 };
 
@@ -205,6 +212,7 @@ const getAddToHandOnlyLifeTriggerDecision = (
   state: GameState,
   damagedPlayerId: PlayerId,
   card: CardInstance,
+  sourceLifeFaceUp = false,
 ): ConfirmLifeTriggerDecision => ({
   id: toDecisionId(
     `decision:life-trigger:${String(card.instanceId)}:${String(state.seq + 1)}`,
@@ -220,12 +228,14 @@ const getAddToHandOnlyLifeTriggerDecision = (
     playerId: damagedPlayerId,
   },
   options: ["addToHand"],
+  ...(sourceLifeFaceUp ? { sourceLifeFaceUp } : {}),
 });
 
 export const getLifeDamageDecision = (
   state: GameState,
   damagedPlayerId: PlayerId,
   card: CardInstance,
+  sourceLifeFaceUp = false,
 ): ConfirmLifeTriggerDecision | undefined => {
   const resolved = state.cardManifest.cards[card.cardId];
   if (resolved === undefined) {
@@ -233,11 +243,26 @@ export const getLifeDamageDecision = (
   }
   if (hasLifeTriggerText(resolved.triggerText)) {
     return (
-      getSupportedLifeTriggerDecision(state, damagedPlayerId, card) ??
-      getAddToHandOnlyLifeTriggerDecision(state, damagedPlayerId, card)
+      getSupportedLifeTriggerDecision(
+        state,
+        damagedPlayerId,
+        card,
+        sourceLifeFaceUp,
+      ) ??
+      getAddToHandOnlyLifeTriggerDecision(
+        state,
+        damagedPlayerId,
+        card,
+        sourceLifeFaceUp,
+      )
     );
   }
-  return getAddToHandOnlyLifeTriggerDecision(state, damagedPlayerId, card);
+  return getAddToHandOnlyLifeTriggerDecision(
+    state,
+    damagedPlayerId,
+    card,
+    sourceLifeFaceUp,
+  );
 };
 
 const invalidDecision = (reason: string): readonly [EngineError] => [
@@ -762,7 +787,7 @@ export const applyLifeTriggerDecisionResponse = (
     );
   }
 
-  const movedCard: CardInstance = {
+  const baseMovedCard: CardInstance = {
     instanceId: decision.card.instanceId,
     cardId: decision.card.cardId,
     owner: decision.playerId,
@@ -775,8 +800,25 @@ export const applyLifeTriggerDecisionResponse = (
       index: 0,
     },
   };
-  const nextHand = addCardsToHand(player.hand, [movedCard], decision.playerId);
-  const handCard = nextHand[nextHand.length - 1] ?? movedCard;
+  const lifeRuleReplacement = findLifeRuleAddToHandReplacement(
+    state,
+    decision.playerId,
+    decision.sourceLifeFaceUp === true,
+  );
+  const replacedMove =
+    lifeRuleReplacement === undefined
+      ? undefined
+      : applyLifeRuleDeckBottomReplacement(
+          player.deck,
+          baseMovedCard,
+          decision.playerId,
+        );
+  const nextHand =
+    replacedMove === undefined
+      ? addCardsToHand(player.hand, [baseMovedCard], decision.playerId)
+      : player.hand;
+  const handCard = nextHand[nextHand.length - 1] ?? baseMovedCard;
+  const destinationCard = replacedMove?.card ?? handCard;
   const events: EngineEvent[] = [];
   appendEvent(
     state,
@@ -790,14 +832,46 @@ export const applyLifeTriggerDecisionResponse = (
     },
     { type: "private", playerId: decision.playerId },
   );
+  if (lifeRuleReplacement !== undefined && replacedMove !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "replacementApplied",
+      {
+        processId: `life-rule:${String(decision.id)}`,
+        replacementId: lifeRuleReplacement.record.id,
+        previousPayloadHash: hashCanonicalStateValue({
+          from: "life",
+          to: "hand",
+          card: decision.card,
+          faceUp: true,
+        }),
+        transformedPayloadHash: hashCanonicalStateValue({
+          from: "life",
+          to: "deck",
+          position: "bottom",
+          card: decision.card,
+        }),
+      },
+      { type: "public" },
+    );
+    const replacementEvent = events[events.length - 1];
+    if (replacementEvent !== undefined) {
+      replacementEvent.causedBy = {
+        type: "replacement",
+        replacementId: lifeRuleReplacement.record.id,
+      };
+    }
+  }
   appendEvent(
     state,
     events,
     "cardMoved",
     {
       from: { zone: "life", playerId: decision.playerId, slot: "life" },
-      to: handCard.zone,
-      reason: "battleDamage",
+      to: destinationCard.zone,
+      reason:
+        replacedMove === undefined ? "battleDamage" : "lifeRuleReplacement",
     },
     { type: "public" },
   );
@@ -806,11 +880,14 @@ export const applyLifeTriggerDecisionResponse = (
     events,
     "cardMoved",
     {
-      instanceId: movedCard.instanceId,
-      cardId: movedCard.cardId,
+      instanceId: baseMovedCard.instanceId,
+      cardId: baseMovedCard.cardId,
       from: { zone: "life", playerId: decision.playerId, slot: "life" },
-      to: handCard.zone,
-      reason: "lifeTriggerDeclined",
+      to: destinationCard.zone,
+      reason:
+        replacedMove === undefined
+          ? "lifeTriggerDeclined"
+          : "lifeRuleReplacement",
     },
     { type: "private", playerId: decision.playerId },
   );
@@ -824,6 +901,7 @@ export const applyLifeTriggerDecisionResponse = (
       [decision.playerId]: {
         ...player,
         hand: nextHand,
+        ...(replacedMove === undefined ? {} : { deck: replacedMove.deck }),
       },
     },
     eventJournal: [...state.eventJournal, ...events],

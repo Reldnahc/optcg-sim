@@ -80,7 +80,12 @@ export const executeDamagePrimitive = (
     );
   }
 
-  const decision = getLifeDamageDecision(state, damagedPlayerId, topLife.card);
+  const decision = getLifeDamageDecision(
+    state,
+    damagedPlayerId,
+    topLife.card,
+    topLife.faceUp,
+  );
   if (decision === undefined) {
     return toEngineResult(
       state,

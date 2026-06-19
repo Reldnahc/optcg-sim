@@ -40,9 +40,29 @@ const wouldBeKodByCardEffect = (): ReplacementTrigger => ({
   target: allSelfCharacters,
 });
 
+const wouldMoveFaceUpLifeToHand = (): Extract<
+  ReplacementTrigger,
+  { type: "wouldMoveZone" }
+> => ({
+  type: "wouldMoveZone",
+  from: "life",
+  to: "hand",
+  lifeMatcher: { faceUp: true },
+  target: { type: "all", zone: "life", player: "self" },
+});
+
 const restSelfInstead = (): Extract<Effect, { type: "rest" }> => ({
   type: "rest",
   target: { type: "self" },
+});
+
+const replacementTargetDeckBottomInstead = (): Extract<
+  Effect,
+  { type: "bounce" }
+> => ({
+  type: "bounce",
+  target: { type: "replacementTarget" },
+  destination: "deckBottom",
 });
 
 const returnSelfToHandInstead = (): Extract<Effect, { type: "bounce" }> => ({
@@ -225,6 +245,33 @@ test("replacement support admits shared queued condition shapes", () => {
   );
 
   assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support admits face-up Life-to-hand replacement target deck bottom primitive", () => {
+  const block = replacementBlock(
+    "replacement-face-up-life-to-deck-bottom",
+    wouldMoveFaceUpLifeToHand(),
+    replacementTargetDeckBottomInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), true);
+});
+
+test("replacement support requires Life visibility evidence for Life-to-hand deck bottom primitive", () => {
+  const trigger = wouldMoveFaceUpLifeToHand();
+  const triggerWithoutVisibility: ReplacementTrigger = {
+    type: "wouldMoveZone",
+    from: "life",
+    to: "hand",
+    target: trigger.target,
+  };
+  const block = replacementBlock(
+    "replacement-life-to-deck-bottom-without-visibility",
+    triggerWithoutVisibility,
+    replacementTargetDeckBottomInstead(),
+  );
+
+  assert.equal(isSupportedReplacementEffectBlock(block), false);
 });
 
 test("replacement support fails closed for unsupported condition shapes", () => {

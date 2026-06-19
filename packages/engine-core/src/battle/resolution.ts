@@ -67,6 +67,10 @@ import {
   getLifeDamageDecision,
   registerLifeTriggerDamageContinuationResolver,
 } from "../life-trigger/actions.js";
+import {
+  applyLifeRuleDeckBottomReplacement,
+  findLifeRuleAddToHandReplacement,
+} from "../life-trigger/life-rule-replacement.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 
 const unsupportedBattleResolution = (
@@ -514,25 +518,57 @@ const processLeaderDamagePoint = ({
   }
   const lifeDamageDecision = attackerHasBanish
     ? undefined
-    : getLifeDamageDecision(nextState, targetPlayerId, topLife.card);
+    : getLifeDamageDecision(
+        nextState,
+        targetPlayerId,
+        topLife.card,
+        topLife.faceUp,
+      );
   appendEvent(state, events, "damageDealt", {
     attacker: attackerInstanceId,
     target: targetInstanceId,
     amount: 1,
   });
   if (lifeDamageDecision === undefined) {
+    const lifeRuleReplacement = attackerHasBanish
+      ? undefined
+      : findLifeRuleAddToHandReplacement(
+          nextState,
+          targetPlayerId,
+          topLife.faceUp,
+        );
     const movedLifeCard: CardInstance = {
       ...topLife.card,
       zone: {
-        zone: attackerHasBanish ? "trash" : "hand",
+        zone:
+          attackerHasBanish || lifeRuleReplacement === undefined
+            ? attackerHasBanish
+              ? "trash"
+              : "hand"
+            : "deck",
         playerId: targetPlayerId,
-        slot: attackerHasBanish ? "trash" : "hand",
+        slot:
+          attackerHasBanish || lifeRuleReplacement === undefined
+            ? attackerHasBanish
+              ? "trash"
+              : "hand"
+            : "deck",
         index: 0,
       },
     };
+    const replacedMove =
+      lifeRuleReplacement === undefined
+        ? undefined
+        : applyLifeRuleDeckBottomReplacement(
+            damaged.deck,
+            movedLifeCard,
+            targetPlayerId,
+          );
     const nextHand = attackerHasBanish
       ? damaged.hand
-      : addCardsToHand(damaged.hand, [movedLifeCard], targetPlayerId);
+      : replacedMove === undefined
+        ? addCardsToHand(damaged.hand, [movedLifeCard], targetPlayerId)
+        : damaged.hand;
     const nextTrash = attackerHasBanish
       ? reindexZoneCards(
           [movedLifeCard, ...damaged.trash],
@@ -541,6 +577,11 @@ const processLeaderDamagePoint = ({
           "trash",
         )
       : damaged.trash;
+    const destinationCard =
+      replacedMove?.card ??
+      (attackerHasBanish
+        ? movedLifeCard
+        : (nextHand[nextHand.length - 1] ?? movedLifeCard));
     const nextLife = damaged.life.slice(1).map((lifeCard, index) => ({
       ...lifeCard,
       card: {
@@ -559,6 +600,7 @@ const processLeaderDamagePoint = ({
         ...nextState.players,
         [targetPlayerId]: {
           ...damaged,
+          ...(replacedMove === undefined ? {} : { deck: replacedMove.deck }),
           hand: nextHand,
           life: nextLife,
           trash: nextTrash,
@@ -581,12 +623,13 @@ const processLeaderDamagePoint = ({
           index: 0,
         },
         to: {
-          zone: attackerHasBanish ? "trash" : "hand",
+          zone: destinationCard.zone.zone,
           playerId: targetPlayerId,
-          slot: attackerHasBanish ? "trash" : "hand",
-          index: attackerHasBanish ? 0 : nextHand.length - 1,
+          slot: destinationCard.zone.slot,
+          index: destinationCard.zone.index,
         },
-        reason: "battleDamage",
+        reason:
+          replacedMove === undefined ? "battleDamage" : "lifeRuleReplacement",
       },
       { type: "public" },
     );
@@ -603,10 +646,9 @@ const processLeaderDamagePoint = ({
           slot: "life",
           index: 0,
         },
-        to: attackerHasBanish
-          ? movedLifeCard.zone
-          : (nextHand[nextHand.length - 1]?.zone ?? movedLifeCard.zone),
-        reason: "battleDamage",
+        to: attackerHasBanish ? movedLifeCard.zone : destinationCard.zone,
+        reason:
+          replacedMove === undefined ? "battleDamage" : "lifeRuleReplacement",
       },
       { type: "private", playerId: targetPlayerId },
     );

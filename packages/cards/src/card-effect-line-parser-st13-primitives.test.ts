@@ -102,3 +102,49 @@ it("parses end-of-turn face-up Life trash as a reusable matching Life movement",
     ]),
   );
 });
+
+it("parses face-up Life add-to-hand rules replacement as a permanent replacement primitive", () => {
+  const result = parseCardEffectLine(
+    "Your face-up Life cards are placed at the bottom of your deck instead of being added to your hand, according to the rules.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "grantReplacement",
+        duration: { type: "permanent" },
+        replacement: {
+          type: "replacement",
+          when: {
+            type: "wouldMoveZone",
+            from: "life",
+            to: "hand",
+            lifeMatcher: { faceUp: true },
+            target: { type: "all", zone: "life", player: "self" },
+          },
+          instead: {
+            type: "bounce",
+            target: { type: "replacementTarget" },
+            destination: "deckBottom",
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:implicitPermanent",
+      "instruction:grantReplacement",
+      "replacement:wouldMoveZone",
+      "zone:life",
+      "visibility:faceUp",
+      "destination:hand",
+      "destination:deck",
+      "position:bottom",
+      "target:replacementTarget",
+      "duration:permanent",
+    ]),
+  );
+});

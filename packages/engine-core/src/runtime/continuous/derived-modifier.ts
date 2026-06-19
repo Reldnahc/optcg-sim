@@ -2,6 +2,7 @@ import type {
   CardRef,
   ContinuousEffectRecord,
   Effect,
+  EffectId,
   GameState,
   TargetSpec,
 } from "@optcg/types";
@@ -10,6 +11,7 @@ import {
   getUnsupportedProtectionReason,
   unsupportedProtectionMessage,
 } from "../../replacement/protection-capabilities.js";
+import { isSupportedReplacementEffectBlock } from "../../replacement/primitives.js";
 import {
   isDonPhasePlacementEffect,
   toSupportedDonPhasePlacementModifier,
@@ -238,6 +240,32 @@ export const effectToDerivedModifier = (
         type: "invalidateEffectEntryPoint",
         effectEntryPoint: effect.effectEntryPoint,
       },
+    };
+  }
+  if (effect.type === "grantReplacement") {
+    if (
+      !isSupportedReplacementEffectBlock({
+        id: "derived-grant-replacement" as EffectId,
+        category: "replacement",
+        trigger: { type: "replacement", replacement: effect.replacement.when },
+        optional: true,
+        sourcePresencePolicy: "resolveFromLastKnownInformation",
+        effect: effect.replacement,
+      })
+    ) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported replacement shape"),
+      );
+    }
+    if (!isSupportedDuration(effect.duration)) {
+      throw new TypeError(
+        unsupportedDerivedMessage("unsupported replacement duration"),
+      );
+    }
+    return {
+      layer: "replacement",
+      target: { type: "player", player: "self" },
+      operation: { type: "replacement", replacement: effect.replacement },
     };
   }
   if (effect.type === "protectFromKO") {

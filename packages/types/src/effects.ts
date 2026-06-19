@@ -405,6 +405,7 @@ export type ReplacementTrigger =
       type: "wouldMoveZone";
       from?: Zone;
       to?: Zone;
+      lifeMatcher?: { faceUp?: boolean };
       sourceKind?: "battle" | "cardEffect";
       sourceControllerRelation?: "any" | "opponentControlled";
       target: Target;

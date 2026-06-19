@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { Effect } from "@optcg/types";
+import type { ContinuousEffectRecord, Effect } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
@@ -18,6 +18,58 @@ import {
   setupAttackState,
 } from "./test-fixtures.js";
 import { filterStateForPlayer } from "../view/filter-state-for-player.js";
+
+const faceUpLifeToDeckBottomReplacementRecord = (
+  state: ReturnType<typeof setupAttackState>,
+): ContinuousEffectRecord => {
+  const player = must(state.players[p2], "p2");
+  return {
+    id: "continuous:life-rule-replacement",
+    source: {
+      instanceId: player.leader.instanceId,
+      cardId: player.leader.cardId,
+      playerId: p2,
+      zone: player.leader.zone,
+    },
+    sourceSnapshot: {
+      instanceId: player.leader.instanceId,
+      cardId: player.leader.cardId,
+      ownerId: p2,
+      controllerId: p2,
+      zone: player.leader.zone,
+      category: "leader",
+      colors: [],
+      life: 5,
+      keywords: [],
+    },
+    controller: p2,
+    modifier: {
+      layer: "replacement",
+      target: { type: "player", player: "self" },
+      operation: {
+        type: "replacement",
+        replacement: {
+          type: "replacement",
+          when: {
+            type: "wouldMoveZone",
+            from: "life",
+            to: "hand",
+            lifeMatcher: { faceUp: true },
+            target: { type: "all", zone: "life", player: "self" },
+          },
+          instead: {
+            type: "bounce",
+            target: { type: "replacementTarget" },
+            destination: "deckBottom",
+          },
+        },
+      },
+    },
+    duration: { type: "permanent" },
+    createdBy: { type: "ruleProcess", name: "test" },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const applySupportedLifeTriggerAttack = () => {
   const state = setupAttackState();
@@ -836,5 +888,119 @@ test("activated life trigger with false condition skips body and still trashes t
   assert.equal(
     nextP2.trash.some((card) => card.instanceId === lifeInstanceId),
     true,
+  );
+});
+
+test("face-up Life add-to-hand rules movement is replaced by deck bottom", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("face-up-life-rule-card");
+  const beforeHandCount = p2State.hand.length;
+  const beforeDeckCount = p2State.deck.length;
+  p2State.life[0] = {
+    ...topLife,
+    faceUp: true,
+    card: { ...topLife.card, cardId: lifeCardId },
+  };
+  state.cardManifest.cards[lifeCardId] = resolvedCard({
+    cardId: lifeCardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: unsupported",
+  });
+  state.continuousEffects = [faceUpLifeToDeckBottomReplacementRecord(state)];
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  const passed = passCounterStep(opened.state, p2);
+  const decision = must(passed.state.pendingDecision, "life decision");
+  assert.equal(decision.type, "confirmLifeTrigger");
+  assert.equal(decision.sourceLifeFaceUp, true);
+
+  const resolved = applyAction(passed.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  const nextP2 = must(resolved.state.players[p2], "next p2");
+  assert.equal(nextP2.hand.length, beforeHandCount);
+  assert.equal(nextP2.deck.length, beforeDeckCount + 1);
+  assert.equal(must(nextP2.deck.at(-1), "bottom deck card").cardId, lifeCardId);
+  assert.equal(
+    resolved.events.some((event) => event.type === "replacementApplied"),
+    true,
+  );
+});
+
+test("face-down Life still goes to hand under face-up Life rules replacement", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const topLife = must(p2State.life[0], "top life");
+  const lifeCardId = toCardId("face-down-life-rule-card");
+  const beforeHandCount = p2State.hand.length;
+  const beforeDeckCount = p2State.deck.length;
+  p2State.life[0] = {
+    ...topLife,
+    faceUp: false,
+    card: { ...topLife.card, cardId: lifeCardId },
+  };
+  state.cardManifest.cards[lifeCardId] = resolvedCard({
+    cardId: lifeCardId,
+    category: "character",
+    power: 1000,
+    triggerText: "TRIGGER: unsupported",
+  });
+  state.continuousEffects = [faceUpLifeToDeckBottomReplacementRecord(state)];
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: p1State.leader.instanceId,
+      cardId: p1State.leader.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+  assert.equal(opened.errors, undefined);
+  const passed = passCounterStep(opened.state, p2);
+  const decision = must(passed.state.pendingDecision, "life decision");
+  assert.equal(decision.type, "confirmLifeTrigger");
+  assert.equal(decision.sourceLifeFaceUp, undefined);
+
+  const resolved = applyAction(passed.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "lifeTrigger", choice: "addToHand" },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  const nextP2 = must(resolved.state.players[p2], "next p2");
+  assert.equal(nextP2.hand.length, beforeHandCount + 1);
+  assert.equal(nextP2.deck.length, beforeDeckCount);
+  assert.equal(must(nextP2.hand.at(-1), "hand card").cardId, lifeCardId);
+  assert.equal(
+    resolved.events.some((event) => event.type === "replacementApplied"),
+    false,
   );
 });

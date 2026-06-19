@@ -243,6 +243,7 @@ export interface ConfirmLifeTriggerDecision extends BaseDecision {
   type: "confirmLifeTrigger";
   card: CardRef;
   options: Array<"activateTrigger" | "addToHand">;
+  sourceLifeFaceUp?: boolean;
 }
 
 export interface OrderCardsDecision extends BaseDecision {

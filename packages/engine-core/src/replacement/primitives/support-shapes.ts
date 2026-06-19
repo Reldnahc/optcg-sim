@@ -19,6 +19,7 @@ import {
   isSupportedReplacementPayCostInsteadEffect,
   isSupportedReplacementInsteadSequenceEffect,
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect,
+  isSupportedReplacementTargetDeckBottomInsteadEffect,
   isSupportedReplacementTargetLifeInsteadEffect,
   isSupportedRestOwnCardsInsteadEffect,
   isSupportedRestSelfInsteadEffect,
@@ -155,6 +156,7 @@ const replacementTriggersEqual = (
       left.to === right.to &&
       left.sourceKind === right.sourceKind &&
       left.sourceControllerRelation === right.sourceControllerRelation &&
+      JSON.stringify(left.lifeMatcher) === JSON.stringify(right.lifeMatcher) &&
       JSON.stringify(left.target) === JSON.stringify(right.target)
     );
   }
@@ -197,6 +199,30 @@ export const isSupportedOpponentFieldRemovalLifeReplacementEffect = (
   effect.effect.when.from === "characterArea" &&
   isSupportedSelfCharacterReplacementTarget(effect.effect.when.target) &&
   isSupportedLifeTopToHandEffect(effect.effect.instead);
+
+const isSupportedSelfLifeReplacementTarget = (target: Target): boolean =>
+  target.type === "all" &&
+  target.zone === "life" &&
+  target.player === "self" &&
+  target.filter === undefined;
+
+export const isSupportedFaceUpLifeRuleDeckBottomReplacementEffect = (
+  effect: EffectDefinition["effects"][number],
+): effect is SupportedReplacementEffectBlock =>
+  isSupportedReplacementEnvelope(effect) &&
+  effect.trigger.replacement.type === "wouldMoveZone" &&
+  effect.trigger.replacement.from === "life" &&
+  effect.trigger.replacement.to === "hand" &&
+  effect.trigger.replacement.lifeMatcher?.faceUp === true &&
+  isSupportedSelfLifeReplacementTarget(effect.trigger.replacement.target) &&
+  effect.oncePerTurn === undefined &&
+  effect.effect.when.type === "wouldMoveZone" &&
+  effect.effect.when.from === "life" &&
+  effect.effect.when.to === "hand" &&
+  effect.effect.when.lifeMatcher?.faceUp === true &&
+  isSupportedSelfLifeReplacementTarget(effect.effect.when.target) &&
+  replacementTriggersEqual(effect.trigger.replacement, effect.effect.when) &&
+  isSupportedReplacementTargetDeckBottomInsteadEffect(effect.effect.instead);
 
 export const isSupportedKoLifeTopToHandReplacementEffect = (
   effect: EffectDefinition["effects"][number],
@@ -257,6 +283,7 @@ export const isSupportedOpponentEffectFieldRemovalInsteadEffect = (
   isSupportedDrawInsteadEffect(effect) ||
   isSupportedLifeVisibilityInsteadEffect(effect) ||
   isSupportedReplacementTargetLifeInsteadEffect(effect) ||
+  isSupportedReplacementTargetDeckBottomInsteadEffect(effect) ||
   isSupportedReturnSelfToHandInsteadEffect(effect) ||
   isSupportedReplacementInsteadSequenceEffect(effect) ||
   isSupportedReplacementSequenceWithTrashFromHandInsteadEffect(effect) ||
@@ -383,6 +410,7 @@ const isSupportedAtomicReplacementEffect = (
 ): effect is SupportedReplacementEffectBlock =>
   isSupportedSelfKoDrawReplacementEffect(effect) ||
   isSupportedOpponentFieldRemovalLifeReplacementEffect(effect) ||
+  isSupportedFaceUpLifeRuleDeckBottomReplacementEffect(effect) ||
   isSupportedKoLifeTopToHandReplacementEffect(effect) ||
   isSupportedKoInsteadReplacementEffect(effect) ||
   isSupportedOpponentEffectFieldRemovalReplacementEffect(effect) ||

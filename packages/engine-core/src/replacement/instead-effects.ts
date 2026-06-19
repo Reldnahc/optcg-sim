@@ -146,6 +146,19 @@ export const isSupportedReplacementTargetLifeInsteadEffect = (
   effect.target.type === "replacementTarget" &&
   (effect.destination === "lifeTop" || effect.destination === "lifeBottom");
 
+export const isSupportedReplacementTargetDeckBottomInsteadEffect = (
+  effect: ReplacementInstead,
+): effect is Extract<ReplacementInstead, { type: "bounce" }> & {
+  target: Extract<
+    Extract<ReplacementInstead, { type: "bounce" }>["target"],
+    { type: "replacementTarget" }
+  >;
+  destination: "deckBottom";
+} =>
+  effect.type === "bounce" &&
+  effect.target.type === "replacementTarget" &&
+  effect.destination === "deckBottom";
+
 export const isSupportedReturnSelfToHandInsteadEffect = (
   effect: ReplacementInstead,
 ): effect is Extract<ReplacementInstead, { type: "bounce" }> & {
@@ -169,6 +182,8 @@ const isSupportedAtomicNoDecisionInsteadEffect = (
     isSupportedLifeVisibilityInsteadEffect(effect)) ||
   (effect.type === "bounce" &&
     isSupportedReplacementTargetLifeInsteadEffect(effect)) ||
+  (effect.type === "bounce" &&
+    isSupportedReplacementTargetDeckBottomInsteadEffect(effect)) ||
   (effect.type === "bounce" &&
     isSupportedReturnSelfToHandInsteadEffect(effect)) ||
   (effect.type === "rest" && isSupportedRestSelfInsteadEffect(effect)) ||
