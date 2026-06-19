@@ -378,6 +378,11 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["modifyPower", "placeTopLifeCard", "sequence"],
   },
   {
+    label: "fixture:eb01-061:when-attacking-copy-selected-power",
+    text: "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",
+    expectedPrimitiveTypes: ["selectTargets", "sequence", "setBasePower"],
+  },
+  {
     label: "fixture:eb01-030:trigger-play-source",
     text: "[Trigger] Play this card.",
     expectedPrimitiveTypes: ["playSource"],

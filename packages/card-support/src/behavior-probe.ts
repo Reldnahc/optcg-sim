@@ -12,7 +12,6 @@ import type {
   EffectBlock,
   EngineResult,
   GameState,
-  LegalAction,
   OptionalCost,
   PlayerId,
   Target,
@@ -26,6 +25,7 @@ import {
   fieldProbeSource,
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
+import { chooseProbeDecisionAction } from "./behavior-probe-decision-policy.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
@@ -161,7 +161,12 @@ export const createBehaviorProbeReport = (
                   ...scenarioInput,
                   category: "leader",
                 },
-                drainRuntime,
+                (initialResult, setupFilterCount) =>
+                  drainRuntime(
+                    initialResult,
+                    setupFilterCount,
+                    scenarioInput.definition.effects,
+                  ),
               )
             : scenario.kind === "lifeTrigger"
               ? runLifeTriggerScenario({
@@ -276,7 +281,11 @@ const runPlayCardScenario = (input: {
     type: "playCard",
     cardInstanceId: card.instanceId,
   });
-  return drainRuntime(opened, input.setupFilters.length);
+  return drainRuntime(
+    opened,
+    input.setupFilters.length,
+    input.definition.effects,
+  );
 };
 
 const runActivateEffectScenario = (input: {
@@ -327,7 +336,11 @@ const runActivateEffectScenario = (input: {
     };
   }
 
-  return drainRuntime(applyAction(state, action), input.setupFilters.length);
+  return drainRuntime(
+    applyAction(state, action),
+    input.setupFilters.length,
+    input.definition.effects,
+  );
 };
 
 const runDeclareAttackScenario = (input: {
@@ -383,6 +396,7 @@ const runDeclareAttackScenario = (input: {
       },
     }),
     input.setupFilters.length,
+    input.definition.effects,
   );
 };
 
@@ -464,7 +478,11 @@ const runCounterScenario = (input: {
     },
   });
   if (opened.errors !== undefined) {
-    return drainRuntime(opened, input.setupFilters.length);
+    return drainRuntime(
+      opened,
+      input.setupFilters.length,
+      input.definition.effects,
+    );
   }
   const counterAction = getLegalActions(opened.state, p2).find(
     (action): action is Extract<Action, { type: "useCounter" }> =>
@@ -484,6 +502,7 @@ const runCounterScenario = (input: {
   return drainRuntime(
     applyAction(opened.state, counterAction),
     input.setupFilters.length,
+    input.definition.effects,
   );
 };
 
@@ -547,12 +566,14 @@ const runLifeTriggerScenario = (input: {
       },
     }),
     input.setupFilters.length,
+    input.definition.effects,
   );
 };
 
 const drainRuntime = (
   initialResult: EngineResult,
   setupFilterCount = 0,
+  effectBlocks: readonly EffectBlock[] = [],
 ): {
   readonly ok: boolean;
   readonly reason?: string;
@@ -602,9 +623,11 @@ const drainRuntime = (
         "runtime work did not drain",
       );
     }
-    const nextAction =
-      chooseDecisionAction(getLegalActions(state, decision.playerId)) ??
-      choosePendingDecisionAction(state);
+    const nextAction = chooseProbeDecisionAction(
+      state,
+      getLegalActions(state, decision.playerId),
+      effectBlocks,
+    );
     if (nextAction === undefined) {
       return drainResult(
         false,
@@ -647,68 +670,6 @@ const drainResult = (
   decisionsResolved,
   setupFilterCount,
 });
-
-const chooseDecisionAction = (
-  legalActions: readonly LegalAction[],
-): Extract<Action, { type: "respondToDecision" }> | undefined => {
-  const responses = legalActions.filter(
-    (action): action is Extract<Action, { type: "respondToDecision" }> =>
-      action.type === "respondToDecision",
-  );
-  if (responses.length === 0) {
-    return undefined;
-  }
-  return [...responses].sort(compareDecisionProgress)[0];
-};
-
-const compareDecisionProgress = (
-  left: Extract<Action, { type: "respondToDecision" }>,
-  right: Extract<Action, { type: "respondToDecision" }>,
-): number => decisionScore(right) - decisionScore(left);
-
-const decisionScore = (
-  action: Extract<Action, { type: "respondToDecision" }>,
-): number => {
-  const response = action.response;
-  switch (response.type) {
-    case "optionalActivation":
-      return response.choice === "activate" ? 100 : 0;
-    case "payment":
-      return (
-        90 +
-        selectionCount(response.selectedCardInstanceIds) +
-        selectionCount(response.selectedDonInstanceIds)
-      );
-    case "paymentDeclined":
-      return 0;
-    case "chooseQuantity":
-      return 80 + response.quantity;
-    case "targets":
-      return 70 + response.targets.length;
-    case "cards":
-      return 60 + response.cards.length;
-    case "effectOption":
-      return 50;
-    case "effectOptionDeclined":
-      return 0;
-    case "lifeTrigger":
-      return response.choice === "activateTrigger" ? 40 : 0;
-    case "replacement":
-      return response.replacementId === undefined ? 0 : 30;
-    case "orderedIds":
-      return 20 + response.ids.length;
-    case "topBottomPlacement":
-      return 20 + response.topIds.length + response.bottomIds.length;
-    case "loopCount":
-      return 10 + response.count;
-    case "mulligan":
-    case "rollbackConsent":
-      return 1;
-  }
-};
-
-const selectionCount = (values: readonly unknown[] | undefined): number =>
-  values?.length ?? 0;
 
 const collectScenarioSetupFilters = (
   effects: readonly EffectBlock[],
@@ -913,34 +874,6 @@ const collectOptionalCostFilters = (
     return collectTargetFilters(cost.target);
   }
   return [];
-};
-
-const choosePendingDecisionAction = (
-  state: GameState,
-): Extract<Action, { type: "respondToDecision" }> | undefined => {
-  const decision = state.pendingDecision;
-  if (decision === undefined || decision.type !== "orderCards") {
-    return undefined;
-  }
-  if (decision.placement?.type === "topOrBottom") {
-    return {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: {
-        type: "topBottomPlacement",
-        topIds: [],
-        bottomIds: decision.cards.map((card) => String(card.instanceId)),
-      },
-    };
-  }
-  return {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: {
-      type: "orderedIds",
-      ids: decision.cards.map((card) => String(card.instanceId)),
-    },
-  };
 };
 
 const engineErrorReason = (

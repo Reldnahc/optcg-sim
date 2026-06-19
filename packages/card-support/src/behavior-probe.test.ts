@@ -139,6 +139,24 @@ describe("card behavior probe", () => {
     );
   });
 
+  it("chooses an optional selected target when a later segment consumes it", () => {
+    const report = createBehaviorProbeReport({
+      text: "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: selectTargets, sequence, setBasePower",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
+      ]),
+    );
+  });
+
   it("preserves multiline choice blocks through behavior materialization", () => {
     const report = createBehaviorProbeReport({
       text: `[Main] Choose one:
