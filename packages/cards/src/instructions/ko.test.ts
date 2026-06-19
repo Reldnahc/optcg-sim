@@ -185,6 +185,72 @@ describe("K.O. instruction parser", () => {
     });
   });
 
+  it("parses exact self Character K.O. as a selected field target request", () => {
+    const result = parseKoInstruction({
+      text: "K.O. 1 of your {Dressrosa} type Characters.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:ko-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zone: "characterArea",
+                min: 1,
+                max: 1,
+                allowFewerIfUnavailable: false,
+                visibility: "public",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Dressrosa"],
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "ko",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:ko-target",
+                },
+                zone: "characterArea",
+                player: "self",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:ko",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "target:yourCharacters",
+        "player:self",
+        "filter:category:character",
+        "filter:type",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
+
   it("parses K.O. as one mixed Character-or-Stage target request", () => {
     expect(
       parseKoInstruction({

@@ -75,6 +75,7 @@ export function selectThenApplyFieldTarget(options: {
   readonly filter: CardFilter;
   readonly min: number;
   readonly max: number;
+  readonly allowFewerIfUnavailable?: boolean;
   readonly selectionConstraints?: readonly TargetSelectionConstraint[];
   readonly apply: (target: Target) => Effect;
   readonly applyConnector?: Extract<
@@ -107,6 +108,7 @@ export function selectThenApplyFieldTarget(options: {
             filter: options.filter,
             min: options.min,
             max: options.max,
+            allowFewerIfUnavailable: options.allowFewerIfUnavailable ?? true,
             ...(options.selectionConstraints === undefined
               ? {}
               : { selectionConstraints: options.selectionConstraints }),
@@ -134,6 +136,7 @@ function selectTargetsRequest(options: {
   readonly filter: CardFilter;
   readonly min: number;
   readonly max: number;
+  readonly allowFewerIfUnavailable: boolean;
   readonly selectionConstraints?: readonly TargetSelectionConstraint[];
 }): SelectTargetsEffect["request"] {
   const base = {
@@ -143,7 +146,7 @@ function selectTargetsRequest(options: {
     filter: options.filter,
     min: options.min,
     max: options.max,
-    allowFewerIfUnavailable: true,
+    allowFewerIfUnavailable: options.allowFewerIfUnavailable,
     visibility: "public" as const,
     ...(options.selectionConstraints === undefined
       ? {}

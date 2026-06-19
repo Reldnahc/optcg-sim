@@ -1,16 +1,21 @@
 import type {
+  CardFilter,
   Effect,
   SelectionId,
   Target,
   TargetPlayerRef,
 } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import {
   allFieldTargetParsers,
   opponentFieldTargetParsers,
   parseTargetFromSet,
+  yourFieldEffectTargetParsers,
 } from "../targets/index.js";
 import { chosenCharacterTarget } from "../targets/chosen-character.js";
 import type { FieldTargetParseResult } from "../targets/field-targets/index.js";
@@ -187,6 +192,11 @@ export const parseKoInstruction: InstructionParser = (input) => {
     };
   }
 
+  const exactTarget = parseExactKoTarget(actionRest);
+  if (exactTarget !== undefined) {
+    return exactTarget;
+  }
+
   const cardinality = parseUpToCardinality({ text: actionRest });
   if (cardinality === undefined) {
     return undefined;
@@ -285,6 +295,131 @@ function parseAnyNumberSelfCharacterKoTarget(text: string):
     evidence: ["player:self", ...predicates.evidence],
     filter: predicates.filter,
   };
+}
+
+function parseExactKoTarget(actionRest: string): ReturnType<InstructionParser> {
+  const cardinality = parseExactCardinality({ text: actionRest });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const opponentTarget = parseTargetFromSet(
+    { text: cardinality.rest },
+    opponentFieldTargetParsers(),
+  );
+  if (opponentTarget !== undefined) {
+    return buildExactKoTarget({
+      cardinality,
+      parsedTarget: opponentTarget,
+      player: "opponent",
+    });
+  }
+
+  const selfTarget = parseTargetFromSet(
+    { text: cardinality.rest },
+    yourFieldEffectTargetParsers({
+      mode: "exact",
+      min: cardinality.count,
+      max: cardinality.count,
+    }),
+  );
+  if (selfTarget === undefined) {
+    return undefined;
+  }
+
+  return buildExactKoTarget({
+    cardinality,
+    parsedTarget: selfTarget,
+    player: "self",
+  });
+}
+
+function buildExactKoTarget({
+  cardinality,
+  parsedTarget,
+  player,
+}: {
+  readonly cardinality: NonNullable<ReturnType<typeof parseExactCardinality>>;
+  readonly parsedTarget: FieldTargetParseResult;
+  readonly player: TargetPlayerRef;
+}): ReturnType<InstructionParser> {
+  if (parsedTarget.rest.length > 0 && parsedTarget.rest !== ".") {
+    return undefined;
+  }
+
+  const filter =
+    parsedTarget.filter ?? filterFromFieldTarget(parsedTarget.target);
+  if (filter === undefined) {
+    return undefined;
+  }
+
+  const zone =
+    fieldZoneForCategory(filter.categories?.[0]) ??
+    zoneFromFieldTarget(parsedTarget.target);
+  if (zone === undefined) {
+    return undefined;
+  }
+
+  return {
+    effect: selectThenApplyKoEffect({
+      min: cardinality.count,
+      max: cardinality.count,
+      player,
+      filter,
+      zone,
+      selectionId: koTargetSelectionId,
+      allowFewerIfUnavailable: false,
+    }),
+    evidence: [
+      "instruction:ko",
+      ...cardinality.evidence,
+      "chooser:self",
+      ...parsedTarget.evidence,
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function filterFromFieldTarget(
+  target: Target | undefined,
+): CardFilter | undefined {
+  if (target?.type === "choose") {
+    return target.request.filter;
+  }
+  if (target?.type === "chooseFromZones") {
+    return target.request.filter;
+  }
+  if (target?.type === "all") {
+    return target.filter;
+  }
+  return undefined;
+}
+
+function zoneFromFieldTarget(
+  target: Target | undefined,
+): PublicFieldSelectionZone | undefined {
+  if (target?.type === "choose") {
+    return asPublicFieldSelectionZone(target.request.zone);
+  }
+  if (target?.type === "all") {
+    return asPublicFieldSelectionZone(target.zone);
+  }
+  return undefined;
+}
+
+function asPublicFieldSelectionZone(
+  zone: string,
+): PublicFieldSelectionZone | undefined {
+  if (
+    zone === "leaderArea" ||
+    zone === "characterArea" ||
+    zone === "stageArea" ||
+    zone === "costArea"
+  ) {
+    return zone;
+  }
+  return undefined;
 }
 
 function parseTotalStatLimitedKoTarget(text: string):
@@ -674,6 +809,7 @@ function selectThenApplyKoEffect(options: {
   readonly max: number;
   readonly player?: TargetPlayerRef;
   readonly filter: TargetFilter;
+  readonly allowFewerIfUnavailable?: boolean;
   readonly selectionConstraints?: Extract<
     Effect,
     { type: "selectTargets" }
@@ -691,6 +827,9 @@ function selectThenApplyKoEffect(options: {
     min: options.min,
     max: options.max,
     filter: options.filter,
+    ...(options.allowFewerIfUnavailable === undefined
+      ? {}
+      : { allowFewerIfUnavailable: options.allowFewerIfUnavailable }),
     ...(options.selectionConstraints === undefined
       ? {}
       : { selectionConstraints: options.selectionConstraints }),
