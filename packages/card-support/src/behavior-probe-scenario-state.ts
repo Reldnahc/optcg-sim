@@ -136,10 +136,27 @@ export const fieldProbeSource = (
     state: "active",
     turnPlayed: 0,
   };
-  player.hand = player.hand.filter((_, index) => index !== handIndex);
+  player.hand = reindexHand(
+    player.hand.filter((_, index) => index !== handIndex),
+    p1,
+  );
   player.characters = [...player.characters, source];
   return source;
 };
+
+const reindexHand = (
+  cards: readonly CardInstance[],
+  playerId: PlayerId,
+): CardInstance[] =>
+  cards.map((card, index) => ({
+    ...card,
+    zone: {
+      zone: "hand",
+      playerId,
+      slot: "hand",
+      index,
+    },
+  }));
 
 const createProbeManifest = (): MatchCardManifest => ({
   manifestHash: "behavior-probe-manifest",

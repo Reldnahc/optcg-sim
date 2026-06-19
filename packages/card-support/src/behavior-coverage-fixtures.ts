@@ -127,6 +127,16 @@ export const behaviorCoverageFixtureCorpus = [
     ],
   },
   {
+    label: "fixture:op06-020:prevent-life-to-hand",
+    text: "[Activate: Main] You may rest this Leader: Rest up to 1 of your opponent's DON!! cards or Characters with a cost of 3 or less. Then, you cannot add Life cards to your hand using your own effects during this turn.",
+    expectedPrimitiveTypes: [
+      "payCost",
+      "preventLifeToHand",
+      "rest",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:invalidate-entrypoint:activate-main",
     text: "[Activate: Main] You may trash 1 card from your hand: Your opponent's [On Play] effects are negated until the end of your opponent's next turn.",
     expectedPrimitiveTypes: [
@@ -172,6 +182,16 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["allowAttackActiveCharacters"],
   },
   {
+    label: "fixture:op06-026:cannot-attack-target",
+    text: "[On Play] Set up to 1 of your  attribute Characters with a cost of 4 or less as active. Then, you cannot attack a Leader during this turn.",
+    expectedPrimitiveTypes: [
+      "activate",
+      "cannotAttackTarget",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:cannot-block:on-play",
     text: "[On Play] Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
     expectedPrimitiveTypes: ["cannotBlock", "selectTargets", "sequence"],
@@ -197,6 +217,16 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["giveProtection"],
   },
   {
+    label: "fixture:op10-070:protect-from-ko",
+    text: "[On Play] All of your Characters with 1000 base power or less cannot be K.O.'d by your opponent's effects until the end of your opponent's next turn.",
+    expectedPrimitiveTypes: ["protectFromKO"],
+  },
+  {
+    label: "fixture:op08-043:attack-cost",
+    text: "[On Play] If your Leader's type includes \"Whitebeard Pirates\" and you have 2 or less Life cards, select all of your opponent's Characters on their field. Until the end of your opponent's next turn, none of the selected Characters can attack unless your opponent trashes 2 cards from their hand whenever they attack.",
+    expectedPrimitiveTypes: ["attackCost", "selectAllTargets", "sequence"],
+  },
+  {
     label: "fixture:swap-base-power:main",
     text: "[Main] Select 2 of your opponent's Characters with 9000 base power or less. Swap the base power of the selected Characters with each other during this turn.",
     expectedPrimitiveTypes: ["selectTargets", "sequence", "swapBasePower"],
@@ -215,6 +245,31 @@ export const behaviorCoverageFixtureCorpus = [
     label: "fixture:prevent-play:on-play",
     text: "[On Play] You cannot play cards from your hand during this turn.",
     expectedPrimitiveTypes: ["preventPlay"],
+  },
+  {
+    label: "fixture:op13-057:prevent-blocker-activation",
+    text: "[Main] You may rest 1 of your DON!! cards: If you have 1 or less Life cards, your opponent cannot activate [Blocker] whenever your Leader attacks during this turn.",
+    expectedPrimitiveTypes: [
+      "conditional",
+      "payCost",
+      "preventBlockerActivation",
+      "sequence",
+    ],
+  },
+  {
+    label: "fixture:op06-116:damage",
+    text: `[Main] Choose one:
+\u2022 K.O. up to 1 of your opponent's Characters with a cost of 5 or less.
+\u2022 If your opponent has 1 Life card, deal 1 damage to your opponent. Then, add 1 card from the top of your Life cards to your hand.`,
+    expectedPrimitiveTypes: [
+      "choice",
+      "conditional",
+      "damage",
+      "ko",
+      "moveCards",
+      "selectTargets",
+      "sequence",
+    ],
   },
   {
     label: "fixture:set-life-face-down:on-play",
@@ -264,6 +319,15 @@ export const behaviorCoverageFixtureCorpus = [
     label: "fixture:extra-turn:on-play",
     text: "[On Play] Take an extra turn after this one.",
     expectedPrimitiveTypes: ["takeExtraTurn"],
+  },
+  {
+    label: "fixture:op15-014:activate-selected-event",
+    text: "[On Play] Activate up to 1 {Dressrosa} type Event with a base cost of 3 or less from your hand.",
+    expectedPrimitiveTypes: [
+      "activateSelectedEvent",
+      "selectCards",
+      "sequence",
+    ],
   },
   {
     label: "fixture:win-game:on-play",

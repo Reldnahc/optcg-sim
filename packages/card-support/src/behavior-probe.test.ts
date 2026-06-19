@@ -61,6 +61,23 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("keeps hand zone refs stable after fielding an Activate Main source", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If your Leader has the {Alabasta} type, give up to 1 of your opponent's Characters \u22121000 power during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 engine primitives: modifyPower");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
+      ]),
+    );
+  });
+
   it("builds leader metadata to satisfy generated leader type conditions", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] If your Leader has the {Impel Down} type, draw 1 card.",
