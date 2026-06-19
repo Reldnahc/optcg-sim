@@ -139,6 +139,7 @@ describe("poneglyph card source", () => {
       decode: async () => ({
         leader: { card_number: "OP01-001", count: 1 },
         main: [{ card_number: "OP01-002", count: 4 }],
+        don: null,
       }),
     };
     const fetchPoneglyph: PoneglyphFetch = async () =>
@@ -256,7 +257,7 @@ describe("poneglyph card source", () => {
     });
     expect(setHttpFailure).toEqual({
       ok: false,
-      error: "Poneglyph set fetch failed for OP01: HTTP 503",
+      error: "Poneglyph set catalog fetch failed for OP01: HTTP 503",
     });
   });
 
@@ -470,7 +471,16 @@ export const createPoneglyphCoverageEntriesFromCardIds = async (
 
 Use `gameplayLinesFromTextParts([card.effect, card.trigger])` in `coverageEntriesForCard`. The lower-level helpers (`decodeProbeDeckHash`, `aggregateDeckHashEntries`, `fetchPoneglyphCardPayload`, `fetchPoneglyphCardPayloads`, and `fetchPoneglyphSetCardIds`) must preserve the current `support:probe` behavior, including counts, variant indexes, `/v1/search` set catalog lookup, and `/v1/cards/batch` detail loading.
 
-All source helpers must catch thrown `fetchPoneglyph`, thrown `response.json()`, invalid payloads, missing batch cards, set catalog HTTP failures, and deck hash decode failures, returning `{ ok: false, error }` instead of throwing.
+Also export `fetchPoneglyphCard` from this module as the default network adapter:
+
+```ts
+export const fetchPoneglyphCard = (
+  url: string | URL,
+  init?: PoneglyphFetchRequest,
+): Promise<PoneglyphFetchResponse> => fetch(url, init);
+```
+
+Move the current implementations of `fetchPoneglyphCardPayload`, `fetchPoneglyphCardPayloads`, and `fetchPoneglyphSetCardIds` from `support-probe-report.ts` into `poneglyph-card-source.ts`, changing the option field name from `fetchCard` to `fetchPoneglyph` without changing URL behavior. All source helpers must catch thrown `fetchPoneglyph`, thrown `response.json()`, invalid payloads, missing batch cards, set catalog HTTP failures, and deck hash decode failures, returning `{ ok: false, error }` instead of throwing.
 
 - [ ] **Step 4: Update support probe imports**
 
@@ -547,7 +557,7 @@ it("reports materialization failures as structured probe failures", () => {
   expect(report.failure).toEqual({
     kind: "materializationFailed",
     diagnostics: expect.arrayContaining([
-      expect.stringMatching(/^unsupported-effect-line/u),
+      "line 1 parse failed: no expression parser matched",
     ]),
   });
   expect(report.scenarios).toEqual([]);
@@ -630,7 +640,7 @@ it("classifies each entry into actionable feedback buckets", () => {
       label: "materialization",
       bucket: "materializationFailed",
       primitiveTypes: [],
-      reason: expect.stringMatching(/^unsupported-effect-line/u),
+      reason: "line 1 parse failed: no expression parser matched",
     },
   ]);
   expect(report.lines).toContain("Behavior coverage bucket behaviorPassed: 1");
@@ -873,6 +883,7 @@ it("runs coverage for a deck hash", async () => {
         decode: async () => ({
           leader: null,
           main: [{ card_number: "OP01-001", count: 4 }],
+          don: null,
         }),
       },
       fetchPoneglyph: async () => ({
@@ -940,7 +951,7 @@ Run:
 corepack pnpm --filter @optcg/card-support test -- behavior-coverage-cli.test.ts
 ```
 
-Expected: FAIL because `createBehaviorCoverageCliReport` is synchronous and only supports `--text`.
+Expected: FAIL because source labels, source args, dependency injection, source failures, and conflicting-source validation are not implemented yet.
 
 - [ ] **Step 3: Make CLI async and source-aware**
 
@@ -1087,17 +1098,18 @@ describe("behavior coverage fixture corpus", () => {
         {
           label: "fixture:draw:on-play",
           text: "[On Play] Draw 1 card.",
-          primitiveFamilies: ["draw"],
+          expectedPrimitiveTypes: ["draw"],
         },
         {
           label: "fixture:search:on-play",
           text: "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
-          primitiveFamilies: [
-            "revealTop",
-            "selectFromSet",
-            "revealSelected",
+          expectedPrimitiveTypes: [
             "moveSelected",
             "placeSetRemainder",
+            "revealSelected",
+            "revealTop",
+            "selectFromSet",
+            "sequence",
           ],
         },
       ]),
@@ -1109,19 +1121,19 @@ describe("behavior coverage fixture corpus", () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it("keeps primitive family metadata aligned with emitted primitives", () => {
+  it("keeps expected primitive metadata aligned with emitted primitives", () => {
     for (const fixture of behaviorCoverageFixtureCorpus) {
       const report = createBehaviorProbeReport({ text: fixture.text });
-      const emitted = new Set(
-        report.scenarios.flatMap((scenario) => scenario.primitiveTypes),
+      const emitted = [
+        ...new Set(
+          report.scenarios.flatMap((scenario) => scenario.primitiveTypes),
+        ),
+      ].sort((left, right) => left.localeCompare(right));
+      const expected = [...fixture.expectedPrimitiveTypes].sort((left, right) =>
+        left.localeCompare(right),
       );
 
-      for (const primitiveFamily of fixture.primitiveFamilies) {
-        expect(
-          emitted.has(primitiveFamily),
-          `${fixture.label} should emit ${primitiveFamily}`,
-        ).toBe(true);
-      }
+      expect(emitted, fixture.label).toEqual(expected);
     }
   });
 });
@@ -1165,35 +1177,36 @@ Create `behavior-coverage-fixtures.ts`:
 export interface BehaviorCoverageFixtureEntry {
   readonly label: string;
   readonly text: string;
-  readonly primitiveFamilies: readonly string[];
+  readonly expectedPrimitiveTypes: readonly string[];
 }
 
 export const behaviorCoverageFixtureCorpus = [
   {
     label: "fixture:draw:on-play",
     text: "[On Play] Draw 1 card.",
-    primitiveFamilies: ["draw"],
+    expectedPrimitiveTypes: ["draw"],
   },
   {
     label: "fixture:draw-up-to:on-play",
     text: "[On Play] Draw up to 2 cards.",
-    primitiveFamilies: ["drawUpTo"],
+    expectedPrimitiveTypes: ["drawUpTo"],
   },
   {
     label: "fixture:search:on-play",
     text: "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
-    primitiveFamilies: [
-      "revealTop",
-      "selectFromSet",
-      "revealSelected",
+    expectedPrimitiveTypes: [
       "moveSelected",
       "placeSetRemainder",
+      "revealSelected",
+      "revealTop",
+      "selectFromSet",
+      "sequence",
     ],
   },
   {
     label: "fixture:when-attacking:draw",
     text: "[When Attacking] Draw 1 card.",
-    primitiveFamilies: ["draw"],
+    expectedPrimitiveTypes: ["draw"],
   },
 ] as const satisfies readonly BehaviorCoverageFixtureEntry[];
 ```
@@ -1269,7 +1282,7 @@ it("prints actionable entry rows grouped by bucket", () => {
   );
 
   expect(entryLines).toEqual([
-    "Behavior coverage entry materializationFailed: materialization - unsupported-effect-line",
+    "Behavior coverage entry materializationFailed: materialization - line 1 parse failed: no expression parser matched",
     "Behavior coverage entry scenarioMissing: scenario-missing - no generated scenario for trigger whenAttacking",
     "Behavior coverage entry behaviorPassed: passed - draw",
   ]);
@@ -1405,17 +1418,15 @@ Expected: command exits with either:
 
 The command must not throw an uncaught exception.
 
-- [ ] **Step 6: Commit verification-only formatting changes**
+- [ ] **Step 6: Confirm no verification-only edits remain**
 
-If pre-commit or verification changed formatting, run:
+Run:
 
 ```bash
 git status --short
-git add <changed-files>
-git commit -m "Format behavior coverage feedback loop"
 ```
 
-Expected final status: clean except generated `.probe-output/`.
+Expected final status: clean except generated `.probe-output/`. If verification unexpectedly changed files, do not hide that in a broad formatting commit; inspect the diff and either fold the change into the relevant task commit before continuing or create a narrowly named follow-up commit for the exact files that changed.
 
 ---
 
