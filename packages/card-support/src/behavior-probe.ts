@@ -709,6 +709,8 @@ const setupProbeMainState = (input: {
   addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
   installScenarioDeckMetadata(active, p1, input.setupFilters);
   installScenarioDeckMetadata(active, p2, []);
+  installScenarioFieldMetadata(active, p1, input.setupFilters);
+  installScenarioFieldMetadata(active, p2, input.setupFilters);
   return active;
 };
 
@@ -771,7 +773,7 @@ const installActiveDon = (state: GameState, playerId: PlayerId): void => {
   player.costArea = player.donDeck.map((card, index) => ({
     ...card,
     zone: { zone: "costArea", playerId, slot: "cost", index },
-    state: "active",
+    state: index === 0 ? "rested" : "active",
   }));
   player.donDeck = [];
 };
@@ -834,6 +836,70 @@ const installScenarioDeckMetadata = (
   }
   player.deck = deck;
 };
+
+const installScenarioFieldMetadata = (
+  state: GameState,
+  playerId: PlayerId,
+  filters: readonly CardFilter[],
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  for (const [index, filter] of filters.entries()) {
+    const profile = profileForCardFilter(filter, index);
+    const category = profile.category ?? "character";
+    const cardId =
+      profile.cardId ??
+      (`probe-field-${String(playerId)}-${String(index)}` as CardId);
+    state.cardManifest.cards[cardId] = resolvedProbeCard({
+      cardId,
+      category,
+      effectText: "",
+      profile,
+    });
+    if (category === "stage" && player.stage === undefined) {
+      player.stage = probeFieldCard({
+        cardId,
+        index: 0,
+        playerId,
+        zone: "stageArea",
+      });
+      continue;
+    }
+    if (category !== "character" || player.characters.length >= 5) {
+      continue;
+    }
+    player.characters = [
+      ...player.characters,
+      probeFieldCard({
+        cardId,
+        index: player.characters.length,
+        playerId,
+        zone: "characterArea",
+      }),
+    ];
+  }
+};
+
+const probeFieldCard = (params: {
+  readonly cardId: CardId;
+  readonly index: number;
+  readonly playerId: PlayerId;
+  readonly zone: "characterArea" | "stageArea";
+}): CardInstance => ({
+  instanceId:
+    `probe-field-${String(params.playerId)}-${params.zone}-${String(params.index)}:instance` as CardInstance["instanceId"],
+  cardId: params.cardId,
+  owner: params.playerId,
+  controller: params.playerId,
+  zone: {
+    zone: params.zone,
+    playerId: params.playerId,
+    slot: params.zone === "stageArea" ? "stage" : "character",
+    index: params.index,
+  },
+  state: "active",
+  attachedDon: [],
+  turnPlayed: 0,
+});
 
 const installScenarioLeaderMetadata = (
   state: GameState,

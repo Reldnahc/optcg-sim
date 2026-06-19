@@ -59,6 +59,40 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("builds matching field targets to exercise target decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] K.O. up to 1 of your opponent's Characters with a cost of 3 or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: ko, selectTargets, sequence",
+    );
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
+      ]),
+    );
+  });
+
+  it("builds rested DON to exercise activation decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Set up to 1 of your DON!! cards as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: activate, selectTargets, sequence",
+    );
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
+      ]),
+    );
+  });
+
   it("builds enough scenario state to resolve search reveal and remainder ordering", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
