@@ -52,6 +52,7 @@ import {
   instructionExpressionSegmentParser,
   koCountPowerContinuationExpressionParser,
   lookPlayFromTopExpressionParser,
+  opponentHandRevealExpressionParser,
   opponentOptionalCostExpressionParser,
   opponentOptionalCostSegmentParser,
   optionalActionEffectSegmentParser,
@@ -201,6 +202,22 @@ function generalExpressionParser(input: ParseInput) {
         instructions: instructionParsers,
         expressions: [singleInstructionExpressionParser],
       }),
+      (segmentInput) => {
+        const parsed = opponentHandRevealExpressionParser({
+          instructions: instructionParsers,
+          expressions: [
+            singleInstructionExpressionParser,
+            generalExpressionParser,
+          ],
+        })(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
       (segmentInput) => {
         const parsed = drawForEachFieldTrashSameExpressionParser(segmentInput);
         if (parsed === undefined) {
@@ -381,6 +398,10 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  opponentHandRevealExpressionParser({
+    instructions: instructionParsers,
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  }),
   drawForEachFieldTrashSameExpressionParser,
   implicitEventReactionExpressionParser({
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
@@ -436,6 +457,10 @@ const topLevelChooseOneExpressions = () =>
       expressions: basicBodyExpressions(),
     }),
     opponentOptionalCostExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    opponentHandRevealExpressionParser({
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
     }),
@@ -609,6 +634,10 @@ const rootExpressionParsers = () =>
       expressions: basicBodyExpressions(),
     }),
     opponentOptionalCostExpressionParser({
+      instructions: instructionParsers,
+      expressions: basicBodyExpressions(),
+    }),
+    opponentHandRevealExpressionParser({
       instructions: instructionParsers,
       expressions: basicBodyExpressions(),
     }),

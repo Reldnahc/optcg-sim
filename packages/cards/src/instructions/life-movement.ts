@@ -18,6 +18,8 @@ const handOrTrashToLifeSelection =
   "cardSelection:self-hand-or-trash-to-life-placement" as SelectionId;
 const opponentLifeTrashSelection =
   "lifeSelection:opponent-life-to-trash" as SelectionId;
+const opponentLifeDeckBottomSelection =
+  "lifeSelection:opponent-life-to-deck-bottom" as SelectionId;
 
 export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
   {
@@ -253,6 +255,63 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
               "player:opponent",
               "zone:life",
               "destination:trash",
+              ...(groups["upTo"] === undefined
+                ? []
+                : (["chooser:self:upTo"] as const)),
+              "composition:selectThenMove",
+            ],
+            rest: "",
+          };
+        },
+      },
+      {
+        id: "place-n-cards-from-opponent-life-area-to-owner-deck-bottom",
+        pattern:
+          /^place (?<upTo>up to )?(?<count>[1-9]\d*) cards? from your opponent's Life area at the bottom of the owner's deck\.?$/i,
+        build: (groups) => {
+          const count = Number.parseInt(groups["count"] ?? "", 10);
+          const min = groups["upTo"] === undefined ? count : 0;
+          return {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: opponentLifeDeckBottomSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "life",
+                    player: "opponent",
+                    chooser: "self",
+                    min,
+                    max: count,
+                    saveAs: opponentLifeDeckBottomSelection,
+                    visibility: "chooserOnly",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "moveSelected",
+                    selection: opponentLifeDeckBottomSelection,
+                    from: "life",
+                    to: "deck",
+                    position: "bottom",
+                  },
+                },
+              ],
+            },
+            evidence: [
+              "instruction:selectCards",
+              "instruction:moveSelected",
+              ...(groups["upTo"] === undefined
+                ? []
+                : (["cardinality:upTo"] as const)),
+              "count:positiveInteger",
+              "player:opponent",
+              "zone:life",
+              "zone:deck",
+              "position:bottom",
               ...(groups["upTo"] === undefined
                 ? []
                 : (["chooser:self:upTo"] as const)),
