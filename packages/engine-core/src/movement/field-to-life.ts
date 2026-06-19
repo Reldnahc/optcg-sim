@@ -9,6 +9,10 @@ import type {
 
 import { appendEvent } from "../action-results.js";
 import { reindexZoneCards } from "../actions/state.js";
+import {
+  clearFieldExitContinuousEffects,
+  clearFieldOnlyCardState,
+} from "./field-exit-cleanup.js";
 
 const reindexLife = (
   cards: readonly LifeCard[],
@@ -43,8 +47,7 @@ export const moveFieldCardToOwnerLife = (params: {
       ? { ...card, state: "rested" as const }
       : card,
   );
-  const lifeCard = { ...params.card, attachedDon: [] };
-  delete lifeCard.state;
+  const lifeCard = clearFieldOnlyCardState(params.card);
   const movedLifeCard: LifeCard = {
     card: lifeCard,
     faceUp: params.faceUp === true,
@@ -78,13 +81,16 @@ export const moveFieldCardToOwnerLife = (params: {
   ) {
     delete nextPlayer.stage;
   }
-  const nextState: GameState = {
-    ...params.state,
-    players: {
-      ...params.state.players,
-      [params.playerId]: nextPlayer,
+  const nextState = clearFieldExitContinuousEffects(
+    {
+      ...params.state,
+      players: {
+        ...params.state.players,
+        [params.playerId]: nextPlayer,
+      },
     },
-  };
+    [params.card],
+  );
   const moved = nextLife.find(
     (candidate) => candidate.card.instanceId === params.card.instanceId,
   );

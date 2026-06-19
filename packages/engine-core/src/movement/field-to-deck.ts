@@ -8,6 +8,10 @@ import type {
 
 import { appendEvent } from "../action-results.js";
 import { reindexZoneCards } from "../actions/state.js";
+import {
+  clearFieldExitContinuousEffects,
+  clearFieldOnlyCardState,
+} from "./field-exit-cleanup.js";
 
 export const moveFieldCardToOwnerDeckBottom = (params: {
   card: CardInstance;
@@ -29,8 +33,7 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
       ? { ...card, state: "rested" as const }
       : card,
   );
-  const deckCard = { ...params.card, attachedDon: [] };
-  delete deckCard.state;
+  const deckCard = clearFieldOnlyCardState(params.card);
   const nextDeck = reindexZoneCards(
     [...player.deck, deckCard],
     "deck",
@@ -60,13 +63,16 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
   ) {
     delete nextPlayer.stage;
   }
-  const nextState: GameState = {
-    ...params.state,
-    players: {
-      ...params.state.players,
-      [params.playerId]: nextPlayer,
+  const nextState = clearFieldExitContinuousEffects(
+    {
+      ...params.state,
+      players: {
+        ...params.state.players,
+        [params.playerId]: nextPlayer,
+      },
     },
-  };
+    [params.card],
+  );
   const moved = nextDeck.find(
     (candidate) => candidate.instanceId === params.card.instanceId,
   );

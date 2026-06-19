@@ -10,6 +10,11 @@ import type {
 
 import { appendEvent } from "../action-results.js";
 import { reindexZoneCards } from "../actions/state.js";
+import {
+  clearFieldExitContinuousEffects,
+  clearFieldOnlyCardState,
+  isInPlayZone,
+} from "./field-exit-cleanup.js";
 
 export const KO_TRASH_MOVEMENT_REASON = "ko";
 
@@ -108,16 +113,21 @@ const buildMovedCards = (
   playerId: PlayerId,
   options: ConcreteTrashMovementOptions,
 ): CardInstance[] =>
-  cards.map((card, index) => ({
-    ...card,
-    ...(options.clearAttachedDon ? { attachedDon: [] } : {}),
-    zone: {
-      zone: "trash" as const,
-      playerId,
-      slot: "trash" as const,
-      index,
-    },
-  }));
+  cards.map((card, index) => {
+    const base =
+      isInPlayZone(card.zone.zone) || options.clearAttachedDon === true
+        ? clearFieldOnlyCardState(card)
+        : card;
+    return {
+      ...base,
+      zone: {
+        zone: "trash" as const,
+        playerId,
+        slot: "trash" as const,
+        index,
+      },
+    };
+  });
 
 const cardMovedPayload = (
   original: CardInstance,
@@ -198,13 +208,16 @@ export const moveConcreteCardsToTrash = (
     );
   }
 
-  const nextState = {
-    ...state,
-    players: {
-      ...state.players,
-      [options.playerId]: nextPlayer,
+  const nextState = clearFieldExitContinuousEffects(
+    {
+      ...state,
+      players: {
+        ...state.players,
+        [options.playerId]: nextPlayer,
+      },
     },
-  };
+    cards,
+  );
 
   const eventBaseState = options.eventBaseState ?? state;
   const movedById = new Map(

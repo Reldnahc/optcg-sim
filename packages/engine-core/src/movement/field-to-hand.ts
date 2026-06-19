@@ -8,6 +8,10 @@ import type {
 
 import { appendEvent } from "../action-results.js";
 import { addCardsToHand, reindexZoneCards } from "../actions/state.js";
+import {
+  clearFieldExitContinuousEffects,
+  clearFieldOnlyCardState,
+} from "./field-exit-cleanup.js";
 
 export const moveFieldCardToOwnerHand = (params: {
   card: CardInstance;
@@ -28,8 +32,7 @@ export const moveFieldCardToOwnerHand = (params: {
       ? { ...card, state: "rested" as const }
       : card,
   );
-  const handCard = { ...params.card, attachedDon: [] };
-  delete handCard.state;
+  const handCard = clearFieldOnlyCardState(params.card);
   const nextHand = addCardsToHand(player.hand, [handCard], params.playerId);
   const nextCharacters =
     params.sourceZone === "characterArea"
@@ -54,13 +57,16 @@ export const moveFieldCardToOwnerHand = (params: {
   ) {
     delete nextPlayer.stage;
   }
-  const nextState: GameState = {
-    ...params.state,
-    players: {
-      ...params.state.players,
-      [params.playerId]: nextPlayer,
+  const nextState = clearFieldExitContinuousEffects(
+    {
+      ...params.state,
+      players: {
+        ...params.state.players,
+        [params.playerId]: nextPlayer,
+      },
     },
-  };
+    [params.card],
+  );
   const moved = nextHand.find(
     (candidate) => candidate.instanceId === params.card.instanceId,
   );
