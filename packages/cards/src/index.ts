@@ -27,6 +27,7 @@ export {
   parseDevCardIdList,
 } from "./dev-manifest.js";
 export { createParserSupportCertificate } from "./materialization/support-certificate.js";
+export { materializeEffectDefinition } from "./materialization/effect-definitions.js";
 export type {
   CachedResolvedCard,
   CardCacheEntry,

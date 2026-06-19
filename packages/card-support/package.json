@@ -12,6 +12,7 @@
   },
   "scripts": {
     "support:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/support-probe.ts",
+    "behavior:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/behavior-probe-cli.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src"
   },

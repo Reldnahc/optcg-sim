@@ -9,6 +9,11 @@ export {
   type SupportProbeReport,
   type SupportProbeRequest,
 } from "./support-probe-report.js";
+export {
+  createBehaviorProbeReport,
+  type BehaviorProbeReport,
+  type BehaviorProbeRequest,
+} from "./behavior-probe.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
   DevPoneglyphFetch,
