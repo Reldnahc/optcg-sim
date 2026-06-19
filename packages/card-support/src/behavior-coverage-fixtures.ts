@@ -63,6 +63,11 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["modifyCounter"],
   },
   {
+    label: "fixture:op13-003:permanent-don-phase-placement",
+    text: "If you have any DON!! cards on your field, 1 DON!! card placed during your DON!! Phase is given to your Leader.",
+    expectedPrimitiveTypes: ["redirectDonPhasePlacement"],
+  },
+  {
     label: "fixture:set-base-cost:on-play",
     text: "[On Play] Set the cost of up to 1 of your opponent's Characters with no base effect to 0 during this turn.",
     expectedPrimitiveTypes: ["selectTargets", "sequence", "setBaseCost"],
