@@ -1,4 +1,7 @@
-import { createBehaviorProbeReport } from "./behavior-probe.js";
+import {
+  createBehaviorProbeReport,
+  type BehaviorProbeScenario,
+} from "./behavior-probe.js";
 
 export interface BehaviorCoverageEntry {
   readonly label: string;
@@ -10,11 +13,39 @@ export interface BehaviorCoverageRequest {
   readonly inventoryPrimitiveTypes: readonly string[];
 }
 
+export type BehaviorCoverageBucket =
+  | "behaviorPassed"
+  | "scenarioMissing"
+  | "scenarioFailed"
+  | "materializationFailed"
+  | "sourceFailed";
+
+export interface BehaviorCoverageBucketSummary {
+  readonly behaviorPassed: number;
+  readonly scenarioMissing: number;
+  readonly scenarioFailed: number;
+  readonly materializationFailed: number;
+  readonly sourceFailed: number;
+}
+
+export interface BehaviorCoverageEntryResult {
+  readonly label: string;
+  readonly bucket: BehaviorCoverageBucket;
+  readonly primitiveTypes: readonly string[];
+  readonly reason?: string;
+}
+
 export interface BehaviorCoverageReport {
   readonly exitCode: number;
   readonly lines: readonly string[];
   readonly errors: readonly string[];
+  readonly bucketSummary: BehaviorCoverageBucketSummary;
+  readonly entryResults: readonly BehaviorCoverageEntryResult[];
 }
+
+type MutableBucketSummary = {
+  -readonly [Key in keyof BehaviorCoverageBucketSummary]: BehaviorCoverageBucketSummary[Key];
+};
 
 export const createBehaviorCoverageReport = (
   request: BehaviorCoverageRequest,
@@ -23,6 +54,8 @@ export const createBehaviorCoverageReport = (
   const coveredPrimitiveTypes = new Set<string>();
   const skippedReasons = new Map<string, number>();
   const probeFailures: string[] = [];
+  const bucketSummary = emptyMutableBucketSummary();
+  const entryResults: BehaviorCoverageEntryResult[] = [];
   let passedScenarioCount = 0;
   let failedScenarioCount = 0;
   let skippedScenarioCount = 0;
@@ -32,9 +65,20 @@ export const createBehaviorCoverageReport = (
     if (probe.exitCode !== 0) {
       probeFailures.push(`${entry.label} - ${probeFailureReason(probe.lines)}`);
     }
+    if (probe.failure?.kind === "materializationFailed") {
+      bucketSummary.materializationFailed += 1;
+      entryResults.push({
+        label: entry.label,
+        bucket: "materializationFailed",
+        primitiveTypes: [],
+        reason: probe.failure.diagnostics[0] ?? "materialization failed",
+      });
+    }
     for (const scenario of probe.scenarios) {
       if (scenario.status === "passed") {
         passedScenarioCount += 1;
+        bucketSummary.behaviorPassed += 1;
+        entryResults.push(entryResultForScenario(entry.label, scenario));
         for (const primitive of scenario.primitiveTypes) {
           coveredPrimitiveTypes.add(primitive);
         }
@@ -42,9 +86,13 @@ export const createBehaviorCoverageReport = (
       }
       if (scenario.status === "failed") {
         failedScenarioCount += 1;
+        bucketSummary.scenarioFailed += 1;
+        entryResults.push(entryResultForScenario(entry.label, scenario));
         continue;
       }
       skippedScenarioCount += 1;
+      bucketSummary.scenarioMissing += 1;
+      entryResults.push(entryResultForScenario(entry.label, scenario));
       incrementCount(skippedReasons, scenario.reason ?? "unknown");
     }
   }
@@ -57,7 +105,7 @@ export const createBehaviorCoverageReport = (
   );
 
   return {
-    exitCode: probeFailures.length === 0 ? 0 : 1,
+    exitCode: hasFailingBuckets(bucketSummary) ? 1 : 0,
     lines: [
       `Behavior coverage entries: ${String(request.entries.length)}`,
       `Behavior coverage primitive coverage: ${String(coveredInventoryPrimitives.length)}/${String(inventoryPrimitiveTypes.length)}`,
@@ -65,6 +113,7 @@ export const createBehaviorCoverageReport = (
       `Behavior coverage failed scenarios: ${String(failedScenarioCount)}`,
       `Behavior coverage skipped scenarios: ${String(skippedScenarioCount)}`,
       `Behavior coverage probe failures: ${String(probeFailures.length)}`,
+      ...bucketLines(bucketSummary),
       ...coveredInventoryPrimitives.map(
         (primitive) => `Behavior coverage covered primitive: ${primitive}`,
       ),
@@ -82,7 +131,85 @@ export const createBehaviorCoverageReport = (
       ),
     ],
     errors: [],
+    bucketSummary,
+    entryResults,
   };
+};
+
+export const createBehaviorCoverageSourceFailureReport = (input: {
+  readonly sourceLabel: string;
+  readonly error: string;
+}): BehaviorCoverageReport => {
+  const bucketSummary = {
+    ...emptyBucketSummary(),
+    sourceFailed: 1,
+  };
+  return {
+    exitCode: 1,
+    lines: [
+      `Behavior coverage source: ${input.sourceLabel}`,
+      "Behavior coverage entries: 0",
+      "Behavior coverage primitive coverage: 0/0",
+      ...bucketLines(bucketSummary),
+      `Behavior coverage source failure: ${input.error}`,
+    ],
+    errors: [],
+    bucketSummary,
+    entryResults: [],
+  };
+};
+
+const emptyBucketSummary = (): BehaviorCoverageBucketSummary => ({
+  behaviorPassed: 0,
+  scenarioMissing: 0,
+  scenarioFailed: 0,
+  materializationFailed: 0,
+  sourceFailed: 0,
+});
+
+const emptyMutableBucketSummary = (): MutableBucketSummary => ({
+  behaviorPassed: 0,
+  scenarioMissing: 0,
+  scenarioFailed: 0,
+  materializationFailed: 0,
+  sourceFailed: 0,
+});
+
+const bucketLines = (
+  summary: BehaviorCoverageBucketSummary,
+): readonly string[] => [
+  `Behavior coverage bucket behaviorPassed: ${String(summary.behaviorPassed)}`,
+  `Behavior coverage bucket scenarioMissing: ${String(summary.scenarioMissing)}`,
+  `Behavior coverage bucket scenarioFailed: ${String(summary.scenarioFailed)}`,
+  `Behavior coverage bucket materializationFailed: ${String(summary.materializationFailed)}`,
+  `Behavior coverage bucket sourceFailed: ${String(summary.sourceFailed)}`,
+];
+
+const hasFailingBuckets = (summary: BehaviorCoverageBucketSummary): boolean =>
+  summary.scenarioFailed > 0 ||
+  summary.materializationFailed > 0 ||
+  summary.sourceFailed > 0;
+
+const entryResultForScenario = (
+  label: string,
+  scenario: BehaviorProbeScenario,
+): BehaviorCoverageEntryResult => ({
+  label,
+  bucket: bucketForScenario(scenario.status),
+  primitiveTypes: scenario.primitiveTypes,
+  ...(scenario.reason === undefined ? {} : { reason: scenario.reason }),
+});
+
+const bucketForScenario = (
+  status: BehaviorProbeScenario["status"],
+): BehaviorCoverageBucket => {
+  if (status === "passed") {
+    return "behaviorPassed";
+  }
+  if (status === "failed") {
+    return "scenarioFailed";
+  }
+  return "scenarioMissing";
 };
 
 const uniqueSorted = (values: readonly string[]): readonly string[] =>

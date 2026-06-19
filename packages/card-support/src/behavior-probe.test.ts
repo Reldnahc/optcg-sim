@@ -103,4 +103,19 @@ describe("card behavior probe", () => {
       },
     ]);
   });
+
+  it("reports materialization failures as structured probe failures", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Do something unknown.",
+    });
+
+    expect(report.exitCode).toBe(1);
+    expect(report.failure?.kind).toBe("materializationFailed");
+    expect(report.failure?.diagnostics).toEqual(
+      expect.arrayContaining([
+        "line 1 parse failed: no expression parser matched",
+      ]),
+    );
+    expect(report.scenarios).toEqual([]);
+  });
 });

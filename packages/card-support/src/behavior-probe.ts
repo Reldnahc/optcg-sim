@@ -39,11 +39,17 @@ export interface BehaviorProbeRequest {
   readonly text: string;
 }
 
+export type BehaviorProbeFailure = {
+  readonly kind: "materializationFailed";
+  readonly diagnostics: readonly string[];
+};
+
 export interface BehaviorProbeReport {
   readonly exitCode: number;
   readonly lines: readonly string[];
   readonly errors: readonly string[];
   readonly scenarios: readonly BehaviorProbeScenario[];
+  readonly failure?: BehaviorProbeFailure;
 }
 
 export interface BehaviorProbeScenario {
@@ -93,6 +99,10 @@ export const createBehaviorProbeReport = (
       ],
       errors: [],
       scenarios: [],
+      failure: {
+        kind: "materializationFailed",
+        diagnostics: materialized.diagnostics,
+      },
     };
   }
 

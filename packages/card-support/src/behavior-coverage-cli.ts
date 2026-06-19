@@ -16,6 +16,14 @@ export const createBehaviorCoverageCliReport = (
       exitCode: 1,
       lines: [],
       errors: ["Usage: behavior:coverage -- --text <effect line>"],
+      bucketSummary: {
+        behaviorPassed: 0,
+        scenarioMissing: 0,
+        scenarioFailed: 0,
+        materializationFailed: 0,
+        sourceFailed: 0,
+      },
+      entryResults: [],
     };
   }
 
