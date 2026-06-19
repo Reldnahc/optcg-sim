@@ -33,6 +33,7 @@ import {
   materializeEffectDefinition,
   parseRawKeywordLine,
 } from "@optcg/cards";
+import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
 export interface BehaviorProbeRequest {
   readonly text: string;
@@ -85,11 +86,15 @@ export const createBehaviorProbeReport = (
   }
 
   const scenario = scenarioForDefinition(materialized.definition.effects);
+  const primitiveTypes = collectEffectBlockPrimitiveTypes(
+    materialized.definition.effects,
+  );
   if (scenario.kind === "skipped") {
     return {
       exitCode: 0,
       lines: [
         "Behavior probe: skipped",
+        `Scenario 1 engine primitives: ${primitiveTypes.join(", ")}`,
         `Scenario 1 result: skipped - ${scenario.reason}`,
       ],
       errors: [],
@@ -118,6 +123,7 @@ export const createBehaviorProbeReport = (
       `Behavior probe: ${passed ? "passed" : "failed"}`,
       "Scenario 1 entrypoint: playCard",
       `Scenario 1 card category: ${scenario.category}`,
+      `Scenario 1 engine primitives: ${primitiveTypes.join(", ")}`,
       `Scenario 1 result: ${resultLine}`,
       "Scenario 1 decision policy: max-progress",
       `Scenario 1 setup filters: ${String(result.setupFilterCount)}`,

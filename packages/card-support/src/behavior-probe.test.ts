@@ -11,6 +11,7 @@ describe("card behavior probe", () => {
     expect(report.exitCode).toBe(0);
     expect(report.lines).toContain("Behavior probe: passed");
     expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 engine primitives: draw");
     expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.lines).toContain("Scenario 1 pending decisions: drained");
     expect(report.lines).toContain("Scenario 1 effect queue: drained");
@@ -23,6 +24,7 @@ describe("card behavior probe", () => {
 
     expect(report.exitCode).toBe(0);
     expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 engine primitives: drawUpTo");
     expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.lines).toContain("Scenario 1 decision policy: max-progress");
     expect(report.lines).toContain("Scenario 1 pending decisions: drained");
@@ -45,6 +47,9 @@ describe("card behavior probe", () => {
 
     expect(report.exitCode).toBe(0);
     expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: moveSelected, placeSetRemainder, revealSelected, revealTop, selectFromSet, sequence",
+    );
     expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.lines).toContain("Scenario 1 pending decisions: drained");
     expect(report.lines).toContain("Scenario 1 effect queue: drained");

@@ -14,6 +14,14 @@ export {
   type BehaviorProbeReport,
   type BehaviorProbeRequest,
 } from "./behavior-probe.js";
+export {
+  collectEffectBlockPrimitiveTypes,
+  createEnginePrimitiveInventoryReport,
+  extractEngineEffectPrimitiveTypes,
+  type CreateEnginePrimitiveInventoryReportRequest,
+  type EnginePrimitiveSourceFile,
+  type ExtractEngineEffectPrimitiveTypesRequest,
+} from "./engine-primitive-inventory.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
   DevPoneglyphFetch,
