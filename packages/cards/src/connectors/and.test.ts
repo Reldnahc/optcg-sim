@@ -15,6 +15,14 @@ describe("and connector parser", () => {
     });
   });
 
+  it("treats inline and-then wording as one ordered connector", () => {
+    expect(parseAndConnector({ text: "A and then B." })).toEqual({
+      segments: ["A", "B."],
+      connectors: ["always", "then"],
+      evidence: ["connector:andOrdered"],
+    });
+  });
+
   it("does not parse text without an and connector", () => {
     expect(parseAndConnector({ text: "A." })).toBeUndefined();
   });

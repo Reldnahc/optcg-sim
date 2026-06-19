@@ -470,6 +470,65 @@ describe("draw and trash-from-hand instruction parsers", () => {
     );
   });
 
+  it("composes inline and-then draw-to-hand-size with reusable play-from-hand", () => {
+    const result = parseEffectLine(
+      "[On Play] Draw card(s) so that you have 3 cards in your hand and then play up to 1 blue {Impel Down} type Character card with a cost of 6 or less from your hand.",
+      defaultRegistry,
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "draw",
+                count: {
+                  type: "countMatchingZoneCards",
+                  player: "self",
+                  zone: "hand",
+                  multiplier: -1,
+                  offset: 3,
+                  minimum: 0,
+                },
+                player: "self",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    effect: { type: "selectCards", zone: "hand" },
+                  },
+                  {
+                    connector: "ifPossible",
+                    effect: { type: "playSelected" },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "connector:andOrdered",
+        "instruction:draw",
+        "instruction:playSelected",
+        "composition:selectThenPlay",
+      ]),
+    );
+  });
+
   it("composes up-to hand trash into same-number deck-top trash", () => {
     const result = parseEffectLine(
       "[Counter] Up to 1 of your Leader or Character cards gains +3000 power during this battle. Then, trash up to 2 cards from your hand. Trash the same number of cards from the top of your deck as you did from your hand.",
