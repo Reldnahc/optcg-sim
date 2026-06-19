@@ -47,7 +47,11 @@ export interface BehaviorProbeReport {
 
 export interface BehaviorProbeScenario {
   readonly index: number;
-  readonly entrypoint?: "activateEffect" | "declareAttack" | "playCard";
+  readonly entrypoint?:
+    | "activateEffect"
+    | "declareAttack"
+    | "lifeTrigger"
+    | "playCard";
   readonly cardCategory?: "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
@@ -58,6 +62,7 @@ type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
   | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
+  | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 const p1 = "p1" as PlayerId;
@@ -144,7 +149,12 @@ export const createBehaviorProbeReport = (
             ...scenarioInput,
             category: "character",
           })
-        : runPlayCardScenario(scenarioInput);
+        : scenario.kind === "lifeTrigger"
+          ? runLifeTriggerScenario({
+              ...scenarioInput,
+              category: "character",
+            })
+          : runPlayCardScenario(scenarioInput);
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -196,6 +206,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "trigger")) {
+    return { kind: "lifeTrigger", category: "character" };
   }
   return {
     kind: "skipped",
@@ -344,6 +357,69 @@ const runDeclareAttackScenario = (input: {
         cardId: target.cardId,
         playerId: p2,
         zone: target.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
+const runLifeTriggerScenario = (input: {
+  readonly category: "character";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  const attacker = must(state.players[p1], `player ${String(p1)}`);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  defender.hand = [];
+  defender.characters = [];
+  const topLife = must(defender.life[0], "defender top Life");
+  defender.life[0] = {
+    ...topLife,
+    card: {
+      ...topLife.card,
+      cardId: probeCardId,
+    },
+  };
+  const resolved = must(
+    state.cardManifest.cards[probeCardId],
+    "probe card metadata",
+  );
+  state.cardManifest.cards[probeCardId] = {
+    ...resolved,
+    triggerText: input.text,
+  };
+
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: attacker.leader.instanceId,
+        cardId: attacker.leader.cardId,
+        playerId: p1,
+        zone: attacker.leader.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p2,
+        zone: defender.leader.zone,
       },
     }),
     input.setupFilters.length,

@@ -211,6 +211,27 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("runs Trigger effects by activating the source from Life", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Trigger] Play this card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.scenarios).toEqual([
+      {
+        index: 1,
+        entrypoint: "lifeTrigger",
+        cardCategory: "character",
+        status: "passed",
+        primitiveTypes: ["playSource"],
+      },
+    ]);
+  });
+
   it("reports materialization failures as structured probe failures", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] Do something unknown.",

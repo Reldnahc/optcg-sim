@@ -367,4 +367,9 @@ export const behaviorCoverageFixtureCorpus = [
     text: "[DON!! x1] [When Attacking] Look at up to 1 card from the top of your or your opponent's Life cards, and place it at the top or bottom of the Life cards. Then, this Leader gains +1000 power during this battle.",
     expectedPrimitiveTypes: ["modifyPower", "placeTopLifeCard", "sequence"],
   },
+  {
+    label: "fixture:eb01-030:trigger-play-source",
+    text: "[Trigger] Play this card.",
+    expectedPrimitiveTypes: ["playSource"],
+  },
 ] as const satisfies readonly BehaviorCoverageFixtureEntry[];
