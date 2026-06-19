@@ -87,3 +87,71 @@ it("parses return-or-deck-bottom as one selection feeding a body choice", () => 
     ]),
   );
 });
+
+it("parses shorter return-or-deck-bottom wording through the same movement choice primitive", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [When Attacking] Return up to 1 Character with a cost of 2 or less to the owner's hand or the bottom of their deck.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "anyPlayer",
+                zone: "characterArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["character"],
+                  cost: { max: 2 },
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "choice",
+              chooser: "self",
+              min: 1,
+              max: 1,
+              options: [
+                {
+                  id: "selected:return-to-owner-hand",
+                  effect: {
+                    type: "bounce",
+                    destination: "hand",
+                  },
+                },
+                {
+                  id: "selected:owner-deck-bottom",
+                  effect: {
+                    type: "bounce",
+                    destination: "deckBottom",
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "instruction:returnToOwnerHand",
+      "instruction:moveSelected",
+      "destination:ownerHand",
+      "destination:deck",
+      "position:bottom",
+      "expression:choice",
+      "composition:selectThenApply",
+    ]),
+  );
+});

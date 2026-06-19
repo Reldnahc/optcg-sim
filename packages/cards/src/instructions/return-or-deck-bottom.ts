@@ -58,7 +58,7 @@ export const parseReturnOrDeckBottomInstruction: InstructionParser = (
   input,
 ) => {
   const match =
-    /^return\s+(?<selection>.+?)\s+to the owner's hand or place it at the bottom of their deck\.?$/iu.exec(
+    /^return\s+(?<selection>.+?)\s+to the owner's hand or (?:place it at )?the bottom of their deck\.?$/iu.exec(
       input.text,
     );
   const selectionText = match?.groups?.["selection"];
