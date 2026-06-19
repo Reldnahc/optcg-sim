@@ -426,6 +426,42 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).toContain("Line 1 engine runtime: passed");
   });
 
+  it("reports parser and runtime support for op11 nami leader text", async () => {
+    const report = await createSupportProbeReport({
+      cardId: "OP11-NAMI",
+      fetchCard: () =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                card_number: "OP11-NAMI",
+                effect: [
+                  "[Your Turn] [Once Per Turn] This effect can be activated when a card is removed from your or your opponent's Life cards. If you have 7 or less cards in your hand, draw 1 card.",
+                  "[DON!!×1] [On Your Opponent's Attack] [Once Per Turn] You may trash 1 card from your hand: This Leader gains +2000 power during this turn.",
+                ].join("\n"),
+                trigger: null,
+              },
+            }),
+        }),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Card ID: OP11-NAMI");
+    expect(report.lines).toContain("Line 1 parse: passed");
+    expect(report.lines).toContain("Line 1 engine runtime: passed");
+    expect(report.lines).toContain("Line 2 parse: passed");
+    expect(report.lines).toContain("Line 2 engine runtime: passed");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Line 2 - parser marker:attachedDon"),
+        expect.stringContaining("Line 2 - parser target:yourLeader"),
+        expect.stringContaining("Line 2 - runtime body:sequence passed"),
+      ]),
+    );
+  });
+
   it("includes primitive missing runtime sections in card probe failures", async () => {
     const report = await createSupportProbeReport({
       cardId: "OP01-002",

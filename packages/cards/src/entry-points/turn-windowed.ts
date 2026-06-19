@@ -27,7 +27,7 @@ const turnWindows: readonly {
 
 const nestedEntryMarkerPrefixes: readonly RegExp[] = [
   /^\[Once Per Turn\]\s*/iu,
-  /^\[DON!!\s*x\s*[1-9]\d*\]\s*/iu,
+  /^\[DON!!\s*[x×]\s*[1-9]\d*\]\s*/iu,
 ];
 
 export function parseTurnWindowedEntryPoint(
