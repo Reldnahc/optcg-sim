@@ -76,6 +76,11 @@ const buildStateFilteredDonCount = (
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const allDonInState = parseAllDonInStateCondition(input.text);
+  if (allDonInState !== undefined) {
+    return allDonInState;
+  }
+
   const eitherPlayer = parseEitherPlayerDonFieldCountCondition(input.text);
   if (eitherPlayer !== undefined) {
     return eitherPlayer;
@@ -243,6 +248,65 @@ export const parseDonFieldCountCondition: ConditionParser = (
     rest: "",
   };
 };
+
+function parseAllDonInStateCondition(
+  text: string,
+): ConditionParseResult | undefined {
+  const match =
+    /^all of (?<player>your|your opponent's) DON!! cards are (?<state>active|rested)$/iu.exec(
+      text,
+    );
+  const state = match?.groups?.["state"]?.toLowerCase() as
+    | "active"
+    | "rested"
+    | undefined;
+  if (state === undefined) {
+    return undefined;
+  }
+
+  const player =
+    match?.groups?.["player"]?.toLowerCase() === "your opponent's"
+      ? "opponent"
+      : "self";
+  return {
+    condition: {
+      type: "and",
+      conditions: [
+        {
+          type: "fieldCount",
+          player,
+          filter: { categories: ["don"] },
+          op: "gte",
+          value: 1,
+        },
+        {
+          type: "fieldCount",
+          player,
+          filter: { categories: ["don"], state: oppositeDonState(state) },
+          op: "eq",
+          value: 0,
+        },
+      ],
+    },
+    evidence: [
+      "composition:conditionAnd",
+      "condition:donFieldCount",
+      "condition:donFieldCount",
+      "condition:comparator:gte",
+      "condition:threshold:positiveInteger",
+      "condition:comparator:eq",
+      "condition:threshold:nonNegativeInteger",
+      player === "self" ? "player:self" : "player:opponent",
+      "filter:category:don",
+      donStateEvidenceByState[oppositeDonState(state)],
+    ],
+    rest: "",
+  };
+}
+
+function oppositeDonState(state: "active" | "rested"): "active" | "rested" {
+  return state === "active" ? "rested" : "active";
+}
 
 function parseDirectMoreThanDonFieldComparison(
   text: string,

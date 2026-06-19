@@ -234,6 +234,47 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses all DON rested as reusable positive total plus zero active DON conditions", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "all of your DON!! cards are rested",
+      }),
+    ).toEqual({
+      condition: {
+        type: "and",
+        conditions: [
+          {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["don"] },
+            op: "gte",
+            value: 1,
+          },
+          {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["don"], state: "active" },
+            op: "eq",
+            value: 0,
+          },
+        ],
+      },
+      evidence: [
+        "composition:conditionAnd",
+        "condition:donFieldCount",
+        "condition:donFieldCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "player:self",
+        "filter:category:don",
+        "filter:state:active",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses any given DON as an attached DON field-count condition", () => {
     expect(
       parseDonFieldCountCondition({
