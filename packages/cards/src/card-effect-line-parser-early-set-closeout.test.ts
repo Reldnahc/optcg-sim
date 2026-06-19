@@ -376,3 +376,46 @@ it("parses Main leader power gain scaled by matching field Characters", () => {
     ]),
   );
 });
+
+it("parses optional On K.O. source card return to hand", () => {
+  const result = parseCardEffectLine(
+    "[On K.O.] You may add this Character card to your hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onKO" },
+      sourcePresencePolicy: "resolveFromDestinationZone",
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            optional: true,
+            effect: {
+              type: "moveCards",
+              count: 1,
+              from: {
+                player: "self",
+                zone: "trash",
+                source: "effectSource",
+              },
+              to: { player: "self", zone: "hand" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onKO",
+      "composition:optionalActionEffect",
+      "instruction:moveCards",
+      "target:thisCharacter",
+      "zone:trash",
+      "destination:hand",
+      "sourcePresence:resolveFromDestination",
+    ]),
+  );
+});
