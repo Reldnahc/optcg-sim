@@ -1,6 +1,5 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type {
-  CardId,
   ParserSupportCertificate,
   RuntimeSupportReport,
 } from "@optcg/types";
@@ -12,21 +11,31 @@ import {
   type ParsedEffectLine,
   type ParsedRuntimeEffectLine,
 } from "@optcg/cards";
-import {
-  createApiDeckHashDictionarySource,
-  createDeckHashCodec,
-  type DeckHashDeck,
-} from "optcg-deck-hash";
 
 import {
   formatPrimitiveSupportSections,
   prefixPrimitiveSupportLines,
 } from "./primitive-support-output.js";
 import {
+  aggregateDeckHashEntries,
+  createPoneglyphDeckHashCodec,
+  decodeProbeDeckHash,
+  defaultPoneglyphBaseUrl,
+  fetchPoneglyphCard,
+  fetchPoneglyphCardPayload,
+  fetchPoneglyphCardPayloads,
+  fetchPoneglyphSetCardIds,
+  type AggregatedDeckHashProbeEntry,
+  type DeckHashCodecPort,
+  type PoneglyphFetch,
+} from "./poneglyph-card-source.js";
+import {
   runtimeBlocksForValues,
   runtimeContextForEffectLines,
   type SupportProbeRuntimeContext,
 } from "./support-probe-runtime-context.js";
+
+export type { DeckHashCodecPort } from "./poneglyph-card-source.js";
 
 export interface SupportProbeRequest {
   readonly text?: string;
@@ -45,47 +54,6 @@ export interface SupportProbeReport {
   readonly errors: readonly string[];
 }
 
-interface PoneglyphCardProbePayload {
-  readonly cardId: string;
-  readonly effect: string | null;
-  readonly trigger: string | null;
-}
-
-interface PoneglyphFetchResponse {
-  readonly ok: boolean;
-  readonly status: number;
-  json(): Promise<unknown>;
-}
-
-interface PoneglyphFetchRequest {
-  readonly method?: "GET" | "POST";
-  readonly headers?: Record<string, string>;
-  readonly body?: string;
-}
-
-type PoneglyphFetch = (
-  url: string | URL,
-  init?: PoneglyphFetchRequest,
-) => Promise<PoneglyphFetchResponse>;
-
-const defaultPoneglyphBaseUrl = "https://api.poneglyph.one";
-const maxBatchCardCount = 60;
-
-export interface DeckHashCodecPort {
-  readonly decode: (hash: string) => Promise<DeckHashDeck>;
-}
-
-const createPoneglyphDeckHashCodec = (): DeckHashCodecPort => {
-  const codec = createDeckHashCodec({
-    dictionarySource: createApiDeckHashDictionarySource({
-      baseUrl: "https://poneglyph.one",
-    }),
-  });
-  return {
-    decode: (hash) => codec.decode(hash),
-  };
-};
-
 export const createSupportProbeReport = async (
   request: SupportProbeRequest,
 ): Promise<SupportProbeReport> => {
@@ -94,7 +62,7 @@ export const createSupportProbeReport = async (
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
       deckHashCodec: request.deckHashCodec ?? createPoneglyphDeckHashCodec(),
       output: request.deckHashOutput ?? "report",
-      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+      fetchPoneglyph: request.fetchCard ?? fetchPoneglyphCard,
     });
   }
 
@@ -102,14 +70,14 @@ export const createSupportProbeReport = async (
     return createSetSupportProbeReport(request.setCode, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
       output: request.deckHashOutput ?? "report",
-      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+      fetchPoneglyph: request.fetchCard ?? fetchPoneglyphCard,
     });
   }
 
   if (request.cardId !== undefined && request.cardId.length > 0) {
     return createCardSupportProbeReport(request.cardId, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
-      fetchCard: request.fetchCard ?? fetchPoneglyphCard,
+      fetchPoneglyph: request.fetchCard ?? fetchPoneglyphCard,
     });
   }
 
@@ -126,25 +94,13 @@ export const createSupportProbeReport = async (
   return createTextLineReport(request.text);
 };
 
-interface DeckHashProbeEntry {
-  readonly cardId: string;
-  readonly count: number;
-  readonly variantIndex?: number;
-}
-
-interface AggregatedDeckHashProbeEntry {
-  readonly cardId: string;
-  readonly count: number;
-  readonly variantIndexes: readonly number[];
-}
-
 const createDeckHashSupportProbeReport = async (
   deckHash: string,
   options: {
     readonly baseUrl: string;
     readonly deckHashCodec: DeckHashCodecPort;
     readonly output: "report" | "unsupportedTextLines";
-    readonly fetchCard: PoneglyphFetch;
+    readonly fetchPoneglyph: PoneglyphFetch;
   },
 ): Promise<SupportProbeReport> => {
   const decoded = await decodeProbeDeckHash(deckHash, options.deckHashCodec);
@@ -182,90 +138,6 @@ const createDeckHashSupportProbeReport = async (
   return { exitCode: probed.exitCode, lines, errors: [] };
 };
 
-const decodeProbeDeckHash = async (
-  deckHash: string,
-  codec: DeckHashCodecPort,
-): Promise<
-  | { readonly ok: true; readonly entries: readonly DeckHashProbeEntry[] }
-  | { readonly ok: false; readonly error: string }
-> => {
-  try {
-    const decoded = await codec.decode(deckHash);
-    return {
-      ok: true,
-      entries: [
-        ...(decoded.leader === null
-          ? []
-          : [
-              {
-                cardId: decoded.leader.card_number,
-                count: decoded.leader.count,
-                ...(decoded.leader.variant_index === undefined
-                  ? {}
-                  : { variantIndex: decoded.leader.variant_index }),
-              },
-            ]),
-        ...decoded.main.map((entry) => ({
-          cardId: entry.card_number,
-          count: entry.count,
-          ...(entry.variant_index === undefined
-            ? {}
-            : { variantIndex: entry.variant_index }),
-        })),
-      ],
-    };
-  } catch (error: unknown) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-};
-
-const aggregateDeckHashEntries = (
-  entries: readonly DeckHashProbeEntry[],
-): readonly AggregatedDeckHashProbeEntry[] => {
-  const byCardId = new Map<string, AggregatedDeckHashProbeEntry>();
-  for (const entry of entries) {
-    const existing = byCardId.get(entry.cardId);
-    const variantIndexes =
-      entry.variantIndex === undefined ? [] : [entry.variantIndex];
-    if (existing === undefined) {
-      byCardId.set(entry.cardId, {
-        cardId: entry.cardId,
-        count: entry.count,
-        variantIndexes,
-      });
-      continue;
-    }
-    byCardId.set(entry.cardId, {
-      cardId: existing.cardId,
-      count: existing.count + entry.count,
-      variantIndexes: uniqueNumbers([
-        ...existing.variantIndexes,
-        ...variantIndexes,
-      ]),
-    });
-  }
-  return [...byCardId.values()];
-};
-
-const uniqueNumbers = (values: readonly number[]): readonly number[] => [
-  ...new Set(values),
-];
-
-const uniqueStrings = (values: readonly string[]): string[] => [
-  ...new Set(values),
-];
-
-const chunks = <T>(values: readonly T[], size: number): T[][] => {
-  const chunked: T[][] = [];
-  for (let index = 0; index < values.length; index += size) {
-    chunked.push(values.slice(index, index + size));
-  }
-  return chunked;
-};
-
 const deckHashEntryLine = (entry: AggregatedDeckHashProbeEntry): string => {
   const variants =
     entry.variantIndexes.length === 0
@@ -279,7 +151,7 @@ const createSetSupportProbeReport = async (
   options: {
     readonly baseUrl: string;
     readonly output: "report" | "unsupportedTextLines";
-    readonly fetchCard: PoneglyphFetch;
+    readonly fetchPoneglyph: PoneglyphFetch;
   },
 ): Promise<SupportProbeReport> => {
   const normalizedSetCode = setCode.trim().toUpperCase();
@@ -325,7 +197,7 @@ const probeAggregatedCards = async (
   cards: readonly AggregatedDeckHashProbeEntry[],
   options: {
     readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
+    readonly fetchPoneglyph: PoneglyphFetch;
   },
 ): Promise<{
   readonly exitCode: number;
@@ -435,7 +307,7 @@ const createCardSupportProbeReport = async (
   cardId: string,
   options: {
     readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
+    readonly fetchPoneglyph: PoneglyphFetch;
   },
 ): Promise<SupportProbeReport> => {
   const fetched = await fetchPoneglyphCardPayload(cardId, options);
@@ -500,199 +372,6 @@ const createCardSupportProbeReport = async (
   }
 
   return { exitCode, lines, errors: [] };
-};
-
-const fetchPoneglyphCardPayload = async (
-  cardId: string,
-  options: {
-    readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
-  },
-): Promise<
-  | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
-  | { readonly ok: false; readonly error: string }
-> => {
-  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/${encodeURIComponent(cardId)}`;
-  const response = await options.fetchCard(url);
-  if (!response.ok) {
-    return {
-      ok: false,
-      error: `Poneglyph card fetch failed for ${cardId}: HTTP ${String(response.status)}`,
-    };
-  }
-
-  const payload = await response.json();
-  const cardPayload = toPoneglyphCardProbePayload(payload);
-  if (cardPayload === undefined) {
-    return {
-      ok: false,
-      error: `Poneglyph card fetch failed for ${cardId}: invalid response payload`,
-    };
-  }
-
-  return {
-    ok: true,
-    card: {
-      cardId: cardPayload.card_number,
-      effect: cardPayload.effect,
-      trigger: cardPayload.trigger,
-    },
-  };
-};
-
-const fetchPoneglyphCardPayloads = async (
-  cardIds: readonly string[],
-  options: {
-    readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
-  },
-): Promise<
-  Map<
-    string,
-    | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
-    | { readonly ok: false; readonly error: string }
-  >
-> => {
-  const results = new Map<
-    string,
-    | { readonly ok: true; readonly card: PoneglyphCardProbePayload }
-    | { readonly ok: false; readonly error: string }
-  >();
-  for (const chunk of chunks(uniqueStrings(cardIds), maxBatchCardCount)) {
-    const fetched = await fetchPoneglyphCardPayloadBatch(chunk, options);
-    if (!fetched.ok) {
-      for (const cardId of chunk) {
-        results.set(cardId, { ok: false, error: fetched.error });
-      }
-      continue;
-    }
-    for (const cardId of chunk) {
-      const card = fetched.cards.get(cardId);
-      if (card === undefined) {
-        results.set(cardId, {
-          ok: false,
-          error: `Poneglyph card batch fetch failed for ${cardId}: missing card`,
-        });
-        continue;
-      }
-      if (card.cardId !== cardId) {
-        results.set(cardId, {
-          ok: false,
-          error: `Poneglyph card batch fetch failed for ${cardId}: response card_number was ${card.cardId}`,
-        });
-        continue;
-      }
-      results.set(cardId, { ok: true, card });
-    }
-  }
-  return results;
-};
-
-const fetchPoneglyphCardPayloadBatch = async (
-  cardIds: readonly string[],
-  options: {
-    readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
-  },
-): Promise<
-  | {
-      readonly ok: true;
-      readonly cards: ReadonlyMap<string, PoneglyphCardProbePayload>;
-    }
-  | { readonly ok: false; readonly error: string }
-> => {
-  if (cardIds.length === 0) {
-    return { ok: true, cards: new Map() };
-  }
-  const url = `${options.baseUrl.replace(/\/+$/u, "")}/v1/cards/batch`;
-  const response = await options.fetchCard(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ card_numbers: cardIds }),
-  });
-  if (!response.ok) {
-    return {
-      ok: false,
-      error: `Poneglyph card batch fetch failed: HTTP ${String(response.status)}`,
-    };
-  }
-
-  const payload = await response.json();
-  const batch = toPoneglyphCardProbeBatchPayload(payload);
-  if (batch === undefined) {
-    return {
-      ok: false,
-      error: "Poneglyph card batch fetch failed: invalid response payload",
-    };
-  }
-  if (batch.missing.length > 0) {
-    return {
-      ok: false,
-      error: `Poneglyph card batch fetch failed: missing ${batch.missing.join(", ")}`,
-    };
-  }
-
-  return {
-    ok: true,
-    cards: new Map(
-      Object.values(batch.data).map((card) => [
-        card.card_number,
-        {
-          cardId: card.card_number,
-          effect: card.effect,
-          trigger: card.trigger,
-        },
-      ]),
-    ),
-  };
-};
-
-const fetchPoneglyphSetCardIds = async (
-  setCode: string,
-  options: {
-    readonly baseUrl: string;
-    readonly fetchCard: PoneglyphFetch;
-  },
-): Promise<
-  | { readonly ok: true; readonly cardIds: readonly CardId[] }
-  | { readonly ok: false; readonly error: string }
-> => {
-  const prefix = `${setCode}-`;
-  const cardIds: CardId[] = [];
-  let page = 1;
-  let hasMore = true;
-  while (hasMore) {
-    const url = new URL(`${options.baseUrl.replace(/\/+$/u, "")}/v1/search`);
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("limit", "500");
-    url.searchParams.set("sort", "card_number");
-    url.searchParams.set("order", "asc");
-    url.searchParams.set("collapse", "card");
-    const response = await options.fetchCard(url);
-    if (!response.ok) {
-      return {
-        ok: false,
-        error: `Poneglyph set catalog fetch failed for ${setCode}: HTTP ${String(response.status)}`,
-      };
-    }
-    const payload = await response.json();
-    const catalog = toPoneglyphCardCatalogPayload(payload);
-    if (catalog === undefined) {
-      return {
-        ok: false,
-        error: `Poneglyph set catalog fetch failed for ${setCode}: invalid response payload`,
-      };
-    }
-    for (const cardId of catalog.cardIds) {
-      if (cardId.toUpperCase().startsWith(prefix)) {
-        cardIds.push(cardId);
-      }
-    }
-    hasMore = catalog.hasMore;
-    page += 1;
-  }
-
-  return { ok: true, cardIds: [...new Set(cardIds)] };
 };
 
 const createTextLineReport = (text: string): SupportProbeReport => {
@@ -912,134 +591,3 @@ const sourceSpanDiagnostics = (
       return `- ${span.id} [${String(span.start)}, ${String(span.end)}] ${evidence}`;
     }),
   );
-
-const fetchPoneglyphCard: PoneglyphFetch = async (url, init) =>
-  fetch(url, init);
-
-const toPoneglyphCardCatalogPayload = (
-  value: unknown,
-):
-  | { readonly cardIds: readonly CardId[]; readonly hasMore: boolean }
-  | undefined => {
-  if (typeof value !== "object" || value === null) {
-    return undefined;
-  }
-  const candidate = value as Record<string, unknown>;
-  const data = candidate["data"];
-  if (!Array.isArray(data)) {
-    return undefined;
-  }
-  const cardIds: CardId[] = [];
-  for (const card of data) {
-    if (typeof card !== "object" || card === null) {
-      return undefined;
-    }
-    const cardNumber = (card as Record<string, unknown>)["card_number"];
-    if (typeof cardNumber !== "string") {
-      return undefined;
-    }
-    cardIds.push(cardNumber as CardId);
-  }
-  const pagination = candidate["pagination"];
-  const hasMore =
-    typeof pagination === "object" &&
-    pagination !== null &&
-    (pagination as Record<string, unknown>)["has_more"] === true;
-  return { cardIds, hasMore };
-};
-
-const isPoneglyphCardProbePayload = (
-  value: unknown,
-): value is {
-  readonly card_number: CardId;
-  readonly effect: string | null;
-  readonly trigger?: string | null;
-} => {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  const effect = candidate["effect"];
-  const trigger = candidate["trigger"];
-  return (
-    typeof candidate["card_number"] === "string" &&
-    (typeof effect === "string" || effect === null) &&
-    (typeof trigger === "string" || trigger === null || trigger === undefined)
-  );
-};
-
-const toPoneglyphCardProbePayload = (
-  value: unknown,
-):
-  | {
-      readonly card_number: CardId;
-      readonly effect: string | null;
-      readonly trigger: string | null;
-    }
-  | undefined => {
-  if (isPoneglyphCardProbePayload(value)) {
-    return {
-      card_number: value.card_number,
-      effect: value.effect,
-      trigger: value.trigger ?? null,
-    };
-  }
-  if (typeof value !== "object" || value === null) {
-    return undefined;
-  }
-  const data = (value as Record<string, unknown>)["data"];
-  return isPoneglyphCardProbePayload(data)
-    ? {
-        card_number: data.card_number,
-        effect: data.effect,
-        trigger: data.trigger ?? null,
-      }
-    : undefined;
-};
-
-const toPoneglyphCardProbeBatchPayload = (
-  value: unknown,
-):
-  | {
-      readonly data: Record<
-        string,
-        {
-          readonly card_number: CardId;
-          readonly effect: string | null;
-          readonly trigger: string | null;
-        }
-      >;
-      readonly missing: readonly string[];
-    }
-  | undefined => {
-  if (typeof value !== "object" || value === null) {
-    return undefined;
-  }
-  const candidate = value as Record<string, unknown>;
-  const data = candidate["data"];
-  const missing = candidate["missing"];
-  if (
-    typeof data !== "object" ||
-    data === null ||
-    !Array.isArray(missing) ||
-    !missing.every((entry) => typeof entry === "string")
-  ) {
-    return undefined;
-  }
-  const cards: Record<
-    string,
-    {
-      readonly card_number: CardId;
-      readonly effect: string | null;
-      readonly trigger: string | null;
-    }
-  > = {};
-  for (const [cardId, card] of Object.entries(data)) {
-    const payload = toPoneglyphCardProbePayload(card);
-    if (payload === undefined) {
-      return undefined;
-    }
-    cards[cardId] = payload;
-  }
-  return { data: cards, missing };
-};
