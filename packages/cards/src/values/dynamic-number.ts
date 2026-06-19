@@ -66,11 +66,50 @@ export function parseMatchingZoneCardsScaledSuffix(
       readonly prefixText: string;
       readonly value: Extract<
         DynamicNumberValue,
-        { type: "countMatchingZoneCards" }
+        { type: "countMatchingFieldCards" | "countMatchingZoneCards" }
       >;
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined {
+  const handMatch =
+    /^(?<prefixText>.+?)\s+for every cards? in your hand\.?$/iu.exec(text);
+  const handPrefixText = handMatch?.groups?.["prefixText"]?.trim();
+  if (handPrefixText !== undefined && handPrefixText.length > 0) {
+    return {
+      prefixText: handPrefixText,
+      value: {
+        type: "countMatchingZoneCards",
+        player: "self",
+        zone: "hand",
+        per: 1,
+        multiplier,
+      },
+      evidence: ["value:dynamic:matchingZoneCards", "zone:hand"],
+    };
+  }
+
+  const fieldMatch =
+    /^(?<prefixText>.+?)\s+for each of your (?<filter>.+?)\.?$/iu.exec(text);
+  const fieldPrefixText = fieldMatch?.groups?.["prefixText"]?.trim();
+  const fieldFilterText = fieldMatch?.groups?.["filter"]?.trim();
+  if (
+    fieldPrefixText !== undefined &&
+    fieldPrefixText.length > 0 &&
+    fieldFilterText !== undefined
+  ) {
+    const fieldCount = parseMatchingFieldCountValue({
+      filterText: fieldFilterText,
+      multiplier,
+    });
+    if (fieldCount !== undefined) {
+      return {
+        prefixText: fieldPrefixText,
+        value: fieldCount.value,
+        evidence: fieldCount.evidence,
+      };
+    }
+  }
+
   const restedDonMatch =
     /^(?<prefixText>.+?)\s+for every (?<per>[1-9]\d*) of your rested DON!! cards\.?$/iu.exec(
       text,
@@ -148,6 +187,136 @@ export function parseMatchingZoneCardsScaledSuffix(
     evidence,
   };
 }
+
+export function parseMatchingZoneCardsScaledDuration(
+  multiplier: number,
+  text: string,
+):
+  | {
+      readonly duration: Duration;
+      readonly value: Extract<
+        DynamicNumberValue,
+        { type: "countMatchingFieldCards" | "countMatchingZoneCards" }
+      >;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const handMatch = /^for every cards? in your hand\s+(?<duration>.+)$/iu.exec(
+    text.trim(),
+  );
+  const handDurationText = handMatch?.groups?.["duration"];
+  if (handDurationText !== undefined) {
+    const duration = parseDurationFromSet(
+      { text: handDurationText },
+      fieldEffectDurationParsers,
+    );
+    if (duration?.duration !== undefined && duration.rest.length === 0) {
+      return {
+        duration: duration.duration,
+        value: {
+          type: "countMatchingZoneCards",
+          player: "self",
+          zone: "hand",
+          per: 1,
+          multiplier,
+        },
+        evidence: [
+          ...duration.evidence,
+          "value:dynamic:matchingZoneCards",
+          "zone:hand",
+        ],
+      };
+    }
+  }
+
+  const fieldMatch =
+    /^for each of your (?<filter>.+?)\s+(?<duration>during this (?:turn|battle)|until .+)\.?$/iu.exec(
+      text.trim(),
+    );
+  const fieldFilterText = fieldMatch?.groups?.["filter"]?.trim();
+  const fieldDurationText = fieldMatch?.groups?.["duration"];
+  if (fieldFilterText === undefined || fieldDurationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: fieldDurationText },
+    fieldEffectDurationParsers,
+  );
+  const fieldCount = parseMatchingFieldCountValue({
+    filterText: fieldFilterText,
+    multiplier,
+  });
+  if (
+    duration?.duration === undefined ||
+    duration.rest.length > 0 ||
+    fieldCount === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    duration: duration.duration,
+    value: fieldCount.value,
+    evidence: [...duration.evidence, ...fieldCount.evidence],
+  };
+}
+
+const parseMatchingFieldCountValue = ({
+  filterText,
+  multiplier,
+}: {
+  readonly filterText: string;
+  readonly multiplier: number;
+}):
+  | {
+      readonly value: Extract<
+        DynamicNumberValue,
+        { type: "countMatchingFieldCards" }
+      >;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined => {
+  const parsed = parseCardFilterPredicates(
+    { text: filterText },
+    { powerSemantics: "printed" },
+  );
+  if (parsed === undefined || parsed.rest.trim().length > 0) {
+    return undefined;
+  }
+  const zone = matchingFieldZoneForFilter(parsed.filter);
+  if (zone === undefined) {
+    return undefined;
+  }
+
+  return {
+    value: {
+      type: "countMatchingFieldCards",
+      player: "self",
+      zone: "characterArea",
+      filter: parsed.filter,
+      multiplier,
+    },
+    evidence: [
+      "valueSource:fieldCount",
+      "zone:characterArea",
+      ...parsed.evidence,
+    ],
+  };
+};
+
+const matchingFieldZoneForFilter = (
+  filter: NonNullable<
+    Extract<DynamicNumberValue, { type: "countMatchingFieldCards" }>["filter"]
+  >,
+):
+  | Extract<DynamicNumberValue, { type: "countMatchingFieldCards" }>["zone"]
+  | undefined => {
+  const categories = filter.categories ?? [];
+  if (categories.includes("character")) {
+    return "characterArea";
+  }
+  return undefined;
+};
 
 export function parseSelectedCardCountScaledValue(
   multiplier: number,

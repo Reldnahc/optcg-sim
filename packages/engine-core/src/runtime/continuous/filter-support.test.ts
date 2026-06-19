@@ -24,3 +24,21 @@ test("continuous support accepts all filtered color and base-cost power modifier
     true,
   );
 });
+
+test("continuous support accepts power modifiers scaled by matching field Characters", () => {
+  assert.equal(
+    isSupportedContinuousQueueEffect({
+      type: "modifyPower",
+      target: { type: "myLeader" },
+      value: {
+        type: "countMatchingFieldCards",
+        player: "self",
+        zone: "characterArea",
+        filter: { categories: ["character"] },
+        multiplier: 1000,
+      },
+      duration: { type: "thisTurn" },
+    }),
+    true,
+  );
+});

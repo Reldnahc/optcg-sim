@@ -302,3 +302,77 @@ it("parses optional Life cost before self power gain and self rested DON attachm
     ]),
   );
 });
+
+it("parses continuous self power gain scaled by cards in hand", () => {
+  const result = parseCardEffectLine(
+    "[DON!! x1] [Your Turn] This Character gains +1000 power for every card in your hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: {
+        type: "and",
+        conditions: [{ type: "attachedDonCount" }, { type: "yourTurn" }],
+      },
+      effect: {
+        type: "modifyPower",
+        target: { type: "self" },
+        value: {
+          type: "countMatchingZoneCards",
+          player: "self",
+          zone: "hand",
+          per: 1,
+          multiplier: 1000,
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "condition:yourTurn",
+      "instruction:modifyPower",
+      "target:thisCharacter",
+      "value:dynamic:matchingZoneCards",
+      "zone:hand",
+    ]),
+  );
+});
+
+it("parses Main leader power gain scaled by matching field Characters", () => {
+  const result = parseCardEffectLine(
+    "[Main] Your Leader gains +1000 power for each of your Characters during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "main" },
+      effect: {
+        type: "modifyPower",
+        target: { type: "myLeader" },
+        value: {
+          type: "countMatchingFieldCards",
+          player: "self",
+          zone: "characterArea",
+          filter: { categories: ["character"] },
+          multiplier: 1000,
+        },
+        duration: { type: "thisTurn" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventMain",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "valueSource:fieldCount",
+      "zone:characterArea",
+      "filter:category:character",
+      "duration:thisTurn",
+    ]),
+  );
+});

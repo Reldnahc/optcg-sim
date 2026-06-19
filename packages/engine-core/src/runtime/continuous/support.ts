@@ -277,6 +277,11 @@ const isSupportedModifierValue = (
         value.filter.custom === "differentNames" &&
         Number.isSafeInteger(value.multiplier) &&
         value.multiplier > 0) ||
+      (value.type === "countMatchingFieldCards" &&
+        (value.player === "self" || value.player === "opponent") &&
+        Number.isSafeInteger(value.multiplier) &&
+        value.multiplier !== 0 &&
+        isSupportedAllFilter(value.filter)) ||
       (value.type === "countMatchingZoneCards" &&
         (value.player === "self" || value.player === "opponent") &&
         Number.isSafeInteger(value.per) &&

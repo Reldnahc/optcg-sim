@@ -7,6 +7,7 @@ import {
 import { parsePositivePowerModifier } from "../../modifiers/index.js";
 import {
   parseAttachedDonScaledValue,
+  parseMatchingZoneCardsScaledDuration,
   parseSelectedCardCountScaledValue,
 } from "../../values/dynamic-number.js";
 
@@ -51,6 +52,7 @@ export function parseGainsPositivePower(target: Target, text: string) {
   const dynamicDuration =
     typeof modifier.value === "number"
       ? (parseAttachedDonScaledValue(modifier.value, modifier.rest) ??
+        parseMatchingZoneCardsScaledDuration(modifier.value, modifier.rest) ??
         parseSelectedCardCountScaledValue(modifier.value, modifier.rest))
       : undefined;
   const parsedDuration = dynamicDuration ?? duration;
