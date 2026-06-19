@@ -30,7 +30,7 @@ export const parseHandCountCondition: ConditionParser = (
   }
 
   const match =
-    /^(?<subject>you|your opponent) (?<verb>have|has) (?<count>[1-9]\d*) or (?<direction>more|less) cards in (?<owner>your|their) hand$/i.exec(
+    /^(?<subject>you|your opponent) (?<verb>have|has) (?<count>\d+)(?: or (?<direction>more|less))? cards in (?<owner>your|their) hand$/i.exec(
       input.text,
     );
   const subjectText = match?.groups?.["subject"]?.toLowerCase();
@@ -42,7 +42,6 @@ export const parseHandCountCondition: ConditionParser = (
     subjectText === undefined ||
     verbText === undefined ||
     countText === undefined ||
-    directionText === undefined ||
     ownerText === undefined
   ) {
     return undefined;
@@ -55,19 +54,31 @@ export const parseHandCountCondition: ConditionParser = (
   ) {
     return undefined;
   }
-  const op = directionText === "more" ? "gte" : "lte";
+  const count = Number.parseInt(countText, 10);
+  const op =
+    directionText === undefined
+      ? "eq"
+      : directionText === "more"
+        ? "gte"
+        : "lte";
 
   return {
     condition: {
       type: "handCount",
       player,
       op,
-      value: Number.parseInt(countText, 10),
+      value: count,
     },
     evidence: [
       "condition:handCount",
-      op === "gte" ? "condition:comparator:gte" : "condition:comparator:lte",
-      "condition:threshold:positiveInteger",
+      op === "gte"
+        ? "condition:comparator:gte"
+        : op === "lte"
+          ? "condition:comparator:lte"
+          : "condition:comparator:eq",
+      count === 0
+        ? "condition:threshold:nonNegativeInteger"
+        : "condition:threshold:positiveInteger",
       player === "self" ? "player:self" : "player:opponent",
     ],
     rest: "",

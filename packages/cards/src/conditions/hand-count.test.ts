@@ -42,6 +42,26 @@ it("parses self and opponent hand-count thresholds as the same reusable conditio
   });
 });
 
+it("parses zero hand-count thresholds as non-negative reusable conditions", () => {
+  expect(
+    parseHandCountCondition({ text: "you have 0 cards in your hand" }),
+  ).toEqual({
+    condition: {
+      type: "handCount",
+      player: "self",
+      op: "eq",
+      value: 0,
+    },
+    evidence: [
+      "condition:handCount",
+      "condition:comparator:eq",
+      "condition:threshold:nonNegativeInteger",
+      "player:self",
+    ],
+    rest: "",
+  });
+});
+
 it("parses hand-count differences as reusable player count operands", () => {
   expect(
     parseHandCountCondition({

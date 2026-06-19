@@ -83,6 +83,39 @@ describe("hand-trash reaction parser", () => {
     );
   });
 
+  it("parses zero-hand end-of-turn draw as reusable conditional timing", () => {
+    const result = parseCardEffectLine(
+      "[End of Your Turn] If you have 0 cards in your hand, draw 2 cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "endOfYourTurn" },
+        condition: {
+          type: "handCount",
+          player: "self",
+          op: "eq",
+          value: 0,
+        },
+        effect: {
+          type: "draw",
+          count: 2,
+          player: "self",
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:endOfYourTurn",
+        "expression:conditional",
+        "condition:handCount",
+        "condition:threshold:nonNegativeInteger",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses optional hand-trash cost into rested DON attachment without binding the cost to the body", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] You may trash 1 card from your hand: Give up to 2 rested DON!! cards to 1 of your {Fish-Man} or {Merfolk} type Leader or Character cards.",
