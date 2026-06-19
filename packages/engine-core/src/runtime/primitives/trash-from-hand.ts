@@ -157,9 +157,6 @@ const validateSupportedTrashFromHandEffect = (
   if (effect.chooser !== "self" && effect.chooser !== "opponent") {
     return { ok: false, reason: "unsupported-chooser-ref" };
   }
-  if (effect.chooser !== effect.player) {
-    return { ok: false, reason: "unsupported-chooser-ref" };
-  }
   if (effect.filter !== undefined) {
     return { ok: false, reason: "unsupported-filter" };
   }
@@ -180,7 +177,7 @@ const validateSupportedTrashFromHandEffect = (
   if (playerId === undefined) {
     return { ok: false, reason: "unsupported-player-ref" };
   }
-  if (chooserId === undefined || chooserId !== playerId) {
+  if (chooserId === undefined) {
     return { ok: false, reason: "unsupported-chooser-ref" };
   }
   const player = state.players[playerId];
@@ -203,7 +200,7 @@ const hasSupportedTrashFromHandEffectEnvelope = (
   effect.failurePolicy === undefined &&
   effect.effect.type === "trashFromHand" &&
   (effect.effect.player === "self" || effect.effect.player === "opponent") &&
-  effect.effect.chooser === effect.effect.player &&
+  (effect.effect.chooser === "self" || effect.effect.chooser === "opponent") &&
   effect.effect.filter === undefined &&
   typeof effect.effect.count === "number" &&
   Number.isInteger(effect.effect.count) &&
@@ -327,7 +324,8 @@ const isTrashFromHandDecision = (decision: SelectCardsDecision): boolean =>
   decision.request.timing === "onResolution" &&
   (decision.request.chooser === "self" ||
     decision.request.chooser === "opponent") &&
-  decision.request.chooser === decision.request.player &&
+  (decision.request.player === "self" ||
+    decision.request.player === "opponent") &&
   decision.request.zone === "hand" &&
   decision.request.set === undefined &&
   decision.request.filter === undefined &&
@@ -349,17 +347,18 @@ export const isTrashFromHandSelectCardsDecision = (
 
 const findCurrentHandCards = (
   state: GameState,
+  playerId: SelectCardsDecision["playerId"],
   decision: SelectCardsDecision,
   selected: readonly CardRef[],
 ): CardInstance[] | null => {
-  const player = state.players[decision.playerId];
+  const player = state.players[playerId];
   if (player === undefined) {
     return null;
   }
   const cards: CardInstance[] = [];
   for (const ref of selected) {
     const card = player.hand.find((candidate) =>
-      cardRefMatches(ref, toCardRef(candidate, decision.playerId)),
+      cardRefMatches(ref, toCardRef(candidate, playerId)),
     );
     if (card === undefined) {
       return null;
@@ -372,8 +371,9 @@ const findCurrentHandCards = (
 const hasCurrentCandidateEnvelope = (
   state: GameState,
   decision: SelectCardsDecision,
+  playerId: SelectCardsDecision["playerId"],
 ): boolean => {
-  const player = state.players[decision.playerId];
+  const player = state.players[playerId];
   if (
     player === undefined ||
     decision.candidates.length !== player.hand.length
@@ -386,7 +386,7 @@ const hasCurrentCandidateEnvelope = (
       current !== undefined &&
       candidate.visibility.type === "private" &&
       candidate.visibility.playerId === decision.playerId &&
-      cardRefMatches(candidate.card, toCardRef(current, decision.playerId))
+      cardRefMatches(candidate.card, toCardRef(current, playerId))
     );
   });
 };
@@ -455,19 +455,32 @@ export const applySupportedTrashFromHandChoiceResponse = (
   if (hasDuplicateInstanceIds(responseCards)) {
     return fail("Selected cards must not contain duplicates.");
   }
-  if (!hasCurrentCandidateEnvelope(state, decision)) {
-    return fail("trashFromHand decision envelope is stale or unsupported.");
-  }
-
-  const selectedCards = findCurrentHandCards(state, decision, responseCards);
-  if (selectedCards === null) {
-    return fail(
-      "Selected cards must be active cards in the choosing player's hand.",
-    );
-  }
   const entry = findDecisionQueueEntry(state, decision);
   if (entry === undefined) {
     return fail("trashFromHand decision is stale for current effect queue.");
+  }
+  const requestPlayer = decision.request.player;
+  if (requestPlayer === undefined) {
+    return fail("trashFromHand decision envelope is stale or unsupported.");
+  }
+  const playerId = resolvePlayerId(state, entry, requestPlayer);
+  if (playerId === undefined) {
+    return fail("trashFromHand decision envelope is stale or unsupported.");
+  }
+  if (!hasCurrentCandidateEnvelope(state, decision, playerId)) {
+    return fail("trashFromHand decision envelope is stale or unsupported.");
+  }
+
+  const selectedCards = findCurrentHandCards(
+    state,
+    playerId,
+    decision,
+    responseCards,
+  );
+  if (selectedCards === null) {
+    return fail(
+      "Selected cards must be active cards in the selected player's hand.",
+    );
   }
 
   const events: EngineEvent[] = [];
@@ -505,7 +518,7 @@ export const applySupportedTrashFromHandChoiceResponse = (
     causedBy: { type: "decision", decisionId: decision.id },
     clearAttachedDon: true,
     emitCardTrashed: true,
-    playerId: decision.playerId,
+    playerId,
     reason: "trashFromHand",
     sourceZone: "hand",
   });
@@ -518,9 +531,7 @@ export const applySupportedTrashFromHandChoiceResponse = (
   };
   delete nextState.pendingDecision;
 
-  const selectedRefs = selectedCards.map((card) =>
-    toCardRef(card, decision.playerId),
-  );
+  const selectedRefs = selectedCards.map((card) => toCardRef(card, playerId));
   const sequenceResume = resumeSequenceFrameAfterTrashFromHand(
     nextState,
     decision,

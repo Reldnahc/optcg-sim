@@ -92,7 +92,7 @@ export const isSupportedTrashFromHandSegment = (
 ): effect is TrashFromHandEffect =>
   effect.type === "trashFromHand" &&
   (effect.player === "self" || effect.player === "opponent") &&
-  effect.chooser === effect.player &&
+  (effect.chooser === "self" || effect.chooser === "opponent") &&
   effect.filter === undefined &&
   isSupportedSegmentCount(effect.count, { positive: true }) &&
   (effect.min === undefined ||

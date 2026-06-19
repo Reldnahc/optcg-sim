@@ -280,7 +280,7 @@ test("CARD-009D: non-chooser filtered view hides private trash decision details"
   assert.equal(nonChooserView.pendingDecision, undefined);
 });
 
-test("CARD-009D: unsupported whenAttacking sequence shape still fails closed", () => {
+test("CARD-009D: whenAttacking draw-then-opponent-trash opens opponent private hand decision", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -304,7 +304,7 @@ test("CARD-009D: unsupported whenAttacking sequence shape still fails closed", (
       },
     ],
   };
-  const before = JSON.stringify(state);
+  ensureDeckHasAtLeast(state, p1, 1);
 
   const result = applyDeclareAttack(state, {
     type: "declareAttack",
@@ -320,16 +320,20 @@ test("CARD-009D: unsupported whenAttacking sequence shape still fails closed", (
     },
   });
 
-  assert.deepEqual(result.errors, [
-    {
-      type: "effectRuntimeError",
-      effectId: "when-attacking-trigger-queueing",
-      details: { reason: "unsupported-when-attacking-definition" },
-    },
-  ]);
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assert.equal(result.errors, undefined);
+  const decision = must(result.state.pendingDecision, "trash decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p2);
+  assert.equal(decision.visibility.type, "private");
+  assert.equal(decision.visibility.playerId, p2);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.playerId),
+    decision.candidates.map(() => p1),
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "decisionCreated"),
+    true,
+  );
 });
 
 test("CARD-009D: zero-draw whenAttacking sequence still fails closed", () => {

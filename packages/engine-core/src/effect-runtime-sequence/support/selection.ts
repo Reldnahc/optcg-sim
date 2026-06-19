@@ -95,8 +95,8 @@ export const savedSelectedCardsKindsForSelectCardsSegment = (
     effect.zones.length === 0 ||
     !isSupportedHandSelectionCardFilter(effect.filter) ||
     !hasSupportedSelectionCardinality(effect.min, effect.max) ||
-    effect.player !== effect.chooser ||
     (effect.player !== "self" && effect.player !== "opponent") ||
+    (effect.chooser !== "self" && effect.chooser !== "opponent") ||
     (effect.visibility !== "chooserOnly" && effect.visibility !== "bothPlayers")
   ) {
     return undefined;
@@ -121,8 +121,8 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
   }
   if (
     effect.zone === "hand" &&
-    effect.player === effect.chooser &&
     (effect.player === "self" || effect.player === "opponent") &&
+    (effect.chooser === "self" || effect.chooser === "opponent") &&
     (effect.visibility === "chooserOnly" || effect.visibility === "bothPlayers")
   ) {
     return "hand";
@@ -147,7 +147,7 @@ export const savedSelectedCardsKindForSelectCardsSegment = (
     effect.zone === "life" &&
     (effect.player === "self" || effect.player === "opponent") &&
     (effect.chooser === "self" || effect.chooser === "opponent") &&
-    effect.visibility === "chooserOnly"
+    (effect.visibility === "chooserOnly" || effect.visibility === "bothPlayers")
   ) {
     return "life";
   }
@@ -237,6 +237,11 @@ export const isSupportedMoveSelectedSegment = (
     (effect.from === "life" &&
       effect.to === "trash" &&
       effect.position === undefined &&
+      effect.destinationFaceUp === undefined &&
+      selectionKinds.includes("life")) ||
+    (effect.from === "life" &&
+      effect.to === "deck" &&
+      effect.position === "bottom" &&
       effect.destinationFaceUp === undefined &&
       selectionKinds.includes("life")) ||
     (effect.from === "hand" &&

@@ -465,24 +465,6 @@ test("unsupported draw-then-trash sequence shapes fail closed before draw or dec
         },
       ],
     },
-    {
-      type: "sequence",
-      effects: [
-        {
-          connector: "always",
-          effect: { type: "draw", player: "self", count: 1 },
-        },
-        {
-          connector: "then",
-          effect: {
-            type: "trashFromHand",
-            player: "self",
-            chooser: "opponent",
-            count: 1,
-          },
-        },
-      ],
-    },
   ];
 
   for (const effect of unsupportedEffects) {

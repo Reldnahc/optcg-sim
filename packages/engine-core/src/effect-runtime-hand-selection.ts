@@ -64,8 +64,8 @@ export const isSupportedSequenceHandSelectCardsEffect = (
 ): effect is SequenceSelectCardsEffect =>
   effect.type === "selectCards" &&
   effect.zone === "hand" &&
-  effect.player === effect.chooser &&
   (effect.player === "self" || effect.player === "opponent") &&
+  (effect.chooser === "self" || effect.chooser === "opponent") &&
   effect.visibility === "chooserOnly" &&
   String(effect.saveAs).startsWith("handSelection:") &&
   isSupportedHandSelectionCardFilter(effect.filter) &&
@@ -195,7 +195,7 @@ const isSupportedSelectCardsDecision = (
   isSupportedHandSelectionCardFilter(decision.request.filter) &&
   ((String(decision.id).startsWith(handDecisionIdPrefix) &&
     decision.request.zone === "hand" &&
-    decision.request.player === decision.request.chooser &&
+    isSupportedRelativePlayer(decision.request.player) &&
     !decision.request.allowFewerIfUnavailable &&
     decision.request.visibility === "privateToChooser" &&
     decision.visibility.type === "private" &&

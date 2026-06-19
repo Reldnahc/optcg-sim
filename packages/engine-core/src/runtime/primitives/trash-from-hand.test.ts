@@ -259,6 +259,46 @@ test("valid trashFromHand response moves selected hand cards to public trash and
   );
 });
 
+test("opponent-chosen trashFromHand selects from owner hand and resolves by chooser", () => {
+  const { result: decisionResult, decision } = createTrashDecision({
+    type: "trashFromHand",
+    player: "self",
+    chooser: "opponent",
+    count: 1,
+  });
+  const beforeP1 = must(decisionResult.state.players[p1], "p1 before");
+  const selected = beforeP1.hand.slice(0, 1).map((card) => handRef(card));
+
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.playerId, p2);
+  assert.equal(decision.visibility.type, "private");
+  assert.equal(decision.visibility.playerId, p2);
+  assert.deepEqual(
+    decision.candidates.map((candidate) => candidate.card.instanceId),
+    beforeP1.hand.map((card) => card.instanceId),
+  );
+
+  const result = respondWithCards(decisionResult.state, selected, p2);
+  const afterP1 = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.deepEqual(
+    afterP1.hand.map((card) => card.instanceId),
+    beforeP1.hand.slice(1).map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    afterP1.trash.slice(0, 1).map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+  assert.deepEqual(
+    result.events
+      .filter((event) => event.type === "cardMoved")
+      .map((event) => event.payload),
+    [{ from: "hand", to: "trash", playerId: p1, reason: "trashFromHand" }],
+  );
+});
+
 test("live trashFromHand response preserves omitted state hash", () => {
   const { result: decisionResult } = createTrashDecision({
     type: "trashFromHand",
@@ -540,18 +580,6 @@ test("trashFromHand rejects malformed, wrong-count, duplicate, stale, and oppone
 
 test("unsupported trashFromHand player refs filters and counts fail closed before decision creation", () => {
   const unsupportedEffects: readonly Effect[] = [
-    {
-      type: "trashFromHand",
-      player: "opponent",
-      chooser: "self",
-      count: 1,
-    },
-    {
-      type: "trashFromHand",
-      player: "self",
-      chooser: "opponent",
-      count: 1,
-    },
     {
       type: "trashFromHand",
       player: "self",
