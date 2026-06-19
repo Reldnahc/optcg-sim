@@ -119,7 +119,7 @@ export const isSupportedPayCostSegment = (
       isSupportedPublicFieldTargetFilter(cost.filter)) &&
     (cost.type !== "moveCards" ||
       (isSupportedMoveCardsCostRoute(cost) &&
-        isSupportedHandSelectionCardFilter(cost.filter))) &&
+        isSupportedMoveCardsCostFilter(cost))) &&
     isSupportedCostCount(cost)
   );
 };
@@ -150,7 +150,8 @@ const isSupportedCostCount = (cost: CountedCost): boolean => {
   if (
     (cost.type === "trashFromHand" ||
       cost.type === "restDon" ||
-      cost.type === "returnDon") &&
+      cost.type === "returnDon" ||
+      cost.type === "moveCards") &&
     cost.maxCount !== undefined
   ) {
     return (
@@ -161,6 +162,13 @@ const isSupportedCostCount = (cost: CountedCost): boolean => {
   }
   return Number.isInteger(cost.count) && cost.count > 0;
 };
+
+const isSupportedMoveCardsCostFilter = (
+  cost: Extract<Cost, { type: "moveCards" }>,
+): boolean =>
+  cost.from.zone === "characterArea" || cost.from.zone === "stageArea"
+    ? isSupportedPublicFieldTargetFilter(cost.filter)
+    : isSupportedHandSelectionCardFilter(cost.filter);
 
 const isSupportedMoveCardsCostRoute = (
   cost: Extract<Cost, { type: "moveCards" }>,

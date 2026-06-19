@@ -73,6 +73,7 @@ export type Cost =
   | {
       type: "moveCards";
       count: number;
+      maxCount?: number | "available";
       chooser: PlayerRef;
       from: {
         player: PlayerRef;
@@ -82,6 +83,7 @@ export type Cost =
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "chooserChoice";
+      filter?: CardFilter;
       optional?: boolean;
     }
   | {
@@ -147,6 +149,7 @@ export type OptionalRevealFromHandCost = {
 export type OptionalMoveCardsCost = {
   type: "moveCards";
   count: number;
+  maxCount?: number | "available";
   chooser: PlayerRef;
   from: {
     player: PlayerRef;

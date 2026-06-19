@@ -61,6 +61,10 @@ import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-
 import { invalidDecision } from "../../engine-error-helpers.js";
 import { applyLifeVisibilityPayment } from "./life-visibility-payment.js";
 import { applyDonPayment } from "./don-payment.js";
+import {
+  selectedCountSatisfiesMoveCardsPayment,
+  selectedMoveCardsPaymentCards,
+} from "./move-cards-payment.js";
 import { applyShuffleDeckPayment } from "./shuffle-deck-payment.js";
 import type { PayCostPaidPayload } from "./pay-cost-paid-payload.js";
 import {
@@ -207,7 +211,10 @@ export const applyOptionalActivationDecisionResponse = (
         const selected = paymentResponse.selectedCardInstanceIds;
         if (
           selected === undefined ||
-          selected.length !== selectedOption.count
+          !selectedCountSatisfiesMoveCardsPayment(
+            selected.length,
+            selectedOption,
+          )
         ) {
           return toEngineResult(
             state,
@@ -220,6 +227,18 @@ export const applyOptionalActivationDecisionResponse = (
             state,
             [],
             invalidDecision("Payment card selection contains duplicates."),
+          );
+        }
+        const selectedCards = selectedMoveCardsPaymentCards(
+          player,
+          selectedOption,
+          selected,
+        );
+        if (selectedCards === undefined) {
+          return toEngineResult(
+            state,
+            [],
+            invalidDecision("Payment card selection is invalid."),
           );
         }
         const moved = applyMoveCardsPayment({
@@ -239,6 +258,9 @@ export const applyOptionalActivationDecisionResponse = (
           );
         }
         nextPlayer = moved;
+        paidCostSelectedCards = selectedCards.map((card) =>
+          toCardRef(card, decision.playerId),
+        );
         costPaidPayload = {
           playerId: decision.playerId,
           optionId: "moveCards",

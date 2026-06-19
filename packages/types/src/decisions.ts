@@ -97,6 +97,7 @@ export type PaymentOption =
       id: string;
       type: "moveCards";
       count: number;
+      maxCount?: number | "available";
       from: {
         player: PlayerRef;
         zone: Zone;

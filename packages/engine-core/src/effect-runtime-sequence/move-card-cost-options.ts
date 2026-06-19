@@ -25,11 +25,14 @@ export const expandMoveCardsCostRoutes = (
 ): MoveCardsPaymentOption[] => {
   if (
     !isMoveCardsCostRouteOwnedByChooser(cost) ||
-    !Number.isInteger(cost.count) ||
-    cost.count <= 0
+    !isSupportedMoveCardsCostCount(cost)
   ) {
     return [];
   }
+  const countFields = {
+    count: cost.count,
+    ...(cost.maxCount === undefined ? {} : { maxCount: cost.maxCount }),
+  };
   if (
     cost.from.zone === "trash" &&
     cost.from.position === undefined &&
@@ -40,7 +43,7 @@ export const expandMoveCardsCostRoutes = (
       {
         id: "moveCards",
         type: "moveCards",
-        count: cost.count,
+        ...countFields,
         from: {
           player: cost.from.player,
           zone: cost.from.zone,
@@ -66,7 +69,7 @@ export const expandMoveCardsCostRoutes = (
       {
         id: "moveCards",
         type: "moveCards",
-        count: cost.count,
+        ...countFields,
         from: {
           player: cost.from.player,
           zone: cost.from.zone,
@@ -87,7 +90,7 @@ export const expandMoveCardsCostRoutes = (
       {
         id: "moveCards",
         type: "moveCards",
-        count: cost.count,
+        ...countFields,
         from: {
           player: cost.from.player,
           zone: cost.from.zone,
@@ -113,7 +116,7 @@ export const expandMoveCardsCostRoutes = (
       {
         id: "moveCards",
         type: "moveCards",
-        count: cost.count,
+        ...countFields,
         from: {
           player: cost.from.player,
           zone: cost.from.zone,
@@ -145,7 +148,7 @@ export const expandMoveCardsCostRoutes = (
   return positions.map((position) => ({
     id: `moveCards:${position}`,
     type: "moveCards",
-    count: cost.count,
+    ...countFields,
     from: { ...cost.from, position },
     to: cost.to,
   }));
@@ -158,6 +161,11 @@ export const selectableMoveCardsCostIds = (
   option: MoveCardsPaymentOption,
 ): CardInstance["instanceId"][] | undefined => {
   if (!isConcreteSamePlayerRoute(option) || option.count <= 0) {
+    if (option.maxCount !== "available" || option.count < 0) {
+      return undefined;
+    }
+  }
+  if (!isConcreteSamePlayerRoute(option)) {
     return undefined;
   }
   if (
@@ -287,3 +295,12 @@ type OptionalCostPlayerRef = Extract<
   OptionalCost,
   { type: "moveCards" }
 >["from"]["player"];
+
+const isSupportedMoveCardsCostCount = (
+  cost: Extract<OptionalCost, { type: "moveCards" }>,
+): boolean => {
+  if (cost.maxCount === "available") {
+    return Number.isInteger(cost.count) && cost.count >= 0;
+  }
+  return Number.isInteger(cost.count) && cost.count > 0;
+};

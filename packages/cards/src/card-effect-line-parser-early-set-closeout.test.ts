@@ -769,3 +769,82 @@ it("parses either-player DON field condition before Leader power through opponen
     ]),
   );
 });
+
+it("parses optional any-number Character return into returned-count battle power", () => {
+  const result = parseCardEffectLine(
+    "[Counter] If your Leader is [Uta], you may return any number of Characters on your field to the owner's hand. Up to 1 of your Leader or Character cards gains +2000 power during this battle for every returned Character.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "counter" },
+      condition: {
+        type: "hasCardInZone",
+        zone: "leaderArea",
+        player: "self",
+        filter: { categories: ["leader"], names: ["Uta"] },
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "paidCost:returnToOwnerHand",
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 0,
+                maxCount: "available",
+                chooser: "self",
+                from: { player: "self", zone: "characterArea" },
+                to: { player: "self", zone: "hand" },
+                filter: { categories: ["character"] },
+                optional: true,
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "modifyPower",
+              target: {
+                type: "chooseFromZones",
+                request: {
+                  player: "self",
+                  zones: ["leaderArea", "characterArea"],
+                  min: 0,
+                  max: 1,
+                  filter: {
+                    anyOf: [
+                      { categories: ["leader"] },
+                      { categories: ["character"] },
+                    ],
+                  },
+                },
+              },
+              value: {
+                type: "paidCostCardCount",
+                cost: "paidCost:returnToOwnerHand",
+                multiplier: 2000,
+              },
+              duration: { type: "thisBattle" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventCounter",
+      "condition:leaderIdentity",
+      "cost:returnToOwnerHand",
+      "count:anyNumber",
+      "instruction:modifyPower",
+      "value:dynamic:paidCostCardCount",
+      "duration:thisBattle",
+    ]),
+  );
+});

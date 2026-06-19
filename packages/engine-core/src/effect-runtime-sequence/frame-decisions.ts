@@ -88,6 +88,36 @@ const canPayAttachDonCost = (
   attachDonSourceIds(state, playerId, option).length >= option.count &&
   attachDonTargetCandidates(state, playerId, option).length > 0;
 
+const chooseVariableCardPaymentCombos = (
+  selectableCardIds: readonly CardInstance["instanceId"][],
+  option: {
+    readonly count: number;
+    readonly maxCount?: number | "available";
+  },
+): CardInstance["instanceId"][][] => {
+  if (option.maxCount !== "available") {
+    return chooseCombos(selectableCardIds, option.count);
+  }
+  const minCount = Math.max(1, option.count);
+  if (selectableCardIds.length < minCount) {
+    return [];
+  }
+  return Array.from(
+    { length: selectableCardIds.length - minCount + 1 },
+    (_, index) => minCount + index,
+  ).flatMap((count) => chooseCombos(selectableCardIds, count));
+};
+
+const canExposeMoveCardsPaymentOption = (
+  selectableCount: number,
+  option: Extract<PaymentOption, { type: "moveCards" }>,
+): boolean => {
+  if (option.maxCount === "available") {
+    return selectableCount >= Math.max(1, option.count);
+  }
+  return option.count > 0 && selectableCount >= option.count;
+};
+
 export const findSequenceFrameByDecisionId = (
   state: GameState,
   decisionId: NonNullable<GameState["pendingDecision"]>["id"],
@@ -522,15 +552,17 @@ export const getSequencePayCostLegalActions = (
         )
         .map((card) => card.instanceId);
       legalPayments.push(
-        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
-          type: "respondToDecision" as const,
-          decisionId: decision.id,
-          response: {
-            type: "payment" as const,
-            optionId: option.id,
-            selectedCardInstanceIds: combo,
-          },
-        })),
+        ...chooseVariableCardPaymentCombos(selectableCardIds, option).map(
+          (combo) => ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "payment" as const,
+              optionId: option.id,
+              selectedCardInstanceIds: combo,
+            },
+          }),
+        ),
       );
       continue;
     }
@@ -545,15 +577,17 @@ export const getSequencePayCostLegalActions = (
         )
         .map((card) => card.instanceId);
       legalPayments.push(
-        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
-          type: "respondToDecision" as const,
-          decisionId: decision.id,
-          response: {
-            type: "payment" as const,
-            optionId: option.id,
-            selectedCardInstanceIds: combo,
-          },
-        })),
+        ...chooseVariableCardPaymentCombos(selectableCardIds, option).map(
+          (combo) => ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "payment" as const,
+              optionId: option.id,
+              selectedCardInstanceIds: combo,
+            },
+          }),
+        ),
       );
       continue;
     }
@@ -854,13 +888,13 @@ export const getSequenceOptionalPayCostOptions = (
       if (
         selectable !== undefined &&
         Number.isInteger(route.count) &&
-        route.count > 0 &&
-        selectable.length >= route.count
+        canExposeMoveCardsPaymentOption(selectable.length, route)
       ) {
         paymentOptions.push({
           id: route.id,
           type: "moveCards",
           count: route.count,
+          ...(route.maxCount === undefined ? {} : { maxCount: route.maxCount }),
           from: route.from,
           to: route.to,
           ...(route.filter === undefined ? {} : { filter: route.filter }),

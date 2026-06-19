@@ -65,6 +65,7 @@ import {
   playedObjectDelayedDeckBottomExpressionParser,
   playedObjectKeywordGrantExpressionParser,
   replacementInsteadExpressionParser,
+  returnToOwnerHandPaidCountPowerExpressionParser,
   returnToOwnerHandCostedEffectExpressionParser,
   revealedHandPlayExpressionParser,
   revealTopAddToHandExpressionParser,
@@ -157,6 +158,13 @@ function generalExpressionParser(input: ParseInput) {
   })(input);
   if (trailingReaction !== undefined) {
     return trailingReaction;
+  }
+
+  const returnPaidCountPower = returnToOwnerHandPaidCountPowerExpressionParser({
+    instructions: instructionParsers,
+  })(input);
+  if (returnPaidCountPower !== undefined) {
+    return returnPaidCountPower;
   }
 
   return parseExpression(input, {
@@ -418,6 +426,9 @@ const conditionalCostedBlockExpressions = () =>
       instructions: instructionParsers,
       expressions: costedExpressions,
     }),
+    returnToOwnerHandPaidCountPowerExpressionParser({
+      instructions: instructionParsers,
+    }),
     optionalCostedEffectExpressionParser({
       instructions: instructionParsers,
       expressions: costedExpressions,
@@ -548,6 +559,9 @@ const rootExpressionParsers = () =>
       conditions: conditionParsers,
       instructions: instructionParsers,
       expressions: costedExpressions,
+    }),
+    returnToOwnerHandPaidCountPowerExpressionParser({
+      instructions: instructionParsers,
     }),
     replacementInsteadExpressionParser,
     activatedReactionExpressionParser({

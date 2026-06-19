@@ -35,6 +35,7 @@ export {
   trailingImplicitEventReactionExpressionParser,
 } from "./event-reaction.js";
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
+export { returnToOwnerHandPaidCountPowerExpressionParser } from "./return-to-owner-hand-paid-count-power.js";
 export { lookPlayFromTopExpressionParser } from "./look-play-from-top.js";
 export { koCountPowerContinuationExpressionParser } from "./ko-count-power-continuation.js";
 export { revealTopConditionalExpressionParser } from "./reveal-top-conditional.js";

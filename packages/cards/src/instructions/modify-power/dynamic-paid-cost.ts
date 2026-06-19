@@ -4,6 +4,7 @@ import type { InstructionParser, PrimitiveEvidence } from "../../types.js";
 
 const paidCostTrashFromHandReference = "paidCost:trashFromHand";
 const paidCostRestDonReference = "paidCost:restDon";
+const paidCostReturnToOwnerHandReference = "paidCost:returnToOwnerHand";
 
 export const parsePaidCostCardCountPower: InstructionParser = (input) => {
   const text = input.text.trim();
@@ -99,7 +100,7 @@ const parseTrailingPaidCostReference = (
     }
   | undefined => {
   const match =
-    /^(?<rest>.+?)\s+for every (?<reference>card trashed|DON!! card rested this way)\.?$/iu.exec(
+    /^(?<rest>.+?)\s+for every (?<reference>card trashed|DON!! card rested this way|returned Characters?)\.?$/iu.exec(
       text,
     );
   const rest = match?.groups?.["rest"]?.trim();
@@ -107,17 +108,25 @@ const parseTrailingPaidCostReference = (
   if (rest === undefined || reference === undefined) {
     return undefined;
   }
-  return reference === "card trashed"
-    ? {
-        cost: paidCostTrashFromHandReference,
-        evidence: "cost:trashFromHand",
-        rest,
-      }
-    : {
-        cost: paidCostRestDonReference,
-        evidence: "cost:restDon",
-        rest,
-      };
+  if (reference === "card trashed") {
+    return {
+      cost: paidCostTrashFromHandReference,
+      evidence: "cost:trashFromHand",
+      rest,
+    };
+  }
+  if (reference === "don!! card rested this way") {
+    return {
+      cost: paidCostRestDonReference,
+      evidence: "cost:restDon",
+      rest,
+    };
+  }
+  return {
+    cost: paidCostReturnToOwnerHandReference,
+    evidence: "cost:returnToOwnerHand",
+    rest,
+  };
 };
 
 const parseSelfTarget = (
@@ -175,6 +184,38 @@ const parseThisLeaderOrTypedCharacterTarget = (
       evidence: [
         "target:yourLeaderOrCharacters",
         "player:self",
+        "count:positiveInteger",
+        "filter:anyOf",
+        "filter:category:leader",
+        "filter:category:character",
+      ],
+    };
+  }
+
+  const upToLeaderOrCharacterMatch =
+    /^up to 1 of your Leader or Character cards$/iu.exec(text);
+  if (upToLeaderOrCharacterMatch !== null) {
+    return {
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea"],
+          min: 0,
+          max: 1,
+          allowFewerIfUnavailable: true,
+          visibility: "public",
+          filter: {
+            anyOf: [{ categories: ["leader"] }, { categories: ["character"] }],
+          },
+        },
+      },
+      evidence: [
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "cardinality:upTo",
         "count:positiveInteger",
         "filter:anyOf",
         "filter:category:leader",

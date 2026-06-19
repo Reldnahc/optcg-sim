@@ -14,6 +14,7 @@ import {
   reindexZoneCards,
 } from "../actions/state.js";
 import { moveFieldCardToOwnerDeckBottom } from "./field-to-deck.js";
+import { moveFieldCardToOwnerHand } from "./field-to-hand.js";
 
 export type MoveCardsPaymentOption = Extract<
   PaymentOption,
@@ -46,8 +47,8 @@ export const isSupportedMoveCardsPaymentRoute = (
     (option.from.zone === "characterArea" ||
       option.from.zone === "stageArea") &&
     option.from.position === undefined &&
-    option.to.zone === "deck" &&
-    option.to.position === "bottom"
+    ((option.to.zone === "deck" && option.to.position === "bottom") ||
+      (option.to.zone === "hand" && option.to.position === undefined))
   ) {
     return (
       option.from.source !== "effectSource" ||
@@ -261,8 +262,10 @@ export const applyMoveCardsPayment = (params: {
     (params.selectedOption.from.zone === "characterArea" ||
       params.selectedOption.from.zone === "stageArea") &&
     params.selectedOption.from.position === undefined &&
-    params.selectedOption.to.zone === "deck" &&
-    params.selectedOption.to.position === "bottom"
+    ((params.selectedOption.to.zone === "deck" &&
+      params.selectedOption.to.position === "bottom") ||
+      (params.selectedOption.to.zone === "hand" &&
+        params.selectedOption.to.position === undefined))
   ) {
     let nextState = params.state;
     for (const selectedId of params.selected) {
@@ -291,15 +294,25 @@ export const applyMoveCardsPayment = (params: {
       ) {
         return null;
       }
-      const moved = moveFieldCardToOwnerDeckBottom({
-        card: selectedCard,
-        causedBy: { type: "decision", decisionId: params.decisionId },
-        events: params.events,
-        playerId: params.playerId,
-        reason: "moveCardsCost",
-        sourceZone: params.selectedOption.from.zone,
-        state: nextState,
-      });
+      const moved =
+        params.selectedOption.to.zone === "deck"
+          ? moveFieldCardToOwnerDeckBottom({
+              card: selectedCard,
+              causedBy: { type: "decision", decisionId: params.decisionId },
+              events: params.events,
+              playerId: params.playerId,
+              reason: "moveCardsCost",
+              sourceZone: params.selectedOption.from.zone,
+              state: nextState,
+            })
+          : moveFieldCardToOwnerHand({
+              card: selectedCard,
+              causedBy: { type: "decision", decisionId: params.decisionId },
+              events: params.events,
+              playerId: params.playerId,
+              sourceZone: params.selectedOption.from.zone,
+              state: nextState,
+            });
       nextState = moved.state;
     }
     return nextState.players[params.playerId] ?? null;
