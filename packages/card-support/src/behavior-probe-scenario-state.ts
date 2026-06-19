@@ -10,6 +10,7 @@ import type {
   Condition,
   EffectBlock,
   EffectDefinition,
+  EffectId,
   GameState,
   MatchCardManifest,
   MatchId,
@@ -29,7 +30,7 @@ const probeCardId = "probe-card" as CardId;
 const probeDefinitionId = "probe-card.behavior-probe";
 
 export const setupProbeMainState = (input: {
-  readonly category: "character" | "event";
+  readonly category: "leader" | "character" | "event";
   readonly definition: EffectDefinition;
   readonly setupFilters: readonly CardFilter[];
   readonly text: string;
@@ -144,6 +145,64 @@ export const fieldProbeSource = (
   return source;
 };
 
+export const installProbeTriggerCostCard = (
+  state: GameState,
+  player: NonNullable<GameState["players"][PlayerId]>,
+): void => {
+  const card = player.hand[0];
+  if (card === undefined) {
+    return;
+  }
+  const definitionId = `${String(card.cardId)}.behavior-probe-trigger`;
+  const definition: EffectDefinition = {
+    cardId: card.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: `${String(card.cardId)}:trigger:1` as EffectId,
+        category: "auto",
+        trigger: { type: "trigger" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "draw",
+          player: "self",
+          count: 1,
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: "behavior-probe-trigger-source",
+      rulesVersion: "behavior-probe",
+      effectDefinitionsVersion: "behavior-probe",
+      tested: true,
+      reviewer: "behavior-probe",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: definition,
+  };
+  state.cardManifest.cards[card.cardId] = {
+    ...(state.cardManifest.cards[card.cardId] ??
+      resolvedProbeCard({
+        cardId: card.cardId,
+        category: "event",
+        effectText: "[Trigger] Draw 1 card.",
+      })),
+    triggerText: "[Trigger] Draw 1 card.",
+    support: {
+      cardId: card.cardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion: "behavior-probe",
+      cardDataVersion: "behavior-probe",
+      sourceTextHash: "behavior-probe-trigger-source",
+      behaviorHash: "behavior-probe-trigger-behavior",
+      effectDefinitionId: definitionId,
+    },
+  };
+};
+
 const reindexHand = (
   cards: readonly CardInstance[],
   playerId: PlayerId,
@@ -172,7 +231,7 @@ const createProbeManifest = (): MatchCardManifest => ({
 const installProbeManifest = (
   state: GameState,
   input: {
-    readonly category: "character" | "event";
+    readonly category: "leader" | "character" | "event";
     readonly definition: EffectDefinition;
     readonly text: string;
   },
@@ -421,7 +480,7 @@ const probeDonCardIds = (player: "p1" | "p2"): CardId[] =>
     (_, index) => `probe-${player}-don-${String(index + 1)}` as CardId,
   );
 
-const resolvedProbeCard = (params: {
+export const resolvedProbeCard = (params: {
   readonly cardId: CardId;
   readonly category: "leader" | "character" | "event" | "don" | "stage";
   readonly effectText: string;

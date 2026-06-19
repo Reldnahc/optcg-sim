@@ -363,6 +363,16 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["draw"],
   },
   {
+    label: "fixture:op16-080:on-opponent-attack-retarget",
+    text: "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card with a [Trigger] from your hand: Change the target of that attack to this Leader or to one of your {Blackbeard Pirates} type Character cards.",
+    expectedPrimitiveTypes: [
+      "changeAttackTarget",
+      "payCost",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:op03-099:when-attacking-life-placement",
     text: "[DON!! x1] [When Attacking] Look at up to 1 card from the top of your or your opponent's Life cards, and place it at the top or bottom of the Life cards. Then, this Leader gains +1000 power during this battle.",
     expectedPrimitiveTypes: ["modifyPower", "placeTopLifeCard", "sequence"],

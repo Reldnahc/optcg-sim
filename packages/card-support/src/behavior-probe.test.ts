@@ -211,6 +211,35 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("runs On Your Opponent's Attack effects from the defending Leader", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card with a [Trigger] from your hand: Change the target of that attack to this Leader or to one of your {Blackbeard Pirates} type Character cards.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: opponentAttack");
+    expect(report.lines).toContain("Scenario 1 card category: leader");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: changeAttackTarget, payCost, selectTargets, sequence",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.scenarios).toEqual([
+      {
+        index: 1,
+        entrypoint: "opponentAttack",
+        cardCategory: "leader",
+        status: "passed",
+        primitiveTypes: [
+          "changeAttackTarget",
+          "payCost",
+          "selectTargets",
+          "sequence",
+        ],
+      },
+    ]);
+  });
+
   it("runs Trigger effects by activating the source from Life", () => {
     const report = createBehaviorProbeReport({
       text: "[Trigger] Play this card.",

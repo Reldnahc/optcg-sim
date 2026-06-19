@@ -26,6 +26,7 @@ import {
   fieldProbeSource,
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
+import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
 export interface BehaviorProbeRequest {
@@ -52,8 +53,9 @@ export interface BehaviorProbeScenario {
     | "counter"
     | "declareAttack"
     | "lifeTrigger"
+    | "opponentAttack"
     | "playCard";
-  readonly cardCategory?: "character" | "event";
+  readonly cardCategory?: "leader" | "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
   readonly reason?: string;
@@ -64,6 +66,7 @@ type SupportedScenario =
   | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "counter"; readonly category: "event" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
+  | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
@@ -71,7 +74,6 @@ const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const probeCardId = "probe-card" as CardId;
 const maxDecisionSteps = 30;
-
 export const createBehaviorProbeReport = (
   request: BehaviorProbeRequest,
 ): BehaviorProbeReport => {
@@ -153,12 +155,23 @@ export const createBehaviorProbeReport = (
               ...scenarioInput,
               category: "character",
             })
-          : scenario.kind === "lifeTrigger"
-            ? runLifeTriggerScenario({
-                ...scenarioInput,
-                category: "character",
-              })
-            : runPlayCardScenario(scenarioInput);
+          : scenario.kind === "opponentAttack"
+            ? runOpponentAttackScenario(
+                {
+                  ...scenarioInput,
+                  category: "leader",
+                },
+                drainRuntime,
+              )
+            : scenario.kind === "lifeTrigger"
+              ? runLifeTriggerScenario({
+                  ...scenarioInput,
+                  category: "character",
+                })
+              : runPlayCardScenario({
+                  ...scenarioInput,
+                  category: scenario.category,
+                });
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -213,6 +226,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
+    return { kind: "opponentAttack", category: "leader" };
   }
   if (effects.every((effect) => effect.trigger.type === "trigger")) {
     return { kind: "lifeTrigger", category: "character" };
@@ -954,7 +970,6 @@ const formatErrorDetails = (details: unknown): string => {
   const serialized = JSON.stringify(details);
   return ` ${serialized}`;
 };
-
 const must = <T>(value: T | undefined, label: string): T => {
   if (value === undefined) {
     throw new Error(`Behavior probe missing ${label}.`);
