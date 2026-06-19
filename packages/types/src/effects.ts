@@ -122,6 +122,12 @@ export type Condition =
     }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
   | {
+      type: "zoneCountTotal";
+      counts: Array<{ player: PlayerRef; zone: Zone }>;
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "handCountDifference";
       minuend: { player: PlayerRef };
       subtrahend: { player: PlayerRef };

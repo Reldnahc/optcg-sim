@@ -538,6 +538,10 @@ const implicitEventReactionBodyExpressions = () =>
 
 const conditionalBlockBodyExpressions = () =>
   [
+    conditionalAlternateSelectionExpressionParser({
+      conditions: conditionParsers,
+      instructions: instructionParsers,
+    }),
     lookPlayFromTopExpressionParser,
     lookTrashFromTopExpressionParser,
     playFromDeckExpressionParser,

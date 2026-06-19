@@ -359,6 +359,78 @@ const evaluateCountCondition = (
   };
 };
 
+const isSupportedZoneCountTotalCondition = (
+  condition: Extract<Condition, { type: "zoneCountTotal" }>,
+): boolean =>
+  isNonNegativeSafeInteger(condition.value) &&
+  isComparator(condition.op) &&
+  Array.isArray(condition.counts) &&
+  condition.counts.length > 0 &&
+  condition.counts.every(
+    (count) =>
+      (count.player === "self" || count.player === "opponent") &&
+      count.zone !== "noZone",
+  );
+
+const countZone = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  count: Extract<Condition, { type: "zoneCountTotal" }>["counts"][number],
+): { supported: true; count: number } | { supported: false } => {
+  const playerId = resolveConditionPlayer(state, entry, count.player);
+  if (playerId === undefined) {
+    return { supported: false };
+  }
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return { supported: false };
+  }
+  switch (count.zone) {
+    case "hand":
+      return { supported: true, count: player.hand.length };
+    case "deck":
+      return { supported: true, count: player.deck.length };
+    case "trash":
+      return { supported: true, count: player.trash.length };
+    case "life":
+      return { supported: true, count: player.life.length };
+    case "costArea":
+      return { supported: true, count: player.costArea.length };
+    case "donDeck":
+      return { supported: true, count: player.donDeck.length };
+    case "characterArea":
+      return { supported: true, count: player.characters.length };
+    case "stageArea":
+      return { supported: true, count: player.stage === undefined ? 0 : 1 };
+    case "leaderArea":
+      return { supported: true, count: 1 };
+    case "noZone":
+      return { supported: false };
+  }
+};
+
+const evaluateZoneCountTotal = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  condition: Extract<Condition, { type: "zoneCountTotal" }>,
+): ConditionEvaluationResult => {
+  if (!isSupportedZoneCountTotalCondition(condition)) {
+    return { supported: false };
+  }
+  let total = 0;
+  for (const zoneCount of condition.counts) {
+    const counted = countZone(state, entry, zoneCount);
+    if (!counted.supported) {
+      return { supported: false };
+    }
+    total += counted.count;
+  }
+  return {
+    supported: true,
+    passed: compareComparator(condition.op, total, condition.value),
+  };
+};
+
 const evaluateCondition = (
   state: GameState,
   entry: EffectQueueEntry,
@@ -388,6 +460,8 @@ const evaluateCondition = (
       return evaluateLeaderColorCount(state, entry, condition);
     case "handCount":
       return evaluateHandCount(state, entry, condition);
+    case "zoneCountTotal":
+      return evaluateZoneCountTotal(state, entry, condition);
     case "handCountDifference":
       return evaluateHandCountDifference(state, entry, condition);
     case "deckCount":
@@ -536,6 +610,8 @@ export const isSupportedQueuedEffectConditionShape = (
       );
     case "handCount":
       return isSupportedHandCountCondition(condition);
+    case "zoneCountTotal":
+      return isSupportedZoneCountTotalCondition(condition);
     case "handCountDifference":
       return isSupportedHandCountDifferenceCondition(condition);
     case "lifeCountDifference":

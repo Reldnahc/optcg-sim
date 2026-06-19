@@ -23,6 +23,7 @@ import {
   parseSourcePlayedThisTurnCondition,
   parseTrashCountCondition,
   parseTurnCountCondition,
+  parseZoneCountTotalCondition,
 } from "../conditions/index.js";
 import {
   parseActivateReferencedEffectInstruction,
@@ -191,6 +192,7 @@ export const conditionParsers = [
   parseDonFieldCountCondition,
   parseDeckCountCondition,
   parseHandCountCondition,
+  parseZoneCountTotalCondition,
   parseOpponentRestedCharactersCondition,
   parseRestedCardCountCondition,
   parseSelfFieldCountCondition,

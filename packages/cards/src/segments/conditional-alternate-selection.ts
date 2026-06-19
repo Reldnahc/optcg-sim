@@ -13,6 +13,9 @@ import type {
 const conditionalAlternateTargetPattern =
   /^(?<defaultText>.+?)\.\s+If (?<conditionText>.+?),\s+you may select (?<alternateTargetText>.+?) instead\.?$/iu;
 
+const conditionalAlternateInstructionPattern =
+  /^(?<defaultText>.+?)\.\s+If (?<conditionText>.+?),\s+you may (?<alternateInstructionText>.+?) instead of (?<defaultReferenceText>.+?)\.?$/iu;
+
 const conditionalAlternateChooseKoPattern =
   /^Choose up to (?<defaultCount>[1-9]\d*) of (?<defaultTargetText>.+?) and K\.O\. it\.\s+If (?<conditionText>.+?),\s+choose up to (?<alternateCount>[1-9]\d*) of (?<alternateTargetText>.+?) instead of .+\.?$/iu;
 
@@ -113,6 +116,26 @@ const parseConditionalAlternateParts = (
     };
   }
 
+  const instruction = conditionalAlternateInstructionPattern.exec(text);
+  const instructionDefaultText = instruction?.groups?.["defaultText"];
+  const instructionConditionText = instruction?.groups?.["conditionText"];
+  const instructionAlternateText =
+    instruction?.groups?.["alternateInstructionText"];
+  const defaultReferenceText = instruction?.groups?.["defaultReferenceText"];
+  if (
+    instructionDefaultText !== undefined &&
+    instructionConditionText !== undefined &&
+    instructionAlternateText !== undefined &&
+    defaultReferenceText !== undefined &&
+    insteadReferenceMatchesDefault(instructionDefaultText, defaultReferenceText)
+  ) {
+    return {
+      defaultInstructionText: instructionDefaultText,
+      conditionText: instructionConditionText,
+      alternateInstructionText: instructionAlternateText,
+    };
+  }
+
   const match = conditionalAlternateTargetPattern.exec(text);
   const defaultText = match?.groups?.["defaultText"];
   const conditionText = match?.groups?.["conditionText"];
@@ -138,6 +161,23 @@ const parseConditionalAlternateParts = (
     conditionText,
     alternateInstructionText,
   };
+};
+
+const insteadReferenceMatchesDefault = (
+  defaultText: string,
+  referenceText: string,
+): boolean => {
+  const defaultDraw = /^draw (?<count>[1-9]\d*) cards?$/iu.exec(
+    defaultText.trim(),
+  );
+  const referenceDraw = /^drawing (?<count>[1-9]\d*) cards?$/iu.exec(
+    referenceText.trim(),
+  );
+  const defaultCount = defaultDraw?.groups?.["count"];
+  return (
+    defaultCount !== undefined &&
+    referenceDraw?.groups?.["count"] === defaultCount
+  );
 };
 
 const parseInstruction = (
