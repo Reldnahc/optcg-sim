@@ -8,11 +8,8 @@ import {
 } from "@optcg/engine-core";
 import type {
   Action,
-  Attribute,
   CardId,
   CardInstance,
-  CardCategory,
-  CardColor,
   CardFilter,
   Condition,
   Effect,
@@ -26,13 +23,17 @@ import type {
   PlayerId,
   ResolvedCard,
   Target,
-  Keyword,
 } from "@optcg/types";
 import {
   gameplayLinesFromTextParts,
   materializeEffectDefinition,
   parseRawKeywordLine,
 } from "@optcg/cards";
+import {
+  profileForCardFilter,
+  profileForLeaderFilters,
+  type ProbeCardProfile,
+} from "./behavior-probe-scenario-profiles.js";
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
 export interface BehaviorProbeRequest {
@@ -695,6 +696,16 @@ const setupProbeMainState = (input: {
   installActiveDon(active, p1);
   installActiveDon(active, p2);
   installProbeManifest(active, input);
+  installScenarioLeaderMetadata(
+    active,
+    p1,
+    collectLeaderConditionFilters(input.definition.effects, "self"),
+  );
+  installScenarioLeaderMetadata(
+    active,
+    p2,
+    collectLeaderConditionFilters(input.definition.effects, "opponent"),
+  );
   addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
   installScenarioDeckMetadata(active, p1, input.setupFilters);
   installScenarioDeckMetadata(active, p2, []);
@@ -791,19 +802,6 @@ const addProbeDeckCards = (
   player.deck = [...player.deck, ...cards];
 };
 
-interface ProbeCardProfile {
-  readonly cardId?: CardId;
-  readonly name?: string;
-  readonly category?: CardCategory;
-  readonly colors?: readonly CardColor[];
-  readonly attributes?: readonly Attribute[];
-  readonly types?: readonly string[];
-  readonly cost?: number;
-  readonly power?: number;
-  readonly counter?: number;
-  readonly keywords?: readonly Keyword[];
-}
-
 const installScenarioDeckMetadata = (
   state: GameState,
   playerId: PlayerId,
@@ -830,91 +828,57 @@ const installScenarioDeckMetadata = (
   player.deck = deck;
 };
 
-const profileForCardFilter = (
-  filter: CardFilter,
-  index: number,
-): ProbeCardProfile => {
-  const effectiveFilter = filter.anyOf?.[0] ?? filter;
-  const category = effectiveFilter.categories?.[0] ?? "character";
-  const cardId = effectiveFilter.cardIds?.[0];
-  const cost = numberForPredicate(
-    effectiveFilter.cost ?? effectiveFilter.baseCost,
-  );
-  const power = numberForPredicate(
-    effectiveFilter.power ?? effectiveFilter.currentPower,
-  );
-  const counter = numberForPredicate(effectiveFilter.counter);
-  return {
-    ...(cardId === undefined ? {} : { cardId }),
-    name:
-      effectiveFilter.names?.[0] ??
-      (effectiveFilter.nameContains === undefined
-        ? `Probe Match ${String(index + 1)}`
-        : `Probe ${effectiveFilter.nameContains} Match`),
-    category,
-    colors: colorsForFilter(effectiveFilter),
-    attributes: attributesForFilter(effectiveFilter),
-    types: typesForFilter(effectiveFilter),
-    ...(cost === undefined ? {} : { cost }),
-    ...(power === undefined ? {} : { power }),
-    ...(counter === undefined ? {} : { counter }),
-    keywords: effectiveFilter.hasKeywords ?? [],
-  };
+const installScenarioLeaderMetadata = (
+  state: GameState,
+  playerId: PlayerId,
+  filters: readonly CardFilter[],
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  const profile = profileForLeaderFilters(filters);
+  state.cardManifest.cards[player.leader.cardId] = resolvedProbeCard({
+    cardId: player.leader.cardId,
+    category: "leader",
+    effectText: "",
+    profile,
+  });
 };
 
-const colorsForFilter = (filter: CardFilter): readonly CardColor[] => {
-  if (filter.colorsAll !== undefined && filter.colorsAll.length > 0) {
-    return filter.colorsAll;
-  }
-  if (filter.colorsAny !== undefined && filter.colorsAny.length > 0) {
-    return [filter.colorsAny[0] as CardColor];
-  }
-  return ["red"];
-};
+const collectLeaderConditionFilters = (
+  effects: readonly EffectBlock[],
+  player: "self" | "opponent",
+): readonly CardFilter[] =>
+  uniqueFilters(
+    effects.flatMap((block) =>
+      collectLeaderConditionFiltersFromCondition(block.condition, player),
+    ),
+  );
 
-const attributesForFilter = (filter: CardFilter): readonly Attribute[] => {
-  if (filter.attributesAll !== undefined && filter.attributesAll.length > 0) {
-    return filter.attributesAll;
+const collectLeaderConditionFiltersFromCondition = (
+  condition: Condition | undefined,
+  player: "self" | "opponent",
+): readonly CardFilter[] => {
+  if (condition === undefined) {
+    return [];
   }
-  if (filter.attributesAny !== undefined && filter.attributesAny.length > 0) {
-    return [filter.attributesAny[0] as Attribute];
+  if (
+    condition.type === "hasCardInZone" &&
+    condition.zone === "leaderArea" &&
+    condition.player === player
+  ) {
+    return [condition.filter];
+  }
+  if (condition.type === "and" || condition.type === "or") {
+    return condition.conditions.flatMap((child) =>
+      collectLeaderConditionFiltersFromCondition(child, player),
+    );
+  }
+  if (condition.type === "not") {
+    return collectLeaderConditionFiltersFromCondition(
+      condition.condition,
+      player,
+    );
   }
   return [];
-};
-
-const typesForFilter = (filter: CardFilter): readonly string[] =>
-  [
-    ...(filter.typesAll ?? []),
-    ...(filter.typesAny === undefined ? [] : [filter.typesAny[0] ?? ""]),
-    ...(filter.typesIncludeAny === undefined
-      ? []
-      : [filter.typesIncludeAny[0] ?? ""]),
-  ].filter((type) => type.length > 0);
-
-const numberForPredicate = (
-  predicate:
-    | { readonly op: string; readonly value: number }
-    | { readonly min?: number; readonly max?: number }
-    | undefined,
-): number | undefined => {
-  if (predicate === undefined) {
-    return undefined;
-  }
-  if ("value" in predicate) {
-    switch (predicate.op) {
-      case "lt":
-        return Math.max(0, predicate.value - 1);
-      case "lte":
-        return predicate.value;
-      case "gt":
-        return predicate.value + 1;
-      case "gte":
-      case "eq":
-      default:
-        return predicate.value;
-    }
-  }
-  return predicate.min ?? predicate.max;
 };
 
 const engineErrorReason = (

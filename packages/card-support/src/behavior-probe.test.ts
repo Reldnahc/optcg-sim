@@ -49,6 +49,16 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("builds leader metadata to satisfy generated leader type conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] If your Leader has the {Impel Down} type, draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("builds enough scenario state to resolve search reveal and remainder ordering", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
@@ -121,15 +131,13 @@ describe("card behavior probe", () => {
 
   it("includes engine error details when a generated scenario fails", () => {
     const report = createBehaviorProbeReport({
-      text: "[On Play] If your Leader has the {Impel Down} type, draw 1 card and play up to 1 [Prisoner of Impel Down] card from your hand.",
+      text: "[On Play] Rest up to 1 of your opponent's cards. Then, you may trash 1 card from your hand. If you do, give up to 3 rested DON!! cards to your Leader.",
     });
 
     expect(report.exitCode).toBe(1);
     expect(report.scenarios[0]).toMatchObject({
       status: "failed",
-      reason: expect.stringContaining(
-        "unsupported-pending-runtime-work",
-      ) as string,
+      reason: expect.stringContaining("unsupported-sequence-frame") as string,
     });
   });
 });
