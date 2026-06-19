@@ -30,7 +30,7 @@ test("ENG-003E replay smoke final hashes remain pinned", () => {
       {
         id: "character-ko",
         finalStateHash:
-          "c2bf9dd172bd020d534e837d2af58f345c7d9bb23cf01c868fd6ea3db3b29430",
+          "1ac07fd09acea5941c6bbd454c68d94f58ad5e304d6eee754b3dbef44f9f3028",
       },
       {
         id: "leader-zero-life-defeat",

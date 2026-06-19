@@ -248,7 +248,7 @@ describe("default dev manifest boundary", () => {
   });
 
   test("dev generated effect definition cache version invalidates parser-output changes", () => {
-    assert.equal(defaultDevEffectDefinitionsVersion, "generated-dev-v25");
+    assert.equal(defaultDevEffectDefinitionsVersion, "generated-dev-v26");
   });
 
   test("dev RNG seed is fresh for each generated setup", () => {
