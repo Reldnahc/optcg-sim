@@ -10,7 +10,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { appendEvent } from "./action-results.js";
+import { appendEvent, toStateSeq } from "./action-results.js";
 import { applyAction, getLegalActions } from "./actions.js";
 import {
   createActiveState,
@@ -164,6 +164,13 @@ const attachOneDonToLeader = (state: GameState, playerId: PlayerId): void => {
   player.leader.attachedDon = [don.instanceId];
 };
 
+const namiLifeActivationActions = (state: GameState, playerId: PlayerId) =>
+  getLegalActions(state, playerId).filter(
+    (action) =>
+      action.type === "activateEffect" &&
+      action.effectId === op11NamiLifeEffectId,
+  );
+
 test.each([
   { name: "own Life", removedLifePlayerId: p1 },
   { name: "opponent Life", removedLifePlayerId: p2 },
@@ -179,11 +186,7 @@ test.each([
     const beforeHand = p1State.hand.length;
     appendLifeRemovedEvent(state, removedLifePlayerId);
 
-    const actions = getLegalActions(state, p1).filter(
-      (action) =>
-        action.type === "activateEffect" &&
-        action.effectId === op11NamiLifeEffectId,
-    );
+    const actions = namiLifeActivationActions(state, p1);
 
     assert.equal(actions.length, 1);
     const activated = applyAction(state, must(actions[0], "Nami activation"));
@@ -205,16 +208,46 @@ test.each([
         usedAtStateSeq: activated.state.oncePerTurn[0]?.usedAtStateSeq,
       },
     ]);
-    assert.deepEqual(
-      getLegalActions(activated.state, p1).filter(
-        (action) =>
-          action.type === "activateEffect" &&
-          action.effectId === op11NamiLifeEffectId,
-      ),
-      [],
-    );
+    assert.deepEqual(namiLifeActivationActions(activated.state, p1), []);
   },
 );
+
+test("OP11 Nami leader cannot activate when Life is removed on the opponent turn", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p2;
+  state.turn.phase = "main";
+  installOp11NamiLeader(state, p1);
+  appendLifeRemovedEvent(state, p1);
+  appendLifeRemovedEvent(state, p2);
+
+  assert.deepEqual(namiLifeActivationActions(state, p1), []);
+});
+
+test("OP11 Nami leader life-removal activation remains once per turn across multiple Life removals", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  installOp11NamiLeader(state, p1);
+  appendLifeRemovedEvent(state, p1);
+
+  const firstAction = must(
+    namiLifeActivationActions(state, p1)[0],
+    "first Nami activation",
+  );
+  const first = applyAction(state, firstAction);
+  assert.equal(first.errors, undefined);
+  appendLifeRemovedEvent(first.state, p2);
+
+  assert.deepEqual(namiLifeActivationActions(first.state, p1), []);
+  assert.equal(first.state.oncePerTurn.length, 1);
+
+  const nextTurn = structuredClone(first.state);
+  nextTurn.turn.globalTurn += 1;
+  nextTurn.seq = toStateSeq(nextTurn.seq + 3);
+  appendLifeRemovedEvent(nextTurn, p1);
+
+  assert.equal(namiLifeActivationActions(nextTurn, p1).length, 1);
+});
 
 test("OP11 Nami leader opponent-attack effect trashes from hand and gains turn power with attached DON", () => {
   const state = setupAttackState();
@@ -302,6 +335,37 @@ test("OP11 Nami leader opponent-attack effect is not offered without attached DO
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
   installOp11NamiLeader(state, p2);
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.notEqual(opened.state.pendingDecision?.type, "payCost");
+  assert.equal(
+    opened.state.effectQueue.some(
+      (entry) => entry.effectBlockId === op11NamiOpponentAttackEffectId,
+    ),
+    false,
+  );
+});
+
+test("OP11 Nami leader opponent-attack effect is not offered after being used once this turn", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const definition = installOp11NamiLeader(state, p2);
+  attachOneDonToLeader(state, p2);
+  state.oncePerTurn = [
+    {
+      cardInstanceId: p2State.leader.instanceId,
+      effectId: must(definition.effects[1], "opponent attack effect").id,
+      turnNumber: state.turn.globalTurn,
+      usedAtStateSeq: state.seq,
+    },
+  ];
 
   const opened = applyDeclareAttack(state, {
     type: "declareAttack",
