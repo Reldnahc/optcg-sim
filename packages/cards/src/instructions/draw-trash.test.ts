@@ -32,6 +32,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
           id: "draw-n-cards",
         },
         {
+          id: "draw-up-to-n-cards",
+        },
+        {
           id: "opponent-draws-n-cards",
         },
         {
@@ -104,6 +107,28 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(parseDrawInstruction({ text })).toEqual({
       effect: { type: "draw", count, player: "self" },
       evidence: ["instruction:draw", "count:positiveInteger", "player:self"],
+      rest: "",
+    });
+  });
+
+  it.each([
+    {
+      text: "Draw up to 1 card.",
+      count: 1,
+    },
+    {
+      text: "Draw up to 2 cards.",
+      count: 2,
+    },
+  ])("parses $text as reusable drawUpTo", ({ text, count }) => {
+    expect(parseDrawInstruction({ text })).toEqual({
+      effect: { type: "drawUpTo", count, player: "self" },
+      evidence: [
+        "instruction:draw",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+      ],
       rest: "",
     });
   });

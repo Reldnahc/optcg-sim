@@ -117,4 +117,56 @@ describe("closeout optional cost composition parser", () => {
       ]),
     );
   });
+
+  it("parses optional hand-trash cost into a conditional drawUpTo body", () => {
+    const result = parseCardEffectLine(
+      "[Main] You may trash 2 cards from your hand: If your Leader has the {Impel Down} type, draw up to 2 cards.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        trigger: { type: "main" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "payCost",
+                cost: {
+                  type: "trashFromHand",
+                  count: 2,
+                  chooser: "self",
+                },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "conditional",
+                if: {
+                  type: "hasCardInZone",
+                  player: "self",
+                  zone: "leaderArea",
+                  filter: { typesAny: ["Impel Down"] },
+                },
+                then: { type: "drawUpTo", count: 2, player: "self" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "composition:optionalCostedEffect",
+        "cost:trashFromHand",
+        "expression:conditional",
+        "condition:leaderIdentity",
+        "instruction:draw",
+        "cardinality:upTo",
+      ]),
+    );
+  });
 });
