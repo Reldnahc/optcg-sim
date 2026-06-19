@@ -585,3 +585,84 @@ it("parses slash-separated entries for global blocker activation restriction", (
     );
   }
 });
+
+it("parses Life cost before self and optional Leader power gains", () => {
+  const result = parseCardEffectLine(
+    "[When Attacking] You may add 1 card from the top or bottom of your Life cards to your hand: This Character and up to 1 of your Leader gain +1000 power during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "whenAttacking" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "moveCards",
+                count: 1,
+                chooser: "self",
+                from: {
+                  player: "self",
+                  zone: "life",
+                  position: "topOrBottom",
+                },
+                to: { player: "self", zone: "hand" },
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "modifyPower",
+                    target: { type: "self" },
+                    value: 1000,
+                    duration: { type: "thisTurn" },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "modifyPower",
+                    target: {
+                      type: "chooseFromZones",
+                      request: {
+                        chooser: "self",
+                        player: "self",
+                        zones: ["leaderArea"],
+                        min: 0,
+                        max: 1,
+                        filter: { categories: ["leader"] },
+                      },
+                    },
+                    value: 1000,
+                    duration: { type: "thisTurn" },
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:whenAttacking",
+      "composition:optionalCostedEffect",
+      "cost:moveCards",
+      "instruction:modifyPower",
+      "target:thisCharacter",
+      "target:yourLeader",
+      "composition:sequence",
+      "duration:thisTurn",
+    ]),
+  );
+});

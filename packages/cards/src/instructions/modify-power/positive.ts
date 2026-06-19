@@ -21,6 +21,11 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
     return dynamicRevealedCostPower;
   }
 
+  const selfAndLeaderPower = parseThisCharacterAndLeaderPower(input);
+  if (selfAndLeaderPower !== undefined) {
+    return selfAndLeaderPower;
+  }
+
   const allTarget = parseAllFieldTarget(input);
   if (allTarget !== undefined) {
     const parsed = parseGainsPositivePower(allTarget.target, allTarget.rest);
@@ -87,6 +92,44 @@ export const parsePowerGainInstruction: InstructionParser = (input) => {
       ...directTarget.evidence,
       ...parsed.evidence,
     ],
+    rest: "",
+  };
+};
+
+const parseThisCharacterAndLeaderPower: InstructionParser = (input) => {
+  const match =
+    /^This Character and up to 1 of your Leader gain (?<modifier>\+[1-9]\d* power .+)$/iu.exec(
+      input.text,
+    );
+  const modifierText = match?.groups?.["modifier"];
+  if (modifierText === undefined) {
+    return undefined;
+  }
+
+  const self = parsePowerGainInstruction({
+    text: `This Character gains ${modifierText}`,
+  });
+  const leader = parsePowerGainInstruction({
+    text: `up to 1 of your Leader gains ${modifierText}`,
+  });
+  if (
+    self === undefined ||
+    leader === undefined ||
+    self.rest.length > 0 ||
+    leader.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        { connector: "always", effect: self.effect },
+        { connector: "then", effect: leader.effect },
+      ],
+    },
+    evidence: [...self.evidence, ...leader.evidence, "composition:sequence"],
     rest: "",
   };
 };
