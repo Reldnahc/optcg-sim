@@ -44,6 +44,7 @@ import {
   conditionalContinuousExpressionParser,
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
+  delayedEndOfBattleSegmentParser,
   costedEffectExpressionParser,
   deckRevealToHandExpressionParser,
   delayedEndOfTurnSegmentParser,
@@ -202,6 +203,10 @@ function generalExpressionParser(input: ParseInput) {
         connectors: [parseAndConnector],
         instructions: instructionParsers,
         expressions: [optionalActionExpressionParser],
+      }),
+      delayedEndOfBattleSegmentParser({
+        connectors: [parseAndConnector],
+        instructions: instructionParsers,
       }),
       delayedEndOfTurnSegmentParser({
         connectors: [parseAndConnector],

@@ -1,4 +1,5 @@
 import { parseExpression } from "../expression-parser.js";
+import type { Trigger } from "@optcg/types";
 import type {
   ConditionParseResult,
   ConditionParser,
@@ -136,6 +137,62 @@ export function delayedStartOfNextMainPhaseSegmentParser(options: {
   };
 }
 
+export function delayedEndOfBattleSegmentParser(options: {
+  readonly connectors: readonly ConnectorParser[];
+  readonly instructions: readonly InstructionParser[];
+}): SegmentParser {
+  return (input: ParseInput) => {
+    const match =
+      /^at the end of this battle,\s*(?<body>[\s\S]+)$/iu.exec(input.text) ??
+      /^(?<body>[\s\S]+?)\s+at the end of this battle\.?$/iu.exec(input.text);
+    const bodyText = match?.groups?.["body"];
+    if (bodyText === undefined) {
+      return undefined;
+    }
+
+    const trigger = endOfBattleTriggerForContext(input.entryPoint?.trigger);
+    if (trigger === undefined) {
+      return undefined;
+    }
+
+    const body = parseExpression(
+      {
+        text: bodyText,
+        ...(input.entryPoint === undefined
+          ? {}
+          : { entryPoint: input.entryPoint }),
+      },
+      {
+        connectors: options.connectors,
+        segments: [
+          instructionExpressionSegmentParser(options),
+          syntheticInstructionSegmentParser(options.instructions),
+        ],
+      },
+    );
+    if (body === undefined || body.rest.length > 0) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "delayed",
+        timing: {
+          type: "event",
+          trigger,
+          expires: { type: "endOfTurn", turn: "current" },
+        },
+        effect: body.effect,
+      },
+      evidence: [
+        "trigger:endOfBattle",
+        "composition:delayed",
+        ...body.evidence,
+      ],
+    };
+  };
+}
+
 export function eventTimedDelayedSegmentParser(options: {
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
@@ -199,6 +256,19 @@ export function eventTimedDelayedSegmentParser(options: {
       ],
     };
   };
+}
+
+function endOfBattleTriggerForContext(
+  entryPointTrigger: Trigger | undefined,
+): Extract<Trigger, { type: "endOfBattle" }> | undefined {
+  if (entryPointTrigger?.type === "whenAttacking") {
+    return {
+      type: "endOfBattle",
+      role: "attacker",
+      player: "self",
+    };
+  }
+  return undefined;
 }
 
 export function conditionalExpressionSegmentParser(options: {

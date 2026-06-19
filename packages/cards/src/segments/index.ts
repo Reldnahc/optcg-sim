@@ -61,6 +61,7 @@ export {
   conditionalCostedBlockExpressionParser,
   conditionalBlockExpressionParser,
   conditionalExpressionSegmentParser,
+  delayedEndOfBattleSegmentParser,
   delayedEndOfTurnSegmentParser,
   delayedStartOfNextMainPhaseSegmentParser,
   eventTimedDelayedSegmentParser,

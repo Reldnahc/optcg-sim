@@ -57,6 +57,7 @@ function parseExpressionWithConnectorParse(
       segmentText,
       registry.segments,
       segmentSources?.[index],
+      parseInput.entryPoint,
     );
     if (parsed === undefined) {
       return undefined;
@@ -136,11 +137,13 @@ function parseSegment(
   text: string,
   parsers: readonly SegmentParser[],
   source?: ParseInput["source"],
+  entryPoint?: ParseInput["entryPoint"],
 ): SegmentParseResult | undefined {
   for (const parser of parsers) {
     const result = parser({
       text,
       ...(source === undefined ? {} : { source }),
+      ...(entryPoint === undefined ? {} : { entryPoint }),
     });
     if (result !== undefined) {
       return result;

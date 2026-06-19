@@ -31,7 +31,12 @@ export function optionalCostedEffectExpressionParser(options: {
     const costPresentationSpans =
       "presentationSpans" in cost ? cost.presentationSpans : undefined;
     const paidCostReference = paidCostReferenceForCost(cost);
-    const body = parseOptionalCostedBody(cost.rest, options, costRestSource);
+    const body = parseOptionalCostedBody(
+      cost.rest,
+      options,
+      costRestSource,
+      input.entryPoint,
+    );
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
@@ -167,11 +172,13 @@ function parseOptionalCostedBody(
     ) => ExpressionParseResult | undefined)[];
   },
   source?: SourceSlice,
+  entryPoint?: ParseInput["entryPoint"],
 ): ExpressionParseResult | undefined {
   for (const expression of options.expressions ?? []) {
     const parsed = expression({
       text,
       ...(source === undefined ? {} : { source }),
+      ...(entryPoint === undefined ? {} : { entryPoint }),
     });
     if (parsed !== undefined && parsed.rest.length === 0) {
       return parsed;
@@ -182,6 +189,7 @@ function parseOptionalCostedBody(
     {
       text,
       ...(source === undefined ? {} : { source }),
+      ...(entryPoint === undefined ? {} : { entryPoint }),
     },
     {
       connectors: [],
