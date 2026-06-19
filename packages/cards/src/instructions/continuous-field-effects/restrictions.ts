@@ -153,6 +153,65 @@ export const parseAllCharactersCannotAttackInstruction: ContinuousInstructionPar
     };
   };
 
+export const parseOpponentAttackOnlyNamedCharacterInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^your opponent cannot attack any card other than the Character \[(?<name>[^\]]+)\]\.?$/iu.exec(
+        input.text,
+      );
+    const name = match?.groups?.["name"]?.trim();
+    if (name === undefined || name.length === 0) {
+      return undefined;
+    }
+
+    const duration = continuousDuration(context.condition);
+    return {
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "leaderArea",
+                filter: { categories: ["leader"] },
+              },
+              duration,
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "characterArea",
+                filter: { categories: ["character"], nameNot: [name] },
+              },
+              duration,
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:cannotAttackTarget",
+        "player:opponent",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:nameNot",
+        continuousDurationEvidence(context.condition),
+      ],
+      rest: "",
+    };
+  };
+
 const combineConditions = (
   ...conditions: readonly (Condition | undefined)[]
 ): Condition | undefined => {

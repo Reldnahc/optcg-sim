@@ -12,6 +12,7 @@ export {
   parsePlayEntryStateInstruction,
   parseAllCharactersCannotAttackInstruction,
   parseAllCharactersRefreshLockInstruction,
+  parseOpponentAttackOnlyNamedCharacterInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordAndAttributeGrantInstruction,

@@ -17,6 +17,7 @@ export {
 export {
   parseAllCharactersCannotAttackInstruction,
   parseAllCharactersRefreshLockInstruction,
+  parseOpponentAttackOnlyNamedCharacterInstruction,
   parseSelfCannotAttackInstruction,
   selfCannotAttackPrimitive,
 } from "./restrictions.js";

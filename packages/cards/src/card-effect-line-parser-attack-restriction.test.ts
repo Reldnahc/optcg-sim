@@ -219,6 +219,94 @@ it("parses Trigger opponent Leader or Character card attack restrictions", () =>
   );
 });
 
+it("parses continuous opponent attacks-only-named-Character restrictions", () => {
+  const result = parseCardEffectLine(
+    '[DON!! x1] [Opponent\'s Turn] If this Character is rested, your opponent cannot attack any card other than the Character [Eustass"Captain"Kid].',
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      condition: {
+        type: "and",
+        conditions: [
+          { type: "attachedDonCount", op: "gte", value: 1 },
+          { type: "opponentTurn" },
+        ],
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "leaderArea",
+                filter: { categories: ["leader"] },
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: {
+                  type: "and",
+                  conditions: [
+                    {
+                      type: "and",
+                      conditions: [
+                        {
+                          type: "attachedDonCount",
+                          target: { type: "self" },
+                          op: "gte",
+                          value: 1,
+                        },
+                        { type: "opponentTurn" },
+                      ],
+                    },
+                    {
+                      type: "cardState",
+                      target: { type: "self" },
+                      state: "rested",
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  nameNot: ['Eustass"Captain"Kid'],
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "marker:attachedDon",
+      "entry:opponentTurn",
+      "expression:conditionalContinuous",
+      "condition:cardState",
+      "instruction:cannotAttackTarget",
+      "player:opponent",
+      "player:self",
+      "filter:nameNot",
+      "duration:whileConditionTrue",
+    ]),
+  );
+});
+
 it("parses selected opponent Character attack restrictions until the start of your next turn", () => {
   const parsed = parsePreventOpponentCharactersAttackInstruction({
     text: "Up to 1 of your opponent's Characters with a cost of 7 or less cannot attack until the start of your next turn.",

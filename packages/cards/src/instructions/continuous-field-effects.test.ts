@@ -4,6 +4,7 @@ import type { ContinuousInstructionContext } from "./continuous-field-effects.js
 import {
   parseAllowAttackActiveCharactersInstruction,
   parseBasePowerBecomeInstruction,
+  parseOpponentAttackOnlyNamedCharacterInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
   parseTargetedKeywordGrantInstruction,
@@ -375,6 +376,70 @@ describe("continuous field-effect instruction parsers", () => {
         "duration:thisTurn",
       ]),
     );
+  });
+
+  it("parses opponent attack-target locks to only a named Character as reusable target restrictions", () => {
+    expect(
+      parseOpponentAttackOnlyNamedCharacterInstruction(
+        {
+          text: 'your opponent cannot attack any card other than the Character [Eustass"Captain"Kid].',
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "leaderArea",
+                filter: { categories: ["leader"] },
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+          {
+            connector: "always",
+            effect: {
+              type: "cannotAttackTarget",
+              target: { type: "player", player: "opponent" },
+              attackTarget: {
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  nameNot: ['Eustass"Captain"Kid'],
+                },
+              },
+              duration: {
+                type: "whileConditionTrue",
+                condition: context.condition,
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:cannotAttackTarget",
+        "player:opponent",
+        "player:self",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:nameNot",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
   });
 
   it("parses self active-Character attack permission with an explicit duration", () => {
