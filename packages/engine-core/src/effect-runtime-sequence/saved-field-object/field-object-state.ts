@@ -358,6 +358,33 @@ export const activateFieldObject = (
       },
     };
   }
+  if (
+    target.zone?.zone === "stageArea" &&
+    player.stage !== undefined &&
+    refsEqual(target, {
+      instanceId: player.stage.instanceId,
+      cardId: player.stage.cardId,
+      playerId: target.playerId,
+      zone: player.stage.zone,
+    })
+  ) {
+    if (!canBecomeActive(state, player.stage)) {
+      return { changed: false, state };
+    }
+    return {
+      changed: player.stage.state !== "active",
+      state: {
+        ...state,
+        players: {
+          ...state.players,
+          [target.playerId]: {
+            ...player,
+            stage: { ...player.stage, state: "active" as const },
+          },
+        },
+      },
+    };
+  }
   return { changed: false, state };
 };
 

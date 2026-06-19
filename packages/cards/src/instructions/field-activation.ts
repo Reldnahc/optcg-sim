@@ -243,11 +243,10 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const parsedTarget = parseActivationCharacterFilter(targetText);
+  const parsedTarget = parseActivationFieldFilter(targetText);
   if (
     parsedTarget === undefined ||
-    parsedTarget.rest.trim().length > 0 ||
-    !isCharacterFilter(parsedTarget.filter)
+    parsedTarget.parsed.rest.trim().length > 0
   ) {
     return undefined;
   }
@@ -265,9 +264,9 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
             request: {
               timing: "onResolution",
               chooser: "self",
-              zone: "characterArea",
+              zone: parsedTarget.zone,
               player: "self",
-              filter: parsedTarget.filter,
+              filter: parsedTarget.parsed.filter,
               min: quantity.cardinality.min,
               max: quantity.cardinality.max,
               allowFewerIfUnavailable: true,
@@ -286,7 +285,7 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
                 family: "selectedTargets",
                 saveResultAs: fieldActivationTarget,
               },
-              zone: "characterArea",
+              zone: parsedTarget.zone,
               player: "self",
               visibility: "publicOnly",
               onFailure: "failClosed",
@@ -300,8 +299,10 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
       ...quantity.evidence,
       "player:self",
       "chooser:self:upTo",
-      "zone:characterArea",
-      ...parsedTarget.evidence,
+      parsedTarget.zone === "stageArea"
+        ? "zone:stageArea"
+        : "zone:characterArea",
+      ...parsedTarget.parsed.evidence,
       "state:active",
       "composition:selectThenApply",
     ],
@@ -309,15 +310,21 @@ export const parseSetFieldActiveInstruction: InstructionParser = (input) => {
   };
 };
 
-function parseActivationCharacterFilter(
-  text: string,
-): ReturnType<typeof parseCardFilterPredicates> {
+function parseActivationFieldFilter(text: string):
+  | {
+      readonly zone: "characterArea" | "stageArea";
+      readonly parsed: NonNullable<
+        ReturnType<typeof parseCardFilterPredicates>
+      >;
+    }
+  | undefined {
   const parsed = parseCardFilterPredicates(
     { text },
     { powerSemantics: "current" },
   );
   if (parsed !== undefined) {
-    return parsed;
+    const zone = activationZoneFromFilter(parsed.filter);
+    return zone === undefined ? undefined : { zone, parsed };
   }
 
   const rested = /^rested\s+(?<rest>.+)$/iu.exec(text.trim());
@@ -332,11 +339,29 @@ function parseActivationCharacterFilter(
   if (filtered === undefined) {
     return undefined;
   }
-  return {
+  const evidence: readonly PrimitiveEvidence[] = [
+    "filter:state:rested",
+    ...filtered.evidence,
+  ];
+  const parsedRested = {
     ...filtered,
-    filter: { ...filtered.filter, state: "rested" },
-    evidence: ["filter:state:rested", ...filtered.evidence],
+    filter: { ...filtered.filter, state: "rested" as const },
+    evidence,
   };
+  const zone = activationZoneFromFilter(parsedRested.filter);
+  return zone === undefined ? undefined : { zone, parsed: parsedRested };
+}
+
+function activationZoneFromFilter(
+  filter: CardFilter,
+): "characterArea" | "stageArea" | undefined {
+  if (isCharacterFilter(filter)) {
+    return "characterArea";
+  }
+  if (isStageFilter(filter)) {
+    return "stageArea";
+  }
+  return undefined;
 }
 
 function parseYourLeaderSelectionTarget(text: string):
@@ -745,4 +770,10 @@ function isLeaderFilter(
   filter: CardFilter,
 ): filter is CardFilter & { readonly categories: readonly ["leader"] } {
   return filter.categories?.includes("leader") === true;
+}
+
+function isStageFilter(
+  filter: CardFilter,
+): filter is CardFilter & { readonly categories: readonly ["stage"] } {
+  return filter.categories?.includes("stage") === true;
 }

@@ -72,6 +72,86 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses aggregate DON returned reactions with Stage activation follow-up", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] When 2 or more DON!! cards on your field are returned to your DON!! deck, add up to 1 DON!! card from your DON!! deck and rest it. Then, set up to 1 of your purple Stages as active.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        oncePerTurn: true,
+        trigger: {
+          type: "eventCount",
+          count: { op: "gte", value: 2 },
+          trigger: { type: "donReturned", player: "self" },
+        },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "moveCards",
+                min: 0,
+                count: 1,
+                from: { player: "self", zone: "donDeck", position: "top" },
+                to: { player: "self", zone: "costArea" },
+                destinationState: "rested",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "selectTargets",
+                      request: {
+                        player: "self",
+                        zone: "stageArea",
+                        min: 0,
+                        max: 1,
+                        filter: {
+                          categories: ["stage"],
+                          colorsAny: ["purple"],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "activate",
+                      target: {
+                        type: "savedFieldObject",
+                        zone: "stageArea",
+                        player: "self",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:donReturned",
+        "count:positiveInteger",
+        "instruction:moveCards",
+        "destination:costArea",
+        "state:rested",
+        "instruction:activate",
+        "zone:stageArea",
+        "filter:color",
+        "filter:category:stage",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
+
   it("parses bare Character K.O. reactions as field-removal primitives for either player", () => {
     const result = parseCardEffectLine(
       "[Once Per Turn] When a Character is K.O.'d, draw 1 card and trash 1 card from your hand.",

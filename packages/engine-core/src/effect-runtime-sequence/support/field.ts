@@ -212,6 +212,7 @@ export const isSupportedActivateSegment = (
   ((effect.target.type === "savedFieldObject" &&
     (effect.target.zone === "costArea" ||
       effect.target.zone === "characterArea" ||
+      effect.target.zone === "stageArea" ||
       isSupportedSavedLeaderOrCharacterTarget(effect.target)) &&
     (effect.target.player === "self" || effect.target.player === "opponent") &&
     effect.target.controller === undefined &&
@@ -223,6 +224,7 @@ export const isSupportedActivateSegment = (
       effect.target.player === "self" &&
       (effect.target.zone === "costArea" ||
         effect.target.zone === "characterArea" ||
+        effect.target.zone === "stageArea" ||
         effect.target.zone === "leaderArea") &&
       isSupportedPublicFieldTargetFilter(effect.target.filter)));
 

@@ -209,6 +209,61 @@ describe("field activation instruction parser", () => {
     });
   });
 
+  it("parses colored Stage activation as a reusable saved target", () => {
+    expect(
+      parseSetFieldActiveInstruction({
+        text: "set up to 1 of your purple Stages as active.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "self",
+                zone: "stageArea",
+                min: 0,
+                max: 1,
+                filter: {
+                  categories: ["stage"],
+                  colorsAny: ["purple"],
+                },
+              },
+            },
+          },
+          {
+            effect: {
+              type: "activate",
+              target: {
+                type: "savedFieldObject",
+                zone: "stageArea",
+                player: "self",
+              },
+            },
+          },
+        ],
+      },
+      evidence: [
+        "instruction:activate",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "player:self",
+        "chooser:self:upTo",
+        "zone:stageArea",
+        "filter:color",
+        "filter:category:stage",
+        "state:active",
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses typed Leader activation as a filtered leader-area activate primitive", () => {
     expect(
       parseSetFieldActiveInstruction({
