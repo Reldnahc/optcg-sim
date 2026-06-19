@@ -38,6 +38,23 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("builds enough scenario state to resolve search reveal and remainder ordering", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Look at 3 cards from the top of your deck; reveal up to 1 {Land of Wano} type card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [2-9]/u),
+      ]),
+    );
+  });
+
   it("reports runtime-supported entrypoints that do not have generated scenarios yet", () => {
     const report = createBehaviorProbeReport({
       text: "[When Attacking] Draw 1 card.",

@@ -112,6 +112,7 @@ export const createBehaviorProbeReport = (
       "Scenario 1 decision policy: max-progress",
       `Scenario 1 pending decisions: ${result.pendingDecisionDrained ? "drained" : "pending"}`,
       `Scenario 1 effect queue: ${result.effectQueueDrained ? "drained" : "pending"}`,
+      `Scenario 1 decisions resolved: ${String(result.decisionsResolved)}`,
       `Scenario 1 events: ${String(result.eventCount)}`,
     ],
     errors: [],
@@ -149,6 +150,7 @@ const runPlayCardScenario = (input: {
   readonly pendingDecisionDrained: boolean;
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
+  readonly decisionsResolved: number;
 } => {
   const state = setupProbeMainState(input);
   const player = state.players[p1];
@@ -162,6 +164,7 @@ const runPlayCardScenario = (input: {
       pendingDecisionDrained: state.pendingDecision === undefined,
       effectQueueDrained: state.effectQueue.length === 0,
       eventCount: 0,
+      decisionsResolved: 0,
     };
   }
 
@@ -180,16 +183,19 @@ const drainRuntime = (
   readonly pendingDecisionDrained: boolean;
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
+  readonly decisionsResolved: number;
 } => {
   let result = initialResult;
   let state = result.state;
   let eventCount = result.events.length;
+  let decisionsResolved = 0;
   for (let step = 0; step < maxDecisionSteps; step += 1) {
     if (result.errors !== undefined && result.errors.length > 0) {
       return drainResult(
         false,
         state,
         eventCount,
+        decisionsResolved,
         engineErrorReason(result.errors[0]),
       );
     }
@@ -198,7 +204,7 @@ const drainRuntime = (
       state.effectQueue.length === 0 &&
       state.deferredTriggers.length === 0
     ) {
-      return drainResult(true, state, eventCount);
+      return drainResult(true, state, eventCount, decisionsResolved);
     }
 
     const decision = state.pendingDecision;
@@ -207,32 +213,42 @@ const drainRuntime = (
         false,
         state,
         eventCount,
+        decisionsResolved,
         "runtime work did not drain",
       );
     }
-    const nextAction = chooseDecisionAction(
-      getLegalActions(state, decision.playerId),
-    );
+    const nextAction =
+      chooseDecisionAction(getLegalActions(state, decision.playerId)) ??
+      choosePendingDecisionAction(state);
     if (nextAction === undefined) {
       return drainResult(
         false,
         state,
         eventCount,
+        decisionsResolved,
         `no legal response for ${decision.type}`,
       );
     }
     result = applyAction(state, nextAction);
     state = result.state;
     eventCount += result.events.length;
+    decisionsResolved += 1;
   }
 
-  return drainResult(false, state, eventCount, "decision drain step limit hit");
+  return drainResult(
+    false,
+    state,
+    eventCount,
+    decisionsResolved,
+    "decision drain step limit hit",
+  );
 };
 
 const drainResult = (
   ok: boolean,
   state: GameState,
   eventCount: number,
+  decisionsResolved: number,
   reason?: string,
 ) => ({
   ok,
@@ -240,6 +256,7 @@ const drainResult = (
   pendingDecisionDrained: state.pendingDecision === undefined,
   effectQueueDrained: state.effectQueue.length === 0,
   eventCount,
+  decisionsResolved,
 });
 
 const chooseDecisionAction = (
@@ -303,6 +320,34 @@ const decisionScore = (
 
 const selectionCount = (values: readonly unknown[] | undefined): number =>
   values?.length ?? 0;
+
+const choosePendingDecisionAction = (
+  state: GameState,
+): Extract<Action, { type: "respondToDecision" }> | undefined => {
+  const decision = state.pendingDecision;
+  if (decision === undefined || decision.type !== "orderCards") {
+    return undefined;
+  }
+  if (decision.placement?.type === "topOrBottom") {
+    return {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "topBottomPlacement",
+        topIds: [],
+        bottomIds: decision.cards.map((card) => String(card.instanceId)),
+      },
+    };
+  }
+  return {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "orderedIds",
+      ids: decision.cards.map((card) => String(card.instanceId)),
+    },
+  };
+};
 
 const setupProbeMainState = (input: {
   readonly category: "character" | "event";
@@ -371,6 +416,8 @@ const setupProbeMainState = (input: {
   installActiveDon(active, p1);
   installActiveDon(active, p2);
   installProbeManifest(active, input);
+  installGenericSearchableDeckMetadata(active, p1);
+  installGenericSearchableDeckMetadata(active, p2);
   addProbeDeckCards(active, p1, 4);
   return active;
 };
@@ -444,6 +491,7 @@ const addProbeDeckCards = (
       cardId,
       category: "character",
       effectText: "",
+      searchProfile: "broad",
     });
     return {
       instanceId:
@@ -463,6 +511,21 @@ const addProbeDeckCards = (
     };
   });
   player.deck = [...player.deck, ...cards];
+};
+
+const installGenericSearchableDeckMetadata = (
+  state: GameState,
+  playerId: PlayerId,
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  for (const card of player.deck) {
+    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
+      cardId: card.cardId,
+      category: "character",
+      effectText: "",
+      searchProfile: "broad",
+    });
+  }
 };
 
 const engineErrorReason = (
@@ -498,6 +561,7 @@ const resolvedProbeCard = (params: {
   readonly cardId: CardId;
   readonly category: "leader" | "character" | "event" | "don" | "stage";
   readonly effectText: string;
+  readonly searchProfile?: "broad";
   readonly support?: ResolvedCard["support"];
 }): ResolvedCard => ({
   cardId: params.cardId,
@@ -509,7 +573,17 @@ const resolvedProbeCard = (params: {
   released: true,
   colors: params.category === "don" ? [] : ["red"],
   attributes: [],
-  types: [],
+  types:
+    params.searchProfile === "broad"
+      ? [
+          "Land of Wano",
+          "Sky Island",
+          "Red-Haired Pirates",
+          "Dressrosa",
+          "Straw Hat Crew",
+          "Navy",
+        ]
+      : [],
   printedKeywords: [],
   variants: [],
   legality: {},
