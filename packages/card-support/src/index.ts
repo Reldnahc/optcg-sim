@@ -11,9 +11,16 @@ export {
 } from "./support-probe-report.js";
 export {
   createBehaviorProbeReport,
+  type BehaviorProbeScenario,
   type BehaviorProbeReport,
   type BehaviorProbeRequest,
 } from "./behavior-probe.js";
+export {
+  createBehaviorCoverageReport,
+  type BehaviorCoverageEntry,
+  type BehaviorCoverageReport,
+  type BehaviorCoverageRequest,
+} from "./behavior-coverage.js";
 export {
   collectEffectBlockPrimitiveTypes,
   createEnginePrimitiveInventoryReport,
