@@ -65,6 +65,7 @@ import {
 } from "./runtime/optional-activation/actions.js";
 import {
   applyLifeReorderSequenceAwareResponse,
+  applyLifeToDeckTopSequenceAwareResponse,
   applySequenceSelectCardsChoiceResponse,
   getSequenceSelectCardsChoiceLegalActions,
   applyPlaceSetRemainderSequenceAwareResponse,
@@ -777,6 +778,18 @@ const applyRespondToDecision = (
     return continueRuntimeAndAttackTimingAfterDecision(
       state,
       lifeReorderResult,
+      options,
+    );
+  }
+  const lifeToDeckTopResult = profileActionSpan(
+    options,
+    "engine:decision:lifeToDeckTop",
+    () => applyLifeToDeckTopSequenceAwareResponse(state, action),
+  );
+  if (lifeToDeckTopResult !== null) {
+    return continueRuntimeAndAttackTimingAfterDecision(
+      state,
+      lifeToDeckTopResult,
       options,
     );
   }

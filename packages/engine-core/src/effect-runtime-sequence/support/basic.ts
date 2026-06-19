@@ -19,6 +19,10 @@ export type MoveMatchingLifeCardsEffect = Extract<
 >;
 export type ReturnDonEffect = Extract<Effect, { type: "returnDon" }>;
 export type ReorderLifeEffect = Extract<Effect, { type: "reorderLife" }>;
+export type MoveLifeToDeckTopAndReorderRestEffect = Extract<
+  Effect,
+  { type: "moveLifeToDeckTopAndReorderRest" }
+>;
 export type PlaceTopLifeCardEffect = Extract<
   Effect,
   { type: "placeTopLifeCard" }
@@ -116,6 +120,13 @@ export const isSupportedReorderLifeSegment = (
   effect: SequenceSegmentEffect,
 ): effect is ReorderLifeEffect =>
   effect.type === "reorderLife" &&
+  (effect.player === "self" || effect.player === "opponent") &&
+  effect.viewer === "self";
+
+export const isSupportedMoveLifeToDeckTopAndReorderRestSegment = (
+  effect: SequenceSegmentEffect,
+): effect is MoveLifeToDeckTopAndReorderRestEffect =>
+  effect.type === "moveLifeToDeckTopAndReorderRest" &&
   (effect.player === "self" || effect.player === "opponent") &&
   effect.viewer === "self";
 

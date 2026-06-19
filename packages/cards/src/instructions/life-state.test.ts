@@ -75,6 +75,37 @@ describe("Life state instruction parser", () => {
     },
   );
 
+  it.each([
+    "Look at all of your Life cards; place 1 card at the top of your deck and place the rest back in your Life area in any order.",
+    "Look at all your Life cards; place 1 at the top of your deck and place the rest back in your Life area in any order.",
+  ])(
+    "parses own Life deck-top extraction and remainder reorder: %s",
+    (text) => {
+      expect(
+        parseLifeStateInstruction({
+          text,
+        }),
+      ).toEqual({
+        effect: {
+          type: "moveLifeToDeckTopAndReorderRest",
+          player: "self",
+          viewer: "self",
+        },
+        evidence: [
+          "instruction:reorder",
+          "instruction:moveCards",
+          "player:self",
+          "zone:life",
+          "destination:deck",
+          "position:top",
+          "visibility:private",
+          "order:anyOrder",
+        ],
+        rest: "",
+      });
+    },
+  );
+
   it("parses turning all own Life face-down as a reusable Life state primitive", () => {
     expect(
       parseLifeStateInstruction({

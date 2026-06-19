@@ -30,6 +30,7 @@ import {
   isSupportedDrawUpToSegment,
   isSupportedDamageSegment,
   isSupportedMoveCardsSegment,
+  isSupportedMoveLifeToDeckTopAndReorderRestSegment,
   isSupportedMoveMatchingLifeCardsSegment,
   isSupportedPlaceTopLifeCardSegment,
   isSupportedPlaceTopDeckCardsSegment,
@@ -43,6 +44,7 @@ import {
   type DrawEffect,
   type DrawUpToEffect,
   type MoveCardsEffect,
+  type MoveLifeToDeckTopAndReorderRestEffect,
   type MoveMatchingLifeCardsEffect,
   type PlaceTopLifeCardEffect,
   type PlaceTopDeckCardsEffect,
@@ -131,6 +133,7 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | DrawUpToEffect
     | DamageEffect
     | MoveCardsEffect
+    | MoveLifeToDeckTopAndReorderRestEffect
     | MoveMatchingLifeCardsEffect
     | ReturnDonEffect
     | ShuffleDeckEffect
@@ -526,6 +529,10 @@ const isSupportedSequenceBlockWithState = (
         return recordSupportedProducer(supportState, segment);
       }
       if (isSupportedReorderLifeSegment(segment.effect)) {
+        supportState.hasPendingDecisionSegment = true;
+        return recordSupportedProducer(supportState, segment);
+      }
+      if (isSupportedMoveLifeToDeckTopAndReorderRestSegment(segment.effect)) {
         supportState.hasPendingDecisionSegment = true;
         return recordSupportedProducer(supportState, segment);
       }

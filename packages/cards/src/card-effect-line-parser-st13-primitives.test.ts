@@ -436,3 +436,34 @@ it("parses up-to-one-each named hand play as independent reusable play selection
     ]),
   );
 });
+
+it("parses Life deck-top extraction as a reusable private Life reorder primitive", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Look at all your Life cards; place 1 at the top of your deck and place the rest back in your Life area in any order.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      effect: {
+        type: "moveLifeToDeckTopAndReorderRest",
+        player: "self",
+        viewer: "self",
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:reorder",
+      "instruction:moveCards",
+      "player:self",
+      "zone:life",
+      "destination:deck",
+      "position:top",
+      "visibility:private",
+      "order:anyOrder",
+    ]),
+  );
+});

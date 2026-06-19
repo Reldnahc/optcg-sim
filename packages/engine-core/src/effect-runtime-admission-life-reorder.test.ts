@@ -27,3 +27,16 @@ test.each([
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts Life deck-top extraction with remainder reorder", () => {
+  const report = evaluateEffectBlockRuntimeSupport(
+    onPlayBlock({
+      type: "moveLifeToDeckTopAndReorderRest",
+      player: "self",
+      viewer: "self",
+    }),
+  );
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});

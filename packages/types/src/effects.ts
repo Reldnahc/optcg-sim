@@ -696,6 +696,11 @@ export type Effect =
       viewer: PlayerRef;
     }
   | {
+      type: "moveLifeToDeckTopAndReorderRest";
+      player: PlayerRef;
+      viewer: PlayerRef;
+    }
+  | {
       type: "placeTopLifeCard";
       players: PlayerRef[];
       viewer: PlayerRef;

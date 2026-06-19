@@ -47,6 +47,31 @@ export const parseLifeStateInstruction: InstructionParser = (input) => {
   }
 
   if (
+    /^look at all (?:of )?your Life cards; place 1 (?:card )?at the top of your deck and place the rest back in your Life area in any order\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return {
+      effect: {
+        type: "moveLifeToDeckTopAndReorderRest",
+        player: "self",
+        viewer: "self",
+      },
+      evidence: [
+        "instruction:reorder",
+        "instruction:moveCards",
+        "player:self",
+        "zone:life",
+        "destination:deck",
+        "position:top",
+        "visibility:private",
+        "order:anyOrder",
+      ],
+      rest: "",
+    };
+  }
+
+  if (
     /^look at all of your opponent's Life cards and place them back in their Life area in any order\.?$/iu.test(
       input.text,
     )

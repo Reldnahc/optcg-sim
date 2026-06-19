@@ -257,6 +257,24 @@ const reorderOpponentLife = (): Extract<Effect, { type: "sequence" }> => ({
   ],
 });
 
+const moveOwnLifeToDeckTopAndReorderRest = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "life-to-deck-top-reorder-rest",
+      connector: "always",
+      effect: {
+        type: "moveLifeToDeckTopAndReorderRest",
+        player: "self",
+        viewer: "self",
+      },
+    },
+  ],
+});
+
 const turnOwnLifeFaceDown = (): Extract<Effect, { type: "sequence" }> => ({
   type: "sequence",
   effects: [
@@ -464,6 +482,56 @@ test("sequence runner reorders opponent Life through a private order decision", 
       (lifeCard) => lifeCard.card.instanceId,
     ),
     orderedIds,
+  );
+});
+
+test("sequence runner moves chosen Life card to deck top and reorders the rest through one order decision", () => {
+  const state = sequenceQueueState(moveOwnLifeToDeckTopAndReorderRest());
+  const beforeP1 = must(state.players[p1], "before p1");
+  const originalLifeIds = beforeP1.life.map(
+    (lifeCard) => lifeCard.card.instanceId,
+  );
+  const originalDeckTopId = must(
+    beforeP1.deck[0],
+    "original deck top",
+  ).instanceId;
+  const deckTopLifeId = must(originalLifeIds[1], "chosen Life card");
+  const orderedIds = [
+    deckTopLifeId,
+    must(originalLifeIds[0], "remaining Life one"),
+    ...originalLifeIds.slice(2),
+  ];
+
+  const paused = processEffectRuntime(state);
+
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "Life-to-deck decision");
+  assert.equal(decision.type, "orderCards");
+  assert.equal(decision.playerId, p1);
+  assert.deepEqual(
+    decision.cards.map((card) => card.instanceId),
+    originalLifeIds,
+  );
+
+  const resolved = processEffectRuntime(
+    applyAction(paused.state, {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "orderedIds", ids: orderedIds },
+    }).state,
+  );
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const afterP1 = must(resolved.state.players[p1], "after p1");
+  assert.equal(must(afterP1.deck[0], "new deck top").instanceId, deckTopLifeId);
+  assert.equal(
+    must(afterP1.deck[1], "old deck top shifted").instanceId,
+    originalDeckTopId,
+  );
+  assert.deepEqual(
+    afterP1.life.map((lifeCard) => lifeCard.card.instanceId),
+    orderedIds.slice(1),
   );
 });
 
