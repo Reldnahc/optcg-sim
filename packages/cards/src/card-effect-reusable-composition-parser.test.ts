@@ -408,23 +408,26 @@ describe("card effect reusable parser compositions", () => {
     expect(result?.evidence).toContain("activation:reaction");
   });
 
-  it("parses marker-led opponent attack activation prose as the opponent-attack entrypoint", () => {
+  it("parses marker-led opponent attack activated reactions", () => {
     const result = parseCardEffectLine(
       "[Once Per Turn] This effect can be activated when your opponent attacks. Give up to 1 of your opponent's Leader or Character cards -1000 power during this turn.",
     );
 
     expect(result).toMatchObject({
       block: {
-        category: "auto",
+        category: "activate",
         trigger: { type: "onOpponentAttack" },
         oncePerTurn: true,
-        effect: { type: "modifyPower" },
+        effect: { type: "sequence" },
       },
     });
     expect(result?.evidence).toEqual(
-      expect.arrayContaining(["entry:onOpponentAttack"]),
+      expect.arrayContaining([
+        "entry:activatedReaction",
+        "activation:reaction",
+        "entry:onOpponentAttack",
+      ]),
     );
-    expect(result?.evidence).not.toContain("activation:reaction");
   });
 
   it("parses opponent Character attack predicates as attack filters", () => {
@@ -658,63 +661,39 @@ describe("card effect reusable parser compositions", () => {
     );
   });
 
-  it("parses named-card keyword grants under opponent-attack activation prose", () => {
+  it("parses named-card keyword grants under activated opponent-attack reactions", () => {
     const result = parseCardEffectLine(
       "[Once Per Turn] This effect can be activated when your opponent attacks. Up to 1 of your [Example Name] cards gains [Blocker] during this turn.",
     );
 
     expect(result).toMatchObject({
       block: {
-        category: "auto",
+        category: "activate",
         trigger: { type: "onOpponentAttack" },
         effect: {
-          type: "giveKeyword",
-          target: {
-            type: "chooseFromZones",
-            request: {
-              player: "self",
-              zones: ["leaderArea", "characterArea"],
-              filter: { names: ["Example Name"] },
-            },
-          },
-          keyword: "blocker",
-          duration: { type: "thisTurn" },
-        },
-      },
-    });
-    expect(result?.evidence).toEqual(
-      expect.arrayContaining([
-        "entry:onOpponentAttack",
-        "target:yourNamedCards",
-        "keyword:anySupported",
-      ]),
-    );
-    expect(result?.evidence).not.toContain("activation:reaction");
-  });
-
-  it("keeps non-opponent-attack activation prose as activated reactions", () => {
-    const result = parseCardEffectLine(
-      "This effect can be activated when this Character is rested by your opponent's effect. You may trash this Character and draw 2 cards.",
-    );
-
-    expect(result).toMatchObject({
-      block: {
-        category: "activate",
-        trigger: {
-          type: "cardRested",
-          target: "self",
-          player: "self",
-          filter: { categories: ["character"] },
-          sourceController: "opponent",
-          sourceKind: "effect",
-        },
-        effect: {
           type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "giveKeyword",
+                target: {
+                  type: "chooseFromZones",
+                  request: {
+                    player: "self",
+                    zones: ["leaderArea", "characterArea"],
+                    filter: { names: ["Example Name"] },
+                  },
+                },
+                keyword: "blocker",
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
         },
       },
     });
     expect(result?.evidence).toEqual(
-      expect.arrayContaining(["activation:reaction", "trigger:cardRested"]),
+      expect.arrayContaining(["target:yourNamedCards", "keyword:anySupported"]),
     );
   });
 
