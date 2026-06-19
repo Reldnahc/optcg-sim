@@ -22,6 +22,21 @@ describe("replacement instead-effect parser groups", () => {
     });
   });
 
+  it("parses trash-this-Stage instead as a self-trash replacement body", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may trash this Stage instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "trash",
+        target: { type: "self" },
+      },
+      evidence: ["instruction:trash", "target:thisStage"],
+    });
+  });
+
   it("parses rest-own-Characters instead as a narrowed rest target", () => {
     expect(
       parseReplacementInsteadFromSet(

@@ -13,7 +13,12 @@ import type { ReplacementInsteadParseResult } from "../shared.js";
 export function parseTrashSelfInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
-  if (!/^you may trash this Character instead\.?$/i.test(text.trim())) {
+  const match =
+    /^you may trash this (?<source>Character|Stage) instead\.?$/iu.exec(
+      text.trim(),
+    );
+  const source = match?.groups?.["source"]?.toLowerCase();
+  if (source !== "character" && source !== "stage") {
     return undefined;
   }
 
@@ -22,7 +27,10 @@ export function parseTrashSelfInstead(
       type: "trash",
       target: { type: "self" },
     },
-    evidence: ["instruction:trash", "target:thisCharacter"],
+    evidence: [
+      "instruction:trash",
+      source === "stage" ? "target:thisStage" : "target:thisCharacter",
+    ],
   };
 }
 

@@ -58,4 +58,32 @@ describe("replacement field target parser", () => {
     expect(result?.evidence).toContain("filter:type");
     expect(result?.evidence).toContain("filter:category:character");
   });
+
+  it("parses article-form base power predicates on typed replacement targets", () => {
+    const result = parseYourFieldReplacementTarget({
+      text: "your {Straw Hat Crew} type Characters with a base power of 8000 or less would be K.O.'d",
+    });
+
+    expect(result).toMatchObject({
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Straw Hat Crew"],
+          power: { max: 8000 },
+        },
+      },
+      rest: "would be K.O.'d",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "target:yourCharacters",
+        "filter:type",
+        "filter:category:character",
+        "filter:power",
+      ]),
+    );
+  });
 });
