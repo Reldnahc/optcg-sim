@@ -202,6 +202,48 @@ test("sequence support accepts selected Life cards moved to trash", () => {
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
 
+test("sequence support accepts selected Life cards moved to hand", () => {
+  const selection = "lifeSelection:opponent-life-to-hand" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: selection,
+          effect: {
+            type: "selectCards",
+            player: "opponent",
+            zone: "life",
+            chooser: "opponent",
+            visibility: "chooserOnly",
+            min: 1,
+            max: 1,
+            saveAs: selection,
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: {
+            type: "moveSelected",
+            selection,
+            from: "life",
+            to: "hand",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
 test("sequence support accepts choosing from a saved revealed hand selection", () => {
   const revealed = "handSelection:revealed-hand-cards" as SelectionId;
   const revealedSet = "handSelection:revealed-hand-cards" as SelectionSetId;

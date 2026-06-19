@@ -6,6 +6,7 @@ import type {
   EngineEvent,
   EventVisibility,
   GameState,
+  LifeCard,
   SequenceSegmentResult,
 } from "@optcg/types";
 
@@ -46,6 +47,18 @@ const selectedRefsPlayerId = (
   }
   return selected.every((card) => card.playerId === first) ? first : null;
 };
+
+const reindexLifeCards = (
+  life: readonly LifeCard[],
+  playerId: CardRef["playerId"],
+): LifeCard[] =>
+  life.map((lifeCard, index) => ({
+    ...lifeCard,
+    card: {
+      ...lifeCard.card,
+      zone: { zone: "life", playerId, slot: "life", index },
+    },
+  }));
 
 const emptySelectedToHandResult = (
   params: SelectedToHandMoveParams,
@@ -263,6 +276,113 @@ export const applyTrashToHandSelectedCardMoveSegment = (
         reason: "effect",
       },
       { type: "public" },
+    );
+    const event = events[events.length - 1];
+    if (event !== undefined) {
+      event.causedBy = {
+        type: "effect",
+        queueEntryId: params.entry.id,
+        effectId: params.entry.effectBlockId,
+      };
+    }
+  }
+  return {
+    events,
+    ledgers: {
+      ...params.ledgers,
+      segmentResults: {
+        ...params.ledgers.segmentResults,
+        [params.segmentKey(params.segment, params.index)]: {
+          ...params.emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: movedCards.length > 0,
+          selectedCards: [...selected],
+        },
+      },
+    },
+    ok: true,
+    state: {
+      ...eventBaseState,
+      eventJournal: [...params.state.eventJournal, ...events],
+    },
+  };
+};
+
+export const applyLifeToHandSelectedCardMoveSegment = (
+  params: SelectedToHandMoveParams,
+  selected: readonly CardRef[],
+):
+  | {
+      events: EngineEvent[];
+      ledgers: SegmentLedgers;
+      ok: true;
+      state: GameState;
+    }
+  | { ok: false } => {
+  if (selected.length === 0) {
+    return emptySelectedToHandResult(params);
+  }
+  const playerId = selectedRefsPlayerId(selected);
+  const player = playerId === null ? undefined : params.state.players[playerId];
+  if (playerId === null || player === undefined) {
+    return { ok: false };
+  }
+
+  const selectedIds = new Set(selected.map((card) => card.instanceId));
+  const movedCards: CardInstance[] = [];
+  for (const selectedCard of selected) {
+    const current = player.life
+      .map((lifeCard) => lifeCard.card)
+      .find(
+        (card) =>
+          card.instanceId === selectedCard.instanceId &&
+          card.cardId === selectedCard.cardId,
+      );
+    if (current === undefined) {
+      return { ok: false };
+    }
+    movedCards.push(current);
+  }
+
+  const nextLife = reindexLifeCards(
+    player.life.filter(
+      (lifeCard) => !selectedIds.has(lifeCard.card.instanceId),
+    ),
+    playerId,
+  );
+  const nextHand = addCardsToHand(player.hand, movedCards, playerId);
+  const eventBaseState: GameState = {
+    ...params.state,
+    players: {
+      ...params.state.players,
+      [playerId]: {
+        ...player,
+        hand: nextHand,
+        life: nextLife,
+      },
+    },
+  };
+  const events: EngineEvent[] = [];
+  for (const card of movedCards) {
+    const moved = nextHand.find(
+      (candidate) => candidate.instanceId === card.instanceId,
+    );
+    if (moved === undefined) {
+      return { ok: false };
+    }
+    appendEvent(
+      eventBaseState,
+      events,
+      "cardMoved",
+      {
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        from: card.zone,
+        to: moved.zone,
+        reason: "effect",
+      },
+      { type: "private", playerId },
     );
     const event = events[events.length - 1];
     if (event !== undefined) {

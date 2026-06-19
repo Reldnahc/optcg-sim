@@ -29,6 +29,7 @@ import { applyHandToLifeSelectedCardMoveSegment } from "./selected-hand-to-life.
 import { applyLifeToDeckBottomSelectedCardMoveSegment } from "./selected-life-to-deck.js";
 import { applyCurrentZoneToLifeSelectedCardMoveSegment } from "./selected-current-to-life.js";
 import {
+  applyLifeToHandSelectedCardMoveSegment,
   applySetToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
 } from "./selected-to-hand.js";
@@ -431,6 +432,13 @@ export const applySelectedCardMoveSegment = (
     params.effect.position === undefined
   ) {
     return applyLifeToTrashSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    params.effect.from === "life" &&
+    params.effect.to === "hand" &&
+    params.effect.position === undefined
+  ) {
+    return applyLifeToHandSelectedCardMoveSegment(params, selected);
   }
   if (
     params.effect.from === "life" &&

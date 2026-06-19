@@ -419,3 +419,59 @@ it("parses optional On K.O. source card return to hand", () => {
     ]),
   );
 });
+
+it("parses opponent hand-count gated opponent Life area to hand", () => {
+  const result = parseCardEffectLine(
+    "[On Play] If your opponent has 6 or more cards in their hand, your opponent adds 1 card from their Life area to their hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      condition: {
+        type: "handCount",
+        player: "opponent",
+        op: "gte",
+        value: 6,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectCards",
+              zone: "life",
+              player: "opponent",
+              chooser: "opponent",
+              min: 1,
+              max: 1,
+              visibility: "chooserOnly",
+            },
+          },
+          {
+            connector: "ifPossible",
+            effect: {
+              type: "moveSelected",
+              from: "life",
+              to: "hand",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "condition:handCount",
+      "player:opponent",
+      "instruction:selectCards",
+      "instruction:moveSelected",
+      "zone:life",
+      "destination:hand",
+      "chooser:opponent",
+      "composition:selectThenMove",
+    ]),
+  );
+});

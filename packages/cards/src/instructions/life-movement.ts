@@ -18,6 +18,8 @@ const handOrTrashToLifeSelection =
   "cardSelection:self-hand-or-trash-to-life-placement" as SelectionId;
 const opponentLifeTrashSelection =
   "lifeSelection:opponent-life-to-trash" as SelectionId;
+const opponentLifeHandSelection =
+  "lifeSelection:opponent-life-to-hand" as SelectionId;
 const opponentLifeDeckBottomSelection =
   "lifeSelection:opponent-life-to-deck-bottom" as SelectionId;
 
@@ -118,6 +120,55 @@ export const lifeMovementPrimitive: PrimitivePatternDefinition<InstructionParseR
           ],
           rest: "",
         }),
+      },
+      {
+        id: "opponent-adds-n-cards-from-life-area-to-hand",
+        pattern:
+          /^your opponent adds (?<count>[1-9]\d*) cards? from their Life area to their hand\.?$/i,
+        build: (groups) => {
+          const count = Number.parseInt(groups["count"] ?? "", 10);
+          return {
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: opponentLifeHandSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "life",
+                    player: "opponent",
+                    chooser: "opponent",
+                    min: count,
+                    max: count,
+                    saveAs: opponentLifeHandSelection,
+                    visibility: "chooserOnly",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "moveSelected",
+                    selection: opponentLifeHandSelection,
+                    from: "life",
+                    to: "hand",
+                  },
+                },
+              ],
+            },
+            evidence: [
+              "instruction:selectCards",
+              "instruction:moveSelected",
+              "count:positiveInteger",
+              "player:opponent",
+              "chooser:opponent",
+              "zone:life",
+              "destination:hand",
+              "composition:selectThenMove",
+            ],
+            rest: "",
+          };
+        },
       },
       {
         id: "trash-n-cards-from-top-of-life",

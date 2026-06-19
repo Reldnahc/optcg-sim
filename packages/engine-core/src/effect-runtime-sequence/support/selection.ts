@@ -240,6 +240,11 @@ export const isSupportedMoveSelectedSegment = (
       effect.destinationFaceUp === undefined &&
       selectionKinds.includes("life")) ||
     (effect.from === "life" &&
+      effect.to === "hand" &&
+      effect.position === undefined &&
+      effect.destinationFaceUp === undefined &&
+      selectionKinds.includes("life")) ||
+    (effect.from === "life" &&
       effect.to === "deck" &&
       effect.position === "bottom" &&
       effect.destinationFaceUp === undefined &&
