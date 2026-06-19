@@ -118,4 +118,18 @@ describe("card behavior probe", () => {
     );
     expect(report.scenarios).toEqual([]);
   });
+
+  it("includes engine error details when a generated scenario fails", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] If your Leader has the {Impel Down} type, draw 1 card and play up to 1 [Prisoner of Impel Down] card from your hand.",
+    });
+
+    expect(report.exitCode).toBe(1);
+    expect(report.scenarios[0]).toMatchObject({
+      status: "failed",
+      reason: expect.stringContaining(
+        "unsupported-pending-runtime-work",
+      ) as string,
+    });
+  });
 });

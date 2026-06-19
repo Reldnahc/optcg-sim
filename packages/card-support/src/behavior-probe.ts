@@ -934,10 +934,15 @@ const engineErrorReason = (
     case "unsupportedCard":
       return `unsupported card: ${String(error.cardId)} ${error.status}`;
     case "effectRuntimeError":
-      return `effect runtime error: ${error.effectId}`;
+      return `effect runtime error: ${error.effectId}${formatErrorDetails(error.details)}`;
     case "loopDetected":
       return "loop detected";
   }
+};
+
+const formatErrorDetails = (details: unknown): string => {
+  const serialized = JSON.stringify(details);
+  return ` ${serialized}`;
 };
 
 const probeDonCardIds = (player: "p1" | "p2"): CardId[] =>
