@@ -129,15 +129,19 @@ describe("card behavior probe", () => {
     expect(report.scenarios).toEqual([]);
   });
 
-  it("includes engine error details when a generated scenario fails", () => {
+  it("builds DON metadata for broad field targeting scenarios", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] Rest up to 1 of your opponent's cards. Then, you may trash 1 card from your hand. If you do, give up to 3 rested DON!! cards to your Leader.",
     });
 
-    expect(report.exitCode).toBe(1);
-    expect(report.scenarios[0]).toMatchObject({
-      status: "failed",
-      reason: expect.stringContaining("unsupported-sequence-frame") as string,
-    });
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [3-9]/u),
+      ]),
+    );
   });
 });

@@ -545,6 +545,32 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       frame.effectPath,
       params.segmentKey,
     );
+    if (params.selectedTargets.length === 0) {
+      return params.resumeSequenceFrameFromLedgers({
+        createTrashDecision: params.createUnsupportedTrashDecision,
+        effectBlock,
+        entry,
+        finalizeCompleted: true,
+        frame,
+        ledgers: {
+          savedReferences: frame.savedReferences,
+          segmentResults: {
+            ...frame.segmentResults,
+            [scopedSegmentKey(
+              pausedSegment,
+              frame.pendingDecision.resumeAtSegmentIndex,
+            )]: {
+              ...params.emptySegmentResult(),
+              attempted: true,
+              succeeded: true,
+              changedState: false,
+              selectedTargets: [],
+            },
+          },
+        },
+        state: params.state,
+      });
+    }
     const process = buildSelectedTargetsRestReplacementProcess(
       entry,
       params.selectedTargets,

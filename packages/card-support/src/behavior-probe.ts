@@ -761,6 +761,13 @@ const installProbeManifest = (
 
 const installActiveDon = (state: GameState, playerId: PlayerId): void => {
   const player = must(state.players[playerId], `player ${String(playerId)}`);
+  for (const card of player.donDeck) {
+    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
+      cardId: card.cardId,
+      category: "don",
+      effectText: "",
+    });
+  }
   player.costArea = player.donDeck.map((card, index) => ({
     ...card,
     zone: { zone: "costArea", playerId, slot: "cost", index },
