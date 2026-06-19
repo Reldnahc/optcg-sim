@@ -11,6 +11,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  effectSpotlightTimerAnimationKey,
   effectSpotlightDisplayForEntry,
   type EffectSpotlightState,
 } from "./use-effect-spotlight.js";
@@ -39,6 +40,16 @@ const target: CardRef = {
   playerId: "p2" as PlayerId,
   instanceId: "target-1" as InstanceId,
   cardId: "OP00-002" as CardId,
+};
+
+const requireDisplay = (
+  display: EffectSpotlightState | undefined,
+): EffectSpotlightState => {
+  expect(display).toBeDefined();
+  if (display === undefined) {
+    throw new Error("Expected spotlight display.");
+  }
+  return display;
 };
 
 describe("effect spotlight display", () => {
@@ -209,6 +220,73 @@ describe("effect spotlight display", () => {
     expect(display?.shownAtMs).toBe(1_000);
     expect(display?.visibleUntilMs).toBe(3_000);
     expect(display?.pinned).toBe(false);
+  });
+
+  it("keeps the timer identity stable when a live search entry becomes completed and final", () => {
+    const live = source(
+      "decision:search-select|source-1|effect|span:search:selection",
+      "span:search:selection",
+      "live",
+    );
+    const completed = source(
+      "completed-frame:queue:effect:decision:span:search:selection",
+      "span:search:selection",
+    );
+    const finalEvent = source(
+      "event:search:selection",
+      "span:search:selection",
+    );
+    const liveDisplay = effectSpotlightDisplayForEntry({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: live,
+      pendingDecisionId: "decision:search-select",
+      cursorVersion: 1,
+    });
+    const completedDisplay = effectSpotlightDisplayForEntry({
+      nowMs: 1_500,
+      previous: liveDisplay,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: completed,
+      pendingDecisionId: undefined,
+      cursorVersion: 1,
+    });
+    const finalDisplay = effectSpotlightDisplayForEntry({
+      nowMs: 1_800,
+      previous: completedDisplay,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: finalEvent,
+      pendingDecisionId: undefined,
+      cursorVersion: 1,
+    });
+    const remainderDisplay = effectSpotlightDisplayForEntry({
+      nowMs: 3_000,
+      previous: finalDisplay,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: source("event:search:remaining", "span:search:remaining"),
+      pendingDecisionId: undefined,
+      cursorVersion: 2,
+      previousCursorVersion: 1,
+    });
+
+    const liveState = requireDisplay(liveDisplay);
+    const completedState = requireDisplay(completedDisplay);
+    const finalState = requireDisplay(finalDisplay);
+    const remainderState = requireDisplay(remainderDisplay);
+    expect(effectSpotlightTimerAnimationKey(liveState)).toBe(
+      effectSpotlightTimerAnimationKey(completedState),
+    );
+    expect(effectSpotlightTimerAnimationKey(completedState)).toBe(
+      effectSpotlightTimerAnimationKey(finalState),
+    );
+    expect(effectSpotlightTimerAnimationKey(remainderState)).not.toBe(
+      effectSpotlightTimerAnimationKey(finalState),
+    );
   });
 
   it("starts fresh dwell when target links are added to the current entry", () => {

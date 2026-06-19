@@ -45,6 +45,7 @@ export {
   effectSpotlightDisplayForEntry,
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
+  effectSpotlightTimerAnimationKey,
   shouldDisplayLiveSpotlightSource,
 } from "./use-effect-spotlight-display.js";
 

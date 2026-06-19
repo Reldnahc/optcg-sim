@@ -28,7 +28,10 @@ import {
   useEndTurnConfirmation,
 } from "./use-end-turn-confirmation.js";
 import { useControlDockTabs } from "./use-control-dock-tabs.js";
-import { useEffectSpotlight } from "./use-effect-spotlight.js";
+import {
+  effectSpotlightTimerAnimationKey,
+  useEffectSpotlight,
+} from "./use-effect-spotlight.js";
 import { buildEffectSpotlightPresentation } from "./effect-spotlight-presentation.js";
 import { activeEffectTextSourcesForSpotlight } from "./effect-spotlight-source.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
@@ -359,9 +362,7 @@ export const MatchApp = ({
           visibleUntilMs: effectSpotlight.visibleUntilMs,
           paused: effectSpotlight.controls.paused,
           pinned: effectSpotlight.pinned,
-          animationKey: `${effectSpotlight.activeKey}:${String(
-            effectSpotlight.shownAtMs,
-          )}`,
+          animationKey: effectSpotlightTimerAnimationKey(effectSpotlight),
         };
   const {
     combineDropTarget,

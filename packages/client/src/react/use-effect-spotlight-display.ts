@@ -47,6 +47,11 @@ export interface EffectSpotlightDisplayInput {
   readonly pendingDecisionId: DecisionId | string | undefined;
 }
 
+export const effectSpotlightTimerAnimationKey = (
+  state: Pick<EffectSpotlightState, "activeKey" | "entry" | "shownAtMs">,
+): string =>
+  `${state.entry.semanticKey ?? state.activeKey}:${String(state.shownAtMs)}`;
+
 const liveEntryMatchesPendingDecision = (
   entry: EffectSpotlightPlaybackEntry,
   pendingDecisionId: DecisionId | string | undefined,
