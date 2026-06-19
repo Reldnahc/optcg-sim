@@ -75,10 +75,6 @@ const parseSelfAttackPermission = (
   input: ParseInput,
   context: ContinuousInstructionContext | undefined,
 ): InstructionParseResult | undefined => {
-  if (context === undefined) {
-    return undefined;
-  }
-
   const target = parseThisCharacterTarget({
     text: input.text,
     allowImplicit: true,
@@ -89,7 +85,30 @@ const parseSelfAttackPermission = (
 
   const permissionMatch = activeCharactersPermissionPattern.exec(target.rest);
   const rest = permissionMatch?.groups?.["rest"]?.trim();
-  if (rest === undefined || (rest.length > 0 && rest !== ".")) {
+  if (rest === undefined) {
+    return undefined;
+  }
+
+  const explicitDuration =
+    rest.length > 0 && rest !== "."
+      ? parseFieldEffectDuration({ text: rest })
+      : undefined;
+  if (explicitDuration !== undefined && explicitDuration.rest.length > 0) {
+    return undefined;
+  }
+  if (explicitDuration === undefined && context === undefined) {
+    return undefined;
+  }
+  const duration =
+    explicitDuration?.duration ??
+    (context === undefined ? undefined : continuousDuration(context.condition));
+  const durationEvidence =
+    explicitDuration?.duration === undefined
+      ? context === undefined
+        ? undefined
+        : [continuousDurationEvidence(context.condition)]
+      : explicitDuration.evidence;
+  if (duration === undefined || durationEvidence === undefined) {
     return undefined;
   }
 
@@ -97,12 +116,12 @@ const parseSelfAttackPermission = (
     effect: {
       type: "allowAttackActiveCharacters",
       target: { type: "self" },
-      duration: continuousDuration(context.condition),
+      duration,
     },
     evidence: [
       "instruction:allowAttackActiveCharacters",
       ...target.evidence,
-      continuousDurationEvidence(context.condition),
+      ...durationEvidence,
     ],
     rest: "",
   };

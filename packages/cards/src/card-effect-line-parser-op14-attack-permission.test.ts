@@ -145,4 +145,47 @@ describe("OP14 attack permission parser support", () => {
       ]),
     );
   });
+
+  it("parses return-DON cost into active Character attack permission", () => {
+    const result = parseCardEffectLine(
+      "[Activate: Main] [Once Per Turn] DON!! -1 (You may return the specified number of DON!! cards from your field to your DON!! deck.): This Character can also attack your opponent's active Characters during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "activate",
+        trigger: { type: "activateMain" },
+        oncePerTurn: true,
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 1, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "allowAttackActiveCharacters",
+                target: { type: "self" },
+                duration: { type: "thisTurn" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:activateMain",
+        "marker:oncePerTurn",
+        "cost:returnDon",
+        "instruction:allowAttackActiveCharacters",
+        "target:thisCharacter",
+        "duration:thisTurn",
+      ]),
+    );
+  });
 });

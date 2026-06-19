@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ContinuousInstructionContext } from "./continuous-field-effects.js";
 import {
+  parseAllowAttackActiveCharactersInstruction,
   parseBasePowerBecomeInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,
@@ -374,6 +375,26 @@ describe("continuous field-effect instruction parsers", () => {
         "duration:thisTurn",
       ]),
     );
+  });
+
+  it("parses self active-Character attack permission with an explicit duration", () => {
+    expect(
+      parseAllowAttackActiveCharactersInstruction({
+        text: "This Character can also attack your opponent's active Characters during this turn.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "allowAttackActiveCharacters",
+        target: { type: "self" },
+        duration: { type: "thisTurn" },
+      },
+      evidence: [
+        "instruction:allowAttackActiveCharacters",
+        "target:thisCharacter",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    });
   });
 
   it("parses self-next-turn duration through multiple field effect body families", () => {
