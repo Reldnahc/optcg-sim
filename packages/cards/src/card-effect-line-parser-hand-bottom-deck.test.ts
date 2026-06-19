@@ -3,6 +3,120 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("card effect line parser hand to deck-bottom movement", () => {
+  it("parses all hand to deck shuffle with draw equal to moved count", () => {
+    const result = parseCardEffectLine(
+      "[Main] Return all cards in your hand to your deck and shuffle your deck. Then, draw cards equal to the number you returned to your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "main" },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              saveResultAs: "number:hand-to-deck-count",
+              saveResultKinds: ["chosenNumber"],
+              effect: {
+                type: "moveCards",
+                from: { player: "self", zone: "hand" },
+                to: { player: "self", zone: "deck" },
+              },
+            },
+            {
+              connector: "then",
+              effect: { type: "shuffleDeck", player: "self" },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "draw",
+                player: "self",
+                count: {
+                  type: "savedNumber",
+                  selection: "number:hand-to-deck-count",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventMain",
+        "instruction:moveCards",
+        "cardinality:all",
+        "value:dynamic:matchingZoneCards",
+        "value:savedNumber",
+        "zone:hand",
+        "zone:deck",
+        "instruction:shuffleDeck",
+        "instruction:draw",
+        "composition:sequence",
+      ]),
+    );
+  });
+
+  it("parses optional all hand to deck-bottom with draw equal to moved count", () => {
+    const result = parseCardEffectLine(
+      "[On Play] You may place all cards in your hand at the bottom of your deck in any order. If you do, draw cards equal to the number you placed at the bottom of your deck.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              optional: true,
+              saveResultAs: "number:hand-to-deck-count",
+              saveResultKinds: ["chosenNumber"],
+              effect: {
+                type: "moveCards",
+                from: { player: "self", zone: "hand" },
+                to: { player: "self", zone: "deck", position: "bottom" },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "draw",
+                player: "self",
+                count: {
+                  type: "savedNumber",
+                  selection: "number:hand-to-deck-count",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "instruction:moveCards",
+        "cardinality:all",
+        "value:dynamic:matchingZoneCards",
+        "value:savedNumber",
+        "zone:hand",
+        "zone:deck",
+        "position:bottom",
+        "order:anyOrder",
+        "instruction:draw",
+        "composition:optionalActionEffect",
+      ]),
+    );
+  });
+
   it("parses conditional self hand top-or-bottom deck placement after draw", () => {
     const result = parseCardEffectLine(
       "[On Play] If your Leader is multicolored, draw 3 cards and place 2 cards from your hand at the top or bottom of your deck in any order.",

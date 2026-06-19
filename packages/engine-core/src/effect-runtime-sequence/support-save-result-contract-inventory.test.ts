@@ -86,6 +86,11 @@ const knownSavedReferenceWriters: ExpectedDoor[] = [
     reason: "generic sequenced segment producers",
   },
   {
+    path: "packages/engine-core/src/effect-runtime-sequence/move-cards-segment.ts",
+    signals: ["inline savedReferences write"],
+    reason: "moveCards selected-card and chosenNumber producers",
+  },
+  {
     path: "packages/engine-core/src/effect-runtime-sequence/select-cards.ts",
     signals: ["saveReference call", "inline savedReferences write"],
     reason: "selectCards and selectFromSet producers",
@@ -146,6 +151,12 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     signals: ["savedReferences helper argument"],
     reason:
       "matching Life card movement preserves existing saved references through segment results",
+  },
+  {
+    path: "packages/engine-core/src/effect-runtime-sequence/move-cards-segment.ts",
+    signals: ["savedReferences helper argument"],
+    reason:
+      "moveCards resolves dynamic counts from saved references and preserves ledgers",
   },
   {
     path: "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",

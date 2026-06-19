@@ -45,7 +45,7 @@ export const isSupportedHandToDeckEffect = (
   effect.from.position === undefined &&
   effect.to.player === effect.from.player &&
   effect.to.zone === "deck" &&
-  effect.to.position === undefined &&
+  (effect.to.position === undefined || effect.to.position === "bottom") &&
   effect.destinationState === undefined;
 
 export const executeHandToDeckMove = (

@@ -16,6 +16,7 @@ const opponentTrashToDeckBottomSelection =
   "trashSelection:opponent-trash-to-deck-bottom" as SelectionId;
 export const selfTrashToDeckPlacementSelection =
   "trashSelection:self-trash-to-deck-placement" as SelectionId;
+const handToDeckCountSelection = "number:hand-to-deck-count" as SelectionId;
 
 type DeckPlacement = "top" | "bottom" | "topOrBottom";
 type SourceZone = "hand" | "trash";
@@ -35,6 +36,17 @@ const deckPlacementEvidence = (
     : [`position:${placement}`];
 
 export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
+  const handResetDrawEqual = parseHandResetDrawEqualInstruction(input);
+  if (handResetDrawEqual !== undefined) {
+    return handResetDrawEqual;
+  }
+
+  const optionalHandBottomDrawEqual =
+    parseOptionalHandBottomDrawEqualInstruction(input);
+  if (optionalHandBottomDrawEqual !== undefined) {
+    return optionalHandBottomDrawEqual;
+  }
+
   const handReset = parseReturnAllHandToDeckInstruction(input);
   if (handReset !== undefined) {
     return handReset;
@@ -140,6 +152,128 @@ export const parseHandToDeckBottomInstruction: InstructionParser = (input) => {
       ...deckPlacementEvidence(placement),
       ...orderEvidence,
       "composition:selectThenMove",
+    ],
+    rest: "",
+  };
+};
+
+const allSelfHandToDeckMoveCount = () =>
+  ({
+    type: "countMatchingZoneCards",
+    player: "self",
+    zone: "hand",
+    per: 1,
+    multiplier: 1,
+  }) as const;
+
+const savedMovedHandCountDraw = () =>
+  ({
+    type: "draw",
+    count: { type: "savedNumber", selection: handToDeckCountSelection },
+    player: "self",
+  }) as const;
+
+const drawEqualMovedHandEvidence = [
+  "value:savedNumber",
+  "instruction:draw",
+  "player:self",
+] as const satisfies readonly PrimitiveEvidence[];
+
+const parseHandResetDrawEqualInstruction: InstructionParser = (input) => {
+  if (
+    !/^Return all cards in your hand to your deck and shuffle your deck\. Then, draw cards equal to the number you returned to your deck\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: handToDeckCountSelection,
+          saveResultKinds: ["chosenNumber"],
+          effect: {
+            type: "moveCards",
+            count: allSelfHandToDeckMoveCount(),
+            from: { player: "self", zone: "hand" },
+            to: { player: "self", zone: "deck" },
+            order: "original",
+          },
+        },
+        {
+          connector: "then",
+          effect: { type: "shuffleDeck", player: "self" },
+        },
+        {
+          connector: "then",
+          effect: savedMovedHandCountDraw(),
+        },
+      ],
+    },
+    evidence: [
+      "instruction:moveCards",
+      "cardinality:all",
+      "value:dynamic:matchingZoneCards",
+      "zone:hand",
+      "zone:deck",
+      "player:self",
+      "instruction:shuffleDeck",
+      ...drawEqualMovedHandEvidence,
+      "composition:sequence",
+    ],
+    rest: "",
+  };
+};
+
+const parseOptionalHandBottomDrawEqualInstruction: InstructionParser = (
+  input,
+) => {
+  if (
+    !/^You may place all cards in your hand at the bottom of your deck in any order\. If you do, draw cards equal to the number you placed at the bottom of your deck\.?$/iu.test(
+      input.text,
+    )
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          optional: true,
+          saveResultAs: handToDeckCountSelection,
+          saveResultKinds: ["chosenNumber"],
+          effect: {
+            type: "moveCards",
+            count: allSelfHandToDeckMoveCount(),
+            from: { player: "self", zone: "hand" },
+            to: { player: "self", zone: "deck", position: "bottom" },
+            order: "original",
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: savedMovedHandCountDraw(),
+        },
+      ],
+    },
+    evidence: [
+      "instruction:moveCards",
+      "cardinality:all",
+      "value:dynamic:matchingZoneCards",
+      "zone:hand",
+      "zone:deck",
+      "position:bottom",
+      "order:anyOrder",
+      "player:self",
+      ...drawEqualMovedHandEvidence,
+      "composition:optionalActionEffect",
     ],
     rest: "",
   };

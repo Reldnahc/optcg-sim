@@ -137,6 +137,21 @@ const savedSelectedCardsKindForMoveCardsSegment = (
   return undefined;
 };
 
+const movesAllHandCardsToDeck = (
+  effect: Extract<Effect, { type: "moveCards" }>,
+): boolean =>
+  effect.from.zone === "hand" &&
+  effect.to.zone === "deck" &&
+  typeof effect.count !== "number" &&
+  effect.count.type === "countMatchingZoneCards" &&
+  effect.count.zone === "hand" &&
+  effect.count.player === effect.from.player &&
+  effect.count.filter === undefined &&
+  effect.count.per === 1 &&
+  effect.count.multiplier === 1 &&
+  effect.count.offset === undefined &&
+  effect.count.minimum === undefined;
+
 const inferredSaveResultKindsForSegment = (
   segment: SequenceSegment,
 ): readonly SequenceSaveResultKind[] | null => {
@@ -177,10 +192,13 @@ const inferredSaveResultKindsForSegment = (
       const selectedCardsKind = savedSelectedCardsKindForMoveCardsSegment(
         segment.effect,
       );
-      if (selectedCardsKind === undefined) {
+      if (selectedCardsKind !== undefined) {
+        kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
+      } else if (movesAllHandCardsToDeck(segment.effect)) {
+        kinds.push("chosenNumber");
+      } else {
         return null;
       }
-      kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
     } else if (
       segment.effect.type !== "revealTop" &&
       segment.effect.type !== "selectFromSet" &&
@@ -320,6 +338,9 @@ const recordSaveResultAsProducer = (
     return addCapability(state, saveResultAs, capability);
   }
   if (segment.effect.type === "moveCards") {
+    if (movesAllHandCardsToDeck(segment.effect)) {
+      return addCapability(state, saveResultAs, { kind: "chosenNumber" });
+    }
     const selectedCardsKind = savedSelectedCardsKindForMoveCardsSegment(
       segment.effect,
     );

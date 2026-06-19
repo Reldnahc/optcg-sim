@@ -72,12 +72,16 @@ const isSupportedSegmentCount = (
     : isSupportedFieldCountValue(count) ||
       isSupportedFieldCountDifferenceValue(count);
 
+const isSupportedDrawCount = (count: number | DynamicNumberValue): boolean =>
+  isSupportedSegmentCount(count, { positive: false }) ||
+  (typeof count === "object" && count.type === "savedNumber");
+
 export const isSupportedDrawSegment = (
   effect: SequenceSegmentEffect,
 ): effect is DrawEffect =>
   effect.type === "draw" &&
   (effect.player === "self" || effect.player === "opponent") &&
-  isSupportedSegmentCount(effect.count, { positive: false });
+  isSupportedDrawCount(effect.count);
 
 export const isSupportedDrawUpToSegment = (
   effect: SequenceSegmentEffect,

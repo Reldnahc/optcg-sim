@@ -22,11 +22,13 @@ import {
   resolvePlayerId,
 } from "../runtime/primitives/execute.js";
 import { resolveDynamicNumberValue } from "../runtime/continuous/value-resolution.js";
-import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import {
   applyReturnDonPayment,
   getReturnDonEligibleInstanceIds,
 } from "../runtime/primitives/return-don.js";
+import { applyMoveCardsSegment } from "./move-cards-segment.js";
+
+export { applyMoveCardsSegment } from "./move-cards-segment.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type DrawEffect = Extract<Effect, { type: "draw" }>;
@@ -48,37 +50,6 @@ const revealTopVisibility = (
     ? { type: "private", playerId: controllerId }
     : { type: "public" };
 
-const movedCardRefsFromPublicEvents = (
-  events: readonly EngineEvent[],
-): CardRef[] =>
-  events.flatMap((event) => {
-    if (event.type !== "cardMoved" || event.visibility.type !== "public") {
-      return [];
-    }
-    const payload = event.payload;
-    if (typeof payload !== "object" || payload === null) {
-      return [];
-    }
-    const record = payload as Record<string, unknown>;
-    const instanceId = record["instanceId"];
-    const cardId = record["cardId"];
-    const playerId = record["playerId"];
-    if (
-      typeof instanceId !== "string" ||
-      typeof cardId !== "string" ||
-      typeof playerId !== "string"
-    ) {
-      return [];
-    }
-    return [
-      {
-        instanceId: instanceId as CardRef["instanceId"],
-        cardId: cardId as CardRef["cardId"],
-        playerId: playerId as CardRef["playerId"],
-      },
-    ];
-  });
-
 export type SegmentLedgers = {
   savedReferences: EffectExecutionFrame["savedReferences"];
   segmentResults: EffectExecutionFrame["segmentResults"];
@@ -96,67 +67,6 @@ export type SupportedSequenceSegment = SequenceEffect["effects"][number] & {
     | Extract<Effect, { type: "trashFromHand" }>
     | Extract<SequenceEffect["effects"][number]["effect"], { type: "payCost" }>
     | Extract<Effect, { type: "selectCards" }>;
-};
-
-export const applyMoveCardsSegment = (
-  state: GameState,
-  entry: EffectQueueEntry,
-  segment: SupportedSequenceSegment & { effect: MoveCardsEffect },
-  index: number,
-  ledgers: SegmentLedgers,
-  emptySegmentResult: () => SequenceSegmentResult,
-  segmentKey: (
-    segment: SequenceEffect["effects"][number],
-    index: number,
-  ) => string,
-):
-  | {
-      events: EngineEvent[];
-      ledgers: SegmentLedgers;
-      ok: true;
-      state: GameState;
-    }
-  | { ok: false } => {
-  const resolution = executeMoveCardsPrimitive(state, entry, segment.effect, {
-    savedReferences: ledgers.savedReferences,
-  });
-  if (resolution.errors !== undefined) {
-    return { ok: false };
-  }
-  const result: SequenceSegmentResult = {
-    ...emptySegmentResult(),
-    attempted: true,
-    succeeded: true,
-    changedState: resolution.events.length > 0,
-  };
-  const movedCards = movedCardRefsFromPublicEvents(resolution.events);
-  const savedReferences =
-    segment.saveResultAs === undefined || movedCards.length === 0
-      ? ledgers.savedReferences
-      : {
-          ...ledgers.savedReferences,
-          [segment.saveResultAs]: {
-            kind: "selectedCards" as const,
-            cards: movedCards,
-          },
-        };
-  return {
-    events: resolution.events,
-    ledgers: {
-      segmentResults: {
-        ...ledgers.segmentResults,
-        [segmentKey(segment, index)]: {
-          ...result,
-          ...(movedCards.length === 0
-            ? {}
-            : { affectedCards: movedCards, selectedCards: movedCards }),
-        },
-      },
-      savedReferences,
-    },
-    ok: true,
-    state: resolution.state,
-  };
 };
 
 export const applyNoOpReturnDonSegment = (

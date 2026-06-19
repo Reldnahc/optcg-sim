@@ -6,6 +6,7 @@ import type {
   Effect,
   EffectDefinition,
   GameState,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -222,5 +223,68 @@ test("all hand cards can move to deck before a shuffle without a selection decis
         (event.payload as { playerId?: unknown }).playerId === p2,
     ),
     true,
+  );
+});
+
+test("all hand cards moved to deck can save a count for a later draw", () => {
+  const movedCount = "number:hand-to-deck-count" as SelectionId;
+  const state = sequenceQueueState({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        saveResultAs: movedCount,
+        saveResultKinds: ["chosenNumber"],
+        effect: {
+          type: "moveCards",
+          count: {
+            type: "countMatchingZoneCards",
+            player: "self",
+            zone: "hand",
+            per: 1,
+            multiplier: 1,
+          },
+          from: { player: "self", zone: "hand" },
+          to: { player: "self", zone: "deck" },
+          order: "original",
+        },
+      },
+      {
+        connector: "then",
+        effect: { type: "shuffleDeck", player: "self" },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "draw",
+          player: "self",
+          count: { type: "savedNumber", selection: movedCount },
+        },
+      },
+    ],
+  });
+  const player = must(state.players[p1], "p1");
+  const movedCards = reindexHand(player.hand.slice(0, 2), p1);
+  const baseDeckCard = must(player.deck[0], "p1 deck card");
+  const deckCards = reindexDeck(
+    Array.from({ length: 6 }, (_, index) => ({
+      ...baseDeckCard,
+      instanceId: toInstanceId(`self-shuffle-deck-card-${String(index)}`),
+    })),
+    p1,
+  );
+  player.hand = movedCards;
+  player.deck = deckCards;
+
+  const result = processEffectRuntime(state);
+  const after = must(result.state.players[p1], "p1 after");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(after.hand.length, movedCards.length);
+  assert.equal(after.deck.length, deckCards.length);
+  assert.equal(
+    result.events.filter((event) => event.type === "cardDrawn").length,
+    movedCards.length,
   );
 });
