@@ -56,6 +56,22 @@ describe("implicit permanent entry point parser", () => {
     });
   });
 
+  it("recognizes filtered hand modifier continuous text without parsing the body", () => {
+    expect(
+      parseImplicitPermanentEntryPoint({
+        text: "Give blue Events in your hand -1 cost.",
+      }),
+    ).toMatchObject({
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+      },
+      evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
+      rest: "Give blue Events in your hand -1 cost.",
+    });
+  });
+
   it("recognizes bare once-per-turn continuous text without consuming the marker", () => {
     expect(
       parseImplicitPermanentEntryPoint({

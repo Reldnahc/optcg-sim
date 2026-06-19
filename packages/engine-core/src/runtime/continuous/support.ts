@@ -51,6 +51,7 @@ const supportedBasePowerSetFilterKeys = new Set<keyof CardFilter>([
 const supportedCostModifierFilterKeys = new Set<keyof CardFilter>([
   "baseCost",
   "categories",
+  "colorsAny",
   "cost",
   "names",
   "typesAny",
@@ -218,10 +219,15 @@ const isSupportedCostModifierFilter = (
     supportedCostModifierFilterKeys.has(key as keyof CardFilter),
   ) &&
   (filter.categories === undefined ||
-    filter.categories.every((category) => category === "character")) &&
-  (isNonEmptyStringArray(filter.typesAny) ||
+    isNonEmptyStringArray(filter.categories)) &&
+  (filter.colorsAny === undefined || isNonEmptyStringArray(filter.colorsAny)) &&
+  (isNonEmptyStringArray(filter.categories) ||
+    isNonEmptyStringArray(filter.colorsAny) ||
+    isNonEmptyStringArray(filter.typesAny) ||
     isNonEmptyStringArray(filter.typesIncludeAny) ||
-    isNonEmptyStringArray(filter.names)) &&
+    isNonEmptyStringArray(filter.names) ||
+    filter.baseCost !== undefined ||
+    filter.cost !== undefined) &&
   hasSupportedNumericFilter(filter.baseCost) &&
   hasSupportedNumericFilter(filter.cost);
 

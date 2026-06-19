@@ -181,6 +181,35 @@ const reviewedHandCostDefinition = (cardId: CardId): EffectDefinition => ({
   },
 });
 
+const reviewedFilteredHandCostDefinition = (
+  cardId: CardId,
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:filtered-hand-cost" as EffectDefinition["effects"][number]["id"],
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "modifyCost",
+        player: "self",
+        sourceZone: "hand",
+        filter: { colorsAny: ["blue"], categories: ["event"] },
+        value: -1,
+        duration: { type: "whileSourceOnField" },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 const installPermanentDslCandidate = (
   state: ReturnType<typeof createState>,
   source: CardInstance,
@@ -237,5 +266,32 @@ test("hand-only self cost modifiers do not affect this card on the field", () =>
   assert.deepEqual(handCostRecord.modifier.operation, {
     type: "addCost",
     value: -2,
+  });
+});
+
+test("field-sourced hand cost modifiers support category and color filters", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const source = withCharacter(p1, toCardId("char-cost-source"), 0);
+  p1State.characters = [source];
+  installPermanentDslCandidate(
+    state,
+    source,
+    reviewedFilteredHandCostDefinition(source.cardId),
+  );
+
+  const records = deriveImplementedDslPermanentContinuousEffects(state);
+
+  assert.equal(records.length, 1);
+  const record = must(records[0], "filtered hand cost record");
+  assert.deepEqual(record.modifier, {
+    layer: "costAdd",
+    target: {
+      type: "allMatching",
+      zone: "hand",
+      player: "self",
+      filter: { colorsAny: ["blue"], categories: ["event"] },
+    },
+    operation: { type: "addCost", value: -1 },
   });
 });

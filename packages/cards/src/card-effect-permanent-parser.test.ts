@@ -782,6 +782,48 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses attached DON filtered hand cost reduction as reusable primitives", () => {
+    const result = parseCardEffectLine(
+      "[DON!! x1] Give blue Events in your hand -1 cost.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "modifyCost",
+          player: "self",
+          sourceZone: "hand",
+          filter: { colorsAny: ["blue"], categories: ["event"] },
+          value: -1,
+          duration: {
+            type: "whileConditionTrue",
+            condition: {
+              type: "attachedDonCount",
+              target: { type: "self" },
+              op: "gte",
+              value: 1,
+            },
+          },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "marker:attachedDon",
+        "condition:attachedDonCount",
+        "instruction:modifyCost",
+        "filter:color",
+        "filter:category:event",
+        "zone:hand",
+        "modifier:costReduction",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
+
   it("parses filtered trash-count self power and cost gains as reusable primitives", () => {
     const result = parseCardEffectLine(
       "If you have 4 or more Events in your trash, this Character gains +2000 power and +5 cost.",
