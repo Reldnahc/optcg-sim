@@ -100,18 +100,14 @@ function parseSelectedPowerContinuation(
   }
 
   const split =
-    /^(?<first>.+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains an additional \+(?<amount>[1-9]\d*) power (?<duration>.+)$/iu.exec(
+    /^(?<first>.+?)\.\s+Then,\s+(?:if (?<condition>.+?),\s+)?that card gains an additional \+(?<amount>[1-9]\d*) power(?: (?<duration>.+?))?\.?$/iu.exec(
       input.text,
     );
   const firstText = split?.groups?.["first"];
   const conditionText = split?.groups?.["condition"];
   const amountText = split?.groups?.["amount"];
   const durationText = split?.groups?.["duration"];
-  if (
-    firstText === undefined ||
-    amountText === undefined ||
-    durationText === undefined
-  ) {
+  if (firstText === undefined || amountText === undefined) {
     return undefined;
   }
 
@@ -135,10 +131,13 @@ function parseSelectedPowerContinuation(
     return undefined;
   }
 
-  const duration = parseDurationFromSet(
-    { text: durationText },
-    fieldEffectDurationParsers,
-  );
+  const duration =
+    durationText === undefined
+      ? { duration: first.effect.duration, evidence: [] as const, rest: "" }
+      : parseDurationFromSet(
+          { text: durationText },
+          fieldEffectDurationParsers,
+        );
   if (
     duration === undefined ||
     duration.duration === undefined ||

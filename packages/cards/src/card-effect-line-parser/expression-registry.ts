@@ -72,6 +72,7 @@ import {
   revealTopPlayRestedExpressionParser,
   sameNumberHandTrashDeckTrashSegmentParser,
   searchRevealExpressionParser,
+  selectedAttackRestrictionExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
   selectedPowerContinuationExpressionParser,
   selectedRefreshLockExpressionParser,
@@ -244,7 +245,21 @@ function generalExpressionParser(input: ParseInput) {
         instructions: instructionParsers,
       }),
       (segmentInput) => {
-        const parsed = selectedPowerContinuationExpressionParser(segmentInput);
+        const parsed =
+          conditionalAdditionalSelectedPowerContinuationExpressionParser({
+            conditions: conditionParsers,
+          })(segmentInput) ??
+          selectedPowerContinuationExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
+      (segmentInput) => {
+        const parsed = selectedAttackRestrictionExpressionParser(segmentInput);
         if (parsed === undefined) {
           return undefined;
         }
@@ -288,6 +303,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     instructions: instructionParsers,
     expressions: [
       searchRevealExpressionParser,
+      selectedAttackRestrictionExpressionParser,
       selectedAttackRetargetExpressionParser,
       selectedRefreshLockExpressionParser,
       singleInstructionExpressionParser,
