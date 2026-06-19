@@ -292,6 +292,29 @@ const parseLifeRemovedPredicate: ReactionPredicateParser = ({ text }) => {
   };
 };
 
+const parseDamageDealtPredicate: ReactionPredicateParser = ({ text }) => {
+  const normalized = text.trim();
+  const sourceAttack =
+    /^this (?:Leader|Character)'s attack deals damage to your opponent's Life$/iu.exec(
+      normalized,
+    );
+  if (sourceAttack !== null) {
+    return {
+      trigger: { ...damageDealtTrigger(["opponent"]), attacker: "self" },
+      evidence: ["trigger:damageDealt", "player:opponent", "attacker:self"],
+    };
+  }
+
+  if (/^you deal damage to your opponent's Life$/iu.test(normalized)) {
+    return {
+      trigger: damageDealtTrigger(["opponent"]),
+      evidence: ["trigger:damageDealt", "player:opponent"],
+    };
+  }
+
+  return undefined;
+};
+
 const parseLifeCountTransitionPredicate = (
   normalized: string,
 ): ReactionPredicateResult | undefined => {
@@ -704,6 +727,7 @@ const implicitReactionSpecificPredicate: ReactionPredicateParser = ({
 
 export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[] =
   [
+    parseDamageDealtPredicate,
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
     parseFieldRemovedPredicate,

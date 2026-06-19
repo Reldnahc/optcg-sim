@@ -203,6 +203,13 @@ const matchDamageDealt = (
   event: EngineEvent,
 ): boolean => {
   const playerId = damagedPlayer(state, event);
+  const payload = publicPayload(event);
+  if (
+    trigger.attacker === "self" &&
+    (!isRecord(payload) || payload["attacker"] !== source.instanceId)
+  ) {
+    return false;
+  }
   return (
     playerId !== undefined &&
     trigger.players.some((ref) =>

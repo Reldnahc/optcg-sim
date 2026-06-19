@@ -77,6 +77,22 @@ test("parser certificate groups visibility evidence by visibility family", () =>
   );
 });
 
+test("parser certificate groups attack-source evidence by attacker family", () => {
+  const certificate = createParserSupportCertificate([
+    parsedRuntimeLine(["attacker:self"]),
+  ]);
+
+  assert.equal(certificate.complete, true);
+  assert.deepEqual(
+    certificate.records.map((record) => [
+      record.authority,
+      record.family,
+      record.id,
+    ]),
+    [["parser", "attacker", "self"]],
+  );
+});
+
 test("parser certificate fails closed when a runtime line has no primitive evidence", () => {
   const certificate = createParserSupportCertificate([parsedRuntimeLine([])]);
 

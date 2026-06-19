@@ -30,6 +30,7 @@ export type PrimitiveEvidence =
   | "entry:implicitReaction"
   | "entry:activatedReaction"
   | "trigger:damageDealt"
+  | "attacker:self"
   | "trigger:lifeRemoved"
   | "trigger:fieldRemoved"
   | "trigger:cardDrawn"

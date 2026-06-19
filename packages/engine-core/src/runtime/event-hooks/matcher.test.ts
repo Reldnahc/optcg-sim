@@ -245,6 +245,34 @@ test("canonical event matcher matches damageDealt by damaged player", () => {
   );
 });
 
+test("canonical event matcher can require damageDealt attacker to be the source card", () => {
+  const { source, state, character } = setupEventHookState();
+  const sourceAttack = publicEvent(state, "damageDealt", {
+    attacker: source.instanceId,
+    target: p2,
+    damagedPlayerId: p2,
+  });
+  const otherAttack = publicEvent(state, "damageDealt", {
+    attacker: character.instanceId,
+    target: p2,
+    damagedPlayerId: p2,
+  });
+  const trigger: Trigger = {
+    type: "damageDealt",
+    players: ["opponent"],
+    attacker: "self",
+  };
+
+  assert.deepEqual(matchEventTrigger(state, source, trigger, sourceAttack), {
+    matched: true,
+    triggerTypes: ["damageDealt"],
+  });
+  assert.deepEqual(matchEventTrigger(state, source, trigger, otherAttack), {
+    matched: false,
+    triggerTypes: [],
+  });
+});
+
 test("canonical event matcher matches fieldRemoved public cardMoved events and requires canonical source evidence", () => {
   const { source, state, character } = setupEventHookState();
   const missingEvidence = publicEvent(state, "cardMoved", {

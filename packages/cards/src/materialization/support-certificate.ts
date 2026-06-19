@@ -16,6 +16,7 @@ const directFamilyPrefixes: ReadonlySet<SupportEvidenceFamily> = new Set([
   "sourcePresence",
   "activation",
   "trigger",
+  "attacker",
   "entrySupport",
   "cost",
   "condition",

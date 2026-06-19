@@ -58,7 +58,7 @@ export type Trigger =
   | { type: "trigger" }
   | { type: "anyOf"; triggers: Trigger[] }
   | EventCountPredicate
-  | { type: "damageDealt"; players: PlayerRef[] }
+  | { type: "damageDealt"; players: PlayerRef[]; attacker?: "self" }
   | { type: "lifeRemoved"; players: PlayerRef[]; destination?: Zone }
   | {
       type: "fieldRemoved";
