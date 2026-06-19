@@ -31,6 +31,7 @@ export { replacementInsteadExpressionParser } from "./replacement-effect.js";
 export {
   activatedReactionExpressionParser,
   implicitEventReactionExpressionParser,
+  trailingImplicitEventReactionExpressionParser,
 } from "./event-reaction.js";
 export { returnToOwnerHandCostedEffectExpressionParser } from "./return-to-owner-hand-costed-effect.js";
 export { lookPlayFromTopExpressionParser } from "./look-play-from-top.js";

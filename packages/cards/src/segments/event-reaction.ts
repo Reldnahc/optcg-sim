@@ -882,6 +882,59 @@ export function implicitEventReactionExpressionParser(options: {
   };
 }
 
+export function trailingImplicitEventReactionExpressionParser(options: {
+  readonly expressions: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
+}): (input: ParseInput) => ExpressionParseResult | undefined {
+  return (input: ParseInput) => {
+    const match = /^(?<body>.+?)\s+when\s+(?<when>.+)$/iu.exec(input.text);
+    const when = match?.groups?.["when"]?.replace(/\.$/u, "").trim();
+    const body = match?.groups?.["body"]?.trim();
+    if (when === undefined || body === undefined) {
+      return undefined;
+    }
+    const predicate = implicitReactionPredicates(when);
+    if (predicate === undefined) {
+      return undefined;
+    }
+
+    for (const expressionParser of options.expressions) {
+      const parsed = parseReactionBody(expressionParser, input, body);
+      if (parsed === undefined || parsed.rest.length > 0) {
+        continue;
+      }
+      if (
+        parsed.blockPatch !== undefined &&
+        predicate.allowBodyBlockPatch !== true
+      ) {
+        continue;
+      }
+      return {
+        effect: parsed.effect,
+        evidence: [...predicate.evidence, ...parsed.evidence],
+        rest: "",
+        blockPatch: {
+          ...parsed.blockPatch,
+          category: "auto",
+          trigger: predicate.trigger,
+          ...(predicate.condition === undefined
+            ? {}
+            : { condition: predicate.condition }),
+          ...(predicate.sourcePresencePolicy === undefined
+            ? {}
+            : { sourcePresencePolicy: predicate.sourcePresencePolicy }),
+        },
+        ...(parsed.presentationSpans === undefined
+          ? {}
+          : { presentationSpans: parsed.presentationSpans }),
+      };
+    }
+
+    return undefined;
+  };
+}
+
 export function activatedReactionExpressionParser(options: {
   readonly expressions: readonly ((
     input: ParseInput,

@@ -77,6 +77,7 @@ import {
   selectedPowerContinuationExpressionParser,
   selectedRefreshLockExpressionParser,
   syntheticInstructionSegmentParser,
+  trailingImplicitEventReactionExpressionParser,
   trailingConditionalExpressionSegmentParser,
   trashTopDeckConditionalExpressionParser,
 } from "../segments/index.js";
@@ -148,6 +149,13 @@ function generalExpressionParser(input: ParseInput) {
         ? {}
         : { presentationSpans: eventTimedDelayed.presentationSpans }),
     };
+  }
+
+  const trailingReaction = trailingImplicitEventReactionExpressionParser({
+    expressions: [singleInstructionExpressionParser, generalExpressionParser],
+  })(input);
+  if (trailingReaction !== undefined) {
+    return trailingReaction;
   }
 
   return parseExpression(input, {
