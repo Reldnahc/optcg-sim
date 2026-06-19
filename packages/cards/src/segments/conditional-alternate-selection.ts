@@ -13,7 +13,16 @@ import type {
 const conditionalAlternateTargetPattern =
   /^(?<defaultText>.+?)\.\s+If (?<conditionText>.+?),\s+you may select (?<alternateTargetText>.+?) instead\.?$/iu;
 
+const conditionalAlternateChooseKoPattern =
+  /^Choose up to (?<defaultCount>[1-9]\d*) of (?<defaultTargetText>.+?) and K\.O\. it\.\s+If (?<conditionText>.+?),\s+choose up to (?<alternateCount>[1-9]\d*) of (?<alternateTargetText>.+?) instead of .+\.?$/iu;
+
 const koDefaultPattern = /^K\.O\.\s+up to (?<count>[1-9]\d*) of\s+.+$/iu;
+
+type ConditionalAlternateParts = {
+  readonly defaultInstructionText: string;
+  readonly conditionText: string;
+  readonly alternateInstructionText: string;
+};
 
 export const conditionalAlternateSelectionExpressionParser =
   (options: {
@@ -21,36 +30,25 @@ export const conditionalAlternateSelectionExpressionParser =
     readonly instructions: readonly InstructionParser[];
   }) =>
   (input: ParseInput): ExpressionParseResult | undefined => {
-    const match = conditionalAlternateTargetPattern.exec(input.text.trim());
-    const defaultText = match?.groups?.["defaultText"];
-    const conditionText = match?.groups?.["conditionText"];
-    const alternateTargetText = match?.groups?.["alternateTargetText"];
-    if (
-      defaultText === undefined ||
-      conditionText === undefined ||
-      alternateTargetText === undefined
-    ) {
+    const parts = parseConditionalAlternateParts(input.text.trim());
+    if (parts === undefined) {
       return undefined;
     }
 
-    const defaultEffect = parseInstruction(defaultText, options.instructions);
+    const defaultEffect = parseInstruction(
+      parts.defaultInstructionText,
+      options.instructions,
+    );
     const condition = parseConditionExpression(
-      conditionText.trim(),
+      parts.conditionText.trim(),
       options.conditions,
     );
     if (defaultEffect === undefined || condition === undefined) {
       return undefined;
     }
 
-    const alternateInstructionText = alternateKoInstructionText(
-      defaultText,
-      alternateTargetText,
-    );
-    if (alternateInstructionText === undefined) {
-      return undefined;
-    }
     const alternateEffect = parseInstruction(
-      alternateInstructionText,
+      parts.alternateInstructionText,
       options.instructions,
     );
     if (alternateEffect === undefined) {
@@ -91,6 +89,56 @@ export const conditionalAlternateSelectionExpressionParser =
       rest: "",
     };
   };
+
+const parseConditionalAlternateParts = (
+  text: string,
+): ConditionalAlternateParts | undefined => {
+  const chooseKo = conditionalAlternateChooseKoPattern.exec(text);
+  const defaultCount = chooseKo?.groups?.["defaultCount"];
+  const defaultTargetText = chooseKo?.groups?.["defaultTargetText"];
+  const chooseKoConditionText = chooseKo?.groups?.["conditionText"];
+  const alternateCount = chooseKo?.groups?.["alternateCount"];
+  const chooseKoAlternateTargetText = chooseKo?.groups?.["alternateTargetText"];
+  if (
+    defaultCount !== undefined &&
+    defaultTargetText !== undefined &&
+    chooseKoConditionText !== undefined &&
+    alternateCount !== undefined &&
+    chooseKoAlternateTargetText !== undefined
+  ) {
+    return {
+      defaultInstructionText: `K.O. up to ${defaultCount} of ${defaultTargetText.trim()}.`,
+      conditionText: chooseKoConditionText,
+      alternateInstructionText: `K.O. up to ${alternateCount} of ${chooseKoAlternateTargetText.trim()}.`,
+    };
+  }
+
+  const match = conditionalAlternateTargetPattern.exec(text);
+  const defaultText = match?.groups?.["defaultText"];
+  const conditionText = match?.groups?.["conditionText"];
+  const alternateTargetText = match?.groups?.["alternateTargetText"];
+  if (
+    defaultText === undefined ||
+    conditionText === undefined ||
+    alternateTargetText === undefined
+  ) {
+    return undefined;
+  }
+
+  const alternateInstructionText = alternateKoInstructionText(
+    defaultText,
+    alternateTargetText,
+  );
+  if (alternateInstructionText === undefined) {
+    return undefined;
+  }
+
+  return {
+    defaultInstructionText: defaultText,
+    conditionText,
+    alternateInstructionText,
+  };
+};
 
 const parseInstruction = (
   text: string,
