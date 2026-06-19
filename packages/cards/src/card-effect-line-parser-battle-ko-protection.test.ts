@@ -159,6 +159,46 @@ it("parses active-source conditional protection for filtered own Characters", ()
   );
 });
 
+it("parses typed Character battle K.O. protection with owned name exclusion", () => {
+  const result = parseCardEffectLine(
+    "{Kurozumi Clan} type Characters other than your [Kurozumi Semimaru] cannot be K.O.'d in battle.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "protectFromKO",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            typesAny: ["Kurozumi Clan"],
+            nameNot: ["Kurozumi Semimaru"],
+          },
+        },
+        sourceKind: "battle",
+        duration: { type: "whileSourceOnField" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:implicitPermanent",
+      "instruction:giveProtection",
+      "filter:type",
+      "filter:category:character",
+      "filter:nameNot",
+      "protectionProcess:ko",
+      "protectionSource:battle",
+      "duration:whileSourceOnField",
+    ]),
+  );
+});
+
 it("parses selected Character battle KO protection as a saved-target continuation", () => {
   const result = parseCardEffectLine(
     "[Counter] Select up to 1 of your Characters. The selected Character cannot be K.O.'d during this battle.",

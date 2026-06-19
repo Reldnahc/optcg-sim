@@ -494,6 +494,22 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses owned name exclusions as the same reusable nameNot predicate", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "{Kurozumi Clan} type Characters other than your [Kurozumi Semimaru]",
+      }),
+    ).toEqual({
+      filter: {
+        typesAny: ["Kurozumi Clan"],
+        categories: ["character"],
+        nameNot: ["Kurozumi Semimaru"],
+      },
+      evidence: ["filter:type", "filter:category:character", "filter:nameNot"],
+      rest: "",
+    });
+  });
+
   it("parses type-or-attribute alternatives separately from shared character predicates", () => {
     expect(
       parseCardFilterPredicates({

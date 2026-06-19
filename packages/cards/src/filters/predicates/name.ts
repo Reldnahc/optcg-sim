@@ -36,7 +36,10 @@ export const parseSelfExclusionPredicate: PredicateParser = (text, current) => {
 };
 
 export const parseNameExclusionPredicate: PredicateParser = (text, current) => {
-  const match = /^other than \[(?<name>[^\]]+)\]\s*(?<rest>.*)$/i.exec(text);
+  const match =
+    /^other than (?:(?:your|your opponent's)\s+)?\[(?<name>[^\]]+)\]\s*(?<rest>.*)$/i.exec(
+      text,
+    );
   const nameText = match?.groups?.["name"]?.trim();
   if (nameText === undefined || nameText.length === 0) {
     return undefined;

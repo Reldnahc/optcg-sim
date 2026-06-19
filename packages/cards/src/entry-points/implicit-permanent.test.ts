@@ -56,6 +56,22 @@ describe("implicit permanent entry point parser", () => {
     });
   });
 
+  it("recognizes bare typed Character continuous text without parsing the body", () => {
+    expect(
+      parseImplicitPermanentEntryPoint({
+        text: "{Kurozumi Clan} type Characters cannot be K.O.'d in battle.",
+      }),
+    ).toMatchObject({
+      node: {
+        type: "entryPoint",
+        trigger: { type: "permanent" },
+        category: "permanent",
+      },
+      evidence: ["entry:implicitPermanent", "sourcePresence:mustRemain"],
+      rest: "{Kurozumi Clan} type Characters cannot be K.O.'d in battle.",
+    });
+  });
+
   it("recognizes filtered hand modifier continuous text without parsing the body", () => {
     expect(
       parseImplicitPermanentEntryPoint({
