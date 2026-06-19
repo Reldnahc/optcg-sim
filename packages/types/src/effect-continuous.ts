@@ -15,13 +15,6 @@ export type AttributeGrantEffect = {
   duration: Duration;
 };
 
-export type KeywordRemovalEffect = {
-  type: "removeKeyword";
-  target: Target;
-  keyword: Keyword;
-  duration: Duration;
-};
-
 export type BasePowerSwapEffect = {
   type: "swapBasePower";
   left: SavedFieldObjectTarget;
@@ -32,5 +25,4 @@ export type BasePowerSwapEffect = {
 export type KeywordOrAttributeContinuousEffect =
   | KeywordGrantEffect
   | AttributeGrantEffect
-  | KeywordRemovalEffect
   | BasePowerSwapEffect;

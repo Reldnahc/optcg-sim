@@ -279,12 +279,7 @@ const scopeEffectPresentationRefs = (
         : { else: scopeEffectPresentationRefs(effect.else, scope) }),
     };
   }
-  if (
-    effect.type === "delayed" ||
-    effect.type === "forEachMatch" ||
-    effect.type === "forEachSavedTarget" ||
-    effect.type === "repeat"
-  ) {
+  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
     return {
       ...effect,
       effect: scopeEffectPresentationRefs(effect.effect, scope),

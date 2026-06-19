@@ -111,7 +111,7 @@ test("runtime admission reports missing evidence for unsupported bodies", () => 
   const report = evaluateEffectBlockRuntimeSupport(
     block({
       category: "auto",
-      effect: { type: "lookAtTop", player: "self", count: 1 },
+      effect: { type: "custom", handler: "unsupported-look-at-top" },
       sourcePresencePolicy: "mustRemainInSameZone",
       trigger: { type: "onPlay" },
     }),
@@ -123,7 +123,7 @@ test("runtime admission reports missing evidence for unsupported bodies", () => 
     {
       authority: "runtime",
       family: "body",
-      id: "lookAtTop",
+      id: "custom",
       reason: "unsupported auto effect body",
       effectPath: ["effect"],
     },

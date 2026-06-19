@@ -42,8 +42,15 @@ export const extractEngineEffectPrimitiveTypes = (
     primitives,
     new Set(),
   );
-  return [...primitives].sort((left, right) => left.localeCompare(right));
+  return [...primitives]
+    .filter(isBehaviorCoveragePrimitive)
+    .sort((left, right) => left.localeCompare(right));
 };
+
+const syntheticUnsupportedPrimitiveTypes = new Set(["custom"]);
+
+const isBehaviorCoveragePrimitive = (primitive: string): boolean =>
+  !syntheticUnsupportedPrimitiveTypes.has(primitive);
 
 export const createEnginePrimitiveInventoryReport = (
   request: CreateEnginePrimitiveInventoryReportRequest,
@@ -263,17 +270,7 @@ const collectEffectPrimitiveTypes = (
     return;
   }
 
-  if (effect.type === "forEachMatch") {
-    collectEffectPrimitiveTypes(effect.effect, primitives);
-    return;
-  }
-
   if (effect.type === "forEachSavedTarget") {
-    collectEffectPrimitiveTypes(effect.effect, primitives);
-    return;
-  }
-
-  if (effect.type === "repeat") {
     collectEffectPrimitiveTypes(effect.effect, primitives);
     return;
   }

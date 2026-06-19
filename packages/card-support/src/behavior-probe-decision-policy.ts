@@ -225,11 +225,7 @@ const consumesSelectedTargetForRequiredBasePower = (
         : consumesSelectedTargetForRequiredBasePower(effect.else, saveResultAs))
     );
   }
-  if (
-    effect.type === "delayed" ||
-    effect.type === "repeat" ||
-    effect.type === "forEachSavedTarget"
-  ) {
+  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
     return consumesSelectedTargetForRequiredBasePower(
       effect.effect,
       saveResultAs,

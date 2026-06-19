@@ -754,16 +754,8 @@ const collectTargetFilters = (target: Target): readonly CardFilter[] => {
 };
 
 const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
-  if (
-    effect.type === "preventPlay" ||
-    effect.type === "enterRested" ||
-    effect.type === "play" ||
-    effect.type === "cannotBeBlockedBy"
-  ) {
+  if (effect.type === "preventPlay" || effect.type === "enterRested") {
     return [effect.filter];
-  }
-  if (effect.type === "forEachMatch") {
-    return [effect.filter, ...collectEffectFilters(effect.effect)];
   }
   if (
     effect.type === "revealFromZone" ||
@@ -796,8 +788,7 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
     effect.type === "attackCost" ||
     effect.type === "cannotBlock" ||
     effect.type === "preventBlockerActivation" ||
-    effect.type === "changeAttackTarget" ||
-    effect.type === "cannotBeAttacked"
+    effect.type === "changeAttackTarget"
   ) {
     return collectTargetFilters(effect.target);
   }
@@ -843,11 +834,7 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
       ...(effect.else === undefined ? [] : collectEffectFilters(effect.else)),
     ];
   }
-  if (
-    effect.type === "delayed" ||
-    effect.type === "repeat" ||
-    effect.type === "forEachSavedTarget"
-  ) {
+  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
     return collectEffectFilters(effect.effect);
   }
   if (effect.type === "replacement") {

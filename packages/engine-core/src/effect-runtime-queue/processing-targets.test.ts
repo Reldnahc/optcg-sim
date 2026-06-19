@@ -953,20 +953,6 @@ test("unsupported untilStartOfNextTurn playerRef parameterization fails closed",
   assert.deepEqual(result.state, before);
 });
 
-test("unsupported restriction family fails closed", () => {
-  const { state } = targetSelectionQueueState();
-  withQueuedEffect(state, {
-    type: "cannotBeAttacked",
-    target: { type: "self" },
-    duration: { type: "thisTurn" },
-  });
-  const before = structuredClone(state);
-  const result = processEffectRuntime(state);
-  assert.deepEqual(result.events, []);
-  assert.ok(result.errors !== undefined);
-  assert.deepEqual(result.state, before);
-});
-
 test("unsupported restriction target fails closed", () => {
   const { state } = targetSelectionQueueState();
   withQueuedEffect(state, {

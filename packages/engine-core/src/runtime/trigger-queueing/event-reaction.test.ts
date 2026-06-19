@@ -898,8 +898,8 @@ test("unsupported matching event reactions do not block canonical event producer
       effects: [
         {
           ...baseEffect,
-          id: "life-removed-unsupported-look-at-top" as EffectDefinition["effects"][number]["id"],
-          effect: { type: "lookAtTop", player: "self", count: 1 },
+          id: "life-removed-unsupported-custom" as EffectDefinition["effects"][number]["id"],
+          effect: { type: "custom", handler: "unsupported-look-at-top" },
         },
       ],
     },
@@ -915,7 +915,7 @@ test("unsupported matching event reactions do not block canonical event producer
         return false;
       }
       const payload = event.payload as { effectBlockId?: unknown };
-      return payload.effectBlockId === "life-removed-unsupported-look-at-top";
+      return payload.effectBlockId === "life-removed-unsupported-custom";
     }),
     false,
   );

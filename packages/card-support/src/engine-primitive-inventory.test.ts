@@ -45,7 +45,7 @@ describe("engine primitive inventory", () => {
           text: `
             export type ContinuousEffect =
               | { type: "giveKeyword"; keyword: string }
-              | { type: "removeKeyword"; keyword: string };
+              | { type: "giveAttribute"; attribute: string };
           `,
         },
       ],
@@ -54,8 +54,8 @@ describe("engine primitive inventory", () => {
 
     expect(primitives).toEqual([
       "draw",
+      "giveAttribute",
       "giveKeyword",
-      "removeKeyword",
       "selectCards",
       "selectTargets",
     ]);
@@ -83,5 +83,23 @@ describe("engine primitive inventory", () => {
     expect(report.lines).toContain("Behavior probe primitive coverage: 2/3");
     expect(report.lines).toContain("Behavior probe covered primitive: draw");
     expect(report.lines).toContain("Behavior probe missing primitive: ko");
+  });
+
+  it("excludes synthetic unsupported sentinel effects from behavior coverage targets", () => {
+    const primitives = extractEngineEffectPrimitiveTypes({
+      sourceFiles: [
+        {
+          fileName: "effects.ts",
+          text: `
+            export type Effect =
+              | { type: "draw"; count: number }
+              | { type: "custom"; handler: string };
+          `,
+        },
+      ],
+      rootTypeName: "Effect",
+    });
+
+    expect(primitives).toEqual(["draw"]);
   });
 });
