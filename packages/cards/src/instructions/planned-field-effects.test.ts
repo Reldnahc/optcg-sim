@@ -28,7 +28,11 @@ describe("planned field-effect instruction parsers", () => {
   it("defines field-effect instructions as primitive parents with match families", () => {
     expect(restOpponentCharactersPrimitive).toEqual({
       primitiveId: "instruction:rest",
-      childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
+      childPrimitiveIds: [
+        "cardinality:exact",
+        "cardinality:upTo",
+        "target:opponentCharacters",
+      ],
     });
     expect(restOpponentCardsPrimitive).toEqual({
       primitiveId: "instruction:rest",

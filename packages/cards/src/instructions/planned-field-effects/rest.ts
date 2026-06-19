@@ -1,6 +1,9 @@
 import type { Effect, Target } from "@optcg/types";
 
-import { parseUpToCardinality } from "../../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../../cardinality/index.js";
 import {
   parseAllFieldTarget,
   parseOpponentCardsTarget,
@@ -21,7 +24,11 @@ import { thatCharacterSelectionId } from "./shared.js";
 
 export const restOpponentCharactersPrimitive = {
   primitiveId: "instruction:rest",
-  childPrimitiveIds: ["cardinality:upTo", "target:opponentCharacters"],
+  childPrimitiveIds: [
+    "cardinality:exact",
+    "cardinality:upTo",
+    "target:opponentCharacters",
+  ],
 } as const;
 
 export const restOpponentCardsPrimitive = {
@@ -91,6 +98,37 @@ export const parseRestOpponentCharactersInstruction: InstructionParser = (
       evidence: ["instruction:rest", ...allTarget.evidence],
       rest: "",
     };
+  }
+
+  const exactCardinality = parseExactCardinality({ text: actionRest });
+  if (exactCardinality !== undefined) {
+    const target = parseOpponentCharactersTarget({
+      text: exactCardinality.rest,
+    });
+    if (
+      target !== undefined &&
+      (target.rest.length === 0 || target.rest === ".")
+    ) {
+      return {
+        effect: selectThenApplyFieldTarget({
+          selectionId: thatCharacterSelectionId,
+          selectId: "select:that-character",
+          player: "opponent",
+          zone: "characterArea",
+          filter: target.filter ?? { categories: ["character"] },
+          min: exactCardinality.count,
+          max: exactCardinality.count,
+          apply: (target) => ({ type: "rest", target }),
+        }),
+        evidence: [
+          "instruction:rest",
+          ...exactCardinality.evidence,
+          "chooser:self",
+          ...target.evidence,
+        ],
+        rest: "",
+      };
+    }
   }
 
   const cardinality = parseUpToCardinality({ text: actionRest });

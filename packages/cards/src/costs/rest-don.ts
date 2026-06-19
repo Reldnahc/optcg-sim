@@ -122,7 +122,7 @@ function parseCircledRestDonCost(
 
   const rest = input.text.trim().slice(marker.length).trim();
   const reminderMatch =
-    /^\(You may rest the specified number of DON!! cards in your cost area\.\)\s*$/iu.exec(
+    /^\(You may rest the specified number of DON!! cards in your cost area\.?\)\s*$/iu.exec(
       rest,
     );
   if (rest.length > 0 && reminderMatch === null) {

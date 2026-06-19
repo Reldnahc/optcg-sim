@@ -27,6 +27,12 @@ export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
     return allTargetDistribution;
   }
 
+  const eachTargetDistribution =
+    parseEachTargetDistributedRestedDonInstruction(input);
+  if (eachTargetDistribution !== undefined) {
+    return eachTargetDistribution;
+  }
+
   const targetDistribution = parseTargetDistributedRestedDonInstruction(input);
   if (targetDistribution !== undefined) {
     return targetDistribution;
@@ -526,6 +532,120 @@ const parseAllTargetDistributedRestedDonInstruction: InstructionParser = (
       zones: ["leaderArea", "characterArea"] as ["leaderArea", "characterArea"],
     },
   };
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select:distributed-don-attach-targets",
+          connector: "always",
+          saveResultAs: distributedDonAttachTarget,
+          saveResultKinds: ["selectedTargets"],
+          effect: {
+            type: "selectAllTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              ...target.requestZone,
+              filter: target.filter,
+              visibility: "public",
+            },
+          },
+        },
+        {
+          id: "for-each:distributed-don-attach-target",
+          connector: "then",
+          effect: {
+            type: "forEachSavedTarget",
+            selection: distributedDonAttachTarget,
+            saveCurrentAs: distributedDonAttachCurrentTarget,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  id: "select:rested-don",
+                  connector: "always",
+                  saveResultAs: donAttachSelection,
+                  saveResultKinds: ["selectedCards:don"],
+                  effect: {
+                    type: "selectCards",
+                    zone: "costArea",
+                    player: "self",
+                    chooser: "self",
+                    min: donQuantity.cardinality.min,
+                    max: donQuantity.cardinality.max,
+                    filter: { categories: ["don"], state: "rested" },
+                    saveAs: donAttachSelection,
+                    visibility: "bothPlayers",
+                  },
+                },
+                {
+                  id: "attach:selected-don-to-current-target",
+                  connector: "then",
+                  effect: {
+                    type: "attachSelectedDon",
+                    selection: donAttachSelection,
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "forEachSavedTarget",
+                        saveResultAs: distributedDonAttachCurrentTarget,
+                      },
+                      ...target.savedTargetZone,
+                      player: "self",
+                      filter: target.filter,
+                      visibility: "publicOnly",
+                      onFailure: "failClosed",
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    evidence: [
+      "instruction:selectAllTargets",
+      "instruction:selectCards",
+      "instruction:attachDon",
+      ...donQuantity.evidence,
+      "player:self",
+      "chooser:self:upTo",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:rested",
+      ...target.evidence,
+      "composition:forEachSavedTarget",
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
+
+const parseEachTargetDistributedRestedDonInstruction: InstructionParser = (
+  input,
+) => {
+  const match =
+    /^give (?<donQuantity>up to [1-9]\d*) rested DON!! cards? to each of your (?<target>.+)\.?$/iu.exec(
+      input.text,
+    );
+  const donQuantityText = match?.groups?.["donQuantity"];
+  const targetText = match?.groups?.["target"];
+  if (donQuantityText === undefined || targetText === undefined) {
+    return undefined;
+  }
+  const donQuantity = parseUpToCardinality({ text: donQuantityText });
+  const target = parseRestedDonAttachmentTarget(`1 of your ${targetText}`);
+  if (
+    donQuantity === undefined ||
+    donQuantity.rest.length > 0 ||
+    target === undefined
+  ) {
+    return undefined;
+  }
 
   return {
     effect: {
