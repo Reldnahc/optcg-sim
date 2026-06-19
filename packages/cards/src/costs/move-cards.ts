@@ -29,6 +29,35 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
+  const thisCharacterToOwnerHand =
+    parseSourceCharacterToOwnerHandCostRoute(afterAction);
+  if (thisCharacterToOwnerHand !== undefined) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: 1,
+      chooser: "self",
+      from: {
+        player: "self",
+        zone: "characterArea",
+        source: "effectSource",
+      },
+      to: { player: "self", zone: "hand" },
+      order: "chooserChoice",
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      "target:thisCharacter",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:characterArea",
+      "destination:ownerHand",
+    ];
+
+    return { cost, evidence, rest: "" };
+  }
+
   const thisCharacterToDeckBottom =
     parseSourceCardToDeckBottomCostRoute(afterAction);
   if (thisCharacterToDeckBottom !== undefined) {
@@ -386,6 +415,12 @@ function parseThisStageToOwnerDeckBottomCostRoute(
   return /^this Stage at the bottom of the owner's deck$/iu.test(text)
     ? true
     : undefined;
+}
+
+function parseSourceCharacterToOwnerHandCostRoute(
+  text: string,
+): true | undefined {
+  return /^this Character to the owner's hand$/iu.test(text) ? true : undefined;
 }
 
 function parseSourceCardToDeckBottomCostRoute(

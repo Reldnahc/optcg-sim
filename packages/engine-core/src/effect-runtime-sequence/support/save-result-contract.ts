@@ -56,6 +56,23 @@ export const cloneStaticSavedResultState = (
   transientSets: new Set(state.transientSets),
 });
 
+export const mergeStaticSavedResultState = (
+  base: StaticSavedResultState,
+  additional: StaticSavedResultState,
+): StaticSavedResultState => {
+  let merged: StaticSavedResultState = {
+    references: new Map(base.references),
+    transientSets: new Set([
+      ...base.transientSets,
+      ...additional.transientSets,
+    ]),
+  };
+  for (const [id, { capabilities }] of additional.references.entries()) {
+    merged = addCapabilities(merged, id, capabilities);
+  }
+  return merged;
+};
+
 const sameCapability = (
   a: SavedReferenceCapability,
   b: SavedReferenceCapability,

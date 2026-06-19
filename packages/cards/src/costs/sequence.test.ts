@@ -314,6 +314,38 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("parses source Character return to owner hand as a reusable moveCards cost", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: "return this Character to the owner's hand",
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "moveCards",
+        count: 1,
+        chooser: "self",
+        from: {
+          player: "self",
+          zone: "characterArea",
+          source: "effectSource",
+        },
+        to: { player: "self", zone: "hand" },
+        order: "chooserChoice",
+        optional: true,
+      },
+      evidence: [
+        "cost:moveCards",
+        "target:thisCharacter",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "player:self",
+        "zone:characterArea",
+        "destination:ownerHand",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses filtered field card move costs to your deck bottom as reusable moveCards costs", () => {
     expect(
       parseOptionalCostSequence({

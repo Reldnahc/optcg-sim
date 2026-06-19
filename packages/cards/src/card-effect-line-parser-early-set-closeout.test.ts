@@ -848,3 +848,122 @@ it("parses optional any-number Character return into returned-count battle power
     ]),
   );
 });
+
+it("parses circled rest-DON before source-return cost and hand play body", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] ➀ (You may rest the specified number of DON!! cards in your cost area.) You may return this Character to the owner's hand: Play up to 1 Character with a cost of 3 from your hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: {
+                type: "sequence",
+                optional: true,
+                costs: [
+                  { type: "restDon", count: 1, chooser: "self" },
+                  {
+                    type: "moveCards",
+                    count: 1,
+                    from: {
+                      player: "self",
+                      zone: "characterArea",
+                      source: "effectSource",
+                    },
+                    to: { player: "self", zone: "hand" },
+                  },
+                ],
+              },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    filter: {
+                      categories: ["character"],
+                      cost: { op: "eq", value: 3 },
+                    },
+                  },
+                },
+                { effect: { type: "playSelected" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "composition:optionalCostedEffect",
+      "composition:costSequence",
+      "cost:restDon",
+      "cost:moveCards",
+      "target:thisCharacter",
+      "destination:ownerHand",
+      "instruction:playSelected",
+      "zone:hand",
+      "filter:cost",
+      "composition:selectThenPlay",
+    ]),
+  );
+});
+
+it("parses circled rest-DON before selected return and returned-color hand play", () => {
+  const result = parseCardEffectLine(
+    "[Activate: Main] [Once Per Turn] ➁ (You may rest the specified number of DON!! cards in your cost area.): If you have 5 Characters, return 1 of your Characters to the owner's hand. Then, play up to 1 Character with a cost of 5 or less from your hand that is a different color than the returned Character.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "activate",
+      trigger: { type: "activateMain" },
+      oncePerTurn: true,
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "payCost",
+              cost: { type: "restDon", count: 2, optional: true },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:activateMain",
+      "marker:oncePerTurn",
+      "composition:optionalCostedEffect",
+      "cost:restDon",
+      "condition:fieldCount",
+      "instruction:returnToOwnerHand",
+      "destination:ownerHand",
+      "instruction:playSelected",
+      "filter:colorRelation",
+      "composition:selectThenPlay",
+    ]),
+  );
+});

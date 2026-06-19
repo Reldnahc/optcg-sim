@@ -89,6 +89,7 @@ import {
   canConsumeTransientSet,
   cloneStaticSavedResultState,
   emptyStaticSavedResultState,
+  mergeStaticSavedResultState,
   recordProducer,
   type SavedReferenceCapability,
   type StaticSavedResultState,
@@ -438,7 +439,8 @@ const isSupportedConditionalSegment = (
   ) {
     return false;
   }
-  return [effect.then, effect.else]
+  const branchStates: SequenceSupportState[] = [];
+  const allBranchesSupported = [effect.then, effect.else]
     .filter((branch): branch is Effect => branch !== undefined)
     .every((branch) => {
       const sequence =
@@ -447,6 +449,8 @@ const isSupportedConditionalSegment = (
       if (flattened === null) {
         return false;
       }
+      const branchState = cloneSequenceSupportState(supportState);
+      branchStates.push(branchState);
       return isSupportedSequenceBlockWithState(
         toSyntheticQueueEntry(sourcePresencePolicy),
         {
@@ -461,9 +465,23 @@ const isSupportedConditionalSegment = (
           allowInitialTrashFromHand: true,
           requirePositiveDrawCount: false,
         },
-        cloneSequenceSupportState(supportState),
+        branchState,
       );
     });
+  if (!allBranchesSupported) {
+    return false;
+  }
+
+  for (const branchState of branchStates) {
+    supportState.hasPendingDecisionSegment =
+      supportState.hasPendingDecisionSegment ||
+      branchState.hasPendingDecisionSegment;
+    supportState.savedResults = mergeStaticSavedResultState(
+      supportState.savedResults,
+      branchState.savedResults,
+    );
+  }
+  return true;
 };
 
 const isSupportedDelayedSegment = (
