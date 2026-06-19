@@ -634,6 +634,69 @@ export const installSupportedCounterEvent = (
   };
 };
 
+export const installSupportedCounterReplacementEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  card: CardInstance,
+) => {
+  const definitionId = `${String(card.cardId)}:counter-replacement`;
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "event",
+    cost: 2,
+    effectText:
+      "[Counter] If any of your Characters would be K.O.'d in battle during this turn, you may trash 1 card from your hand instead.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+    },
+  });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      cardId: card.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: `${String(card.cardId)}:counter-replacement:1` as EffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: {
+            type: "grantReplacement",
+            duration: { type: "thisTurn" },
+            replacement: {
+              type: "replacement",
+              when: {
+                type: "wouldBeKOd",
+                sourceKind: "battle",
+                target: {
+                  type: "all",
+                  zone: "characterArea",
+                  player: "self",
+                  filter: { categories: ["character"] },
+                },
+              },
+              instead: {
+                type: "trashFromHand",
+                player: "self",
+                chooser: "self",
+                count: 1,
+              },
+            },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+};
+
 export const ensureActiveDonInCostArea = (
   state: ReturnType<typeof setupAttackState>,
   playerId: PlayerId,

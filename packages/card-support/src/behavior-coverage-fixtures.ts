@@ -372,4 +372,13 @@ export const behaviorCoverageFixtureCorpus = [
     text: "[Trigger] Play this card.",
     expectedPrimitiveTypes: ["playSource"],
   },
+  {
+    label: "fixture:eb02-030:counter-ko-replacement",
+    text: "[Counter] If any of your Characters would be K.O.'d in battle during this turn, you may trash 1 card from your hand instead.",
+    expectedPrimitiveTypes: [
+      "grantReplacement",
+      "replacement",
+      "trashFromHand",
+    ],
+  },
 ] as const satisfies readonly BehaviorCoverageFixtureEntry[];

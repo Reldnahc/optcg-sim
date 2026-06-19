@@ -15,6 +15,11 @@ import type {
 import { reifyCardRef } from "../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
+import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
+import {
+  continuousChooseTargetRequest,
+  type ContinuousQueueEffect,
+} from "../runtime/continuous/targeting.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 export interface SupportedCounterEventPower {
@@ -27,6 +32,14 @@ export interface SupportedCounterEventPower {
     effectBlockId: EffectDefinition["effects"][number]["id"];
     startIndex: number;
   };
+}
+
+export interface SupportedCounterEventRuntime {
+  printedCost: number;
+  target: CardRef;
+  effects: readonly (EffectDefinition["effects"][number] & {
+    effect: ContinuousQueueEffect;
+  })[];
 }
 
 const sameCardRef = (left: CardRef, right: CardRef): boolean =>
@@ -265,6 +278,36 @@ const supportedCounterEventPower = (
   };
 };
 
+const supportedCounterEventRuntimeEffect = (
+  state: GameState,
+  card: CardInstance,
+  metadata: ResolvedCard,
+  effect: EffectDefinition["effects"][number],
+  controllerId: PlayerId,
+  options: { evaluateCondition: boolean },
+):
+  | (EffectDefinition["effects"][number] & { effect: ContinuousQueueEffect })
+  | null => {
+  if (
+    effect.category !== "auto" ||
+    effect.trigger.type !== "counter" ||
+    effect.optional === true ||
+    effect.oncePerTurn === true ||
+    effect.conditionTiming !== undefined ||
+    effect.cost !== undefined ||
+    effect.failurePolicy !== undefined ||
+    effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
+    counterPowerEffect(effect) !== null ||
+    !isSupportedContinuousQueueEffect(effect.effect) ||
+    continuousChooseTargetRequest(effect.effect) !== undefined ||
+    (options.evaluateCondition &&
+      !counterEventConditionPasses(state, card, metadata, effect, controllerId))
+  ) {
+    return null;
+  }
+  return { ...effect, effect: effect.effect };
+};
+
 export const getSupportedCounterEventPower = (
   state: GameState,
   card: CardInstance,
@@ -344,6 +387,58 @@ export const getSupportedCounterEventPower = (
       battleTarget !== undefined && sameCardRef(target, battleTarget),
     ...(trailingSequence === undefined ? {} : { trailingSequence }),
   };
+};
+
+export const getSupportedCounterEventRuntime = (
+  state: GameState,
+  card: CardInstance,
+  target: CardRef | undefined,
+  options: { evaluateCondition?: boolean } = {},
+): SupportedCounterEventRuntime | null => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (
+    target === undefined ||
+    metadata?.category !== "event" ||
+    metadata.support.status !== "implemented-dsl" ||
+    metadata.support.effectDefinitionId === undefined ||
+    (metadata.support.customHandlerIds?.length ?? 0) > 0
+  ) {
+    return null;
+  }
+  const definition =
+    state.cardManifest.effectDefinitions?.[metadata.support.effectDefinitionId];
+  const counterEffects =
+    definition?.effects.filter((effect) => effect.trigger.type === "counter") ??
+    [];
+  if (
+    definition?.implementationStatus !== "implemented-dsl" ||
+    counterEffects.length === 0
+  ) {
+    return null;
+  }
+
+  const effects: (EffectDefinition["effects"][number] & {
+    effect: ContinuousQueueEffect;
+  })[] = [];
+  for (const counterEffect of counterEffects) {
+    const supported = supportedCounterEventRuntimeEffect(
+      state,
+      card,
+      metadata,
+      counterEffect,
+      target.playerId,
+      { evaluateCondition: options.evaluateCondition ?? true },
+    );
+    if (supported === null) {
+      return null;
+    }
+    effects.push(supported);
+  }
+  const printedCost = metadata.cost ?? 0;
+  if (!Number.isInteger(printedCost) || printedCost < 0) {
+    return null;
+  }
+  return { printedCost, target, effects };
 };
 
 const countEligibleHandCardsForEffectCost = (

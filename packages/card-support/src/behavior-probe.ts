@@ -49,6 +49,7 @@ export interface BehaviorProbeScenario {
   readonly index: number;
   readonly entrypoint?:
     | "activateEffect"
+    | "counter"
     | "declareAttack"
     | "lifeTrigger"
     | "playCard";
@@ -61,6 +62,7 @@ export interface BehaviorProbeScenario {
 type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
   | { readonly kind: "activateEffect"; readonly category: "character" }
+  | { readonly kind: "counter"; readonly category: "event" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
@@ -144,17 +146,19 @@ export const createBehaviorProbeReport = (
   const result =
     scenario.kind === "activateEffect"
       ? runActivateEffectScenario({ ...scenarioInput, category: "character" })
-      : scenario.kind === "declareAttack"
-        ? runDeclareAttackScenario({
-            ...scenarioInput,
-            category: "character",
-          })
-        : scenario.kind === "lifeTrigger"
-          ? runLifeTriggerScenario({
+      : scenario.kind === "counter"
+        ? runCounterScenario({ ...scenarioInput, category: "event" })
+        : scenario.kind === "declareAttack"
+          ? runDeclareAttackScenario({
               ...scenarioInput,
               category: "character",
             })
-          : runPlayCardScenario(scenarioInput);
+          : scenario.kind === "lifeTrigger"
+            ? runLifeTriggerScenario({
+                ...scenarioInput,
+                category: "character",
+              })
+            : runPlayCardScenario(scenarioInput);
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -203,6 +207,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "activateMain")) {
     return { kind: "activateEffect", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "counter")) {
+    return { kind: "counter", category: "event" };
   }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };
@@ -359,6 +366,107 @@ const runDeclareAttackScenario = (input: {
         zone: target.zone,
       },
     }),
+    input.setupFilters.length,
+  );
+};
+
+const runCounterScenario = (input: {
+  readonly category: "event";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  const attacker = must(state.players[p1], `player ${String(p1)}`);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  const probeHandIndex = attacker.hand.findIndex(
+    (candidate) => candidate.cardId === probeCardId,
+  );
+  const probeCard = attacker.hand[probeHandIndex];
+  if (probeCard === undefined) {
+    return drainResult(
+      false,
+      state,
+      0,
+      0,
+      input.setupFilters.length,
+      "probe counter event was not in hand",
+    );
+  }
+  attacker.hand = attacker.hand
+    .filter((_, index) => index !== probeHandIndex)
+    .map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "hand" as const,
+        playerId: p1,
+        slot: "hand" as const,
+        index,
+      },
+    }));
+  defender.hand = [
+    {
+      ...probeCard,
+      owner: p2,
+      controller: p2,
+      zone: {
+        zone: "hand" as const,
+        playerId: p2,
+        slot: "hand" as const,
+        index: 0,
+      },
+    },
+  ];
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.leader.instanceId,
+      cardId: attacker.leader.cardId,
+      playerId: p1,
+      zone: attacker.leader.zone,
+    },
+    target: {
+      instanceId: defender.leader.instanceId,
+      cardId: defender.leader.cardId,
+      playerId: p2,
+      zone: defender.leader.zone,
+    },
+  });
+  if (opened.errors !== undefined) {
+    return drainRuntime(opened, input.setupFilters.length);
+  }
+  const counterAction = getLegalActions(opened.state, p2).find(
+    (action): action is Extract<Action, { type: "useCounter" }> =>
+      action.type === "useCounter" &&
+      action.cardInstanceId === probeCard.instanceId,
+  );
+  if (counterAction === undefined) {
+    return drainResult(
+      false,
+      opened.state,
+      opened.events.length,
+      0,
+      input.setupFilters.length,
+      "no legal useCounter action",
+    );
+  }
+  return drainRuntime(
+    applyAction(opened.state, counterAction),
     input.setupFilters.length,
   );
 };

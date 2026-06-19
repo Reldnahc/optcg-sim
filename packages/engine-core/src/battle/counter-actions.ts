@@ -30,6 +30,7 @@ import {
 import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
+  getSupportedCounterEventRuntime,
 } from "./counter-event-support.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import {
@@ -250,24 +251,42 @@ export const applyCounterStepDecisionResponse = (
       (supportedTarget) =>
         String(supportedTarget.target.instanceId) === context.targetInstanceId,
     );
-    if (selectedTarget === undefined) {
+    const selectedRuntimeTarget =
+      String(battle.currentTarget.instanceId) === context.targetInstanceId
+        ? battle.currentTarget
+        : undefined;
+    if (selectedTarget === undefined && selectedRuntimeTarget === undefined) {
       return illegalAction(state, "Unsupported payCost decision context.");
     }
     const supportedCounterEvent = getSupportedCounterEventPower(
       state,
       handCard,
-      selectedTarget.target,
+      selectedTarget?.target,
       battle.currentTarget,
     );
+    const supportedRuntimeEvent =
+      supportedCounterEvent === null
+        ? getSupportedCounterEventRuntime(
+            state,
+            handCard,
+            selectedRuntimeTarget,
+          )
+        : null;
     if (
-      supportedCounterEvent === null ||
-      (context.kind === "printed" && supportedCounterEvent.printedCost <= 0) ||
+      (supportedCounterEvent === null && supportedRuntimeEvent === null) ||
+      (context.kind === "printed" &&
+        (supportedCounterEvent?.printedCost ??
+          supportedRuntimeEvent?.printedCost ??
+          0) <= 0) ||
       (context.kind === "effect" &&
-        supportedCounterEvent.effectCost === undefined)
+        supportedCounterEvent?.effectCost === undefined)
     ) {
       return illegalAction(state, "Unsupported payCost decision context.");
     }
     if (context.kind === "effect") {
+      if (supportedCounterEvent === null) {
+        return illegalAction(state, "Unsupported payCost decision context.");
+      }
       return applyCounterEventEffectCostDecisionResponse({
         action,
         battle,
@@ -287,9 +306,12 @@ export const applyCounterStepDecisionResponse = (
       return illegalAction(state, "Payment option mismatch.");
     }
     const selected = action.response.selectedDonInstanceIds;
+    const printedCost =
+      supportedCounterEvent?.printedCost ?? supportedRuntimeEvent?.printedCost;
     if (
       selected === undefined ||
-      selected.length !== supportedCounterEvent.printedCost
+      printedCost === undefined ||
+      selected.length !== printedCost
     ) {
       return illegalAction(state, "Payment DON!! selection count mismatch.");
     }
@@ -330,7 +352,10 @@ export const applyCounterStepDecisionResponse = (
       ...state,
       eventJournal: [...state.eventJournal, ...events],
     };
-    if (supportedCounterEvent.effectCost !== undefined) {
+    if (supportedCounterEvent?.effectCost !== undefined) {
+      if (selectedTarget === undefined) {
+        return illegalAction(state, "Unsupported payCost decision context.");
+      }
       const costState: GameState = {
         ...stagedState,
         players: {
@@ -351,6 +376,30 @@ export const applyCounterStepDecisionResponse = (
         target: selectedTarget.target,
       });
       return prependEventsToEngineResult(effectCostDecision, events, options);
+    }
+    if (supportedRuntimeEvent !== null) {
+      return resolveCounterCardUse({
+        state: stagedState,
+        decisionPlayerId: decision.playerId,
+        battle,
+        handCard,
+        target: supportedRuntimeEvent.target,
+        counterValue: 0,
+        usesBattleCounterPower: false,
+        runtimeEffects: supportedRuntimeEvent.effects,
+        costArea: nextCostArea,
+        decisionResolvedId: decision.id,
+        applyCounterPower: false,
+        pendingDecision:
+          createCounterStepPassDecision(stagedState, {
+            requirePotentialCounterActions: false,
+          }) ?? undefined,
+        priorEvents: events,
+        options,
+      });
+    }
+    if (supportedCounterEvent === null || selectedTarget === undefined) {
+      return illegalAction(state, "Unsupported payCost decision context.");
     }
     return resolveCounterCardUse({
       state: stagedState,
