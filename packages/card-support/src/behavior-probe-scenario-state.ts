@@ -461,6 +461,9 @@ const resolvedProbeCard = (params: {
         power: params.profile?.power ?? 2000,
       }
     : {}),
+  ...(params.category === "leader"
+    ? { power: params.profile?.power ?? 5000 }
+    : {}),
   ...(params.category === "event" ? { cost: params.profile?.cost ?? 0 } : {}),
   ...(params.profile?.counter === undefined
     ? {}

@@ -19,14 +19,11 @@ describe("behavior coverage", () => {
     expect(report.errors).toEqual([]);
     expect(report.lines).toContain("Behavior coverage entries: 2");
     expect(report.lines).toContain("Behavior coverage primitive coverage: 1/2");
-    expect(report.lines).toContain("Behavior coverage passed scenarios: 1");
+    expect(report.lines).toContain("Behavior coverage passed scenarios: 2");
     expect(report.lines).toContain("Behavior coverage failed scenarios: 0");
-    expect(report.lines).toContain("Behavior coverage skipped scenarios: 1");
+    expect(report.lines).toContain("Behavior coverage skipped scenarios: 0");
     expect(report.lines).toContain("Behavior coverage covered primitive: draw");
     expect(report.lines).toContain("Behavior coverage missing primitive: ko");
-    expect(report.lines).toContain(
-      "Behavior coverage skipped reason: no generated scenario for trigger whenAttacking x1",
-    );
   });
 
   it("fails coverage when a behavior probe fails to materialize", () => {
@@ -49,15 +46,15 @@ describe("behavior coverage", () => {
     const report = createBehaviorCoverageReport({
       entries: [
         { label: "passed", text: "[On Play] Draw 1 card." },
-        { label: "scenario-missing", text: "[When Attacking] Draw 1 card." },
+        { label: "when-attacking", text: "[When Attacking] Draw 1 card." },
         { label: "materialization", text: "[On Play] Do something unknown." },
       ],
       inventoryPrimitiveTypes: ["draw", "ko"],
     });
 
     expect(report.bucketSummary).toEqual({
-      behaviorPassed: 1,
-      scenarioMissing: 1,
+      behaviorPassed: 2,
+      scenarioMissing: 0,
       scenarioFailed: 0,
       materializationFailed: 1,
       sourceFailed: 0,
@@ -68,10 +65,9 @@ describe("behavior coverage", () => {
       primitiveTypes: ["draw"],
     });
     expect(report.entryResults[1]).toEqual({
-      label: "scenario-missing",
-      bucket: "scenarioMissing",
+      label: "when-attacking",
+      bucket: "behaviorPassed",
       primitiveTypes: ["draw"],
-      reason: "no generated scenario for trigger whenAttacking",
     });
     expect(report.entryResults[2]).toMatchObject({
       label: "materialization",
@@ -81,10 +77,10 @@ describe("behavior coverage", () => {
     expect(report.entryResults[2]?.reason).toMatch(/^line 1 parse failed:/u);
     expect(report.entryResults).toHaveLength(3);
     expect(report.lines).toContain(
-      "Behavior coverage bucket behaviorPassed: 1",
+      "Behavior coverage bucket behaviorPassed: 2",
     );
     expect(report.lines).toContain(
-      "Behavior coverage bucket scenarioMissing: 1",
+      "Behavior coverage bucket scenarioMissing: 0",
     );
     expect(report.lines).toContain(
       "Behavior coverage bucket materializationFailed: 1",
@@ -124,7 +120,7 @@ describe("behavior coverage", () => {
   it("prints actionable entry rows grouped by bucket", () => {
     const report = createBehaviorCoverageReport({
       entries: [
-        { label: "scenario-missing", text: "[When Attacking] Draw 1 card." },
+        { label: "when-attacking", text: "[When Attacking] Draw 1 card." },
         { label: "passed", text: "[On Play] Draw 1 card." },
         { label: "materialization", text: "[On Play] Do something unknown." },
       ],
@@ -137,8 +133,8 @@ describe("behavior coverage", () => {
 
     expect(entryLines).toEqual([
       "Behavior coverage entry materializationFailed: materialization - line 1 parse failed: no expression parser matched",
-      "Behavior coverage entry scenarioMissing: scenario-missing - no generated scenario for trigger whenAttacking",
       "Behavior coverage entry behaviorPassed: passed - draw",
+      "Behavior coverage entry behaviorPassed: when-attacking - draw",
     ]);
   });
 });

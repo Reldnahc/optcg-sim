@@ -190,22 +190,23 @@ describe("card behavior probe", () => {
     );
   });
 
-  it("reports runtime-supported entrypoints that do not have generated scenarios yet", () => {
+  it("runs When Attacking effects by declaring an attack with the source", () => {
     const report = createBehaviorProbeReport({
       text: "[When Attacking] Draw 1 card.",
     });
 
     expect(report.exitCode).toBe(0);
-    expect(report.lines).toContain("Behavior probe: skipped");
-    expect(report.lines).toContain(
-      "Scenario 1 result: skipped - no generated scenario for trigger whenAttacking",
-    );
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: declareAttack");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.scenarios).toEqual([
       {
         index: 1,
-        status: "skipped",
+        entrypoint: "declareAttack",
+        cardCategory: "character",
+        status: "passed",
         primitiveTypes: ["draw"],
-        reason: "no generated scenario for trigger whenAttacking",
       },
     ]);
   });

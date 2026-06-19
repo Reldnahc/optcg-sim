@@ -47,7 +47,7 @@ export interface BehaviorProbeReport {
 
 export interface BehaviorProbeScenario {
   readonly index: number;
-  readonly entrypoint?: "activateEffect" | "playCard";
+  readonly entrypoint?: "activateEffect" | "declareAttack" | "playCard";
   readonly cardCategory?: "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
@@ -57,9 +57,11 @@ export interface BehaviorProbeScenario {
 type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
   | { readonly kind: "activateEffect"; readonly category: "character" }
+  | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 const p1 = "p1" as PlayerId;
+const p2 = "p2" as PlayerId;
 const probeCardId = "probe-card" as CardId;
 const maxDecisionSteps = 30;
 
@@ -122,36 +124,27 @@ export const createBehaviorProbeReport = (
     };
   }
 
+  const scenarioInput = {
+    category: scenario.category,
+    definition: {
+      ...materialized.definition,
+      metadata: {
+        ...materialized.definition.metadata,
+        effectDefinitionsVersion: "behavior-probe",
+      },
+    },
+    setupFilters: collectScenarioSetupFilters(materialized.definition.effects),
+    text: request.text,
+  };
   const result =
     scenario.kind === "activateEffect"
-      ? runActivateEffectScenario({
-          category: scenario.category,
-          definition: {
-            ...materialized.definition,
-            metadata: {
-              ...materialized.definition.metadata,
-              effectDefinitionsVersion: "behavior-probe",
-            },
-          },
-          setupFilters: collectScenarioSetupFilters(
-            materialized.definition.effects,
-          ),
-          text: request.text,
-        })
-      : runPlayCardScenario({
-          category: scenario.category,
-          definition: {
-            ...materialized.definition,
-            metadata: {
-              ...materialized.definition.metadata,
-              effectDefinitionsVersion: "behavior-probe",
-            },
-          },
-          setupFilters: collectScenarioSetupFilters(
-            materialized.definition.effects,
-          ),
-          text: request.text,
-        });
+      ? runActivateEffectScenario({ ...scenarioInput, category: "character" })
+      : scenario.kind === "declareAttack"
+        ? runDeclareAttackScenario({
+            ...scenarioInput,
+            category: "character",
+          })
+        : runPlayCardScenario(scenarioInput);
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -200,6 +193,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "activateMain")) {
     return { kind: "activateEffect", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
+    return { kind: "declareAttack", category: "character" };
   }
   return {
     kind: "skipped",
@@ -296,6 +292,62 @@ const runActivateEffectScenario = (input: {
   }
 
   return drainRuntime(applyAction(state, action), input.setupFilters.length);
+};
+
+const runDeclareAttackScenario = (input: {
+  readonly category: "character";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return {
+      ok: false,
+      reason: "probe card could not be fielded",
+      pendingDecisionDrained: state.pendingDecision === undefined,
+      effectQueueDrained: state.effectQueue.length === 0,
+      eventCount: 0,
+      decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
+    };
+  }
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  defender.hand = [];
+  const target = defender.leader;
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: target.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
 };
 
 const drainRuntime = (
