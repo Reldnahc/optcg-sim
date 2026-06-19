@@ -139,6 +139,50 @@ const parserNestedAttachDonSequence = (): Extract<
   };
 };
 
+const selfAttachDonSequence = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "add-rested-don",
+      connector: "always",
+      effect: {
+        type: "moveCards",
+        min: 0,
+        count: 2,
+        from: { player: "self", zone: "donDeck", position: "top" },
+        to: { player: "self", zone: "costArea" },
+        order: "original",
+        destinationState: "rested",
+      },
+    },
+    {
+      id: "select-rested-don",
+      connector: "then",
+      saveResultAs: "donSelection:self-attach",
+      effect: {
+        type: "selectCards",
+        zone: "costArea",
+        player: "self",
+        chooser: "self",
+        min: 0,
+        max: 2,
+        filter: { categories: ["don"], state: "rested" },
+        saveAs: "donSelection:self-attach" as SelectionId,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      id: "attach-selected-don-to-source",
+      connector: "then",
+      effect: {
+        type: "attachSelectedDon",
+        selection: "donSelection:self-attach" as SelectionId,
+        target: { type: "self" },
+      },
+    },
+  ],
+});
+
 const restedDonToLeaderThenOpponentLifeToHandSequence = (): Extract<
   Effect,
   { type: "sequence" }
@@ -638,6 +682,40 @@ test("activate-main DON sequence checks turn count, adds active/rested DON, and 
   assert.deepEqual(
     afterTarget?.attachedDon,
     selectedDon.map((card) => card.instanceId),
+  );
+});
+
+test("DON attachment sequence can target its source card", () => {
+  const state = createActiveState();
+  setupDefinition(state, selfAttachDonSequence());
+  const source = must(state.players[p1], "p1").leader;
+
+  const firstPause = processEffectRuntime(state);
+  assert.equal(firstPause.errors, undefined);
+  assert.equal(firstPause.state.pendingDecision?.type, "chooseQuantity");
+  assert.equal(firstPause.state.pendingDecision.max, 2);
+
+  const addedRested = chooseQuantity(firstPause.state, 2);
+  const selectDon = must(addedRested.state.pendingDecision, "select DON");
+  assert.equal(addedRested.errors, undefined);
+  assert.equal(selectDon.type, "selectCards");
+  assert.equal(selectDon.candidates.length, 2);
+  const selectedDon = selectDon.candidates.map((candidate) => candidate.card);
+
+  const attached = applyAction(addedRested.state, {
+    type: "respondToDecision",
+    decisionId: selectDon.id,
+    response: { type: "cards", cards: selectedDon },
+  });
+  assert.equal(attached.errors, undefined);
+  assert.equal(attached.state.pendingDecision, undefined);
+  assert.deepEqual(
+    must(attached.state.players[p1], "after p1").leader.attachedDon,
+    selectedDon.map((card) => card.instanceId),
+  );
+  assert.equal(
+    must(attached.state.players[p1], "after p1").leader.instanceId,
+    source.instanceId,
   );
 });
 

@@ -137,8 +137,22 @@ const selectedCardRefsForAttachDon = (
 
 const selectedTargetRefForAttachDon = (
   ledgers: SegmentLedgers,
+  entry: EffectQueueEntry,
   effect: AttachSelectedDonEffect,
 ): CardRef | null => {
+  const sourceZone = entry.source.zone;
+  if (
+    effect.target.type === "self" &&
+    sourceZone !== undefined &&
+    (sourceZone.zone === "leaderArea" || sourceZone.zone === "characterArea")
+  ) {
+    return {
+      instanceId: entry.source.instanceId,
+      cardId: entry.source.cardId,
+      playerId: entry.source.playerId,
+      zone: sourceZone,
+    };
+  }
   if (effect.target.type !== "savedFieldObject") {
     return null;
   }
@@ -175,7 +189,11 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
     params.ledgers,
     params.effect,
   );
-  const target = selectedTargetRefForAttachDon(params.ledgers, params.effect);
+  const target = selectedTargetRefForAttachDon(
+    params.ledgers,
+    params.entry,
+    params.effect,
+  );
   if (selectedDon === null || target === null) {
     return { ok: false };
   }

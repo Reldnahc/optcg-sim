@@ -9,6 +9,7 @@ import {
   donAttachSelection,
   donAttachTarget,
 } from "./shared.js";
+import { parseAttachRestedDonToSelf } from "./attach-rested-self.js";
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const decomposed = parseDonAttachmentInstruction(input);
@@ -747,6 +748,11 @@ const parseAttachRestedDonToTarget = (
   if (quantity === undefined || quantity.rest.length > 0) {
     return undefined;
   }
+  const selfTarget = parseAttachRestedDonToSelf(quantityText, targetText);
+  if (selfTarget !== undefined) {
+    return selfTarget;
+  }
+
   const target = parseRestedDonAttachmentTarget(targetText);
   if (target === undefined) {
     return undefined;

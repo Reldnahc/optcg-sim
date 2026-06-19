@@ -285,21 +285,22 @@ export const isSupportedAttachSelectedDonSegment = (
 ): effect is AttachSelectedDonEffect =>
   effect.type === "attachSelectedDon" &&
   selectionKind === "don" &&
-  effect.target.type === "savedFieldObject" &&
-  (effect.target.player === "self" ||
-    effect.target.player === "opponent" ||
-    effect.target.player === "anyPlayer") &&
-  (((effect.target.zone === "leaderArea" ||
-    effect.target.zone === "characterArea") &&
-    effect.target.zones === undefined) ||
-    (effect.target.zone === undefined &&
-      effect.target.zones?.every(
-        (zone) => zone === "leaderArea" || zone === "characterArea",
-      ) === true)) &&
-  effect.target.controller === undefined &&
-  (effect.target.binding.family === "selectedTargets" ||
-    effect.target.binding.family === "forEachSavedTarget") &&
-  isSupportedAttachDonTargetFilter(effect.target.filter);
+  (effect.target.type === "self" ||
+    (effect.target.type === "savedFieldObject" &&
+      (effect.target.player === "self" ||
+        effect.target.player === "opponent" ||
+        effect.target.player === "anyPlayer") &&
+      (((effect.target.zone === "leaderArea" ||
+        effect.target.zone === "characterArea") &&
+        effect.target.zones === undefined) ||
+        (effect.target.zone === undefined &&
+          effect.target.zones?.every(
+            (zone) => zone === "leaderArea" || zone === "characterArea",
+          ) === true)) &&
+      effect.target.controller === undefined &&
+      (effect.target.binding.family === "selectedTargets" ||
+        effect.target.binding.family === "forEachSavedTarget") &&
+      isSupportedAttachDonTargetFilter(effect.target.filter)));
 
 export const isSupportedPlaySourceSegment = (
   effect: SequenceSegmentEffect,

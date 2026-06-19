@@ -389,3 +389,45 @@ test("sequence support accepts selected DON attachment to a Leader-only target",
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts selected DON attachment to the source card", () => {
+  const donSelection = "selected-don-for-self-attach" as SelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-attach-don-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: donSelection,
+          effect: {
+            type: "selectCards",
+            zone: "costArea",
+            player: "self",
+            chooser: "self",
+            min: 0,
+            max: 2,
+            saveAs: donSelection,
+            visibility: "bothPlayers",
+            filter: { categories: ["don"], state: "rested" },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "attachSelectedDon",
+            selection: donSelection,
+            target: { type: "self" },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
