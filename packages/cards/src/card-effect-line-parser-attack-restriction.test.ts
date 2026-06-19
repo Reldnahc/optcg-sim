@@ -125,6 +125,100 @@ it("parses selected opponent rested Leader attack restrictions", () => {
   );
 });
 
+it("parses selected opponent Leader or Character card attack restrictions", () => {
+  const parsed = parsePreventOpponentCharactersAttackInstruction({
+    text: "Up to 1 of your opponent's Leader or Character cards cannot attack during this turn.",
+  });
+
+  expect(parsed).toMatchObject({
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          saveResultAs: "selected:thatCharacter",
+          effect: {
+            type: "selectTargets",
+            request: {
+              player: "opponent",
+              zones: ["leaderArea", "characterArea"],
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["leader", "character"],
+              },
+            },
+          },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "cannotAttack",
+            target: {
+              type: "savedFieldObject",
+              player: "opponent",
+              zones: ["leaderArea", "characterArea"],
+            },
+            duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+    rest: "",
+  });
+  expect(parsed?.evidence).toEqual(
+    expect.arrayContaining([
+      "instruction:preventActivation",
+      "cardinality:upTo",
+      "count:positiveInteger",
+      "chooser:self:upTo",
+      "target:opponentLeaderOrCharacters",
+      "player:opponent",
+      "filter:category:leader",
+      "filter:category:character",
+      "duration:thisTurn",
+      "composition:selectThenApply",
+    ]),
+  );
+});
+
+it("parses Trigger opponent Leader or Character card attack restrictions", () => {
+  const result = parseCardEffectLine(
+    "[Trigger] Up to 1 of your opponent's Leader or Character cards cannot attack during this turn.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "trigger" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "opponent",
+                zones: ["leaderArea", "characterArea"],
+              },
+            },
+          },
+          {
+            effect: { type: "cannotAttack", duration: { type: "thisTurn" } },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:lifeTrigger",
+      "instruction:preventActivation",
+      "target:opponentLeaderOrCharacters",
+      "duration:thisTurn",
+    ]),
+  );
+});
+
 it("parses selected opponent Character attack restrictions until the start of your next turn", () => {
   const parsed = parsePreventOpponentCharactersAttackInstruction({
     text: "Up to 1 of your opponent's Characters with a cost of 7 or less cannot attack until the start of your next turn.",

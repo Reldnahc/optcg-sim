@@ -4,7 +4,10 @@ import {
   parseDurationFromSet,
 } from "../../durations/index.js";
 import { parseCardFilterPredicates } from "../../filters/index.js";
-import { parseOpponentCharactersTarget } from "../../targets/index.js";
+import {
+  parseOpponentCharactersTarget,
+  parseOpponentLeaderOrCharacterCardsTarget,
+} from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { selectThenApplyFieldTarget } from "../effect-builders.js";
 import { thatCharacterSelectionId } from "./shared.js";
@@ -31,6 +34,12 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
       parseOpponentRestedLeaderOrCharacterAttackRestriction(input);
     if (mixedLeaderOrCharacter !== undefined) {
       return mixedLeaderOrCharacter;
+    }
+
+    const genericLeaderOrCharacter =
+      parseOpponentLeaderOrCharacterAttackRestriction(input);
+    if (genericLeaderOrCharacter !== undefined) {
+      return genericLeaderOrCharacter;
     }
 
     const cardinality = parseUpToCardinality({ text: input.text });
@@ -88,6 +97,74 @@ export const parsePreventOpponentCharactersAttackInstruction: InstructionParser 
       rest: "",
     };
   };
+
+const parseOpponentLeaderOrCharacterAttackRestriction: InstructionParser = (
+  input,
+) => {
+  const cardinality = parseUpToCardinality({ text: input.text });
+  if (cardinality === undefined) {
+    return undefined;
+  }
+
+  const target = parseOpponentLeaderOrCharacterCardsTarget({
+    text: cardinality.rest,
+  });
+  if (target === undefined) {
+    return undefined;
+  }
+
+  const durationText = /^cannot attack\s+(?<rest>.*)$/i.exec(target.rest)
+    ?.groups?.["rest"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    attackRestrictionDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+  const parsedDuration = duration.duration;
+  const request =
+    target.target?.type === "chooseFromZones"
+      ? target.target.request
+      : undefined;
+  if (request === undefined || request.player !== "opponent") {
+    return undefined;
+  }
+
+  return {
+    effect: selectThenApplyFieldTarget({
+      selectionId: thatCharacterSelectionId,
+      selectId: "select:cannot-attack",
+      player: "opponent",
+      zones: ["leaderArea", "characterArea"],
+      filter: request.filter ?? { categories: ["leader", "character"] },
+      min: cardinality.cardinality.min,
+      max: cardinality.cardinality.max,
+      apply: (target) => ({
+        type: "cannotAttack",
+        target,
+        duration: parsedDuration,
+      }),
+    }),
+    evidence: [
+      "instruction:preventActivation",
+      ...cardinality.evidence,
+      "chooser:self:upTo",
+      ...target.evidence,
+      ...duration.evidence,
+      "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+};
 
 const parseOpponentLeaderAttackRestriction: InstructionParser = (input) => {
   const cardinality = parseUpToCardinality({ text: input.text });
