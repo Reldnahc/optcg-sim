@@ -416,3 +416,40 @@ export const parseSelfAttackTargetRestrictionInstruction: InstructionParser = (
     rest: "",
   };
 };
+
+export const parsePlayedTurnSelfAttackTargetRestrictionInstruction: InstructionParser =
+  (input) => {
+    if (
+      !/^This Character cannot attack a Leader on the turn in which it is played\.?$/iu.test(
+        input.text,
+      )
+    ) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "cannotAttackTarget",
+        target: { type: "self" },
+        attackTarget: {
+          player: "opponent",
+          zone: "leaderArea",
+          filter: { categories: ["leader"] },
+        },
+        duration: {
+          type: "whileConditionTrue",
+          condition: { type: "sourcePlayedThisTurn" },
+        },
+      },
+      evidence: [
+        "instruction:cannotAttackTarget",
+        "target:thisCharacter",
+        "player:opponent",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "condition:sourcePlayedThisTurn",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    };
+  };

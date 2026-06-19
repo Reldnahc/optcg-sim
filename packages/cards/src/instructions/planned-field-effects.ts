@@ -1,4 +1,5 @@
 export {
+  parsePlayedTurnSelfAttackTargetRestrictionInstruction,
   parsePreventOpponentCharactersAttackInstruction,
   parseSelfAttackTargetRestrictionInstruction,
   parsePreventOpponentCharactersBlockerActivationInstruction,
