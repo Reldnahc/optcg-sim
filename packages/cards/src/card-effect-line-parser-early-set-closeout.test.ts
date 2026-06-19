@@ -945,7 +945,33 @@ it("parses circled rest-DON before selected return and returned-color hand play"
           {
             connector: "ifYouDo",
             effect: {
-              type: "sequence",
+              type: "conditional",
+              then: {
+                type: "sequence",
+                effects: [
+                  { effect: { type: "selectTargets" } },
+                  { effect: { type: "bounce", destination: "hand" } },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "sequence",
+                      effects: [
+                        {
+                          effect: {
+                            type: "selectCards",
+                            filter: {
+                              colorRelation: {
+                                type: "differentFromSavedFieldObject",
+                              },
+                            },
+                          },
+                        },
+                        { effect: { type: "playSelected" } },
+                      ],
+                    },
+                  },
+                ],
+              },
             },
           },
         ],

@@ -89,7 +89,6 @@ import {
   canConsumeTransientSet,
   cloneStaticSavedResultState,
   emptyStaticSavedResultState,
-  mergeStaticSavedResultState,
   recordProducer,
   type SavedReferenceCapability,
   type StaticSavedResultState,
@@ -476,10 +475,6 @@ const isSupportedConditionalSegment = (
     supportState.hasPendingDecisionSegment =
       supportState.hasPendingDecisionSegment ||
       branchState.hasPendingDecisionSegment;
-    supportState.savedResults = mergeStaticSavedResultState(
-      supportState.savedResults,
-      branchState.savedResults,
-    );
   }
   return true;
 };

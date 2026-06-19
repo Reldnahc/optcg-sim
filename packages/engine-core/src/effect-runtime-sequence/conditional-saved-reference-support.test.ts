@@ -55,7 +55,7 @@ const activateMainEntry = (): EffectQueueEntry => ({
   causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
 });
 
-test("sequence support carries conditional saved targets to later sibling segments", () => {
+test("sequence support carries parent saved targets into conditional sibling segments", () => {
   const targetSelection = "selected:return-to-owner-hand" as SelectionId;
   const handSelection = "handSelection:play-from-hand" as HandSelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {
@@ -70,6 +70,24 @@ test("sequence support carries conditional saved targets to later sibling segmen
       effects: [
         {
           connector: "always",
+          saveResultAs: targetSelection,
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zone: "characterArea",
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: { categories: ["character"] },
+            },
+          },
+        },
+        {
+          connector: "then",
           effect: {
             type: "conditional",
             if: {
@@ -84,24 +102,6 @@ test("sequence support carries conditional saved targets to later sibling segmen
               effects: [
                 {
                   connector: "always",
-                  saveResultAs: targetSelection,
-                  effect: {
-                    type: "selectTargets",
-                    request: {
-                      timing: "onResolution",
-                      chooser: "self",
-                      player: "self",
-                      zone: "characterArea",
-                      min: 1,
-                      max: 1,
-                      allowFewerIfUnavailable: true,
-                      visibility: "public",
-                      filter: { categories: ["character"] },
-                    },
-                  },
-                },
-                {
-                  connector: "then",
                   effect: {
                     type: "bounce",
                     destination: "hand",
@@ -153,6 +153,123 @@ test("sequence support carries conditional saved targets to later sibling segmen
             type: "playSelected",
             selection: handSelection,
             ignoreCost: true,
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    isSupportedSequenceBlock(activateMainEntry(), effectBlock),
+    true,
+  );
+});
+
+test("sequence support accepts optional cost before conditional branch-local saved target play", () => {
+  const targetSelection = "selected:returned-character" as SelectionId;
+  const handSelection = "handSelection:different-color-play" as HandSelectionId;
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-costed-conditional-return-play" as EffectDefinition["effects"][number]["id"],
+    category: "activate",
+    trigger: { type: "activateMain" },
+    optional: false,
+    oncePerTurn: true,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: {
+            type: "payCost",
+            cost: { type: "restDon", count: 2, optional: true },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: {
+            type: "conditional",
+            if: {
+              type: "fieldCount",
+              player: "self",
+              filter: { categories: ["character"] },
+              op: "eq",
+              value: 5,
+            },
+            then: {
+              type: "sequence",
+              effects: [
+                {
+                  connector: "always",
+                  saveResultAs: targetSelection,
+                  effect: {
+                    type: "selectTargets",
+                    request: {
+                      timing: "onResolution",
+                      chooser: "self",
+                      player: "self",
+                      zone: "characterArea",
+                      min: 1,
+                      max: 1,
+                      allowFewerIfUnavailable: false,
+                      visibility: "public",
+                      filter: { categories: ["character"] },
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  effect: {
+                    type: "bounce",
+                    destination: "hand",
+                    target: {
+                      type: "savedFieldObject",
+                      binding: {
+                        family: "selectedTargets",
+                        saveResultAs: targetSelection,
+                      },
+                      zone: "characterArea",
+                      player: "self",
+                      visibility: "publicOnly",
+                      onFailure: "failClosed",
+                    },
+                  },
+                },
+                {
+                  connector: "then",
+                  saveResultAs: handSelection,
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      categories: ["character"],
+                      cost: { max: 5 },
+                      colorRelation: {
+                        type: "differentFromSavedFieldObject",
+                        binding: {
+                          family: "selectedTargets",
+                          saveResultAs: targetSelection,
+                        },
+                      },
+                    },
+                    saveAs: handSelection,
+                    visibility: "chooserOnly",
+                  },
+                },
+                {
+                  connector: "ifPossible",
+                  effect: {
+                    type: "playSelected",
+                    selection: handSelection,
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
           },
         },
       ],

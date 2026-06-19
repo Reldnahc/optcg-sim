@@ -1,4 +1,4 @@
-import type { EffectTextSpan, SequencedEffect } from "@optcg/types";
+import type { Effect, EffectTextSpan, SequencedEffect } from "@optcg/types";
 
 import type {
   ConnectorParser,
@@ -75,8 +75,13 @@ function parseExpressionWithConnectorParse(
     return undefined;
   }
 
-  if (parsedSegments.length === 1) {
-    const only = parsedSegments[0];
+  const normalizedSegments = absorbConditionalDependentSiblings(
+    parsedSegments,
+    connectors,
+  );
+
+  if (normalizedSegments.length === 1) {
+    const only = normalizedSegments[0]?.segment;
     const presentationSpans =
       only === undefined ? [] : spansForSegment(only, segmentSources?.[0]);
     return only === undefined
@@ -105,9 +110,9 @@ function parseExpressionWithConnectorParse(
   return {
     effect: {
       type: "sequence",
-      effects: parsedSegments.map(
-        (segment, index): SequencedEffect => ({
-          connector: connectors[index] ?? "then",
+      effects: normalizedSegments.map(
+        ({ segment, connector }): SequencedEffect => ({
+          connector,
           ...(segment.saveResultAs === undefined
             ? {}
             : { saveResultAs: segment.saveResultAs }),
@@ -120,6 +125,171 @@ function parseExpressionWithConnectorParse(
     ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
   };
 }
+
+type NormalizedExpressionSegment = {
+  readonly connector: SequencedEffect["connector"];
+  readonly segment: SegmentParseResult;
+};
+
+type JsonRecord = Record<string, unknown>;
+
+const isRecord = (value: unknown): value is JsonRecord =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+const collectSavedReferenceIds = (
+  value: unknown,
+  key: "saveResultAs" | "saveAs",
+  ids: Set<string>,
+): void => {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectSavedReferenceIds(item, key, ids);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  const saved = value[key];
+  if (typeof saved === "string") {
+    ids.add(saved);
+  }
+  for (const nested of Object.values(value)) {
+    collectSavedReferenceIds(nested, key, ids);
+  }
+};
+
+const producedSavedReferences = (effect: Effect): ReadonlySet<string> => {
+  const ids = new Set<string>();
+  collectSavedReferenceIds(effect, "saveResultAs", ids);
+  collectSavedReferenceIds(effect, "saveAs", ids);
+  return ids;
+};
+
+const segmentConsumesAnyReference = (
+  segment: SegmentParseResult,
+  references: ReadonlySet<string>,
+): boolean => {
+  if (references.size === 0) {
+    return false;
+  }
+  return consumesAnySavedFieldObjectReference(segment.effect, references);
+};
+
+const consumesAnySavedFieldObjectReference = (
+  value: unknown,
+  references: ReadonlySet<string>,
+): boolean => {
+  if (Array.isArray(value)) {
+    return value.some((item) =>
+      consumesAnySavedFieldObjectReference(item, references),
+    );
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  const binding = value["binding"];
+  if (isRecord(binding) && typeof binding["saveResultAs"] === "string") {
+    return references.has(binding["saveResultAs"]);
+  }
+  return Object.values(value).some((nested) =>
+    consumesAnySavedFieldObjectReference(nested, references),
+  );
+};
+
+const appendSegmentsToConditionalThen = (
+  effect: Effect,
+  segments: readonly SequencedEffect[],
+): Effect => {
+  if (effect.type !== "conditional" || segments.length === 0) {
+    return effect;
+  }
+  const baseThen =
+    effect.then.type === "sequence"
+      ? effect.then
+      : {
+          type: "sequence" as const,
+          effects: [
+            {
+              connector: "always" as const,
+              effect: effect.then,
+            },
+          ],
+        };
+  return {
+    ...effect,
+    then: {
+      type: "sequence",
+      effects: [...baseThen.effects, ...segments],
+    },
+  };
+};
+
+const toSequencedEffect = (
+  segment: SegmentParseResult,
+  connector: SequencedEffect["connector"],
+): SequencedEffect => ({
+  connector,
+  ...(segment.saveResultAs === undefined
+    ? {}
+    : { saveResultAs: segment.saveResultAs }),
+  effect: segment.effect,
+});
+
+const absorbConditionalDependentSiblings = (
+  segments: readonly SegmentParseResult[],
+  connectors: readonly SequencedEffect["connector"][],
+): readonly NormalizedExpressionSegment[] => {
+  const normalized: NormalizedExpressionSegment[] = [];
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    if (segment === undefined) {
+      continue;
+    }
+    const connector = connectors[index] ?? "then";
+    if (segment.effect.type !== "conditional") {
+      normalized.push({ connector, segment });
+      continue;
+    }
+
+    const produced = producedSavedReferences(segment.effect.then);
+    const absorbed: SequencedEffect[] = [];
+    const absorbedSegments: SegmentParseResult[] = [];
+    let cursor = index + 1;
+    while (cursor < segments.length) {
+      const nextSegment = segments[cursor];
+      const nextConnector = connectors[cursor] ?? "then";
+      if (
+        nextSegment === undefined ||
+        nextConnector === "always" ||
+        !segmentConsumesAnyReference(nextSegment, produced)
+      ) {
+        break;
+      }
+      absorbed.push(toSequencedEffect(nextSegment, nextConnector));
+      absorbedSegments.push(nextSegment);
+      cursor += 1;
+    }
+
+    normalized.push({
+      connector,
+      segment: {
+        ...segment,
+        effect: appendSegmentsToConditionalThen(segment.effect, absorbed),
+        evidence: [
+          ...segment.evidence,
+          ...absorbedSegments.flatMap((item) => item.evidence),
+        ],
+        presentationSpans: [
+          ...(segment.presentationSpans ?? []),
+          ...absorbedSegments.flatMap((item) => item.presentationSpans ?? []),
+        ],
+      },
+    });
+    index = cursor - 1;
+  }
+  return normalized;
+};
 
 function spansForSegment(
   segment: SegmentParseResult,

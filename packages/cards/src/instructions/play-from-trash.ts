@@ -324,12 +324,8 @@ const parseMultiNamedPlayFromTrashInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const normalizedSharedPredicateText = sharedPredicateText.replace(
-    /^with\s+/iu,
-    "",
-  );
   const sharedPredicates = parseCardFilterPredicates({
-    text: normalizedSharedPredicateText,
+    text: sharedPredicateText,
   });
   if (
     sharedPredicates === undefined ||
