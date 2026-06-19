@@ -47,10 +47,15 @@ export const extractEngineEffectPrimitiveTypes = (
     .sort((left, right) => left.localeCompare(right));
 };
 
-const syntheticUnsupportedPrimitiveTypes = new Set(["custom"]);
+const nonStandaloneBehaviorCoveragePrimitiveTypes = new Set([
+  "attachDon",
+  "custom",
+  "enterRested",
+  "moveMatchingLifeCards",
+]);
 
 const isBehaviorCoveragePrimitive = (primitive: string): boolean =>
-  !syntheticUnsupportedPrimitiveTypes.has(primitive);
+  !nonStandaloneBehaviorCoveragePrimitiveTypes.has(primitive);
 
 export const createEnginePrimitiveInventoryReport = (
   request: CreateEnginePrimitiveInventoryReportRequest,

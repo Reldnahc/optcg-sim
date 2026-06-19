@@ -102,4 +102,30 @@ describe("engine primitive inventory", () => {
 
     expect(primitives).toEqual(["draw"]);
   });
+
+  it("excludes duplicate close-cousin effects from behavior coverage targets", () => {
+    const primitives = extractEngineEffectPrimitiveTypes({
+      sourceFiles: [
+        {
+          fileName: "effects.ts",
+          text: `
+            export type Effect =
+              | { type: "attachDon"; count: number }
+              | { type: "attachSelectedDon"; count: number }
+              | { type: "enterRested"; filter: unknown }
+              | { type: "moveCards"; from: unknown; to: unknown }
+              | { type: "moveMatchingLifeCards"; matcher: unknown }
+              | { type: "playSelected"; enterRested?: boolean };
+          `,
+        },
+      ],
+      rootTypeName: "Effect",
+    });
+
+    expect(primitives).toEqual([
+      "attachSelectedDon",
+      "moveCards",
+      "playSelected",
+    ]);
+  });
 });
