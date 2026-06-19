@@ -683,12 +683,22 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
   });
 
   it("parses variable hand-trash paid-count power under multiple attack timings", () => {
-    const lines = [
-      "[When Attacking] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
-      "[On Your Opponent's Attack] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+    const cases = [
+      {
+        line: "[When Attacking] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+        evidence: ["entry:whenAttacking"],
+      },
+      {
+        line: "[On Your Opponent's Attack] You may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+        evidence: ["entry:onOpponentAttack"],
+      },
+      {
+        line: "When this Leader attacks or is attacked, you may trash any number of Event or Stage cards from your hand. This Leader gains +1000 power during this battle for every card trashed.",
+        evidence: ["trigger:attackDeclared"],
+      },
     ];
 
-    for (const line of lines) {
+    for (const { line, evidence } of cases) {
       const result = parseCardEffectLine(line);
 
       expect(result).toMatchObject({
@@ -730,6 +740,7 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
       });
       expect(result?.evidence).toEqual(
         expect.arrayContaining([
+          ...evidence,
           "cost:trashFromHand",
           "count:anyNumber",
           "filter:category:event",

@@ -65,6 +65,35 @@ export const parseAttackDeclaredPredicate: ReactionPredicateParser = ({
     };
   }
 
+  const attacksOrIsAttacked =
+    /^this (?<source>Leader|Character) attacks or is attacked$/iu.exec(
+      normalized,
+    );
+  const attacksOrIsAttackedCategoryText =
+    attacksOrIsAttacked?.groups?.["source"];
+  if (attacksOrIsAttackedCategoryText !== undefined) {
+    const sourceCategory = attackCategoryFromText(
+      attacksOrIsAttackedCategoryText,
+    );
+    if (sourceCategory === undefined) {
+      return undefined;
+    }
+
+    return {
+      trigger: {
+        type: "attackDeclared",
+        role: "attackerOrTarget",
+        player: "self",
+        filter: { categories: [sourceCategory] },
+      },
+      evidence: [
+        "trigger:attackDeclared",
+        ...attackCategoryEvidence(sourceCategory, "self"),
+        "player:self",
+      ],
+    };
+  }
+
   const filteredBattle =
     /^this (?<source>Leader|Character) battles (?<counterpart>.+)$/iu.exec(
       normalized,

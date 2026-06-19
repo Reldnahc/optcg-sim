@@ -678,6 +678,32 @@ describe("event reaction predicate routing", () => {
       assertPredicateParsesThroughBothGroups(text, trigger, evidence);
     },
   );
+  it.each([
+    {
+      text: "this Leader attacks or is attacked",
+      category: "leader",
+      evidence: ["target:thisLeader", "filter:category:leader"],
+    },
+    {
+      text: "this Character attacks or is attacked",
+      category: "character",
+      evidence: ["target:thisCharacter", "filter:category:character"],
+    },
+  ] as const)(
+    "parses this-card attack-or-attacked predicate $text",
+    ({ text, category, evidence }) => {
+      assertPredicateParsesThroughBothGroups(
+        text,
+        {
+          type: "attackDeclared",
+          role: "attackerOrTarget",
+          player: "self",
+          filter: { categories: [category] },
+        },
+        ["trigger:attackDeclared", "player:self", ...evidence],
+      );
+    },
+  );
 });
 
 function assertPredicateParsesThroughBothGroups(
