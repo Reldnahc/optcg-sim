@@ -8,16 +8,25 @@ import {
 } from "@optcg/engine-core";
 import type {
   Action,
+  Attribute,
   CardId,
   CardInstance,
+  CardCategory,
+  CardColor,
+  CardFilter,
+  Condition,
+  Effect,
   EffectBlock,
   EngineResult,
   GameState,
   LegalAction,
   MatchCardManifest,
   MatchId,
+  OptionalCost,
   PlayerId,
   ResolvedCard,
+  Target,
+  Keyword,
 } from "@optcg/types";
 import {
   gameplayLinesFromTextParts,
@@ -96,6 +105,7 @@ export const createBehaviorProbeReport = (
         effectDefinitionsVersion: "behavior-probe",
       },
     },
+    setupFilters: collectScenarioSetupFilters(materialized.definition.effects),
     text: request.text,
   });
   const passed = result.ok;
@@ -110,6 +120,7 @@ export const createBehaviorProbeReport = (
       `Scenario 1 card category: ${scenario.category}`,
       `Scenario 1 result: ${resultLine}`,
       "Scenario 1 decision policy: max-progress",
+      `Scenario 1 setup filters: ${String(result.setupFilterCount)}`,
       `Scenario 1 pending decisions: ${result.pendingDecisionDrained ? "drained" : "pending"}`,
       `Scenario 1 effect queue: ${result.effectQueueDrained ? "drained" : "pending"}`,
       `Scenario 1 decisions resolved: ${String(result.decisionsResolved)}`,
@@ -143,6 +154,7 @@ const runPlayCardScenario = (input: {
   readonly definition: NonNullable<
     ReturnType<typeof materializeEffectDefinition>["definition"]
   >;
+  readonly setupFilters: readonly CardFilter[];
   readonly text: string;
 }): {
   readonly ok: boolean;
@@ -151,6 +163,7 @@ const runPlayCardScenario = (input: {
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
 } => {
   const state = setupProbeMainState(input);
   const player = state.players[p1];
@@ -165,6 +178,7 @@ const runPlayCardScenario = (input: {
       effectQueueDrained: state.effectQueue.length === 0,
       eventCount: 0,
       decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
     };
   }
 
@@ -172,11 +186,12 @@ const runPlayCardScenario = (input: {
     type: "playCard",
     cardInstanceId: card.instanceId,
   });
-  return drainRuntime(opened);
+  return drainRuntime(opened, input.setupFilters.length);
 };
 
 const drainRuntime = (
   initialResult: EngineResult,
+  setupFilterCount = 0,
 ): {
   readonly ok: boolean;
   readonly reason?: string;
@@ -184,6 +199,7 @@ const drainRuntime = (
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
 } => {
   let result = initialResult;
   let state = result.state;
@@ -196,6 +212,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        setupFilterCount,
         engineErrorReason(result.errors[0]),
       );
     }
@@ -204,7 +221,13 @@ const drainRuntime = (
       state.effectQueue.length === 0 &&
       state.deferredTriggers.length === 0
     ) {
-      return drainResult(true, state, eventCount, decisionsResolved);
+      return drainResult(
+        true,
+        state,
+        eventCount,
+        decisionsResolved,
+        setupFilterCount,
+      );
     }
 
     const decision = state.pendingDecision;
@@ -214,6 +237,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        setupFilterCount,
         "runtime work did not drain",
       );
     }
@@ -226,6 +250,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        setupFilterCount,
         `no legal response for ${decision.type}`,
       );
     }
@@ -240,6 +265,7 @@ const drainRuntime = (
     state,
     eventCount,
     decisionsResolved,
+    setupFilterCount,
     "decision drain step limit hit",
   );
 };
@@ -249,6 +275,7 @@ const drainResult = (
   state: GameState,
   eventCount: number,
   decisionsResolved: number,
+  setupFilterCount: number,
   reason?: string,
 ) => ({
   ok,
@@ -257,6 +284,7 @@ const drainResult = (
   effectQueueDrained: state.effectQueue.length === 0,
   eventCount,
   decisionsResolved,
+  setupFilterCount,
 });
 
 const chooseDecisionAction = (
@@ -321,6 +349,211 @@ const decisionScore = (
 const selectionCount = (values: readonly unknown[] | undefined): number =>
   values?.length ?? 0;
 
+const collectScenarioSetupFilters = (
+  effects: readonly EffectBlock[],
+): readonly CardFilter[] =>
+  uniqueFilters(
+    effects.flatMap((block) => [
+      ...collectConditionFilters(block.condition),
+      ...collectEffectFilters(block.effect),
+    ]),
+  );
+
+const uniqueFilters = (
+  filters: readonly CardFilter[],
+): readonly CardFilter[] => {
+  const seen = new Set<string>();
+  const unique: CardFilter[] = [];
+  for (const filter of filters) {
+    const key = JSON.stringify(filter);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(filter);
+  }
+  return unique;
+};
+
+const collectConditionFilters = (
+  condition: Condition | undefined,
+): readonly CardFilter[] => {
+  if (condition === undefined) {
+    return [];
+  }
+  if (
+    condition.type === "cardMatches" ||
+    condition.type === "fieldStatTotal" ||
+    condition.type === "onlyMatchingFieldCards" ||
+    condition.type === "hasCardInZone"
+  ) {
+    return [condition.filter];
+  }
+  if (
+    condition.type === "fieldCount" ||
+    condition.type === "fieldCountTotal" ||
+    condition.type === "trashCount"
+  ) {
+    return condition.filter === undefined ? [] : [condition.filter];
+  }
+  if (condition.type === "fieldCountDifference") {
+    return [
+      ...(condition.minuend.filter === undefined
+        ? []
+        : [condition.minuend.filter]),
+      ...(condition.subtrahend.filter === undefined
+        ? []
+        : [condition.subtrahend.filter]),
+    ];
+  }
+  if (condition.type === "eventHistory") {
+    return [
+      ...(condition.filter === undefined ? [] : [condition.filter]),
+      ...(condition.sourceFilter === undefined ? [] : [condition.sourceFilter]),
+    ];
+  }
+  if (condition.type === "and" || condition.type === "or") {
+    return condition.conditions.flatMap(collectConditionFilters);
+  }
+  if (condition.type === "not") {
+    return collectConditionFilters(condition.condition);
+  }
+  return [];
+};
+
+const collectTargetFilters = (target: Target): readonly CardFilter[] => {
+  if (target.type === "all" || target.type === "savedFieldObject") {
+    return target.filter === undefined ? [] : [target.filter];
+  }
+  if (target.type === "choose" || target.type === "chooseFromZones") {
+    return target.request.filter === undefined ? [] : [target.request.filter];
+  }
+  return [];
+};
+
+const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
+  if (
+    effect.type === "preventPlay" ||
+    effect.type === "enterRested" ||
+    effect.type === "play" ||
+    effect.type === "cannotBeBlockedBy"
+  ) {
+    return [effect.filter];
+  }
+  if (effect.type === "forEachMatch") {
+    return [effect.filter, ...collectEffectFilters(effect.effect)];
+  }
+  if (
+    effect.type === "revealFromZone" ||
+    effect.type === "selectFromSet" ||
+    effect.type === "selectCards" ||
+    effect.type === "trashFromHand" ||
+    effect.type === "modifyCounter"
+  ) {
+    return effect.filter === undefined ? [] : [effect.filter];
+  }
+  if (effect.type === "selectTargets" || effect.type === "selectAllTargets") {
+    return effect.request.filter === undefined ? [] : [effect.request.filter];
+  }
+  if (
+    effect.type === "bounce" ||
+    effect.type === "trash" ||
+    effect.type === "ko" ||
+    effect.type === "modifyPower" ||
+    effect.type === "setPowerToZero" ||
+    effect.type === "setBasePower" ||
+    effect.type === "rest" ||
+    effect.type === "activate" ||
+    effect.type === "giveProtection" ||
+    effect.type === "attachDon" ||
+    effect.type === "attachSelectedDon" ||
+    effect.type === "invalidateEffects" ||
+    effect.type === "protectFromKO" ||
+    effect.type === "cannotBecomeActive" ||
+    effect.type === "cannotAttack" ||
+    effect.type === "attackCost" ||
+    effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
+    effect.type === "changeAttackTarget" ||
+    effect.type === "cannotBeAttacked"
+  ) {
+    return collectTargetFilters(effect.target);
+  }
+  if (effect.type === "modifyCost") {
+    return [
+      ...(effect.filter === undefined ? [] : [effect.filter]),
+      ...(effect.target === undefined
+        ? []
+        : collectTargetFilters(effect.target)),
+    ];
+  }
+  if (
+    effect.type === "preventPlayByEffects" ||
+    effect.type === "allowAttackActiveCharacters" ||
+    effect.type === "setBaseCost"
+  ) {
+    return collectTargetFilters(effect.target);
+  }
+  if (effect.type === "cannotAttackTarget") {
+    return [
+      ...collectTargetFilters(effect.target),
+      ...(effect.attackTarget.filter === undefined
+        ? []
+        : [effect.attackTarget.filter]),
+    ];
+  }
+  if (effect.type === "sequence") {
+    return effect.effects.flatMap((segment) =>
+      segment.effect.type === "payCost"
+        ? collectOptionalCostFilters(segment.effect.cost)
+        : collectEffectFilters(segment.effect),
+    );
+  }
+  if (effect.type === "choice") {
+    return effect.options.flatMap((option) =>
+      collectEffectFilters(option.effect),
+    );
+  }
+  if (effect.type === "conditional") {
+    return [
+      ...collectConditionFilters(effect.if),
+      ...collectEffectFilters(effect.then),
+      ...(effect.else === undefined ? [] : collectEffectFilters(effect.else)),
+    ];
+  }
+  if (
+    effect.type === "delayed" ||
+    effect.type === "repeat" ||
+    effect.type === "forEachSavedTarget"
+  ) {
+    return collectEffectFilters(effect.effect);
+  }
+  if (effect.type === "replacement") {
+    return collectEffectFilters(effect.instead);
+  }
+  return [];
+};
+
+const collectOptionalCostFilters = (
+  cost: OptionalCost,
+): readonly CardFilter[] => {
+  if (
+    cost.type === "trashFromHand" ||
+    cost.type === "revealFromHand" ||
+    cost.type === "trashFromField" ||
+    cost.type === "koFromField" ||
+    cost.type === "restFromField" ||
+    cost.type === "moveCards" ||
+    cost.type === "moveFieldToLife"
+  ) {
+    return cost.filter === undefined ? [] : [cost.filter];
+  }
+  if (cost.type === "modifyPower" || cost.type === "attachDon") {
+    return collectTargetFilters(cost.target);
+  }
+  return [];
+};
+
 const choosePendingDecisionAction = (
   state: GameState,
 ): Extract<Action, { type: "respondToDecision" }> | undefined => {
@@ -354,6 +587,7 @@ const setupProbeMainState = (input: {
   readonly definition: NonNullable<
     ReturnType<typeof materializeEffectDefinition>["definition"]
   >;
+  readonly setupFilters: readonly CardFilter[];
   readonly text: string;
 }): GameState => {
   const setup = createInitialState({
@@ -416,9 +650,9 @@ const setupProbeMainState = (input: {
   installActiveDon(active, p1);
   installActiveDon(active, p2);
   installProbeManifest(active, input);
-  installGenericSearchableDeckMetadata(active, p1);
-  installGenericSearchableDeckMetadata(active, p2);
-  addProbeDeckCards(active, p1, 4);
+  addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
+  installScenarioDeckMetadata(active, p1, input.setupFilters);
+  installScenarioDeckMetadata(active, p2, []);
   return active;
 };
 
@@ -491,7 +725,6 @@ const addProbeDeckCards = (
       cardId,
       category: "character",
       effectText: "",
-      searchProfile: "broad",
     });
     return {
       instanceId:
@@ -513,19 +746,130 @@ const addProbeDeckCards = (
   player.deck = [...player.deck, ...cards];
 };
 
-const installGenericSearchableDeckMetadata = (
+interface ProbeCardProfile {
+  readonly cardId?: CardId;
+  readonly name?: string;
+  readonly category?: CardCategory;
+  readonly colors?: readonly CardColor[];
+  readonly attributes?: readonly Attribute[];
+  readonly types?: readonly string[];
+  readonly cost?: number;
+  readonly power?: number;
+  readonly counter?: number;
+  readonly keywords?: readonly Keyword[];
+}
+
+const installScenarioDeckMetadata = (
   state: GameState,
   playerId: PlayerId,
+  filters: readonly CardFilter[],
 ): void => {
   const player = must(state.players[playerId], `player ${String(playerId)}`);
-  for (const card of player.deck) {
-    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
-      cardId: card.cardId,
-      category: "character",
+  const deck = [...player.deck];
+  for (const [index, card] of deck.entries()) {
+    const filter = filters[index];
+    const profile =
+      filter === undefined ? {} : profileForCardFilter(filter, index);
+    const cardId = profile.cardId ?? card.cardId;
+    deck[index] = {
+      ...card,
+      cardId,
+    };
+    state.cardManifest.cards[cardId] = resolvedProbeCard({
+      cardId,
+      category: profile.category ?? "character",
       effectText: "",
-      searchProfile: "broad",
+      profile,
     });
   }
+  player.deck = deck;
+};
+
+const profileForCardFilter = (
+  filter: CardFilter,
+  index: number,
+): ProbeCardProfile => {
+  const effectiveFilter = filter.anyOf?.[0] ?? filter;
+  const category = effectiveFilter.categories?.[0] ?? "character";
+  const cardId = effectiveFilter.cardIds?.[0];
+  const cost = numberForPredicate(
+    effectiveFilter.cost ?? effectiveFilter.baseCost,
+  );
+  const power = numberForPredicate(
+    effectiveFilter.power ?? effectiveFilter.currentPower,
+  );
+  const counter = numberForPredicate(effectiveFilter.counter);
+  return {
+    ...(cardId === undefined ? {} : { cardId }),
+    name:
+      effectiveFilter.names?.[0] ??
+      (effectiveFilter.nameContains === undefined
+        ? `Probe Match ${String(index + 1)}`
+        : `Probe ${effectiveFilter.nameContains} Match`),
+    category,
+    colors: colorsForFilter(effectiveFilter),
+    attributes: attributesForFilter(effectiveFilter),
+    types: typesForFilter(effectiveFilter),
+    ...(cost === undefined ? {} : { cost }),
+    ...(power === undefined ? {} : { power }),
+    ...(counter === undefined ? {} : { counter }),
+    keywords: effectiveFilter.hasKeywords ?? [],
+  };
+};
+
+const colorsForFilter = (filter: CardFilter): readonly CardColor[] => {
+  if (filter.colorsAll !== undefined && filter.colorsAll.length > 0) {
+    return filter.colorsAll;
+  }
+  if (filter.colorsAny !== undefined && filter.colorsAny.length > 0) {
+    return [filter.colorsAny[0] as CardColor];
+  }
+  return ["red"];
+};
+
+const attributesForFilter = (filter: CardFilter): readonly Attribute[] => {
+  if (filter.attributesAll !== undefined && filter.attributesAll.length > 0) {
+    return filter.attributesAll;
+  }
+  if (filter.attributesAny !== undefined && filter.attributesAny.length > 0) {
+    return [filter.attributesAny[0] as Attribute];
+  }
+  return [];
+};
+
+const typesForFilter = (filter: CardFilter): readonly string[] =>
+  [
+    ...(filter.typesAll ?? []),
+    ...(filter.typesAny === undefined ? [] : [filter.typesAny[0] ?? ""]),
+    ...(filter.typesIncludeAny === undefined
+      ? []
+      : [filter.typesIncludeAny[0] ?? ""]),
+  ].filter((type) => type.length > 0);
+
+const numberForPredicate = (
+  predicate:
+    | { readonly op: string; readonly value: number }
+    | { readonly min?: number; readonly max?: number }
+    | undefined,
+): number | undefined => {
+  if (predicate === undefined) {
+    return undefined;
+  }
+  if ("value" in predicate) {
+    switch (predicate.op) {
+      case "lt":
+        return Math.max(0, predicate.value - 1);
+      case "lte":
+        return predicate.value;
+      case "gt":
+        return predicate.value + 1;
+      case "gte":
+      case "eq":
+      default:
+        return predicate.value;
+    }
+  }
+  return predicate.min ?? predicate.max;
 };
 
 const engineErrorReason = (
@@ -561,30 +905,21 @@ const resolvedProbeCard = (params: {
   readonly cardId: CardId;
   readonly category: "leader" | "character" | "event" | "don" | "stage";
   readonly effectText: string;
-  readonly searchProfile?: "broad";
+  readonly profile?: ProbeCardProfile;
   readonly support?: ResolvedCard["support"];
 }): ResolvedCard => ({
   cardId: params.cardId,
   language: "en",
-  name: String(params.cardId),
+  name: params.profile?.name ?? String(params.cardId),
   category: params.category,
   set: "PROBE",
   setName: "Behavior Probe",
   released: true,
-  colors: params.category === "don" ? [] : ["red"],
-  attributes: [],
-  types:
-    params.searchProfile === "broad"
-      ? [
-          "Land of Wano",
-          "Sky Island",
-          "Red-Haired Pirates",
-          "Dressrosa",
-          "Straw Hat Crew",
-          "Navy",
-        ]
-      : [],
-  printedKeywords: [],
+  colors:
+    params.category === "don" ? [] : [...(params.profile?.colors ?? ["red"])],
+  attributes: [...(params.profile?.attributes ?? [])],
+  types: [...(params.profile?.types ?? [])],
+  printedKeywords: [...(params.profile?.keywords ?? [])],
   variants: [],
   legality: {},
   officialFaq: [],
@@ -600,8 +935,16 @@ const resolvedProbeCard = (params: {
     sourceTextHash: "behavior-probe-source",
     behaviorHash: "behavior-probe-behavior",
   },
-  ...(params.category === "character" ? { cost: 0, power: 2000 } : {}),
-  ...(params.category === "event" ? { cost: 0 } : {}),
+  ...(params.category === "character"
+    ? {
+        cost: params.profile?.cost ?? 0,
+        power: params.profile?.power ?? 2000,
+      }
+    : {}),
+  ...(params.category === "event" ? { cost: params.profile?.cost ?? 0 } : {}),
+  ...(params.profile?.counter === undefined
+    ? {}
+    : { counter: params.profile.counter }),
   ...(params.effectText.length === 0 ? {} : { effectText: params.effectText }),
 });
 

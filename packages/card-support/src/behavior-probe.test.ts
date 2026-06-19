@@ -55,6 +55,21 @@ describe("card behavior probe", () => {
     );
   });
 
+  it("derives searchable card metadata from structured filters instead of broad fixtures", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Look at 4 cards from the top of your deck; reveal up to 1 [Sanji] or Event card and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 setup filters: 1");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [2-9]/u),
+      ]),
+    );
+  });
+
   it("reports runtime-supported entrypoints that do not have generated scenarios yet", () => {
     const report = createBehaviorProbeReport({
       text: "[When Attacking] Draw 1 card.",
