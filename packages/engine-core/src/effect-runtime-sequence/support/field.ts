@@ -75,8 +75,11 @@ export const isSupportedSavedFieldObjectKoTarget = (
   target: Target,
 ): target is Extract<Target, { type: "savedFieldObject" }> =>
   target.type === "savedFieldObject" &&
-  (target.zone === "characterArea" || target.zone === "stageArea") &&
-  target.zones === undefined &&
+  (target.zone === "characterArea" ||
+    target.zone === "stageArea" ||
+    target.zones?.every(
+      (zone) => zone === "characterArea" || zone === "stageArea",
+    ) === true) &&
   (target.player === "self" ||
     target.player === "opponent" ||
     target.player === "anyPlayer") &&

@@ -104,3 +104,63 @@ test("sequence support accepts opponent-chosen field-object bounce consumers", (
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
 });
+
+test("sequence support accepts multi-zone saved field-object K.O. consumers", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-opponent-target-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "main" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          id: "select-opponent-ko-target",
+          connector: "always",
+          saveResultAs: "selected:opponent-ko-target",
+          effect: {
+            type: "selectTargets",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "opponent",
+              zones: ["characterArea", "stageArea"],
+              min: 0,
+              max: 1,
+              allowFewerIfUnavailable: true,
+              visibility: "public",
+              filter: {
+                anyOf: [
+                  { categories: ["character"], cost: { op: "eq", value: 0 } },
+                  { categories: ["stage"], cost: { max: 3 } },
+                ],
+              },
+            },
+          },
+        },
+        {
+          id: "ko-selected-target",
+          connector: "then",
+          effect: {
+            type: "ko",
+            target: {
+              type: "savedFieldObject",
+              binding: {
+                family: "selectedTargets",
+                saveResultAs: "selected:opponent-ko-target",
+              },
+              zones: ["characterArea", "stageArea"],
+              player: "opponent",
+              visibility: "publicOnly",
+              onFailure: "failClosed",
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});

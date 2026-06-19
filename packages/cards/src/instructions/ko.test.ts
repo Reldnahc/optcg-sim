@@ -185,6 +185,67 @@ describe("K.O. instruction parser", () => {
     });
   });
 
+  it("parses K.O. as one mixed Character-or-Stage target request", () => {
+    expect(
+      parseKoInstruction({
+        text: "K.O. up to 1 of your opponent's Characters with a cost of 0 or your opponent's Stages with a cost of 3 or less.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:ko-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                timing: "onResolution",
+                chooser: "self",
+                player: "opponent",
+                zones: ["characterArea", "stageArea"],
+                min: 0,
+                max: 1,
+                allowFewerIfUnavailable: true,
+                visibility: "public",
+                filter: {
+                  anyOf: [
+                    {
+                      categories: ["character"],
+                      cost: { op: "eq", value: 0 },
+                    },
+                    {
+                      categories: ["stage"],
+                      cost: { max: 3 },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "ko",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:ko-target",
+                },
+                zones: ["characterArea", "stageArea"],
+                player: "opponent",
+                visibility: "publicOnly",
+                onFailure: "failClosed",
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+  });
+
   it("parses K.O.-or-return as one selected target followed by reusable action choice", () => {
     expect(
       parseKoInstruction({

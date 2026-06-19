@@ -192,6 +192,30 @@ export const parseKoInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
+  const mixedCharacterStageTarget = parseOpponentCharacterOrStageKoTarget(
+    cardinality.rest,
+  );
+  if (mixedCharacterStageTarget !== undefined) {
+    return {
+      effect: selectThenApplyKoEffect({
+        min: cardinality.cardinality.min,
+        max: cardinality.cardinality.max,
+        player: "opponent",
+        filter: mixedCharacterStageTarget.filter,
+        zones: ["characterArea", "stageArea"],
+        selectionId: koTargetSelectionId,
+      }),
+      evidence: [
+        "instruction:ko",
+        ...cardinality.evidence,
+        "chooser:self:upTo",
+        ...mixedCharacterStageTarget.evidence,
+        "composition:selectThenApply",
+      ],
+      rest: "",
+    };
+  }
+
   const totalStatTarget = parseTotalStatLimitedKoTarget(cardinality.rest);
   const target =
     totalStatTarget?.target ??
@@ -322,6 +346,56 @@ function parseTotalStatLimitedKoTarget(text: string):
       op === "lte" ? "condition:comparator:lte" : "condition:comparator:gte",
       "condition:threshold:positiveInteger",
     ],
+  };
+}
+
+function parseOpponentCharacterOrStageKoTarget(text: string):
+  | {
+      readonly evidence: readonly PrimitiveEvidence[];
+      readonly filter: TargetFilter;
+    }
+  | undefined {
+  const match =
+    /^of your opponent's (?<characterText>Characters?.+?)\s+or\s+your opponent's (?<stageText>Stages?.+?)\.?$/iu.exec(
+      text,
+    );
+  const characterText = match?.groups?.["characterText"];
+  const stageText = match?.groups?.["stageText"];
+  if (characterText === undefined || stageText === undefined) {
+    return undefined;
+  }
+
+  const character = parseCardFilterPredicates(
+    { text: characterText },
+    { powerSemantics: "current" },
+  );
+  const stage = parseCardFilterPredicates(
+    { text: stageText },
+    { powerSemantics: "current" },
+  );
+  if (
+    character === undefined ||
+    stage === undefined ||
+    character.rest.trim().length > 0 ||
+    stage.rest.trim().length > 0 ||
+    !character.filter.categories?.includes("character") ||
+    !stage.filter.categories?.includes("stage")
+  ) {
+    return undefined;
+  }
+
+  return {
+    evidence: [
+      "player:opponent",
+      "zone:characterArea",
+      "zone:stageArea",
+      "filter:anyOf",
+      ...character.evidence,
+      ...stage.evidence,
+    ],
+    filter: {
+      anyOf: [character.filter, stage.filter],
+    },
   };
 }
 
@@ -604,14 +678,16 @@ function selectThenApplyKoEffect(options: {
     Effect,
     { type: "selectTargets" }
   >["request"]["selectionConstraints"];
-  readonly zone: PublicFieldSelectionZone;
+  readonly zone?: PublicFieldSelectionZone;
+  readonly zones?: readonly PublicFieldSelectionZone[];
   readonly selectionId: string;
 }): Effect {
   return selectThenApplyFieldTarget({
     selectionId: options.selectionId,
     selectId: `select:ko-target:${options.selectionId}`,
     player: options.player ?? "opponent",
-    zone: options.zone,
+    ...(options.zone === undefined ? {} : { zone: options.zone }),
+    ...(options.zones === undefined ? {} : { zones: options.zones }),
     min: options.min,
     max: options.max,
     filter: options.filter,
