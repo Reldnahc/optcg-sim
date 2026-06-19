@@ -11,7 +11,10 @@ import type {
   SegmentParser,
 } from "../types.js";
 import type { ContinuousInstructionParser } from "../instructions/continuous-field-effects.js";
-import { parseLeadingConditionalExpression } from "./composed-expression.js";
+import {
+  parseConditionExpression,
+  parseLeadingConditionalExpression,
+} from "./composed-expression.js";
 
 export function conditionalContinuousExpressionParser(options: {
   readonly conditions: readonly ConditionParser[];
@@ -19,14 +22,14 @@ export function conditionalContinuousExpressionParser(options: {
   readonly instructions: readonly ContinuousInstructionParser[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
   return (input) => {
-    const parsed = parseLeadingConditionalExpression(
+    const parsed = parseContinuousConditionExpression(
       input.text,
       options.conditions,
     );
     if (parsed === undefined) {
       return undefined;
     }
-    const { condition, thenText: bodyText } = parsed;
+    const { condition, bodyText } = parsed;
 
     const isPermanentEntry =
       input.entryPoint === undefined ||
@@ -241,7 +244,7 @@ function conditionalContinuousSegmentParser(options: {
   readonly instructions: readonly ContinuousInstructionParser[];
 }): SegmentParser {
   return (input) => {
-    const parsed = parseLeadingConditionalExpression(
+    const parsed = parseContinuousConditionExpression(
       input.text,
       options.conditions,
     );
@@ -253,7 +256,7 @@ function conditionalContinuousSegmentParser(options: {
       options.condition,
       parsed.condition.condition,
     );
-    const body = parseExpression(parsed.thenText, {
+    const body = parseExpression(parsed.bodyText, {
       connectors: options.connectors,
       segments: [
         continuousInstructionSegmentParser({
@@ -279,4 +282,38 @@ function conditionalContinuousSegmentParser(options: {
       ],
     };
   };
+}
+
+function parseContinuousConditionExpression(
+  text: string,
+  conditions: readonly ConditionParser[],
+):
+  | {
+      readonly condition: ConditionParseResult;
+      readonly bodyText: string;
+    }
+  | undefined {
+  const leading = parseLeadingConditionalExpression(text, conditions);
+  if (leading !== undefined) {
+    return {
+      condition: leading.condition,
+      bodyText: leading.thenText,
+    };
+  }
+
+  const trailing = /^(?<body>.+?)\s+if\s+(?<condition>.+)$/iu.exec(text.trim());
+  const bodyText = trailing?.groups?.["body"]?.trim();
+  const conditionText = trailing?.groups?.["condition"]
+    ?.replace(/\.$/u, "")
+    .trim();
+  if (
+    bodyText === undefined ||
+    bodyText.length === 0 ||
+    conditionText === undefined ||
+    conditionText.length === 0
+  ) {
+    return undefined;
+  }
+  const condition = parseConditionExpression(conditionText, conditions);
+  return condition === undefined ? undefined : { condition, bodyText };
 }
