@@ -408,6 +408,11 @@ function parseSourceCardToDeckBottomCostRoute(
 const parseLifeToHandCost = (
   input: ParseInput,
 ): CostParseResult | undefined => {
+  const lifeArea = parseLifeAreaToHandCost(input);
+  if (lifeArea !== undefined) {
+    return lifeArea;
+  }
+
   const match =
     /^add (?<count>[1-9]\d*) cards? from the (?<position>top|bottom|top or bottom) of your Life cards to your hand$/i.exec(
       input.text,
@@ -447,6 +452,42 @@ const parseLifeToHandCost = (
       ...positionEvidence,
       "destination:hand",
       "order:original",
+    ],
+    rest: "",
+  };
+};
+
+const parseLifeAreaToHandCost = (
+  input: ParseInput,
+): CostParseResult | undefined => {
+  const match =
+    /^add (?<count>[1-9]\d*) cards? from your Life area to your hand$/iu.exec(
+      input.text,
+    );
+  const countText = match?.groups?.["count"];
+  if (countText === undefined) {
+    return undefined;
+  }
+
+  return {
+    cost: {
+      type: "moveCards",
+      count: Number.parseInt(countText, 10),
+      chooser: "self",
+      from: { player: "self", zone: "life", position: "topOrBottom" },
+      to: { player: "self", zone: "hand" },
+      order: "chooserChoice",
+      optional: true,
+    },
+    evidence: [
+      "cost:moveCards",
+      "cardinality:exact",
+      "count:positiveInteger",
+      "player:self",
+      "zone:life",
+      "position:top",
+      "position:bottom",
+      "destination:hand",
     ],
     rest: "",
   };

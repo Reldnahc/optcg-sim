@@ -42,4 +42,10 @@ export const continuousDurationEvidence = (
 export const parseFieldEffectDuration = (
   input: ParseInput,
 ): DurationParseResult | undefined =>
-  parseDurationFromSet(input, fieldEffectDurationParsers);
+  parseDurationFromSet(
+    { text: stripTerminalReminder(input.text) },
+    fieldEffectDurationParsers,
+  );
+
+const stripTerminalReminder = (text: string): string =>
+  text.replace(/\s+\([^)]*\)\.?$/u, "").trim();

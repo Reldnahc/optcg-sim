@@ -74,4 +74,25 @@ describe("rest from field cost parser", () => {
       rest: "",
     });
   });
+
+  it("parses bare own Leader rest as a reusable field category", () => {
+    expect(parseRestFromFieldCost({ text: "rest your Leader" })).toEqual({
+      cost: {
+        type: "restFromField",
+        count: 1,
+        chooser: "self",
+        filter: { categories: ["leader"] },
+        optional: true,
+      },
+      evidence: [
+        "cost:restFromField",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "player:self",
+        "filter:category:leader",
+      ],
+      rest: "",
+    });
+  });
 });

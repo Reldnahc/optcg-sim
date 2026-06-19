@@ -61,8 +61,11 @@ export function parseRestFromFieldCost(
 }
 
 function normalizeLeaderOrStageRestCost(text: string): string {
-  return text.replace(
-    /^your Leader or 1 of your Stage cards?$/iu,
-    "1 of your Leader or Stage cards",
-  );
+  return text
+    .replace(/^your 1 Leader$/iu, "1 of your Leader")
+    .replace(/^your Leader$/iu, "1 of your Leader")
+    .replace(
+      /^your Leader or 1 of your Stage cards?$/iu,
+      "1 of your Leader or Stage cards",
+    );
 }

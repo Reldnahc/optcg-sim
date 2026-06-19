@@ -11,6 +11,11 @@ export interface FieldCostFilterParseResult {
 export function parseFieldCostFilter(
   input: ParseInput,
 ): FieldCostFilterParseResult | undefined {
+  const categoryOnly = parseFieldCostCategoryOnly(input.text);
+  if (categoryOnly !== undefined) {
+    return categoryOnly;
+  }
+
   const leaderOrStageMatch = /^Leader or Stage cards?$/iu.exec(input.text);
   if (leaderOrStageMatch !== null) {
     return {
@@ -60,5 +65,34 @@ export function parseFieldCostFilter(
       ...predicates.filter,
       categories: [category],
     },
+  };
+}
+
+function parseFieldCostCategoryOnly(
+  text: string,
+): FieldCostFilterParseResult | undefined {
+  const match = /^(?<category>Leaders?|Characters?|Stages?)$/iu.exec(text);
+  const categoryText = match?.groups?.["category"]?.toLowerCase();
+  if (categoryText === undefined) {
+    return undefined;
+  }
+
+  if (categoryText.startsWith("leader")) {
+    return {
+      evidence: ["filter:category:leader"],
+      filter: { categories: ["leader"] },
+    };
+  }
+
+  if (categoryText.startsWith("character")) {
+    return {
+      evidence: ["filter:category:character"],
+      filter: { categories: ["character"] },
+    };
+  }
+
+  return {
+    evidence: ["filter:category:stage"],
+    filter: { categories: ["stage"] },
   };
 }

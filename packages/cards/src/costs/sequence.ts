@@ -350,7 +350,7 @@ function applyInheritedAction(
 }
 
 function stripOptionalCostPrefix(text: string): string {
-  return text.replace(/^You may\s+/i, "");
+  return text.replace(/^You (?:may|can)\s+/i, "");
 }
 
 function parseCostPart(text: string): CostParseResult | undefined {

@@ -123,7 +123,7 @@ function parseOptionalCostSequenceFromIfYouDoSentence(
 }
 
 function hasOptionalCostMarker(text: string): boolean {
-  return /^(?:[\u2780\u2460\u2781\u2461\u2782\u2462\u2783\u2463\u2784\u2464]|You may\b|.*(?:,|\band\b)\s*You may\b)/iu.test(
+  return /^(?:[\u2780\u2460\u2781\u2461\u2782\u2462\u2783\u2463\u2784\u2464]|You (?:may|can)\b|.*(?:,|\band\b)\s*You (?:may|can)\b)/iu.test(
     text,
   );
 }
