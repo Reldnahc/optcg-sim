@@ -235,7 +235,7 @@ function parseRevealTopCondition(text: string):
   }
 
   const isMatch = new RegExp(
-    String.raw`^Reveal 1 card from the top of your ${sourcePattern}\. If that card is (?<predicate>.+?), (?<body>[\s\S]+)$`,
+    String.raw`^Reveal 1 card from the top of your ${sourcePattern}\. If (?:the revealed card|that card) is (?<predicate>.+?), (?<body>[\s\S]+)$`,
     "iu",
   ).exec(text);
   const isPredicate = isMatch?.groups?.["predicate"]?.trim();
