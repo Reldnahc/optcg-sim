@@ -57,7 +57,7 @@ function parseConjunctiveCardFilterPredicates(
   text: string,
   options: CardFilterPredicateParseOptions,
 ): CardFilterPredicateParseResult | undefined {
-  let rest = text.trim();
+  let rest = stripLeadingArticle(text.trim());
   let filter: CardFilter = {};
   const evidence: PrimitiveEvidence[] = [];
   let parsedAny = false;
@@ -107,4 +107,8 @@ function parseNextPredicate(
 
 function stripLeadingConnector(text: string): string {
   return text.replace(/^(?:,?\s*(?:with|and)\s+)+/i, "").trim();
+}
+
+function stripLeadingArticle(text: string): string {
+  return text.replace(/^(?:an?|the)\s+/iu, "").trim();
 }

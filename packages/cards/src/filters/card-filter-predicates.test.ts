@@ -745,6 +745,28 @@ describe("card filter predicate parser", () => {
       rest: "",
     });
   });
+
+  it("parses leading article before type and category predicates", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: "a {Land of Wano} type Character card with a cost of 3 or more",
+      }),
+    ).toEqual({
+      filter: {
+        categories: ["character"],
+        typesAny: ["Land of Wano"],
+        cost: { min: 3 },
+      },
+      evidence: [
+        "filter:type",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+      ],
+      rest: "",
+    });
+  });
 });
 
 it("parses shorthand cost thresholds without 'of'", () => {
