@@ -229,9 +229,8 @@ export const parseQuotedTypeIncludingPredicate: PredicateParser = (
   text,
   current,
 ) => {
-  const match = /^a type including\s+"(?<type>[^"]+)"\s*(?<rest>.*)$/i.exec(
-    text,
-  );
+  const match =
+    /^(?:a\s+)?type including\s+"(?<type>[^"]+)"\s*(?<rest>.*)$/i.exec(text);
   const typeText = match?.groups?.["type"]?.trim();
   if (typeText === undefined || typeText.length === 0) {
     return undefined;

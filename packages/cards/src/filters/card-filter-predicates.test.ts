@@ -679,6 +679,23 @@ describe("card filter predicate parser", () => {
     });
   });
 
+  it("parses categoryless type or type-including alternatives as reusable filters", () => {
+    expect(
+      parseCardFilterPredicates({
+        text: '{Cross Guild} type or a type including "Baroque Works"',
+      }),
+    ).toEqual({
+      filter: {
+        anyOf: [
+          { typesAny: ["Cross Guild"] },
+          { typesIncludeAny: ["Baroque Works"] },
+        ],
+      },
+      evidence: ["filter:anyOf", "filter:type", "filter:type"],
+      rest: "",
+    });
+  });
+
   it("parses attribute-card or color-event alternatives as reusable filters", () => {
     expect(
       parseCardFilterPredicates({
