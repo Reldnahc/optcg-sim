@@ -223,6 +223,23 @@ const parseOpponentRefreshLockTarget = (
         rest: restedCharactersOrDon.rest,
       };
     }
+    const restedLeadersAndCharacters =
+      parseOpponentRestedLeadersAndCharactersRefreshLockTarget(
+        cardinality.rest,
+        cardinality.cardinality.min,
+        cardinality.cardinality.max,
+      );
+    if (restedLeadersAndCharacters !== undefined) {
+      return {
+        target: restedLeadersAndCharacters.target,
+        evidence: [
+          ...cardinality.evidence,
+          "chooser:self:upTo",
+          ...restedLeadersAndCharacters.evidence,
+        ],
+        rest: restedLeadersAndCharacters.rest,
+      };
+    }
     const restedCards = parseOpponentRestedCardsRefreshLockTarget(
       cardinality.rest,
       cardinality.cardinality.min,
@@ -454,6 +471,27 @@ const parseOpponentRestedCharactersOrDonRefreshLockTarget = (
       "zone:costArea",
       "filter:category:character",
       "filter:category:don",
+      "filter:state:rested",
+    ],
+  });
+
+const parseOpponentRestedLeadersAndCharactersRefreshLockTarget = (
+  text: string,
+  min: number,
+  max: number,
+): RefreshLockTargetParseResult | undefined =>
+  parseOpponentRestedChooseFromZonesRefreshLockTarget(text, min, max, {
+    pattern:
+      /^of your opponent's rested Leaders? and Characters? cards?\b\s*(?<rest>.*)$/iu,
+    zones: ["leaderArea", "characterArea"],
+    categories: ["leader", "character"],
+    evidence: [
+      "target:opponentRestedCards",
+      "player:opponent",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "filter:category:leader",
+      "filter:category:character",
       "filter:state:rested",
     ],
   });

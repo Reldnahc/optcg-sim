@@ -255,6 +255,47 @@ describe("planned refresh-lock field-effect instruction parser", () => {
     });
   });
 
+  it("parses opponent rested Leader and Character refresh locks as a mixed public-zone selection", () => {
+    expect(
+      parsePreventOpponentCharactersRefreshInstruction({
+        text: "Up to a total of 3 of your opponent's rested Leader and Character cards will not become active in your opponent's next Refresh Phase.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotBecomeActive",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            player: "opponent",
+            zones: ["leaderArea", "characterArea"],
+            min: 0,
+            max: 3,
+            filter: {
+              categories: ["leader", "character"],
+              state: "rested",
+            },
+          },
+        },
+        duration: { type: "untilStartOfNextTurn", player: "opponent" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:upTo",
+        "count:positiveInteger",
+        "chooser:self:upTo",
+        "target:opponentRestedCards",
+        "player:opponent",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:leader",
+        "filter:category:character",
+        "filter:state:rested",
+        "duration:opponentNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses all opponent Character refresh locks through the same prevent-activation primitive", () => {
     expect(
       parsePreventOpponentCharactersRefreshInstruction({
