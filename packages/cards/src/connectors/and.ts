@@ -2,7 +2,7 @@ import type { ConnectorParser } from "../types.js";
 import { splitSourceByDelimiter } from "../source-slices.js";
 
 const andPattern =
-  /\s*,?\s+and(?:\s+then)?\s+(?!different card names\b|(?:Leader|Character|Event|Stage)s? effects\b|your opponent's Life cards\b|set (?:it|them) as active\b|rest (?:it|them)\b|\+\d+\s+(?:cost|power)\b|place them at the top(?: or bottom)?\b)/iu;
+  /\s*,?\s+and(?:\s+then)?\s*,?\s+(?!different card names\b|(?:Leader|Character|Event|Stage)s? effects\b|your opponent's Life cards\b|set (?:it|them) as active\b|rest (?:it|them)\b|\+\d+\s+(?:cost|power)\b|place them at the top(?: or bottom)?\b)/iu;
 
 export const parseAndConnector: ConnectorParser = (input) => {
   const split =

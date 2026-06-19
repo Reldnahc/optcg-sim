@@ -23,6 +23,14 @@ describe("and connector parser", () => {
     });
   });
 
+  it("treats comma-punctuated conditional continuation as one ordered connector", () => {
+    expect(parseAndConnector({ text: "A and, if C, B." })).toEqual({
+      segments: ["A", "if C, B."],
+      connectors: ["always", "then"],
+      evidence: ["connector:andOrdered"],
+    });
+  });
+
   it("does not parse text without an and connector", () => {
     expect(parseAndConnector({ text: "A." })).toBeUndefined();
   });
