@@ -29,6 +29,7 @@ const must = <T>(value: T | undefined, label: string): T => {
 const resolvedCard = (params: {
   cardId: CardId;
   category: "leader" | "character" | "don";
+  cost?: number;
   power?: number;
   printedKeywords?: ResolvedCard["printedKeywords"];
 }): ResolvedCard => ({
@@ -47,6 +48,7 @@ const resolvedCard = (params: {
   legality: {},
   officialFaq: [],
   errata: [],
+  ...(params.cost === undefined ? {} : { cost: params.cost }),
   sourceTextHash: "source-hash",
   behaviorHash: "behavior-hash",
   support: {
@@ -205,6 +207,43 @@ const installPermanentDslCandidate = (
   };
 };
 
+const allCostThreeOrFourCannotAttackDefinition = (
+  cardId: CardId,
+): EffectDefinition => ({
+  cardId,
+  implementationStatus: "implemented-dsl",
+  effects: [
+    {
+      id: "perm:any-player-cost-attack-restriction" as EffectDefinition["effects"][number]["id"],
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "cannotAttack",
+        target: {
+          type: "all",
+          player: "anyPlayer",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            anyOf: [
+              { cost: { op: "eq", value: 3 } },
+              { cost: { op: "eq", value: 4 } },
+            ],
+          },
+        },
+        duration: { type: "whileSourceOnField" },
+      },
+    },
+  ],
+  metadata: {
+    sourceTextHash: "source-hash",
+    rulesVersion: "r1",
+    effectDefinitionsVersion: "fixture",
+    tested: true,
+    reviewer: "reviewer",
+  },
+});
+
 test.each([
   ["leader", "leader-red"],
   ["character", "char-rush"],
@@ -235,3 +274,64 @@ test.each([
     ]);
   },
 );
+
+test("derived DSL any-player cost-filtered cannotAttack restriction applies to both fields", () => {
+  const state = createState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  setMainTurnAfterFirstTurn(state);
+
+  state.cardManifest.cards[toCardId("char-cost-3")] = resolvedCard({
+    cardId: toCardId("char-cost-3"),
+    category: "character",
+    cost: 3,
+    power: 3000,
+  });
+  state.cardManifest.cards[toCardId("char-cost-4")] = resolvedCard({
+    cardId: toCardId("char-cost-4"),
+    category: "character",
+    cost: 4,
+    power: 4000,
+  });
+  state.cardManifest.cards[toCardId("char-cost-5")] = resolvedCard({
+    cardId: toCardId("char-cost-5"),
+    category: "character",
+    cost: 5,
+    power: 5000,
+  });
+
+  const source = p1State.leader;
+  const costThree = withCharacter(p1, toCardId("char-cost-3"), 0);
+  const costFive = withCharacter(p1, toCardId("char-cost-5"), 1);
+  const opponentCostFour = withCharacter(p2, toCardId("char-cost-4"), 0);
+  p1State.characters = [costThree, costFive];
+  p2State.characters = [opponentCostFour];
+  state.cardManifest.effectDefinitions = {
+    "def:perm:any-player-cost-attack-restriction":
+      allCostThreeOrFourCannotAttackDefinition(source.cardId),
+  };
+  state.cardManifest.cards[source.cardId] = {
+    ...must(state.cardManifest.cards[source.cardId], "source card"),
+    support: {
+      cardId: source.cardId,
+      status: "implemented-dsl",
+      effectDefinitionId: "def:perm:any-player-cost-attack-restriction",
+      tested: true,
+      rulesVersion: "r1",
+      cardDataVersion: "fixture",
+      sourceTextHash: "source-hash",
+      behaviorHash: "behavior-hash",
+    },
+  };
+
+  const view = computeView(state);
+
+  assert.deepEqual(view.legalAttackTargets[costThree.instanceId], []);
+  assert.notDeepEqual(view.legalAttackTargets[costFive.instanceId], []);
+  assert.deepEqual(view.cards[costThree.instanceId]?.restrictions, [
+    "cannot-attack",
+  ]);
+  assert.deepEqual(view.cards[opponentCostFour.instanceId]?.restrictions, [
+    "cannot-attack",
+  ]);
+});

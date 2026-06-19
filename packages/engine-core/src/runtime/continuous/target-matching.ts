@@ -236,6 +236,9 @@ export const cardMatchesAllTargetSpec = (
   if (target.player === "opponent") {
     return card.controller !== controller;
   }
+  if (target.player === "anyPlayer") {
+    return true;
+  }
   return false;
 };
 
@@ -263,6 +266,9 @@ const cardMatchesAllTarget = (
   }
   if (target.player === "opponent") {
     return card.controller !== effect.controller;
+  }
+  if (target.player === "anyPlayer") {
+    return true;
   }
   return false;
 };

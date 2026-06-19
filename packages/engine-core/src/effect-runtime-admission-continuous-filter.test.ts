@@ -59,3 +59,40 @@ test("runtime admission accepts auto modifyPower targets with exclude-self filte
   assert.equal(report.supported, true);
   assert.deepEqual(report.missing, []);
 });
+
+test("runtime admission accepts permanent all-player Character attack restrictions with anyOf filters", () => {
+  const report = evaluateEffectBlockRuntimeSupport(
+    block({
+      category: "permanent",
+      effect: {
+        type: "cannotAttack",
+        target: {
+          type: "all",
+          player: "anyPlayer",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            anyOf: [
+              { cost: { op: "eq", value: 3 } },
+              { cost: { op: "eq", value: 4 } },
+            ],
+          },
+        },
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "hasCardInZone",
+            player: "self",
+            zone: "leaderArea",
+            filter: { categories: ["leader"], names: ["Buggy"] },
+          },
+        },
+      },
+      sourcePresencePolicy: "mustRemainInSameZone",
+      trigger: { type: "permanent" },
+    }),
+  );
+
+  assert.equal(report.supported, true);
+  assert.deepEqual(report.missing, []);
+});

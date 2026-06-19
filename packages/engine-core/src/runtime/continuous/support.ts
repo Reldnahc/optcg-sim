@@ -366,7 +366,9 @@ export const isSupportedTarget = (target: Target): boolean => {
   if (target.type !== "all") return false;
   return (
     isSupportedAllFilter(target.filter) &&
-    (target.player === "self" || target.player === "opponent") &&
+    (target.player === "self" ||
+      target.player === "opponent" ||
+      (target.player === "anyPlayer" && target.zone === "characterArea")) &&
     (target.zone === "leaderArea" || target.zone === "characterArea")
   );
 };

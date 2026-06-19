@@ -6,6 +6,7 @@ export {
   parseHandCounterSetInstruction,
   parseExplicitDurationAllFieldStatGainInstruction,
   parsePlayEntryStateInstruction,
+  parseAllCharactersCannotAttackInstruction,
   parseAllCharactersRefreshLockInstruction,
   parseSelfCannotAttackInstruction,
   parseSetBasePowerInstruction,

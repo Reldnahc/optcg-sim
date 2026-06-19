@@ -666,3 +666,55 @@ it("parses Life cost before self and optional Leader power gains", () => {
     ]),
   );
 });
+
+it("parses leader-gated all-character exact cost attack restriction", () => {
+  const result = parseCardEffectLine(
+    "If your Leader is [Buggy], all Characters with a cost of 3 or 4 cannot attack.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "permanent",
+      trigger: { type: "permanent" },
+      effect: {
+        type: "cannotAttack",
+        target: {
+          type: "all",
+          player: "anyPlayer",
+          zone: "characterArea",
+          filter: {
+            anyOf: [
+              { cost: { op: "eq", value: 3 } },
+              { cost: { op: "eq", value: 4 } },
+            ],
+            categories: ["character"],
+          },
+        },
+        duration: {
+          type: "whileConditionTrue",
+          condition: {
+            type: "hasCardInZone",
+            zone: "leaderArea",
+            player: "self",
+            filter: {
+              categories: ["leader"],
+              names: ["Buggy"],
+            },
+          },
+        },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "condition:leaderIdentity",
+      "instruction:preventActivation",
+      "cardinality:all",
+      "player:any",
+      "target:anyCharacters",
+      "filter:category:character",
+      "filter:cost",
+      "duration:whileConditionTrue",
+    ]),
+  );
+});

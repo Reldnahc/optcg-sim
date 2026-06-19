@@ -109,6 +109,50 @@ export const parseAllCharactersRefreshLockInstruction: ContinuousInstructionPars
     };
   };
 
+export const parseAllCharactersCannotAttackInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^all Characters with a cost of (?<first>[1-9]\d*) or (?<second>[1-9]\d*) cannot attack\.?$/iu.exec(
+        input.text.trim(),
+      );
+    const firstText = match?.groups?.["first"];
+    const secondText = match?.groups?.["second"];
+    if (firstText === undefined || secondText === undefined) {
+      return undefined;
+    }
+
+    return {
+      effect: {
+        type: "cannotAttack",
+        target: {
+          type: "all",
+          player: "anyPlayer",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            anyOf: [
+              { cost: { op: "eq", value: Number.parseInt(firstText, 10) } },
+              { cost: { op: "eq", value: Number.parseInt(secondText, 10) } },
+            ],
+          },
+        },
+        duration: continuousDuration(context.condition),
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "cardinality:all",
+        "player:any",
+        "target:anyCharacters",
+        "filter:category:character",
+        "filter:cost",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        continuousDurationEvidence(context.condition),
+      ],
+      rest: "",
+    };
+  };
+
 const combineConditions = (
   ...conditions: readonly (Condition | undefined)[]
 ): Condition | undefined => {
