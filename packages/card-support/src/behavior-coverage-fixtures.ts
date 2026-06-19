@@ -53,6 +53,26 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["modifyPower"],
   },
   {
+    label: "fixture:modify-cost:on-play",
+    text: "[On Play] Up to 1 of your Characters gains +2 cost during this turn.",
+    expectedPrimitiveTypes: ["modifyCost"],
+  },
+  {
+    label: "fixture:set-base-cost:on-play",
+    text: "[On Play] Set the cost of up to 1 of your opponent's Characters with no base effect to 0 during this turn.",
+    expectedPrimitiveTypes: ["selectTargets", "sequence", "setBaseCost"],
+  },
+  {
+    label: "fixture:set-base-power:on-play",
+    text: "[On Play] If you have 10 DON!! cards on your field, all of your [Prisoner of Impel Down] cards' base power becomes 7000 during this turn.",
+    expectedPrimitiveTypes: ["setBasePower"],
+  },
+  {
+    label: "fixture:set-power-zero:on-play",
+    text: "[On Play] Set the power of up to 1 of your opponent's Characters to 0 during this turn.",
+    expectedPrimitiveTypes: ["selectTargets", "sequence", "setPowerToZero"],
+  },
+  {
     label: "fixture:return-don:on-play",
     text: "[On Play] Your opponent returns 1 DON!! card from their field to their DON!! deck.",
     expectedPrimitiveTypes: ["returnDon"],
@@ -63,9 +83,68 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["draw", "payCost", "sequence"],
   },
   {
+    label: "fixture:choice:main",
+    text: `[Main] Choose one:
+\u2022 Draw 2 cards.
+\u2022 Up to 1 of your {Dressrosa} type Characters gains [Blocker] until the end of your opponent's next End Phase.`,
+    expectedPrimitiveTypes: ["choice", "draw", "giveKeyword"],
+  },
+  {
+    label: "fixture:conditional:on-play",
+    text: "[On Play] Draw 1 card. If you have 6 or less cards in your hand, draw 2 cards.",
+    expectedPrimitiveTypes: ["conditional", "draw", "sequence"],
+  },
+  {
+    label: "fixture:choose-number:main",
+    text: "[Main] Choose a cost and reveal 1 card from the top of your opponent's deck. If the revealed card has the chosen cost, K.O. up to 1 of your opponent's Characters with a base cost of 8 or less.",
+    expectedPrimitiveTypes: [
+      "chooseNumber",
+      "ko",
+      "revealTop",
+      "selectFromSet",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:activate-don:on-play",
     text: "[On Play] Set up to 1 of your DON!! cards as active.",
     expectedPrimitiveTypes: ["activate", "selectTargets", "sequence"],
+  },
+  {
+    label: "fixture:activate-main:draw",
+    text: "[Activate: Main] Draw 1 card.",
+    expectedPrimitiveTypes: ["draw"],
+  },
+  {
+    label: "fixture:prevent-don-activation:activate-main",
+    text: "[Activate: Main] Set up to 1 of your DON!! cards as active. Then, you cannot set DON!! cards as active using Character effects during this turn.",
+    expectedPrimitiveTypes: [
+      "activate",
+      "preventDonActivation",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
+    label: "fixture:invalidate-entrypoint:activate-main",
+    text: "[Activate: Main] You may trash 1 card from your hand: Your opponent's [On Play] effects are negated until the end of your opponent's next turn.",
+    expectedPrimitiveTypes: [
+      "invalidateEffectEntryPoint",
+      "payCost",
+      "sequence",
+    ],
+  },
+  {
+    label: "fixture:invalidate-effects:main",
+    text: "[Main] Negate the effect of up to 1 of your opponent's Characters during this turn. Then, if that Character has a cost of 4 or less, K.O. it.",
+    expectedPrimitiveTypes: [
+      "conditional",
+      "invalidateEffects",
+      "ko",
+      "selectTargets",
+      "sequence",
+    ],
   },
   {
     label: "fixture:play-selected:on-play",
@@ -88,9 +167,108 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["cannotAttack", "selectTargets", "sequence"],
   },
   {
+    label: "fixture:allow-attack-active:on-play",
+    text: "[On Play] Up to 1 of your Characters can also attack active Characters during this turn.",
+    expectedPrimitiveTypes: ["allowAttackActiveCharacters"],
+  },
+  {
+    label: "fixture:cannot-block:on-play",
+    text: "[On Play] Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
+    expectedPrimitiveTypes: ["cannotBlock", "selectTargets", "sequence"],
+  },
+  {
+    label: "fixture:cannot-become-active:on-play",
+    text: "[On Play] Up to 1 of your opponent's rested Characters will not become active in your opponent's next Refresh Phase.",
+    expectedPrimitiveTypes: ["cannotBecomeActive"],
+  },
+  {
+    label: "fixture:give-attribute:on-play",
+    text: "[On Play] Up to 1 of your [Sabo] Characters gains [Blocker] and the <Special> attribute during this turn.",
+    expectedPrimitiveTypes: [
+      "giveAttribute",
+      "giveKeyword",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
+    label: "fixture:give-protection:on-play",
+    text: "[On Play] Up to 1 of your opponent's Characters other than [Monkey.D.Luffy] cannot be rested until the end of your opponent's next End Phase.",
+    expectedPrimitiveTypes: ["giveProtection"],
+  },
+  {
+    label: "fixture:swap-base-power:main",
+    text: "[Main] Select 2 of your opponent's Characters with 9000 base power or less. Swap the base power of the selected Characters with each other during this turn.",
+    expectedPrimitiveTypes: ["selectTargets", "sequence", "swapBasePower"],
+  },
+  {
+    label: "fixture:place-top-deck:on-play",
+    text: "[On Play] Look at 3 cards from the top of your deck; place them at the top or bottom of your deck in any order.",
+    expectedPrimitiveTypes: ["placeTopDeckCards"],
+  },
+  {
+    label: "fixture:shuffle-deck:on-play",
+    text: "[On Play] Shuffle your deck. Then, draw 1 card.",
+    expectedPrimitiveTypes: ["draw", "sequence", "shuffleDeck"],
+  },
+  {
+    label: "fixture:prevent-play:on-play",
+    text: "[On Play] You cannot play cards from your hand during this turn.",
+    expectedPrimitiveTypes: ["preventPlay"],
+  },
+  {
+    label: "fixture:set-life-face-down:on-play",
+    text: "[On Play] Draw 1 card. Then, turn all of your Life cards face-down.",
+    expectedPrimitiveTypes: ["draw", "sequence", "setLifeFaceUp"],
+  },
+  {
+    label: "fixture:reorder-life:on-play",
+    text: "[On Play] Draw 1 card. Then, look at all of your opponent's Life cards and place them back in their Life area in any order.",
+    expectedPrimitiveTypes: ["draw", "reorderLife", "sequence"],
+  },
+  {
+    label: "fixture:life-to-deck-top-reorder:on-play",
+    text: "[On Play] Draw 1 card. Then, look at all of your Life cards; place 1 card at the top of your deck and place the rest back in your Life area in any order.",
+    expectedPrimitiveTypes: [
+      "draw",
+      "moveLifeToDeckTopAndReorderRest",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:trash-from-hand:on-play",
     text: "[On Play] Draw 1 card. Then, trash 1 card from your hand.",
     expectedPrimitiveTypes: ["draw", "sequence", "trashFromHand"],
+  },
+  {
+    label: "fixture:reveal-zone:on-play",
+    text: "[On Play] Your opponent trashes 1 card from their hand and reveals their hand. Then, your opponent draws 1 card.",
+    expectedPrimitiveTypes: [
+      "draw",
+      "revealFromZone",
+      "sequence",
+      "trashFromHand",
+    ],
+  },
+  {
+    label: "fixture:trash-hand-until:on-play",
+    text: "[On Play] Trash cards from your hand until you have 2 cards in your hand.",
+    expectedPrimitiveTypes: ["trashFromHandUntilCount"],
+  },
+  {
+    label: "fixture:delayed-self-activate:on-play",
+    text: "[On Play] Draw 1 card. Then, set this Character as active at the end of this turn.",
+    expectedPrimitiveTypes: ["activate", "delayed", "draw", "sequence"],
+  },
+  {
+    label: "fixture:extra-turn:on-play",
+    text: "[On Play] Take an extra turn after this one.",
+    expectedPrimitiveTypes: ["takeExtraTurn"],
+  },
+  {
+    label: "fixture:win-game:on-play",
+    text: "[On Play] You win the game.",
+    expectedPrimitiveTypes: ["winGame"],
   },
   {
     label: "fixture:attach-selected-don:on-play",
@@ -99,6 +277,17 @@ export const behaviorCoverageFixtureCorpus = [
       "attachSelectedDon",
       "payCost",
       "rest",
+      "selectCards",
+      "selectTargets",
+      "sequence",
+    ],
+  },
+  {
+    label: "fixture:for-each-saved-target:on-play",
+    text: "[On Play] Give up to 3 of your {Straw Hat Crew} type Characters up to 1 rested DON!! card each.",
+    expectedPrimitiveTypes: [
+      "attachSelectedDon",
+      "forEachSavedTarget",
       "selectCards",
       "selectTargets",
       "sequence",

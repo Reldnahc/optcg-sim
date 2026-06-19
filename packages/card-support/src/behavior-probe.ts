@@ -1,15 +1,11 @@
 import {
   applyAction,
-  createInitialState,
   evaluateEffectBlockRuntimeSupport,
   getLegalActions,
-  respondToMulliganDecision,
-  startMulliganFlow,
 } from "@optcg/engine-core";
 import type {
   Action,
   CardId,
-  CardInstance,
   CardFilter,
   Condition,
   Effect,
@@ -17,11 +13,8 @@ import type {
   EngineResult,
   GameState,
   LegalAction,
-  MatchCardManifest,
-  MatchId,
   OptionalCost,
   PlayerId,
-  ResolvedCard,
   Target,
 } from "@optcg/types";
 import {
@@ -30,10 +23,9 @@ import {
   parseRawKeywordLine,
 } from "@optcg/cards";
 import {
-  profileForCardFilter,
-  profileForLeaderFilters,
-  type ProbeCardProfile,
-} from "./behavior-probe-scenario-profiles.js";
+  fieldProbeSource,
+  setupProbeMainState,
+} from "./behavior-probe-scenario-state.js";
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
 export interface BehaviorProbeRequest {
@@ -55,7 +47,7 @@ export interface BehaviorProbeReport {
 
 export interface BehaviorProbeScenario {
   readonly index: number;
-  readonly entrypoint?: "playCard";
+  readonly entrypoint?: "activateEffect" | "playCard";
   readonly cardCategory?: "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
@@ -64,12 +56,11 @@ export interface BehaviorProbeScenario {
 
 type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
+  | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 const p1 = "p1" as PlayerId;
-const p2 = "p2" as PlayerId;
 const probeCardId = "probe-card" as CardId;
-const probeDefinitionId = "probe-card.behavior-probe";
 const maxDecisionSteps = 30;
 
 export const createBehaviorProbeReport = (
@@ -131,18 +122,36 @@ export const createBehaviorProbeReport = (
     };
   }
 
-  const result = runPlayCardScenario({
-    category: scenario.category,
-    definition: {
-      ...materialized.definition,
-      metadata: {
-        ...materialized.definition.metadata,
-        effectDefinitionsVersion: "behavior-probe",
-      },
-    },
-    setupFilters: collectScenarioSetupFilters(materialized.definition.effects),
-    text: request.text,
-  });
+  const result =
+    scenario.kind === "activateEffect"
+      ? runActivateEffectScenario({
+          category: scenario.category,
+          definition: {
+            ...materialized.definition,
+            metadata: {
+              ...materialized.definition.metadata,
+              effectDefinitionsVersion: "behavior-probe",
+            },
+          },
+          setupFilters: collectScenarioSetupFilters(
+            materialized.definition.effects,
+          ),
+          text: request.text,
+        })
+      : runPlayCardScenario({
+          category: scenario.category,
+          definition: {
+            ...materialized.definition,
+            metadata: {
+              ...materialized.definition.metadata,
+              effectDefinitionsVersion: "behavior-probe",
+            },
+          },
+          setupFilters: collectScenarioSetupFilters(
+            materialized.definition.effects,
+          ),
+          text: request.text,
+        });
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -151,7 +160,7 @@ export const createBehaviorProbeReport = (
     exitCode: passed ? 0 : 1,
     lines: [
       `Behavior probe: ${passed ? "passed" : "failed"}`,
-      "Scenario 1 entrypoint: playCard",
+      `Scenario 1 entrypoint: ${scenario.kind}`,
       `Scenario 1 card category: ${scenario.category}`,
       `Scenario 1 engine primitives: ${primitiveTypes.join(", ")}`,
       `Scenario 1 result: ${resultLine}`,
@@ -166,7 +175,7 @@ export const createBehaviorProbeReport = (
     scenarios: [
       {
         index: 1,
-        entrypoint: "playCard",
+        entrypoint: scenario.kind,
         cardCategory: scenario.category,
         status: passed ? "passed" : "failed",
         primitiveTypes,
@@ -188,6 +197,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "main")) {
     return { kind: "playCard", category: "event" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "activateMain")) {
+    return { kind: "activateEffect", category: "character" };
   }
   return {
     kind: "skipped",
@@ -233,6 +245,57 @@ const runPlayCardScenario = (input: {
     cardInstanceId: card.instanceId,
   });
   return drainRuntime(opened, input.setupFilters.length);
+};
+
+const runActivateEffectScenario = (input: {
+  readonly category: "character";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return {
+      ok: false,
+      reason: "probe card could not be fielded",
+      pendingDecisionDrained: state.pendingDecision === undefined,
+      effectQueueDrained: state.effectQueue.length === 0,
+      eventCount: 0,
+      decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
+    };
+  }
+
+  const action = getLegalActions(state, p1).find(
+    (candidate): candidate is Extract<Action, { type: "activateEffect" }> =>
+      candidate.type === "activateEffect" &&
+      candidate.source.instanceId === source.instanceId,
+  );
+  if (action === undefined) {
+    return {
+      ok: false,
+      reason: "no legal activateEffect action",
+      pendingDecisionDrained: state.pendingDecision === undefined,
+      effectQueueDrained: state.effectQueue.length === 0,
+      eventCount: 0,
+      decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
+    };
+  }
+
+  return drainRuntime(applyAction(state, action), input.setupFilters.length);
 };
 
 const drainRuntime = (
@@ -628,332 +691,6 @@ const choosePendingDecisionAction = (
   };
 };
 
-const setupProbeMainState = (input: {
-  readonly category: "character" | "event";
-  readonly definition: NonNullable<
-    ReturnType<typeof materializeEffectDefinition>["definition"]
-  >;
-  readonly setupFilters: readonly CardFilter[];
-  readonly text: string;
-}): GameState => {
-  const setup = createInitialState({
-    matchId: "behavior-probe-match" as MatchId,
-    firstPlayerId: p1,
-    rngSeed: "behavior-probe-seed",
-    playerOrder: [p1, p2],
-    leaderCardIds: {
-      [p1]: "probe-leader-p1" as CardId,
-      [p2]: "probe-leader-p2" as CardId,
-    },
-    leaderLifeCounts: {
-      [p1]: 2,
-      [p2]: 2,
-    },
-    deckCardIds: {
-      [p1]: [
-        probeCardId,
-        "probe-p1-a" as CardId,
-        "probe-p1-b" as CardId,
-        "probe-p1-c" as CardId,
-        "probe-p1-d" as CardId,
-        "probe-p1-e" as CardId,
-        "probe-p1-f" as CardId,
-        "probe-p1-g" as CardId,
-        "probe-p1-h" as CardId,
-        "probe-p1-i" as CardId,
-      ],
-      [p2]: [
-        "probe-p2-a" as CardId,
-        "probe-p2-b" as CardId,
-        "probe-p2-c" as CardId,
-        "probe-p2-d" as CardId,
-        "probe-p2-e" as CardId,
-        "probe-p2-f" as CardId,
-        "probe-p2-g" as CardId,
-        "probe-p2-h" as CardId,
-      ],
-    },
-    donDeckCardIds: {
-      [p1]: probeDonCardIds("p1"),
-      [p2]: probeDonCardIds("p2"),
-    },
-    cardManifest: createProbeManifest(),
-    shuffleDecks: false,
-  });
-  const started = startMulliganFlow(setup);
-  const first = respondToMulliganDecision(started.state, {
-    type: "respondToDecision",
-    decisionId: must(started.state.pendingDecision, "first mulligan").id,
-    response: { type: "mulligan", keep: true },
-  });
-  const active = respondToMulliganDecision(first.state, {
-    type: "respondToDecision",
-    decisionId: must(first.state.pendingDecision, "second mulligan").id,
-    response: { type: "mulligan", keep: true },
-  }).state;
-  active.turn.phase = "main";
-  active.turn.turnPlayerId = p1;
-  installActiveDon(active, p1);
-  installActiveDon(active, p2);
-  installProbeManifest(active, input);
-  installScenarioLeaderMetadata(
-    active,
-    p1,
-    collectLeaderConditionFilters(input.definition.effects, "self"),
-  );
-  installScenarioLeaderMetadata(
-    active,
-    p2,
-    collectLeaderConditionFilters(input.definition.effects, "opponent"),
-  );
-  addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
-  installScenarioDeckMetadata(active, p1, input.setupFilters);
-  installScenarioDeckMetadata(active, p2, []);
-  installScenarioFieldMetadata(active, p1, input.setupFilters);
-  installScenarioFieldMetadata(active, p2, input.setupFilters);
-  return active;
-};
-
-const createProbeManifest = (): MatchCardManifest => ({
-  manifestHash: "behavior-probe-manifest",
-  source: "manual-test",
-  cardDataVersion: "behavior-probe",
-  effectDefinitionsVersion: "behavior-probe",
-  customHandlerVersion: "behavior-probe",
-  banlistVersion: "behavior-probe",
-  createdAt: "2026-06-19T00:00:00.000Z",
-  cards: {},
-});
-
-const installProbeManifest = (
-  state: GameState,
-  input: {
-    readonly category: "character" | "event";
-    readonly definition: NonNullable<
-      ReturnType<typeof materializeEffectDefinition>["definition"]
-    >;
-    readonly text: string;
-  },
-): void => {
-  const definition = {
-    ...input.definition,
-    cardId: probeCardId,
-  };
-  const support: ResolvedCard["support"] = {
-    cardId: probeCardId,
-    status: "implemented-dsl",
-    tested: true,
-    rulesVersion: "behavior-probe",
-    cardDataVersion: "behavior-probe",
-    sourceTextHash: "behavior-probe-source",
-    behaviorHash: "behavior-probe-behavior",
-    effectDefinitionId: probeDefinitionId,
-  };
-  state.cardManifest.effectDefinitionsVersion = "behavior-probe";
-  state.cardManifest.effectDefinitions = {
-    [probeDefinitionId]: definition,
-  };
-  state.cardManifest.cards[probeCardId] = resolvedProbeCard({
-    cardId: probeCardId,
-    category: input.category,
-    effectText: input.text,
-    support,
-  });
-};
-
-const installActiveDon = (state: GameState, playerId: PlayerId): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  for (const card of player.donDeck) {
-    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
-      cardId: card.cardId,
-      category: "don",
-      effectText: "",
-    });
-  }
-  player.costArea = player.donDeck.map((card, index) => ({
-    ...card,
-    zone: { zone: "costArea", playerId, slot: "cost", index },
-    state: index === 0 ? "rested" : "active",
-  }));
-  player.donDeck = [];
-};
-
-const addProbeDeckCards = (
-  state: GameState,
-  playerId: PlayerId,
-  count: number,
-): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  const cards = Array.from({ length: count }, (_, index): CardInstance => {
-    const cardId = `probe-extra-${String(playerId)}-${String(index)}` as CardId;
-    state.cardManifest.cards[cardId] = resolvedProbeCard({
-      cardId,
-      category: "character",
-      effectText: "",
-    });
-    return {
-      instanceId:
-        `probe-extra-${String(playerId)}-${String(index)}:instance` as CardInstance["instanceId"],
-      cardId,
-      owner: playerId,
-      controller: playerId,
-      zone: {
-        zone: "deck",
-        playerId,
-        slot: "deck",
-        index: player.deck.length + index,
-      },
-      state: "active",
-      attachedDon: [],
-      turnPlayed: 0,
-    };
-  });
-  player.deck = [...player.deck, ...cards];
-};
-
-const installScenarioDeckMetadata = (
-  state: GameState,
-  playerId: PlayerId,
-  filters: readonly CardFilter[],
-): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  const deck = [...player.deck];
-  for (const [index, card] of deck.entries()) {
-    const filter = filters[index];
-    const profile =
-      filter === undefined ? {} : profileForCardFilter(filter, index);
-    const cardId = profile.cardId ?? card.cardId;
-    deck[index] = {
-      ...card,
-      cardId,
-    };
-    state.cardManifest.cards[cardId] = resolvedProbeCard({
-      cardId,
-      category: profile.category ?? "character",
-      effectText: "",
-      profile,
-    });
-  }
-  player.deck = deck;
-};
-
-const installScenarioFieldMetadata = (
-  state: GameState,
-  playerId: PlayerId,
-  filters: readonly CardFilter[],
-): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  for (const [index, filter] of filters.entries()) {
-    const profile = profileForCardFilter(filter, index);
-    const category = profile.category ?? "character";
-    const cardId =
-      profile.cardId ??
-      (`probe-field-${String(playerId)}-${String(index)}` as CardId);
-    state.cardManifest.cards[cardId] = resolvedProbeCard({
-      cardId,
-      category,
-      effectText: "",
-      profile,
-    });
-    if (category === "stage" && player.stage === undefined) {
-      player.stage = probeFieldCard({
-        cardId,
-        index: 0,
-        playerId,
-        zone: "stageArea",
-      });
-      continue;
-    }
-    if (category !== "character" || player.characters.length >= 5) {
-      continue;
-    }
-    player.characters = [
-      ...player.characters,
-      probeFieldCard({
-        cardId,
-        index: player.characters.length,
-        playerId,
-        zone: "characterArea",
-      }),
-    ];
-  }
-};
-
-const probeFieldCard = (params: {
-  readonly cardId: CardId;
-  readonly index: number;
-  readonly playerId: PlayerId;
-  readonly zone: "characterArea" | "stageArea";
-}): CardInstance => ({
-  instanceId:
-    `probe-field-${String(params.playerId)}-${params.zone}-${String(params.index)}:instance` as CardInstance["instanceId"],
-  cardId: params.cardId,
-  owner: params.playerId,
-  controller: params.playerId,
-  zone: {
-    zone: params.zone,
-    playerId: params.playerId,
-    slot: params.zone === "stageArea" ? "stage" : "character",
-    index: params.index,
-  },
-  state: "active",
-  attachedDon: [],
-  turnPlayed: 0,
-});
-
-const installScenarioLeaderMetadata = (
-  state: GameState,
-  playerId: PlayerId,
-  filters: readonly CardFilter[],
-): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  const profile = profileForLeaderFilters(filters);
-  state.cardManifest.cards[player.leader.cardId] = resolvedProbeCard({
-    cardId: player.leader.cardId,
-    category: "leader",
-    effectText: "",
-    profile,
-  });
-};
-
-const collectLeaderConditionFilters = (
-  effects: readonly EffectBlock[],
-  player: "self" | "opponent",
-): readonly CardFilter[] =>
-  uniqueFilters(
-    effects.flatMap((block) =>
-      collectLeaderConditionFiltersFromCondition(block.condition, player),
-    ),
-  );
-
-const collectLeaderConditionFiltersFromCondition = (
-  condition: Condition | undefined,
-  player: "self" | "opponent",
-): readonly CardFilter[] => {
-  if (condition === undefined) {
-    return [];
-  }
-  if (
-    condition.type === "hasCardInZone" &&
-    condition.zone === "leaderArea" &&
-    condition.player === player
-  ) {
-    return [condition.filter];
-  }
-  if (condition.type === "and" || condition.type === "or") {
-    return condition.conditions.flatMap((child) =>
-      collectLeaderConditionFiltersFromCondition(child, player),
-    );
-  }
-  if (condition.type === "not") {
-    return collectLeaderConditionFiltersFromCondition(
-      condition.condition,
-      player,
-    );
-  }
-  return [];
-};
-
 const engineErrorReason = (
   error: EngineResult["errors"] extends readonly (infer T)[] | undefined
     ? T | undefined
@@ -981,59 +718,6 @@ const formatErrorDetails = (details: unknown): string => {
   const serialized = JSON.stringify(details);
   return ` ${serialized}`;
 };
-
-const probeDonCardIds = (player: "p1" | "p2"): CardId[] =>
-  Array.from(
-    { length: 10 },
-    (_, index) => `probe-${player}-don-${String(index + 1)}` as CardId,
-  );
-
-const resolvedProbeCard = (params: {
-  readonly cardId: CardId;
-  readonly category: "leader" | "character" | "event" | "don" | "stage";
-  readonly effectText: string;
-  readonly profile?: ProbeCardProfile;
-  readonly support?: ResolvedCard["support"];
-}): ResolvedCard => ({
-  cardId: params.cardId,
-  language: "en",
-  name: params.profile?.name ?? String(params.cardId),
-  category: params.category,
-  set: "PROBE",
-  setName: "Behavior Probe",
-  released: true,
-  colors:
-    params.category === "don" ? [] : [...(params.profile?.colors ?? ["red"])],
-  attributes: [...(params.profile?.attributes ?? [])],
-  types: [...(params.profile?.types ?? [])],
-  printedKeywords: [...(params.profile?.keywords ?? [])],
-  variants: [],
-  legality: {},
-  officialFaq: [],
-  errata: [],
-  sourceTextHash: "behavior-probe-source",
-  behaviorHash: "behavior-probe-behavior",
-  support: params.support ?? {
-    cardId: params.cardId,
-    status: "vanilla-confirmed",
-    tested: true,
-    rulesVersion: "behavior-probe",
-    cardDataVersion: "behavior-probe",
-    sourceTextHash: "behavior-probe-source",
-    behaviorHash: "behavior-probe-behavior",
-  },
-  ...(params.category === "character"
-    ? {
-        cost: params.profile?.cost ?? 0,
-        power: params.profile?.power ?? 2000,
-      }
-    : {}),
-  ...(params.category === "event" ? { cost: params.profile?.cost ?? 0 } : {}),
-  ...(params.profile?.counter === undefined
-    ? {}
-    : { counter: params.profile.counter }),
-  ...(params.effectText.length === 0 ? {} : { effectText: params.effectText }),
-});
 
 const must = <T>(value: T | undefined, label: string): T => {
   if (value === undefined) {

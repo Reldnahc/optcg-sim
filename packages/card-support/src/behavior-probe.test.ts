@@ -49,6 +49,18 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("activates Activate Main effects from a fielded source", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] Draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 engine primitives: draw");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("builds leader metadata to satisfy generated leader type conditions", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] If your Leader has the {Impel Down} type, draw 1 card.",
@@ -91,6 +103,39 @@ describe("card behavior probe", () => {
         expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
       ]),
     );
+  });
+
+  it("builds multiple matching field targets for exact multi-target decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Main] Select 2 of your opponent's Characters with 9000 base power or less. Swap the base power of the selected Characters with each other during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: selectTargets, sequence, swapBasePower",
+    );
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 decisions resolved: [1-9]/u),
+      ]),
+    );
+  });
+
+  it("preserves multiline choice blocks through behavior materialization", () => {
+    const report = createBehaviorProbeReport({
+      text: `[Main] Choose one:
+\u2022 Draw 2 cards.
+\u2022 Up to 1 of your {Dressrosa} type Characters gains [Blocker] until the end of your opponent's next End Phase.`,
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: choice, draw, giveKeyword",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
   });
 
   it("builds enough scenario state to resolve search reveal and remainder ordering", () => {
