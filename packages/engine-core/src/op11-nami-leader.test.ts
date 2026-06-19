@@ -5,6 +5,7 @@ import type {
   CardInstance,
   EffectDefinition,
   EffectId,
+  EffectQueueEntry,
   EngineEvent,
   GameState,
   PlayerId,
@@ -20,8 +21,19 @@ import {
   resolvedCard,
 } from "./action-test-fixtures.js";
 import { computeView } from "./view/compute-view.js";
+import { processEffectRuntime } from "./effect-runtime.js";
 import { applyDeclareAttack } from "./battle/actions.js";
-import { cardRef, setupAttackState } from "./battle/test-fixtures.js";
+import {
+  cardRef,
+  passCounterStep,
+  setupAttackState,
+} from "./battle/test-fixtures.js";
+import {
+  toQueueEntryId,
+  toSourceSnapshot,
+  toTimingWindowId,
+  withCardInZone,
+} from "./effect-runtime-queue/test-support.js";
 
 const op11NamiLifeEffectId = "op11-nami:life-removed-draw" as EffectId;
 const op11NamiOpponentAttackEffectId =
@@ -164,6 +176,90 @@ const attachOneDonToLeader = (state: GameState, playerId: PlayerId): void => {
   player.leader.attachedDon = [don.instanceId];
 };
 
+const installSelfLifeMoveSource = (state: GameState): CardInstance => {
+  const player = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(player.hand[0], "life move source"),
+    zone: "characterArea",
+  });
+  player.hand = player.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const definitionId = "def:op11-nami-test-life-move-source";
+  const effectBlockId = "op11-nami-test:move-own-life-to-hand" as EffectId;
+  const definition: EffectDefinition = {
+    cardId: source.cardId,
+    implementationStatus: "implemented-dsl",
+    effects: [
+      {
+        id: effectBlockId,
+        category: "auto",
+        trigger: { type: "onPlay" },
+        sourcePresencePolicy: "mustRemainInSameZone",
+        effect: {
+          type: "moveCards",
+          count: 1,
+          from: { player: "self", zone: "life", position: "top" },
+          to: { player: "self", zone: "hand" },
+          order: "original",
+        },
+      },
+    ],
+    metadata: {
+      sourceTextHash: `${definitionId}:source`,
+      rulesVersion: `${definitionId}:rules`,
+      effectDefinitionsVersion: "fixture",
+      tested: true,
+      reviewer: "qa-reviewer",
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: definition,
+  };
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    cost: 1,
+    power: 1000,
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+      sourceTextHash: definition.metadata.sourceTextHash,
+      rulesVersion: definition.metadata.rulesVersion,
+      cardDataVersion: state.cardManifest.cardDataVersion,
+    },
+  });
+  state.effectQueue = [
+    {
+      id: toQueueEntryId("queue-entry:op11-nami-test-life-move-source"),
+      state: "pending",
+      timingWindowId: toTimingWindowId(
+        "timing-window:op11-nami-test-life-move-source",
+      ),
+      queueOrigin: { type: "activateMain" },
+      generation: 0,
+      controllerId: p1,
+      source: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      sourceSnapshot: toSourceSnapshot(source, p1, p1),
+      effectBlockId,
+      orderingGroup: "turnPlayer",
+      createdAtEventSeq: state.eventJournal.length,
+      queuedAtStateSeq: state.seq,
+      sourcePresencePolicy: "mustRemainInSameZone",
+      causedBy: { type: "ruleProcess", name: "test:life-move-effect" },
+    } satisfies EffectQueueEntry,
+  ];
+  return source;
+};
+
 const namiLifeActivationActions = (state: GameState, playerId: PlayerId) =>
   getLegalActions(state, playerId).filter(
     (action) =>
@@ -211,6 +307,95 @@ test.each([
     assert.deepEqual(namiLifeActivationActions(activated.state, p1), []);
   },
 );
+
+test("OP11 Nami leader can activate after combat damage removes opponent Life", () => {
+  const state = setupAttackState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  installOp11NamiLeader(state, p1);
+  const beforeP1Deck = p1State.deck.length;
+  const beforeP1Hand = p1State.hand.length;
+  const beforeP2Life = p2State.life.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+
+  const damaged = passCounterStep(opened.state, p2);
+  assert.equal(damaged.errors, undefined);
+  assert.equal(
+    must(damaged.state.players[p2], "damaged p2").life.length,
+    beforeP2Life - 1,
+  );
+  assert.equal(
+    damaged.events.some((event) => event.type === "damageDealt"),
+    true,
+  );
+  assert.equal(
+    damaged.events.some((event) => event.type === "cardMoved"),
+    true,
+  );
+
+  const actions = namiLifeActivationActions(damaged.state, p1);
+  assert.equal(actions.length, 1);
+
+  const activated = applyAction(damaged.state, must(actions[0], "Nami draw"));
+  assert.equal(activated.errors, undefined);
+  assert.equal(
+    must(activated.state.players[p1], "after p1").deck.length,
+    beforeP1Deck - 1,
+  );
+  assert.equal(
+    must(activated.state.players[p1], "after p1").hand.length,
+    beforeP1Hand + 1,
+  );
+});
+
+test("OP11 Nami leader can activate after an effect removes Life", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  state.eventJournal = [];
+  installOp11NamiLeader(state, p1);
+  installSelfLifeMoveSource(state);
+  const beforeP1 = must(state.players[p1], "p1 before");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+  const beforeLife = beforeP1.life.length;
+  const topLife = must(beforeP1.life[0], "top life").card;
+
+  const moved = processEffectRuntime(state);
+  assert.equal(moved.errors, undefined);
+  assert.equal(moved.state.effectQueue.length, 0);
+  assert.equal(moved.state.pendingDecision, undefined);
+  assert.equal(
+    must(moved.state.players[p1], "after move").life.length,
+    beforeLife - 1,
+  );
+  assert.equal(
+    must(moved.state.players[p1], "after move").hand.at(-1)?.instanceId,
+    topLife.instanceId,
+  );
+
+  const actions = namiLifeActivationActions(moved.state, p1);
+  assert.equal(actions.length, 1);
+
+  const activated = applyAction(moved.state, must(actions[0], "Nami draw"));
+  assert.equal(activated.errors, undefined);
+  assert.equal(
+    must(activated.state.players[p1], "after p1").deck.length,
+    beforeDeck - 1,
+  );
+  assert.equal(
+    must(activated.state.players[p1], "after p1").hand.length,
+    beforeHand + 2,
+  );
+});
 
 test("OP11 Nami leader cannot activate when Life is removed on the opponent turn", () => {
   const state = createActiveState();
