@@ -17,6 +17,7 @@
     "cards:cache:clear": "corepack pnpm --filter @optcg/cards cache:clear",
     "support:probe": "corepack pnpm --filter @optcg/card-support support:probe",
     "behavior:probe": "corepack pnpm --filter @optcg/card-support behavior:probe",
+    "behavior:coverage": "corepack pnpm --filter @optcg/card-support behavior:coverage",
     "build:match-server": "corepack pnpm exec tsc -p packages/types/tsconfig.json && corepack pnpm exec tsc -p packages/engine-core/tsconfig.json && corepack pnpm exec tsc -p packages/cards/tsconfig.json && corepack pnpm exec tsc -p packages/card-support/tsconfig.json && corepack pnpm exec tsc -p packages/match-server/tsconfig.json",
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
