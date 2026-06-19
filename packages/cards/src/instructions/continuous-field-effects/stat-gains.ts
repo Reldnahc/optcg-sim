@@ -154,6 +154,12 @@ const parseAllFieldStatGainInstruction: ContinuousInstructionParser = (
   input,
   context,
 ) => {
+  const namedAndFilteredCharactersGain =
+    parseNamedCardAndAllCharactersStatGainInstruction(input, context);
+  if (namedAndFilteredCharactersGain !== undefined) {
+    return namedAndFilteredCharactersGain;
+  }
+
   const leaderAndAllCharactersGain =
     parseYourLeaderAndAllCharactersStatGainInstruction(input, context);
   if (leaderAndAllCharactersGain !== undefined) {
@@ -273,6 +279,97 @@ const parseYourLeaderAndAllCharactersStatGainInstruction: ContinuousInstructionP
         "player:self",
         "zone:characterArea",
         "filter:category:character",
+        ...modifier.evidence,
+        duration.evidence,
+      ],
+      rest: "",
+    };
+  };
+
+const parseNamedCardAndAllCharactersStatGainInstruction: ContinuousInstructionParser =
+  (input, context) => {
+    const match =
+      /^your \[(?<name>[^\]]+)\] and all (?:of )?your (?<predicate>Characters?\b.+?) gain (?<modifier>.+)$/iu.exec(
+        input.text,
+      );
+    const name = match?.groups?.["name"]?.trim();
+    const predicateText = match?.groups?.["predicate"];
+    const modifierText = match?.groups?.["modifier"];
+    if (
+      name === undefined ||
+      name.length === 0 ||
+      predicateText === undefined ||
+      modifierText === undefined
+    ) {
+      return undefined;
+    }
+
+    const predicates = parseCardFilterPredicates(
+      { text: predicateText },
+      { powerSemantics: "current" },
+    );
+    if (predicates === undefined || predicates.rest.length > 0) {
+      return undefined;
+    }
+
+    const modifier = parseModifierFromSet(
+      { text: modifierText },
+      allPowerModifierParsers,
+    );
+    if (modifier === undefined) {
+      return undefined;
+    }
+    const duration = parseStatGainDuration(modifier.rest, context);
+    if (duration === undefined) {
+      return undefined;
+    }
+
+    const namedFilter: CardFilter = { names: [name] };
+    const characterFilter = withCategory(predicates.filter, "character");
+    const effects: Effect[] = [
+      {
+        type: "modifyPower",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "leaderArea",
+          filter: withCategory(namedFilter, "leader"),
+        },
+        value: modifier.value,
+        duration: duration.duration,
+      },
+      {
+        type: "modifyPower",
+        target: {
+          type: "all",
+          player: "self",
+          zone: "characterArea",
+          filter: {
+            categories: ["character"],
+            anyOf: [withCategory(namedFilter, "character"), characterFilter],
+          },
+        },
+        value: modifier.value,
+        duration: duration.duration,
+      },
+    ];
+
+    return {
+      effect: {
+        type: "sequence",
+        effects: effects.map((effect) => ({ connector: "always", effect })),
+      },
+      evidence: [
+        "instruction:modifyPower",
+        "cardinality:all",
+        "player:self",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:name",
+        "filter:anyOf",
+        "filter:category:leader",
+        "filter:category:character",
+        ...predicates.evidence,
         ...modifier.evidence,
         duration.evidence,
       ],

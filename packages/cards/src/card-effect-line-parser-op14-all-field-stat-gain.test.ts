@@ -265,4 +265,109 @@ describe("OP14 all-field stat gain parsing", () => {
       ]),
     );
   });
+
+  it("decomposes named card plus filtered all-Character stat gains into reusable target primitives", () => {
+    const result = parseCardEffectLine(
+      '[Your Turn] If you have 1 or less Life cards, your [Edward.Newgate] and all your Characters with a type including "Whitebeard Pirates" gain +2000 power.',
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "all",
+                  player: "self",
+                  zone: "leaderArea",
+                  filter: {
+                    categories: ["leader"],
+                    names: ["Edward.Newgate"],
+                  },
+                },
+                value: 2000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "and",
+                    conditions: [
+                      { type: "yourTurn" },
+                      {
+                        type: "lifeCount",
+                        player: "self",
+                        op: "lte",
+                        value: 1,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              connector: "always",
+              effect: {
+                type: "modifyPower",
+                target: {
+                  type: "all",
+                  player: "self",
+                  zone: "characterArea",
+                  filter: {
+                    categories: ["character"],
+                    anyOf: [
+                      {
+                        categories: ["character"],
+                        names: ["Edward.Newgate"],
+                      },
+                      {
+                        categories: ["character"],
+                        typesIncludeAny: ["Whitebeard Pirates"],
+                      },
+                    ],
+                  },
+                },
+                value: 2000,
+                duration: {
+                  type: "whileConditionTrue",
+                  condition: {
+                    type: "and",
+                    conditions: [
+                      { type: "yourTurn" },
+                      {
+                        type: "lifeCount",
+                        player: "self",
+                        op: "lte",
+                        value: 1,
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:yourTurn",
+        "expression:conditionalContinuous",
+        "condition:lifeCount",
+        "instruction:modifyPower",
+        "filter:name",
+        "filter:anyOf",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "filter:category:character",
+        "filter:type",
+        "modifier:positivePower",
+        "duration:whileConditionTrue",
+      ]),
+    );
+  });
 });
