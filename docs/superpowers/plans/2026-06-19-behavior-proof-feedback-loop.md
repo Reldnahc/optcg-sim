@@ -16,6 +16,7 @@
   - Owns Poneglyph card/set/deck text loading.
   - Exports typed fetch/deck ports so tests can inject fake cards and fake deck hashes.
   - Contains the shared batch fetch/chunk/deck aggregation helpers currently private in `support-probe-report.ts`.
+  - Exposes lower-level card/deck/set helpers for `support:probe`, plus coverage-entry adapters for `behavior:coverage`.
 - Modify `packages/card-support/src/support-probe-report.ts`
   - Imports shared source helpers instead of keeping private copies.
   - Keeps support-specific parser/runtime report formatting in this file.
@@ -24,6 +25,7 @@
 - Modify `packages/card-support/src/behavior-coverage.ts`
   - Adds structured entry results and bucketed summary rows.
   - Keeps aggregation pure over already-loaded text entries.
+  - Exposes a small source-failure report factory so CLI source failures do not pollute text aggregation.
 - Modify `packages/card-support/src/behavior-coverage-cli.ts`
   - Adds `--card`, `--set`, `--deck-hash`, and `--fixture corpus`.
   - Resolves sources, then calls the aggregator.
@@ -64,7 +66,7 @@ const jsonResponse = (payload: unknown) => ({
 
 describe("poneglyph card source", () => {
   it("loads gameplay text entries for card ids", async () => {
-    const fetchCard: PoneglyphFetch = async () =>
+    const fetchPoneglyph: PoneglyphFetch = async () =>
       jsonResponse({
         data: {
           "OP01-001": {
@@ -78,7 +80,7 @@ describe("poneglyph card source", () => {
 
     const entries = await createPoneglyphCoverageEntriesFromCardIds(
       ["OP01-001"],
-      { baseUrl: "https://example.test", fetchCard },
+      { baseUrl: "https://example.test", fetchPoneglyph },
     );
 
     expect(entries).toEqual({
@@ -96,11 +98,15 @@ describe("poneglyph card source", () => {
 
   it("loads gameplay text entries for a set code", async () => {
     const seenUrls: string[] = [];
-    const fetchCard: PoneglyphFetch = async (url) => {
+    const fetchPoneglyph: PoneglyphFetch = async (url, init) => {
       seenUrls.push(String(url));
-      if (String(url).includes("/v1/cards?set=OP01")) {
+      if (String(url).includes("/v1/search?")) {
         return jsonResponse({ data: [{ card_number: "OP01-001" }] });
       }
+      expect(String(url)).toBe("https://example.test/v1/cards/batch");
+      expect(JSON.parse(String(init?.body))).toEqual({
+        card_numbers: ["OP01-001"],
+      });
       return jsonResponse({
         data: {
           "OP01-001": {
@@ -115,14 +121,17 @@ describe("poneglyph card source", () => {
 
     const entries = await createPoneglyphCoverageEntriesFromSet("op01", {
       baseUrl: "https://example.test",
-      fetchCard,
+      fetchPoneglyph,
     });
 
     expect(entries.ok).toBe(true);
     expect(
       entries.ok ? entries.entries.map((entry) => entry.label) : [],
     ).toEqual(["OP01-001 line 1"]);
-    expect(seenUrls).toContain("https://example.test/v1/cards?set=OP01");
+    expect(seenUrls).toEqual([
+      "https://example.test/v1/search?page=1&limit=500&sort=card_number&order=asc&collapse=card",
+      "https://example.test/v1/cards/batch",
+    ]);
   });
 
   it("loads unique gameplay text entries for a deck hash", async () => {
@@ -132,7 +141,7 @@ describe("poneglyph card source", () => {
         main: [{ card_number: "OP01-002", count: 4 }],
       }),
     };
-    const fetchCard: PoneglyphFetch = async () =>
+    const fetchPoneglyph: PoneglyphFetch = async () =>
       jsonResponse({
         data: {
           "OP01-001": {
@@ -152,7 +161,7 @@ describe("poneglyph card source", () => {
     const entries = await createPoneglyphCoverageEntriesFromDeckHash("hash", {
       baseUrl: "https://example.test",
       deckHashCodec,
-      fetchCard,
+      fetchPoneglyph,
     });
 
     expect(entries).toEqual({
@@ -171,6 +180,102 @@ describe("poneglyph card source", () => {
           text: "[On Play] Draw 1 card.",
         },
       ],
+    });
+  });
+
+  it("returns source errors instead of throwing for failed fetch and json parsing", async () => {
+    const thrownFetch = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP01-001"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: async () => {
+          throw new Error("network down");
+        },
+      },
+    );
+    expect(thrownFetch).toEqual({
+      ok: false,
+      error: "Poneglyph card batch fetch failed: network down",
+    });
+
+    const thrownJson = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP01-001"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: async () => ({
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new Error("bad json");
+          },
+        }),
+      },
+    );
+    expect(thrownJson).toEqual({
+      ok: false,
+      error: "Poneglyph card batch fetch failed: bad json",
+    });
+  });
+
+  it("returns source errors for invalid batch payloads, missing cards, and set catalog HTTP failures", async () => {
+    const invalidBatch = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP01-001"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: async () => jsonResponse({ nope: true }),
+      },
+    );
+    expect(invalidBatch).toEqual({
+      ok: false,
+      error: "Poneglyph card batch fetch failed: invalid response payload",
+    });
+
+    const missingBatch = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP01-001"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: async () =>
+          jsonResponse({
+            data: {},
+            missing: ["OP01-001"],
+          }),
+      },
+    );
+    expect(missingBatch).toEqual({
+      ok: false,
+      error: "Poneglyph card batch fetch failed: missing OP01-001",
+    });
+
+    const setHttpFailure = await createPoneglyphCoverageEntriesFromSet("OP01", {
+      baseUrl: "https://example.test",
+      fetchPoneglyph: async () => ({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      }),
+    });
+    expect(setHttpFailure).toEqual({
+      ok: false,
+      error: "Poneglyph set fetch failed for OP01: HTTP 503",
+    });
+  });
+
+  it("returns source errors for deck hash decode rejection", async () => {
+    const deckHashCodec: DeckHashCodecPort = {
+      decode: async () => {
+        throw new Error("bad deck");
+      },
+    };
+
+    const result = await createPoneglyphCoverageEntriesFromDeckHash("hash", {
+      baseUrl: "https://example.test",
+      deckHashCodec,
+      fetchPoneglyph: async () => jsonResponse({ data: {}, missing: [] }),
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Deck hash decode failed: bad deck",
     });
   });
 });
@@ -247,9 +352,97 @@ export const createPoneglyphDeckHashCodec = (): DeckHashCodecPort => {
 Move the existing private fetch/deck helpers from `support-probe-report.ts` into this file and expose:
 
 ```ts
+export interface DeckHashProbeEntry {
+  readonly cardId: string;
+  readonly count: number;
+  readonly variantIndex?: number;
+}
+
+export interface AggregatedDeckHashProbeEntry {
+  readonly cardId: string;
+  readonly count: number;
+  readonly variantIndexes: readonly number[];
+}
+
+export const decodeProbeDeckHash = async (
+  deckHash: string,
+  codec: DeckHashCodecPort,
+): Promise<
+  | { readonly ok: true; readonly entries: readonly DeckHashProbeEntry[] }
+  | { readonly ok: false; readonly error: string }
+> => {
+  try {
+    const decoded = await codec.decode(deckHash);
+    return { ok: true, entries: deckHashEntriesFromDecodedDeck(decoded) };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+};
+
+const deckHashEntriesFromDecodedDeck = (
+  decoded: DeckHashDeck,
+): readonly DeckHashProbeEntry[] => [
+  ...(decoded.leader === null
+    ? []
+    : [
+        {
+          cardId: decoded.leader.card_number,
+          count: decoded.leader.count,
+          ...(decoded.leader.variant_index === undefined
+            ? {}
+            : { variantIndex: decoded.leader.variant_index }),
+        },
+      ]),
+  ...decoded.main.map((entry) => ({
+    cardId: entry.card_number,
+    count: entry.count,
+    ...(entry.variant_index === undefined
+      ? {}
+      : { variantIndex: entry.variant_index }),
+  })),
+];
+
+export const aggregateDeckHashEntries = (
+  entries: readonly DeckHashProbeEntry[],
+): readonly AggregatedDeckHashProbeEntry[] => {
+  const byCardId = new Map<string, AggregatedDeckHashProbeEntry>();
+  for (const entry of entries) {
+    const existing = byCardId.get(entry.cardId);
+    const variantIndexes =
+      entry.variantIndex === undefined ? [] : [entry.variantIndex];
+    if (existing === undefined) {
+      byCardId.set(entry.cardId, {
+        cardId: entry.cardId,
+        count: entry.count,
+        variantIndexes,
+      });
+      continue;
+    }
+    byCardId.set(entry.cardId, {
+      cardId: existing.cardId,
+      count: existing.count + entry.count,
+      variantIndexes: uniqueNumbers([
+        ...existing.variantIndexes,
+        ...variantIndexes,
+      ]),
+    });
+  }
+  return [...byCardId.values()];
+};
+
+const uniqueNumbers = (values: readonly number[]): readonly number[] => [
+  ...new Set(values),
+];
+
 export const createPoneglyphCoverageEntriesFromCardIds = async (
   cardIds: readonly string[],
-  options: { readonly baseUrl: string; readonly fetchCard: PoneglyphFetch },
+  options: {
+    readonly baseUrl: string;
+    readonly fetchPoneglyph: PoneglyphFetch;
+  },
 ): Promise<
   | {
       readonly ok: true;
@@ -275,7 +468,9 @@ export const createPoneglyphCoverageEntriesFromCardIds = async (
 };
 ```
 
-Use `gameplayLinesFromTextParts([card.effect, card.trigger])` in `coverageEntriesForCard`.
+Use `gameplayLinesFromTextParts([card.effect, card.trigger])` in `coverageEntriesForCard`. The lower-level helpers (`decodeProbeDeckHash`, `aggregateDeckHashEntries`, `fetchPoneglyphCardPayload`, `fetchPoneglyphCardPayloads`, and `fetchPoneglyphSetCardIds`) must preserve the current `support:probe` behavior, including counts, variant indexes, `/v1/search` set catalog lookup, and `/v1/cards/batch` detail loading.
+
+All source helpers must catch thrown `fetchPoneglyph`, thrown `response.json()`, invalid payloads, missing batch cards, set catalog HTTP failures, and deck hash decode failures, returning `{ ok: false, error }` instead of throwing.
 
 - [ ] **Step 4: Update support probe imports**
 
@@ -290,6 +485,8 @@ import {
   fetchPoneglyphCardPayloads,
   fetchPoneglyphSetCardIds,
   type DeckHashCodecPort,
+  type AggregatedDeckHashProbeEntry,
+  type DeckHashProbeEntry,
   type PoneglyphFetch,
   type PoneglyphCardProbePayload,
 } from "./poneglyph-card-source.js";
@@ -302,7 +499,7 @@ Remove the private duplicate declarations/functions from `support-probe-report.t
 Run:
 
 ```bash
-corepack pnpm --filter @optcg/card-support test -- poneglyph-card-source.test.ts support-probe-report.test.ts
+corepack pnpm --filter @optcg/card-support test -- poneglyph-card-source.test.ts support-probe.test.ts
 corepack pnpm --filter @optcg/card-support typecheck
 ```
 
@@ -325,6 +522,16 @@ git commit -m "Extract Poneglyph card text source"
 - Modify: `packages/card-support/src/behavior-probe.test.ts`
 - Modify: `packages/card-support/src/behavior-coverage.ts`
 - Modify: `packages/card-support/src/behavior-coverage.test.ts`
+
+Bucket exit-code policy:
+
+| Bucket                  | Meaning                                                                        | Affects coverage proof?                                | Exit code |
+| ----------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ | --------- |
+| `behaviorPassed`        | Scenario ran and drained successfully                                          | Covers primitives in that scenario                     | `0`       |
+| `scenarioMissing`       | Parser/runtime supported it, but probe cannot generate that game situation yet | Does not cover primitives; actionable scenario work    | `0`       |
+| `scenarioFailed`        | Probe generated the scenario but engine/probe execution failed                 | Does not cover primitives; likely bug                  | `1`       |
+| `materializationFailed` | Parser/runtime materialization failed before behavior scenario generation      | Does not cover primitives; parser/runtime support work | `1`       |
+| `sourceFailed`          | Card/set/deck text could not be loaded                                         | Does not cover primitives; source/network/deck issue   | `1`       |
 
 - [ ] **Step 1: Write failing behavior probe failure metadata test**
 
@@ -434,6 +641,32 @@ it("classifies each entry into actionable feedback buckets", () => {
 });
 ```
 
+Add this source-failure report test:
+
+```ts
+it("creates source failure reports without running text aggregation", () => {
+  const report = createBehaviorCoverageSourceFailureReport({
+    sourceLabel: "card OP01-001",
+    error: "Poneglyph card fetch failed for OP01-001: HTTP 503",
+  });
+
+  expect(report.exitCode).toBe(1);
+  expect(report.bucketSummary).toEqual({
+    behaviorPassed: 0,
+    scenarioMissing: 0,
+    scenarioFailed: 0,
+    materializationFailed: 0,
+    sourceFailed: 1,
+  });
+  expect(report.entryResults).toEqual([]);
+  expect(report.lines).toContain("Behavior coverage source: card OP01-001");
+  expect(report.lines).toContain("Behavior coverage bucket sourceFailed: 1");
+  expect(report.lines).toContain(
+    "Behavior coverage source failure: Poneglyph card fetch failed for OP01-001: HTTP 503",
+  );
+});
+```
+
 - [ ] **Step 5: Run coverage test and confirm red**
 
 Run:
@@ -472,6 +705,37 @@ export interface BehaviorCoverageBucketSummary {
 }
 ```
 
+Add a report factory for source failures:
+
+```ts
+export const createBehaviorCoverageSourceFailureReport = (input: {
+  readonly sourceLabel: string;
+  readonly error: string;
+}): BehaviorCoverageReport => ({
+  exitCode: 1,
+  lines: [
+    `Behavior coverage source: ${input.sourceLabel}`,
+    "Behavior coverage entries: 0",
+    "Behavior coverage primitive coverage: 0/0",
+    "Behavior coverage bucket behaviorPassed: 0",
+    "Behavior coverage bucket scenarioMissing: 0",
+    "Behavior coverage bucket scenarioFailed: 0",
+    "Behavior coverage bucket materializationFailed: 0",
+    "Behavior coverage bucket sourceFailed: 1",
+    `Behavior coverage source failure: ${input.error}`,
+  ],
+  errors: [],
+  bucketSummary: {
+    behaviorPassed: 0,
+    scenarioMissing: 0,
+    scenarioFailed: 0,
+    materializationFailed: 0,
+    sourceFailed: 1,
+  },
+  entryResults: [],
+});
+```
+
 Classify:
 
 ```ts
@@ -483,6 +747,8 @@ const bucketForScenario = (status: BehaviorProbeScenario["status"]) => {
 ```
 
 When `probe.failure?.kind === "materializationFailed"`, emit one entry result with `bucket: "materializationFailed"` and `reason: probe.failure.diagnostics[0] ?? "materialization failed"`.
+
+Set `exitCode` to `1` when any `scenarioFailed`, `materializationFailed`, or `sourceFailed` bucket is nonzero. Keep `scenarioMissing` as exit `0` so missing scenario families are visible without making the coverage command unusable as a discovery tool.
 
 - [ ] **Step 7: Run tests and typecheck**
 
@@ -516,11 +782,27 @@ git commit -m "Classify behavior coverage feedback buckets"
 Add tests to `behavior-coverage-cli.test.ts` that inject fake source dependencies:
 
 ```ts
+// Update the existing --text and usage tests in this file to await
+// createBehaviorCoverageCliReport(...) after the CLI becomes async.
+
+it("keeps text coverage output compatible after the CLI becomes async", async () => {
+  const report = await createBehaviorCoverageCliReport([
+    "--",
+    "--text",
+    "[On Play] Draw 1 card.",
+  ]);
+
+  expect(report.exitCode).toBe(0);
+  expect(report.lines).toContain("Behavior coverage source: text");
+  expect(report.lines).toContain("Behavior coverage entries: 1");
+  expect(report.lines).toContain("Behavior coverage passed scenarios: 1");
+});
+
 it("runs coverage for a card id", async () => {
   const report = await createBehaviorCoverageCliReport(
     ["--", "--card", "OP01-001"],
     {
-      fetchCard: async () => ({
+      fetchPoneglyph: async () => ({
         ok: true,
         status: 200,
         json: async () => ({
@@ -548,8 +830,8 @@ it("runs coverage for a set", async () => {
   const report = await createBehaviorCoverageCliReport(
     ["--", "--set", "OP01"],
     {
-      fetchCard: async (url) => {
-        if (String(url).includes("/v1/cards?set=OP01")) {
+      fetchPoneglyph: async (url) => {
+        if (String(url).includes("/v1/search?")) {
           return {
             ok: true,
             status: 200,
@@ -593,7 +875,7 @@ it("runs coverage for a deck hash", async () => {
           main: [{ card_number: "OP01-001", count: 4 }],
         }),
       },
-      fetchCard: async () => ({
+      fetchPoneglyph: async () => ({
         ok: true,
         status: 200,
         json: async () => ({
@@ -614,6 +896,40 @@ it("runs coverage for a deck hash", async () => {
   expect(report.exitCode).toBe(0);
   expect(report.lines).toContain("Behavior coverage source: deck hash");
 });
+
+it("returns source-failed coverage when source loading fails", async () => {
+  const report = await createBehaviorCoverageCliReport(
+    ["--", "--card", "OP01-001"],
+    {
+      fetchPoneglyph: async () => ({
+        ok: false,
+        status: 503,
+        json: async () => ({}),
+      }),
+      baseUrl: "https://example.test",
+    },
+  );
+
+  expect(report.exitCode).toBe(1);
+  expect(report.bucketSummary.sourceFailed).toBe(1);
+  expect(report.lines).toContain("Behavior coverage source: card OP01-001");
+  expect(report.lines).toContain("Behavior coverage bucket sourceFailed: 1");
+});
+
+it("rejects conflicting source families instead of silently choosing one", async () => {
+  const report = await createBehaviorCoverageCliReport([
+    "--",
+    "--text",
+    "[On Play] Draw 1 card.",
+    "--set",
+    "OP01",
+  ]);
+
+  expect(report.exitCode).toBe(1);
+  expect(report.errors).toEqual([
+    "Choose exactly one behavior coverage source family: --text, --card, --set, --deck-hash, or --fixture",
+  ]);
+});
 ```
 
 - [ ] **Step 2: Run CLI tests and confirm red**
@@ -632,7 +948,7 @@ Change signature:
 
 ```ts
 export interface BehaviorCoverageCliDependencies {
-  readonly fetchCard?: PoneglyphFetch;
+  readonly fetchPoneglyph?: PoneglyphFetch;
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly baseUrl?: string;
 }
@@ -645,13 +961,14 @@ export const createBehaviorCoverageCliReport = async (
 };
 ```
 
-Resolve source priority:
+Resolve source selection:
 
-1. all `--text` values
-2. all `--card` values
-3. one `--set`
-4. one `--deck-hash`
-5. one `--fixture corpus`
+- `--text` accepts one or more text values.
+- `--card` accepts one or more card ids.
+- `--set` accepts exactly one set code.
+- `--deck-hash` accepts exactly one deck hash.
+- `--fixture` accepts exactly one fixture name.
+- Mixed source families are invalid and must return `Choose exactly one behavior coverage source family: --text, --card, --set, --deck-hash, or --fixture`.
 
 If no source args exist, return:
 
@@ -665,27 +982,26 @@ If no source args exist, return:
 }
 ```
 
-For source errors from Poneglyph/deck hash loading, return a coverage report with one source-failed line:
+For source errors from Poneglyph/deck hash loading, return `createBehaviorCoverageSourceFailureReport({ sourceLabel, error: loaded.error })` from `behavior-coverage.ts`. Do not duplicate source-failure line formatting in the CLI.
 
 ```ts
-{
-  exitCode: 1,
-  lines: [
-    `Behavior coverage source: ${sourceLabel}`,
-    "Behavior coverage entries: 0",
-    "Behavior coverage bucket sourceFailed: 1",
-    `Behavior coverage source failure: ${loaded.error}`,
-  ],
-  errors: [],
-  bucketSummary: {
-    behaviorPassed: 0,
-    scenarioMissing: 0,
-    scenarioFailed: 0,
-    materializationFailed: 0,
-    sourceFailed: 1,
-  },
-  entryResults: [],
-}
+return createBehaviorCoverageSourceFailureReport({
+  sourceLabel,
+  error: loaded.error,
+});
+```
+
+For successful sources, call `createBehaviorCoverageReport(...)` and prefix the source label in the returned report:
+
+```ts
+const coverage = createBehaviorCoverageReport({
+  entries: source.entries,
+  inventoryPrimitiveTypes,
+});
+return {
+  ...coverage,
+  lines: [`Behavior coverage source: ${source.sourceLabel}`, ...coverage.lines],
+};
 ```
 
 - [ ] **Step 4: Update CLI main**
@@ -704,8 +1020,23 @@ const main = async (): Promise<number> => {
   return report.exitCode;
 };
 
+const safeMain = async (): Promise<number> => {
+  try {
+    return await main();
+  } catch (error: unknown) {
+    const report = createBehaviorCoverageSourceFailureReport({
+      sourceLabel: "unknown",
+      error: error instanceof Error ? error.message : String(error),
+    });
+    for (const line of report.lines) {
+      writeLine(line);
+    }
+    return report.exitCode;
+  }
+};
+
 if (process.argv[1]?.endsWith("behavior-coverage-cli.ts") === true) {
-  process.exitCode = await main();
+  process.exitCode = await safeMain();
 }
 ```
 
@@ -746,6 +1077,7 @@ Create `behavior-coverage-fixtures.test.ts`:
 ```ts
 import { describe, expect, it } from "vitest";
 
+import { createBehaviorProbeReport } from "./behavior-probe.js";
 import { behaviorCoverageFixtureCorpus } from "./behavior-coverage-fixtures.js";
 
 describe("behavior coverage fixture corpus", () => {
@@ -775,6 +1107,22 @@ describe("behavior coverage fixture corpus", () => {
   it("does not contain duplicate labels", () => {
     const labels = behaviorCoverageFixtureCorpus.map((entry) => entry.label);
     expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("keeps primitive family metadata aligned with emitted primitives", () => {
+    for (const fixture of behaviorCoverageFixtureCorpus) {
+      const report = createBehaviorProbeReport({ text: fixture.text });
+      const emitted = new Set(
+        report.scenarios.flatMap((scenario) => scenario.primitiveTypes),
+      );
+
+      for (const primitiveFamily of fixture.primitiveFamilies) {
+        expect(
+          emitted.has(primitiveFamily),
+          `${fixture.label} should emit ${primitiveFamily}`,
+        ).toBe(true);
+      }
+    }
   });
 });
 ```
