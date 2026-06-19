@@ -1,6 +1,9 @@
 import type { Effect, SelectionId } from "@optcg/types";
 
-import { parseUpToCardinality } from "../cardinality/index.js";
+import {
+  parseExactCardinality,
+  parseUpToCardinality,
+} from "../cardinality/index.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import type { InstructionParser, PrimitiveEvidence } from "../types.js";
 
@@ -30,7 +33,12 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const cardinality = parseUpToCardinality({ text: afterPlay });
+  const upToCardinality = parseUpToCardinality({ text: afterPlay });
+  const exactCardinality =
+    upToCardinality === undefined
+      ? parseExactCardinality({ text: afterPlay })
+      : undefined;
+  const cardinality = upToCardinality ?? exactCardinality;
   if (cardinality === undefined) {
     return undefined;
   }
@@ -53,8 +61,14 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
             zone: "trash",
             player: "self",
             chooser: "self",
-            min: cardinality.cardinality.min,
-            max: cardinality.cardinality.max,
+            min:
+              "count" in cardinality
+                ? cardinality.count
+                : cardinality.cardinality.min,
+            max:
+              "count" in cardinality
+                ? cardinality.count
+                : cardinality.cardinality.max,
             filter: source.filter,
             saveAs: trashPlaySelection,
             visibility: "bothPlayers",
@@ -77,7 +91,7 @@ export const parsePlayFromTrashInstruction: InstructionParser = (input) => {
       ...cardinality.evidence,
       "zone:trash",
       "player:self",
-      "chooser:self:upTo",
+      "count" in cardinality ? "chooser:self" : "chooser:self:upTo",
       ...source.evidence,
       ...(source.enterRested ? ["state:rested" as const] : []),
       "composition:selectThenPlay",
