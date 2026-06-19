@@ -286,6 +286,7 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   TransientCardSet: "TYP-001F",
   RuleModifier: "TYP-001F",
   DeckOutLossTimingRuleModifier: "TYP-001F",
+  DeckOutWinRuleModifier: "TYP-001F",
   TargetSpec: "TYP-001F",
   ExactCardTargetSpec: "TYP-009B",
   ModifierLayer: "TYP-001F",

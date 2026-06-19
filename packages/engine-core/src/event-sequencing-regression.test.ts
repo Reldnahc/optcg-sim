@@ -551,7 +551,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "51effa8f047cb666a616f51054da559df5885138f4ad559982f9ddafe3c8f7ee",
+      "717d6221e928e381f8b3c7db1a6f2be719476e8f11cdcce62cd98dca68058b4a",
   });
 
   return {

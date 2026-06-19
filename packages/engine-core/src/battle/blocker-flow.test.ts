@@ -580,7 +580,13 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
       {
         type: "cardMoved",
         payload: {
+          cardId: "p2-a",
           from: defenderBlocker.zone,
+          instanceId: "p2:deck:0:p2-a",
+          sourceCardId: "leader-red",
+          sourceControllerId: "p1",
+          sourceInstanceId: "p1:leader",
+          sourceKind: "battle",
           to: {
             zone: "trash",
             playerId: p2,
@@ -849,7 +855,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "67830e7b52b3ec1ef8f59e369d3f88db74f3a11c00b84181c9b508a237570b84",
+    "4987eb6a59360a2a62ecb538b04321256397cdf188d301e105cde0adef81fff2",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);
