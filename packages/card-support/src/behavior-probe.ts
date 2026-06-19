@@ -43,6 +43,16 @@ export interface BehaviorProbeReport {
   readonly exitCode: number;
   readonly lines: readonly string[];
   readonly errors: readonly string[];
+  readonly scenarios: readonly BehaviorProbeScenario[];
+}
+
+export interface BehaviorProbeScenario {
+  readonly index: number;
+  readonly entrypoint?: "playCard";
+  readonly cardCategory?: "character" | "event";
+  readonly status: "passed" | "failed" | "skipped";
+  readonly primitiveTypes: readonly string[];
+  readonly reason?: string;
 }
 
 type SupportedScenario =
@@ -82,6 +92,7 @@ export const createBehaviorProbeReport = (
         ),
       ],
       errors: [],
+      scenarios: [],
     };
   }
 
@@ -98,6 +109,14 @@ export const createBehaviorProbeReport = (
         `Scenario 1 result: skipped - ${scenario.reason}`,
       ],
       errors: [],
+      scenarios: [
+        {
+          index: 1,
+          status: "skipped",
+          primitiveTypes,
+          reason: scenario.reason,
+        },
+      ],
     };
   }
 
@@ -133,6 +152,16 @@ export const createBehaviorProbeReport = (
       `Scenario 1 events: ${String(result.eventCount)}`,
     ],
     errors: [],
+    scenarios: [
+      {
+        index: 1,
+        entrypoint: "playCard",
+        cardCategory: scenario.category,
+        status: passed ? "passed" : "failed",
+        primitiveTypes,
+        ...(result.reason === undefined ? {} : { reason: result.reason }),
+      },
+    ],
   };
 };
 

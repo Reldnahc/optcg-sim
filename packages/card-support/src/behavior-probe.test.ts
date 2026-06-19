@@ -15,6 +15,15 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.lines).toContain("Scenario 1 pending decisions: drained");
     expect(report.lines).toContain("Scenario 1 effect queue: drained");
+    expect(report.scenarios).toEqual([
+      {
+        index: 1,
+        entrypoint: "playCard",
+        cardCategory: "character",
+        status: "passed",
+        primitiveTypes: ["draw"],
+      },
+    ]);
   });
 
   it("auto-resolves supported decisions while proving the scenario", () => {
@@ -85,5 +94,13 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain(
       "Scenario 1 result: skipped - no generated scenario for trigger whenAttacking",
     );
+    expect(report.scenarios).toEqual([
+      {
+        index: 1,
+        status: "skipped",
+        primitiveTypes: ["draw"],
+        reason: "no generated scenario for trigger whenAttacking",
+      },
+    ]);
   });
 });

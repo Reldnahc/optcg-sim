@@ -14,6 +14,7 @@ export const createBehaviorProbeCliReport = (
       exitCode: 1,
       lines: [],
       errors: ["Usage: behavior:probe -- --text <effect line>"],
+      scenarios: [],
     };
   }
   return createBehaviorProbeReport({ text });
