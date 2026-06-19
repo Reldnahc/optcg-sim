@@ -48,6 +48,40 @@ describe("poneglyph card source", () => {
     });
   });
 
+  it("filters raw keyword reminder lines without renumbering gameplay lines", async () => {
+    const fetchPoneglyph: PoneglyphFetch = () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            "ST17-004": {
+              card_number: "ST17-004",
+              effect:
+                "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Draw 1 card.",
+              trigger: null,
+            },
+          },
+          missing: [],
+        }),
+      );
+
+    const entries = await createPoneglyphCoverageEntriesFromCardIds(
+      ["ST17-004"],
+      { baseUrl: "https://example.test", fetchPoneglyph },
+    );
+
+    expect(entries).toEqual({
+      ok: true,
+      entries: [
+        {
+          label: "ST17-004 line 2",
+          cardId: "ST17-004",
+          lineNumber: 2,
+          text: "[On Play] Draw 1 card.",
+        },
+      ],
+    });
+  });
+
   it("loads gameplay text entries for a set code", async () => {
     const seenUrls: string[] = [];
     const fetchPoneglyph: PoneglyphFetch = (url, init) => {

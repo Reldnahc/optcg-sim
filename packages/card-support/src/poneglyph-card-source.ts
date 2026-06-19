@@ -1,4 +1,4 @@
-import { gameplayLinesFromTextParts } from "@optcg/cards";
+import { gameplayLinesFromTextParts, parseRawKeywordLine } from "@optcg/cards";
 import type { CardId } from "@optcg/types";
 import {
   createApiDeckHashDictionarySource,
@@ -363,13 +363,18 @@ const maxBatchCardCount = 60;
 const coverageEntriesForCard = (
   card: PoneglyphCardProbePayload,
 ): readonly BehaviorCoverageSourceEntry[] =>
-  gameplayLinesFromTextParts([card.effect, card.trigger]).map(
-    (text, index) => ({
-      label: `${card.cardId} line ${String(index + 1)}`,
-      cardId: card.cardId,
-      lineNumber: index + 1,
-      text,
-    }),
+  gameplayLinesFromTextParts([card.effect, card.trigger]).flatMap(
+    (text, index) =>
+      parseRawKeywordLine({ text }) === undefined
+        ? [
+            {
+              label: `${card.cardId} line ${String(index + 1)}`,
+              cardId: card.cardId,
+              lineNumber: index + 1,
+              text,
+            },
+          ]
+        : [],
   );
 
 const deckHashEntriesFromDecodedDeck = (
