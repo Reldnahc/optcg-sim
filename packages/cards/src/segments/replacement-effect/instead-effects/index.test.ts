@@ -105,6 +105,48 @@ describe("replacement instead-effect parser groups", () => {
     });
   });
 
+  it("parses rest-your-Leader-or-named-card instead as one alternative field target", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may rest your Leader or 1 [Example Stage] instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["leaderArea", "characterArea", "stageArea"],
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+            filter: {
+              anyOf: [{ categories: ["leader"] }, { names: ["Example Stage"] }],
+            },
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "target:yourLeader",
+        "target:yourCards",
+        "zone:leaderArea",
+        "zone:characterArea",
+        "zone:stageArea",
+        "filter:anyOf",
+        "filter:category:leader",
+        "filter:name",
+        "cardinality:exact",
+        "count:positiveInteger",
+      ],
+    });
+  });
+
   it("reuses rest-Characters instead for opponent-owned targets", () => {
     expect(
       parseReplacementInsteadFromSet(

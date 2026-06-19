@@ -7,6 +7,11 @@ import type { ReplacementInsteadParseResult } from "../shared.js";
 export function parseRestCardsInstead(
   text: string,
 ): ReplacementInsteadParseResult | undefined {
+  const leaderOrNamedCard = parseLeaderOrNamedCardRestInstead(text);
+  if (leaderOrNamedCard !== undefined) {
+    return leaderOrNamedCard;
+  }
+
   const namedLeader = parseNamedLeaderRestInstead(text);
   if (namedLeader !== undefined) {
     return namedLeader;
@@ -264,6 +269,65 @@ function parseRestOwner(text: string): RestOwner | undefined {
     };
   }
   return undefined;
+}
+
+function parseLeaderOrNamedCardRestInstead(
+  text: string,
+): ReplacementInsteadParseResult | undefined {
+  const normalized = text.trim();
+  const leaderFirst =
+    /^you may rest your Leader or (?<count>[1-9]\d*) \[(?<name>[^\]]+)\](?: cards?)? instead\.?$/iu.exec(
+      normalized,
+    );
+  const namedFirst =
+    /^you may rest (?<count>[1-9]\d*) \[(?<name>[^\]]+)\](?: cards?)? or your Leader instead\.?$/iu.exec(
+      normalized,
+    );
+  const match = leaderFirst ?? namedFirst;
+  const countText = match?.groups?.["count"];
+  const name = match?.groups?.["name"]?.trim();
+  if (countText === undefined || name === undefined || name.length === 0) {
+    return undefined;
+  }
+  const count = Number.parseInt(countText, 10);
+  if (count !== 1) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "rest",
+      target: {
+        type: "chooseFromZones",
+        request: {
+          timing: "onResolution",
+          chooser: "self",
+          player: "self",
+          zones: ["leaderArea", "characterArea", "stageArea"],
+          min: 1,
+          max: 1,
+          allowFewerIfUnavailable: false,
+          visibility: "public",
+          filter: {
+            anyOf: [{ categories: ["leader"] }, { names: [name] }],
+          },
+        },
+      },
+    },
+    evidence: [
+      "instruction:rest",
+      "target:yourLeader",
+      "target:yourCards",
+      "zone:leaderArea",
+      "zone:characterArea",
+      "zone:stageArea",
+      "filter:anyOf",
+      "filter:category:leader",
+      "filter:name",
+      "cardinality:exact",
+      "count:positiveInteger",
+    ],
+  };
 }
 
 function parseNamedLeaderRestInstead(
