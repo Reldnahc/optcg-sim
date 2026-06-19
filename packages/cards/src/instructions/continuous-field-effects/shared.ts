@@ -6,6 +6,7 @@ import {
   type DurationParseResult,
 } from "../../durations/index.js";
 import type {
+  ConditionParseResult,
   InstructionParseResult,
   ParseInput,
   PrimitiveEvidence,
@@ -13,6 +14,7 @@ import type {
 
 export interface ContinuousInstructionContext {
   readonly condition: Condition | undefined;
+  readonly parseCondition?: (text: string) => ConditionParseResult | undefined;
 }
 
 export type ContinuousInstructionParser = (

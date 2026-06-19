@@ -605,7 +605,7 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
       }),
     },
     {
-      name: "battle-timing-trigger",
+      name: "custom-timing-trigger",
       mutate: (
         definition: ReturnType<typeof reviewedOnPlayDrawDefinition>,
       ) => ({
@@ -613,7 +613,7 @@ test("choice custom Event and unsupported On Play effects fail closed without mu
         effects: [
           {
             ...must(definition.effects[0], "effect"),
-            trigger: { type: "endOfBattle" },
+            trigger: { type: "custom", event: "unsupported-play-test" },
           },
         ],
       }),

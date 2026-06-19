@@ -63,12 +63,16 @@ const isDeterministicLifeToHandMoveCost = (option: PaymentOption): boolean =>
 const countLabel = (count: number, singular: string, plural: string): string =>
   `${String(count)} ${count === 1 ? singular : plural}`;
 
-const lifePositionLabel = (position: "top" | "bottom" | undefined): string => {
+const lifePositionLabel = (
+  position: "top" | "bottom" | "anyMatching" | undefined,
+): string => {
   switch (position) {
     case "top":
       return "top Life";
     case "bottom":
       return "bottom Life";
+    case "anyMatching":
+      return "matching Life";
     case undefined:
       return "Life";
   }

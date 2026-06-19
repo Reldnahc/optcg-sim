@@ -261,6 +261,7 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
       "damageDealt",
       "lifeTaken",
       "decisionCreated",
+      "battleEnded",
       "effectResolved",
       "ruleProcessingChecked",
       "decisionResolved",

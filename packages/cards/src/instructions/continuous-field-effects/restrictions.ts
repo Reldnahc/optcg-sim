@@ -235,7 +235,14 @@ const parseSelfCannotAttackUnlessInstruction: ContinuousInstructionParser = (
     return undefined;
   }
 
-  const unlessCondition = parseUnlessCondition(conditionText);
+  const parsedContextCondition = context.parseCondition?.(conditionText);
+  const unlessCondition =
+    parsedContextCondition === undefined
+      ? parseUnlessCondition(conditionText)
+      : {
+          condition: parsedContextCondition.condition,
+          evidence: parsedContextCondition.evidence,
+        };
   if (unlessCondition === undefined) {
     return undefined;
   }

@@ -465,6 +465,7 @@ const rootExpressionParsers = () =>
       expressions: implicitEventReactionBodyExpressions(),
     }),
     applyEachContinuousExpressionParser({
+      conditions: conditionParsers,
       connectors: [parseAndConnector],
       instructions: continuousInstructionParsers,
     }),
@@ -474,6 +475,7 @@ const rootExpressionParsers = () =>
       instructions: continuousInstructionParsers,
     }),
     entryConditionContinuousExpressionParser({
+      conditions: conditionParsers,
       connectors: [parseAndConnector],
       instructions: continuousInstructionParsers,
     }),

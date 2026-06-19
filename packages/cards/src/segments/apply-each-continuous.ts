@@ -1,8 +1,11 @@
 import type { Condition, Effect, SequencedEffect } from "@optcg/types";
 
+import { parseConditionFromSet } from "../conditions/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type { ContinuousInstructionParser } from "../instructions/continuous-field-effects.js";
 import type {
+  ConditionParseResult,
+  ConditionParser,
   ConnectorParser,
   ExpressionParseResult,
   ParseInput,
@@ -12,6 +15,7 @@ import type {
 import { parseBulletListPayload } from "./bullet-list.js";
 
 export function applyEachContinuousExpressionParser(options: {
+  readonly conditions?: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly ContinuousInstructionParser[];
 }): (input: ParseInput) => ExpressionParseResult | undefined {
@@ -64,6 +68,7 @@ export function applyEachContinuousExpressionParser(options: {
 function parseApplyEachBullet(
   text: string,
   options: {
+    readonly conditions?: readonly ConditionParser[];
     readonly connectors: readonly ConnectorParser[];
     readonly instructions: readonly ContinuousInstructionParser[];
   },
@@ -95,6 +100,7 @@ function parseApplyEachBullet(
     segments: [
       continuousInstructionSegmentParser({
         condition,
+        conditions: options.conditions ?? [],
         instructions: options.instructions,
       }),
     ],
@@ -227,11 +233,17 @@ function effectParts(effect: Effect): readonly SequencedEffect[] {
 
 function continuousInstructionSegmentParser(options: {
   readonly condition: Condition | undefined;
+  readonly conditions: readonly ConditionParser[];
   readonly instructions: readonly ContinuousInstructionParser[];
 }): SegmentParser {
   return (input) => {
+    const parseCondition = (text: string): ConditionParseResult | undefined =>
+      parseConditionFromSet({ text }, options.conditions);
     for (const instruction of options.instructions) {
-      const result = instruction(input, { condition: options.condition });
+      const result = instruction(input, {
+        condition: options.condition,
+        parseCondition,
+      });
       if (result !== undefined && result.rest.length === 0) {
         return {
           effect: result.effect,

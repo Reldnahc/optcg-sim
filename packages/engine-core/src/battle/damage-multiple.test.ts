@@ -341,6 +341,7 @@ test("double attack leader damage processes two life cards sequentially", () => 
     { type: "damageDealt", visibility: "public" },
     { type: "lifeTaken", visibility: "public" },
     { type: "decisionCreated", visibility: "private" },
+    { type: "battleEnded", visibility: "public" },
     { type: "effectResolved", visibility: "replayOnly" },
     { type: "ruleProcessingChecked", visibility: "replayOnly" },
     { type: "decisionResolved", visibility: "private" },

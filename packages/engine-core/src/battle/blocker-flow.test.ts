@@ -592,6 +592,16 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
         visibility: { type: "public" },
       },
       {
+        type: "battleEnded",
+        payload: {
+          attacker: opened.state.battle?.attacker,
+          target: blocker,
+          originalTarget,
+          blocker,
+        },
+        visibility: { type: "public" },
+      },
+      {
         type: "effectResolved",
         payload: { systemStep: "endBattle", battleCleared: true },
         visibility: { type: "replayOnly" },
@@ -811,6 +821,7 @@ test("supported blocked-battle resolution is deterministic", () => {
       "damageDealt",
       "cardKOd",
       "cardMoved",
+      "battleEnded",
       "effectResolved",
       "ruleProcessingChecked",
     ],
@@ -818,6 +829,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(
     events.map((event) => event.visibility),
     [
+      { type: "public" },
       { type: "public" },
       { type: "public" },
       { type: "public" },
@@ -837,7 +849,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "3316beafbdeeacc7eb7823c0b262f43cc1c23f0a7045c13ac97cc67ca831cb7d",
+    "67830e7b52b3ec1ef8f59e369d3f88db74f3a11c00b84181c9b508a237570b84",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

@@ -52,6 +52,7 @@ const eventLabels: Record<EngineEvent["type"], string> = {
   attackDeclared: "Attack declared",
   blockerActivated: "Blocker activated",
   counterUsed: "Counter used",
+  battleEnded: "Battle ended",
   damageWouldBeDealt: "Damage pending",
   damageDealt: "Damage dealt",
   lifeTaken: "Life taken",

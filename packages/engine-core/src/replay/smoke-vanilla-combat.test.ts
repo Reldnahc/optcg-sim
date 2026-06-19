@@ -25,17 +25,17 @@ test("ENG-003E replay smoke final hashes remain pinned", () => {
       {
         id: "leader-damage",
         finalStateHash:
-          "29402322bfea15d85a6dd11f9dea910de21619a94e18b8833aebda977ceb7941",
+          "6b75a10131e4694fd625f737259ad2022bc0970cea169b2763bf262d2202bf10",
       },
       {
         id: "character-ko",
         finalStateHash:
-          "bf9a88f5e4b78c05a07f29171bcef561dd8afbfa9202427595b45a7fafa0ebc5",
+          "2e17ee83ed425c6867b16f934448402b8fbf0459941b70f903192ce2e90a8b75",
       },
       {
         id: "leader-zero-life-defeat",
         finalStateHash:
-          "3ed8458af737c4e1568d1557238c89e1ee2025aafbe019576e0ae9a19800384e",
+          "1d641e637c02360961e4081eff6ce34d3c0021e5c5df2be8a4d9db89ee8c0cee",
       },
       {
         id: "deck-out-defeat",

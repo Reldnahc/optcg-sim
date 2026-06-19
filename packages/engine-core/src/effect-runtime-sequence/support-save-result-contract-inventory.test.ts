@@ -142,6 +142,12 @@ const knownSavedReferenceReaders: ExpectedDoor[] = [
     reason: "shared frame plumbing carries saved references",
   },
   {
+    path: "packages/engine-core/src/effect-runtime-sequence/matching-life-cards.ts",
+    signals: ["savedReferences helper argument"],
+    reason:
+      "matching Life card movement preserves existing saved references through segment results",
+  },
+  {
     path: "packages/engine-core/src/effect-runtime-sequence/runner/for-each-saved-target.ts",
     signals: [
       "savedReferences direct lookup",
