@@ -80,6 +80,7 @@ import {
   searchRevealExpressionParser,
   selectedAttackRestrictionExpressionParser,
   selectedBasePowerSnapshotExpressionParser,
+  selectedProtectionContinuationExpressionParser,
   selectedPowerContinuationExpressionParser,
   selectedRefreshLockExpressionParser,
   syntheticInstructionSegmentParser,
@@ -306,6 +307,17 @@ function generalExpressionParser(input: ParseInput) {
           evidence: parsed.evidence,
         };
       },
+      (segmentInput) => {
+        const parsed =
+          selectedProtectionContinuationExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
       sameNumberHandTrashDeckTrashSegmentParser,
       syntheticInstructionSegmentParser(instructionParsers),
     ],
@@ -393,6 +405,7 @@ const costedExpressions = [
   selectedAttackRetargetExpressionParser,
   selectedOpponentCharactersAttackCostExpressionParser,
   selectedRefreshLockExpressionParser,
+  selectedProtectionContinuationExpressionParser,
   koCountPowerContinuationExpressionParser,
   conditionalSelectedPowerContinuationExpressionParser({
     conditions: conditionParsers,
@@ -550,6 +563,7 @@ const conditionalBlockBodyExpressions = () =>
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedAttackRetargetExpressionParser,
     selectedRefreshLockExpressionParser,
+    selectedProtectionContinuationExpressionParser,
     koCountPowerContinuationExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({
       conditions: conditionParsers,
@@ -629,6 +643,7 @@ const rootExpressionParsers = () =>
     }),
     selectedOpponentCharactersAttackCostExpressionParser,
     selectedRefreshLockExpressionParser,
+    selectedProtectionContinuationExpressionParser,
     selectedBasePowerSnapshotExpressionParser,
     koCountPowerContinuationExpressionParser,
     conditionalAdditionalSelectedPowerContinuationExpressionParser({

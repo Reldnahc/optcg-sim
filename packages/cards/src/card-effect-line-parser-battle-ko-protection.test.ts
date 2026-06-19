@@ -158,3 +158,102 @@ it("parses active-source conditional protection for filtered own Characters", ()
     ]),
   );
 });
+
+it("parses selected Character battle KO protection as a saved-target continuation", () => {
+  const result = parseCardEffectLine(
+    "[Counter] Select up to 1 of your Characters. The selected Character cannot be K.O.'d during this battle.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "counter" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            saveResultAs: "selected:protection-target",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                max: 1,
+                filter: { categories: ["character"] },
+              },
+            },
+          },
+          {
+            connector: "then",
+            effect: {
+              type: "protectFromKO",
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "selected:protection-target",
+                },
+                zone: "characterArea",
+                player: "self",
+              },
+              duration: { type: "thisBattle" },
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:eventCounter",
+      "composition:selectThenApply",
+      "instruction:selectTargets",
+      "target:selectedCharacter",
+      "instruction:giveProtection",
+      "protectionProcess:ko",
+      "duration:thisBattle",
+    ]),
+  );
+});
+
+it("parses optional hand-trash cost into selected Character battle KO protection", () => {
+  const result = parseCardEffectLine(
+    "[Counter] You may trash 1 card from your hand: Select up to 1 of your Characters. The selected Character cannot be K.O.'d during this battle.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "counter" },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            connector: "always",
+            effect: {
+              type: "payCost",
+              cost: { type: "trashFromHand", count: 1 },
+            },
+          },
+          {
+            connector: "ifYouDo",
+            effect: {
+              type: "sequence",
+              effects: [
+                { saveResultAs: "selected:protection-target" },
+                { effect: { type: "protectFromKO" } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "composition:optionalCostedEffect",
+      "cost:trashFromHand",
+      "composition:selectThenApply",
+      "instruction:giveProtection",
+    ]),
+  );
+});

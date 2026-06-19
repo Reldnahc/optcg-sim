@@ -47,6 +47,7 @@ export { revealTopPlayExpressionParser } from "./reveal-top-play.js";
 export { revealTopPlayRestedExpressionParser } from "./reveal-top-play-rested.js";
 export { selectedAttackRestrictionExpressionParser } from "./selected-attack-restriction.js";
 export { selectedBasePowerSnapshotExpressionParser } from "./selected-base-power-snapshot.js";
+export { selectedProtectionContinuationExpressionParser } from "./selected-protection-continuation.js";
 export { selectedRefreshLockExpressionParser } from "./selected-refresh-lock.js";
 export { sameNumberHandTrashDeckTrashSegmentParser } from "./same-number-deck-trash.js";
 export {

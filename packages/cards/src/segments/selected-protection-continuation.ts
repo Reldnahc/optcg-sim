@@ -1,26 +1,26 @@
 import type { SelectionId } from "@optcg/types";
 
 import {
-  attackRestrictionDurationParsers,
+  fieldEffectDurationParsers,
   parseDurationFromSet,
 } from "../durations/index.js";
 import { parseSelectTargetsInstruction } from "../instructions/index.js";
+import { parseProtectionProcess } from "../protection/process.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 import { savedFieldObjectTarget } from "./saved-field-object-target.js";
 
-const selectedAttackRestrictionTarget =
-  "selected:attack-restriction-target" as SelectionId;
+const selectedProtectionTarget = "selected:protection-target" as SelectionId;
 
-export function selectedAttackRestrictionExpressionParser(
+export function selectedProtectionContinuationExpressionParser(
   input: ParseInput,
 ): ExpressionParseResult | undefined {
   const split =
-    /^(?<selection>Select .+?)\.\s+The selected Character cannot attack (?<duration>.+)$/iu.exec(
+    /^(?<selection>Select .+?)\.\s+The selected Character (?<protection>cannot be K\.O\.'d\s+.+)$/iu.exec(
       input.text,
     );
   const selectionText = split?.groups?.["selection"];
-  const durationText = split?.groups?.["duration"];
-  if (selectionText === undefined || durationText === undefined) {
+  const protectionText = split?.groups?.["protection"];
+  if (selectionText === undefined || protectionText === undefined) {
     return undefined;
   }
 
@@ -37,15 +37,20 @@ export function selectedAttackRestrictionExpressionParser(
 
   const savedTarget = savedFieldObjectTarget(
     selection.effect,
-    selectedAttackRestrictionTarget,
+    selectedProtectionTarget,
   );
   if (savedTarget === undefined) {
     return undefined;
   }
 
+  const protection = parseProtectionProcess({ text: protectionText });
+  if (protection === undefined || protection.process.type !== "ko") {
+    return undefined;
+  }
+
   const duration = parseDurationFromSet(
-    { text: durationText },
-    attackRestrictionDurationParsers,
+    { text: protection.rest },
+    fieldEffectDurationParsers,
   );
   if (
     duration === undefined ||
@@ -61,13 +66,13 @@ export function selectedAttackRestrictionExpressionParser(
       effects: [
         {
           connector: "always",
-          saveResultAs: selectedAttackRestrictionTarget,
+          saveResultAs: selectedProtectionTarget,
           effect: selection.effect,
         },
         {
           connector: "then",
           effect: {
-            type: "cannotAttack",
+            type: "protectFromKO",
             target: savedTarget,
             duration: duration.duration,
           },
@@ -78,7 +83,8 @@ export function selectedAttackRestrictionExpressionParser(
       "composition:selectThenApply",
       ...selection.evidence,
       "target:selectedCharacter",
-      "instruction:preventActivation",
+      "instruction:giveProtection",
+      ...protection.evidence,
       ...duration.evidence,
     ],
     rest: "",

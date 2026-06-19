@@ -21,6 +21,7 @@ export {
   parseYourNamedCardsTarget,
   parseSelectedLeaderFilter,
   yourFieldEffectTargetParsers,
+  type FieldTargetParseResult,
   type FieldTargetParser,
 } from "./field-targets.js";
 export { parseThisCharacterTarget } from "./this-character.js";
