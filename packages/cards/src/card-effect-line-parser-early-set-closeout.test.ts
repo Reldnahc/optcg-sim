@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import {
+  parseCardEffectLine,
+  parseCardEffectLines,
+} from "./card-effect-line-parser.js";
 
 it("parses rest-self activation cost before exact opponent Character rest", () => {
   const result = parseCardEffectLine(
@@ -542,4 +545,43 @@ it("parses optional hand trash cost before opponent-selected owner deck bottom p
       "composition:selectThenApply",
     ]),
   );
+});
+
+it("parses slash-separated entries for global blocker activation restriction", () => {
+  const results = parseCardEffectLines(
+    "[On Play]/[When Attacking] Your opponent cannot activate [Blocker] during this turn.",
+  );
+
+  expect(results).toHaveLength(2);
+  expect(results.map((result) => result.block.trigger)).toEqual([
+    { type: "onPlay" },
+    { type: "whenAttacking" },
+  ]);
+  for (const result of results) {
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        effect: {
+          type: "cannotBlock",
+          target: {
+            type: "all",
+            player: "opponent",
+            zone: "characterArea",
+            filter: { categories: ["character"] },
+          },
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:entryAlternatives",
+        "instruction:cannotBlock",
+        "target:opponentCharacters",
+        "filter:category:character",
+        "duration:thisTurn",
+        "activation:blocker",
+      ]),
+    );
+  }
 });

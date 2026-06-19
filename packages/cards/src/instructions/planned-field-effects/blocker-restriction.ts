@@ -148,6 +148,12 @@ function parseOpponentCannotActivateBlocker(
     return undefined;
   }
 
+  const globalRestriction =
+    parseGlobalBlockerActivationRestriction(selectionText);
+  if (globalRestriction !== undefined) {
+    return globalRestriction;
+  }
+
   const matchingBlockers =
     parseMatchingBlockerCharactersCannotBlock(selectionText);
   if (matchingBlockers !== undefined) {
@@ -217,6 +223,48 @@ function parseOpponentCannotActivateBlocker(
       ...duration.evidence,
       "activation:blocker",
       "composition:selectThenApply",
+    ],
+    rest: "",
+  };
+}
+
+function parseGlobalBlockerActivationRestriction(
+  text: string,
+): InstructionParseResult | undefined {
+  const match = /^\[Blocker\]\s+(?<duration>during this turn\.?)$/iu.exec(text);
+  const durationText = match?.groups?.["duration"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    thisTurnOnlyDurationParsers,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotBlock",
+      target: {
+        type: "all",
+        player: "opponent",
+        zone: "characterArea",
+        filter: { categories: ["character"] },
+      },
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:cannotBlock",
+      "target:opponentCharacters",
+      "filter:category:character",
+      ...duration.evidence,
+      "activation:blocker",
     ],
     rest: "",
   };
