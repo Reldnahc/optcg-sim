@@ -141,7 +141,7 @@ export const createBehaviorCoverageSourceFailureReport = (input: {
   readonly error: string;
 }): BehaviorCoverageReport => {
   const bucketSummary = {
-    ...emptyBucketSummary(),
+    ...createEmptyBehaviorCoverageBucketSummary(),
     sourceFailed: 1,
   };
   return {
@@ -150,6 +150,10 @@ export const createBehaviorCoverageSourceFailureReport = (input: {
       `Behavior coverage source: ${input.sourceLabel}`,
       "Behavior coverage entries: 0",
       "Behavior coverage primitive coverage: 0/0",
+      "Behavior coverage passed scenarios: 0",
+      "Behavior coverage failed scenarios: 0",
+      "Behavior coverage skipped scenarios: 0",
+      "Behavior coverage probe failures: 0",
       ...bucketLines(bucketSummary),
       `Behavior coverage source failure: ${input.error}`,
     ],
@@ -159,20 +163,17 @@ export const createBehaviorCoverageSourceFailureReport = (input: {
   };
 };
 
-const emptyBucketSummary = (): BehaviorCoverageBucketSummary => ({
-  behaviorPassed: 0,
-  scenarioMissing: 0,
-  scenarioFailed: 0,
-  materializationFailed: 0,
-  sourceFailed: 0,
-});
+export const createEmptyBehaviorCoverageBucketSummary =
+  (): BehaviorCoverageBucketSummary => ({
+    behaviorPassed: 0,
+    scenarioMissing: 0,
+    scenarioFailed: 0,
+    materializationFailed: 0,
+    sourceFailed: 0,
+  });
 
 const emptyMutableBucketSummary = (): MutableBucketSummary => ({
-  behaviorPassed: 0,
-  scenarioMissing: 0,
-  scenarioFailed: 0,
-  materializationFailed: 0,
-  sourceFailed: 0,
+  ...createEmptyBehaviorCoverageBucketSummary(),
 });
 
 const bucketLines = (

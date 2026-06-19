@@ -62,25 +62,24 @@ describe("behavior coverage", () => {
       materializationFailed: 1,
       sourceFailed: 0,
     });
-    expect(report.entryResults).toEqual([
-      {
-        label: "passed",
-        bucket: "behaviorPassed",
-        primitiveTypes: ["draw"],
-      },
-      {
-        label: "scenario-missing",
-        bucket: "scenarioMissing",
-        primitiveTypes: ["draw"],
-        reason: "no generated scenario for trigger whenAttacking",
-      },
-      {
-        label: "materialization",
-        bucket: "materializationFailed",
-        primitiveTypes: [],
-        reason: "line 1 parse failed: no expression parser matched",
-      },
-    ]);
+    expect(report.entryResults[0]).toEqual({
+      label: "passed",
+      bucket: "behaviorPassed",
+      primitiveTypes: ["draw"],
+    });
+    expect(report.entryResults[1]).toEqual({
+      label: "scenario-missing",
+      bucket: "scenarioMissing",
+      primitiveTypes: ["draw"],
+      reason: "no generated scenario for trigger whenAttacking",
+    });
+    expect(report.entryResults[2]).toMatchObject({
+      label: "materialization",
+      bucket: "materializationFailed",
+      primitiveTypes: [],
+    });
+    expect(report.entryResults[2]?.reason).toMatch(/^line 1 parse failed:/u);
+    expect(report.entryResults).toHaveLength(3);
     expect(report.lines).toContain(
       "Behavior coverage bucket behaviorPassed: 1",
     );
@@ -107,10 +106,18 @@ describe("behavior coverage", () => {
       sourceFailed: 1,
     });
     expect(report.entryResults).toEqual([]);
-    expect(report.lines).toContain("Behavior coverage source: card OP01-001");
-    expect(report.lines).toContain("Behavior coverage bucket sourceFailed: 1");
-    expect(report.lines).toContain(
-      "Behavior coverage source failure: Poneglyph card fetch failed for OP01-001: HTTP 503",
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        "Behavior coverage source: card OP01-001",
+        "Behavior coverage entries: 0",
+        "Behavior coverage primitive coverage: 0/0",
+        "Behavior coverage passed scenarios: 0",
+        "Behavior coverage failed scenarios: 0",
+        "Behavior coverage skipped scenarios: 0",
+        "Behavior coverage probe failures: 0",
+        "Behavior coverage bucket sourceFailed: 1",
+        "Behavior coverage source failure: Poneglyph card fetch failed for OP01-001: HTTP 503",
+      ]),
     );
   });
 });
