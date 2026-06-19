@@ -127,6 +127,14 @@ const resolveCoverageSource = async (
       }),
     );
   }
+  const singletonError = validateSingletonSources({
+    setCodes,
+    deckHashes,
+    fixtures,
+  });
+  if (singletonError !== undefined) {
+    return { ok: false, report: errorReport([singletonError]) };
+  }
   const setCode = setCodes[0];
   if (setCode !== undefined) {
     return loadedSource(
@@ -156,6 +164,23 @@ const resolveCoverageSource = async (
       `Unknown behavior coverage fixture: ${fixtures[0] ?? ""}`,
     ]),
   };
+};
+
+const validateSingletonSources = (input: {
+  readonly setCodes: readonly string[];
+  readonly deckHashes: readonly string[];
+  readonly fixtures: readonly string[];
+}): string | undefined => {
+  if (input.setCodes.length > 1) {
+    return "Expected exactly one value for --set.";
+  }
+  if (input.deckHashes.length > 1) {
+    return "Expected exactly one value for --deck-hash.";
+  }
+  if (input.fixtures.length > 1) {
+    return "Expected exactly one value for --fixture.";
+  }
+  return undefined;
 };
 
 const loadedSource = (

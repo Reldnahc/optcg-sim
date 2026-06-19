@@ -174,6 +174,38 @@ describe("behavior coverage CLI", () => {
     ]);
   });
 
+  it("rejects multiple singleton source values", async () => {
+    const setReport = await createBehaviorCoverageCliReport([
+      "--",
+      "--set",
+      "OP01",
+      "--set",
+      "OP02",
+    ]);
+    const deckHashReport = await createBehaviorCoverageCliReport([
+      "--",
+      "--deck-hash",
+      "hash-1",
+      "--deck-hash",
+      "hash-2",
+    ]);
+    const fixtureReport = await createBehaviorCoverageCliReport([
+      "--",
+      "--fixture",
+      "corpus",
+      "--fixture",
+      "other",
+    ]);
+
+    expect(setReport.errors).toEqual(["Expected exactly one value for --set."]);
+    expect(deckHashReport.errors).toEqual([
+      "Expected exactly one value for --deck-hash.",
+    ]);
+    expect(fixtureReport.errors).toEqual([
+      "Expected exactly one value for --fixture.",
+    ]);
+  });
+
   it("reports usage when text is missing", async () => {
     const report = await createBehaviorCoverageCliReport([]);
 
