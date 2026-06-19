@@ -120,4 +120,25 @@ describe("behavior coverage", () => {
       ]),
     );
   });
+
+  it("prints actionable entry rows grouped by bucket", () => {
+    const report = createBehaviorCoverageReport({
+      entries: [
+        { label: "scenario-missing", text: "[When Attacking] Draw 1 card." },
+        { label: "passed", text: "[On Play] Draw 1 card." },
+        { label: "materialization", text: "[On Play] Do something unknown." },
+      ],
+      inventoryPrimitiveTypes: ["draw"],
+    });
+
+    const entryLines = report.lines.filter((line) =>
+      line.startsWith("Behavior coverage entry "),
+    );
+
+    expect(entryLines).toEqual([
+      "Behavior coverage entry materializationFailed: materialization - line 1 parse failed: no expression parser matched",
+      "Behavior coverage entry scenarioMissing: scenario-missing - no generated scenario for trigger whenAttacking",
+      "Behavior coverage entry behaviorPassed: passed - draw",
+    ]);
+  });
 });

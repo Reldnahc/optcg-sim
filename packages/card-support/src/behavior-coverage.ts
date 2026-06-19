@@ -129,6 +129,7 @@ export const createBehaviorCoverageReport = (
       ...probeFailures.map(
         (failure) => `Behavior coverage probe failure: ${failure}`,
       ),
+      ...entryResultLines(entryResults),
     ],
     errors: [],
     bucketSummary,
@@ -212,6 +213,30 @@ const bucketForScenario = (
   }
   return "scenarioMissing";
 };
+
+const entryResultLines = (
+  entryResults: readonly BehaviorCoverageEntryResult[],
+): readonly string[] =>
+  [...entryResults]
+    .sort((left, right) => {
+      const bucketDelta =
+        bucketOrder.indexOf(left.bucket) - bucketOrder.indexOf(right.bucket);
+      return bucketDelta === 0
+        ? left.label.localeCompare(right.label)
+        : bucketDelta;
+    })
+    .map((entry) => {
+      const detail = entry.reason ?? entry.primitiveTypes.join(", ");
+      return `Behavior coverage entry ${entry.bucket}: ${entry.label} - ${detail}`;
+    });
+
+const bucketOrder: readonly BehaviorCoverageBucket[] = [
+  "materializationFailed",
+  "sourceFailed",
+  "scenarioFailed",
+  "scenarioMissing",
+  "behaviorPassed",
+];
 
 const uniqueSorted = (values: readonly string[]): readonly string[] =>
   [...new Set(values)].sort((left, right) => left.localeCompare(right));
