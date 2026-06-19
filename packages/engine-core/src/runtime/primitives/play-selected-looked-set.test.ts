@@ -162,6 +162,62 @@ const lookedSetLifeSequence = ({
   };
 };
 
+const lookedSetTrashSequence = (): Extract<Effect, { type: "sequence" }> => {
+  const lookedSet = "set:looked-trash-candidates" as SelectionSetId;
+  const selected = "revealSelection:trash-from-looked-set" as SelectionId;
+  return {
+    type: "sequence",
+    effects: [
+      {
+        id: "reveal-top-trash-candidates",
+        connector: "always",
+        effect: {
+          type: "revealTop",
+          player: "self",
+          zone: "deck",
+          count: 5,
+          saveAs: lookedSet,
+          visibility: "chooserOnly",
+        },
+      },
+      {
+        id: "select-trash-candidates",
+        connector: "then",
+        effect: {
+          type: "selectFromSet",
+          set: lookedSet,
+          chooser: "self",
+          min: 0,
+          max: 2,
+          saveAs: selected,
+        },
+      },
+      {
+        id: "trash-looked-candidates",
+        connector: "ifPreviousSucceeded",
+        effect: {
+          type: "moveSelected",
+          selection: selected,
+          from: lookedSet,
+          to: "trash",
+        },
+      },
+      {
+        id: "bottom-rest",
+        connector: "then",
+        effect: {
+          type: "placeSetRemainder",
+          set: lookedSet,
+          owner: "self",
+          destination: "deck",
+          position: "bottom",
+          order: "chooser",
+        },
+      },
+    ],
+  };
+};
+
 const setupSequenceDefinition = (
   state: GameState,
   source: CardInstance,
@@ -515,6 +571,53 @@ test("looked-set moveSelected adds selected deck card to Life and bottoms only t
   assert.deepEqual(
     finalPlayer.deck.slice(-2).map((card) => card.instanceId),
     expectedRemainder.map((card) => card.instanceId).reverse(),
+  );
+});
+
+test("looked-set moveSelected trashes selected deck cards and bottoms only the remainder", () => {
+  const state = sequenceQueueState(lookedSetTrashSequence());
+  const topDeck = markTopDeckCharactersSupported(state, 5);
+  const selected = topDeck.slice(0, 2);
+  const expectedRemainder = topDeck.slice(2, 5);
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const selection = must(paused.state.pendingDecision, "selection");
+  assert.equal(selection.type, "selectCards");
+
+  const moved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selection.id,
+    response: {
+      type: "cards",
+      cards: selected.map((card) => ({
+        instanceId: card.instanceId,
+        cardId: card.cardId,
+        playerId: p1,
+        zone: card.zone,
+      })),
+    },
+  });
+  assert.equal(moved.errors, undefined);
+  const order = must(moved.state.pendingDecision, "remainder order");
+  assert.equal(order.type, "orderCards");
+  assert.deepEqual(
+    order.cards.map((card) => card.instanceId),
+    expectedRemainder.map((card) => card.instanceId),
+  );
+
+  const movedPlayer = must(moved.state.players[p1], "p1 after trash move");
+  assert.deepEqual(
+    movedPlayer.trash.slice(0, 2).map((card) => card.instanceId),
+    selected.map((card) => card.instanceId),
+  );
+  assert.equal(
+    movedPlayer.deck.some((card) =>
+      selected.some(
+        (selectedCard) => selectedCard.instanceId === card.instanceId,
+      ),
+    ),
+    false,
   );
 });
 

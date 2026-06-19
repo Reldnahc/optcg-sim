@@ -282,6 +282,12 @@ export const isSupportedMoveSelectedSegment = (
       selectionKinds.includes("set") &&
       hasSourceSet) ||
     (isSelectionSetSource(effect.from) &&
+      effect.to === "trash" &&
+      effect.position === undefined &&
+      effect.destinationFaceUp === undefined &&
+      selectionKinds.includes("set") &&
+      hasSourceSet) ||
+    (isSelectionSetSource(effect.from) &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&
       (effect.destinationFaceUp === undefined ||

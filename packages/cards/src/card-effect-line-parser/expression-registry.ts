@@ -55,6 +55,7 @@ import {
   instructionExpressionSegmentParser,
   koCountPowerContinuationExpressionParser,
   lookPlayFromTopExpressionParser,
+  lookTrashFromTopExpressionParser,
   opponentHandRevealExpressionParser,
   opponentOptionalCostExpressionParser,
   opponentOptionalCostSegmentParser,
@@ -319,6 +320,7 @@ const conditionalCostedBodyExpressionParser = (input: ParseInput) => {
     expressions: [
       searchRevealExpressionParser,
       lookPlayFromTopExpressionParser,
+      lookTrashFromTopExpressionParser,
     ],
   })(input);
   if (conditionalSearch !== undefined) {
@@ -369,6 +371,7 @@ const costedExpressions = [
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
   lookPlayFromTopExpressionParser,
+  lookTrashFromTopExpressionParser,
   playFromDeckExpressionParser,
   deckRevealToHandExpressionParser,
   revealTopAddToHandExpressionParser,
@@ -447,6 +450,7 @@ const conditionalCostedBlockExpressions = () =>
 const topLevelChooseOneExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
+    lookTrashFromTopExpressionParser,
     playFromDeckExpressionParser,
     deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
@@ -492,6 +496,7 @@ const activatedReactionBodyExpressions = () =>
 const implicitEventReactionBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
+    lookTrashFromTopExpressionParser,
     playFromDeckExpressionParser,
     deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
@@ -516,6 +521,7 @@ const implicitEventReactionBodyExpressions = () =>
 const conditionalBlockBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
+    lookTrashFromTopExpressionParser,
     playFromDeckExpressionParser,
     deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
@@ -631,6 +637,7 @@ const rootExpressionParsers = () =>
     selectedPowerContinuationExpressionParser,
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
+    lookTrashFromTopExpressionParser,
     playFromDeckExpressionParser,
     deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,

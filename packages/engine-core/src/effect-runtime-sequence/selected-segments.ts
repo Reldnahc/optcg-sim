@@ -33,6 +33,7 @@ import {
   applyLifeToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
 } from "./selected-to-hand.js";
+import { applySetToTrashSelectedCardMoveSegment } from "./selected-set-to-trash.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type MoveSelectedEffect = Extract<Effect, { type: "moveSelected" }>;
@@ -485,6 +486,14 @@ export const applySelectedCardMoveSegment = (
     params.effect.destinationFaceUp === undefined
   ) {
     return applyDeckOrSetToHandSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    isSelectionSetSource(params.effect.from) &&
+    params.effect.to === "trash" &&
+    params.effect.position === undefined &&
+    params.effect.destinationFaceUp === undefined
+  ) {
+    return applySetToTrashSelectedCardMoveSegment(params, selected);
   }
   if (
     isSelectionSetSource(params.effect.from) &&
