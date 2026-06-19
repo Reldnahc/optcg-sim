@@ -37,6 +37,9 @@ describe("draw and trash-from-hand instruction parsers", () => {
         {
           id: "draw-per-trigger-hand-trash",
         },
+        {
+          id: "draw-until-hand-size",
+        },
       ],
     });
     expect(trashFromHandPrimitive).toMatchObject({
@@ -101,6 +104,36 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(parseDrawInstruction({ text })).toEqual({
       effect: { type: "draw", count, player: "self" },
       evidence: ["instruction:draw", "count:positiveInteger", "player:self"],
+      rest: "",
+    });
+  });
+
+  it.each([
+    "Draw cards so that you have 3 cards in your hand.",
+    "Draw card(s) so that you have 3 cards in your hand.",
+  ])("parses %s as dynamic draw to hand size", (text) => {
+    expect(parseDrawInstruction({ text })).toEqual({
+      effect: {
+        type: "draw",
+        count: {
+          type: "countMatchingZoneCards",
+          player: "self",
+          zone: "hand",
+          per: 1,
+          multiplier: -1,
+          offset: 3,
+          minimum: 0,
+        },
+        player: "self",
+      },
+      evidence: [
+        "instruction:draw",
+        "value:dynamic:matchingZoneCards",
+        "valueTransform:offset",
+        "valueTransform:minimum",
+        "count:positiveInteger",
+        "player:self",
+      ],
       rest: "",
     });
   });
@@ -388,6 +421,53 @@ describe("draw and trash-from-hand instruction parsers", () => {
     expect(result?.evidence).toContain("instruction:moveCards");
     expect(result?.evidence).toContain("zone:deck");
     expect(result?.evidence).toContain("destination:trash");
+  });
+
+  it("integrates draw-to-hand-size through reusable card-line orchestration", () => {
+    const result = parseEffectLine(
+      "[Counter] Up to 1 of your Leader or Character cards gains +6000 power during this battle. Then, draw cards so that you have 2 cards in your hand.",
+      defaultRegistry,
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "counter" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: { type: "modifyPower" },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "draw",
+                count: {
+                  type: "countMatchingZoneCards",
+                  player: "self",
+                  zone: "hand",
+                  multiplier: -1,
+                  offset: 2,
+                  minimum: 0,
+                },
+                player: "self",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:eventCounter",
+        "instruction:draw",
+        "value:dynamic:matchingZoneCards",
+        "valueTransform:offset",
+        "valueTransform:minimum",
+      ]),
+    );
   });
 
   it("composes up-to hand trash into same-number deck-top trash", () => {

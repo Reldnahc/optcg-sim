@@ -55,6 +55,35 @@ export const drawPrimitive: PrimitivePatternDefinition<InstructionParseResult> =
           rest: "",
         }),
       },
+      {
+        id: "draw-until-hand-size",
+        pattern:
+          /^Draw (?:cards|card\(s\)) so that you have (?<count>[1-9]\d*) cards? in your hand\.?$/i,
+        build: (groups) => ({
+          effect: {
+            type: "draw",
+            count: {
+              type: "countMatchingZoneCards",
+              player: "self",
+              zone: "hand",
+              per: 1,
+              multiplier: -1,
+              offset: Number.parseInt(groups["count"] ?? "", 10),
+              minimum: 0,
+            },
+            player: "self",
+          },
+          evidence: [
+            "instruction:draw",
+            "value:dynamic:matchingZoneCards",
+            "valueTransform:offset",
+            "valueTransform:minimum",
+            "count:positiveInteger",
+            "player:self",
+          ],
+          rest: "",
+        }),
+      },
     ],
   };
 

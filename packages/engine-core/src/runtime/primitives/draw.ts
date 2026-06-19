@@ -12,6 +12,7 @@ import type {
   SourcePresencePolicy,
 } from "@optcg/types";
 
+import { resolveDynamicNumberValue } from "../continuous/value-resolution.js";
 import {
   appendEvent,
   toEngineResult,
@@ -70,10 +71,17 @@ const executeDrawEffect = (
   effect: Extract<Effect, { type: "draw" }>,
   options: { incrementStateSeq?: boolean } = {},
 ): EngineResult => {
+  const resolvedCount =
+    typeof effect.count === "number"
+      ? effect.count
+      : resolveDynamicNumberValue(state, effect.count, {
+          controllerId: entry.controllerId,
+          source: entry.source,
+        });
   if (
-    typeof effect.count !== "number" ||
-    !Number.isInteger(effect.count) ||
-    effect.count < 0
+    resolvedCount === null ||
+    !Number.isInteger(resolvedCount) ||
+    resolvedCount < 0
   ) {
     return toEngineResult(
       state,
@@ -91,7 +99,7 @@ const executeDrawEffect = (
     );
   }
 
-  if (effect.count === 0) {
+  if (resolvedCount === 0) {
     return toEngineResult(state, []);
   }
   if (isDrawPreventedByOwnEffects(state, entry, playerId)) {
@@ -102,7 +110,7 @@ const executeDrawEffect = (
   const events: EngineEvent[] = [];
   let nextDeck = player.deck;
   let nextHand = player.hand;
-  const maxDraw = Math.min(effect.count, nextDeck.length);
+  const maxDraw = Math.min(resolvedCount, nextDeck.length);
   for (let index = 0; index < maxDraw; index += 1) {
     const drawn = nextDeck[0];
     if (drawn === undefined) {
@@ -175,10 +183,27 @@ export const isSupportedDrawBody = (
   effect: Effect,
 ): effect is Extract<Effect, { type: "draw" }> =>
   effect.type === "draw" &&
-  typeof effect.count === "number" &&
-  Number.isInteger(effect.count) &&
-  effect.count >= 0 &&
+  isSupportedDrawCount(effect.count) &&
   effect.player === "self";
+
+const isSupportedDrawCount = (
+  count: Extract<Effect, { type: "draw" }>["count"],
+): boolean => {
+  if (typeof count === "number") {
+    return Number.isInteger(count) && count >= 0;
+  }
+  return (
+    count.type === "countMatchingZoneCards" &&
+    count.player === "self" &&
+    count.zone === "hand" &&
+    count.filter === undefined &&
+    Number.isInteger(count.per) &&
+    count.per > 0 &&
+    Number.isInteger(count.multiplier) &&
+    Number.isInteger(count.offset ?? 0) &&
+    Number.isInteger(count.minimum ?? 0)
+  );
+};
 
 const targetPlayerForDrawRestriction = (
   state: GameState,

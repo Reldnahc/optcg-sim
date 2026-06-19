@@ -599,3 +599,60 @@ test("drawUpTo chooseQuantity accepts zero and resolves without draw events", ()
     1,
   );
 });
+
+test("dynamic draw count can draw until controller reaches a hand size", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1");
+  const deckRefill = p1State.hand.slice(0, 3).map((card, index) => ({
+    ...card,
+    zone: { zone: "deck" as const, playerId: p1, slot: "deck" as const, index },
+  }));
+  state.players[p1] = {
+    ...p1State,
+    deck: [...deckRefill, ...p1State.deck].map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "deck" as const,
+        playerId: p1,
+        slot: "deck" as const,
+        index,
+      },
+    })),
+    hand: p1State.hand.slice(3).map((card, index) => ({
+      ...card,
+      zone: {
+        zone: "hand" as const,
+        playerId: p1,
+        slot: "hand" as const,
+        index,
+      },
+    })),
+  };
+  const beforeP1 = must(state.players[p1], "before p1");
+  const targetHandSize = beforeP1.hand.length + 3;
+  const beforeDeck = beforeP1.deck.length;
+
+  const result = executeNoChoiceEffectPrimitive(state, queueDrawForP1(), {
+    type: "draw",
+    player: "self",
+    count: {
+      type: "countMatchingZoneCards",
+      player: "self",
+      zone: "hand",
+      per: 1,
+      multiplier: -1,
+      offset: targetHandSize,
+      minimum: 0,
+    },
+  });
+  const afterP1 = must(result.state.players[p1], "after p1");
+
+  assert.equal(result.errors, undefined);
+  assert.equal(afterP1.hand.length, targetHandSize);
+  assert.equal(afterP1.deck.length, beforeDeck - 3);
+  assert.equal(
+    result.events.filter((event) => event.type === "cardDrawn").length,
+    3,
+  );
+  assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
+});

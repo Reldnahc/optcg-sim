@@ -63,6 +63,19 @@ const isSupportedFieldCountDifferenceValue = (
   count.subtrahend.filter?.categories?.includes("don") === true &&
   (count.minimum === undefined || Number.isSafeInteger(count.minimum));
 
+const isSupportedZoneCountValue = (
+  count: number | DynamicNumberValue,
+): boolean =>
+  typeof count === "object" &&
+  count.type === "countMatchingZoneCards" &&
+  (count.player === "self" || count.player === "opponent") &&
+  (count.filter === undefined || count.zone !== "life") &&
+  Number.isSafeInteger(count.per) &&
+  count.per > 0 &&
+  Number.isSafeInteger(count.multiplier) &&
+  (count.offset === undefined || Number.isSafeInteger(count.offset)) &&
+  (count.minimum === undefined || Number.isSafeInteger(count.minimum));
+
 const isSupportedSegmentCount = (
   count: number | DynamicNumberValue,
   options: { positive: boolean },
@@ -74,6 +87,7 @@ const isSupportedSegmentCount = (
 
 const isSupportedDrawCount = (count: number | DynamicNumberValue): boolean =>
   isSupportedSegmentCount(count, { positive: false }) ||
+  isSupportedZoneCountValue(count) ||
   (typeof count === "object" && count.type === "savedNumber");
 
 export const isSupportedDrawSegment = (
