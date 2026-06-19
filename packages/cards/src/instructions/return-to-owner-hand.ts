@@ -47,11 +47,28 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
     };
   }
 
-  const cardinality = parseReturnCardinality(rest);
+  const sharedSelections = parseSharedDestinationReturnSelections(rest);
+  if (sharedSelections !== undefined) {
+    return sharedSelections;
+  }
+
+  const selection = parseReturnSelectionToOwnerHand(rest);
+  if (selection === undefined) {
+    return undefined;
+  }
+  return { ...selection, rest: "" };
+};
+
+function parseReturnSelectionToOwnerHand(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const cardinality = parseReturnCardinality(text);
   if (cardinality === undefined) {
     return undefined;
   }
-
   const opponentTarget = parseOpponentFieldTarget({ text: cardinality.rest });
   if (
     opponentTarget !== undefined &&
@@ -74,7 +91,6 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
         "destination:ownerHand",
         "composition:selectThenApply",
       ],
-      rest: "",
     };
   }
 
@@ -100,7 +116,6 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
         "destination:ownerHand",
         "composition:selectThenApply",
       ],
-      rest: "",
     };
   }
 
@@ -129,9 +144,44 @@ export const parseReturnToOwnerHandInstruction: InstructionParser = (input) => {
       "destination:ownerHand",
       "composition:selectThenApply",
     ],
+  };
+}
+
+function parseSharedDestinationReturnSelections(
+  text: string,
+): ReturnType<InstructionParser> {
+  const selections = text
+    .split(/\s+and\s+(?=(?:up to|[1-9]\d*\s))/iu)
+    .map((selection) => selection.trim())
+    .filter((selection) => selection.length > 0);
+  if (selections.length < 2) {
+    return undefined;
+  }
+
+  const parsed = selections.map(parseReturnSelectionToOwnerHand);
+  if (parsed.some((selection) => selection === undefined)) {
+    return undefined;
+  }
+  const effects = parsed.filter(
+    (selection): selection is NonNullable<typeof selection> =>
+      selection !== undefined,
+  );
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: effects.map((selection, index) => ({
+        connector: index === 0 ? "always" : "then",
+        effect: selection.effect,
+      })),
+    },
+    evidence: [
+      "expression:sequence",
+      ...effects.flatMap((selection) => selection.evidence),
+    ],
     rest: "",
   };
-};
+}
 
 export function selectThenReturnToOwnerHand(
   player: "self" | "opponent" | "anyPlayer",

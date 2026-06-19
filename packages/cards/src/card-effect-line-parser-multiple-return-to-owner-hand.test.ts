@@ -1,34 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
-import { parseReturnToOwnerHandInstruction } from "./return-to-owner-hand.js";
+import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
-describe("return to owner hand instruction parser", () => {
-  it("parses returning this Character as a self bounce primitive", () => {
-    expect(
-      parseReturnToOwnerHandInstruction({
-        text: "Return this Character to the owner's hand.",
-      }),
-    ).toEqual({
-      effect: {
-        type: "bounce",
-        target: { type: "self" },
-        destination: "hand",
-      },
-      evidence: [
-        "instruction:returnToOwnerHand",
-        "target:thisCharacter",
-        "destination:ownerHand",
-      ],
-      rest: "",
-    });
-  });
+it("parses multiple shared-destination return selections under an entry point", () => {
+  const result = parseCardEffectLine(
+    "[On Play] Return up to 1 Character with a cost of 8 or less and up to 1 Character with a cost of 3 or less to the owner's hand.",
+  );
 
-  it("parses multiple shared-destination return selections as reusable bounce primitives", () => {
-    expect(
-      parseReturnToOwnerHandInstruction({
-        text: "Return up to 1 Character with a cost of 8 or less and up to 1 Character with a cost of 3 or less to the owner's hand.",
-      }),
-    ).toMatchObject({
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
       effect: {
         type: "sequence",
         effects: [
@@ -92,7 +74,17 @@ describe("return to owner hand instruction parser", () => {
           },
         ],
       },
-      rest: "",
-    });
+    },
   });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "instruction:returnToOwnerHand",
+      "cardinality:upTo",
+      "filter:cost",
+      "destination:ownerHand",
+      "composition:selectThenApply",
+      "expression:sequence",
+    ]),
+  );
 });
