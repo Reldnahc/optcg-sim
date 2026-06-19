@@ -1,5 +1,6 @@
 import {
   applyAction,
+  enterMainPhase,
   evaluateEffectBlockRuntimeSupport,
   getLegalActions,
 } from "@optcg/engine-core";
@@ -54,6 +55,7 @@ export interface BehaviorProbeScenario {
     | "declareAttack"
     | "lifeTrigger"
     | "opponentAttack"
+    | "permanent"
     | "playCard";
   readonly cardCategory?: "leader" | "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
@@ -68,6 +70,7 @@ type SupportedScenario =
   | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
+  | { readonly kind: "permanent"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 const p1 = "p1" as PlayerId;
@@ -173,10 +176,15 @@ export const createBehaviorProbeReport = (
                   ...scenarioInput,
                   category: "character",
                 })
-              : runPlayCardScenario({
-                  ...scenarioInput,
-                  category: scenario.category,
-                });
+              : scenario.kind === "permanent"
+                ? runPermanentScenario({
+                    ...scenarioInput,
+                    category: "character",
+                  })
+                : runPlayCardScenario({
+                    ...scenarioInput,
+                    category: scenario.category,
+                  });
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -237,6 +245,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "trigger")) {
     return { kind: "lifeTrigger", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "permanent")) {
+    return { kind: "permanent", category: "character" };
   }
   return {
     kind: "skipped",
@@ -565,6 +576,45 @@ const runLifeTriggerScenario = (input: {
         zone: defender.leader.zone,
       },
     }),
+    input.setupFilters.length,
+    input.definition.effects,
+  );
+};
+
+const runPermanentScenario = (input: {
+  readonly category: "character";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  state.turn.phase = "don";
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return {
+      ok: false,
+      reason: "probe card could not be fielded",
+      pendingDecisionDrained: state.pendingDecision === undefined,
+      effectQueueDrained: state.effectQueue.length === 0,
+      eventCount: 0,
+      decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
+    };
+  }
+
+  return drainRuntime(
+    enterMainPhase(state, { includeStateHash: false }),
     input.setupFilters.length,
     input.definition.effects,
   );

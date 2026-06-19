@@ -61,6 +61,21 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("proves permanent counter modifiers through field continuous validation", () => {
+    const report = createBehaviorProbeReport({
+      text: "The counter of all of your Character cards with 8000 power in your hand becomes +2000.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: permanent");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: modifyCounter",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("keeps hand zone refs stable after fielding an Activate Main source", () => {
     const report = createBehaviorProbeReport({
       text: "[Activate: Main] [Once Per Turn] If your Leader has the {Alabasta} type, give up to 1 of your opponent's Characters \u22121000 power during this turn.",

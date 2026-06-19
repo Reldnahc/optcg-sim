@@ -58,6 +58,11 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["modifyCost"],
   },
   {
+    label: "fixture:op16-118:permanent-counter-modifier",
+    text: "The counter of all of your Character cards with 8000 power in your hand becomes +2000.",
+    expectedPrimitiveTypes: ["modifyCounter"],
+  },
+  {
     label: "fixture:set-base-cost:on-play",
     text: "[On Play] Set the cost of up to 1 of your opponent's Characters with no base effect to 0 during this turn.",
     expectedPrimitiveTypes: ["selectTargets", "sequence", "setBaseCost"],
