@@ -387,6 +387,26 @@ describe("event reaction predicate routing", () => {
       ],
     },
     {
+      text: "you play a Character with no base effect from your hand",
+      trigger: {
+        type: "cardPlayed",
+        player: "self",
+        sourceZone: "hand",
+        filter: {
+          categories: ["character"],
+          effectEntryPoint: { mode: "without", trigger: { type: "onPlay" } },
+        },
+      },
+      evidence: [
+        "trigger:cardPlayed",
+        "player:self",
+        "zone:hand",
+        "filter:category:character",
+        "filter:effectEntryPoint",
+        "filter:effectEntryPoint:without",
+      ],
+    },
+    {
       text: "a {Land of Wano} type Character card is played from your trash",
       trigger: {
         type: "cardPlayed",

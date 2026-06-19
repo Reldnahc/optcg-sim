@@ -443,8 +443,15 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
     return undefined;
   }
 
-  const sourceEffect = parsePlayedUsingSourceEffect(playedFilter);
-  const parsed = parseCharacterFilter(sourceEffect?.filterText ?? playedFilter);
+  const player = playedPlayer.toLowerCase() === "you" ? "self" : "opponent";
+  const sourceZone = parsePlayedSourceZone(playedFilter, player);
+  if (sourceZone === undefined) {
+    return undefined;
+  }
+  const sourceEffect = parsePlayedUsingSourceEffect(sourceZone.filterText);
+  const parsed = parseCharacterFilter(
+    sourceEffect?.filterText ?? sourceZone.filterText,
+  );
   if (parsed === undefined) {
     return undefined;
   }
@@ -454,12 +461,12 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   if (source !== undefined && parsedSource === undefined) {
     return undefined;
   }
-  const player = playedPlayer.toLowerCase() === "you" ? "self" : "opponent";
   return {
     trigger: {
       type: "cardPlayed",
       player,
       filter: parsed.filter,
+      ...(sourceZone.zone === undefined ? {} : { sourceZone: sourceZone.zone }),
       ...(parsedSource === undefined
         ? {}
         : { sourceFilter: parsedSource.filter }),
@@ -467,11 +474,36 @@ const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
     evidence: [
       "trigger:cardPlayed",
       `player:${player}`,
+      ...(sourceZone.zone === undefined
+        ? []
+        : ([`zone:${sourceZone.zone}`] as const)),
       ...parsed.evidence,
       ...(parsedSource?.evidence ?? []),
     ],
   };
 };
+
+function parsePlayedSourceZone(
+  text: string,
+  player: "self" | "opponent",
+): { readonly filterText: string; readonly zone?: "hand" } | undefined {
+  const match =
+    /^(?<filter>.+?)\s+from\s+(?<owner>your|their|your opponent's)\s+hand$/iu.exec(
+      text.trim(),
+    );
+  const filterText = match?.groups?.["filter"];
+  const owner = match?.groups?.["owner"]?.toLowerCase();
+  if (filterText === undefined || owner === undefined) {
+    return { filterText: text };
+  }
+  if (
+    (player === "self" && owner !== "your") ||
+    (player === "opponent" && owner !== "their" && owner !== "your opponent's")
+  ) {
+    return undefined;
+  }
+  return { filterText, zone: "hand" };
+}
 
 function parsePlayedUsingSourceEffect(
   text: string,
