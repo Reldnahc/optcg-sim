@@ -18,6 +18,8 @@ const selfTrashDeckPlacementSelection =
   "trashSelection:self-trash-to-deck-placement" as SelectionId;
 const selectedFieldTargetsSelection =
   "selectedTargets:self-field-count" as SelectionId;
+const deckRevealToHandSelection =
+  "deckSelection:runtime-reveal-to-hand" as SelectionId;
 
 const reindexTrash = (cards: readonly CardInstance[]): CardInstance[] =>
   cards.map((card, index) => ({
@@ -143,6 +145,47 @@ const selectedTargetCountPowerSequence = (): Extract<
         },
         duration: { type: "thisTurn" },
       },
+    },
+  ],
+});
+
+const deckRevealToHandSequence = (): Extract<Effect, { type: "sequence" }> => ({
+  type: "sequence",
+  effects: [
+    {
+      connector: "always",
+      saveResultAs: deckRevealToHandSelection,
+      effect: {
+        type: "selectCards",
+        zone: "deck",
+        player: "self",
+        chooser: "self",
+        min: 0,
+        max: 1,
+        saveAs: deckRevealToHandSelection,
+        visibility: "chooserOnly",
+      },
+    },
+    {
+      connector: "ifPreviousSucceeded",
+      effect: {
+        type: "revealSelected",
+        selection: deckRevealToHandSelection,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      connector: "ifPreviousSucceeded",
+      effect: {
+        type: "moveSelected",
+        selection: deckRevealToHandSelection,
+        from: "deck",
+        to: "hand",
+      },
+    },
+    {
+      connector: "then",
+      effect: { type: "shuffleDeck", player: "self" },
     },
   ],
 });
@@ -293,4 +336,38 @@ test("selectedCardCount power value counts saved selected field targets", () => 
   );
   assert.equal(modifier.layer, "powerAdd");
   assert.deepEqual(modifier.operation, { type: "addPower", value: 2000 });
+});
+
+test("revealed deck selection moves selected card to hand and shuffles deck", () => {
+  const { state } = sequenceQueueState(deckRevealToHandSequence(), 2);
+  const player = must(state.players[p1], "p1");
+  const selected = must(player.deck[0], "selected deck card");
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const decision = must(paused.state.pendingDecision, "pending decision");
+  assert.equal(decision.type, "selectCards");
+  assert.equal(decision.candidates.length, 2);
+
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: [must(decision.candidates[0], "first deck candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  const nextPlayer = must(resolved.state.players[p1], "resolved p1");
+  assert.equal(
+    nextPlayer.hand.some((card) => card.instanceId === selected.instanceId),
+    true,
+  );
+  assert.equal(
+    nextPlayer.deck.some((card) => card.instanceId === selected.instanceId),
+    false,
+  );
+  assert.equal(resolved.state.effectExecutionFrames.length, 0);
 });

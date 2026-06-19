@@ -29,8 +29,8 @@ import { applyHandToLifeSelectedCardMoveSegment } from "./selected-hand-to-life.
 import { applyLifeToDeckBottomSelectedCardMoveSegment } from "./selected-life-to-deck.js";
 import { applyCurrentZoneToLifeSelectedCardMoveSegment } from "./selected-current-to-life.js";
 import {
+  applyDeckOrSetToHandSelectedCardMoveSegment,
   applyLifeToHandSelectedCardMoveSegment,
-  applySetToHandSelectedCardMoveSegment,
   applyTrashToHandSelectedCardMoveSegment,
 } from "./selected-to-hand.js";
 
@@ -471,12 +471,20 @@ export const applySelectedCardMoveSegment = (
     return applyCurrentZoneToLifeSelectedCardMoveSegment(params, selected);
   }
   if (
+    params.effect.from === "deck" &&
+    params.effect.to === "hand" &&
+    params.effect.position === undefined &&
+    params.effect.destinationFaceUp === undefined
+  ) {
+    return applyDeckOrSetToHandSelectedCardMoveSegment(params, selected);
+  }
+  if (
     isSelectionSetSource(params.effect.from) &&
     params.effect.to === "hand" &&
     params.effect.position === undefined &&
     params.effect.destinationFaceUp === undefined
   ) {
-    return applySetToHandSelectedCardMoveSegment(params, selected);
+    return applyDeckOrSetToHandSelectedCardMoveSegment(params, selected);
   }
   if (
     isSelectionSetSource(params.effect.from) &&

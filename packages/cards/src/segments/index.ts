@@ -7,6 +7,7 @@ export { basePowerSwapExpressionParser } from "./base-power-swap.js";
 export { chooseOneExpressionParser } from "./choose-one.js";
 export { chosenCostRevealExpressionParser } from "./chosen-cost-reveal.js";
 export { costedEffectExpressionParser } from "./costed-effect.js";
+export { deckRevealToHandExpressionParser } from "./deck-reveal-to-hand.js";
 export { drawForEachFieldTrashSameExpressionParser } from "./draw-for-each-field-trash-same.js";
 export {
   opponentOptionalCostExpressionParser,

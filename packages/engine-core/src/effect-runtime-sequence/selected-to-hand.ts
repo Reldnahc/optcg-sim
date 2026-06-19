@@ -86,7 +86,7 @@ const emptySelectedToHandResult = (
   state: params.state,
 });
 
-export const applySetToHandSelectedCardMoveSegment = (
+export const applyDeckOrSetToHandSelectedCardMoveSegment = (
   params: SelectedToHandMoveParams,
   selected: readonly CardRef[],
 ):
@@ -141,7 +141,10 @@ export const applySetToHandSelectedCardMoveSegment = (
       },
     },
   };
-  const selectionSetId = String(params.effect.from);
+  const selectionSetId =
+    params.effect.from === "deck"
+      ? String(params.effect.selection)
+      : String(params.effect.from);
   let revealVisibility: EventVisibility | undefined;
   for (
     let recordIndex = params.state.revealedCards.length - 1;

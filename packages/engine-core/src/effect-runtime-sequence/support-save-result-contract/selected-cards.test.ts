@@ -8,6 +8,7 @@ import {
   savedLeaderOrCharacterTarget,
   selectCostAreaDonCards,
   selectCostAreaDonTargets,
+  selectDeck,
   selectHand,
   selectHandOrTrash,
   selectLeaderTarget,
@@ -255,6 +256,31 @@ test("selectedCards matrix accepts trash selection moved to hand", () => {
         type: "moveSelected",
         selection,
         from: "trash",
+        to: "hand",
+      },
+    },
+  ]);
+});
+
+test("selectedCards matrix accepts revealed deck selection moved to hand", () => {
+  const selection = "saved-result:deck-to-hand" as SelectionId;
+
+  assertSupported([
+    selectDeck(selection),
+    {
+      connector: "then",
+      effect: {
+        type: "revealSelected",
+        selection,
+        visibility: "bothPlayers",
+      },
+    },
+    {
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection,
+        from: "deck",
         to: "hand",
       },
     },

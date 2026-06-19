@@ -244,6 +244,11 @@ export const isSupportedMoveSelectedSegment = (
       effect.position === undefined &&
       effect.destinationFaceUp === undefined &&
       selectionKinds.includes("life")) ||
+    (effect.from === "deck" &&
+      effect.to === "hand" &&
+      effect.position === undefined &&
+      effect.destinationFaceUp === undefined &&
+      selectionKinds.includes("deck")) ||
     (effect.from === "life" &&
       effect.to === "deck" &&
       effect.position === "bottom" &&

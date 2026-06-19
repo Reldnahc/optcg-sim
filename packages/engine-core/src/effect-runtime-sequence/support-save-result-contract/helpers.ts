@@ -113,6 +113,21 @@ export const selectTrash = (selection: SelectionId): SequenceSegment => ({
   },
 });
 
+export const selectDeck = (selection: SelectionId): SequenceSegment => ({
+  connector: "always",
+  saveResultAs: selection,
+  effect: {
+    type: "selectCards",
+    player: "self",
+    zone: "deck",
+    chooser: "self",
+    visibility: "chooserOnly",
+    min: 0,
+    max: 1,
+    saveAs: selection,
+  },
+});
+
 export const selectHandOrTrash = (
   selection: SelectionId,
   max = 2,

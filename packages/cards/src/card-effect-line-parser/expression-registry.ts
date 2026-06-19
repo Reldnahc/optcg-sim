@@ -44,6 +44,7 @@ import {
   conditionalCostedBlockExpressionParser,
   conditionalExpressionSegmentParser,
   costedEffectExpressionParser,
+  deckRevealToHandExpressionParser,
   delayedEndOfTurnSegmentParser,
   delayedStartOfNextMainPhaseSegmentParser,
   drawForEachFieldTrashSameExpressionParser,
@@ -262,6 +263,7 @@ function generalExpressionParser(input: ParseInput) {
       (segmentInput) => {
         const parsed =
           revealTopAddToHandExpressionParser(segmentInput) ??
+          deckRevealToHandExpressionParser(segmentInput) ??
           revealTopPlayExpressionParser(segmentInput);
         if (parsed === undefined) {
           return undefined;
@@ -367,6 +369,7 @@ const costedExpressions = [
   }),
   lookPlayFromTopExpressionParser,
   playFromDeckExpressionParser,
+  deckRevealToHandExpressionParser,
   revealTopAddToHandExpressionParser,
   revealTopPlayExpressionParser,
   revealTopConditionalExpressionParser({
@@ -444,6 +447,7 @@ const topLevelChooseOneExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
@@ -488,6 +492,7 @@ const implicitEventReactionBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     conditionalBlockExpressionParser({
@@ -511,6 +516,7 @@ const conditionalBlockBodyExpressions = () =>
   [
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({
@@ -606,6 +612,7 @@ const rootExpressionParsers = () =>
     }),
     playFromDeckExpressionParser,
     playStageFromDeckExpressionParser,
+    deckRevealToHandExpressionParser,
     selectThenPreventBlockerActivationExpressionParser,
     selectPowerThenPreventBlockerActivationExpressionParser,
     selectedAttackRetargetExpressionParser,
@@ -624,6 +631,7 @@ const rootExpressionParsers = () =>
     basePowerSwapExpressionParser,
     lookPlayFromTopExpressionParser,
     playFromDeckExpressionParser,
+    deckRevealToHandExpressionParser,
     revealTopAddToHandExpressionParser,
     revealTopPlayExpressionParser,
     revealTopConditionalExpressionParser({

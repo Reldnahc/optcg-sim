@@ -52,6 +52,9 @@ const selectedCardRefs = (
   return selected?.kind === "selectedCards" ? selected.cards : null;
 };
 
+const allSelectedFromDeck = (selected: readonly CardRef[]): boolean =>
+  selected.length > 0 && selected.every((card) => card.zone?.zone === "deck");
+
 export const applyRevealSelectedSequenceSegment = (
   params: RevealSelectedParams,
 ):
@@ -99,6 +102,20 @@ export const applyRevealSelectedSequenceSegment = (
       : {
           ...params.state,
           seq: toStateSeq(params.state.seq + 1),
+          revealedCards: allSelectedFromDeck(selected)
+            ? [
+                ...params.state.revealedCards,
+                {
+                  id: revealId,
+                  cards: [...selected],
+                  visibility,
+                  origin: "topOfDeck" as const,
+                  selectionSetId: String(params.effect.selection),
+                  createdAtStateSeq: toStateSeq(params.state.seq + 1),
+                  cleanupPolicy: "returnToOrigin" as const,
+                },
+              ]
+            : params.state.revealedCards,
           eventJournal: [...params.state.eventJournal, ...events],
         };
   return {

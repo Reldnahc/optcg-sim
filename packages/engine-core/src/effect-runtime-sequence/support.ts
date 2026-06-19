@@ -383,6 +383,8 @@ const isSupportedMoveSelectedWithSavedResults = (
     canConsumeSelectedCards(state.savedResults, effect.selection, ["trash"])) ||
   (isSupportedMoveSelectedSegment(effect, ["life"]) &&
     canConsumeSelectedCards(state.savedResults, effect.selection, ["life"])) ||
+  (isSupportedMoveSelectedSegment(effect, ["deck"]) &&
+    canConsumeSelectedCards(state.savedResults, effect.selection, ["deck"])) ||
   (isSupportedMoveSelectedSegment(
     effect,
     ["hand"],
