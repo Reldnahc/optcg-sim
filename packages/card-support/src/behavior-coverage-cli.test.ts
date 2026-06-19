@@ -206,6 +206,30 @@ describe("behavior coverage CLI", () => {
     ]);
   });
 
+  it("rejects missing source values and stray positional args before source work", async () => {
+    const missingCard = await createBehaviorCoverageCliReport([
+      "--",
+      "--card",
+      "--set",
+    ]);
+    const missingDeckHash = await createBehaviorCoverageCliReport([
+      "--",
+      "--deck-hash",
+    ]);
+    const strayValue = await createBehaviorCoverageCliReport([
+      "--",
+      "OP01-001",
+    ]);
+
+    expect(missingCard.errors).toEqual(["Expected a value after --card."]);
+    expect(missingDeckHash.errors).toEqual([
+      "Expected a value after --deck-hash.",
+    ]);
+    expect(strayValue.errors).toEqual([
+      "Unexpected behavior coverage argument: OP01-001",
+    ]);
+  });
+
   it("reports usage when text is missing", async () => {
     const report = await createBehaviorCoverageCliReport([]);
 

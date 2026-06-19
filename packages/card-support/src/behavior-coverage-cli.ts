@@ -42,6 +42,21 @@ type CoverageSource =
       readonly report: BehaviorCoverageReport;
     };
 
+type CoverageCliOption =
+  | "--text"
+  | "--card"
+  | "--set"
+  | "--deck-hash"
+  | "--fixture";
+
+interface ParsedCoverageArgs {
+  readonly texts: readonly string[];
+  readonly cardIds: readonly string[];
+  readonly setCodes: readonly string[];
+  readonly deckHashes: readonly string[];
+  readonly fixtures: readonly string[];
+}
+
 export const createBehaviorCoverageCliReport = async (
   argv: readonly string[],
   dependencies: BehaviorCoverageCliDependencies = {},
@@ -86,11 +101,11 @@ const resolveCoverageSource = async (
   args: readonly string[],
   dependencies: BehaviorCoverageCliDependencies,
 ): Promise<CoverageSource> => {
-  const texts = valuesForArg(args, "--text");
-  const cardIds = valuesForArg(args, "--card");
-  const setCodes = valuesForArg(args, "--set");
-  const deckHashes = valuesForArg(args, "--deck-hash");
-  const fixtures = valuesForArg(args, "--fixture");
+  const parsed = parseCoverageArgs(args);
+  if (!parsed.ok) {
+    return { ok: false, report: errorReport([parsed.error]) };
+  }
+  const { cardIds, deckHashes, fixtures, setCodes, texts } = parsed.args;
   const selectedFamilies = [
     texts.length > 0,
     cardIds.length > 0,
@@ -221,21 +236,67 @@ const argsAfterPassthrough = (argv: readonly string[]): readonly string[] => {
   return passthroughIndex >= 0 ? argv.slice(passthroughIndex + 1) : argv;
 };
 
-const valuesForArg = (
+const parseCoverageArgs = (
   args: readonly string[],
-  name: string,
-): readonly string[] => {
-  const values: string[] = [];
+):
+  | { readonly ok: true; readonly args: ParsedCoverageArgs }
+  | { readonly ok: false; readonly error: string } => {
+  const parsed = {
+    texts: [],
+    cardIds: [],
+    setCodes: [],
+    deckHashes: [],
+    fixtures: [],
+  };
   for (let index = 0; index < args.length; index += 1) {
-    if (args[index] !== name) {
-      continue;
+    const arg = args[index];
+    if (!isCoverageCliOption(arg)) {
+      return {
+        ok: false,
+        error: `Unexpected behavior coverage argument: ${arg ?? ""}`,
+      };
     }
     const value = args[index + 1];
-    if (value !== undefined && value.length > 0) {
-      values.push(value);
+    if (value === undefined || isCoverageCliOption(value)) {
+      return { ok: false, error: `Expected a value after ${arg}.` };
     }
+    valuesForOption(parsed, arg).push(value);
+    index += 1;
   }
-  return values;
+  return { ok: true, args: parsed };
+};
+
+const isCoverageCliOption = (
+  value: string | undefined,
+): value is CoverageCliOption =>
+  value === "--text" ||
+  value === "--card" ||
+  value === "--set" ||
+  value === "--deck-hash" ||
+  value === "--fixture";
+
+const valuesForOption = (
+  parsed: {
+    readonly texts: string[];
+    readonly cardIds: string[];
+    readonly setCodes: string[];
+    readonly deckHashes: string[];
+    readonly fixtures: string[];
+  },
+  option: CoverageCliOption,
+): string[] => {
+  switch (option) {
+    case "--text":
+      return parsed.texts;
+    case "--card":
+      return parsed.cardIds;
+    case "--set":
+      return parsed.setCodes;
+    case "--deck-hash":
+      return parsed.deckHashes;
+    case "--fixture":
+      return parsed.fixtures;
+  }
 };
 
 const main = async (): Promise<number> => {
