@@ -66,6 +66,7 @@ export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parsePreventThisCharacterRefreshInstruction,
   parsePlayedTurnSelfAttackTargetRestrictionInstruction,
   parseSelfAttackTargetRestrictionInstruction,
   parseRestOpponentCardsInstruction,

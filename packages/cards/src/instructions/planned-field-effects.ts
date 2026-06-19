@@ -6,6 +6,7 @@ export {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventOpponentCharactersRestInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parsePreventThisCharacterRefreshInstruction,
   parseRestOpponentCardsInstruction,
   parseRestOpponentCharactersInstruction,
   parseRestOpponentCharactersOrDonCardsInstruction,

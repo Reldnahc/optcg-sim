@@ -16,6 +16,7 @@ export {
   parsePreventOpponentCharactersRestInstruction,
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parsePreventThisCharacterRefreshInstruction,
   preventOpponentCharactersRestPrimitive,
   preventOpponentCharactersRefreshPrimitive,
   preventThatCharacterRefreshPrimitive,

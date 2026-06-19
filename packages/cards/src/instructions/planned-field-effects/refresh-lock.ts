@@ -98,6 +98,44 @@ export const parsePreventThatCharacterRefreshInstruction: InstructionParser = (
   };
 };
 
+export const parsePreventThisCharacterRefreshInstruction: InstructionParser = (
+  input,
+) => {
+  const durationText =
+    /^this Character will not become active\s+(?<rest>.*)$/iu.exec(input.text)
+      ?.groups?.["rest"];
+  if (durationText === undefined) {
+    return undefined;
+  }
+
+  const target: Target = { type: "self" };
+  const duration = parseRefreshRestrictionDurationForTarget(
+    durationText,
+    target,
+  );
+  if (
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "cannotBecomeActive",
+      target,
+      duration: duration.duration,
+    },
+    evidence: [
+      "instruction:preventActivation",
+      "target:thisCharacter",
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+};
+
 export const parsePreventOpponentCharactersRefreshInstruction: InstructionParser =
   (input) => {
     const parsedTarget = parseOpponentRefreshLockTarget(input.text);

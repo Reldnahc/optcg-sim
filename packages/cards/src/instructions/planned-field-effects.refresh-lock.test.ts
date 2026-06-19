@@ -3,9 +3,30 @@ import { describe, expect, it } from "vitest";
 import {
   parsePreventOpponentCharactersRefreshInstruction,
   parsePreventThatCharacterRefreshInstruction,
+  parsePreventThisCharacterRefreshInstruction,
 } from "./planned-field-effects.js";
 
 describe("planned refresh-lock field-effect instruction parser", () => {
+  it("parses this Character refresh lock as a direct self restriction", () => {
+    expect(
+      parsePreventThisCharacterRefreshInstruction({
+        text: "this Character will not become active in your next Refresh Phase.",
+      }),
+    ).toMatchObject({
+      effect: {
+        type: "cannotBecomeActive",
+        target: { type: "self" },
+        duration: { type: "untilStartOfNextTurn", player: "self" },
+      },
+      evidence: [
+        "instruction:preventActivation",
+        "target:thisCharacter",
+        "duration:selfNextRefreshPhase",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses the selected Character refresh lock as a saved-target restriction", () => {
     expect(
       parsePreventThatCharacterRefreshInstruction({
