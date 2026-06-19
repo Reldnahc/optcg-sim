@@ -290,6 +290,7 @@ export type PrimitiveEvidence =
   | "deckRestriction:typeIncludesOnly"
   | "ruleModifier:deckOutLossTiming"
   | "ruleModifier:deckOutWin"
+  | "ruleModifier:designatedEventOnly"
   | "reveal:bothPlayers"
   | "reveal:chooserOnly"
   | "visibility:faceDown"
@@ -370,6 +371,7 @@ export type PrimitiveEvidence =
   | "modifier:positiveCounter"
   | "modifier:costReduction"
   | "metadata:nameAliases"
+  | "metadata:identityTreatment"
   | "protectionProcess:fieldRemoval"
   | "protectionProcess:ko"
   | "protectionProcess:rest"
@@ -566,7 +568,19 @@ export type ParsedMetadataPayload =
           }
         | {
             readonly type: "deckOutWin";
+          }
+        | {
+            readonly type: "designatedEventOnly";
+            readonly cardCategory: "leader";
           };
+    }
+  | {
+      readonly type: "identityTreatment";
+      readonly subject: {
+        readonly type: "thisCard";
+        readonly cardCategory: "leader";
+      };
+      readonly includes: readonly ("names" | "types" | "attributes")[];
     };
 
 export interface ParsedMetadataLine {

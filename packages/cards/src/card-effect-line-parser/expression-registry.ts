@@ -28,6 +28,7 @@ import {
   parseDeckOutWinRuleLine,
   parseDonDeckSizeRuleLine,
   parseNameAliasesRuleLine,
+  parseSpecialRulesLine,
 } from "../metadata-lines/index.js";
 import type { EffectLineParserRegistry } from "../orchestrator.js";
 import {
@@ -677,6 +678,7 @@ export const defaultRegistry = {
     parseDeckOutWinRuleLine,
     parseDonDeckSizeRuleLine,
     parseNameAliasesRuleLine,
+    parseSpecialRulesLine,
   ],
   entryPoints: [
     parseRulesStartOfGameEntryPoint,
