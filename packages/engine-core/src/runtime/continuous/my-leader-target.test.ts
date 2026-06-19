@@ -413,6 +413,78 @@ test("continuous setBasePower resolves saved selected Character current power as
   assert.equal(record.modifier.operation.value, 8000);
 });
 
+test("continuous setBasePower resolves current attacker power as a queued snapshot", () => {
+  const state = createActiveState();
+  const entry = { ...queueDrawForP1(), controllerId: p1 };
+  const p2State = state.players[p2];
+  const p1State = state.players[p1];
+  assert.ok(p2State !== undefined);
+  assert.ok(p1State !== undefined);
+  const attackerSource = p2State.hand[0];
+  assert.ok(attackerSource !== undefined);
+  const attacker: CardInstance = {
+    ...attackerSource,
+    zone: { zone: "characterArea", playerId: p2, slot: "character", index: 0 },
+    attachedDon: [toInstanceId("attached-don-1")],
+    state: "rested",
+    turnPlayed: state.turn.globalTurn - 1,
+  };
+  p2State.hand = p2State.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p2, slot: "hand", index },
+  }));
+  p2State.characters = [attacker];
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 6000,
+  });
+  const attackerRef: CardRef = {
+    instanceId: attacker.instanceId,
+    cardId: attacker.cardId,
+    playerId: p2,
+    zone: attacker.zone,
+  };
+  const targetRef: CardRef = {
+    instanceId: p1State.leader.instanceId,
+    cardId: p1State.leader.cardId,
+    playerId: p1,
+    zone: p1State.leader.zone,
+  };
+  state.battle = {
+    attacker: attackerRef,
+    originalTarget: targetRef,
+    currentTarget: targetRef,
+    step: "block",
+    damageCount: 1,
+  };
+
+  const effect: Extract<Effect, { type: "setBasePower" }> = {
+    type: "setBasePower",
+    target: { type: "self" },
+    value: {
+      type: "snapshotCardStat",
+      target: { type: "attacker" },
+      stat: "currentPower",
+    },
+    duration: { type: "thisTurn" },
+  };
+
+  assert.equal(isSupportedContinuousQueueEffect(effect), true);
+  const records = createContinuousRecordsForResolvedEffect(
+    state,
+    entry,
+    effect,
+  );
+
+  assert.ok(records !== null);
+  const record = records[0];
+  assert.ok(record !== undefined);
+  assert.equal(record.modifier.layer, "basePowerSet");
+  assert.equal(record.modifier.operation.type, "setBasePower");
+  assert.equal(record.modifier.operation.value, 7000);
+});
+
 test("continuous setBasePower resolves saved selected Character base power as a queued snapshot", () => {
   const state = createActiveState();
   const entry = { ...queueDrawForP1(), controllerId: p1 };

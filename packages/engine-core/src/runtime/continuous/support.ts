@@ -337,6 +337,7 @@ export const isSupportedBasePowerValue = (
   (typeof value === "object" &&
     (value.target.type === "myLeader" ||
       value.target.type === "opponentLeader" ||
+      value.target.type === "attacker" ||
       (value.target.type === "savedFieldObject" &&
         value.target.binding.family === "selectedTargets" &&
         value.target.zone === "characterArea" &&

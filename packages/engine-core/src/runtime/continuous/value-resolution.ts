@@ -515,6 +515,13 @@ const cardRefForSnapshotTarget = (
       zone: player.leader.zone,
     };
   }
+  if (target.type === "attacker") {
+    const attacker = state.battle?.attacker;
+    if (attacker === undefined) {
+      return null;
+    }
+    return attacker;
+  }
   if (target.type === "savedFieldObject") {
     const saved = context?.savedReferences?.[target.binding.saveResultAs];
     if (saved?.kind !== "selectedTargets") {
@@ -542,6 +549,7 @@ const cardRefForSnapshotTarget = (
 };
 
 const continuousTargetMatchesCard = (
+  state: GameState,
   target: TargetSpec,
   card: CardRef,
 ): boolean => {
@@ -556,6 +564,13 @@ const continuousTargetMatchesCard = (
       target.card.instanceId === card.instanceId &&
       target.card.cardId === card.cardId &&
       target.card.playerId === card.playerId
+    );
+  }
+  if (target.type === "attacker") {
+    return (
+      state.battle?.attacker.instanceId === card.instanceId &&
+      state.battle.attacker.cardId === card.cardId &&
+      state.battle.attacker.playerId === card.playerId
     );
   }
   if (target.type === "all") {
@@ -617,7 +632,7 @@ const currentPowerForSnapshotTarget = (
   let powerAdd = cardInstance.attachedDon.length * 1000;
   let powerSet: number | undefined;
   for (const effect of state.continuousEffects) {
-    if (!continuousTargetMatchesCard(effect.modifier.target, card)) {
+    if (!continuousTargetMatchesCard(state, effect.modifier.target, card)) {
       continue;
     }
     if (effect.modifier.operation.type === "setBasePower") {

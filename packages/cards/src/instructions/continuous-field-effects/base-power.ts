@@ -130,6 +130,17 @@ const parseBasePowerSnapshotSource = (
   text: string,
 ): BasePowerSnapshotSource | undefined => {
   const normalizedText = text.trim();
+  if (
+    /^(?:the power of )?your opponent's attacking Leader or Character(?:'s (?:base )?power)?$/i.test(
+      normalizedText,
+    )
+  ) {
+    return {
+      target: { type: "attacker" },
+      evidence: ["target:attacker"],
+    };
+  }
+
   if (/^your Leader(?:'s (?:base )?power)?$/i.test(normalizedText)) {
     return {
       target: { type: "myLeader" },
