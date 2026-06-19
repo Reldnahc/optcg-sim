@@ -117,6 +117,76 @@ describe("OP14 all-field stat gain parsing", () => {
     );
   });
 
+  it("parses costed all-field stat gains through reusable explicit duration support", () => {
+    const result = parseCardEffectLine(
+      "[On Play] DON!! −2 (You may return the specified number of DON!! cards from your field to your DON!! deck.): Your Leader and all of your Characters gain +1000 power until the start of your next turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: { type: "onPlay" },
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              effect: {
+                type: "payCost",
+                cost: { type: "returnDon", count: 2, optional: true },
+              },
+            },
+            {
+              connector: "ifYouDo",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    effect: {
+                      type: "modifyPower",
+                      target: { type: "myLeader" },
+                      value: 1000,
+                      duration: {
+                        type: "untilStartOfNextTurn",
+                        player: "self",
+                      },
+                    },
+                  },
+                  {
+                    effect: {
+                      type: "modifyPower",
+                      target: {
+                        type: "all",
+                        player: "self",
+                        zone: "characterArea",
+                        filter: { categories: ["character"] },
+                      },
+                      value: 1000,
+                      duration: {
+                        type: "untilStartOfNextTurn",
+                        player: "self",
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:onPlay",
+        "cost:returnDon",
+        "instruction:modifyPower",
+        "target:yourLeader",
+        "cardinality:all",
+        "zone:characterArea",
+        "duration:selfNextTurnStart",
+      ]),
+    );
+  });
+
   it("parses all typed Character cost gains through opponent next End Phase", () => {
     const result = parseCardEffectLine(
       "[On K.O.] All of your {Thriller Bark Pirates} type Characters gain +4 cost until the end of your opponent's next End Phase.",

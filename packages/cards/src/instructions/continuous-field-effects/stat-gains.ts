@@ -87,14 +87,21 @@ export const parseExplicitDurationAllFieldStatGainInstruction: InstructionParser
     const parsed = parseAllFieldStatGainInstruction(input, {
       condition: undefined,
     });
-    if (
-      parsed === undefined ||
-      !parsed.evidence.includes("duration:thisTurn")
-    ) {
+    if (parsed === undefined || !hasExplicitDurationEvidence(parsed.evidence)) {
       return undefined;
     }
     return parsed;
   };
+
+const hasExplicitDurationEvidence = (
+  evidence: readonly PrimitiveEvidence[],
+): boolean =>
+  evidence.some(
+    (primitive) =>
+      primitive.startsWith("duration:") &&
+      primitive !== "duration:whileSourceOnField" &&
+      primitive !== "duration:whileConditionTrue",
+  );
 
 const parseLeaderStatGainInstruction: ContinuousInstructionParser = (
   input,
