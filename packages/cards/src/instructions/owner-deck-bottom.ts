@@ -236,6 +236,37 @@ export const parsePlaceAtOwnerDeckBottomInstruction: InstructionParser = (
     };
   }
 
+  if (
+    /^the opponent(?:'|\u2019)s Character you battled with$/iu.test(
+      selectionText,
+    )
+  ) {
+    return {
+      effect: {
+        type: "bounce",
+        destination: "deckBottom",
+        target: {
+          type: "savedFieldObject",
+          binding: {
+            family: "producedObjects",
+            saveResultAs: "trigger:battleCounterpart",
+          },
+          zone: "characterArea",
+          player: "opponent",
+          visibility: "publicOnly",
+          onFailure: "failClosed",
+        },
+      },
+      evidence: [
+        "instruction:bounce",
+        "target:battleCounterpart",
+        "destination:deck",
+        "position:bottom",
+      ],
+      rest: "",
+    };
+  }
+
   const allTarget = parseAllFieldTarget({ text: selectionText });
   if (allTarget !== undefined && allTarget.rest.length === 0) {
     if (
