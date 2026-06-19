@@ -270,10 +270,24 @@ const matchFieldRemoved = (
   ) {
     return false;
   }
-  return matchesResolvedFilter(
-    state,
-    resolvedCardForId(state, payload["cardId"]),
-    trigger.filter,
+  if (
+    trigger.sourceTarget === "self" &&
+    (payload["sourceInstanceId"] !== source.instanceId ||
+      payload["sourceCardId"] !== source.cardId)
+  ) {
+    return false;
+  }
+  return (
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, payload["cardId"]),
+      trigger.filter,
+    ) &&
+    matchesResolvedFilter(
+      state,
+      resolvedCardForId(state, payload["sourceCardId"]),
+      trigger.sourceFilter,
+    )
   );
 };
 

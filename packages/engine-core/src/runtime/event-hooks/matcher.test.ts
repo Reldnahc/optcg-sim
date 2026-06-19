@@ -352,6 +352,72 @@ test("canonical event matcher filters fieldRemoved destination", () => {
   });
 });
 
+test("canonical event matcher matches fieldRemoved battle K.O. source evidence", () => {
+  const { source, state, character } = setupEventHookState();
+  const opponent = must(state.players[p2], "p2");
+  const target: CardInstance = {
+    instanceId: "p2-character:battle-ko" as CardInstance["instanceId"],
+    cardId: toCardId("p2-character:battle-ko"),
+    owner: p2,
+    controller: p2,
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    },
+    state: "rested",
+    attachedDon: [],
+  };
+  opponent.characters = [target];
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+  });
+  const battleKo = publicEvent(state, "cardMoved", {
+    from: target.zone,
+    to: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+    playerId: p2,
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    reason: "ko",
+    sourceControllerId: source.controller,
+    sourceKind: "battle",
+    sourceInstanceId: source.instanceId,
+    sourceCardId: source.cardId,
+  });
+  const otherBattleKo = publicEvent(state, "cardMoved", {
+    from: target.zone,
+    to: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
+    playerId: p2,
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    reason: "ko",
+    sourceControllerId: character.controller,
+    sourceKind: "battle",
+    sourceInstanceId: character.instanceId,
+    sourceCardId: character.cardId,
+  });
+  const trigger = {
+    type: "fieldRemoved",
+    player: "opponent",
+    filter: { categories: ["character"] },
+    sourceController: "self",
+    sourceKind: "battle",
+    sourceTarget: "self",
+  } as unknown as Trigger;
+
+  assert.deepEqual(matchEventTrigger(state, source, trigger, battleKo), {
+    matched: true,
+    triggerTypes: ["fieldRemoved"],
+  });
+  assert.deepEqual(matchEventTrigger(state, source, trigger, otherBattleKo), {
+    matched: false,
+    triggerTypes: [],
+  });
+});
+
 test("canonical event matcher matches cardPlayed sourceZone and source-card filters", () => {
   const { source, state, character } = setupEventHookState();
   const event = publicEvent(state, "cardPlayed", {

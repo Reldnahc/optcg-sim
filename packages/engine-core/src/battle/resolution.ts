@@ -410,9 +410,15 @@ export const resolveSupportedVanillaBattle = (
           clearAttachedDon: true,
           emitCardTrashed: false,
           eventBaseState: state,
-          includeCardIdentityInCardMoved: shouldDetectBattleKOTriggers,
+          includeCardIdentityInCardMoved: true,
           playerId: target.playerId,
           reason: KO_TRASH_MOVEMENT_REASON,
+          cardMovedPayloadExtra: {
+            sourceControllerId: attacker.playerId,
+            sourceKind: "battle",
+            sourceInstanceId: attacker.card.instanceId,
+            sourceCardId: attacker.card.cardId,
+          },
           sourceZone: "characterArea",
         },
       );

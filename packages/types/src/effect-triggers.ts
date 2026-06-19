@@ -65,8 +65,10 @@ export type Trigger =
       target?: "self" | "any";
       player: PlayerRef;
       filter?: CardFilter;
+      sourceTarget?: "self";
       sourceController?: PlayerRef;
-      sourceKind?: "effect" | "ko" | "any";
+      sourceKind?: "battle" | "effect" | "ko" | "any";
+      sourceFilter?: CardFilter;
       destination?: Zone;
     }
   | {

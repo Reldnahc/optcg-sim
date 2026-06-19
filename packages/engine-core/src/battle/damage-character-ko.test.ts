@@ -214,6 +214,26 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
     )?.state,
     "rested",
   );
+  const cardMoved = must(
+    result.events.find((event) => event.type === "cardMoved"),
+    "battle K.O. movement event",
+  );
+  assert.deepEqual(cardMoved.payload, {
+    instanceId: target.instanceId,
+    cardId: target.cardId,
+    from: target.zone,
+    to: {
+      zone: "trash",
+      playerId: p2,
+      slot: "trash",
+      index: 0,
+    },
+    reason: "ko",
+    sourceControllerId: p1,
+    sourceKind: "battle",
+    sourceInstanceId: attacker.instanceId,
+    sourceCardId: attacker.cardId,
+  });
 });
 
 test("battle K.O. still removes a Character protected from opponent effect removal", () => {

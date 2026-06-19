@@ -232,6 +232,37 @@ export const parseFieldRemovedPredicate: ReactionPredicateParser = ({
     };
   }
 
+  const battleKo =
+    /^this Character battles and K\.O\.'s your opponent's (?<filter>.+)$/iu.exec(
+      normalized,
+    );
+  const battleKoFilterText = battleKo?.groups?.["filter"];
+  if (
+    battleKoFilterText !== undefined &&
+    containsCharacterCategoryText(battleKoFilterText)
+  ) {
+    const parsed = parseCharacterFilter(battleKoFilterText);
+    if (parsed === undefined) {
+      return undefined;
+    }
+    return {
+      trigger: {
+        type: "fieldRemoved",
+        player: "opponent",
+        filter: parsed.filter,
+        sourceController: "self",
+        sourceKind: "battle",
+        sourceTarget: "self",
+      },
+      evidence: [
+        "trigger:fieldRemoved",
+        "player:opponent",
+        ...parsed.evidence,
+        "protectionSource:battle",
+      ],
+    };
+  }
+
   const opponentCharacter =
     /^your opponent's (?<filter>.+) is (?<removal>K\.O\.'d|removed from the field(?: by (?:your effect|an effect))?|returned to the owner's hand by your effect)$/iu.exec(
       normalized,
