@@ -4,9 +4,10 @@ import {
   createBehaviorCoverageReport,
   createBehaviorCoverageSourceFailureReport,
   createEmptyBehaviorCoverageBucketSummary,
-  type BehaviorCoverageReport,
   type BehaviorCoverageEntry,
+  type BehaviorCoverageReport,
 } from "./behavior-coverage.js";
+import { behaviorCoverageFixtureCorpus } from "./behavior-coverage-fixtures.js";
 import { extractEngineEffectPrimitiveTypes } from "./engine-primitive-inventory.js";
 import {
   createPoneglyphCoverageEntriesFromCardIds,
@@ -171,6 +172,17 @@ const resolveCoverageSource = async (
         fetchPoneglyph,
       }),
     );
+  }
+
+  if (fixtures[0] === "corpus") {
+    return {
+      ok: true,
+      sourceLabel: "fixture corpus",
+      entries: behaviorCoverageFixtureCorpus.map((entry) => ({
+        label: entry.label,
+        text: entry.text,
+      })),
+    };
   }
 
   return {

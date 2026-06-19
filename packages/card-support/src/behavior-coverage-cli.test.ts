@@ -230,6 +230,22 @@ describe("behavior coverage CLI", () => {
     ]);
   });
 
+  it("runs coverage for the curated fixture corpus", async () => {
+    const report = await createBehaviorCoverageCliReport([
+      "--",
+      "--fixture",
+      "corpus",
+    ]);
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior coverage source: fixture corpus");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Behavior coverage entries: [1-9]\d*/u),
+      ]),
+    );
+  });
+
   it("reports usage when text is missing", async () => {
     const report = await createBehaviorCoverageCliReport([]);
 
