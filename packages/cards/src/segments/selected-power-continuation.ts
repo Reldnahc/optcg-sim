@@ -15,6 +15,7 @@ import {
 import { parseKeywordGrantForTarget } from "../instructions/continuous-field-effects/keyword-grants/shared.js";
 import {
   parseModifyPowerInstruction,
+  parseSetFieldActiveInstruction,
   parseSelectTargetsInstruction,
 } from "../instructions/index.js";
 import {
@@ -39,6 +40,7 @@ const distributedPowerSelection =
 
 type ModifyPowerEffect = Extract<Effect, { type: "modifyPower" }>;
 type SelectTargetsEffect = Extract<Effect, { type: "selectTargets" }>;
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SelectableTarget = Extract<Target, { type: "choose" | "chooseFromZones" }>;
 type PowerModifier = {
   readonly value: number;
@@ -69,6 +71,12 @@ function parseSelectedPowerContinuation(
   const distributedPower = parseSelectedDistributedPower(input);
   if (distributedPower !== undefined) {
     return distributedPower;
+  }
+
+  const fieldActivationPower =
+    parseSelectedFieldActivationPowerContinuation(input);
+  if (fieldActivationPower !== undefined) {
+    return fieldActivationPower;
   }
 
   const explicitSelectContinuation = parseExplicitSelectKeywordContinuation(
@@ -307,6 +315,86 @@ function parseSelectedDistributedPower(
       "instruction:modifyPower",
       ...firstModifier.evidence,
       ...secondModifier.evidence,
+      ...duration.evidence,
+    ],
+    rest: "",
+  };
+}
+
+function parseSelectedFieldActivationPowerContinuation(
+  input: ParseInput,
+): ExpressionParseResult | undefined {
+  const split =
+    /^(?<first>.+?)\.\s+(?:Then,\s+)?It gains (?<modifier>[+\-−][1-9]\d* power) (?<duration>.+)$/iu.exec(
+      input.text,
+    );
+  const firstText = split?.groups?.["first"];
+  const modifierText = split?.groups?.["modifier"];
+  const durationText = split?.groups?.["duration"];
+  if (
+    firstText === undefined ||
+    modifierText === undefined ||
+    durationText === undefined
+  ) {
+    return undefined;
+  }
+
+  const first = parseSetFieldActiveInstruction({ text: `${firstText}.` });
+  if (
+    first === undefined ||
+    first.rest.length > 0 ||
+    first.effect.type !== "sequence"
+  ) {
+    return undefined;
+  }
+  const selection = selectedTargetProducer(first.effect);
+  if (selection === undefined) {
+    return undefined;
+  }
+  const savedTarget = savedFieldObjectTargetFromSelect(
+    selection.effect,
+    selection.saveResultAs,
+  );
+  if (savedTarget === undefined) {
+    return undefined;
+  }
+
+  const modifier = parsePowerModifier(modifierText);
+  const duration = parseDurationFromSet(
+    { text: durationText },
+    fieldEffectDurationParsers,
+  );
+  if (
+    modifier === undefined ||
+    duration === undefined ||
+    duration.duration === undefined ||
+    duration.rest.length > 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        ...first.effect.effects,
+        {
+          id: "power:selected-field-activation-target",
+          connector: "then",
+          effect: {
+            type: "modifyPower",
+            target: savedTarget,
+            value: modifier.value,
+            duration: duration.duration,
+          },
+        },
+      ],
+    },
+    evidence: [
+      ...first.evidence,
+      "instruction:modifyPower",
+      "target:selectedCharacter",
+      ...modifier.evidence,
       ...duration.evidence,
     ],
     rest: "",
@@ -835,6 +923,25 @@ function savedFieldObjectTargetFromSelect(
     visibility: "publicOnly",
     onFailure: "failClosed",
   };
+}
+
+function selectedTargetProducer(
+  effect: SequenceEffect,
+):
+  | { readonly effect: SelectTargetsEffect; readonly saveResultAs: SelectionId }
+  | undefined {
+  for (const segment of effect.effects) {
+    if (
+      segment.effect.type === "selectTargets" &&
+      segment.saveResultAs !== undefined
+    ) {
+      return {
+        effect: segment.effect,
+        saveResultAs: segment.saveResultAs as SelectionId,
+      };
+    }
+  }
+  return undefined;
 }
 
 function isSavedFieldObjectZone(zone: string): zone is SavedFieldObjectZone {

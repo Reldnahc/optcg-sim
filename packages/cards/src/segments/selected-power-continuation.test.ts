@@ -62,6 +62,62 @@ describe("selected power continuation expression parser", () => {
     );
   });
 
+  it("reuses a selected field-activation target for a following power modifier", () => {
+    const result = selectedPowerContinuationExpressionParser({
+      text: "Set up to 1 of your {Supernovas} or {Straw Hat Crew} type Character cards with a cost of 5 or less as active. It gains +1000 power during this turn.",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            saveResultAs: "targetSelection:set-field-active",
+            effect: {
+              type: "selectTargets",
+              request: {
+                player: "self",
+                zone: "characterArea",
+                filter: {
+                  categories: ["character"],
+                  typesAny: ["Supernovas", "Straw Hat Crew"],
+                  cost: { max: 5 },
+                },
+              },
+            },
+          },
+          {
+            effect: { type: "activate" },
+          },
+          {
+            effect: {
+              type: "modifyPower",
+              value: 1000,
+              duration: { type: "thisTurn" },
+              target: {
+                type: "savedFieldObject",
+                binding: {
+                  family: "selectedTargets",
+                  saveResultAs: "targetSelection:set-field-active",
+                },
+              },
+            },
+          },
+        ],
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:activate",
+        "instruction:modifyPower",
+        "target:selectedCharacter",
+        "duration:thisTurn",
+        "composition:selectThenApply",
+      ]),
+    );
+  });
+
   it("saves a selected power target and conditionally grants that card a keyword", () => {
     const result =
       conditionalAdditionalSelectedPowerContinuationExpressionParser({
