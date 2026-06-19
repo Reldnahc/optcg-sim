@@ -23,6 +23,7 @@ export {
 } from "./optional-play-costed-effect.js";
 export { optionalActionEffectSegmentParser } from "./optional-action-effect.js";
 export { opponentHandRevealExpressionParser } from "./opponent-hand-reveal.js";
+export { paidCostSelectionMovementExpressionParser } from "./paid-cost-selection-movement.js";
 export { playStageFromDeckExpressionParser } from "./play-stage-from-deck.js";
 export {
   playedObjectDelayedDeckBottomExpressionParser,

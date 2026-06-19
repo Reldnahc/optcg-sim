@@ -120,6 +120,35 @@ export const parseMoveCardsCost = (
     return undefined;
   }
 
+  const attachedDonToRestedCostArea = parseAttachedDonToRestedCostAreaCostRoute(
+    cardinality.rest,
+  );
+  if (attachedDonToRestedCostArea !== undefined) {
+    const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+      type: "moveCards",
+      count: cardinality.count,
+      chooser: "self",
+      from: { player: "self", zone: "costArea" },
+      to: { player: "self", zone: "costArea" },
+      order: "chooserChoice",
+      filter: { categories: ["don"], state: "attached" },
+      destinationState: "rested",
+      optional: true,
+    };
+    const evidence: PrimitiveEvidence[] = [
+      "cost:moveCards",
+      ...cardinality.evidence,
+      "player:self",
+      "zone:costArea",
+      "filter:category:don",
+      "filter:state:attached",
+      "destination:costArea",
+      "state:rested",
+    ];
+
+    return { cost, evidence, rest: "" };
+  }
+
   const fieldToOwnerDeckBottom = parseFieldToOwnerDeckBottomCostRoute(
     cardinality.rest,
   );
@@ -226,6 +255,16 @@ function parseHandToDeckCostRoute(text: string):
     position,
     evidence: position === "top" ? "position:top" : "position:bottom",
   };
+}
+
+function parseAttachedDonToRestedCostAreaCostRoute(
+  text: string,
+): true | undefined {
+  return /^total of your currently given DON!! cards? to your cost area rested$/iu.test(
+    text,
+  )
+    ? true
+    : undefined;
 }
 
 const parseDeckTopToTrashCost = (

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import type { OptionalCost } from "@optcg/types";
+import type { CardInstance, OptionalCost } from "@optcg/types";
 
 import {
   createActiveState,
@@ -13,6 +13,42 @@ import {
   expandMoveCardsCostRoutes,
   selectableMoveCardsCostIds,
 } from "./move-card-cost-options.js";
+
+const attachFirstCostDonToLeader = (
+  player: ReturnType<typeof createActiveState>["players"][typeof p1],
+): CardInstance["instanceId"] => {
+  const don = must(player.costArea[0], "cost DON");
+  player.leader = {
+    ...player.leader,
+    attachedDon: [...player.leader.attachedDon, don.instanceId],
+  };
+  const attachedDon = { ...don };
+  delete attachedDon.state;
+  player.costArea = [{ ...attachedDon }, ...player.costArea.slice(1)];
+  return don.instanceId;
+};
+
+const placeFirstDonInCostArea = (
+  player: ReturnType<typeof createActiveState>["players"][typeof p1],
+): void => {
+  const don = must(player.donDeck[0], "DON deck card");
+  player.donDeck = player.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  player.costArea = [
+    {
+      ...don,
+      zone: {
+        zone: "costArea",
+        playerId: p1,
+        slot: "cost",
+        index: player.costArea.length,
+      },
+      state: "active",
+    },
+  ];
+};
 
 test("move-card cost options expose hand-to-deck-bottom payment routes", () => {
   const state = createActiveState();
@@ -192,6 +228,47 @@ test("move-card cost options reject malformed variable move-card routes", () => 
   };
 
   assert.deepEqual(expandMoveCardsCostRoutes(malformed), []);
+});
+
+test("move-card cost options expose attached DON to rested cost area payment routes", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "player");
+  placeFirstDonInCostArea(player);
+  const attachedDonId = attachFirstCostDonToLeader(player);
+  const cost: Extract<OptionalCost, { type: "moveCards" }> = {
+    type: "moveCards",
+    count: 1,
+    chooser: "self",
+    from: { player: "self", zone: "costArea" },
+    to: { player: "self", zone: "costArea" },
+    order: "chooserChoice",
+    filter: { categories: ["don"], state: "attached" },
+    destinationState: "rested",
+    optional: true,
+  };
+
+  const options = expandMoveCardsCostRoutes(cost);
+
+  assert.deepEqual(options, [
+    {
+      id: "moveCards",
+      type: "moveCards",
+      count: 1,
+      from: { player: "self", zone: "costArea" },
+      to: { player: "self", zone: "costArea" },
+      filter: { categories: ["don"], state: "attached" },
+      destinationState: "rested",
+    },
+  ]);
+  assert.deepEqual(
+    selectableMoveCardsCostIds(
+      state,
+      queueDrawForP1().controllerId,
+      player,
+      must(options[0], "option"),
+    ),
+    [attachedDonId],
+  );
 });
 
 test("move-card cost options expose top and bottom Life-to-trash payment routes", () => {

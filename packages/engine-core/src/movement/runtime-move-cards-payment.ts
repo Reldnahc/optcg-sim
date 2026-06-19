@@ -55,6 +55,17 @@ export const isSupportedMoveCardsPaymentRoute = (
       option.sourceInstanceId !== undefined
     );
   }
+  if (
+    option.from.zone === "costArea" &&
+    option.from.position === undefined &&
+    option.to.zone === "costArea" &&
+    option.to.position === undefined
+  ) {
+    return (
+      option.destinationState === "rested" &&
+      option.filter?.state === "attached"
+    );
+  }
   return (
     (option.from.zone === "deck" &&
       option.from.position === "top" &&
@@ -316,6 +327,75 @@ export const applyMoveCardsPayment = (params: {
       nextState = moved.state;
     }
     return nextState.players[params.playerId] ?? null;
+  }
+
+  if (
+    params.selectedOption.from.zone === "costArea" &&
+    params.selectedOption.from.position === undefined &&
+    params.selectedOption.to.zone === "costArea" &&
+    params.selectedOption.to.position === undefined &&
+    params.selectedOption.destinationState === "rested" &&
+    params.selectedOption.filter?.state === "attached"
+  ) {
+    if (params.selected.length !== params.selectedOption.count) {
+      return null;
+    }
+    const attachedDonIds = new Set([
+      ...params.player.leader.attachedDon,
+      ...params.player.characters.flatMap((character) => character.attachedDon),
+    ]);
+    const selectedCards: CardInstance[] = [];
+    for (const selectedId of params.selected) {
+      const card = params.player.costArea.find(
+        (candidate) => candidate.instanceId === selectedId,
+      );
+      if (card === undefined || !attachedDonIds.has(card.instanceId)) {
+        return null;
+      }
+      selectedCards.push(card);
+    }
+    const selectedSet = new Set(params.selected);
+    for (const card of selectedCards) {
+      appendEvent(
+        params.state,
+        params.events,
+        "donReturned",
+        {
+          playerId: params.playerId,
+          donInstanceId: card.instanceId,
+          state: "rested",
+        },
+        { type: "replayOnly" },
+      );
+      const returnedDon = params.events[params.events.length - 1];
+      if (returnedDon !== undefined) {
+        returnedDon.causedBy = {
+          type: "decision",
+          decisionId: params.decisionId,
+        };
+      }
+    }
+
+    return {
+      ...params.player,
+      leader: {
+        ...params.player.leader,
+        attachedDon: params.player.leader.attachedDon.filter(
+          (donId) => !selectedSet.has(donId),
+        ),
+      },
+      characters: params.player.characters.map((character) => ({
+        ...character,
+        attachedDon: character.attachedDon.filter(
+          (donId) => !selectedSet.has(donId),
+        ),
+      })),
+      costArea: params.player.costArea.map((card) =>
+        selectedSet.has(card.instanceId)
+          ? { ...card, state: "rested" as const }
+          : card,
+      ),
+    };
   }
 
   if (

@@ -37,6 +37,9 @@ const isExplicitActionBasePowerEffect = (effect: Effect): boolean => {
       effect.duration.type !== "whileConditionTrue"
     );
   }
+  if (effect.type === "conditional") {
+    return isExplicitActionBasePowerEffect(effect.then);
+  }
   return (
     effect.type === "sequence" &&
     effect.effects.every((segment) => {

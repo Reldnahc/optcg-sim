@@ -12,6 +12,10 @@ import {
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 export type SequenceSegment = SequenceEffect["effects"][number];
+type PayCostSegmentEffect = Extract<
+  SequenceSegment["effect"],
+  { type: "payCost" }
+>;
 
 export type SelectedCardsCapability = {
   readonly kind: "selectedCards";
@@ -154,6 +158,35 @@ const savedSelectedCardsKindForMoveCardsSegment = (
   return undefined;
 };
 
+const selectedCardsKindForPayCostSegment = (
+  effect: PayCostSegmentEffect,
+): SavedSelectedCardsKind | undefined => {
+  if (
+    effect.cost.type === "trashFromHand" ||
+    effect.cost.type === "revealFromHand"
+  ) {
+    return "hand";
+  }
+  if (effect.cost.type === "moveCards" && effect.cost.from.zone === "hand") {
+    return "hand";
+  }
+  return undefined;
+};
+
+const selectedCardsMaxForPayCostSegment = (
+  effect: PayCostSegmentEffect,
+): number | undefined => {
+  const cost = effect.cost;
+  if (
+    cost.type === "trashFromHand" ||
+    cost.type === "revealFromHand" ||
+    (cost.type === "moveCards" && cost.from.zone === "hand")
+  ) {
+    return typeof cost.count === "number" ? cost.count : undefined;
+  }
+  return undefined;
+};
+
 const movesAllHandCardsToDeck = (
   effect: Extract<Effect, { type: "moveCards" }>,
 ): boolean =>
@@ -195,6 +228,12 @@ const inferredSaveResultKindsForSegment = (
       kinds.push("selectedTargets");
     } else if (segment.effect.type === "payCost") {
       kinds.push("paidCost");
+      const selectedCardsKind = selectedCardsKindForPayCostSegment(
+        segment.effect,
+      );
+      if (selectedCardsKind !== undefined) {
+        kinds.push(selectedCardsKindToSaveResultKind(selectedCardsKind));
+      }
     } else if (
       segment.effect.type === "draw" ||
       segment.effect.type === "playSelected"
@@ -326,7 +365,20 @@ const recordSaveResultAsProducer = (
   }
 
   if (segment.effect.type === "payCost") {
-    return addCapability(state, saveResultAs, { kind: "paidCost" });
+    const selectedCardsKind = selectedCardsKindForPayCostSegment(
+      segment.effect,
+    );
+    const capabilities: SavedReferenceCapability[] = [{ kind: "paidCost" }];
+    if (selectedCardsKind !== undefined) {
+      const max = selectedCardsMaxForPayCostSegment(segment.effect);
+      capabilities.push(
+        selectedCardsKindsToCapability({
+          kinds: [selectedCardsKind],
+          ...(max === undefined ? {} : { max }),
+        }),
+      );
+    }
+    return addCapabilities(state, saveResultAs, capabilities);
   }
 
   if (

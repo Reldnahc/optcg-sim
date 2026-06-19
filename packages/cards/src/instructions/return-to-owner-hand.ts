@@ -65,6 +65,11 @@ function parseReturnSelectionToOwnerHand(text: string):
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined {
+  const allNamedSelfCharacters = parseAllNamedSelfCharacters(text);
+  if (allNamedSelfCharacters !== undefined) {
+    return allNamedSelfCharacters;
+  }
+
   const cardinality = parseReturnCardinality(text);
   if (cardinality === undefined) {
     return undefined;
@@ -143,6 +148,53 @@ function parseReturnSelectionToOwnerHand(text: string):
       ...predicates.evidence,
       "destination:ownerHand",
       "composition:selectThenApply",
+    ],
+  };
+}
+
+function parseAllNamedSelfCharacters(text: string):
+  | {
+      readonly effect: Effect;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }
+  | undefined {
+  const match =
+    /^all of your (?<names>(?:\[[^\]]+\](?:\s+and\s+)?)+) Characters$/iu.exec(
+      text.trim(),
+    );
+  const namesText = match?.groups?.["names"];
+  if (namesText === undefined) {
+    return undefined;
+  }
+  const names = [...namesText.matchAll(/\[([^\]]+)\]/gu)]
+    .map((nameMatch) => nameMatch[1]?.trim())
+    .filter((name): name is string => name !== undefined && name.length > 0);
+  if (names.length === 0) {
+    return undefined;
+  }
+
+  return {
+    effect: {
+      type: "bounce",
+      destination: "hand",
+      target: {
+        type: "all",
+        player: "self",
+        zone: "characterArea",
+        filter: {
+          categories: ["character"],
+          names,
+        },
+      },
+    },
+    evidence: [
+      "instruction:returnToOwnerHand",
+      "cardinality:all",
+      "player:self",
+      "zone:characterArea",
+      "filter:name",
+      "filter:category:character",
+      "destination:ownerHand",
     ],
   };
 }

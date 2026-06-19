@@ -261,6 +261,12 @@ export const isSupportedMoveSelectedSegment = (
         effect.position === "topOrBottom") &&
       effect.destinationFaceUp === undefined &&
       selectionKinds.includes("hand")) ||
+    (effect.from === "currentZone" &&
+      effect.to === "deck" &&
+      (effect.position === "top" || effect.position === "bottom") &&
+      effect.destinationFaceUp === undefined &&
+      selectionKinds.length > 0 &&
+      selectionKinds.every((kind) => kind === "hand")) ||
     (effect.from === "hand" &&
       effect.to === "life" &&
       (effect.position === "top" || effect.position === "bottom") &&

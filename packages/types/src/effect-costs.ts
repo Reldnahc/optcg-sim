@@ -84,6 +84,7 @@ export type Cost =
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "chooserChoice";
       filter?: CardFilter;
+      destinationState?: "active" | "rested";
       optional?: boolean;
     }
   | {
@@ -160,6 +161,7 @@ export type OptionalMoveCardsCost = {
   to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
   order: "chooserChoice";
   filter?: CardFilter;
+  destinationState?: "active" | "rested";
   optional: true;
 };
 

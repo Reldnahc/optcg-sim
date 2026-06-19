@@ -127,7 +127,7 @@ export const isSupportedBounceSegment = (
   (effect.target.type === "self" ||
     isSupportedSavedFieldObjectKoTarget(effect.target) ||
     (effect.target.type === "all" &&
-      effect.destination === "deckBottom" &&
+      (effect.destination === "deckBottom" || effect.destination === "hand") &&
       effect.target.zone === "characterArea" &&
       (effect.target.player === "self" ||
         effect.target.player === "opponent" ||

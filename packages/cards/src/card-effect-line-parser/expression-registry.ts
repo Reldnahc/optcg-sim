@@ -65,6 +65,7 @@ import {
   optionalCostedEffectSegmentParser,
   optionalPlayCostedEffectExpressionParser,
   optionalPlayCostedEffectSegmentParser,
+  paidCostSelectionMovementExpressionParser,
   playFromDeckExpressionParser,
   playStageFromDeckExpressionParser,
   playedObjectDelayedDeckBottomExpressionParser,
@@ -142,6 +143,47 @@ const basicBodyExpressions = () =>
 
 const singleInstructionBodyExpressions = () =>
   [singleInstructionExpressionParser] as const;
+
+const paidCostAwareExpressionParser = (
+  input: ParseInput,
+): ExpressionParseResult | undefined => {
+  if (
+    !/\bplace the (?:revealed|selected) cards? at the (?:top|bottom) of your deck\b/iu.test(
+      input.text,
+    )
+  ) {
+    return undefined;
+  }
+
+  return parseExpression(input, {
+    connectors: [parseThenConnector, parseSentenceConnector, parseAndConnector],
+    segments: [
+      (segmentInput) => {
+        const parsed = singleInstructionExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+          ...(parsed.presentationSpans === undefined
+            ? {}
+            : { presentationSpans: parsed.presentationSpans }),
+        };
+      },
+      (segmentInput) => {
+        const parsed = paidCostSelectionMovementExpressionParser(segmentInput);
+        if (parsed === undefined) {
+          return undefined;
+        }
+        return {
+          effect: parsed.effect,
+          evidence: parsed.evidence,
+        };
+      },
+    ],
+  });
+};
 
 function generalExpressionParser(input: ParseInput) {
   const eventTimedDelayed = eventTimedDelayedSegmentParser({
@@ -437,6 +479,8 @@ const costedExpressions = [
     instructions: instructionParsers,
     expressions: [singleInstructionExpressionParser, generalExpressionParser],
   }),
+  paidCostSelectionMovementExpressionParser,
+  paidCostAwareExpressionParser,
   drawForEachFieldTrashSameExpressionParser,
   implicitEventReactionExpressionParser({
     expressions: [singleInstructionExpressionParser, generalExpressionParser],

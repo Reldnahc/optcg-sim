@@ -624,11 +624,13 @@ export const selectThenPreventBlockerActivationExpressionParser = (
   input: ParseInput,
 ): ExpressionParseResult | undefined => {
   const match =
-    /^Select\s+(?<selection>up to [^.]+?)\.\s+Your opponent cannot activate \[Blocker\] if (?:that Leader or Character|that card|the selected card) attacks\s+(?<duration>during this turn\.?)$/iu.exec(
+    /^(?:Select\s+(?<selection>up to [^.]+?)\.\s+Your opponent cannot activate \[Blocker\] if (?:that Leader or Character|that card|the selected card) attacks\s+(?<duration>during this turn\.?)|Select\s+(?<selectionBeforeIf>up to [^.]+?)\.\s+If (?:the selected Character|the selected card|that Leader or Character|that card) attacks\s+(?<durationBeforeBlocker>during this turn),\s+your opponent cannot activate \[Blocker\]\.?)$/iu.exec(
       input.text,
     );
-  const selectionText = match?.groups?.["selection"];
-  const durationText = match?.groups?.["duration"];
+  const selectionText =
+    match?.groups?.["selection"] ?? match?.groups?.["selectionBeforeIf"];
+  const durationText =
+    match?.groups?.["duration"] ?? match?.groups?.["durationBeforeBlocker"];
   if (selectionText === undefined || durationText === undefined) {
     return undefined;
   }

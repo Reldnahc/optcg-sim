@@ -48,6 +48,9 @@ const moveCardsPaymentCandidates = (
   if (option.from.zone === "deck") {
     return player.deck;
   }
+  if (option.from.zone === "costArea") {
+    return player.costArea;
+  }
   if (option.from.zone === "characterArea") {
     return player.characters;
   }

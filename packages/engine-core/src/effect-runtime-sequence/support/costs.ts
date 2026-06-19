@@ -166,9 +166,11 @@ const isSupportedCostCount = (cost: CountedCost): boolean => {
 const isSupportedMoveCardsCostFilter = (
   cost: Extract<Cost, { type: "moveCards" }>,
 ): boolean =>
-  cost.from.zone === "characterArea" || cost.from.zone === "stageArea"
-    ? isSupportedPublicFieldTargetFilter(cost.filter)
-    : isSupportedHandSelectionCardFilter(cost.filter);
+  cost.from.zone === "costArea" && cost.filter?.state === "attached"
+    ? isSupportedHandSelectionCardFilter(cost.filter)
+    : cost.from.zone === "characterArea" || cost.from.zone === "stageArea"
+      ? isSupportedPublicFieldTargetFilter(cost.filter)
+      : isSupportedHandSelectionCardFilter(cost.filter);
 
 const isSupportedMoveCardsCostRoute = (
   cost: Extract<Cost, { type: "moveCards" }>,
@@ -205,6 +207,16 @@ const isSupportedMoveCardsCostRoute = (
     cost.from.position === undefined &&
     cost.to.zone === "hand" &&
     cost.to.position === undefined
+  ) {
+    return true;
+  }
+  if (
+    cost.from.zone === "costArea" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "costArea" &&
+    cost.to.position === undefined &&
+    cost.destinationState === "rested" &&
+    cost.filter?.state === "attached"
   ) {
     return true;
   }

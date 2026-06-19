@@ -309,6 +309,9 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
         to: cost.to,
         order: cost.order,
         ...(cost.filter === undefined ? {} : { filter: cost.filter }),
+        ...(cost.destinationState === undefined
+          ? {}
+          : { destinationState: cost.destinationState }),
       };
     case "shuffleDeck":
       return { type: "shuffleDeck", player: cost.player };

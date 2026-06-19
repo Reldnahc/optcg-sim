@@ -120,7 +120,13 @@ const selectedCardRefsForMove = (
   effect: MoveSelectedEffect,
 ): readonly CardRef[] | null => {
   const selected = ledgers.savedReferences[effect.selection];
-  return selected?.kind === "selectedCards" ? selected.cards : null;
+  if (selected?.kind === "selectedCards") {
+    return selected.cards;
+  }
+  if (selected?.kind === "paidCost" && selected.selectedCards !== undefined) {
+    return selected.selectedCards;
+  }
+  return null;
 };
 
 const selectedCardRefsForAttachDon = (
@@ -456,6 +462,15 @@ export const applySelectedCardMoveSegment = (
       params.effect.position === "topOrBottom")
   ) {
     return applyHandToDeckSelectedCardMoveSegment(params, selected);
+  }
+  if (
+    params.effect.from === "currentZone" &&
+    params.effect.to === "deck" &&
+    (params.effect.position === "top" || params.effect.position === "bottom")
+  ) {
+    return selected.every((card) => card.zone?.zone === "hand")
+      ? applyHandToDeckSelectedCardMoveSegment(params, selected)
+      : { ok: false };
   }
   if (
     params.effect.from === "hand" &&

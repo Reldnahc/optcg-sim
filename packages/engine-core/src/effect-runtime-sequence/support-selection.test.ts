@@ -51,6 +51,15 @@ const syntheticEntry = (): EffectQueueEntry => ({
   causedBy: { type: "ruleProcess", name: "sequence-support-selection-test" },
 });
 
+const activateMainEntry = (): EffectQueueEntry => ({
+  ...syntheticEntry(),
+  id: "queue-entry:activate-main:sequence-support-selection-test:source:effect" as EffectQueueEntry["id"],
+  timingWindowId:
+    "timing-window:activate-main:sequence-support-selection-test" as EffectQueueEntry["timingWindowId"],
+  queueOrigin: { type: "activateMain" },
+  causedBy: { type: "ruleProcess", name: "effectRuntime:activateMain" },
+});
+
 test("sequence support accepts controller-selected opponent trash moved to owner deck bottom", () => {
   const selection = "trashSelection:owner-deck-bottom" as SelectionId;
   const effectBlock: EffectDefinition["effects"][number] = {
@@ -115,6 +124,78 @@ test("sequence support accepts all Characters moved to owner deck bottom", () =>
   };
 
   assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts all matching Characters moved to owner hand", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "auto",
+    trigger: { type: "onPlay" },
+    optional: false,
+    oncePerTurn: false,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "bounce",
+      destination: "hand",
+      target: {
+        type: "all",
+        player: "self",
+        zone: "characterArea",
+        filter: { categories: ["character"], names: ["San-Gorou", "Sanji"] },
+      },
+    },
+  };
+
+  assert.equal(isSupportedSequenceBlock(syntheticEntry(), effectBlock), true);
+});
+
+test("sequence support accepts paid hand cost cards moved from current zone to deck top", () => {
+  const effectBlock: EffectDefinition["effects"][number] = {
+    id: "sequence-support-selection-test-effect" as EffectDefinition["effects"][number]["id"],
+    category: "activate",
+    trigger: { type: "activateMain" },
+    optional: false,
+    oncePerTurn: true,
+    sourcePresencePolicy: "mustRemainInSameZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          saveResultAs: "paidCost",
+          effect: {
+            type: "payCost",
+            cost: {
+              type: "revealFromHand",
+              count: 1,
+              chooser: "self",
+              optional: true,
+              filter: { typesIncludeAny: ["Whitebeard Pirates"] },
+            },
+          },
+        },
+        {
+          connector: "ifYouDo",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "moveSelected",
+            selection: "paidCost" as SelectionId,
+            from: "currentZone",
+            to: "deck",
+            position: "top",
+          },
+        },
+      ],
+    },
+  };
+
+  assert.equal(
+    isSupportedSequenceBlock(activateMainEntry(), effectBlock),
+    true,
+  );
 });
 
 test("sequence support accepts single selected hand card movement to Life top", () => {

@@ -197,15 +197,6 @@ function combineConditions(
   return { type: "and", conditions: present };
 }
 
-function continuousDurationForSubject(
-  subject: BasePowerTargetSubject,
-  contextCondition: Condition | undefined,
-): Extract<Effect, { type: "setBasePower" }>["duration"] {
-  return continuousDuration(
-    combineConditions(contextCondition, subject.condition),
-  );
-}
-
 function continuousDurationEvidenceForSubject(
   subject: BasePowerTargetSubject,
   contextCondition: Condition | undefined,
@@ -226,6 +217,46 @@ function uniqueEvidence(
   evidence: readonly PrimitiveEvidence[],
 ): readonly PrimitiveEvidence[] {
   return [...new Set(evidence)];
+}
+
+function basePowerEffectForSubject(
+  subject: BasePowerTargetSubject,
+  contextCondition: Condition | undefined,
+  value: Extract<Effect, { type: "setBasePower" }>["value"],
+  explicitDuration:
+    | Extract<Effect, { type: "setBasePower" }>["duration"]
+    | undefined,
+): Effect {
+  const condition = combineConditions(contextCondition, subject.condition);
+  const effect = setBasePowerEffect(
+    subject.target,
+    value,
+    explicitDuration ?? continuousDuration(condition),
+  );
+  if (explicitDuration === undefined || condition === undefined) {
+    return effect;
+  }
+  return {
+    type: "conditional",
+    if: condition,
+    then: effect,
+  };
+}
+
+function basePowerDurationEvidenceForSubject(
+  subject: BasePowerTargetSubject,
+  contextCondition: Condition | undefined,
+  explicitDurationEvidence: readonly PrimitiveEvidence[] | undefined,
+): readonly PrimitiveEvidence[] {
+  if (explicitDurationEvidence !== undefined) {
+    return [
+      ...explicitDurationEvidence,
+      ...(contextCondition !== undefined && subject.condition !== undefined
+        ? (["composition:conditionAnd"] as const)
+        : []),
+    ];
+  }
+  return continuousDurationEvidenceForSubject(subject, contextCondition);
 }
 
 export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
@@ -269,18 +300,12 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
     }
   }
   const parsedSubjects = subjects as BasePowerTargetSubject[];
-  if (
-    explicitDuration !== undefined &&
-    parsedSubjects.some((subject) => subject.condition !== undefined)
-  ) {
-    return undefined;
-  }
   const effects = parsedSubjects.map((subject) =>
-    setBasePowerEffect(
-      subject.target,
+    basePowerEffectForSubject(
+      subject,
+      context.condition,
       value,
-      explicitDuration?.duration ??
-        continuousDurationForSubject(subject, context.condition),
+      explicitDuration?.duration,
     ),
   );
   const effect = effectSequence(effects);
@@ -295,10 +320,13 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
       ...parsedSubjects.flatMap((subject) => subject.evidence),
       "value:basePower:positiveInteger",
       ...uniqueEvidence(
-        explicitDuration?.evidence ??
-          parsedSubjects.flatMap((subject) =>
-            continuousDurationEvidenceForSubject(subject, context.condition),
+        parsedSubjects.flatMap((subject) =>
+          basePowerDurationEvidenceForSubject(
+            subject,
+            context.condition,
+            explicitDuration?.evidence,
           ),
+        ),
       ),
     ],
     rest: "",
@@ -350,18 +378,12 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
     stat: "currentPower" as const,
   };
   const parsedSubjects = subjects as BasePowerTargetSubject[];
-  if (
-    explicitDuration !== undefined &&
-    parsedSubjects.some((subject) => subject.condition !== undefined)
-  ) {
-    return undefined;
-  }
   const effects = parsedSubjects.map((subject) =>
-    setBasePowerEffect(
-      subject.target,
+    basePowerEffectForSubject(
+      subject,
+      context.condition,
       value,
-      explicitDuration?.duration ??
-        continuousDurationForSubject(subject, context.condition),
+      explicitDuration?.duration,
     ),
   );
   const effect = effectSequence(effects);
@@ -377,10 +399,13 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
       "value:basePower:snapshotCurrentPower",
       ...source.evidence,
       ...uniqueEvidence(
-        explicitDuration?.evidence ??
-          parsedSubjects.flatMap((subject) =>
-            continuousDurationEvidenceForSubject(subject, context.condition),
+        parsedSubjects.flatMap((subject) =>
+          basePowerDurationEvidenceForSubject(
+            subject,
+            context.condition,
+            explicitDuration?.evidence,
           ),
+        ),
       ),
     ],
     rest: "",

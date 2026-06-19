@@ -6,6 +6,7 @@ import type {
   Effect,
   EffectDefinition,
   GameState,
+  SelectionId,
 } from "@optcg/types";
 
 import {
@@ -62,6 +63,48 @@ const revealFromHandThenDrawSequence = (): Extract<
       id: "draw-if-paid",
       connector: "ifYouDo",
       effect: { type: "draw", player: "self", count: 1 },
+    },
+  ],
+});
+
+const revealFromHandDrawThenTopdeckPaidCardSequence = (): Extract<
+  Effect,
+  { type: "sequence" }
+> => ({
+  type: "sequence",
+  effects: [
+    {
+      id: "optional-reveal-from-hand",
+      connector: "always",
+      saveResultAs: "paidCost",
+      effect: {
+        type: "payCost",
+        cost: {
+          type: "revealFromHand",
+          count: 1,
+          chooser: "self",
+          optional: true,
+          filter: {
+            typesIncludeAny: ["Whitebeard Pirates"],
+          },
+        },
+      },
+    },
+    {
+      id: "draw-if-paid",
+      connector: "ifYouDo",
+      effect: { type: "draw", player: "self", count: 1 },
+    },
+    {
+      id: "topdeck-paid-card",
+      connector: "then",
+      effect: {
+        type: "moveSelected",
+        selection: "paidCost" as SelectionId,
+        from: "currentZone",
+        to: "deck",
+        position: "top",
+      },
     },
   ],
 });
@@ -357,6 +400,41 @@ test("optional reveal-from-hand cost reveals filtered hand cards without moving 
   );
   assert.equal(afterP1.deck.length, beforeDeckCount - 1);
   assert.equal(afterP1.hand.length, beforeHandCount + 1);
+});
+
+test("optional reveal-from-hand cost can topdeck the paid card after drawing", () => {
+  const state = sequenceQueueState(
+    revealFromHandDrawThenTopdeckPaidCardSequence(),
+  );
+  const beforeP1 = must(state.players[p1], "before p1");
+  const eligible = must(beforeP1.hand[0], "eligible reveal card");
+  eligible.cardId = toCardId("eligible-whitebeard-pirates-character");
+  state.cardManifest.cards[eligible.cardId] = {
+    ...resolvedCard({
+      cardId: eligible.cardId,
+      category: "character",
+      power: 8000,
+    }),
+    types: ["Whitebeard Pirates"],
+  };
+  const beforeHandCount = beforeP1.hand.length;
+  const beforeDeckCount = beforeP1.deck.length;
+
+  const revealPaused = processEffectRuntime(state);
+  const paidReveal = payRevealFromHandWithCard(revealPaused.state, eligible);
+  const afterP1 = must(paidReveal.state.players[p1], "after p1");
+  const topDeckCard = must(afterP1.deck[0], "top deck card");
+
+  assert.equal(revealPaused.errors, undefined);
+  assert.equal(paidReveal.errors, undefined);
+  assert.equal(paidReveal.state.pendingDecision, undefined);
+  assert.equal(topDeckCard.instanceId, eligible.instanceId);
+  assert.equal(
+    afterP1.hand.some((card) => card.instanceId === eligible.instanceId),
+    false,
+  );
+  assert.equal(afterP1.hand.length, beforeHandCount);
+  assert.equal(afterP1.deck.length, beforeDeckCount);
 });
 
 test("optional reveal-from-hand cost asks for reveal before a dependent K.O. target body", () => {

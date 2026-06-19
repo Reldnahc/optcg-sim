@@ -129,6 +129,29 @@ export const expandMoveCardsCostRoutes = (
         ...(cost.from.source === undefined || sourceInstanceId === undefined
           ? {}
           : { sourceInstanceId }),
+        ...(cost.destinationState === undefined
+          ? {}
+          : { destinationState: cost.destinationState }),
+      },
+    ];
+  }
+  if (
+    cost.from.zone === "costArea" &&
+    cost.from.position === undefined &&
+    cost.to.zone === "costArea" &&
+    cost.to.position === undefined &&
+    cost.destinationState === "rested" &&
+    cost.filter?.state === "attached"
+  ) {
+    return [
+      {
+        id: "moveCards",
+        type: "moveCards",
+        ...countFields,
+        from: { player: cost.from.player, zone: cost.from.zone },
+        to: cost.to,
+        filter: cost.filter,
+        destinationState: cost.destinationState,
       },
     ];
   }
@@ -263,6 +286,20 @@ export const selectableMoveCardsCostIds = (
       : [];
   }
   if (
+    option.from.zone === "costArea" &&
+    option.from.position === undefined &&
+    option.to.zone === "costArea" &&
+    option.to.position === undefined &&
+    option.destinationState === "rested" &&
+    option.filter?.state === "attached"
+  ) {
+    return player.costArea
+      .filter((card) =>
+        cardMatchesAttachedDonMoveCardsFilter(state, playerId, player, card),
+      )
+      .map((card) => card.instanceId);
+  }
+  if (
     option.from.zone === "life" &&
     (option.to.zone === "hand" || option.to.zone === "trash") &&
     option.to.position === undefined
@@ -277,6 +314,25 @@ export const selectableMoveCardsCostIds = (
     }
   }
   return undefined;
+};
+
+const cardMatchesAttachedDonMoveCardsFilter = (
+  state: GameState,
+  playerId: PlayerId,
+  player: PlayerState,
+  card: CardInstance,
+): boolean => {
+  const attachedDonIds = new Set([
+    ...player.leader.attachedDon,
+    ...player.characters.flatMap((character) => character.attachedDon),
+  ]);
+  return (
+    attachedDonIds.has(card.instanceId) &&
+    (state.players[playerId]?.costArea.some(
+      (candidate) => candidate.instanceId === card.instanceId,
+    ) ??
+      false)
+  );
 };
 
 const isMoveCardsCostRouteOwnedByChooser = (
