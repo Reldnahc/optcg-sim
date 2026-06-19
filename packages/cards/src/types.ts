@@ -40,6 +40,7 @@ export type PrimitiveEvidence =
   | "trigger:cardRested"
   | "trigger:attackDeclared"
   | "trigger:endOfBattle"
+  | "trigger:donAttached"
   | "trigger:donReturned"
   | "trigger:handTrashedByEffect"
   | "trigger:opponentActivated"

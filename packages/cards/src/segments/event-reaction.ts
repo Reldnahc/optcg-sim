@@ -15,6 +15,8 @@ import {
 } from "./event-reaction-character-filter.js";
 import { parseAttackDeclaredPredicate } from "./event-reaction-predicates/attack-declared.js";
 import { parseActivationPredicate } from "./event-reaction-predicates/activation.js";
+import { parseDonAttachedPredicate } from "./event-reaction-predicates/don-attached.js";
+import { parseDonReturnedPredicate } from "./event-reaction-predicates/don-returned.js";
 import { parseEndOfBattlePredicate } from "./event-reaction-predicates/end-of-battle.js";
 import { parseFieldRemovedPredicate } from "./event-reaction-predicates/field-removed.js";
 
@@ -364,45 +366,6 @@ const parseLifeRemovedOwner = (
   };
 };
 
-const parseDonReturnedPredicate: ReactionPredicateParser = ({ text }) => {
-  const returned =
-    /^(?:(?<count>[1-9]\d*) or more DON!! cards on (?<countField>your|the) field are returned|a DON!! card on (?<singleField>your|the) field is returned) to your DON!! deck(?<byYourEffect> by your effect)?$/iu.exec(
-      text.trim(),
-    );
-  if (returned === null) {
-    return undefined;
-  }
-
-  const byYourEffect = returned.groups?.["byYourEffect"] !== undefined;
-  const countText = returned.groups?.["count"];
-  const trigger: Trigger = {
-    type: "donReturned",
-    player: "self",
-    ...(byYourEffect
-      ? {
-          sourceController: "self" as const,
-          sourceKind: "effect" as const,
-        }
-      : {}),
-  };
-  return {
-    trigger:
-      countText === undefined
-        ? trigger
-        : {
-            type: "eventCount",
-            trigger,
-            count: { op: "gte", value: Number.parseInt(countText, 10) },
-          },
-    evidence: [
-      "trigger:donReturned",
-      "player:self",
-      ...(countText === undefined ? [] : (["count:positiveInteger"] as const)),
-      ...(byYourEffect ? (["replacementSource:cardEffect"] as const) : []),
-    ],
-  };
-};
-
 const parseCardPlayedPredicate: ReactionPredicateParser = ({ text }) => {
   const normalized = text.trim();
 
@@ -715,6 +678,7 @@ export const activatedReactionPredicateParsers: readonly ReactionPredicateParser
   [
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
+    parseDonAttachedPredicate,
     parseFieldRemovedPredicate,
     parseCardDrawnPredicate,
     parseCardPlayedPredicate,
@@ -762,6 +726,7 @@ export const implicitReactionPredicateParsers: readonly ReactionPredicateParser[
     parseDamageDealtPredicate,
     parseLifeRemovedPredicate,
     parseDonReturnedPredicate,
+    parseDonAttachedPredicate,
     parseFieldRemovedPredicate,
     parseCardDrawnPredicate,
     parseCardPlayedPredicate,

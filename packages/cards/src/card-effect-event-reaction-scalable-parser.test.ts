@@ -401,6 +401,80 @@ describe("scalable event reaction parser primitives", () => {
     );
   });
 
+  it("parses own Leader-or-Character DON attachment reactions into cost reduction", () => {
+    const result = parseCardEffectLine(
+      "[Your Turn] When this Leader or any of your Characters is given a DON!! card, give up to 1 of your opponent's Characters with a cost of 7 or less −1 cost during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        condition: { type: "yourTurn" },
+        trigger: {
+          type: "donAttached",
+          player: "self",
+          target: "yourLeaderOrCharacters",
+        },
+        effect: {
+          type: "modifyCost",
+          target: {
+            type: "choose",
+            request: {
+              player: "opponent",
+              zone: "characterArea",
+              min: 0,
+              max: 1,
+              filter: {
+                categories: ["character"],
+                cost: { max: 7 },
+              },
+            },
+          },
+          value: -1,
+          duration: { type: "thisTurn" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:donAttached",
+        "target:yourLeaderOrCharacters",
+        "player:self",
+        "instruction:modifyCost",
+        "filter:cost",
+        "duration:thisTurn",
+      ]),
+    );
+  });
+
+  it("parses source Character DON attachment reactions through the same trigger primitive", () => {
+    const result = parseCardEffectLine(
+      "When this Character is given a DON!! card, draw 1 card.",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "auto",
+        trigger: {
+          type: "donAttached",
+          player: "self",
+          target: "self",
+          filter: { categories: ["character"] },
+        },
+        effect: { type: "draw", player: "self", count: 1 },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "trigger:donAttached",
+        "target:thisCharacter",
+        "player:self",
+        "filter:category:character",
+        "instruction:draw",
+      ]),
+    );
+  });
+
   it("parses reversed Blocker-or-Event activation reactions with conditional optional deck trash", () => {
     const result = parseCardEffectLine(
       "[Your Turn] When your opponent activates [Blocker] or an Event, if your Leader has the {East Blue} type, you may trash 4 cards from the top of your deck.",
