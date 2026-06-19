@@ -212,7 +212,14 @@ export interface DeckOutLossTimingRuleModifier {
   timing: "endOfTurn";
 }
 
-export type RuleModifier = DeckOutLossTimingRuleModifier;
+export interface DeckOutWinRuleModifier {
+  type: "deckOutWin";
+  playerId: PlayerId;
+}
+
+export type RuleModifier =
+  | DeckOutLossTimingRuleModifier
+  | DeckOutWinRuleModifier;
 
 export interface PendingDeckOutRuleLoss {
   type: "deckOut";

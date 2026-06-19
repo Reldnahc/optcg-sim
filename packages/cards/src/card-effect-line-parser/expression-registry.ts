@@ -25,6 +25,7 @@ import {
   parseAnyCopiesOfThisCardRuleLine,
   parseCardCostRestrictionRuleLine,
   parseDeckOutLossTimingRuleLine,
+  parseDeckOutWinRuleLine,
   parseDonDeckSizeRuleLine,
   parseNameAliasesRuleLine,
 } from "../metadata-lines/index.js";
@@ -665,6 +666,7 @@ export const defaultRegistry = {
     parseAnyCopiesOfThisCardRuleLine,
     parseCardCostRestrictionRuleLine,
     parseDeckOutLossTimingRuleLine,
+    parseDeckOutWinRuleLine,
     parseDonDeckSizeRuleLine,
     parseNameAliasesRuleLine,
   ],

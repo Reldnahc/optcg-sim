@@ -243,6 +243,7 @@ export type PrimitiveEvidence =
   | "filter:category:leader"
   | "filter:category:event"
   | "filter:category:don"
+  | "filter:typeIncludes"
   | "filter:state:active"
   | "filter:state:rested"
   | "filter:state:attached"
@@ -286,7 +287,9 @@ export type PrimitiveEvidence =
   | "deckRestriction:cardCostLessThan"
   | "deckRestriction:donDeckSize"
   | "deckRestriction:anyCopiesOfThisCard"
+  | "deckRestriction:typeIncludesOnly"
   | "ruleModifier:deckOutLossTiming"
+  | "ruleModifier:deckOutWin"
   | "reveal:bothPlayers"
   | "reveal:chooserOnly"
   | "visibility:faceDown"
@@ -530,34 +533,49 @@ export interface ParsedRuntimeEffectLine {
   readonly sourceMap?: EffectTextSourceMap;
 }
 
+export type ParsedMetadataPayload =
+  | {
+      readonly type: "deckRestriction";
+      readonly restriction:
+        | {
+            readonly type: "donDeckSize";
+            readonly count: number;
+          }
+        | {
+            readonly type: "anyCopiesOfThisCard";
+          }
+        | {
+            readonly type: "cardCostLessThan";
+            readonly cost: number;
+          }
+        | {
+            readonly type: "typeIncludesOnly";
+            readonly typeText: string;
+          };
+    }
+  | {
+      readonly type: "nameAliases";
+      readonly names: readonly string[];
+    }
+  | {
+      readonly type: "ruleModifier";
+      readonly modifier:
+        | {
+            readonly type: "deckOutLossTiming";
+            readonly timing: "endOfTurn";
+          }
+        | {
+            readonly type: "deckOutWin";
+          };
+    };
+
 export interface ParsedMetadataLine {
   readonly kind: "metadata";
   readonly metadata:
+    | ParsedMetadataPayload
     | {
-        readonly type: "deckRestriction";
-        readonly restriction:
-          | {
-              readonly type: "donDeckSize";
-              readonly count: number;
-            }
-          | {
-              readonly type: "anyCopiesOfThisCard";
-            }
-          | {
-              readonly type: "cardCostLessThan";
-              readonly cost: number;
-            };
-      }
-    | {
-        readonly type: "nameAliases";
-        readonly names: readonly string[];
-      }
-    | {
-        readonly type: "ruleModifier";
-        readonly modifier: {
-          readonly type: "deckOutLossTiming";
-          readonly timing: "endOfTurn";
-        };
+        readonly type: "compound";
+        readonly entries: readonly ParsedMetadataPayload[];
       };
   readonly evidence: readonly PrimitiveEvidence[];
 }

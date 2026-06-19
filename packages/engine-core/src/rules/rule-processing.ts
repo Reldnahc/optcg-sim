@@ -24,8 +24,16 @@ const opponentOf = (state: GameState, playerId: PlayerId): PlayerId | null => {
 };
 
 const hasDelayedDeckOutLoss = (state: GameState, playerId: PlayerId): boolean =>
-  state.ruleModifiers?.some((modifier) => modifier.playerId === playerId) ===
-  true;
+  state.ruleModifiers?.some(
+    (modifier) =>
+      modifier.type === "deckOutLossTiming" && modifier.playerId === playerId,
+  ) === true;
+
+const hasDeckOutWin = (state: GameState, playerId: PlayerId): boolean =>
+  state.ruleModifiers?.some(
+    (modifier) =>
+      modifier.type === "deckOutWin" && modifier.playerId === playerId,
+  ) === true;
 
 const hasPendingDeckOutLoss = (
   state: GameState,
@@ -64,6 +72,7 @@ export const applyRuleProcessingCheckpoint = ({
     return state;
   }
 
+  const winners = new Set<PlayerId>();
   const losers = new Set<PlayerId>(immediateLosers);
   const nextPendingRuleLosses = [...(state.pendingRuleLosses ?? [])];
   for (const [playerId, player] of Object.entries(state.players) as [
@@ -71,6 +80,10 @@ export const applyRuleProcessingCheckpoint = ({
     GameState["players"][PlayerId],
   ][]) {
     if (player.deck.length !== 0) {
+      continue;
+    }
+    if (hasDeckOutWin(state, playerId)) {
+      winners.add(playerId);
       continue;
     }
     if (!hasDelayedDeckOutLoss(state, playerId)) {
@@ -97,7 +110,7 @@ export const applyRuleProcessingCheckpoint = ({
     }
   }
 
-  if (losers.size === 0) {
+  if (winners.size === 0 && losers.size === 0) {
     const nextState =
       nextPendingRuleLosses.length === (state.pendingRuleLosses?.length ?? 0)
         ? state
@@ -108,6 +121,32 @@ export const applyRuleProcessingCheckpoint = ({
       "ruleProcessingChecked",
       { phase, result: "ok" },
       { type: "replayOnly" },
+    );
+    return nextState;
+  }
+
+  const winnerList = [...winners].sort();
+  if (winnerList.length > 0) {
+    const soleWinner = winnerList[0];
+    const winner =
+      winnerList.length === 1 && soleWinner !== undefined ? soleWinner : "draw";
+    const nextState: GameState = {
+      ...state,
+      status: { type: "completed", winner },
+    };
+    appendEvent(
+      events,
+      createEvent,
+      "ruleProcessingChecked",
+      { phase, result: "gameEnded", winners: winnerList, winner },
+      { type: "replayOnly" },
+    );
+    appendEvent(
+      events,
+      createEvent,
+      "gameEnded",
+      { reason: "ruleProcessing", winners: winnerList, winner },
+      { type: "public" },
     );
     return nextState;
   }

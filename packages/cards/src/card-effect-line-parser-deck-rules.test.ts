@@ -82,3 +82,74 @@ it("parses maximum deck card cost rules text as legality metadata without a runt
     },
   });
 });
+
+it("parses deck-out win rules text as rule metadata", () => {
+  const result = parseCardEffectLineDetailed(
+    "When your deck is reduced to 0, you win the game instead of losing, according to the rules.",
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    value: {
+      kind: "metadata",
+      metadata: {
+        type: "ruleModifier",
+        modifier: {
+          type: "deckOutWin",
+        },
+      },
+      evidence: [
+        "ruleModifier:deckOutWin",
+        "condition:deckCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "instruction:winGame",
+        "player:self",
+        "zone:deck",
+      ],
+    },
+  });
+});
+
+it("parses compound deck restriction plus deck-out win rules text without dropping either primitive", () => {
+  const result = parseCardEffectLineDetailed(
+    "Under the rules of this game, you can only include {East Blue} type cards in your deck and when your deck is reduced to 0, you win the game instead of losing.",
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    value: {
+      kind: "metadata",
+      metadata: {
+        type: "compound",
+        entries: [
+          {
+            type: "deckRestriction",
+            restriction: {
+              type: "typeIncludesOnly",
+              typeText: "East Blue",
+            },
+          },
+          {
+            type: "ruleModifier",
+            modifier: {
+              type: "deckOutWin",
+            },
+          },
+        ],
+      },
+      evidence: [
+        "deckRestriction:typeIncludesOnly",
+        "filter:typeIncludes",
+        "zone:deck",
+        "ruleModifier:deckOutWin",
+        "condition:deckCount",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "instruction:winGame",
+        "player:self",
+        "zone:deck",
+      ],
+    },
+  });
+});
