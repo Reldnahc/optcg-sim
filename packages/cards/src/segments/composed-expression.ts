@@ -392,6 +392,9 @@ export function trailingConditionalExpressionSegmentParser(options: {
   readonly conditions: readonly ConditionParser[];
   readonly connectors: readonly ConnectorParser[];
   readonly instructions: readonly InstructionParser[];
+  readonly expressions?: readonly ((
+    input: ParseInput,
+  ) => ExpressionParseResult | undefined)[];
 }): SegmentParser {
   return (input: ParseInput) => {
     const match = /^(?<then>.+?)\s+if (?<condition>.+)$/i.exec(input.text);
@@ -415,14 +418,15 @@ export function trailingConditionalExpressionSegmentParser(options: {
       thenText,
       conditionText,
     );
-    const then = parseExpression(
-      {
-        text: thenText,
-        ...(sourceParts?.thenSource === undefined
-          ? {}
-          : { source: sourceParts.thenSource }),
-      },
-      {
+    const thenInput = {
+      text: thenText,
+      ...(sourceParts?.thenSource === undefined
+        ? {}
+        : { source: sourceParts.thenSource }),
+    };
+    const then =
+      parseThenExpression(thenInput, options.expressions) ??
+      parseExpression(thenInput, {
         connectors: options.connectors,
         segments: [
           instructionExpressionSegmentParser({
@@ -431,8 +435,7 @@ export function trailingConditionalExpressionSegmentParser(options: {
           }),
           syntheticInstructionSegmentParser(options.instructions),
         ],
-      },
-    );
+      });
     if (then === undefined || then.rest.length > 0) {
       return undefined;
     }
@@ -464,6 +467,21 @@ export function trailingConditionalExpressionSegmentParser(options: {
     };
   };
 }
+
+const parseThenExpression = (
+  input: ParseInput,
+  expressions:
+    | readonly ((input: ParseInput) => ExpressionParseResult | undefined)[]
+    | undefined,
+): ExpressionParseResult | undefined => {
+  for (const expression of expressions ?? []) {
+    const parsed = expression(input);
+    if (parsed !== undefined && parsed.rest.length === 0) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
 
 export function conditionalBlockExpressionParser(options: {
   readonly conditions: readonly ConditionParser[];

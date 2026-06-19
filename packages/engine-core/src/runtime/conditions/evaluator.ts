@@ -237,7 +237,7 @@ const evaluateEventHistory = (
   if (playerId === undefined || state.players[playerId] === undefined) {
     return { supported: false };
   }
-  const count = countMatchingEventHistory(state, playerId, condition);
+  const count = countMatchingEventHistory(state, entry, playerId, condition);
   return {
     supported: true,
     passed: compareComparator(condition.op, count, condition.value),

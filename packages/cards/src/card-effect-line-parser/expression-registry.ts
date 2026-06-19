@@ -254,6 +254,7 @@ function generalExpressionParser(input: ParseInput) {
         conditions: conditionParsers,
         connectors: [parseAndConnector],
         instructions: instructionParsers,
+        expressions: [optionalActionExpressionParser],
       }),
       (segmentInput) => {
         const parsed = searchRevealExpressionParser(segmentInput);

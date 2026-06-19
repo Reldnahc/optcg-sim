@@ -30,6 +30,38 @@ export const parseEventHistoryCondition: ConditionParser = (input) => {
     };
   }
 
+  const sourceDrawMatch =
+    /^(?:you\s+)?haven't drawn a card using this (?<source>Leader|Character)'s effect during this turn$/iu.exec(
+      input.text.trim(),
+    );
+  const drawSource = sourceDrawMatch?.groups?.["source"]?.toLowerCase();
+  if (drawSource === "leader" || drawSource === "character") {
+    return {
+      condition: {
+        type: "eventHistory",
+        event: "cardDrawn",
+        player: "self",
+        sourceTarget: "self",
+        sourceFilter: { categories: [drawSource] },
+        window: "thisTurn",
+        op: "eq",
+        value: 0,
+      },
+      evidence: [
+        "condition:eventHistory",
+        "event:cardDrawn",
+        "player:self",
+        drawSource === "leader"
+          ? "sourceCategory:leader"
+          : "sourceCategory:character",
+        "condition:comparator:eq",
+        "condition:threshold:nonNegativeInteger",
+        "duration:thisTurn",
+      ],
+      rest: "",
+    };
+  }
+
   const match =
     /^you have activated an Event with a base cost of (?<cost>[1-9]\d*) or more during this turn$/iu.exec(
       input.text.trim(),

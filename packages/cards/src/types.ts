@@ -37,6 +37,7 @@ export type PrimitiveEvidence =
   | "trigger:cardPlayed"
   | "event:cardPlayed"
   | "event:cardKOd"
+  | "event:cardDrawn"
   | "trigger:cardRested"
   | "trigger:attackDeclared"
   | "trigger:endOfBattle"

@@ -137,7 +137,11 @@ const executeDrawEffect = (
     nextDeck = remaining;
     nextHand = addCardsToHand(nextHand, [moved], playerId);
 
-    appendEvent(state, events, "cardDrawn", { playerId });
+    appendEvent(state, events, "cardDrawn", {
+      playerId,
+      turnNumber: state.turn.globalTurn,
+      ...publicDrawSourceEvidence(entry),
+    });
     appendEvent(
       state,
       events,
@@ -177,6 +181,30 @@ const executeDrawEffect = (
   };
 
   return toEngineResult(nextState, events);
+};
+
+const publicDrawSourceEvidence = (
+  entry: EffectQueueEntry,
+):
+  | {
+      readonly sourceInstanceId: EffectQueueEntry["source"]["instanceId"];
+      readonly sourceCardId: EffectQueueEntry["source"]["cardId"];
+      readonly sourceCategory: EffectQueueEntry["sourceSnapshot"]["category"];
+    }
+  | Record<string, never> => {
+  const sourceZone = entry.sourceSnapshot.zone.zone;
+  if (
+    sourceZone !== "leaderArea" &&
+    sourceZone !== "characterArea" &&
+    sourceZone !== "stageArea"
+  ) {
+    return {};
+  }
+  return {
+    sourceInstanceId: entry.source.instanceId,
+    sourceCardId: entry.source.cardId,
+    sourceCategory: entry.sourceSnapshot.category,
+  };
 };
 
 export const isSupportedDrawBody = (

@@ -1,8 +1,10 @@
 import type {
+  CardCategory,
   CardFilter,
   CardId,
   Comparator,
   Condition,
+  EffectQueueEntry,
   GameState,
   PlayerId,
 } from "@optcg/types";
@@ -97,6 +99,7 @@ export const isSupportedEventHistoryCondition = (
   condition: Extract<Condition, { type: "eventHistory" }>,
 ): boolean =>
   isSupportedEventHistoryFilter(condition.filter) &&
+  isSupportedEventHistoryFilter(condition.sourceFilter) &&
   isNonNegativeSafeInteger(condition.value) &&
   isComparator(condition.op);
 
@@ -184,8 +187,63 @@ const eventPayloadMatchesCardFilter = (
   return true;
 };
 
+const eventPayloadMatchesSourceTarget = (
+  payload: Record<string, unknown>,
+  entry: EffectQueueEntry,
+  sourceTarget: Extract<Condition, { type: "eventHistory" }>["sourceTarget"],
+): boolean => {
+  if (sourceTarget === undefined) {
+    return true;
+  }
+  return (
+    payload["sourceInstanceId"] === entry.source.instanceId &&
+    payload["sourceCardId"] === entry.source.cardId
+  );
+};
+
+const eventPayloadMatchesSourceFilter = (
+  state: GameState,
+  payload: Record<string, unknown>,
+  filter: CardFilter | undefined,
+): boolean => {
+  if (filter === undefined) {
+    return true;
+  }
+  if (
+    filter.categories !== undefined &&
+    isCardCategory(payload["sourceCategory"]) &&
+    !filter.categories.includes(payload["sourceCategory"])
+  ) {
+    return false;
+  }
+  if (
+    Object.keys(filter).every((key) => key === "categories") &&
+    filter.categories !== undefined &&
+    isCardCategory(payload["sourceCategory"])
+  ) {
+    return true;
+  }
+  const rawCardId = payload["sourceCardId"];
+  if (typeof rawCardId !== "string") {
+    return false;
+  }
+  return eventPayloadMatchesCardFilter(
+    state,
+    { ...payload, cardId: rawCardId },
+    filter,
+  );
+};
+
+const isCardCategory = (value: unknown): value is CardCategory =>
+  value === "leader" ||
+  value === "character" ||
+  value === "event" ||
+  value === "stage" ||
+  value === "don";
+
 export const countMatchingEventHistory = (
   state: GameState,
+  entry: EffectQueueEntry,
   playerId: PlayerId,
   condition: Extract<Condition, { type: "eventHistory" }>,
 ): number =>
@@ -199,9 +257,17 @@ export const countMatchingEventHistory = (
     if (event.payload["turnNumber"] !== state.turn.globalTurn) {
       return false;
     }
-    return eventPayloadMatchesCardFilter(
-      state,
-      event.payload,
-      condition.filter,
+    return (
+      eventPayloadMatchesCardFilter(state, event.payload, condition.filter) &&
+      eventPayloadMatchesSourceTarget(
+        event.payload,
+        entry,
+        condition.sourceTarget,
+      ) &&
+      eventPayloadMatchesSourceFilter(
+        state,
+        event.payload,
+        condition.sourceFilter,
+      )
     );
   }).length;

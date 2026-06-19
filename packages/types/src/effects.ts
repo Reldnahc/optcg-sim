@@ -142,8 +142,17 @@ export type Condition =
       op: Comparator;
       value: number;
     }
-  // prettier-ignore
-  | { type: "eventHistory"; event: "cardPlayed" | "cardKOd"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
+  | {
+      type: "eventHistory";
+      event: "cardPlayed" | "cardKOd" | "cardDrawn";
+      player: PlayerRef;
+      filter?: CardFilter;
+      sourceTarget?: "self";
+      sourceFilter?: CardFilter;
+      window: "thisTurn";
+      op: Comparator;
+      value: number;
+    }
   | {
       type: "leaderColorCount";
       player: PlayerRef;
