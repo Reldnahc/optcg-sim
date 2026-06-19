@@ -182,16 +182,28 @@ function parseRestTargetFilter(
     };
   }
 
-  const donMatch = /^(?<state>active|rested) DON!! cards?$/iu.exec(normalized);
+  const donMatch = /^(?:(?<state>active|rested) )?DON!! cards?$/iu.exec(
+    normalized,
+  );
   const donState = donMatch?.groups?.["state"]?.toLowerCase();
-  if (donState === "active" || donState === "rested") {
+  if (
+    donMatch !== null &&
+    (donState === undefined || donState === "active" || donState === "rested")
+  ) {
     return {
-      filter: { categories: ["don"], state: donState },
+      filter: {
+        categories: ["don"],
+        ...(donState === undefined ? {} : { state: donState }),
+      },
       evidence: [
         owner.donEvidence,
         "zone:costArea",
         "filter:category:don",
-        donState === "active" ? "filter:state:active" : "filter:state:rested",
+        ...(donState === undefined
+          ? []
+          : donState === "active"
+            ? (["filter:state:active"] as const)
+            : (["filter:state:rested"] as const)),
       ],
       zones: ["costArea"],
     };

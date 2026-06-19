@@ -55,6 +55,41 @@ describe("replacement instead-effect parser groups", () => {
     });
   });
 
+  it("parses rest-own-DON instead as a narrowed cost-area rest target", () => {
+    expect(
+      parseReplacementInsteadFromSet(
+        "you may rest 1 of your DON!! cards instead.",
+        replacementInsteadBodyParsers,
+      ),
+    ).toEqual({
+      effect: {
+        type: "rest",
+        target: {
+          type: "chooseFromZones",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "self",
+            zones: ["costArea"],
+            min: 1,
+            max: 1,
+            allowFewerIfUnavailable: false,
+            visibility: "public",
+            filter: { categories: ["don"] },
+          },
+        },
+      },
+      evidence: [
+        "instruction:rest",
+        "target:yourDonCards",
+        "zone:costArea",
+        "filter:category:don",
+        "cardinality:exact",
+        "count:positiveInteger",
+      ],
+    });
+  });
+
   it("reuses rest-Characters instead for opponent-owned targets", () => {
     expect(
       parseReplacementInsteadFromSet(

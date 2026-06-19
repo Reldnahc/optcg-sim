@@ -867,6 +867,75 @@ describe("replacement effect parser", () => {
     }
   });
 
+  it("parses once-per-turn field-removal replacement into reusable typed target and rest-DON instead primitives", () => {
+    const result = parseCardEffectLine(
+      "[Once Per Turn] If your {Straw Hat Crew} type Character would be removed from the field by your opponent's effect, you may rest 1 of your DON!! cards instead.",
+    );
+    if (result === undefined || !("block" in result)) {
+      assert.fail("expected parsed replacement effect block");
+    }
+
+    const when = {
+      type: "wouldMoveZone",
+      from: "characterArea",
+      sourceKind: "cardEffect",
+      sourceControllerRelation: "opponentControlled",
+      target: {
+        type: "all",
+        zone: "characterArea",
+        player: "self",
+        filter: {
+          categories: ["character"],
+          typesAny: ["Straw Hat Crew"],
+        },
+      },
+    } as const;
+
+    assert.deepEqual(result.block, {
+      category: "replacement",
+      trigger: { type: "replacement", replacement: when },
+      oncePerTurn: true,
+      optional: true,
+      sourcePresencePolicy: "resolveFromLastKnownInformation",
+      effect: {
+        type: "replacement",
+        when,
+        instead: {
+          type: "rest",
+          target: {
+            type: "chooseFromZones",
+            request: {
+              timing: "onResolution",
+              chooser: "self",
+              player: "self",
+              zones: ["costArea"],
+              min: 1,
+              max: 1,
+              allowFewerIfUnavailable: false,
+              visibility: "public",
+              filter: { categories: ["don"] },
+            },
+          },
+        },
+      },
+    });
+    for (const evidence of [
+      "marker:oncePerTurn",
+      "entry:replacement",
+      "replacement:wouldMoveZone",
+      "replacement:fieldRemoval",
+      "replacementSource:opponent",
+      "replacementSource:cardEffect",
+      "target:yourCharacters",
+      "filter:type",
+      "instruction:rest",
+      "target:yourDonCards",
+      "zone:costArea",
+    ] as const) {
+      assert.equal(result.evidence.includes(evidence), true, evidence);
+    }
+  });
+
   it("parses once-per-turn self field-removal replacement into reusable self power modifier instead primitives", () => {
     const result = parseCardEffectLine(
       "[Once Per Turn] If this Character would be removed from the field by your opponent's effect, you may give this Character -2000 power during this turn instead.",
