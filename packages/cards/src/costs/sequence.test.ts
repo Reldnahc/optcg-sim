@@ -53,6 +53,46 @@ describe("optional cost sequence parser", () => {
     });
   });
 
+  it("carries an inherited trash verb into later field-card cost parts", () => {
+    expect(
+      parseOptionalCostSequence({
+        text: 'trash this Character and 1 of your Characters with a type including "Baroque Works"',
+      }),
+    ).toMatchObject({
+      cost: {
+        type: "sequence",
+        optional: true,
+        costs: [
+          { type: "trashSelf" },
+          {
+            type: "trashFromField",
+            count: 1,
+            chooser: "self",
+            filter: {
+              categories: ["character"],
+              typesIncludeAny: ["Baroque Works"],
+            },
+          },
+        ],
+      },
+      evidence: [
+        "composition:costSequence",
+        "cost:trashSelf",
+        "target:thisCharacter",
+        "cost:trashFromField",
+        "cardinality:exact",
+        "count:positiveInteger",
+        "chooser:self",
+        "player:self",
+        "zone:characterArea",
+        "zone:stageArea",
+        "filter:category:character",
+        "filter:type",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses adjacent circled DON, rest-self, and field-rest costs", () => {
     expect(
       parseOptionalCostSequence({

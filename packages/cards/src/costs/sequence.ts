@@ -72,15 +72,16 @@ export function parseOptionalCostSequence(
   }
 
   const parsedCosts: CostParseResult[] = [];
-  let inheritedAction: "rest" | undefined;
+  let inheritedAction: InheritedCostAction | undefined;
   for (const part of parts) {
     const text = applyInheritedAction(part, inheritedAction);
     const parsed = parseCostPart(text);
     if (parsed === undefined || parsed.rest.length > 0) {
       return undefined;
     }
-    if (/^rest\b/i.test(part)) {
-      inheritedAction = "rest";
+    const nextInheritedAction = parseInheritedAction(part);
+    if (nextInheritedAction !== undefined) {
+      inheritedAction = nextInheritedAction;
     }
     parsedCosts.push(parsed);
   }
@@ -334,9 +335,11 @@ function toRequiredCost(cost: SequenceCostPrimitive): Cost {
   }
 }
 
+type InheritedCostAction = "rest" | "trash";
+
 function applyInheritedAction(
   text: string,
-  inheritedAction: "rest" | undefined,
+  inheritedAction: InheritedCostAction | undefined,
 ): string {
   const startsWithExplicitCostAction =
     /^(?:K\.O\.|(?:DON!!|add|give|place|rest|return|reveal|shuffle|trash|turn)\b)/i.test(
@@ -347,6 +350,16 @@ function applyInheritedAction(
   }
 
   return `${inheritedAction} ${text}`;
+}
+
+function parseInheritedAction(text: string): InheritedCostAction | undefined {
+  if (/^rest\b/iu.test(text)) {
+    return "rest";
+  }
+  if (/^trash\b/iu.test(text)) {
+    return "trash";
+  }
+  return undefined;
 }
 
 function stripOptionalCostPrefix(text: string): string {
