@@ -7,7 +7,10 @@ import type { InstructionParseResult } from "../../../types.js";
 import type { ContinuousInstructionParser } from "../shared.js";
 import { continuousDuration, continuousDurationEvidence } from "../shared.js";
 import { parseContinuousModifierListForTarget } from "../modifier-list.js";
-import { parseNamedCardsAndSelfKeywordGrant } from "./named-and-self.js";
+import {
+  parseNamedCardsAndSelfKeywordGrant,
+  parseNamedCardsKeywordGrant,
+} from "./named-and-self.js";
 import { parseKeywordGrantForTarget } from "./shared.js";
 
 export const thisCharacterKeywordGrantPrimitive = {
@@ -25,6 +28,7 @@ export const parseThisCharacterKeywordGrantInstruction: ContinuousInstructionPar
     parseLeaderKeywordGrant(input, context) ??
     parseThatCharacterKeywordGrant(input.text, context) ??
     parseNamedCardsAndSelfKeywordGrant(input.text, context) ??
+    parseNamedCardsKeywordGrant(input.text, context) ??
     parseNaturalRushCharacterGrant(input.text, context) ??
     parseFilteredNaturalRushCharacterGrant(input.text, context) ??
     parseSelfKeywordGrant(input.text, context);

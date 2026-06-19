@@ -348,6 +348,75 @@ describe("permanent card effect line parser", () => {
     );
   });
 
+  it("parses implicit permanent named-card-only keyword grants", () => {
+    const result = parseCardEffectLine("Your [Blugori] gains [Blocker].");
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "giveKeyword",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: { categories: ["character"], names: ["Blugori"] },
+          },
+          keyword: "blocker",
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:giveKeyword",
+        "filter:name",
+        "keyword:anySupported",
+      ]),
+    );
+  });
+
+  it("parses implicit permanent all-field filtered keyword grants", () => {
+    const result = parseCardEffectLine(
+      "All of your red Characters with a cost of 3 or more other than this Character gain [Rush].",
+    );
+
+    expect(result).toMatchObject({
+      block: {
+        category: "permanent",
+        trigger: { type: "permanent" },
+        effect: {
+          type: "giveKeyword",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: {
+              colorsAny: ["red"],
+              categories: ["character"],
+              cost: { min: 3 },
+              excludeSelf: true,
+            },
+          },
+          keyword: "rush",
+          duration: { type: "whileSourceOnField" },
+        },
+      },
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "entry:implicitPermanent",
+        "instruction:giveKeyword",
+        "filter:color",
+        "filter:cost",
+        "filter:excludeSelf",
+        "keyword:anySupported",
+      ]),
+    );
+  });
+
   it("parses Opponent's Turn rest protection and keyword grant as reusable continuous primitives", () => {
     const result = parseCardEffectLine(
       "[Opponent's Turn] This Character cannot be rested by your opponent's Leader and Character effects and gains [Blocker].",

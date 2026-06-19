@@ -2,6 +2,7 @@ import type { Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../../cardinality/index.js";
 import {
+  parseAllFieldTarget,
   directPowerGainTargetParsers,
   parseTargetFromSet,
   yourFieldEffectTargetParsers,
@@ -13,6 +14,18 @@ import { parseKeywordGrantForTarget } from "./shared.js";
 export const parseTargetedKeywordGrantInstruction: InstructionParser = (
   input,
 ) => {
+  const allTarget = parseAllFieldTarget(input);
+  if (allTarget?.target !== undefined) {
+    const parsed = parseKeywordModifierText({
+      target: allTarget.target,
+      targetEvidence: allTarget.evidence,
+      rest: allTarget.rest,
+    });
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
   const directTarget = parseTargetFromSet(
     input,
     directPowerGainTargetParsers(),
@@ -107,7 +120,7 @@ function parseKeywordModifierText({
   readonly targetEvidence: readonly PrimitiveEvidence[];
   readonly rest: string;
 }): ReturnType<InstructionParser> {
-  const keywordText = /^gains\s+(?<rest>.*)$/i.exec(rest)?.groups?.["rest"];
+  const keywordText = /^gains?\s+(?<rest>.*)$/i.exec(rest)?.groups?.["rest"];
   if (keywordText === undefined) {
     return undefined;
   }

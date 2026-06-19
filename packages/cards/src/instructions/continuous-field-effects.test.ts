@@ -503,6 +503,78 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
+  it("parses named-card-only permanent keyword grants as all matching field targets", () => {
+    expect(
+      parseThisCharacterKeywordGrantInstruction(
+        {
+          text: "Your [Blugori] gains [Blocker].",
+        },
+        context,
+      ),
+    ).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: { categories: ["character"], names: ["Blugori"] },
+        },
+        keyword: "blocker",
+        duration: {
+          type: "whileConditionTrue",
+          condition: context.condition,
+        },
+      },
+      evidence: [
+        "instruction:giveKeyword",
+        "cardinality:all",
+        "player:self",
+        "zone:characterArea",
+        "filter:name",
+        "filter:category:character",
+        "keyword:anySupported",
+        "duration:whileConditionTrue",
+      ],
+      rest: "",
+    });
+  });
+
+  it("reuses all-field targets for filtered keyword grants", () => {
+    const result = parseTargetedKeywordGrantInstruction({
+      text: "All of your red Characters with a cost of 3 or more other than this Character gain [Rush].",
+    });
+
+    expect(result).toMatchObject({
+      effect: {
+        type: "giveKeyword",
+        target: {
+          type: "all",
+          zone: "characterArea",
+          player: "self",
+          filter: {
+            colorsAny: ["red"],
+            categories: ["character"],
+            cost: { min: 3 },
+            excludeSelf: true,
+          },
+        },
+        keyword: "rush",
+      },
+      rest: "",
+    });
+    expect(result?.evidence).toEqual(
+      expect.arrayContaining([
+        "instruction:giveKeyword",
+        "cardinality:all",
+        "filter:color",
+        "filter:cost",
+        "filter:excludeSelf",
+        "keyword:anySupported",
+      ]),
+    );
+  });
+
   it("parses this Character power and cost gains as separate reusable modifiers", () => {
     expect(
       parseYourLeaderConditionalPowerInstruction(
