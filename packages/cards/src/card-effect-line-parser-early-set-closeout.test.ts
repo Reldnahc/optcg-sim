@@ -718,3 +718,54 @@ it("parses leader-gated all-character exact cost attack restriction", () => {
     ]),
   );
 });
+
+it("parses either-player DON field condition before Leader power through opponent next End Phase", () => {
+  const result = parseCardEffectLine(
+    "[On Play] If either you or your opponent has 10 DON!! cards on the field, your Leader gains +2000 power until the end of your opponent's next End Phase.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      category: "auto",
+      trigger: { type: "onPlay" },
+      condition: {
+        type: "or",
+        conditions: [
+          {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["don"] },
+            op: "eq",
+            value: 10,
+          },
+          {
+            type: "fieldCount",
+            player: "opponent",
+            filter: { categories: ["don"] },
+            op: "eq",
+            value: 10,
+          },
+        ],
+      },
+      effect: {
+        type: "modifyPower",
+        target: { type: "myLeader" },
+        value: 2000,
+        duration: { type: "untilEndOfNextTurn" },
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:onPlay",
+      "composition:conditionOr",
+      "condition:donFieldCount",
+      "player:self",
+      "player:opponent",
+      "filter:category:don",
+      "instruction:modifyPower",
+      "target:yourLeader",
+      "duration:opponentNextEndPhase",
+    ]),
+  );
+});

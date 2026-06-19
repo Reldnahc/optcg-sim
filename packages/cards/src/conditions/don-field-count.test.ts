@@ -73,6 +73,45 @@ describe("DON field count condition parser", () => {
     });
   });
 
+  it("parses either-player DON field thresholds as a condition disjunction", () => {
+    expect(
+      parseDonFieldCountCondition({
+        text: "either you or your opponent has 10 DON!! cards on the field",
+      }),
+    ).toEqual({
+      condition: {
+        type: "or",
+        conditions: [
+          {
+            type: "fieldCount",
+            player: "self",
+            filter: { categories: ["don"] },
+            op: "eq",
+            value: 10,
+          },
+          {
+            type: "fieldCount",
+            player: "opponent",
+            filter: { categories: ["don"] },
+            op: "eq",
+            value: 10,
+          },
+        ],
+      },
+      evidence: [
+        "composition:conditionOr",
+        "condition:donFieldCount",
+        "condition:donFieldCount",
+        "condition:comparator:eq",
+        "condition:threshold:positiveInteger",
+        "player:self",
+        "player:opponent",
+        "filter:category:don",
+      ],
+      rest: "",
+    });
+  });
+
   it("parses opponent DON on their field as the same opponent field-count primitive", () => {
     expect(
       parseDonFieldCountCondition({

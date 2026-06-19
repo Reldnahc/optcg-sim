@@ -76,6 +76,11 @@ const buildStateFilteredDonCount = (
 export const parseDonFieldCountCondition: ConditionParser = (
   input,
 ): ConditionParseResult | undefined => {
+  const eitherPlayer = parseEitherPlayerDonFieldCountCondition(input.text);
+  if (eitherPlayer !== undefined) {
+    return eitherPlayer;
+  }
+
   const directMoreThan = parseDirectMoreThanDonFieldComparison(input.text);
   if (directMoreThan !== undefined) {
     return directMoreThan;
@@ -280,6 +285,58 @@ function parseDirectMoreThanDonFieldComparison(
       "condition:comparator:gte",
       "condition:threshold:positiveInteger",
       "valueOffset:fieldCountDifference",
+    ],
+    rest: "",
+  };
+}
+
+function parseEitherPlayerDonFieldCountCondition(
+  text: string,
+): ConditionParseResult | undefined {
+  const match = /^either you or your opponent has (?<comparison>.+)$/iu.exec(
+    text,
+  );
+  const comparisonText = match?.groups?.["comparison"];
+  if (comparisonText === undefined) {
+    return undefined;
+  }
+
+  const comparison = parseLeadingCountComparison({ text: comparisonText });
+  if (
+    comparison === undefined ||
+    !/^DON!! cards on the field$/iu.test(comparison.rest)
+  ) {
+    return undefined;
+  }
+
+  return {
+    condition: {
+      type: "or",
+      conditions: [
+        {
+          type: "fieldCount",
+          player: "self",
+          filter: { categories: ["don"] },
+          op: comparison.op,
+          value: comparison.value,
+        },
+        {
+          type: "fieldCount",
+          player: "opponent",
+          filter: { categories: ["don"] },
+          op: comparison.op,
+          value: comparison.value,
+        },
+      ],
+    },
+    evidence: [
+      "composition:conditionOr",
+      "condition:donFieldCount",
+      "condition:donFieldCount",
+      ...comparison.evidence,
+      "player:self",
+      "player:opponent",
+      "filter:category:don",
     ],
     rest: "",
   };
