@@ -274,11 +274,12 @@ function parseMatchingBlockerCharactersCannotBlock(
   text: string,
 ): InstructionParseResult | undefined {
   const match =
-    /^(?:a|any|all)?\s*\[Blocker\]\s+(?<predicate>.+?)\s+(?<duration>during this (?:turn|battle)\.?)$/iu.exec(
+    /^(?:(?:a|any|all)?\s*\[Blocker\]\s+|(?:the\s+)?\[Blocker\]\s+of\s+)(?<predicate>.+?)\s+(?<duration>during this (?:turn|battle)\.?)$/iu.exec(
       text,
     );
   const predicateText = match?.groups?.["predicate"]
     ?.replace(/\bthat has\b/iu, "with")
+    .replace(/^(?:a|any|all)\s+/iu, "")
     .trim();
   const durationText = match?.groups?.["duration"];
   if (predicateText === undefined || durationText === undefined) {

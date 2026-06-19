@@ -96,6 +96,53 @@ describe("card effect event parser blocker restrictions", () => {
     );
   });
 
+  it.each([
+    {
+      line: "[When Attacking] If you have 1 or less cards in your hand, your opponent cannot activate the [Blocker] of any Character with a cost of 5 or less during this battle.",
+      conditionEvidence: ["condition:handCount"],
+    },
+    {
+      line: "[When Attacking] If there is a Character with a cost of 0, your opponent cannot activate the [Blocker] of any Character with a cost of 5 or less during this battle.",
+      conditionEvidence: ["condition:fieldCount"],
+    },
+  ])(
+    "parses conditional battle blocker restriction wording: $line",
+    ({ line, conditionEvidence }) => {
+      const result = parseCardEffectLine(line);
+
+      expect(result).toMatchObject({
+        block: {
+          category: "auto",
+          trigger: { type: "whenAttacking" },
+          effect: {
+            type: "cannotBlock",
+            target: {
+              type: "all",
+              player: "opponent",
+              zone: "characterArea",
+              filter: {
+                categories: ["character"],
+                cost: { max: 5 },
+              },
+            },
+            duration: { type: "thisBattle" },
+          },
+        },
+      });
+      expect(result?.evidence).toEqual(
+        expect.arrayContaining([
+          ...conditionEvidence,
+          "instruction:cannotBlock",
+          "cardinality:all",
+          "target:opponentCharacters",
+          "filter:cost",
+          "duration:thisBattle",
+          "activation:blocker",
+        ]),
+      );
+    },
+  );
+
   it("parses costed Activate Main opponent Character Blocker activation restriction", () => {
     const result = parseCardEffectLine(
       "[Activate: Main] [Once Per Turn] DON!! −1: Up to 1 of your opponent's Characters cannot activate [Blocker] during this turn.",
