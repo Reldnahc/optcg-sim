@@ -13,7 +13,12 @@ import type {
   SequenceSavedResultReferenceMap,
 } from "@optcg/types";
 
-import { cardMatchesAnyName } from "../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyAttribute,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../card-name-matching.js";
 
 export type LocatedCombatCard = {
   card: CardInstance;
@@ -497,39 +502,31 @@ const cardMatchesBaseFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((type) => card.types.includes(type))
+    !cardMatchesAnyType(card, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      card.types.some((type) => type.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(card, filter.typesIncludeAny)
   ) {
     return false;
   }
   if (
     filter.typesNotIncludeAny !== undefined &&
-    filter.typesNotIncludeAny.some((typeText) =>
-      card.types.some((type) => type.includes(typeText)),
-    )
+    cardMatchesAnyTypeIncludes(card, filter.typesNotIncludeAny)
   ) {
     return false;
   }
   if (
     filter.attributesAny !== undefined &&
-    !filter.attributesAny.some((attribute) =>
-      card.attributes.includes(attribute),
-    )
+    !cardMatchesAnyAttribute(card, filter.attributesAny)
   ) {
     return false;
   }
   if (
     filter.attributesNotAny !== undefined &&
-    filter.attributesNotAny.some((attribute) =>
-      card.attributes.includes(attribute),
-    )
+    cardMatchesAnyAttribute(card, filter.attributesNotAny)
   ) {
     return false;
   }

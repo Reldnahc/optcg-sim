@@ -7,6 +7,9 @@ import type {
 
 import {
   cardMatchesAnyName,
+  cardMatchesAnyAttribute,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
   cardMatchesNameContains,
 } from "../../card-name-matching.js";
 
@@ -147,31 +150,25 @@ export const cardMatchesCharacterFieldCountFilter = (
   }
   if (
     filter.attributesAny !== undefined &&
-    !filter.attributesAny.some((attributeName) =>
-      metadata.attributes.includes(attributeName),
-    )
+    !cardMatchesAnyAttribute(metadata, filter.attributesAny)
   ) {
     return false;
   }
   if (
     filter.attributesNotAny !== undefined &&
-    filter.attributesNotAny.some((attributeName) =>
-      metadata.attributes.includes(attributeName),
-    )
+    cardMatchesAnyAttribute(metadata, filter.attributesNotAny)
   ) {
     return false;
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((typeName) => typeName.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }

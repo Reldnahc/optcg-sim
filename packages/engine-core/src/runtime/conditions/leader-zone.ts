@@ -12,6 +12,9 @@ import type {
 
 import {
   cardMatchesAnyName,
+  cardMatchesAnyAttribute,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
   cardMatchesNameContains,
 } from "../../card-name-matching.js";
 
@@ -263,25 +266,19 @@ const leaderMatchesFilter = (
   const typesMatch =
     filter.typesAny === undefined
       ? true
-      : filter.typesAny.some((type) => leader.types.includes(type));
+      : cardMatchesAnyType(leader, filter.typesAny);
   const typesIncludeMatch =
     filter.typesIncludeAny === undefined
       ? true
-      : filter.typesIncludeAny.some((typeText) =>
-          leader.types.some((type) => type.includes(typeText)),
-        );
+      : cardMatchesAnyTypeIncludes(leader, filter.typesIncludeAny);
   const attributesMatch =
     filter.attributesAny === undefined
       ? true
-      : filter.attributesAny.some((attribute) =>
-          leader.attributes.includes(attribute),
-        );
+      : cardMatchesAnyAttribute(leader, filter.attributesAny);
   const excludedAttributesMatch =
     filter.attributesNotAny === undefined
       ? true
-      : !filter.attributesNotAny.some((attribute) =>
-          leader.attributes.includes(attribute),
-        );
+      : !cardMatchesAnyAttribute(leader, filter.attributesNotAny);
   const colorsMatch =
     filter.colorsAny === undefined
       ? true

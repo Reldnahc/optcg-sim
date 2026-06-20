@@ -9,7 +9,11 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { cardMatchesAnyName } from "../../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../../card-name-matching.js";
 
 type NumericFilter =
   | { op: Comparator; value: number }
@@ -160,15 +164,13 @@ const eventPayloadMatchesCardFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((typeName) => typeName.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }

@@ -9,7 +9,12 @@ import type {
   TargetSpec,
 } from "@optcg/types";
 
-import { cardMatchesAnyName } from "../../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyAttribute,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../../card-name-matching.js";
 import {
   allContinuousEffects,
   continuousEffectConditionPasses,
@@ -151,31 +156,25 @@ const cardMatchesAllFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((type) => metadata.types.includes(type))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((type) => type.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }
   if (
     filter.typesNotIncludeAny !== undefined &&
-    filter.typesNotIncludeAny.some((typeText) =>
-      metadata.types.some((type) => type.includes(typeText)),
-    )
+    cardMatchesAnyTypeIncludes(metadata, filter.typesNotIncludeAny)
   ) {
     return false;
   }
   if (
     filter.attributesAny !== undefined &&
-    !filter.attributesAny.some((attribute) =>
-      metadata.attributes.includes(attribute),
-    )
+    !cardMatchesAnyAttribute(metadata, filter.attributesAny)
   ) {
     return false;
   }
@@ -191,9 +190,7 @@ const cardMatchesAllFilter = (
   }
   if (
     filter.attributesNotAny !== undefined &&
-    filter.attributesNotAny.some((attribute) =>
-      metadata.attributes.includes(attribute),
-    )
+    cardMatchesAnyAttribute(metadata, filter.attributesNotAny)
   ) {
     return false;
   }

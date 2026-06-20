@@ -215,6 +215,66 @@ test("fieldCount condition supports named self characters while excluding the so
   );
 });
 
+test("fieldCount condition treats an all-identity leader as every named card", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  state.cardManifest.cards[self.leader.cardId] = {
+    ...resolvedCard({
+      cardId: self.leader.cardId,
+      category: "leader",
+      power: 5000,
+    }),
+    name: "P-000",
+    identityTreatment: {
+      includes: ["names", "types", "attributes"],
+    },
+  };
+
+  const condition: Condition = {
+    type: "and",
+    conditions: [
+      {
+        type: "fieldCount",
+        player: "self",
+        filter: { names: ["Kotori"] },
+        op: "gte",
+        value: 1,
+      },
+      {
+        type: "fieldCount",
+        player: "self",
+        filter: { names: ["Satori"] },
+        op: "gte",
+        value: 1,
+      },
+    ],
+  };
+
+  assert.equal(isSupportedQueuedEffectConditionShape(condition), true);
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+
+  const ordinaryLeader = {
+    ...must(state.cardManifest.cards[self.leader.cardId], "leader metadata"),
+  };
+  delete ordinaryLeader.identityTreatment;
+  state.cardManifest.cards[self.leader.cardId] = ordinaryLeader;
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});
+
 test("fieldCount condition supports current-power and type filters for self characters", () => {
   const state = createActiveState();
   const self = must(state.players[p1], "p1");

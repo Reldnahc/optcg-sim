@@ -12,7 +12,12 @@ import type {
   TargetSpec,
 } from "@optcg/types";
 
-import { cardMatchesAnyName } from "../../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyAttribute,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../../card-name-matching.js";
 
 export type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
@@ -60,31 +65,25 @@ const cardMatchesBasicFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((typeName) => metadata.types.includes(typeName))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((typeName) => typeName.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }
   if (
     filter.attributesAny !== undefined &&
-    !filter.attributesAny.some((attribute) =>
-      metadata.attributes.includes(attribute),
-    )
+    !cardMatchesAnyAttribute(metadata, filter.attributesAny)
   ) {
     return false;
   }
   if (
     filter.attributesNotAny !== undefined &&
-    filter.attributesNotAny.some((attribute) =>
-      metadata.attributes.includes(attribute),
-    )
+    cardMatchesAnyAttribute(metadata, filter.attributesNotAny)
   ) {
     return false;
   }

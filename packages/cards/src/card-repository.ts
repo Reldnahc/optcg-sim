@@ -3,6 +3,7 @@ import { createCardCacheKey as createSharedCardCacheKey } from "optcg-card-cache
 import type {
   Attribute,
   CardColor,
+  CardIdentityTreatment,
   CardId,
   CardSupportStatus,
   EffectDefinition,
@@ -398,6 +399,7 @@ const buildResolvedCard = (
   const lines = gameplayLines(detail);
   const printedKeywords = rawKeywordsFromLines(lines);
   const nameAliases = nameAliasesFromLines(lines);
+  const identityTreatment = identityTreatmentFromLines(lines);
   const effectLines = lines.filter(
     (line) => parseRawKeywordLine({ text: line }) === undefined,
   );
@@ -450,6 +452,7 @@ const buildResolvedCard = (
       "nameAliases",
       nameAliases.length > 0 ? nameAliases : undefined,
     ),
+    ...optional("identityTreatment", identityTreatment),
     category: normalizeCategory(detail.card_type),
     set: detail.set,
     setName: detail.set_name,
@@ -519,6 +522,29 @@ const nameAliasesFromLines = (lines: readonly string[]): string[] => {
     }
   }
   return [...new Set(aliases)];
+};
+
+const identityTreatmentFromLines = (
+  lines: readonly string[],
+): CardIdentityTreatment | undefined => {
+  const includes = new Set<CardIdentityTreatment["includes"][number]>();
+  for (const line of lines) {
+    const parsed = parseCardEffectLinesDetailed(line);
+    if (!parsed.ok) {
+      continue;
+    }
+    for (const value of parsed.value) {
+      if (
+        value.kind === "metadata" &&
+        value.metadata.type === "identityTreatment"
+      ) {
+        for (const included of value.metadata.includes) {
+          includes.add(included);
+        }
+      }
+    }
+  }
+  return includes.size === 0 ? undefined : { includes: [...includes] };
 };
 
 const effectTextSourceMapFromText = (

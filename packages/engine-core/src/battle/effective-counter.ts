@@ -5,7 +5,11 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import { cardMatchesAnyName } from "../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../card-name-matching.js";
 import {
   allContinuousEffects,
   durationIsActive,
@@ -54,15 +58,13 @@ const handCardMatchesCounterFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((type) => metadata.types.includes(type))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((type) => type.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }

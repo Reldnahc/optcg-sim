@@ -33,6 +33,12 @@ export type Keyword =
   | "blocker"
   | "unblockable";
 
+export type CardIdentityTreatmentKind = "names" | "types" | "attributes";
+
+export interface CardIdentityTreatment {
+  includes: readonly CardIdentityTreatmentKind[];
+}
+
 export type CardSupportStatus =
   | "vanilla-confirmed"
   | "implemented-dsl"
@@ -268,6 +274,7 @@ export interface ResolvedCard {
   language: string;
   name: string;
   nameAliases?: string[];
+  identityTreatment?: CardIdentityTreatment;
   category: CardCategory;
   set: string;
   setName: string;

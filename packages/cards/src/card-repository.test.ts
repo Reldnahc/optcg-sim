@@ -338,6 +338,40 @@ describe("card repository", () => {
     assert.equal(resolved.support.tested, true);
   });
 
+  test("preserves all-identity leader metadata on resolved cards", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "P-000" as CardId;
+    const client = new FakePoneglyphClient({
+      "P-000": {
+        ...poneglyphCard(
+          "P-000",
+          "This Leader is treated as a card with all card names, types, and attributes according to the rules.",
+        ),
+        card_type: "Leader",
+        life: 5,
+        cost: null,
+        power: 5000,
+        counter: null,
+      },
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.support.effectDefinitionId, undefined);
+    assert.deepEqual(resolved.identityTreatment?.includes, [
+      "names",
+      "types",
+      "attributes",
+    ]);
+  });
+
   test("ignores fully parenthesized reminder lines when building generated effects", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

@@ -16,7 +16,11 @@ import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
 import { hasUnsupportedSupportGateText } from "../battle/support.js";
-import { cardMatchesAnyName } from "../card-name-matching.js";
+import {
+  cardMatchesAnyName,
+  cardMatchesAnyType,
+  cardMatchesAnyTypeIncludes,
+} from "../card-name-matching.js";
 import { playRelevantEffectBlocks } from "./effect-relevance.js";
 
 export type SupportedPlayMetadata = {
@@ -67,15 +71,13 @@ const cardMatchesHandFilter = (
   }
   if (
     filter.typesAny !== undefined &&
-    !filter.typesAny.some((type) => metadata.types.includes(type))
+    !cardMatchesAnyType(metadata, filter.typesAny)
   ) {
     return false;
   }
   if (
     filter.typesIncludeAny !== undefined &&
-    !filter.typesIncludeAny.some((typeText) =>
-      metadata.types.some((type) => type.includes(typeText)),
-    )
+    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
   ) {
     return false;
   }

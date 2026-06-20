@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { CardInstance } from "@optcg/types";
+
 import { applyAction, getLegalActions } from "../../actions.js";
 import {
   installActivateMainDrawDefinition,
@@ -213,6 +215,247 @@ test("activate main applies all-target dynamic power from DON attached to source
   assert.equal(
     view.cards[opponentCharacterSource.instanceId]?.currentPower,
     3000,
+  );
+});
+
+test("P-000 leader satisfies named-card conditions for activate-main target power effects", () => {
+  const state = makeMainPhaseLegalActionState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const p000Id = toCardId("P-000");
+  p1State.leader = {
+    ...p1State.leader,
+    cardId: p000Id,
+  };
+  state.cardManifest.cards[p000Id] = {
+    ...resolvedCard({
+      cardId: p000Id,
+      category: "leader",
+      power: 5000,
+    }),
+    name: "P-000",
+    identityTreatment: {
+      includes: ["names", "types", "attributes"],
+    },
+  };
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+
+  const secondDon = must(p1State.donDeck[0], "second active DON");
+  p1State.donDeck = reindexZoneCards(
+    p1State.donDeck.slice(1),
+    "donDeck",
+    p1,
+    "donDeck",
+  );
+  p1State.costArea = reindexZoneCards(
+    [
+      ...p1State.costArea,
+      {
+        ...secondDon,
+        zone: {
+          zone: "costArea",
+          playerId: p1,
+          slot: "cost",
+          index: p1State.costArea.length,
+        },
+        state: "active",
+      },
+    ],
+    "costArea",
+    p1,
+    "cost",
+  );
+
+  const source = must(p1State.characters[0], "source character");
+  const target: CardInstance = {
+    ...must(p2State.hand[0], "opponent target"),
+    zone: {
+      zone: "characterArea",
+      playerId: p2,
+      slot: "character",
+      index: 0,
+    },
+    state: "active",
+    attachedDon: [],
+    turnPlayed: state.turn.globalTurn,
+  };
+  p2State.characters = [target];
+  p2State.hand = reindexZoneCards(p2State.hand.slice(1), "hand", p2, "hand");
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    cost: 3,
+    power: 5000,
+  });
+
+  const effectId = toEffectId("p000-kotori-satori-activate-main-power");
+  const definition = installActivateMainDrawDefinition({
+    state,
+    sourceCardId: toCardId(source.cardId),
+    category: "character",
+    definitionId: "def-p000-kotori-satori-activate-main-power",
+    effectId,
+  });
+  const effectBlock = must(definition.effects[0], "activate main effect");
+  effectBlock.condition = {
+    type: "and",
+    conditions: [
+      {
+        type: "fieldCount",
+        player: "self",
+        filter: { names: ["Kotori"] },
+        op: "gte",
+        value: 1,
+      },
+      {
+        type: "fieldCount",
+        player: "self",
+        filter: { names: ["Satori"] },
+        op: "gte",
+        value: 1,
+      },
+    ],
+  };
+  effectBlock.effect = {
+    type: "sequence",
+    effects: [
+      {
+        id: "pay-two-don",
+        connector: "always",
+        saveResultAs: "paidReturnDon",
+        effect: {
+          type: "payCost",
+          cost: { type: "returnDon", count: 2, optional: true },
+        },
+      },
+      {
+        id: "rest-source",
+        connector: "ifYouDo",
+        saveResultAs: "paidRestSelf",
+        effect: {
+          type: "payCost",
+          cost: { type: "restSelf", optional: true },
+        },
+      },
+      {
+        id: "select-opponent-character",
+        connector: "ifYouDo",
+        saveResultAs: "selectedPowerTarget",
+        effect: {
+          type: "selectTargets",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: 0,
+            max: 1,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: { categories: ["character"] },
+          },
+        },
+      },
+      {
+        id: "minus-three-thousand",
+        connector: "ifYouDo",
+        effect: {
+          type: "modifyPower",
+          target: {
+            type: "savedFieldObject",
+            binding: {
+              family: "selectedTargets",
+              saveResultAs: "selectedPowerTarget",
+            },
+            zone: "characterArea",
+            player: "opponent",
+            visibility: "publicOnly",
+            onFailure: "failClosed",
+          },
+          value: -3000,
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+  };
+
+  assert.equal(
+    getLegalActions(state, p1).some(
+      (action) =>
+        action.type === "activateEffect" &&
+        action.source.instanceId === source.instanceId &&
+        action.effectId === effectId,
+    ),
+    true,
+  );
+
+  const activated = applyAction(state, {
+    type: "activateEffect",
+    source: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: p1,
+      zone: source.zone,
+    },
+    effectId,
+  });
+  assert.equal(activated.errors, undefined);
+  const returnDonDecision = must(
+    activated.state.pendingDecision,
+    "return DON decision",
+  );
+  assert.equal(returnDonDecision.type, "payCost");
+  assert.equal(returnDonDecision.cost.type, "returnDon");
+  const returned = p1State.costArea.slice(0, 2);
+  const paidDon = applyAction(activated.state, {
+    type: "respondToDecision",
+    decisionId: returnDonDecision.id,
+    response: {
+      type: "payment",
+      optionId: "returnDon",
+      selectedDonInstanceIds: returned.map((card) => card.instanceId),
+    },
+  });
+  assert.equal(paidDon.errors, undefined);
+  const restSelfDecision = must(
+    paidDon.state.pendingDecision,
+    "rest self decision",
+  );
+  assert.equal(restSelfDecision.type, "payCost");
+  assert.equal(restSelfDecision.cost.type, "restSelf");
+  const restedSelf = applyAction(paidDon.state, {
+    type: "respondToDecision",
+    decisionId: restSelfDecision.id,
+    response: { type: "payment", optionId: "restSelf" },
+  });
+  assert.equal(restedSelf.errors, undefined);
+  const targetDecision = must(
+    restedSelf.state.pendingDecision,
+    "target decision",
+  );
+  assert.equal(targetDecision.type, "selectTargets");
+  const resolved = applyAction(restedSelf.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: {
+      type: "targets",
+      targets: [must(targetDecision.candidates[0], "target candidate").card],
+    },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(
+    computeView(resolved.state).cards[target.instanceId]?.currentPower,
+    2000,
+  );
+  assert.equal(
+    must(resolved.state.players[p1], "resolved p1").characters[0]?.state,
+    "rested",
   );
 });
 

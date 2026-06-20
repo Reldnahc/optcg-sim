@@ -55,6 +55,64 @@ test("leader-zone hasCardInZone supports anyOf name filters", () => {
   );
 });
 
+test("leader-zone hasCardInZone treats an all-identity leader as every type and attribute", () => {
+  const state = createActiveState();
+  const self = must(state.players[p1], "p1");
+  state.cardManifest.cards[self.leader.cardId] = {
+    ...resolvedCard({ cardId: self.leader.cardId, category: "leader" }),
+    name: "P-000",
+    identityTreatment: {
+      includes: ["names", "types", "attributes"],
+    },
+  };
+  const condition: Condition = {
+    type: "and",
+    conditions: [
+      {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: { categories: ["leader"], typesAny: ["Sky Island"] },
+      },
+      {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: { categories: ["leader"], typesIncludeAny: ["Pirates"] },
+      },
+      {
+        type: "hasCardInZone",
+        player: "self",
+        zone: "leaderArea",
+        filter: { categories: ["leader"], attributesAny: ["slash"] },
+      },
+    ],
+  };
+
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: true },
+  );
+
+  const ordinaryLeader = {
+    ...must(state.cardManifest.cards[self.leader.cardId], "leader metadata"),
+  };
+  delete ordinaryLeader.identityTreatment;
+  state.cardManifest.cards[self.leader.cardId] = ordinaryLeader;
+  assert.deepEqual(
+    evaluateQueuedEffectCondition(
+      state,
+      { ...queueDrawForP1(), controllerId: p1 },
+      condition,
+    ),
+    { supported: true, passed: false },
+  );
+});
+
 test("leader-zone hasCardInZone supports current-power filters", () => {
   const state = createActiveState();
   const self = must(state.players[p1], "p1");
