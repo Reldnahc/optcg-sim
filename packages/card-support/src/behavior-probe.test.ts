@@ -361,6 +361,53 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 effect queue: drained");
   });
 
+  it("proves End of Your Turn effects through the turn transition", () => {
+    const report = createBehaviorProbeReport({
+      text: "[End of Your Turn] Set up to 1 of your DON!! cards as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: endOfYourTurn");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: activate, selectTargets, sequence",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+  });
+
+  it("proves card-played reactions by playing a matching card", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] When you play a Character, draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: cardPlayed");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain("Scenario 1 engine primitives: draw");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+  });
+
+  it("proves field-removed reactions by removing a matching field card with an effect", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] When a Character is removed from the field by your effect, draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: fieldRemoved");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toContain("Scenario 1 engine primitives: draw");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+  });
+
   it("proves On K.O. effects through combat K.O.", () => {
     const report = createBehaviorProbeReport({
       text: "[On K.O.] You may turn 1 card from the top of your Life cards face-up: Play up to 1 Character card with 6000 power or less from your hand.",

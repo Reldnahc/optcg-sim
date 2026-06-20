@@ -11,6 +11,7 @@ import type {
   EngineResult,
   GameState,
   PlayerId,
+  Trigger,
 } from "@optcg/types";
 import {
   gameplayLinesFromTextParts,
@@ -24,6 +25,11 @@ import {
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
 import { chooseProbeDecisionAction } from "./behavior-probe-decision-policy.js";
+import {
+  runCardPlayedScenario,
+  runEndOfYourTurnScenario,
+  runFieldRemovedScenario,
+} from "./behavior-probe-event-scenarios.js";
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
@@ -53,7 +59,10 @@ export interface BehaviorProbeScenario {
   readonly entrypoint?:
     | "activateEffect"
     | "counter"
+    | "cardPlayed"
     | "declareAttack"
+    | "endOfYourTurn"
+    | "fieldRemoved"
     | "lifeTrigger"
     | "lifeRemoved"
     | "onKO"
@@ -70,7 +79,10 @@ type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
   | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "counter"; readonly category: "event" }
+  | { readonly kind: "cardPlayed"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
+  | { readonly kind: "endOfYourTurn"; readonly category: "character" }
+  | { readonly kind: "fieldRemoved"; readonly category: "character" }
   | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "lifeRemoved"; readonly category: "character" }
@@ -155,69 +167,115 @@ export const createBehaviorProbeReport = (
     setupFilters: collectScenarioSetupFilters(materialized.definition.effects),
     text: request.text,
   };
-  const result =
-    scenario.kind === "activateEffect"
-      ? runActivateEffectScenario({ ...scenarioInput, category: "character" })
-      : scenario.kind === "counter"
-        ? runCounterScenario({ ...scenarioInput, category: "event" })
-        : scenario.kind === "declareAttack"
-          ? runDeclareAttackScenario({
-              ...scenarioInput,
-              category: "character",
-            })
-          : scenario.kind === "opponentAttack"
-            ? runOpponentAttackScenario(
-                {
-                  ...scenarioInput,
-                  category: "leader",
-                },
-                (initialResult, setupFilterCount) =>
-                  drainRuntime(
-                    initialResult,
-                    setupFilterCount,
-                    scenarioInput.definition.effects,
-                  ),
-              )
-            : scenario.kind === "lifeTrigger"
-              ? runLifeTriggerScenario({
-                  ...scenarioInput,
-                  category: "character",
-                })
-              : scenario.kind === "lifeRemoved"
-                ? runLifeRemovedScenario({
-                    ...scenarioInput,
-                    category: "character",
-                  })
-                : scenario.kind === "onKO"
-                  ? runOnKOScenario(
-                      {
-                        ...scenarioInput,
-                        category: "character",
-                      },
-                      (initialResult, setupFilterCount) =>
-                        drainRuntime(
-                          initialResult,
-                          setupFilterCount,
-                          scenarioInput.definition.effects,
-                        ),
-                    )
-                  : scenario.kind === "permanent"
-                    ? runPermanentScenario(
-                        {
-                          ...scenarioInput,
-                          category: "character",
-                        },
-                        (initialResult, setupFilterCount) =>
-                          drainRuntime(
-                            initialResult,
-                            setupFilterCount,
-                            scenarioInput.definition.effects,
-                          ),
-                      )
-                    : runPlayCardScenario({
-                        ...scenarioInput,
-                        category: scenario.category,
-                      });
+  const result = (() => {
+    switch (scenario.kind) {
+      case "activateEffect":
+        return runActivateEffectScenario({
+          ...scenarioInput,
+          category: "character",
+        });
+      case "counter":
+        return runCounterScenario({ ...scenarioInput, category: "event" });
+      case "cardPlayed":
+        return runCardPlayedScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "declareAttack":
+        return runDeclareAttackScenario({
+          ...scenarioInput,
+          category: "character",
+        });
+      case "endOfYourTurn":
+        return runEndOfYourTurnScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "fieldRemoved":
+        return runFieldRemovedScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "opponentAttack":
+        return runOpponentAttackScenario(
+          {
+            ...scenarioInput,
+            category: "leader",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "lifeTrigger":
+        return runLifeTriggerScenario({
+          ...scenarioInput,
+          category: "character",
+        });
+      case "lifeRemoved":
+        return runLifeRemovedScenario({
+          ...scenarioInput,
+          category: "character",
+        });
+      case "onKO":
+        return runOnKOScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "permanent":
+        return runPermanentScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
+      case "playCard":
+        return runPlayCardScenario({
+          ...scenarioInput,
+          category: scenario.category,
+        });
+    }
+  })();
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -270,8 +328,17 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effect.trigger.type === "counter")) {
     return { kind: "counter", category: "event" };
   }
+  if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
+    return { kind: "cardPlayed", category: "character" };
+  }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "endOfYourTurn")) {
+    return { kind: "endOfYourTurn", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "fieldRemoved"))) {
+    return { kind: "fieldRemoved", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
     return { kind: "opponentAttack", category: "leader" };
@@ -295,6 +362,29 @@ const scenarioForDefinition = (
     kind: "skipped",
     reason: `no generated scenario for trigger ${firstTrigger}`,
   };
+};
+
+const effectHasTrigger = (
+  effect: EffectBlock,
+  triggerType: Trigger["type"],
+): boolean => triggerContainsType(effect.trigger, triggerType);
+
+const triggerContainsType = (
+  trigger: Trigger,
+  triggerType: Trigger["type"],
+): boolean => {
+  if (trigger.type === triggerType) {
+    return true;
+  }
+  if (trigger.type === "anyOf") {
+    return trigger.triggers.some((child) =>
+      triggerContainsType(child, triggerType),
+    );
+  }
+  if (trigger.type === "eventCount") {
+    return triggerContainsType(trigger.trigger, triggerType);
+  }
+  return false;
 };
 
 const focusedEffectBlocks = (
