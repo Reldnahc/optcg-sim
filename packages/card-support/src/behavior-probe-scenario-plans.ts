@@ -20,6 +20,7 @@ export type SupportedScenario =
   | { readonly kind: "opponentActivated"; readonly category: "character" }
   | { readonly kind: "permanent"; readonly category: "character" }
   | { readonly kind: "replacement"; readonly category: "character" }
+  | { readonly kind: "triggerActivated"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 export type RunnableScenario = Exclude<
@@ -108,6 +109,9 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
   if (effectHasTrigger(effect, "handTrashedByEffect")) {
     return "handTrashedByEffect";
   }
+  if (effectHasTrigger(effect, "triggerActivated")) {
+    return "triggerActivated";
+  }
   if (effectHasTrigger(effect, "trigger")) return "trigger";
   return `unsupported:${effect.trigger.type}`;
 };
@@ -153,6 +157,9 @@ const scenarioForDefinition = (
     effects.every((effect) => effectHasTrigger(effect, "handTrashedByEffect"))
   ) {
     return { kind: "handTrashedByEffect", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "triggerActivated"))) {
+    return { kind: "triggerActivated", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
     return { kind: "opponentAttack", category: "leader" };

@@ -22,12 +22,17 @@ import {
 import { applyFieldMutationSequenceSegment } from "../field-segments.js";
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
 import { type SupportedSequenceSegment } from "../support.js";
+import { continueNoDecisionSegments } from "../runner.js";
 import {
   emptySegmentResult,
   getSupportedFrameContext,
   sequenceRuntimeError,
 } from "./shared.js";
-import { resolveSequenceForPath, segmentKeyForPath } from "../paths.js";
+import {
+  nestedSequencePath,
+  resolveSequenceForPath,
+  segmentKeyForPath,
+} from "../paths.js";
 import { consumeOncePerTurnForQueueEntry } from "../../rules/once-per-turn.js";
 import type {
   CreateTrashFromHandSequenceDecision,
@@ -173,6 +178,63 @@ export const resumeSequenceFrameAfterOptionalActivation = (
       nextState = moved.state;
       events = moved.events;
       ledgers = moved.ledgers;
+    } else if (pausedSegment.effect.type === "sequence") {
+      const nestedPath = nestedSequencePath(
+        frame.effectPath,
+        frame.pendingDecision.resumeAtSegmentIndex,
+      );
+      const run = continueNoDecisionSegments(
+        nextState,
+        entry,
+        pausedSegment.effect,
+        supportedBlock,
+        0,
+        {
+          savedReferences: frame.savedReferences,
+          segmentResults: frame.segmentResults,
+        },
+        createTrashDecision,
+        false,
+        nestedPath,
+      );
+      if (!run.ok) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      if (run.kind === "paused") {
+        return {
+          events: run.events,
+          ok: true,
+          state: run.state,
+        };
+      }
+      const resumed = resumeSequenceFrameFromLedgers({
+        createTrashDecision,
+        effectBlock: supportedBlock,
+        entry,
+        finalizeCompleted: true,
+        frame: {
+          ...frame,
+          effectPath: nestedPath,
+          nextSegmentIndex: pausedSegment.effect.effects.length,
+        },
+        ledgers: run.ledgers,
+        state: run.state,
+      });
+      return resumed === undefined
+        ? undefined
+        : resumed.ok
+          ? {
+              events: [...run.events, ...resumed.events],
+              ok: true,
+              state: resumed.state,
+            }
+          : resumed;
     } else {
       const mutation = applyFieldMutationSequenceSegment({
         effectPath: frame.effectPath,

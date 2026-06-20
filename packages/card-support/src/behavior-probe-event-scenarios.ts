@@ -273,6 +273,56 @@ export const runOpponentActivatedScenario = (
   );
 };
 
+export const runTriggerActivatedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.turnPlayerId = p2;
+  state.turn.playerTurnCounts[p1] = 1;
+  state.turn.playerTurnCounts[p2] = 2;
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const defender = must(state.players[p1], `player ${String(p1)}`);
+  const attacker = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  const source = fieldProbeSource(defender);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  defender.hand = [];
+  installLifeTriggerProbeCard(state, defender);
+
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: attacker.leader.instanceId,
+        cardId: attacker.leader.cardId,
+        playerId: p2,
+        zone: attacker.leader.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p1,
+        zone: defender.leader.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
 const failedProbeFielding = (
   state: GameState,
   setupFilterCount: number,
@@ -371,6 +421,64 @@ const addOpponentActivationEventCard = (state: GameState): CardInstance => {
     effectText: "[Main] Draw 1 card.",
     sourceTextHash: "behavior-probe-opponent-activation-event",
   });
+};
+
+const installLifeTriggerProbeCard = (
+  state: GameState,
+  player: NonNullable<GameState["players"][PlayerId]>,
+): void => {
+  const topLife = must(player.life[0], "trigger activation top Life");
+  const triggerCardId = "probe-trigger-activation-life" as CardId;
+  const effectText = "[Trigger] Draw 1 card.";
+  const materialized = materializeEffectDefinition(
+    triggerCardId,
+    [effectText],
+    "behavior-probe-trigger-activation",
+    {
+      effectDefinitionsVersion: "behavior-probe",
+      rulesVersion: "behavior-probe",
+    },
+    { evaluateRuntimeSupport: evaluateEffectBlockRuntimeSupport },
+  );
+  const definition = must(
+    materialized.definition,
+    "trigger activation definition",
+  );
+  const effectDefinitionId = `${String(triggerCardId)}.behavior-probe`;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[triggerCardId] = resolvedProbeCard({
+    cardId: triggerCardId,
+    category: "character",
+    effectText,
+    support: {
+      cardId: triggerCardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion: "behavior-probe",
+      cardDataVersion: "behavior-probe",
+      sourceTextHash: "behavior-probe-trigger-activation",
+      behaviorHash: "behavior-probe-trigger-activation",
+      effectDefinitionId,
+    },
+  });
+  const resolved = must(
+    state.cardManifest.cards[triggerCardId],
+    "trigger activation card metadata",
+  );
+  state.cardManifest.cards[triggerCardId] = {
+    ...resolved,
+    triggerText: effectText,
+  };
+  player.life[0] = {
+    ...topLife,
+    card: {
+      ...topLife.card,
+      cardId: triggerCardId,
+    },
+  };
 };
 
 const addSupportedEventCard = (params: {

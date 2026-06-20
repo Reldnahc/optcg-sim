@@ -746,4 +746,37 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: counter");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("builds trash cards for trash-to-deck activation costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may place 1 card from your trash at the bottom of your deck: Give up to 1 rested DON!! card to your Leader or 1 of your Characters.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("resolves rested-DON attachment before optional bounce-play tails", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Give up to 1 rested DON!! card to your Leader. Then, you may return up to 1 of your opponent's Characters with a cost of 5 or less to the owner's hand. If you do, your opponent plays up to 1 Character card with a cost of 4 or less from their hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("routes trigger-activation anyOf reactions to behavior scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Opponent's Turn] When a [Trigger] activates, this Character gains [Blocker] during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: triggerActivated");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });

@@ -34,6 +34,7 @@ import {
   runFieldRemovedScenario,
   runHandTrashedByEffectScenario,
   runOpponentActivatedScenario,
+  runTriggerActivatedScenario,
 } from "./behavior-probe-event-scenarios.js";
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
@@ -82,7 +83,8 @@ export interface BehaviorProbeScenario {
     | "opponentAttack"
     | "permanent"
     | "playCard"
-    | "replacement";
+    | "replacement"
+    | "triggerActivated";
   readonly cardCategory?: "leader" | "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
@@ -378,6 +380,19 @@ const runScenario = (
       });
     case "replacement":
       return runReplacementScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "triggerActivated":
+      return runTriggerActivatedScenario(
         {
           ...scenarioInput,
           category: "character",

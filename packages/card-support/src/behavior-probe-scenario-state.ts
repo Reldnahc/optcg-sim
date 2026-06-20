@@ -657,6 +657,13 @@ const installCostFacts = (
     }
     return;
   }
+  if (cost.type === "moveCards") {
+    const playerId = resolvePlayerRef(cost.from.player);
+    if (playerId !== undefined) {
+      addCardsForZone(state, playerId, cost.from.zone, cost.count, cost.filter);
+    }
+    return;
+  }
   if (cost.type === "setLifeFaceUp" || cost.type === "turnLifeFaceUp") {
     const playerId = resolvePlayerRef(cost.player);
     const player = playerId === undefined ? undefined : state.players[playerId];
