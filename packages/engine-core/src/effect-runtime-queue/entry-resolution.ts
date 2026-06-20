@@ -22,6 +22,7 @@ import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
+import { isLifeTriggerQueueEntry } from "../life-trigger/queue-origin.js";
 import {
   canAdmitOncePerTurnEffect,
   consumeOncePerTurnForQueueEntry,
@@ -276,6 +277,41 @@ export const createQueueEntryResolver = (
         allEvents.push(...cleanup.events);
         continue;
       }
+      const sequenceFrameResult = (
+        frame: Exclude<
+          ReturnType<typeof createSupportedSequenceFrameDecision>,
+          undefined
+        >,
+      ): EngineResult => {
+        if (!frame.ok) {
+          return frame.error !== undefined
+            ? toEngineResult(originalState, [], [frame.error], options)
+            : unsupportedEffectQueueResult(originalState, {
+                gate: "queue-entry-resolution",
+                entry: selectedForBodyResolution,
+                exposeEntryIdentity: true,
+                queueReason: "unsupported-sequence-frame",
+              });
+        }
+        if (frame.state.pendingDecision !== undefined) {
+          return toEngineResult(
+            frame.state,
+            [...allEvents, ...frame.events],
+            undefined,
+            options,
+          );
+        }
+        const cleanup = cleanupResolvedLifeTrigger(
+          frame.state,
+          selectedForBodyResolution,
+        );
+        return toEngineResult(
+          cleanup.state,
+          [...allEvents, ...frame.events, ...cleanup.events],
+          undefined,
+          options,
+        );
+      };
       const sequenceFrame = createSupportedSequenceFrameDecision(
         nextState,
         selectedForBodyResolution,
@@ -283,21 +319,7 @@ export const createQueueEntryResolver = (
         createSupportedTrashFromHandChoiceDecision,
       );
       if (sequenceFrame !== undefined) {
-        return sequenceFrame.ok
-          ? toEngineResult(
-              sequenceFrame.state,
-              [...allEvents, ...sequenceFrame.events],
-              undefined,
-              options,
-            )
-          : sequenceFrame.error !== undefined
-            ? toEngineResult(originalState, [], [sequenceFrame.error], options)
-            : unsupportedEffectQueueResult(originalState, {
-                gate: "queue-entry-resolution",
-                entry: selectedForBodyResolution,
-                exposeEntryIdentity: true,
-                queueReason: "unsupported-sequence-frame",
-              });
+        return sequenceFrameResult(sequenceFrame);
       }
       const primitiveBody = resolveQueuedPrimitiveBody(
         queuedEffectForBodyResolution,
@@ -481,6 +503,20 @@ export const createQueueEntryResolver = (
           takeExtraTurnEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
+          const lifeTriggerSingleEffectFrame = isLifeTriggerQueueEntry(
+            selectedForBodyResolution,
+          )
+            ? createSupportedSequenceFrameDecision(
+                nextState,
+                selectedForBodyResolution,
+                queuedEffectForBodyResolution,
+                createSupportedTrashFromHandChoiceDecision,
+                { allowSingleEffect: true },
+              )
+            : undefined;
+          if (lifeTriggerSingleEffectFrame?.ok === true) {
+            return sequenceFrameResult(lifeTriggerSingleEffectFrame);
+          }
           return unsupportedEffectQueueResult(originalState, {
             gate: "queue-entry-resolution",
             entry: selectedForBodyResolution,

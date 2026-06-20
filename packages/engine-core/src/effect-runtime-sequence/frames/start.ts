@@ -218,9 +218,11 @@ const shouldDeferInitialOncePerTurnUse = (
 
 const shouldAttemptSequenceFrame = (
   effectBlock: EffectDefinition["effects"][number] | undefined,
+  options: { readonly allowSingleEffect: boolean },
 ): effectBlock is EffectDefinition["effects"][number] =>
   effectBlock !== undefined &&
-  (effectBlock.effect.type === "sequence" ||
+  (options.allowSingleEffect ||
+    effectBlock.effect.type === "sequence" ||
     effectBlock.effect.type === "choice" ||
     effectBlock.effect.type === "returnDon");
 
@@ -229,8 +231,13 @@ export const createSupportedSequenceFrameDecision = (
   entry: EffectQueueEntry,
   effectBlock: EffectDefinition["effects"][number] | undefined,
   createTrashDecision: CreateTrashFromHandSequenceDecision,
+  options: { readonly allowSingleEffect?: boolean } = {},
 ): SequenceFrameDecisionResult => {
-  if (!shouldAttemptSequenceFrame(effectBlock)) {
+  if (
+    !shouldAttemptSequenceFrame(effectBlock, {
+      allowSingleEffect: options.allowSingleEffect === true,
+    })
+  ) {
     return undefined;
   }
   const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
