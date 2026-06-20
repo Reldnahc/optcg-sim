@@ -754,6 +754,7 @@ export const continueNoDecisionSegments = (
         emptySegmentResult,
         entry,
         events,
+        effectPath,
         index,
         ledgers: nextLedgers,
         segment: segment as SupportedSequenceSegment & {

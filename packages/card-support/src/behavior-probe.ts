@@ -19,23 +19,28 @@ import {
   parseRawKeywordLine,
 } from "@optcg/cards";
 import {
-  configureProbeFieldSourceForScenario,
   fieldProbeSource,
-  installProbeSourceMetadata,
   resolvedProbeCard,
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
 import { chooseProbeDecisionAction } from "./behavior-probe-decision-policy.js";
 import {
+  runAttackDeclaredScenario,
   runCardPlayedScenario,
   runCardRestedScenario,
   runDonReturnedScenario,
   runEndOfYourTurnScenario,
+  runEffectQueuedScenario,
   runFieldRemovedScenario,
   runHandTrashedByEffectScenario,
+  runOnBlockScenario,
   runOpponentActivatedScenario,
   runTriggerActivatedScenario,
 } from "./behavior-probe-event-scenarios.js";
+import {
+  runActivateEffectScenario,
+  runStartOfTurnScenario,
+} from "./behavior-probe-activation-scenarios.js";
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
@@ -68,22 +73,26 @@ export interface BehaviorProbeScenario {
   readonly index: number;
   readonly entrypoint?:
     | "activateEffect"
+    | "attackDeclared"
     | "counter"
     | "cardPlayed"
     | "cardRested"
     | "declareAttack"
     | "donReturned"
     | "endOfYourTurn"
+    | "effectQueued"
     | "fieldRemoved"
     | "handTrashedByEffect"
     | "lifeTrigger"
     | "lifeRemoved"
     | "onKO"
+    | "onBlock"
     | "opponentActivated"
     | "opponentAttack"
     | "permanent"
     | "playCard"
     | "replacement"
+    | "startOfYourTurn"
     | "triggerActivated";
   readonly cardCategory?: "leader" | "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
@@ -222,10 +231,31 @@ const runScenario = (
 ) => {
   switch (scenario.kind) {
     case "activateEffect":
-      return runActivateEffectScenario({
-        ...scenarioInput,
-        category: "character",
-      });
+      return runActivateEffectScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "attackDeclared":
+      return runAttackDeclaredScenario(
+        {
+          ...scenarioInput,
+          category: "leader",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "counter":
       return runCounterScenario({ ...scenarioInput, category: "event" });
     case "cardPlayed":
@@ -274,6 +304,19 @@ const runScenario = (
       );
     case "endOfYourTurn":
       return runEndOfYourTurnScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "effectQueued":
+      return runEffectQueuedScenario(
         {
           ...scenarioInput,
           category: "character",
@@ -347,6 +390,19 @@ const runScenario = (
             scenarioInput.definition.effects,
           ),
       );
+    case "onBlock":
+      return runOnBlockScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "opponentActivated":
       return runOpponentActivatedScenario(
         {
@@ -380,6 +436,19 @@ const runScenario = (
       });
     case "replacement":
       return runReplacementScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "startOfYourTurn":
+      return runStartOfTurnScenario(
         {
           ...scenarioInput,
           category: "character",
@@ -468,63 +537,6 @@ const runPlayCardScenario = (input: {
   });
   return drainRuntime(
     opened,
-    input.setupFilters.length,
-    input.definition.effects,
-  );
-};
-
-const runActivateEffectScenario = (input: {
-  readonly category: "character";
-  readonly definition: NonNullable<
-    ReturnType<typeof materializeEffectDefinition>["definition"]
-  >;
-  readonly setupFilters: readonly CardFilter[];
-  readonly text: string;
-}): {
-  readonly ok: boolean;
-  readonly reason?: string;
-  readonly pendingDecisionDrained: boolean;
-  readonly effectQueueDrained: boolean;
-  readonly eventCount: number;
-  readonly decisionsResolved: number;
-  readonly setupFilterCount: number;
-} => {
-  const state = setupProbeMainState(input);
-  installProbeSourceMetadata(state, "character", input.setupFilters);
-  const player = must(state.players[p1], `player ${String(p1)}`);
-  const source = fieldProbeSource(player);
-  if (source === undefined) {
-    return {
-      ok: false,
-      reason: "probe card could not be fielded",
-      pendingDecisionDrained: state.pendingDecision === undefined,
-      effectQueueDrained: state.effectQueue.length === 0,
-      eventCount: 0,
-      decisionsResolved: 0,
-      setupFilterCount: input.setupFilters.length,
-    };
-  }
-  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
-
-  const action = getLegalActions(state, p1).find(
-    (candidate): candidate is Extract<Action, { type: "activateEffect" }> =>
-      candidate.type === "activateEffect" &&
-      candidate.source.instanceId === source.instanceId,
-  );
-  if (action === undefined) {
-    return {
-      ok: false,
-      reason: "no legal activateEffect action",
-      pendingDecisionDrained: state.pendingDecision === undefined,
-      effectQueueDrained: state.effectQueue.length === 0,
-      eventCount: 0,
-      decisionsResolved: 0,
-      setupFilterCount: input.setupFilters.length,
-    };
-  }
-
-  return drainRuntime(
-    applyAction(state, action),
     input.setupFilters.length,
     input.definition.effects,
   );

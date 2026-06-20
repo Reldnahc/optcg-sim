@@ -35,13 +35,14 @@ import {
   hasCondition,
 } from "./behavior-probe-scenario-effect-analysis.js";
 import { collectLeaderConditionFilters } from "./behavior-probe-scenario-leader-filters.js";
+import { resolvedProbeCard } from "./behavior-probe-resolved-card.js";
 
-const p1 = "p1" as PlayerId;
-const p2 = "p2" as PlayerId;
-const probeCardId = "probe-card" as CardId;
-const probeDefinitionId = "probe-card.behavior-probe";
-type ProbePlayerRef = PlayerRef | "anyPlayer";
+export { resolvedProbeCard } from "./behavior-probe-resolved-card.js";
 
+const p1 = "p1" as PlayerId,
+  p2 = "p2" as PlayerId;
+const probeCardId = "probe-card" as CardId,
+  probeDefinitionId = "probe-card.behavior-probe";
 export const setupProbeMainState = (input: {
   readonly category: "leader" | "character" | "event";
   readonly definition: EffectDefinition;
@@ -147,7 +148,7 @@ export const fieldProbeSource = (
     ...handCard,
     zone: {
       zone: "characterArea",
-      playerId: p1,
+      playerId: player.playerId,
       slot: "character",
       index: player.characters.length,
     },
@@ -157,9 +158,19 @@ export const fieldProbeSource = (
   };
   player.hand = reindexHand(
     player.hand.filter((_, index) => index !== handIndex),
-    p1,
+    player.playerId,
   );
   player.characters = [...player.characters, source];
+  return source;
+};
+
+export const leaderProbeSource = (state: GameState): CardInstance => {
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source: CardInstance = {
+    ...player.leader,
+    cardId: probeCardId,
+  };
+  player.leader = source;
   return source;
 };
 
@@ -183,7 +194,7 @@ export const configureProbeFieldSourceForScenario = (
     )
   ) {
     source.attachedDon =
-      state.players[p1]?.costArea.slice(0, 2).map((card) => card.instanceId) ??
+      state.players[p1]?.costArea.slice(0, 5).map((card) => card.instanceId) ??
       [];
   }
   if (effects.some((block) => effectSelectsRestedDon(block.effect))) {
@@ -594,6 +605,16 @@ const installConditionFact = (
     }
     return;
   }
+  if (condition.type === "lifeCount") {
+    for (const playerId of resolvePlayerRefsForSetup(condition.player)) {
+      setPlayerLifeCount(
+        state,
+        playerId,
+        passingCount(condition.op, condition.value),
+      );
+    }
+    return;
+  }
   if (condition.type === "trashCount") {
     for (const playerId of resolvePlayerRefsForSetup(condition.player)) {
       addProbeTrashCards(
@@ -638,6 +659,47 @@ const installConditionFact = (
       }
     }
   }
+};
+
+const setPlayerLifeCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = state.players[playerId];
+  if (player === undefined) {
+    return;
+  }
+  while (player.life.length < count) {
+    const deckCard = player.deck.shift();
+    if (deckCard === undefined) {
+      break;
+    }
+    player.life.push({
+      card: {
+        ...deckCard,
+        zone: {
+          zone: "life",
+          playerId,
+          slot: "life",
+          index: player.life.length,
+        },
+      },
+      faceUp: false,
+    });
+  }
+  player.life = player.life.slice(0, count).map((life, index) => ({
+    ...life,
+    card: {
+      ...life.card,
+      zone: {
+        zone: "life",
+        playerId,
+        slot: "life",
+        index,
+      },
+    },
+  }));
 };
 
 const installCostFacts = (
@@ -867,7 +929,9 @@ const passingCount = (
   }
 };
 
-const resolvePlayerRef = (player: ProbePlayerRef): PlayerId | undefined => {
+const resolvePlayerRef = (
+  player: PlayerRef | "anyPlayer",
+): PlayerId | undefined => {
   switch (player) {
     case "opponent":
     case "nonTurnPlayer":
@@ -884,7 +948,7 @@ const resolvePlayerRef = (player: ProbePlayerRef): PlayerId | undefined => {
 };
 
 const resolvePlayerRefsForSetup = (
-  player: ProbePlayerRef,
+  player: PlayerRef | "anyPlayer",
 ): readonly PlayerId[] =>
   player === "anyPlayer" ? [p1, p2] : player === "owner" ? [p1] : [p1, p2];
 
@@ -920,56 +984,6 @@ const probeDonCardIds = (player: "p1" | "p2"): CardId[] =>
     { length: 10 },
     (_, index) => `probe-${player}-don-${String(index + 1)}` as CardId,
   );
-
-export const resolvedProbeCard = (params: {
-  readonly cardId: CardId;
-  readonly category: "leader" | "character" | "event" | "don" | "stage";
-  readonly effectText: string;
-  readonly profile?: ProbeCardProfile;
-  readonly support?: ResolvedCard["support"];
-}): ResolvedCard => ({
-  cardId: params.cardId,
-  language: "en",
-  name: params.profile?.name ?? String(params.cardId),
-  category: params.category,
-  set: "PROBE",
-  setName: "Behavior Probe",
-  released: true,
-  colors:
-    params.category === "don" ? [] : [...(params.profile?.colors ?? ["red"])],
-  attributes: [...(params.profile?.attributes ?? [])],
-  types: [...(params.profile?.types ?? [])],
-  printedKeywords: [...(params.profile?.keywords ?? [])],
-  variants: [],
-  legality: {},
-  officialFaq: [],
-  errata: [],
-  sourceTextHash: "behavior-probe-source",
-  behaviorHash: "behavior-probe-behavior",
-  support: params.support ?? {
-    cardId: params.cardId,
-    status: "vanilla-confirmed",
-    tested: true,
-    rulesVersion: "behavior-probe",
-    cardDataVersion: "behavior-probe",
-    sourceTextHash: "behavior-probe-source",
-    behaviorHash: "behavior-probe-behavior",
-  },
-  ...(params.category === "character"
-    ? {
-        cost: params.profile?.cost ?? 0,
-        power: params.profile?.power ?? 2000,
-      }
-    : {}),
-  ...(params.category === "leader"
-    ? { power: params.profile?.power ?? 5000 }
-    : {}),
-  ...(params.category === "event" ? { cost: params.profile?.cost ?? 0 } : {}),
-  ...(params.profile?.counter === undefined
-    ? {}
-    : { counter: params.profile.counter }),
-  ...(params.effectText.length === 0 ? {} : { effectText: params.effectText }),
-});
 
 const must = <T>(value: T | undefined, label: string): T => {
   if (value === undefined) {

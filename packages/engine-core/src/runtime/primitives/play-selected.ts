@@ -18,6 +18,7 @@ import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
 } from "../../effect-runtime-sequence/frame-decisions.js";
+import { resolveSequenceForPath } from "../../effect-runtime-sequence/paths.js";
 import type {
   CreateTrashFromHandSequenceDecision,
   SequenceFrameResumeResult,
@@ -142,6 +143,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
   emptySegmentResult: () => SequenceSegmentResult;
   entry: EffectQueueEntry;
   events: EngineEvent[];
+  effectPath?: readonly string[];
   index: number;
   ledgers: SegmentLedgers;
   segment: PlaySelectedSegment;
@@ -152,6 +154,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
     emptySegmentResult,
     entry,
     events,
+    effectPath,
     index,
     ledgers,
     segment,
@@ -304,6 +307,7 @@ export const applyPlaySelectedSequenceSegment = (params: {
       const frame = frameForPausedSequenceDecision({
         decision: played.state.pendingDecision,
         entry,
+        ...(effectPath === undefined ? {} : { effectPath: [...effectPath] }),
         index,
         savedReferences: {
           ...nextLedgers.savedReferences,
@@ -409,8 +413,12 @@ export const resumePlaySelectedOverflowFrame = (
     sequenceRuntimeError,
     state,
   } = params;
+  const pausedSequence = resolveSequenceForPath(
+    effectBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    pausedSequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     pausedSegment.effect.type !== "playSelected"
@@ -431,6 +439,7 @@ export const resumePlaySelectedOverflowFrame = (
     emptySegmentResult,
     entry,
     events: [],
+    effectPath: frame.effectPath,
     index: frame.pendingDecision.resumeAtSegmentIndex,
     ledgers: {
       savedReferences: frame.savedReferences,

@@ -1,10 +1,10 @@
 import type { GameState } from "@optcg/types";
 
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
+import { resolveSequenceForPath, segmentKeyForPath } from "../paths.js";
 import {
   emptySegmentResult,
   getSupportedFrameContext,
-  segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
 import type {
@@ -22,8 +22,12 @@ export const resumeSequenceFrameAfterTopDeckPlacement = (
     return context.result;
   }
   const { entry, frame, supportedBlock } = context;
+  const pausedSequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
-    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    pausedSequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     (pausedSegment.effect.type !== "placeTopDeckCards" &&
@@ -49,13 +53,16 @@ export const resumeSequenceFrameAfterTopDeckPlacement = (
       savedReferences: frame.savedReferences,
       segmentResults: {
         ...frame.segmentResults,
-        [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
-          {
-            ...emptySegmentResult(),
-            attempted: true,
-            succeeded: true,
-            changedState: true,
-          },
+        [segmentKeyForPath(
+          frame.effectPath,
+          pausedSegment,
+          frame.pendingDecision.resumeAtSegmentIndex,
+        )]: {
+          ...emptySegmentResult(),
+          attempted: true,
+          succeeded: true,
+          changedState: true,
+        },
       },
     },
     state,

@@ -1,15 +1,18 @@
 import {
   applyAction,
   evaluateEffectBlockRuntimeSupport,
+  getLegalActions,
 } from "@optcg/engine-core";
 import { materializeEffectDefinition } from "@optcg/cards";
 import type {
+  Action,
   CardFilter,
   CardId,
   CardInstance,
   EffectDefinition,
   EngineResult,
   GameState,
+  Keyword,
   PlayerId,
 } from "@optcg/types";
 
@@ -17,12 +20,14 @@ import {
   configureProbeFieldSourceForScenario,
   fieldProbeSource,
   installProbeSourceMetadata,
+  leaderProbeSource,
   resolvedProbeCard,
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
+const blockerKeyword = "blocker" as Keyword;
 
 interface BehaviorProbeRunResult {
   readonly ok: boolean;
@@ -133,6 +138,49 @@ export const runCardRestedScenario = (
   );
 };
 
+export const runAttackDeclaredScenario = (
+  input: {
+    readonly category: "leader";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  const source = leaderProbeSource(state);
+  installProbeSourceMetadata(state, "leader", input.setupFilters);
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  source.state = "active";
+  defender.leader.state = "active";
+  defender.hand = [];
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p2,
+        zone: defender.leader.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
 export const runDonReturnedScenario = (
   input: {
     readonly category: "character";
@@ -172,6 +220,80 @@ export const runDonReturnedScenario = (
   );
 };
 
+export const runEffectQueuedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  state.turn.globalTurn = 3;
+  state.turn.turnPlayerId = p2;
+  state.turn.playerTurnCounts[p1] = 1;
+  state.turn.playerTurnCounts[p2] = 2;
+  const defender = must(state.players[p1], `player ${String(p1)}`);
+  const attacker = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  const source = fieldProbeSource(defender);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  defender.hand = [];
+  const event = addSupportedEventCard({
+    state,
+    playerId: p1,
+    cardId: "probe-effect-queued-counter-event" as CardId,
+    effectText:
+      "[Counter] Up to 1 of your Leader or Character cards gains +1000 power during this battle.",
+    sourceTextHash: "behavior-probe-effect-queued-counter-event",
+  });
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.leader.instanceId,
+      cardId: attacker.leader.cardId,
+      playerId: p2,
+      zone: attacker.leader.zone,
+    },
+    target: {
+      instanceId: defender.leader.instanceId,
+      cardId: defender.leader.cardId,
+      playerId: p1,
+      zone: defender.leader.zone,
+    },
+  });
+  if (opened.errors !== undefined) {
+    return drainRuntime(opened, input.setupFilters.length);
+  }
+  const counterAction = getLegalActions(opened.state, p1).find(
+    (action): action is Extract<Action, { type: "useCounter" }> =>
+      action.type === "useCounter" &&
+      action.cardInstanceId === event.instanceId,
+  );
+  if (counterAction === undefined) {
+    return failedScenarioResult(
+      opened.state,
+      opened.events.length,
+      0,
+      input.setupFilters.length,
+      "no legal useCounter action",
+    );
+  }
+  return drainRuntime(
+    applyAction(opened.state, counterAction),
+    input.setupFilters.length,
+  );
+};
+
 export const runFieldRemovedScenario = (
   input: {
     readonly category: "character";
@@ -198,6 +320,82 @@ export const runFieldRemovedScenario = (
       type: "playCard",
       cardInstanceId: removalEvent.instanceId,
     }),
+    input.setupFilters.length,
+  );
+};
+
+export const runOnBlockScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  state.turn.globalTurn = 3;
+  state.turn.turnPlayerId = p2;
+  state.turn.playerTurnCounts[p1] = 1;
+  state.turn.playerTurnCounts[p2] = 2;
+  const defender = must(state.players[p1], `player ${String(p1)}`);
+  const attacker = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  const source = fieldProbeSource(defender);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const metadata = state.cardManifest.cards[source.cardId];
+  if (metadata !== undefined) {
+    state.cardManifest.cards[source.cardId] = {
+      ...metadata,
+      printedKeywords: [
+        ...new Set([...metadata.printedKeywords, blockerKeyword]),
+      ],
+    };
+  }
+  defender.hand = [];
+  const opened = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.leader.instanceId,
+      cardId: attacker.leader.cardId,
+      playerId: p2,
+      zone: attacker.leader.zone,
+    },
+    target: {
+      instanceId: defender.leader.instanceId,
+      cardId: defender.leader.cardId,
+      playerId: p1,
+      zone: defender.leader.zone,
+    },
+  });
+  if (opened.errors !== undefined) {
+    return drainRuntime(opened, input.setupFilters.length);
+  }
+  const blockAction: Extract<Action, { type: "respondToDecision" }> = {
+    type: "respondToDecision",
+    decisionId: must(opened.state.pendingDecision, "block decision").id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+          zone: source.zone,
+        },
+      ],
+    },
+  };
+  return drainRuntime(
+    applyAction(opened.state, blockAction),
     input.setupFilters.length,
   );
 };
@@ -333,6 +531,22 @@ const failedProbeFielding = (
   effectQueueDrained: state.effectQueue.length === 0,
   eventCount: 0,
   decisionsResolved: 0,
+  setupFilterCount,
+});
+
+const failedScenarioResult = (
+  state: GameState,
+  eventCount: number,
+  decisionsResolved: number,
+  setupFilterCount: number,
+  reason: string,
+): BehaviorProbeRunResult => ({
+  ok: false,
+  reason,
+  pendingDecisionDrained: state.pendingDecision === undefined,
+  effectQueueDrained: state.effectQueue.length === 0,
+  eventCount,
+  decisionsResolved,
   setupFilterCount,
 });
 

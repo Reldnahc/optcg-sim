@@ -6,9 +6,9 @@ import {
   createUnsupportedTrashDecision,
   emptySegmentResult,
   getSupportedFrameContext,
-  segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
+import { segmentKeyForPath } from "../paths.js";
 import type { SequenceFrameResumeResult } from "./types.js";
 
 export const resumeSequenceFrameAfterPlaySelectedOverflow = (
@@ -26,7 +26,8 @@ export const resumeSequenceFrameAfterPlaySelectedOverflow = (
     entry: context.entry,
     frame: context.frame,
     resumeSequenceFrameFromLedgers,
-    segmentKey,
+    segmentKey: (segment, index) =>
+      segmentKeyForPath(context.frame.effectPath, segment, index),
     sequenceRuntimeError,
     state,
   });

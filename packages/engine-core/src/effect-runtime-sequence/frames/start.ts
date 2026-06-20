@@ -302,6 +302,7 @@ export const createSupportedSequenceFrameDecision = (
 
 export const continueSupportedSequenceFrameFromSegment = (params: {
   completedSegmentResults: EffectExecutionFrame["segmentResults"];
+  createTrashDecision?: CreateTrashFromHandSequenceDecision;
   effectBlock: EffectDefinition["effects"][number];
   entry: EffectQueueEntry;
   resumePendingDecision?: NonNullable<GameState["pendingDecision"]>;
@@ -340,7 +341,7 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
       savedReferences: initialSavedReferences(params.state, resolvingEntry),
       segmentResults: params.completedSegmentResults,
     },
-    createUnsupportedTrashDecision,
+    params.createTrashDecision ?? createUnsupportedTrashDecision,
     false,
   );
   if (!run.ok) {

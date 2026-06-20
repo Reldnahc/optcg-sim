@@ -54,6 +54,7 @@ export const createSequenceSelectTargetsPause = (params: {
     params.state,
     params.request,
     {
+      source: params.entry.source,
       sourceControllerId: params.entry.controllerId,
     },
   );

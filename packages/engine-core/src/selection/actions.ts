@@ -207,6 +207,7 @@ const currentCandidatesForDecision = (
     state,
     decision.request,
     {
+      source: entry.source,
       sourceControllerId: entry.controllerId,
     },
   );

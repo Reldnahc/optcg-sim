@@ -308,6 +308,25 @@ const isCounterStepBattleDecision = (
     (decision.type === "selectTargets" &&
       parseCounterTargetDecisionId(String(decision.id)) !== null));
 
+const isBlockStepBattleDecision = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]>,
+): boolean =>
+  state.battle?.step === "block" &&
+  decision.type === "selectCards" &&
+  String(decision.id).startsWith("decision:blockStep:decline:") &&
+  decision.request.min === 0 &&
+  decision.request.max === 1 &&
+  decision.defaultResponse?.type === "cards" &&
+  decision.defaultResponse.cards.length === 0;
+
+const isBattleDecision = (
+  state: GameState,
+  decision: NonNullable<GameState["pendingDecision"]>,
+): boolean =>
+  isCounterStepBattleDecision(state, decision) ||
+  isBlockStepBattleDecision(state, decision);
+
 const applyBattleDecisionResponseWithContinuation = (
   state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
@@ -586,7 +605,7 @@ const applyRespondToDecision = (
       return lifeTriggerResult;
     }
   }
-  if (isCounterStepBattleDecision(state, decision)) {
+  if (isBattleDecision(state, decision)) {
     const battleResult = applyBattleDecisionResponseWithContinuation(
       state,
       action,
@@ -686,12 +705,14 @@ const applyRespondToDecision = (
     () => applyReplacementContinuationDecision(state, action, options),
   );
   if (replacementRestTargetResult !== null) return replacementRestTargetResult;
-  const battleResult = applyBattleDecisionResponseWithContinuation(
-    state,
-    action,
-    options,
-  );
-  if (battleResult !== null) return battleResult;
+  if (isBattleDecision(state, decision)) {
+    const battleResult = applyBattleDecisionResponseWithContinuation(
+      state,
+      action,
+      options,
+    );
+    if (battleResult !== null) return battleResult;
+  }
   const lifeTriggerResult = applyLifeTriggerDecisionResponseWithContinuation(
     state,
     action,

@@ -11,6 +11,7 @@ import { continueSupportedSequenceFrameFromSegment } from "../effect-runtime-seq
 import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
 import type { getSupportedCounterEventPower } from "./counter-event-support.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
+import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
 
 export type CounterEventTrailingSequence = NonNullable<
   NonNullable<
@@ -132,6 +133,7 @@ export const continueCounterEventTrailingSequence = (
         playerDeclined: false,
       },
     },
+    createTrashDecision: createSupportedTrashFromHandChoiceDecision,
     effectBlock: flattenedEffectBlock,
     entry,
     ...(resumePendingDecision === undefined ? {} : { resumePendingDecision }),

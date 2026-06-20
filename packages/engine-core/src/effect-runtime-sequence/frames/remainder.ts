@@ -1,10 +1,10 @@
 import type { GameState } from "@optcg/types";
 
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
+import { resolveSequenceForPath, segmentKeyForPath } from "../paths.js";
 import {
   emptySegmentResult,
   getSupportedFrameContext,
-  segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
 import type {
@@ -23,7 +23,11 @@ export const resumeSequenceFrameAfterPlaceSetRemainder = (
   }
   const { entry, frame, supportedBlock } = context;
   const index = frame.pendingDecision.resumeAtSegmentIndex;
-  const pausedSegment = supportedBlock.effect.effects[index];
+  const pausedSequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
+  const pausedSegment = pausedSequence?.effects[index];
   if (
     pausedSegment === undefined ||
     pausedSegment.effect.type !== "placeSetRemainder"
@@ -36,7 +40,7 @@ export const resumeSequenceFrameAfterPlaceSetRemainder = (
       ok: false,
     };
   }
-  const resultKey = segmentKey(pausedSegment, index);
+  const resultKey = segmentKeyForPath(frame.effectPath, pausedSegment, index);
   const previousResult = frame.segmentResults[resultKey];
   return resumeSequenceFrameFromLedgers({
     createTrashDecision,

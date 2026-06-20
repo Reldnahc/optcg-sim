@@ -6,20 +6,24 @@ export type SupportedScenario =
   | { readonly kind: "playCard"; readonly category: "character" | "event" }
   | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "counter"; readonly category: "event" }
+  | { readonly kind: "attackDeclared"; readonly category: "leader" }
   | { readonly kind: "cardPlayed"; readonly category: "character" }
   | { readonly kind: "cardRested"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "donReturned"; readonly category: "character" }
   | { readonly kind: "endOfYourTurn"; readonly category: "character" }
+  | { readonly kind: "effectQueued"; readonly category: "character" }
   | { readonly kind: "fieldRemoved"; readonly category: "character" }
   | { readonly kind: "handTrashedByEffect"; readonly category: "character" }
   | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "lifeRemoved"; readonly category: "character" }
   | { readonly kind: "onKO"; readonly category: "character" }
+  | { readonly kind: "onBlock"; readonly category: "character" }
   | { readonly kind: "opponentActivated"; readonly category: "character" }
   | { readonly kind: "permanent"; readonly category: "character" }
   | { readonly kind: "replacement"; readonly category: "character" }
+  | { readonly kind: "startOfYourTurn"; readonly category: "character" }
   | { readonly kind: "triggerActivated"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
@@ -92,19 +96,23 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
     effect.trigger.type === "counter" ||
     effect.trigger.type === "whenAttacking" ||
     effect.trigger.type === "onOpponentAttack" ||
+    effect.trigger.type === "onBlock" ||
     effect.trigger.type === "trigger" ||
     effect.trigger.type === "lifeRemoved" ||
     effect.trigger.type === "onKO" ||
     effect.trigger.type === "opponentActivated" ||
     effect.trigger.type === "permanent" ||
     effect.trigger.type === "endOfYourTurn" ||
-    effect.trigger.type === "replacement"
+    effect.trigger.type === "replacement" ||
+    effect.trigger.type === "startOfYourTurn"
   ) {
     return effect.trigger.type;
   }
+  if (effectHasTrigger(effect, "attackDeclared")) return "attackDeclared";
   if (effectHasTrigger(effect, "cardPlayed")) return "cardPlayed";
   if (effectHasTrigger(effect, "cardRested")) return "cardRested";
   if (effectHasTrigger(effect, "donReturned")) return "donReturned";
+  if (effectHasTrigger(effect, "effectQueued")) return "effectQueued";
   if (effectHasTrigger(effect, "fieldRemoved")) return "fieldRemoved";
   if (effectHasTrigger(effect, "handTrashedByEffect")) {
     return "handTrashedByEffect";
@@ -135,6 +143,9 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effect.trigger.type === "counter")) {
     return { kind: "counter", category: "event" };
   }
+  if (effects.every((effect) => effectHasTrigger(effect, "attackDeclared"))) {
+    return { kind: "attackDeclared", category: "leader" };
+  }
   if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
     return { kind: "cardPlayed", category: "character" };
   }
@@ -149,6 +160,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "endOfYourTurn")) {
     return { kind: "endOfYourTurn", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "effectQueued"))) {
+    return { kind: "effectQueued", category: "character" };
   }
   if (effects.every((effect) => effectHasTrigger(effect, "fieldRemoved"))) {
     return { kind: "fieldRemoved", category: "character" };
@@ -176,6 +190,9 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effect.trigger.type === "onKO")) {
     return { kind: "onKO", category: "character" };
   }
+  if (effects.every((effect) => effect.trigger.type === "onBlock")) {
+    return { kind: "onBlock", category: "character" };
+  }
   if (effects.every((effect) => effect.trigger.type === "opponentActivated")) {
     return { kind: "opponentActivated", category: "character" };
   }
@@ -184,6 +201,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "replacement")) {
     return { kind: "replacement", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "startOfYourTurn")) {
+    return { kind: "startOfYourTurn", category: "character" };
   }
   return {
     kind: "skipped",

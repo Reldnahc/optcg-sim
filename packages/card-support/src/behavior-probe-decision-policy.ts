@@ -175,13 +175,17 @@ const choosePendingDecisionAction = (
     return undefined;
   }
   if (decision.placement?.type === "topOrBottom") {
+    const bottomIds =
+      decision.destination === "life"
+        ? decision.cards.slice(0, 1).map((card) => String(card.instanceId))
+        : decision.cards.map((card) => String(card.instanceId));
     return {
       type: "respondToDecision",
       decisionId: decision.id,
       response: {
         type: "topBottomPlacement",
         topIds: [],
-        bottomIds: decision.cards.map((card) => String(card.instanceId)),
+        bottomIds,
       },
     };
   }

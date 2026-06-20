@@ -779,4 +779,125 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: triggerActivated");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("routes self Event activation reactions during the opponent turn", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Opponent's Turn] [Once Per Turn] When you activate an Event, add up to 1 DON!! card from your DON!! deck and set it as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: effectQueued");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("routes On Block reactions through blocker activation", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Block] Rest up to 1 of your opponent's Characters with a cost of 5 or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: onBlock");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("routes start-of-turn activations through behavior scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "This effect can be activated at the start of your turn. If you have 8 or more DON!! cards on your field, look at 5 cards from the top of your deck; reveal up to 1 {Straw Hat Crew} type card and add it to your hand. Then, place the rest at the top or bottom of the deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: startOfYourTurn");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("routes leader attack-declared reactions through behavior scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "When this Leader attacks your opponent's Leader, if you have 2 or more Characters with a cost of 8 or more, draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: attackDeclared");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("answers top-or-bottom Life placement decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Main] Look at up to 1 card from the top of your or your opponent's Life cards and place it at the top or bottom of the Life cards. Then, K.O. up to 1 of your opponent's Characters with a cost of 5 or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Counter Event power effects with trailing field activation", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] If you have 1 or less Life cards, up to 1 of your Leader or Character cards gains +3000 power during this battle. Then, set up to 1 of your Characters with a cost of 5 or less as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs DON-attached Leader activations with delayed attack restrictions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[DON!! x3] [Activate: Main] [Once Per Turn] If this Leader battles your opponent's Character during this turn, set this Leader as active. Then, this Leader cannot attack your opponent's Characters with a base cost of 7 or less during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs optional rest-DON and rest-self activation costs before search bodies", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] You may rest 1 of your DON!! cards and this Character: If your Leader is [Roronoa Zoro], look at 5 cards from the top of your deck; reveal up to 1 <Slash> attribute card or green Event and add it to your hand. Then, place the rest at the bottom of your deck in any order.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("builds any-player targets for other-character bounce effects", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] If your Leader has the {The Seven Warlords of the Sea} type, return up to 1 Character with a cost of 1 or less other than this Character to the owner's hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Counter Event power effects with trailing hand trash", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] Up to 1 of your Leader or Character cards gains +4000 power during this battle. Then, trash 1 card from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs optional trash-to-deck costs before conditional trash play bodies", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] You may place 3 {Revolutionary Army} type cards from your trash at the bottom of your deck in any order: If your Leader has the {Revolutionary Army} type, play up to 1 Character card with a cost of 6 or less from your trash.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });
