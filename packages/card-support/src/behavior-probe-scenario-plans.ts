@@ -11,7 +11,10 @@ export type SupportedScenario =
   | { readonly kind: "cardDrawn"; readonly category: "character" }
   | { readonly kind: "cardRested"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
+  | { readonly kind: "damageDealt"; readonly category: "character" }
+  | { readonly kind: "donAttached"; readonly category: "character" }
   | { readonly kind: "donReturned"; readonly category: "character" }
+  | { readonly kind: "endOfBattle"; readonly category: "character" }
   | { readonly kind: "endOfYourTurn"; readonly category: "character" }
   | { readonly kind: "effectQueued"; readonly category: "character" }
   | { readonly kind: "fieldRemoved"; readonly category: "character" }
@@ -113,7 +116,10 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
   if (effectHasTrigger(effect, "cardDrawn")) return "cardDrawn";
   if (effectHasTrigger(effect, "cardPlayed")) return "cardPlayed";
   if (effectHasTrigger(effect, "cardRested")) return "cardRested";
+  if (effectHasTrigger(effect, "damageDealt")) return "damageDealt";
+  if (effectHasTrigger(effect, "donAttached")) return "donAttached";
   if (effectHasTrigger(effect, "donReturned")) return "donReturned";
+  if (effectHasTrigger(effect, "endOfBattle")) return "endOfBattle";
   if (effectHasTrigger(effect, "effectQueued")) return "effectQueued";
   if (effectHasTrigger(effect, "fieldRemoved")) return "fieldRemoved";
   if (effectHasTrigger(effect, "handTrashedByEffect")) {
@@ -157,8 +163,17 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effectHasTrigger(effect, "cardRested"))) {
     return { kind: "cardRested", category: "character" };
   }
+  if (effects.every((effect) => effectHasTrigger(effect, "damageDealt"))) {
+    return { kind: "damageDealt", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "donAttached"))) {
+    return { kind: "donAttached", category: "character" };
+  }
   if (effects.every((effect) => effectHasTrigger(effect, "donReturned"))) {
     return { kind: "donReturned", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "endOfBattle"))) {
+    return { kind: "endOfBattle", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };

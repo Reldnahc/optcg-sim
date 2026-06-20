@@ -84,7 +84,7 @@ export const isSupportedSavedFieldObjectKoTarget = (
     target.player === "opponent" ||
     target.player === "anyPlayer") &&
   target.controller === undefined &&
-  target.filter === undefined;
+  isSupportedPublicFieldTargetFilter(target.filter);
 
 export const isSupportedSavedLeaderOrCharacterTarget = (
   target: Target,

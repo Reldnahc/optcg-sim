@@ -18,7 +18,10 @@ import type {
 } from "@optcg/types";
 
 import { toEngineResult, toStateSeq } from "../../action-results.js";
-import { getOpponentId } from "../../actions/state.js";
+import {
+  cardMatchesHandSelectionFilter,
+  getOpponentId,
+} from "../../actions/state.js";
 import {
   buildSelectedTargetsFieldRemovalKoReplacementProcess,
   buildSelectedTargetsRestReplacementProcess,
@@ -196,10 +199,7 @@ export const resolveSavedFieldObjectKoSelection = (params: {
 }):
   | { ok: true; selectedTargets: readonly CardRef[] }
   | { ok: false; reason: SavedFieldObjectKoSelectionFailureReason } => {
-  if (
-    params.target.controller !== undefined ||
-    params.target.filter !== undefined
-  ) {
+  if (params.target.controller !== undefined) {
     return { ok: false, reason: "unsupported-target-policy" };
   }
 
@@ -286,6 +286,17 @@ export const resolveSavedFieldObjectKoSelection = (params: {
       located.playerId !== object.object.playerId ||
       located.card.cardId !== object.object.cardId ||
       located.card.zone.zone !== object.object.zone.zone
+    ) {
+      return { ok: false, reason: "illegal-object" };
+    }
+    if (
+      params.target.filter !== undefined &&
+      !cardMatchesHandSelectionFilter(
+        params.state,
+        located.playerId,
+        located.card,
+        params.target.filter,
+      )
     ) {
       return { ok: false, reason: "illegal-object" };
     }

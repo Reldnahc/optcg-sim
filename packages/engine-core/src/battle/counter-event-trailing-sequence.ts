@@ -5,6 +5,7 @@ import type {
   EngineEvent,
   GameState,
   PlayerId,
+  SequenceSegmentResult,
 } from "@optcg/types";
 
 import { continueSupportedSequenceFrameFromSegment } from "../effect-runtime-sequence/frames.js";
@@ -108,12 +109,23 @@ export const continueCounterEventTrailingSequence = (
     ...effectBlock,
     effect: sequence,
   };
-  const firstSegment = sequence.effects[0];
   if (
-    firstSegment === undefined ||
-    firstSegment.effect.type !== "modifyPower"
+    trailingSequence.startIndex <= 0 ||
+    trailingSequence.startIndex > sequence.effects.length
   ) {
     return null;
+  }
+  const completedSegmentResults: Record<string, SequenceSegmentResult> = {};
+  for (let index = 0; index < trailingSequence.startIndex; index += 1) {
+    completedSegmentResults[String(index)] = {
+      attempted: true,
+      succeeded: true,
+      changedState: true,
+      selectedCards: [],
+      selectedTargets: [],
+      paidCost: sequence.effects[index]?.effect.type === "payCost",
+      playerDeclined: false,
+    };
   }
   const entry = toCounterEventSequenceQueueEntry(
     state,
@@ -122,17 +134,7 @@ export const continueCounterEventTrailingSequence = (
     flattenedEffectBlock,
   );
   const continued = continueSupportedSequenceFrameFromSegment({
-    completedSegmentResults: {
-      "0": {
-        attempted: true,
-        succeeded: true,
-        changedState: true,
-        selectedCards: [],
-        selectedTargets: [],
-        paidCost: false,
-        playerDeclined: false,
-      },
-    },
+    completedSegmentResults,
     createTrashDecision: createSupportedTrashFromHandChoiceDecision,
     effectBlock: flattenedEffectBlock,
     entry,

@@ -536,6 +536,7 @@ export const applySupportedTrashFromHandChoiceResponse = (
     nextState,
     decision,
     selectedRefs,
+    createSupportedTrashFromHandChoiceDecision,
   );
   if (sequenceResume !== undefined) {
     if (!sequenceResume.ok) {

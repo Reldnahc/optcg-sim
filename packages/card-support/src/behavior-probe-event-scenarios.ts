@@ -253,6 +253,144 @@ export const runDonReturnedScenario = (
   );
 };
 
+export const runDonAttachedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const attachAction = getLegalActions(state, p1).find(
+    (action): action is Extract<Action, { type: "attachDon" }> =>
+      action.type === "attachDon" &&
+      action.target.instanceId === source.instanceId,
+  );
+  if (attachAction === undefined) {
+    return failedScenarioResult(
+      state,
+      0,
+      0,
+      input.setupFilters.length,
+      "no legal attachDon action",
+    );
+  }
+  return drainRuntime(
+    applyAction(state, attachAction),
+    input.setupFilters.length,
+  );
+};
+
+export const runDamageDealtScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  setProbeCardPower(state, source.cardId, 7000);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  defender.hand = [];
+  defender.leader.state = "active";
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p2,
+        zone: defender.leader.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
+export const runEndOfBattleScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  setProbeCardPower(state, source.cardId, 7000);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  defender.hand = [];
+  const target =
+    defender.characters[0] ??
+    addProbeFieldCharacter(state, p2, "probe-end-of-battle-target" as CardId);
+  target.state = "rested";
+  setProbeCardPower(state, target.cardId, 8000);
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: target.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
 export const runEffectQueuedScenario = (
   input: {
     readonly category: "character";
@@ -648,6 +786,21 @@ const addProbeFieldCharacter = (
   };
   player.characters = [...player.characters, card];
   return card;
+};
+
+const setProbeCardPower = (
+  state: GameState,
+  cardId: CardId,
+  power: number,
+): void => {
+  const resolved = state.cardManifest.cards[cardId];
+  if (resolved === undefined) {
+    return;
+  }
+  state.cardManifest.cards[cardId] = {
+    ...resolved,
+    power,
+  };
 };
 
 const addFieldRemovalEventCard = (state: GameState): CardInstance => {

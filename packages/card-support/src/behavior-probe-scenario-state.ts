@@ -10,10 +10,10 @@ import type {
   CardInstance,
   Condition,
   Cost,
+  Effect,
   EffectBlock,
   EffectDefinition,
   EngineEventId,
-  Effect,
   EffectId,
   GameState,
   InstanceId,
@@ -25,6 +25,8 @@ import type {
   ResolvedCard,
 } from "@optcg/types";
 
+import { supportForFilterEntryPoint } from "./behavior-probe-filter-entrypoint-support.js";
+import { enforceLowFieldCountConditions } from "./behavior-probe-low-field-count.js";
 import {
   profileForCardFilter,
   profileForLeaderFilters,
@@ -192,6 +194,7 @@ export const configureProbeFieldSourceForScenario = (
   effects: readonly EffectBlock[],
 ): void => {
   installProbeSourceConditionMetadata(state, source, effects);
+  enforceLowFieldCountConditions(state, source, effects);
   if (
     effects.some((block) =>
       hasCondition(block.condition, "sourcePlayedThisTurn"),
@@ -748,11 +751,17 @@ const installHandCostCards = (
       ...card,
       cardId,
     };
+    const support = supportForFilterEntryPoint(
+      state,
+      cardId,
+      filter?.effectEntryPoint,
+    );
     state.cardManifest.cards[cardId] = resolvedProbeCard({
       cardId,
       category: profile.category ?? "character",
       effectText: "",
       profile,
+      ...(support === undefined ? {} : { support }),
     });
   }
   player.hand = reindexHand(mutableHand, playerId);

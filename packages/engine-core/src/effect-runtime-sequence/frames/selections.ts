@@ -52,9 +52,10 @@ export const resumeSequenceFrameAfterTrashFromHand = (
   state: GameState,
   decision: SelectCardsDecision,
   selectedCards: readonly CardRef[],
+  createTrashDecision: CreateTrashFromHandSequenceDecision = createUnsupportedTrashDecision,
 ): SequenceFrameResumeResult => {
   return resumeSequenceFrameAfterTrashFromHandHelper({
-    createUnsupportedTrashDecision,
+    createUnsupportedTrashDecision: createTrashDecision,
     decision,
     emptySegmentResult,
     findFrameQueueEntry,

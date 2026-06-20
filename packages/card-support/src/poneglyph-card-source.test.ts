@@ -156,6 +156,65 @@ describe("poneglyph card source", () => {
     expect(entries).toEqual({ ok: true, entries: [] });
   });
 
+  it("skips alternate-name rules metadata in behavior coverage entries", async () => {
+    const fetchPoneglyph: PoneglyphFetch = () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            "OP01-121": {
+              card_number: "OP01-121",
+              effect:
+                "Also treat this card's name as [Kouzuki Oden] according to the rules.\n[Double Attack] (This card deals 2 damage.)",
+              trigger: null,
+            },
+          },
+          missing: [],
+        }),
+      );
+
+    const entries = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP01-121"],
+      { baseUrl: "https://example.test", fetchPoneglyph },
+    );
+
+    expect(entries).toEqual({ ok: true, entries: [] });
+  });
+
+  it("skips deck-out replacement rules metadata in behavior coverage entries", async () => {
+    const fetchPoneglyph: PoneglyphFetch = () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            "OP03-040": {
+              card_number: "OP03-040",
+              effect:
+                "When your deck is reduced to 0, you win the game instead of losing, according to the rules.\n[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+              trigger: null,
+            },
+          },
+          missing: [],
+        }),
+      );
+
+    const entries = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP03-040"],
+      { baseUrl: "https://example.test", fetchPoneglyph },
+    );
+
+    expect(entries).toEqual({
+      ok: true,
+      entries: [
+        {
+          label: "OP03-040 line 2",
+          cardId: "OP03-040",
+          lineNumber: 2,
+          focusLineNumber: 1,
+          text: "[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+        },
+      ],
+    });
+  });
+
   it("loads gameplay text entries for a set code", async () => {
     const seenUrls: string[] = [];
     const fetchPoneglyph: PoneglyphFetch = (url, init) => {

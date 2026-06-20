@@ -29,7 +29,10 @@ import {
   runCardDrawnScenario,
   runCardPlayedScenario,
   runCardRestedScenario,
+  runDamageDealtScenario,
+  runDonAttachedScenario,
   runDonReturnedScenario,
+  runEndOfBattleScenario,
   runEndOfYourTurnScenario,
   runEffectQueuedScenario,
   runFieldRemovedScenario,
@@ -81,7 +84,10 @@ export interface BehaviorProbeScenario {
     | "cardPlayed"
     | "cardRested"
     | "declareAttack"
+    | "damageDealt"
+    | "donAttached"
     | "donReturned"
+    | "endOfBattle"
     | "endOfYourTurn"
     | "effectQueued"
     | "fieldRemoved"
@@ -301,12 +307,54 @@ const runScenario = (
           ),
       );
     case "declareAttack":
-      return runDeclareAttackScenario({
-        ...scenarioInput,
-        category: "character",
-      });
+      return runDeclareAttackScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        true,
+      );
+    case "damageDealt":
+      return runDamageDealtScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "donAttached":
+      return runDonAttachedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "donReturned":
       return runDonReturnedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "endOfBattle":
+      return runEndOfBattleScenario(
         {
           ...scenarioInput,
           category: "character",
@@ -561,14 +609,17 @@ const runPlayCardScenario = (input: {
   );
 };
 
-const runDeclareAttackScenario = (input: {
-  readonly category: "character";
-  readonly definition: NonNullable<
-    ReturnType<typeof materializeEffectDefinition>["definition"]
-  >;
-  readonly setupFilters: readonly CardFilter[];
-  readonly text: string;
-}): {
+const runDeclareAttackScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: NonNullable<
+      ReturnType<typeof materializeEffectDefinition>["definition"]
+    >;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  allowBattleRemainder = false,
+): {
   readonly ok: boolean;
   readonly reason?: string;
   readonly pendingDecisionDrained: boolean;
@@ -595,7 +646,13 @@ const runDeclareAttackScenario = (input: {
     };
   }
   const defender = must(state.players[p2], `player ${String(p2)}`);
-  defender.hand = [];
+  for (const card of defender.hand) {
+    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
+      cardId: card.cardId,
+      category: "character",
+      effectText: "",
+    });
+  }
   const target = defender.leader;
   return drainRuntime(
     applyAction(state, {
@@ -615,6 +672,7 @@ const runDeclareAttackScenario = (input: {
     }),
     input.setupFilters.length,
     input.definition.effects,
+    { allowBattleRemainder },
   );
 };
 
@@ -812,6 +870,7 @@ const drainRuntime = (
   initialResult: EngineResult,
   setupFilterCount = 0,
   effectBlocks: readonly EffectBlock[] = [],
+  options: { readonly allowBattleRemainder?: boolean } = {},
 ): {
   readonly ok: boolean;
   readonly reason?: string;
@@ -838,6 +897,20 @@ const drainRuntime = (
     }
     if (
       state.pendingDecision === undefined &&
+      state.effectQueue.length === 0 &&
+      state.deferredTriggers.length === 0
+    ) {
+      return drainResult(
+        true,
+        state,
+        eventCount,
+        decisionsResolved,
+        setupFilterCount,
+      );
+    }
+    if (
+      options.allowBattleRemainder === true &&
+      state.battle !== undefined &&
       state.effectQueue.length === 0 &&
       state.deferredTriggers.length === 0
     ) {

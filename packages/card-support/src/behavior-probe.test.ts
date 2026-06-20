@@ -1021,4 +1021,92 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("continues sequences through multiple hand-trash decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[When Attacking] Draw 1 card and trash 1 card from your hand. Then, trash up to 3 cards from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: declareAttack");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("continues sequences through opponent hand-trash decisions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[When Attacking] DON!! \u22121: Your opponent trashes 1 card from their hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: declareAttack");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("does not over-seed field cards for low field-count activation conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If you have 1 or less Characters, the next time you play a {Land of Wano} type Character card with a cost of 3 or more from your hand during this turn, the cost will be reduced by 1.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds Trigger cards for trigger-filtered activation costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may trash 1 card with a [Trigger] from your hand: Rest up to 1 of your opponent's Characters with a cost of 2 or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves DON-attached reactions through generated scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] When this Leader or any of your Characters is given a DON!! card, give up to 1 of your opponent's Characters with a cost of 7 or less \u22121 cost during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: donAttached");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves damage-dealt reactions through generated combat scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[DON!! x1] When this Character's attack deals damage to your opponent's Life, you may trash 7 cards from the top of your deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: damageDealt");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves end-of-battle reactions through generated battle scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] At the end of a battle in which this Character battles your opponent's Character with a cost of 5 or less, place the opponent's Character you battled with at the bottom of the owner's deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: endOfBattle");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs counter power effects with trailing deck trash", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] You may trash 1 card from your hand: Up to 1 of your Leader gains +4000 power during this battle. Then, you may trash 2 cards from the top of your deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });

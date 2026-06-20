@@ -383,8 +383,15 @@ const coverageEntriesForCard = (
 };
 
 const isBehaviorCoverageRuntimeLine = (text: string): boolean =>
-  parseRawKeywordLine({ text }) === undefined &&
-  !/^Under the rules of this game,/iu.test(text.trim());
+  parseRawKeywordLine({ text }) === undefined && !isRulesMetadataLine(text);
+
+const isRulesMetadataLine = (text: string): boolean => {
+  const trimmed = text.trim();
+  return (
+    /^Under the rules of this game,/iu.test(trimmed) ||
+    /according to the rules\.?$/iu.test(trimmed)
+  );
+};
 
 const deckHashEntriesFromDecodedDeck = (
   decoded: DeckHashDeck,
