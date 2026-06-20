@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardRef,
   Effect,
   EffectDefinition,
   GameState,
@@ -133,4 +134,19 @@ test("noSourceRequired life trigger sequence support is routed through shared qu
   assert.equal(paused.state.pendingDecision?.type, "selectCards");
   const queued = must(paused.state.effectQueue[0], "queued entry");
   assert.equal(queued.sourcePresencePolicy, "noSourceRequired");
+
+  const trashDecision = must(paused.state.pendingDecision, "trash decision");
+  assert.equal(trashDecision.type, "selectCards");
+  const selectedCards = trashDecision.candidates
+    .slice(0, 1)
+    .map((candidate): CardRef => candidate.card);
+  const resolved = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: trashDecision.id,
+    response: { type: "cards", cards: selectedCards },
+  });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.effectQueue.length, 0);
 });

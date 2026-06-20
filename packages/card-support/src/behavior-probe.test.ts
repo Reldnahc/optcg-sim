@@ -244,6 +244,17 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("keeps deck zone refs stable after life-count setup for attack scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[When Attacking] If you have 3 or less Life cards, add up to 1 DON!! card from your DON!! deck and set it as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: declareAttack");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("runs each supported entry alternative from the same printed line", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play]/[When Attacking] Add up to 1 DON!! card from your DON!! deck and set it as active.",
@@ -335,6 +346,50 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("profiles Activate Main sources from self stat conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If this Character has 7000 power or more, play up to 1 {Revolutionary Army} type Character card with 5000 power or less other than [Emporio.Ivankov] from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds field cards for Activate Main trash-from-field costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may trash 1 of your Characters with 6000 power or more: Play up to 1 {FILM} type Character card with 2000 to 5000 power from your trash rested.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds Stage cards for Activate Main move-from-stage costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may place 1 Stage with a cost of 1 at the bottom of the owner's deck: K.O. up to 1 of your opponent's Characters with a cost of 2 or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("does not seed an extra matching field card for no-other self conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If your Leader has the {Foxy Pirates} type and you have no other [Itomimizu], add up to 1 DON!! card from your DON!! deck and rest it.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("runs Trigger effects by activating the source from Life", () => {
     const report = createBehaviorProbeReport({
       text: "[Trigger] Play this card.",
@@ -354,6 +409,17 @@ describe("card behavior probe", () => {
         primitiveTypes: ["playSource"],
       },
     ]);
+  });
+
+  it("keeps a trigger card in Life while setting up zero-life trigger conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Trigger] If you have 0 Life cards, you may add up to 1 card from the top of your deck to the top of your Life cards. Then, trash 1 card from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
   it("proves referenced Main activation triggers with same-card context", () => {
@@ -791,6 +857,17 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("routes outside-draw-phase card-drawn reactions through behavior scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] [Once Per Turn] When you draw a card outside of your Draw Phase, this Character gains +2000 power during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: cardDrawn");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("routes On Block reactions through blocker activation", () => {
     const report = createBehaviorProbeReport({
       text: "[On Block] Rest up to 1 of your opponent's Characters with a cost of 5 or less.",
@@ -893,6 +970,50 @@ describe("card behavior probe", () => {
   it("runs optional trash-to-deck costs before conditional trash play bodies", () => {
     const report = createBehaviorProbeReport({
       text: "[On Play] You may place 3 {Revolutionary Army} type cards from your trash at the bottom of your deck in any order: If your Leader has the {Revolutionary Army} type, play up to 1 Character card with a cost of 6 or less from your trash.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Life Trigger draw-then-trash sequences after drawing into hand", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Trigger] If your Leader is [Nico Robin], draw 3 cards and trash 2 cards from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Life Trigger top-deck-to-Life sequences before hand trash", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Trigger] If your Leader has the {Egghead} type, add up to 1 card from the top of your deck to the top of your Life cards. Then, trash 2 cards from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Life Trigger optional return costs before target bounce bodies", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Trigger] You may return 1 of your Characters to the owner's hand: Return up to 1 of your opponent's Characters with a cost of 5 or less to the owner's hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs optional trash-to-deck costs before opponent hand trash and trash bottoming", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] You may place 3 cards from your trash at the bottom of your deck in any order: Your opponent trashes 1 card from their hand. Then, you may place up to 1 card from your opponent's trash at the bottom of their deck.",
     });
 
     expect(report.exitCode).toBe(0);

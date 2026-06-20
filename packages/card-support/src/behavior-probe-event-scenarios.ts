@@ -68,6 +68,39 @@ export const runCardPlayedScenario = (
   );
 };
 
+export const runCardDrawnScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const event = addSupportedEventCard({
+    state,
+    playerId: p1,
+    cardId: "probe-card-drawn-event" as CardId,
+    effectText: "[Main] Draw 1 card.",
+    sourceTextHash: "behavior-probe-card-drawn-event",
+  });
+  return drainRuntime(
+    applyAction(state, { type: "playCard", cardInstanceId: event.instanceId }),
+    input.setupFilters.length,
+  );
+};
+
 export const runEndOfYourTurnScenario = (
   input: {
     readonly category: "character";

@@ -26,6 +26,7 @@ import {
 import { chooseProbeDecisionAction } from "./behavior-probe-decision-policy.js";
 import {
   runAttackDeclaredScenario,
+  runCardDrawnScenario,
   runCardPlayedScenario,
   runCardRestedScenario,
   runDonReturnedScenario,
@@ -45,6 +46,7 @@ import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
 import { runReplacementScenario } from "./behavior-probe-replacement-scenario.js";
+import { runLifeTriggerScenario } from "./behavior-probe-life-trigger-scenario.js";
 import {
   scenarioPlansForEffects,
   type RunnableScenario,
@@ -75,6 +77,7 @@ export interface BehaviorProbeScenario {
     | "activateEffect"
     | "attackDeclared"
     | "counter"
+    | "cardDrawn"
     | "cardPlayed"
     | "cardRested"
     | "declareAttack"
@@ -258,6 +261,19 @@ const runScenario = (
       );
     case "counter":
       return runCounterScenario({ ...scenarioInput, category: "event" });
+    case "cardDrawn":
+      return runCardDrawnScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "cardPlayed":
       return runCardPlayedScenario(
         {
@@ -368,10 +384,13 @@ const runScenario = (
           ),
       );
     case "lifeTrigger":
-      return runLifeTriggerScenario({
-        ...scenarioInput,
-        category: "character",
-      });
+      return runLifeTriggerScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        drainRuntime,
+      );
     case "lifeRemoved":
       return runLifeRemovedScenario({
         ...scenarioInput,
@@ -725,70 +744,6 @@ const runCounterScenario = (input: {
   }
   return drainRuntime(
     applyAction(opened.state, counterAction),
-    input.setupFilters.length,
-    input.definition.effects,
-  );
-};
-
-const runLifeTriggerScenario = (input: {
-  readonly category: "character";
-  readonly definition: NonNullable<
-    ReturnType<typeof materializeEffectDefinition>["definition"]
-  >;
-  readonly setupFilters: readonly CardFilter[];
-  readonly text: string;
-}): {
-  readonly ok: boolean;
-  readonly reason?: string;
-  readonly pendingDecisionDrained: boolean;
-  readonly effectQueueDrained: boolean;
-  readonly eventCount: number;
-  readonly decisionsResolved: number;
-  readonly setupFilterCount: number;
-} => {
-  const state = setupProbeMainState(input);
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
-  const attacker = must(state.players[p1], `player ${String(p1)}`);
-  const defender = must(state.players[p2], `player ${String(p2)}`);
-  attacker.leader.state = "active";
-  defender.leader.state = "active";
-  defender.hand = [];
-  defender.characters = [];
-  const topLife = must(defender.life[0], "defender top Life");
-  defender.life[0] = {
-    ...topLife,
-    card: {
-      ...topLife.card,
-      cardId: probeCardId,
-    },
-  };
-  const resolved = must(
-    state.cardManifest.cards[probeCardId],
-    "probe card metadata",
-  );
-  state.cardManifest.cards[probeCardId] = {
-    ...resolved,
-    triggerText: input.text,
-  };
-
-  return drainRuntime(
-    applyAction(state, {
-      type: "declareAttack",
-      attacker: {
-        instanceId: attacker.leader.instanceId,
-        cardId: attacker.leader.cardId,
-        playerId: p1,
-        zone: attacker.leader.zone,
-      },
-      target: {
-        instanceId: defender.leader.instanceId,
-        cardId: defender.leader.cardId,
-        playerId: p2,
-        zone: defender.leader.zone,
-      },
-    }),
     input.setupFilters.length,
     input.definition.effects,
   );

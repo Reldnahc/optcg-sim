@@ -370,6 +370,117 @@ test("self hand selection can be ordered onto the top of deck through an order d
   );
 });
 
+test("nested self hand top-or-bottom placement resumes the parent sequence", () => {
+  const selection = "handSelection:self-hand-to-deck-placement" as SelectionId;
+  const state = queueSequence({
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "sequence",
+          effects: [
+            {
+              connector: "always",
+              effect: {
+                type: "draw",
+                count: 1,
+                player: "self",
+              },
+            },
+            {
+              connector: "then",
+              effect: {
+                type: "sequence",
+                effects: [
+                  {
+                    connector: "always",
+                    saveResultAs: selection,
+                    effect: {
+                      type: "selectCards",
+                      zone: "hand",
+                      player: "self",
+                      chooser: "self",
+                      min: 1,
+                      max: 1,
+                      saveAs: selection,
+                      visibility: "chooserOnly",
+                    },
+                  },
+                  {
+                    connector: "then",
+                    effect: {
+                      type: "moveSelected",
+                      selection,
+                      from: "hand",
+                      to: "deck",
+                      position: "topOrBottom",
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      {
+        connector: "then",
+        effect: {
+          type: "draw",
+          count: 1,
+          player: "self",
+        },
+      },
+    ],
+  });
+
+  const paused = processEffectRuntime(state);
+  const selectDecision = must(paused.state.pendingDecision, "select decision");
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(selectDecision.type, "selectCards");
+
+  const selected = must(
+    selectDecision.candidates[0],
+    "selected hand card",
+  ).card;
+  const selectedCards = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selectDecision.id,
+    response: {
+      type: "cards",
+      cards: [selected],
+    },
+  });
+  const orderDecision = must(
+    selectedCards.state.pendingDecision,
+    "order selected card",
+  );
+
+  assert.equal(selectedCards.errors, undefined);
+  assert.equal(orderDecision.type, "orderCards");
+
+  const ordered = applyAction(selectedCards.state, {
+    type: "respondToDecision",
+    decisionId: orderDecision.id,
+    response: {
+      type: "topBottomPlacement",
+      topIds: [],
+      bottomIds: [String(selected.instanceId)],
+    },
+  });
+
+  assert.equal(ordered.errors, undefined);
+  assert.equal(ordered.state.pendingDecision, undefined);
+  assert.equal(ordered.state.effectQueue.length, 0);
+  assert.equal(
+    [...paused.events, ...selectedCards.events, ...ordered.events].filter(
+      (event) => event.type === "cardDrawn",
+    ).length,
+    2,
+  );
+});
+
 test("self hand selection moves one chosen card to the top of Life", () => {
   const selection = "handSelection:self-hand-to-life-placement" as SelectionId;
   const state = queueSequence({

@@ -45,7 +45,9 @@ export const resolvedProbeCard = (params: {
   ...(params.category === "leader"
     ? { power: params.profile?.power ?? 5000 }
     : {}),
-  ...(params.category === "event" ? { cost: params.profile?.cost ?? 0 } : {}),
+  ...(params.category === "event" || params.category === "stage"
+    ? { cost: params.profile?.cost ?? 0 }
+    : {}),
   ...(params.profile?.counter === undefined
     ? {}
     : { counter: params.profile.counter }),

@@ -582,7 +582,24 @@ const cardMatchesBaseFilter = (
     }
   }
   if (filter.currentPower !== undefined) {
-    return false;
+    const power = card.power;
+    if (power === undefined) {
+      return false;
+    }
+    if ("op" in filter.currentPower) {
+      if (!numericComparisonMatches(power, filter.currentPower)) return false;
+    } else {
+      if (
+        filter.currentPower.min !== undefined &&
+        power < filter.currentPower.min
+      )
+        return false;
+      if (
+        filter.currentPower.max !== undefined &&
+        power > filter.currentPower.max
+      )
+        return false;
+    }
   }
   if (filter.statComparisons !== undefined) {
     for (const comparison of filter.statComparisons) {

@@ -249,7 +249,8 @@ const supportedCounterEventPower = (
     effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
     !(
       parsed.power.duration.type === "thisBattle" ||
-      parsed.power.duration.type === "thisTurn"
+      parsed.power.duration.type === "thisTurn" ||
+      parsed.power.duration.type === "untilEndOfNextTurn"
     ) ||
     typeof parsed.power.value !== "number" ||
     !Number.isInteger(parsed.power.value) ||

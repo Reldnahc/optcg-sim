@@ -109,6 +109,33 @@ test("hand-selection filters do not treat type-or-attribute alternatives as a ca
   );
 });
 
+test("hand-selection filters compare current power against card power when no computed value is supplied", () => {
+  const state = createActiveState();
+  const player = must(state.players[p1], "p1");
+  const character = must(player.hand[0], "character");
+
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    power: 6000,
+  });
+
+  assert.equal(
+    cardMatchesHandSelectionFilter(state, p1, character, {
+      categories: ["character"],
+      currentPower: { min: 6000 },
+    }),
+    true,
+  );
+  assert.equal(
+    cardMatchesHandSelectionFilter(state, p1, character, {
+      categories: ["character"],
+      currentPower: { max: 5000 },
+    }),
+    false,
+  );
+});
+
 test("hand-selection filters compare cost against self and opponent DON field counts", () => {
   const state = createActiveState();
   const player = must(state.players[p1], "p1");

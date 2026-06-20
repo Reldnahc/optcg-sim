@@ -21,6 +21,7 @@ export {
   respondToMulliganDecision,
   startMulliganFlow,
 } from "./setup/mulligan.js";
+export { reindexZoneCards } from "./actions/state.js";
 export {
   advanceDonPhase,
   advanceDrawPhase,

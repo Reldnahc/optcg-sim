@@ -59,6 +59,14 @@ const collectConditionFilters = (
     condition.type === "fieldCountTotal" ||
     condition.type === "trashCount"
   ) {
+    if (
+      condition.type === "fieldCount" &&
+      condition.op === "eq" &&
+      condition.value === 0 &&
+      condition.filter?.excludeSelf === true
+    ) {
+      return [];
+    }
     return condition.filter === undefined ? [] : [condition.filter];
   }
   if (condition.type === "fieldCountDifference") {

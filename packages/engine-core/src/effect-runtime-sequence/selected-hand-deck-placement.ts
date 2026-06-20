@@ -3,11 +3,11 @@ import type { GameState } from "@optcg/types";
 import { findSequenceFrameByDecisionId } from "./frame-decisions.js";
 import {
   emptySegmentResult,
-  segmentKey,
   sequenceRuntimeError,
   type CreateTrashFromHandSequenceDecision,
   type SequenceFrameResumeResult,
 } from "./runner.js";
+import { resolveSequenceForPath, segmentKeyForPath } from "./paths.js";
 import {
   findFrameQueueEntry,
   findSequenceEffectBlock,
@@ -39,8 +39,12 @@ export const resumeSequenceFrameAfterSelectedHandDeckPlacement = (
       ok: false,
     };
   }
+  const pausedSequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
-    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    pausedSequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (
     pausedSegment === undefined ||
     pausedSegment.effect.type !== "moveSelected" ||
@@ -56,7 +60,8 @@ export const resumeSequenceFrameAfterSelectedHandDeckPlacement = (
       ok: false,
     };
   }
-  const resultKey = segmentKey(
+  const resultKey = segmentKeyForPath(
+    frame.effectPath,
     pausedSegment,
     frame.pendingDecision.resumeAtSegmentIndex,
   );

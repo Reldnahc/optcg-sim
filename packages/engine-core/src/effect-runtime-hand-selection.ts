@@ -646,16 +646,22 @@ export const getHandSelectionDecisionLegalActions = (
   ) {
     return [];
   }
-  const cards = decision.candidates
-    .slice(0, decision.request.min)
-    .map((candidate) => candidate.card);
-  return [
-    {
-      type: "respondToDecision",
-      decisionId: decision.id,
-      response: { type: "cards", cards },
-    },
+  const counts = [
+    ...new Set([
+      decision.request.min,
+      Math.min(decision.request.max, decision.candidates.length),
+    ]),
   ];
+  return counts.map((count) => ({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: {
+      type: "cards",
+      cards: decision.candidates
+        .slice(0, count)
+        .map((candidate) => candidate.card),
+    },
+  }));
 };
 
 export const applySupportedHandSelectionChoiceResponse = (

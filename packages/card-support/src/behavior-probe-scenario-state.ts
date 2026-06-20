@@ -1,5 +1,6 @@
 import {
   createInitialState,
+  reindexZoneCards,
   respondToMulliganDecision,
   startMulliganFlow,
 } from "@optcg/engine-core";
@@ -27,7 +28,6 @@ import type {
 import {
   profileForCardFilter,
   profileForLeaderFilters,
-  type ProbeCardProfile,
 } from "./behavior-probe-scenario-profiles.js";
 import {
   effectSelectsRestedDon,
@@ -36,8 +36,20 @@ import {
 } from "./behavior-probe-scenario-effect-analysis.js";
 import { collectLeaderConditionFilters } from "./behavior-probe-scenario-leader-filters.js";
 import { resolvedProbeCard } from "./behavior-probe-resolved-card.js";
+import {
+  installProbeSourceConditionMetadata,
+  profileForSourceFilters,
+} from "./behavior-probe-source-metadata.js";
+import {
+  addProbeDeckCards,
+  reindexHand,
+} from "./behavior-probe-zone-helpers.js";
 
 export { resolvedProbeCard } from "./behavior-probe-resolved-card.js";
+export {
+  ensureProbePlayerDeckCount,
+  ensureProbePlayerHandCount,
+} from "./behavior-probe-zone-helpers.js";
 
 const p1 = "p1" as PlayerId,
   p2 = "p2" as PlayerId;
@@ -179,6 +191,7 @@ export const configureProbeFieldSourceForScenario = (
   source: CardInstance,
   effects: readonly EffectBlock[],
 ): void => {
+  installProbeSourceConditionMetadata(state, source, effects);
   if (
     effects.some((block) =>
       hasCondition(block.condition, "sourcePlayedThisTurn"),
@@ -288,59 +301,6 @@ export const installProbeTriggerCostCard = (
   };
 };
 
-const reindexHand = (
-  cards: readonly CardInstance[],
-  playerId: PlayerId,
-): CardInstance[] =>
-  cards.map((card, index) => ({
-    ...card,
-    zone: {
-      zone: "hand",
-      playerId,
-      slot: "hand",
-      index,
-    },
-  }));
-
-const profileForSourceFilters = (
-  filters: readonly CardFilter[],
-): ProbeCardProfile => {
-  const profiles = filters.map((filter, index) =>
-    profileForCardFilter(filter, index),
-  );
-  const costs = profiles.flatMap((profile) =>
-    profile.cost === undefined ? [] : [profile.cost],
-  );
-  const powers = profiles.flatMap((profile) =>
-    profile.power === undefined ? [] : [profile.power],
-  );
-  const counters = profiles.flatMap((profile) =>
-    profile.counter === undefined ? [] : [profile.counter],
-  );
-  const name = profiles.find((profile) => profile.name !== undefined)?.name;
-  return {
-    category: "character",
-    ...(name === undefined ? {} : { name }),
-    colors: uniqueProfileValues(profiles.flatMap((profile) => profile.colors)),
-    attributes: uniqueProfileValues(
-      profiles.flatMap((profile) => profile.attributes),
-    ),
-    types: uniqueProfileValues(profiles.flatMap((profile) => profile.types)),
-    keywords: uniqueProfileValues(
-      profiles.flatMap((profile) => profile.keywords),
-    ),
-    ...(costs.length === 0 ? {} : { cost: Math.max(...costs) }),
-    ...(powers.length === 0 ? {} : { power: Math.max(...powers) }),
-    ...(counters.length === 0 ? {} : { counter: Math.max(...counters) }),
-  };
-};
-
-const uniqueProfileValues = <T>(
-  values: readonly (T | undefined)[],
-): readonly T[] => [
-  ...new Set(values.filter((value): value is T => value !== undefined)),
-];
-
 const createProbeManifest = (): MatchCardManifest => ({
   manifestHash: "behavior-probe-manifest",
   source: "manual-test",
@@ -401,39 +361,6 @@ const installActiveDon = (state: GameState, playerId: PlayerId): void => {
     state: index === 0 ? "rested" : "active",
   }));
   player.donDeck = [];
-};
-
-const addProbeDeckCards = (
-  state: GameState,
-  playerId: PlayerId,
-  count: number,
-): void => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  const cards = Array.from({ length: count }, (_, index): CardInstance => {
-    const cardId = `probe-extra-${String(playerId)}-${String(index)}` as CardId;
-    state.cardManifest.cards[cardId] = resolvedProbeCard({
-      cardId,
-      category: "character",
-      effectText: "",
-    });
-    return {
-      instanceId:
-        `probe-extra-${String(playerId)}-${String(index)}:instance` as CardInstance["instanceId"],
-      cardId,
-      owner: playerId,
-      controller: playerId,
-      zone: {
-        zone: "deck",
-        playerId,
-        slot: "deck",
-        index: player.deck.length + index,
-      },
-      state: "active",
-      attachedDon: [],
-      turnPlayed: 0,
-    };
-  });
-  player.deck = [...player.deck, ...cards];
 };
 
 const installScenarioDeckMetadata = (
@@ -688,6 +615,7 @@ const setPlayerLifeCount = (
       faceUp: false,
     });
   }
+  player.deck = reindexZoneCards(player.deck, "deck", playerId, "deck");
   player.life = player.life.slice(0, count).map((life, index) => ({
     ...life,
     card: {
@@ -700,6 +628,18 @@ const setPlayerLifeCount = (
       },
     },
   }));
+};
+
+export const ensureProbePlayerLifeCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = state.players[playerId];
+  if (player === undefined || player.life.length >= count) {
+    return;
+  }
+  setPlayerLifeCount(state, playerId, count);
 };
 
 const installCostFacts = (
@@ -716,6 +656,23 @@ const installCostFacts = (
     const playerId = resolvePlayerRef(cost.chooser);
     if (playerId !== undefined) {
       installHandCostCards(state, playerId, cost.count, cost.filter);
+    }
+    return;
+  }
+  if (
+    cost.type === "trashFromField" ||
+    cost.type === "koFromField" ||
+    cost.type === "restFromField"
+  ) {
+    const playerId = resolvePlayerRef(cost.chooser);
+    if (playerId !== undefined) {
+      addCardsForZone(
+        state,
+        playerId,
+        "characterArea",
+        cost.count,
+        cost.filter,
+      );
     }
     return;
   }
@@ -866,6 +823,20 @@ const addCardsForZone = (
 ): void => {
   if (zone === "trash") {
     addProbeTrashCards(state, playerId, count, filter);
+    return;
+  }
+  if (zone === "hand") {
+    installHandCostCards(state, playerId, count, filter);
+    return;
+  }
+  if (zone === "characterArea" || zone === "stageArea") {
+    installScenarioFieldMetadata(
+      state,
+      playerId,
+      Array.from({ length: count }, () => filter).filter(
+        (candidate): candidate is CardFilter => candidate !== undefined,
+      ),
+    );
   }
 };
 

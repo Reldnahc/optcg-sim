@@ -8,6 +8,7 @@ export type SupportedScenario =
   | { readonly kind: "counter"; readonly category: "event" }
   | { readonly kind: "attackDeclared"; readonly category: "leader" }
   | { readonly kind: "cardPlayed"; readonly category: "character" }
+  | { readonly kind: "cardDrawn"; readonly category: "character" }
   | { readonly kind: "cardRested"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "donReturned"; readonly category: "character" }
@@ -109,6 +110,7 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
     return effect.trigger.type;
   }
   if (effectHasTrigger(effect, "attackDeclared")) return "attackDeclared";
+  if (effectHasTrigger(effect, "cardDrawn")) return "cardDrawn";
   if (effectHasTrigger(effect, "cardPlayed")) return "cardPlayed";
   if (effectHasTrigger(effect, "cardRested")) return "cardRested";
   if (effectHasTrigger(effect, "donReturned")) return "donReturned";
@@ -145,6 +147,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effectHasTrigger(effect, "attackDeclared"))) {
     return { kind: "attackDeclared", category: "leader" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "cardDrawn"))) {
+    return { kind: "cardDrawn", category: "character" };
   }
   if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
     return { kind: "cardPlayed", category: "character" };
