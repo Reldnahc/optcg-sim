@@ -22,7 +22,6 @@ import { executeMoveCardsPrimitive } from "../effect-runtime-move-cards.js";
 import { createQueuedTopDeckPlacementDecision as placeTopDeck } from "../effect-runtime-top-deck-placement.js";
 import { createSupportedSequenceFrameDecision } from "../effect-runtime-sequence/frames.js";
 import { applyRuntimePlaySource } from "../play-card/core.js";
-import { isLifeTriggerQueueEntry } from "../life-trigger/queue-origin.js";
 import {
   canAdmitOncePerTurnEffect,
   consumeOncePerTurnForQueueEntry,
@@ -503,19 +502,15 @@ export const createQueueEntryResolver = (
           takeExtraTurnEffect === undefined &&
           queuedContinuousEffect === undefined
         ) {
-          const lifeTriggerSingleEffectFrame = isLifeTriggerQueueEntry(
+          const singleEffectFrame = createSupportedSequenceFrameDecision(
+            nextState,
             selectedForBodyResolution,
-          )
-            ? createSupportedSequenceFrameDecision(
-                nextState,
-                selectedForBodyResolution,
-                queuedEffectForBodyResolution,
-                createSupportedTrashFromHandChoiceDecision,
-                { allowSingleEffect: true },
-              )
-            : undefined;
-          if (lifeTriggerSingleEffectFrame?.ok === true) {
-            return sequenceFrameResult(lifeTriggerSingleEffectFrame);
+            queuedEffectForBodyResolution,
+            createSupportedTrashFromHandChoiceDecision,
+            { allowSingleEffect: true },
+          );
+          if (singleEffectFrame?.ok === true) {
+            return sequenceFrameResult(singleEffectFrame);
           }
           return unsupportedEffectQueueResult(originalState, {
             gate: "queue-entry-resolution",

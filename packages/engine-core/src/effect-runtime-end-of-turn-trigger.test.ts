@@ -142,6 +142,80 @@ test("end-of-your-turn trigger queues reusable DON activation before turn handof
   assert.equal(activated?.state, "active");
 });
 
+test("end-of-your-turn trigger resolves top-level all-target activation bodies", () => {
+  const state = createActiveState();
+  state.turn.phase = "main";
+  state.turn.turnPlayerId = p1;
+  const source = must(state.players[p1], "p1").leader;
+  const effectDefinitionId = "def-end-of-your-turn-all-activate";
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: "end-of-your-turn-all-activate-rules",
+      sourceTextHash: "end-of-your-turn-all-activate-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const definition: EffectDefinition = {
+    ...base,
+    effects: [
+      {
+        ...must(base.effects[0], "base effect"),
+        id: toEffectId("effect-end-of-your-turn-all-activate"),
+        trigger: { type: "endOfYourTurn" },
+        effect: {
+          type: "activate",
+          target: {
+            type: "all",
+            zone: "characterArea",
+            player: "self",
+            filter: { categories: ["character"] },
+          },
+        },
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = { [effectDefinitionId]: definition };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  const player = must(state.players[p1], "p1");
+  const character = must(player.hand[0], "character");
+  player.hand = player.hand.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index },
+  }));
+  player.characters = [
+    {
+      ...character,
+      zone: {
+        zone: "characterArea",
+        playerId: p1,
+        slot: "character",
+        index: 0,
+      },
+      state: "rested",
+    },
+  ];
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+  });
+
+  const resolved = applyAction(state, { type: "endMainPhase" });
+
+  assert.equal(resolved.errors, undefined);
+  assert.equal(resolved.state.pendingDecision, undefined);
+  assert.equal(resolved.state.turn.phase, "refresh");
+  assert.equal(
+    must(resolved.state.players[p1], "p1 after").characters[0]?.state,
+    "active",
+  );
+});
+
 test("live end-of-your-turn queueing preserves omitted state hash", () => {
   const state = createActiveState();
   state.turn.phase = "end";
