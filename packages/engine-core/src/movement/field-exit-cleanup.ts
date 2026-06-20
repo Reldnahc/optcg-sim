@@ -36,9 +36,7 @@ const recordReferencesLeavingCard = (
       targetReferencesCard(record.modifier.target, card),
   );
 
-export const clearFieldOnlyCardState = (
-  card: CardInstance,
-): CardInstance => {
+export const clearFieldOnlyCardState = (card: CardInstance): CardInstance => {
   const cleared = { ...card, attachedDon: [] };
   delete cleared.state;
   delete cleared.turnPlayed;
