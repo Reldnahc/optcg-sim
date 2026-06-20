@@ -364,7 +364,7 @@ export const isSequenceFrameSelectTargetsDecision = (
   );
 
 export const resumeSequenceFrameAfterSelectTargets = (params: {
-  createUnsupportedTrashDecision: unknown;
+  createTrashDecision: unknown;
   decision: SelectTargetsDecision;
   emptySegmentResult: () => SequenceSegmentResult;
   findFrameQueueEntry: (
@@ -450,7 +450,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       params.segmentKey,
     );
     return params.resumeSequenceFrameFromLedgers({
-      createTrashDecision: params.createUnsupportedTrashDecision,
+      createTrashDecision: params.createTrashDecision,
       effectBlock,
       entry,
       finalizeCompleted: true,
@@ -505,7 +505,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       params.segmentKey,
     );
     return params.resumeSequenceFrameFromLedgers({
-      createTrashDecision: params.createUnsupportedTrashDecision,
+      createTrashDecision: params.createTrashDecision,
       effectBlock,
       entry,
       finalizeCompleted: true,
@@ -547,7 +547,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
     );
     if (params.selectedTargets.length === 0) {
       return params.resumeSequenceFrameFromLedgers({
-        createTrashDecision: params.createUnsupportedTrashDecision,
+        createTrashDecision: params.createTrashDecision,
         effectBlock,
         entry,
         finalizeCompleted: true,
@@ -631,7 +631,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
       (event) => event.type === "cardRested",
     );
     return params.resumeSequenceFrameFromLedgers({
-      createTrashDecision: params.createUnsupportedTrashDecision,
+      createTrashDecision: params.createTrashDecision,
       effectBlock,
       entry,
       finalizeCompleted: true,
@@ -703,7 +703,7 @@ export const resumeSequenceFrameAfterSelectTargets = (params: {
           ),
         });
   return params.resumeSequenceFrameFromLedgers({
-    createTrashDecision: params.createUnsupportedTrashDecision,
+    createTrashDecision: params.createTrashDecision,
     effectBlock,
     entry,
     finalizeCompleted: true,

@@ -273,6 +273,39 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("builds spare hand cards for costed Counter Event effects", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +3000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("profiles Activate Main sources from field-only matching conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If the only Characters on your field are {Impel Down} type Characters, set up to 2 of your DON!! cards as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("profiles Activate Main sources from self cost filters", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] You may trash this Character with a cost of 20 or more: If you have 9 or more DON!! cards on your field, play up to 1 [Kouzuki Momonosuke] with a cost of 9 from your trash.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("runs Trigger effects by activating the source from Life", () => {
     const report = createBehaviorProbeReport({
       text: "[Trigger] Play this card.",
@@ -343,6 +376,17 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
     expect(report.lines).toContain("Scenario 1 pending decisions: drained");
     expect(report.lines).toContain("Scenario 1 effect queue: drained");
+  });
+
+  it("builds return-to-hand optional cost targets", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] You may return 1 of your Characters with a cost of 2 or more to the owner's hand: Draw 2 cards and trash 1 card from your hand.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
   it("reports materialization failures as structured probe failures", () => {

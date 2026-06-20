@@ -42,6 +42,7 @@ describe("poneglyph card source", () => {
           label: "OP01-001 line 1",
           cardId: "OP01-001",
           lineNumber: 1,
+          focusLineNumber: 1,
           text: "[On Play] Draw 1 card.",
         },
       ],
@@ -76,10 +77,83 @@ describe("poneglyph card source", () => {
           label: "ST17-004 line 2",
           cardId: "ST17-004",
           lineNumber: 2,
+          focusLineNumber: 1,
           text: "[On Play] Draw 1 card.",
         },
       ],
     });
+  });
+
+  it("uses full card runtime text as sibling context for focused coverage entries", async () => {
+    const fetchPoneglyph: PoneglyphFetch = () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            "OP16-102": {
+              card_number: "OP16-102",
+              effect:
+                "[On K.O.] Draw 1 card, then play up to 1 [Fullalead] from your hand or trash.",
+              trigger: "[Trigger] Activate this card's [On K.O.] effect.",
+            },
+          },
+          missing: [],
+        }),
+      );
+
+    const entries = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP16-102"],
+      { baseUrl: "https://example.test", fetchPoneglyph },
+    );
+
+    expect(entries).toEqual({
+      ok: true,
+      entries: [
+        {
+          label: "OP16-102 line 1",
+          cardId: "OP16-102",
+          lineNumber: 1,
+          focusLineNumber: 1,
+          text: [
+            "[On K.O.] Draw 1 card, then play up to 1 [Fullalead] from your hand or trash.",
+            "[Trigger] Activate this card's [On K.O.] effect.",
+          ].join("\n"),
+        },
+        {
+          label: "OP16-102 line 2",
+          cardId: "OP16-102",
+          lineNumber: 2,
+          focusLineNumber: 2,
+          text: [
+            "[On K.O.] Draw 1 card, then play up to 1 [Fullalead] from your hand or trash.",
+            "[Trigger] Activate this card's [On K.O.] effect.",
+          ].join("\n"),
+        },
+      ],
+    });
+  });
+
+  it("skips deck construction metadata in behavior coverage entries", async () => {
+    const fetchPoneglyph: PoneglyphFetch = () =>
+      Promise.resolve(
+        jsonResponse({
+          data: {
+            "OP16-042": {
+              card_number: "OP16-042",
+              effect:
+                "Under the rules of this game, you may have any number of this card in your deck.",
+              trigger: null,
+            },
+          },
+          missing: [],
+        }),
+      );
+
+    const entries = await createPoneglyphCoverageEntriesFromCardIds(
+      ["OP16-042"],
+      { baseUrl: "https://example.test", fetchPoneglyph },
+    );
+
+    expect(entries).toEqual({ ok: true, entries: [] });
   });
 
   it("loads gameplay text entries for a set code", async () => {
@@ -165,12 +239,14 @@ describe("poneglyph card source", () => {
           label: "OP01-001 line 1",
           cardId: "OP01-001",
           lineNumber: 1,
+          focusLineNumber: 1,
           text: "[Activate: Main] Draw 1 card.",
         },
         {
           label: "OP01-002 line 1",
           cardId: "OP01-002",
           lineNumber: 1,
+          focusLineNumber: 1,
           text: "[On Play] Draw 1 card.",
         },
       ],

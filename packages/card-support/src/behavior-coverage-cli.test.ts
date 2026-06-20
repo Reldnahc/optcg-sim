@@ -66,6 +66,51 @@ describe("behavior coverage CLI", () => {
     expect(report.lines).toContain("Behavior coverage passed scenarios: 1");
   });
 
+  it("probes referenced trigger lines with same-card context and skips deck construction metadata", async () => {
+    const report = await createBehaviorCoverageCliReport(
+      ["--", "--card", "OP16-102", "--card", "OP16-042"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: () =>
+          Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  "OP16-042": {
+                    card_number: "OP16-042",
+                    effect:
+                      "Under the rules of this game, you may have any number of this card in your deck.",
+                    trigger: null,
+                  },
+                  "OP16-102": {
+                    card_number: "OP16-102",
+                    effect:
+                      "[On K.O.] Draw 1 card, then play up to 1 [Fullalead] from your hand or trash.",
+                    trigger: "[Trigger] Activate this card's [On K.O.] effect.",
+                  },
+                },
+                missing: [],
+              }),
+          }),
+      },
+    );
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain(
+      "Behavior coverage source: card OP16-102, OP16-042",
+    );
+    expect(report.lines).toContain("Behavior coverage entries: 2");
+    expect(report.lines).toContain("Behavior coverage passed scenarios: 2");
+    expect(report.lines).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("unsupported referenced effect target"),
+        expect.stringContaining("OP16-042"),
+      ]),
+    );
+  });
+
   it("runs coverage for a set", async () => {
     const report = await createBehaviorCoverageCliReport(
       ["--", "--set", "OP01"],

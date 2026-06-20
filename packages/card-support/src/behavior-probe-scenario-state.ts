@@ -145,6 +145,24 @@ export const fieldProbeSource = (
   return source;
 };
 
+export const installProbeSourceMetadata = (
+  state: GameState,
+  category: "character" | "leader" | "event",
+  filters: readonly CardFilter[],
+): void => {
+  const resolved = state.cardManifest.cards[probeCardId];
+  if (resolved === undefined) {
+    return;
+  }
+  state.cardManifest.cards[probeCardId] = resolvedProbeCard({
+    cardId: probeCardId,
+    category,
+    effectText: resolved.effectText ?? "",
+    profile: profileForSourceFilters(filters),
+    support: resolved.support,
+  });
+};
+
 export const installProbeTriggerCostCard = (
   state: GameState,
   player: NonNullable<GameState["players"][PlayerId]>,
@@ -216,6 +234,45 @@ const reindexHand = (
       index,
     },
   }));
+
+const profileForSourceFilters = (
+  filters: readonly CardFilter[],
+): ProbeCardProfile => {
+  const profiles = filters.map((filter, index) =>
+    profileForCardFilter(filter, index),
+  );
+  const costs = profiles.flatMap((profile) =>
+    profile.cost === undefined ? [] : [profile.cost],
+  );
+  const powers = profiles.flatMap((profile) =>
+    profile.power === undefined ? [] : [profile.power],
+  );
+  const counters = profiles.flatMap((profile) =>
+    profile.counter === undefined ? [] : [profile.counter],
+  );
+  const name = profiles.find((profile) => profile.name !== undefined)?.name;
+  return {
+    category: "character",
+    ...(name === undefined ? {} : { name }),
+    colors: uniqueProfileValues(profiles.flatMap((profile) => profile.colors)),
+    attributes: uniqueProfileValues(
+      profiles.flatMap((profile) => profile.attributes),
+    ),
+    types: uniqueProfileValues(profiles.flatMap((profile) => profile.types)),
+    keywords: uniqueProfileValues(
+      profiles.flatMap((profile) => profile.keywords),
+    ),
+    ...(costs.length === 0 ? {} : { cost: Math.max(...costs) }),
+    ...(powers.length === 0 ? {} : { power: Math.max(...powers) }),
+    ...(counters.length === 0 ? {} : { counter: Math.max(...counters) }),
+  };
+};
+
+const uniqueProfileValues = <T>(
+  values: readonly (T | undefined)[],
+): readonly T[] => [
+  ...new Set(values.filter((value): value is T => value !== undefined)),
+];
 
 const createProbeManifest = (): MatchCardManifest => ({
   manifestHash: "behavior-probe-manifest",

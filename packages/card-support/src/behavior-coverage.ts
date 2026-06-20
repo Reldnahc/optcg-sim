@@ -6,6 +6,7 @@ import {
 export interface BehaviorCoverageEntry {
   readonly label: string;
   readonly text: string;
+  readonly focusLineNumber?: number;
 }
 
 export interface BehaviorCoverageRequest {
@@ -61,7 +62,12 @@ export const createBehaviorCoverageReport = (
   let skippedScenarioCount = 0;
 
   for (const entry of request.entries) {
-    const probe = createBehaviorProbeReport({ text: entry.text });
+    const probe = createBehaviorProbeReport({
+      text: entry.text,
+      ...(entry.focusLineNumber === undefined
+        ? {}
+        : { focusLineNumber: entry.focusLineNumber }),
+    });
     if (probe.exitCode !== 0) {
       probeFailures.push(`${entry.label} - ${probeFailureReason(probe.lines)}`);
     }

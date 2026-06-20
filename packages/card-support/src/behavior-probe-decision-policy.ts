@@ -191,14 +191,11 @@ const shouldProbeSelectOptionalTarget = (
   return effectBlock.effect.effects
     .slice(frame.pendingDecision.resumeAtSegmentIndex + 1)
     .some((candidate) =>
-      consumesSelectedTargetForRequiredBasePower(
-        candidate.effect,
-        saveResultAs,
-      ),
+      consumesSelectedTarget(candidate.effect, saveResultAs),
     );
 };
 
-const consumesSelectedTargetForRequiredBasePower = (
+const consumesSelectedTarget = (
   effect: Effect | { type: "payCost" },
   saveResultAs: string,
 ): boolean => {
@@ -212,34 +209,49 @@ const consumesSelectedTargetForRequiredBasePower = (
         targetUsesSelectedTarget(effect.value.target, saveResultAs))
     );
   }
+  if (
+    effect.type === "bounce" ||
+    effect.type === "trash" ||
+    effect.type === "ko" ||
+    effect.type === "modifyPower" ||
+    effect.type === "setPowerToZero" ||
+    effect.type === "rest" ||
+    effect.type === "activate" ||
+    effect.type === "giveProtection" ||
+    effect.type === "attachDon" ||
+    effect.type === "invalidateEffects" ||
+    effect.type === "protectFromKO" ||
+    effect.type === "cannotBecomeActive" ||
+    effect.type === "cannotAttack" ||
+    effect.type === "attackCost" ||
+    effect.type === "cannotBlock" ||
+    effect.type === "preventBlockerActivation" ||
+    effect.type === "changeAttackTarget"
+  ) {
+    return targetUsesSelectedTarget(effect.target, saveResultAs);
+  }
   if (effect.type === "sequence") {
     return effect.effects.some((segment) =>
-      consumesSelectedTargetForRequiredBasePower(segment.effect, saveResultAs),
+      consumesSelectedTarget(segment.effect, saveResultAs),
     );
   }
   if (effect.type === "conditional") {
     return (
-      consumesSelectedTargetForRequiredBasePower(effect.then, saveResultAs) ||
+      consumesSelectedTarget(effect.then, saveResultAs) ||
       (effect.else === undefined
         ? false
-        : consumesSelectedTargetForRequiredBasePower(effect.else, saveResultAs))
+        : consumesSelectedTarget(effect.else, saveResultAs))
     );
   }
   if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
-    return consumesSelectedTargetForRequiredBasePower(
-      effect.effect,
-      saveResultAs,
-    );
+    return consumesSelectedTarget(effect.effect, saveResultAs);
   }
   if (effect.type === "replacement") {
-    return consumesSelectedTargetForRequiredBasePower(
-      effect.instead,
-      saveResultAs,
-    );
+    return consumesSelectedTarget(effect.instead, saveResultAs);
   }
   if (effect.type === "choice") {
     return effect.options.some((option) =>
-      consumesSelectedTargetForRequiredBasePower(option.effect, saveResultAs),
+      consumesSelectedTarget(option.effect, saveResultAs),
     );
   }
   return false;

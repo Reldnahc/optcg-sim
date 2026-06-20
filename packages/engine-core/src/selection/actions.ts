@@ -24,6 +24,7 @@ import {
   continueSelectedTargetEffect,
   resolveImplementedDslEffectDefinition,
 } from "../effect-runtime.js";
+import { createSupportedTrashFromHandChoiceDecision } from "../runtime/primitives/trash-from-hand.js";
 import {
   clearPendingDecision,
   effectQueueEntryForDecision,
@@ -457,6 +458,7 @@ export const applySelectTargetsDecisionResponse = (
       nextState,
       decision,
       targets,
+      createSupportedTrashFromHandChoiceDecision,
     );
     if (resumed === undefined) {
       return null;

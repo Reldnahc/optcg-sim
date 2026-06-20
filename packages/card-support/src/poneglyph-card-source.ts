@@ -11,6 +11,7 @@ export interface BehaviorCoverageSourceEntry {
   readonly text: string;
   readonly cardId?: string;
   readonly lineNumber?: number;
+  readonly focusLineNumber?: number;
 }
 
 export interface PoneglyphCardProbePayload {
@@ -362,20 +363,28 @@ const maxBatchCardCount = 60;
 
 const coverageEntriesForCard = (
   card: PoneglyphCardProbePayload,
-): readonly BehaviorCoverageSourceEntry[] =>
-  gameplayLinesFromTextParts([card.effect, card.trigger]).flatMap(
-    (text, index) =>
-      parseRawKeywordLine({ text }) === undefined
-        ? [
-            {
-              label: `${card.cardId} line ${String(index + 1)}`,
-              cardId: card.cardId,
-              lineNumber: index + 1,
-              text,
-            },
-          ]
-        : [],
+): readonly BehaviorCoverageSourceEntry[] => {
+  const runtimeLines = gameplayLinesFromTextParts([
+    card.effect,
+    card.trigger,
+  ]).flatMap((text, index) =>
+    isBehaviorCoverageRuntimeLine(text)
+      ? [{ text, sourceLineNumber: index + 1 }]
+      : [],
   );
+  const fullRuntimeText = runtimeLines.map((line) => line.text).join("\n");
+  return runtimeLines.map((line, index) => ({
+    label: `${card.cardId} line ${String(line.sourceLineNumber)}`,
+    cardId: card.cardId,
+    lineNumber: line.sourceLineNumber,
+    focusLineNumber: index + 1,
+    text: fullRuntimeText,
+  }));
+};
+
+const isBehaviorCoverageRuntimeLine = (text: string): boolean =>
+  parseRawKeywordLine({ text }) === undefined &&
+  !/^Under the rules of this game,/iu.test(text.trim());
 
 const deckHashEntriesFromDecodedDeck = (
   decoded: DeckHashDeck,
