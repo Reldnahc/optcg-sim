@@ -329,6 +329,40 @@ const markTopDeckCharactersSupported = (
   return topDeck;
 };
 
+const fillCharacterArea = (state: GameState): void => {
+  const player = must(state.players[p1], "p1");
+  while (player.characters.length < 5) {
+    const index = player.characters.length;
+    const cardId =
+      `looked-set-filler-${String(index)}` as CardInstance["cardId"];
+    state.cardManifest.cards[cardId] = resolvedCard({
+      cardId,
+      category: "character",
+      cost: 1,
+      power: 1000,
+    });
+    player.characters = [
+      ...player.characters,
+      {
+        instanceId:
+          `looked-set-filler-${String(index)}:instance` as CardInstance["instanceId"],
+        cardId,
+        owner: p1,
+        controller: p1,
+        zone: {
+          zone: "characterArea",
+          playerId: p1,
+          slot: "character",
+          index,
+        },
+        attachedDon: [],
+        state: "active",
+        turnPlayed: 0,
+      },
+    ];
+  }
+};
+
 test("looked-set playSelected plays selected deck cards and bottoms only the remainder", () => {
   const state = sequenceQueueState(lookedSetPlaySequence());
   const topDeck = markTopDeckCharactersSupported(state, 5);
@@ -394,6 +428,60 @@ test("looked-set playSelected plays selected deck cards and bottoms only the rem
   assert.deepEqual(
     finalPlayer.deck.slice(-3).map((card) => card.instanceId),
     expectedRemainder.map((card) => card.instanceId).reverse(),
+  );
+});
+
+test("looked-set playSelected resumes after overflow for a selected deck card", () => {
+  const state = sequenceQueueState(lookedSetPlaySequence());
+  fillCharacterArea(state);
+  const topDeck = markTopDeckCharactersSupported(state, 5);
+  const selected = must(topDeck[0], "selected deck card");
+  const expectedRemainder = topDeck.slice(1, 5);
+
+  const paused = processEffectRuntime(state);
+  assert.equal(paused.errors, undefined);
+  const selection = must(paused.state.pendingDecision, "selection");
+  assert.equal(selection.type, "selectCards");
+
+  const overflow = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: selection.id,
+    response: {
+      type: "cards",
+      cards: [
+        {
+          instanceId: selected.instanceId,
+          cardId: selected.cardId,
+          playerId: p1,
+          zone: selected.zone,
+        },
+      ],
+    },
+  });
+  assert.equal(overflow.errors, undefined);
+  const overflowDecision = must(overflow.state.pendingDecision, "overflow");
+  assert.equal(overflowDecision.type, "selectCards");
+
+  const played = applyAction(overflow.state, {
+    type: "respondToDecision",
+    decisionId: overflowDecision.id,
+    response: {
+      type: "cards",
+      cards: [must(overflowDecision.candidates[0], "overflow candidate").card],
+    },
+  });
+  assert.equal(played.errors, undefined);
+  const order = must(played.state.pendingDecision, "remainder order");
+  assert.equal(order.type, "orderCards");
+  assert.deepEqual(
+    order.cards.map((card) => card.instanceId),
+    expectedRemainder.map((card) => card.instanceId),
+  );
+  assert.equal(
+    must(played.state.players[p1], "p1").characters.some(
+      (card) => card.instanceId === selected.instanceId,
+    ),
+    true,
   );
 });
 

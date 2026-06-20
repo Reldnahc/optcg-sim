@@ -3,7 +3,7 @@ import type { CardInstance, GameState, PlayerId } from "@optcg/types";
 export type PlayCardOverflowSource = {
   sourceCard: CardInstance;
   sourceIndex: number;
-  sourceZone: "hand" | "trash" | "noZone";
+  sourceZone: "hand" | "trash" | "deck" | "noZone";
 };
 
 export const findPlayCardOverflowSource = (
@@ -28,6 +28,16 @@ export const findPlayCardOverflowSource = (
     return sourceCard === undefined
       ? null
       : { sourceCard, sourceIndex: trashIndex, sourceZone: "trash" };
+  }
+
+  const deckIndex = player.deck.findIndex(
+    (card) => card.instanceId === instanceId,
+  );
+  if (deckIndex >= 0) {
+    const sourceCard = player.deck[deckIndex];
+    return sourceCard === undefined
+      ? null
+      : { sourceCard, sourceIndex: deckIndex, sourceZone: "deck" };
   }
 
   return null;

@@ -2,6 +2,7 @@ import type {
   CardFilter,
   Condition,
   Cost,
+  DynamicNumberValue,
   Effect,
   OptionalCost,
   ReplacementTrigger,
@@ -183,11 +184,25 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
   if (effect.type === "preventPlay" || effect.type === "enterRested") {
     return [effect.filter];
   }
+  if (effect.type === "draw") {
+    return collectDynamicNumberFilters(effect.count);
+  }
+  if (effect.type === "trashFromHand") {
+    return [
+      ...collectDynamicNumberFilters(effect.count),
+      ...(effect.filter === undefined ? [] : [effect.filter]),
+    ];
+  }
+  if (effect.type === "modifyPower") {
+    return [
+      ...collectTargetFilters(effect.target),
+      ...collectDynamicNumberFilters(effect.value),
+    ];
+  }
   if (
     effect.type === "revealFromZone" ||
     effect.type === "selectFromSet" ||
     effect.type === "selectCards" ||
-    effect.type === "trashFromHand" ||
     effect.type === "modifyCounter"
   ) {
     return effect.filter === undefined ? [] : [effect.filter];
@@ -199,7 +214,6 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
     effect.type === "bounce" ||
     effect.type === "trash" ||
     effect.type === "ko" ||
-    effect.type === "modifyPower" ||
     effect.type === "setPowerToZero" ||
     effect.type === "setBasePower" ||
     effect.type === "rest" ||
@@ -220,11 +234,19 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
   }
   if (effect.type === "modifyCost") {
     return [
+      ...collectDynamicNumberFilters(effect.value),
       ...(effect.filter === undefined ? [] : [effect.filter]),
       ...(effect.target === undefined
         ? []
         : collectTargetFilters(effect.target)),
     ];
+  }
+  if (
+    effect.type === "damage" ||
+    effect.type === "returnDon" ||
+    effect.type === "moveCards"
+  ) {
+    return collectDynamicNumberFilters(effect.count);
   }
   if (
     effect.type === "preventPlayByEffects" ||
@@ -265,6 +287,38 @@ const collectEffectFilters = (effect: Effect): readonly CardFilter[] => {
   }
   if (effect.type === "replacement") {
     return collectEffectFilters(effect.instead);
+  }
+  return [];
+};
+
+const collectDynamicNumberFilters = (
+  value: number | DynamicNumberValue,
+): readonly CardFilter[] => {
+  if (typeof value === "number") {
+    return [];
+  }
+  if (
+    value.type === "countMatchingFieldCards" ||
+    value.type === "countDistinctMatchingFieldNames"
+  ) {
+    return [value.filter];
+  }
+  if (
+    value.type === "countMatchingZoneCards" ||
+    value.type === "countMatchingZoneCardsAcrossPlayers"
+  ) {
+    return value.filter === undefined ? [] : [value.filter];
+  }
+  if (value.type === "fieldCountDifference") {
+    return [
+      ...(value.minuend.filter === undefined ? [] : [value.minuend.filter]),
+      ...(value.subtrahend.filter === undefined
+        ? []
+        : [value.subtrahend.filter]),
+    ];
+  }
+  if (value.type === "countAttachedDon") {
+    return collectTargetFilters(value.target);
   }
   return [];
 };

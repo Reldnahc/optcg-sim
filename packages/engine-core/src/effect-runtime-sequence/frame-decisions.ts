@@ -614,15 +614,17 @@ export const getSequencePayCostLegalActions = (
         continue;
       }
       legalPayments.push(
-        ...chooseCombos(selectableCardIds, option.count).map((combo) => ({
-          type: "respondToDecision" as const,
-          decisionId: decision.id,
-          response: {
-            type: "payment" as const,
-            optionId: option.id,
-            selectedCardInstanceIds: combo,
-          },
-        })),
+        ...chooseVariableCardPaymentCombos(selectableCardIds, option).map(
+          (combo) => ({
+            type: "respondToDecision" as const,
+            decisionId: decision.id,
+            response: {
+              type: "payment" as const,
+              optionId: option.id,
+              selectedCardInstanceIds: combo,
+            },
+          }),
+        ),
       );
       continue;
     }
