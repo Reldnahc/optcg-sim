@@ -54,6 +54,7 @@ export interface BehaviorProbeScenario {
     | "counter"
     | "declareAttack"
     | "lifeTrigger"
+    | "lifeRemoved"
     | "opponentAttack"
     | "permanent"
     | "playCard";
@@ -70,6 +71,7 @@ type SupportedScenario =
   | { readonly kind: "declareAttack"; readonly category: "character" }
   | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
+  | { readonly kind: "lifeRemoved"; readonly category: "character" }
   | { readonly kind: "permanent"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
@@ -176,15 +178,20 @@ export const createBehaviorProbeReport = (
                   ...scenarioInput,
                   category: "character",
                 })
-              : scenario.kind === "permanent"
-                ? runPermanentScenario({
+              : scenario.kind === "lifeRemoved"
+                ? runLifeRemovedScenario({
                     ...scenarioInput,
                     category: "character",
                   })
-                : runPlayCardScenario({
-                    ...scenarioInput,
-                    category: scenario.category,
-                  });
+                : scenario.kind === "permanent"
+                  ? runPermanentScenario({
+                      ...scenarioInput,
+                      category: "character",
+                    })
+                  : runPlayCardScenario({
+                      ...scenarioInput,
+                      category: scenario.category,
+                    });
   const passed = result.ok;
   const resultLine = passed
     ? "passed"
@@ -245,6 +252,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "trigger")) {
     return { kind: "lifeTrigger", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "lifeRemoved")) {
+    return { kind: "lifeRemoved", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "permanent")) {
     return { kind: "permanent", category: "character" };
@@ -559,6 +569,65 @@ const runLifeTriggerScenario = (input: {
     ...resolved,
     triggerText: input.text,
   };
+
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: attacker.leader.instanceId,
+        cardId: attacker.leader.cardId,
+        playerId: p1,
+        zone: attacker.leader.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p2,
+        zone: defender.leader.zone,
+      },
+    }),
+    input.setupFilters.length,
+    input.definition.effects,
+  );
+};
+
+const runLifeRemovedScenario = (input: {
+  readonly category: "character";
+  readonly definition: NonNullable<
+    ReturnType<typeof materializeEffectDefinition>["definition"]
+  >;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}): {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly setupFilterCount: number;
+} => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  const attacker = must(state.players[p1], `player ${String(p1)}`);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  attacker.leader.state = "active";
+  defender.leader.state = "active";
+  defender.hand = [];
+  const source = fieldProbeSource(attacker);
+  if (source === undefined) {
+    return {
+      ok: false,
+      reason: "probe card could not be fielded",
+      pendingDecisionDrained: state.pendingDecision === undefined,
+      effectQueueDrained: state.effectQueue.length === 0,
+      eventCount: 0,
+      decisionsResolved: 0,
+      setupFilterCount: input.setupFilters.length,
+    };
+  }
 
   return drainRuntime(
     applyAction(state, {

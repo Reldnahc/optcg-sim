@@ -147,6 +147,11 @@ export const behaviorCoverageFixtureCorpus = [
     ],
   },
   {
+    label: "fixture:op12-099:life-removed-prevent-draw",
+    text: "[Your Turn] When a card is removed from your or your opponent's Life cards, draw 1 card. Then, you cannot draw cards using your own effects during this turn.",
+    expectedPrimitiveTypes: ["draw", "preventDraw", "sequence"],
+  },
+  {
     label: "fixture:invalidate-entrypoint:activate-main",
     text: "[Activate: Main] You may trash 1 card from your hand: Your opponent's [On Play] effects are negated until the end of your opponent's next turn.",
     expectedPrimitiveTypes: [
