@@ -1,8 +1,10 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type {
+  CardId,
   DecisionId,
   GameState,
+  InstanceId,
   LegalAction,
   PlayerId,
 } from "@optcg/types";
@@ -47,6 +49,53 @@ const paymentAction = (optionId: string): LegalAction => ({
 });
 
 describe("local dev action labels", () => {
+  test("labels counter actions with the counter amount when known", () => {
+    const counterCardId = "counter-card" as CardId;
+    const counterInstanceId = "counter-instance" as InstanceId;
+    const targetInstanceId = "target-instance" as InstanceId;
+    const state = {
+      cardManifest: {
+        cards: {
+          [counterCardId]: {
+            cardId: counterCardId,
+            name: "Counter Card",
+            category: "character",
+            counter: 2000,
+          },
+        },
+      },
+      players: {
+        [p1]: {
+          playerId: p1,
+          leader: {
+            instanceId: "leader-instance" as InstanceId,
+            cardId: "leader-card" as CardId,
+          },
+          deck: [],
+          hand: [{ instanceId: counterInstanceId, cardId: counterCardId }],
+          trash: [],
+          characters: [],
+          costArea: [],
+          donDeck: [],
+          life: [],
+        },
+      },
+    } as unknown as GameState;
+
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        target: {
+          instanceId: targetInstanceId,
+          cardId: "target-card" as CardId,
+          playerId: p1,
+        },
+      }),
+      "Counter +2000",
+    );
+  });
+
   test("labels no-selection life-to-hand costs from payment option structure", () => {
     const state = payCostState([
       {

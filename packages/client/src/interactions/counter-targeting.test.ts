@@ -22,6 +22,7 @@ describe("counter targeting interaction", () => {
         counter: {
           cardInstanceId: "counter-event" as InstanceId,
           targetInstanceId: "leader-target" as InstanceId,
+          amount: 2000,
         },
       },
       {
@@ -31,6 +32,7 @@ describe("counter targeting interaction", () => {
         counter: {
           cardInstanceId: "counter-event" as InstanceId,
           targetInstanceId: "character-target" as InstanceId,
+          amount: 2000,
         },
       },
       { index: 6, type: "activateEffect", label: "Activate effect" },
@@ -50,7 +52,7 @@ describe("counter targeting interaction", () => {
       {
         index: COUNTER_TARGET_CHOICE_ACTION_INDEX,
         type: "chooseCounterTarget",
-        label: "Counter",
+        label: "Counter +2000",
       },
       { index: 6, type: "activateEffect", label: "Activate effect" },
     ]);

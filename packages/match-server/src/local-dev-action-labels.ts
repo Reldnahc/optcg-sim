@@ -30,6 +30,21 @@ const instanceNameWithCardId = (
   ref: { instanceId: CardInstance["instanceId"]; cardId: CardId },
 ): string => `${instanceName(state, ref.instanceId)} (${String(ref.cardId)})`;
 
+const counterAmount = (
+  state: GameState,
+  instanceId: CardInstance["instanceId"],
+): number | undefined => {
+  for (const player of Object.values(state.players)) {
+    const card = allPlayerCards(player).find(
+      (candidate) => candidate.instanceId === instanceId,
+    );
+    if (card !== undefined) {
+      return state.cardManifest.cards[card.cardId]?.counter;
+    }
+  }
+  return undefined;
+};
+
 const paymentOptionForAction = (
   state: GameState,
   action: Extract<LegalAction, { type: "respondToDecision" }>,
@@ -273,8 +288,12 @@ export const actionLabel = (state: GameState, action: LegalAction): string => {
       )} into ${instanceNameWithCardId(state, action.target)}`;
     case "activateBlocker":
       return `Block with ${cardName(state, action.blocker.cardId)}`;
-    case "useCounter":
-      return `Counter with ${instanceName(state, action.cardInstanceId)}`;
+    case "useCounter": {
+      const amount = counterAmount(state, action.cardInstanceId);
+      return amount === undefined || amount <= 0
+        ? `Counter with ${instanceName(state, action.cardInstanceId)}`
+        : `Counter +${String(amount)}`;
+    }
     case "endMainPhase":
       return "End turn";
     case "concede":

@@ -210,7 +210,7 @@ const visibleAction = (
   const placement = actionPlacement(state, action);
   const attachment = actionAttachment(action);
   const attack = actionAttack(action);
-  const counter = actionCounter(action);
+  const counter = actionCounter(state, action);
   const decisionPayment = actionDecisionPayment(state, action);
   return {
     type: action.type,
@@ -552,14 +552,23 @@ const actionAttack = (
 };
 
 const actionCounter = (
+  state: GameState,
   action: LegalAction,
 ): DevVisibleAction["counter"] | undefined => {
   if (action.type !== "useCounter") {
     return undefined;
   }
+  const counterCard = Object.values(state.players)
+    .flatMap((player) => player.hand)
+    .find((card) => card.instanceId === action.cardInstanceId);
+  const amount =
+    counterCard === undefined
+      ? undefined
+      : state.cardManifest.cards[counterCard.cardId]?.counter;
   return {
     cardInstanceId: action.cardInstanceId,
     targetInstanceId: action.target.instanceId,
+    ...(amount === undefined ? {} : { amount }),
   };
 };
 

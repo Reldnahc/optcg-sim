@@ -652,6 +652,16 @@ describe("local dev match", () => {
     );
     assert.ok(counterLabels.includes("End step"));
     assert.equal(counterLabels.includes("Choose 0 card"), false);
+    const counterAction = counterSnapshot.actions.find(
+      (action) => action.type === "useCounter",
+    );
+    if (counterAction?.counter === undefined) {
+      throw new Error("Expected a counter action with metadata.");
+    }
+    const counterCard = counterSnapshot.view.self.hand.find(
+      (card) => card.instanceId === counterAction.counter?.cardInstanceId,
+    );
+    assert.equal(counterAction.counter.amount, counterCard?.printedCounter);
   });
 
   test("OP13-084 projects its own active base-power change in the filtered view", () => {

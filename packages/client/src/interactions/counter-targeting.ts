@@ -41,13 +41,19 @@ export const createCollapsedCounterActions = (
     (action) => action.type === "useCounter",
   );
   const otherActions = actions.filter((action) => action.type !== "useCounter");
+  const counterAmount = counterActions.find(
+    (action) => action.counter?.amount !== undefined,
+  )?.counter?.amount;
   return counterActions.length <= 1
     ? [...actions]
     : [
         {
           index: COUNTER_TARGET_CHOICE_ACTION_INDEX,
           type: "chooseCounterTarget",
-          label: "Counter",
+          label:
+            counterAmount === undefined || counterAmount <= 0
+              ? "Counter"
+              : `Counter +${String(counterAmount)}`,
         },
         ...otherActions,
       ];
