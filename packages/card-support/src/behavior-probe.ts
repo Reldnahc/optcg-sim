@@ -8,10 +8,10 @@ import type {
   CardId,
   CardFilter,
   EffectBlock,
+  EffectDefinition,
   EngineResult,
   GameState,
   PlayerId,
-  Trigger,
 } from "@optcg/types";
 import {
   gameplayLinesFromTextParts,
@@ -34,8 +34,11 @@ import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
 import { runReplacementScenario } from "./behavior-probe-replacement-scenario.js";
+import {
+  scenarioPlansForEffects,
+  type RunnableScenario,
+} from "./behavior-probe-scenario-plans.js";
 import { collectScenarioSetupFilters } from "./behavior-probe-setup-filters.js";
-import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
 export interface BehaviorProbeRequest {
   readonly text: string;
@@ -77,21 +80,12 @@ export interface BehaviorProbeScenario {
   readonly reason?: string;
 }
 
-type SupportedScenario =
-  | { readonly kind: "playCard"; readonly category: "character" | "event" }
-  | { readonly kind: "activateEffect"; readonly category: "character" }
-  | { readonly kind: "counter"; readonly category: "event" }
-  | { readonly kind: "cardPlayed"; readonly category: "character" }
-  | { readonly kind: "declareAttack"; readonly category: "character" }
-  | { readonly kind: "endOfYourTurn"; readonly category: "character" }
-  | { readonly kind: "fieldRemoved"; readonly category: "character" }
-  | { readonly kind: "opponentAttack"; readonly category: "leader" }
-  | { readonly kind: "lifeTrigger"; readonly category: "character" }
-  | { readonly kind: "lifeRemoved"; readonly category: "character" }
-  | { readonly kind: "onKO"; readonly category: "character" }
-  | { readonly kind: "permanent"; readonly category: "character" }
-  | { readonly kind: "replacement"; readonly category: "character" }
-  | { readonly kind: "skipped"; readonly reason: string };
+interface ScenarioInput {
+  readonly category: "leader" | "character" | "event";
+  readonly definition: EffectDefinition;
+  readonly setupFilters: readonly CardFilter[];
+  readonly text: string;
+}
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -131,279 +125,210 @@ export const createBehaviorProbeReport = (
       },
     };
   }
+  const materializedDefinition = materialized.definition;
 
   const focusedEffects = focusedEffectBlocks(
-    materialized.definition.effects,
+    materializedDefinition.effects,
     request.focusLineNumber,
   );
-  const scenario = scenarioForDefinition(focusedEffects);
-  const primitiveTypes = collectEffectBlockPrimitiveTypes(focusedEffects);
-  if (scenario.kind === "skipped") {
-    return {
-      exitCode: 0,
-      lines: [
-        "Behavior probe: skipped",
-        `Scenario 1 engine primitives: ${primitiveTypes.join(", ")}`,
-        `Scenario 1 result: skipped - ${scenario.reason}`,
-      ],
-      errors: [],
-      scenarios: [
-        {
-          index: 1,
-          status: "skipped",
-          primitiveTypes,
-          reason: scenario.reason,
+  const scenarioResults = scenarioPlansForEffects(focusedEffects).map(
+    (plan, index) => {
+      const scenarioIndex = index + 1;
+      if (plan.scenario.kind === "skipped") {
+        return {
+          lines: [
+            `Scenario ${String(scenarioIndex)} engine primitives: ${plan.primitiveTypes.join(", ")}`,
+            `Scenario ${String(scenarioIndex)} result: skipped - ${plan.scenario.reason}`,
+          ],
+          scenario: {
+            index: scenarioIndex,
+            status: "skipped" as const,
+            primitiveTypes: plan.primitiveTypes,
+            reason: plan.scenario.reason,
+          },
+        };
+      }
+      const scenarioDefinition: EffectDefinition = {
+        ...materializedDefinition,
+        effects: [...plan.effects],
+        metadata: {
+          ...materializedDefinition.metadata,
+          effectDefinitionsVersion: "behavior-probe",
         },
-      ],
-    };
-  }
-
-  const scenarioInput = {
-    category: scenario.category,
-    definition: {
-      ...materialized.definition,
-      metadata: {
-        ...materialized.definition.metadata,
-        effectDefinitionsVersion: "behavior-probe",
-      },
+      };
+      const scenarioInput: ScenarioInput = {
+        category: plan.scenario.category,
+        definition: scenarioDefinition,
+        setupFilters: collectScenarioSetupFilters(plan.effects),
+        text: request.text,
+      };
+      const result = runScenario(plan.scenario, scenarioInput);
+      const passed = result.ok;
+      const resultLine = passed
+        ? "passed"
+        : `failed - ${result.reason ?? "unknown reason"}`;
+      return {
+        lines: [
+          `Scenario ${String(scenarioIndex)} entrypoint: ${plan.scenario.kind}`,
+          `Scenario ${String(scenarioIndex)} card category: ${plan.scenario.category}`,
+          `Scenario ${String(scenarioIndex)} engine primitives: ${plan.primitiveTypes.join(", ")}`,
+          `Scenario ${String(scenarioIndex)} result: ${resultLine}`,
+          `Scenario ${String(scenarioIndex)} decision policy: max-progress`,
+          `Scenario ${String(scenarioIndex)} setup filters: ${String(result.setupFilterCount)}`,
+          `Scenario ${String(scenarioIndex)} pending decisions: ${result.pendingDecisionDrained ? "drained" : "pending"}`,
+          `Scenario ${String(scenarioIndex)} effect queue: ${result.effectQueueDrained ? "drained" : "pending"}`,
+          `Scenario ${String(scenarioIndex)} decisions resolved: ${String(result.decisionsResolved)}`,
+          `Scenario ${String(scenarioIndex)} events: ${String(result.eventCount)}`,
+        ],
+        scenario: {
+          index: scenarioIndex,
+          entrypoint: plan.scenario.kind,
+          cardCategory: plan.scenario.category,
+          status: passed ? ("passed" as const) : ("failed" as const),
+          primitiveTypes: plan.primitiveTypes,
+          ...(result.reason === undefined ? {} : { reason: result.reason }),
+        },
+      };
     },
-    setupFilters: collectScenarioSetupFilters(materialized.definition.effects),
-    text: request.text,
-  };
-  const result = (() => {
-    switch (scenario.kind) {
-      case "activateEffect":
-        return runActivateEffectScenario({
-          ...scenarioInput,
-          category: "character",
-        });
-      case "counter":
-        return runCounterScenario({ ...scenarioInput, category: "event" });
-      case "cardPlayed":
-        return runCardPlayedScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "declareAttack":
-        return runDeclareAttackScenario({
-          ...scenarioInput,
-          category: "character",
-        });
-      case "endOfYourTurn":
-        return runEndOfYourTurnScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "fieldRemoved":
-        return runFieldRemovedScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "opponentAttack":
-        return runOpponentAttackScenario(
-          {
-            ...scenarioInput,
-            category: "leader",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "lifeTrigger":
-        return runLifeTriggerScenario({
-          ...scenarioInput,
-          category: "character",
-        });
-      case "lifeRemoved":
-        return runLifeRemovedScenario({
-          ...scenarioInput,
-          category: "character",
-        });
-      case "onKO":
-        return runOnKOScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "permanent":
-        return runPermanentScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-      case "playCard":
-        return runPlayCardScenario({
-          ...scenarioInput,
-          category: scenario.category,
-        });
-      case "replacement":
-        return runReplacementScenario(
-          {
-            ...scenarioInput,
-            category: "character",
-          },
-          (initialResult, setupFilterCount) =>
-            drainRuntime(
-              initialResult,
-              setupFilterCount,
-              scenarioInput.definition.effects,
-            ),
-        );
-    }
-  })();
-  const passed = result.ok;
-  const resultLine = passed
-    ? "passed"
-    : `failed - ${result.reason ?? "unknown reason"}`;
+  );
+  const scenarios = scenarioResults.map((result) => result.scenario);
+  const failed = scenarios.some((scenario) => scenario.status === "failed");
+  const skipped = scenarios.every((scenario) => scenario.status === "skipped");
   return {
-    exitCode: passed ? 0 : 1,
+    exitCode: failed ? 1 : 0,
     lines: [
-      `Behavior probe: ${passed ? "passed" : "failed"}`,
-      `Scenario 1 entrypoint: ${scenario.kind}`,
-      `Scenario 1 card category: ${scenario.category}`,
-      `Scenario 1 engine primitives: ${primitiveTypes.join(", ")}`,
-      `Scenario 1 result: ${resultLine}`,
-      "Scenario 1 decision policy: max-progress",
-      `Scenario 1 setup filters: ${String(result.setupFilterCount)}`,
-      `Scenario 1 pending decisions: ${result.pendingDecisionDrained ? "drained" : "pending"}`,
-      `Scenario 1 effect queue: ${result.effectQueueDrained ? "drained" : "pending"}`,
-      `Scenario 1 decisions resolved: ${String(result.decisionsResolved)}`,
-      `Scenario 1 events: ${String(result.eventCount)}`,
+      `Behavior probe: ${failed ? "failed" : skipped ? "skipped" : "passed"}`,
+      ...scenarioResults.flatMap((result) => result.lines),
     ],
     errors: [],
-    scenarios: [
-      {
-        index: 1,
-        entrypoint: scenario.kind,
-        cardCategory: scenario.category,
-        status: passed ? "passed" : "failed",
-        primitiveTypes,
-        ...(result.reason === undefined ? {} : { reason: result.reason }),
-      },
-    ],
+    scenarios,
   };
 };
 
-const scenarioForDefinition = (
-  effects: readonly EffectBlock[],
-): SupportedScenario => {
-  const firstTrigger = effects[0]?.trigger.type;
-  if (firstTrigger === undefined) {
-    return { kind: "skipped", reason: "no runtime effect blocks" };
+const runScenario = (
+  scenario: RunnableScenario,
+  scenarioInput: ScenarioInput,
+) => {
+  switch (scenario.kind) {
+    case "activateEffect":
+      return runActivateEffectScenario({
+        ...scenarioInput,
+        category: "character",
+      });
+    case "counter":
+      return runCounterScenario({ ...scenarioInput, category: "event" });
+    case "cardPlayed":
+      return runCardPlayedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "declareAttack":
+      return runDeclareAttackScenario({
+        ...scenarioInput,
+        category: "character",
+      });
+    case "endOfYourTurn":
+      return runEndOfYourTurnScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "fieldRemoved":
+      return runFieldRemovedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "opponentAttack":
+      return runOpponentAttackScenario(
+        {
+          ...scenarioInput,
+          category: "leader",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "lifeTrigger":
+      return runLifeTriggerScenario({
+        ...scenarioInput,
+        category: "character",
+      });
+    case "lifeRemoved":
+      return runLifeRemovedScenario({
+        ...scenarioInput,
+        category: "character",
+      });
+    case "onKO":
+      return runOnKOScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "permanent":
+      return runPermanentScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "playCard":
+      return runPlayCardScenario({
+        ...scenarioInput,
+        category: scenario.category,
+      });
+    case "replacement":
+      return runReplacementScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
   }
-  if (effects.every((effect) => effect.trigger.type === "onPlay")) {
-    return { kind: "playCard", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "main")) {
-    return { kind: "playCard", category: "event" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "activateMain")) {
-    return { kind: "activateEffect", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "counter")) {
-    return { kind: "counter", category: "event" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
-    return { kind: "cardPlayed", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
-    return { kind: "declareAttack", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "endOfYourTurn")) {
-    return { kind: "endOfYourTurn", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "fieldRemoved"))) {
-    return { kind: "fieldRemoved", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
-    return { kind: "opponentAttack", category: "leader" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "trigger")) {
-    return { kind: "lifeTrigger", category: "character" };
-  }
-  if (effects.some((effect) => effect.trigger.type === "trigger")) {
-    return { kind: "lifeTrigger", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "lifeRemoved")) {
-    return { kind: "lifeRemoved", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "onKO")) {
-    return { kind: "onKO", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "permanent")) {
-    return { kind: "permanent", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "replacement")) {
-    return { kind: "replacement", category: "character" };
-  }
-  return {
-    kind: "skipped",
-    reason: `no generated scenario for trigger ${firstTrigger}`,
-  };
-};
-
-const effectHasTrigger = (
-  effect: EffectBlock,
-  triggerType: Trigger["type"],
-): boolean => triggerContainsType(effect.trigger, triggerType);
-
-const triggerContainsType = (
-  trigger: Trigger,
-  triggerType: Trigger["type"],
-): boolean => {
-  if (trigger.type === triggerType) {
-    return true;
-  }
-  if (trigger.type === "anyOf") {
-    return trigger.triggers.some((child) =>
-      triggerContainsType(child, triggerType),
-    );
-  }
-  if (trigger.type === "eventCount") {
-    return triggerContainsType(trigger.trigger, triggerType);
-  }
-  return false;
 };
 
 const focusedEffectBlocks = (

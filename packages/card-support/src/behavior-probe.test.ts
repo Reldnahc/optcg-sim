@@ -244,6 +244,35 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("runs each supported entry alternative from the same printed line", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play]/[When Attacking] Add up to 1 DON!! card from your DON!! deck and set it as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 2 entrypoint: declareAttack");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 2 result: passed");
+    expect(report.scenarios).toEqual([
+      {
+        index: 1,
+        entrypoint: "playCard",
+        cardCategory: "character",
+        status: "passed",
+        primitiveTypes: ["moveCards"],
+      },
+      {
+        index: 2,
+        entrypoint: "declareAttack",
+        cardCategory: "character",
+        status: "passed",
+        primitiveTypes: ["moveCards"],
+      },
+    ]);
+  });
+
   it("runs On Your Opponent's Attack effects from the defending Leader", () => {
     const report = createBehaviorProbeReport({
       text: "[On Your Opponent's Attack] [Once Per Turn] You may trash 1 card with a [Trigger] from your hand: Change the target of that attack to this Leader or to one of your {Blackbeard Pirates} type Character cards.",
