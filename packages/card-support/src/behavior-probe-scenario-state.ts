@@ -195,7 +195,7 @@ export const configureProbeFieldSourceForScenario = (
       );
       player.costArea = player.costArea.map((card, index) => ({
         ...card,
-        state: index < restedDonCount ? "rested" : card.state,
+        state: index < restedDonCount ? "rested" : (card.state ?? "active"),
       }));
     }
   }
@@ -708,7 +708,10 @@ const installHandCostCards = (
   }
   for (let offset = 0; offset < count; offset += 1) {
     const index = usableIndexes[offset];
-    const card = index === undefined ? undefined : mutableHand[index];
+    if (index === undefined) {
+      continue;
+    }
+    const card = mutableHand[index];
     if (card === undefined) {
       continue;
     }

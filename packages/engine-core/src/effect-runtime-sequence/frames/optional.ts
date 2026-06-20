@@ -77,6 +77,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
       entry,
       supportedBlock,
     );
+    const supportedPausedSegment = pausedSegment as SupportedSequenceSegment;
     if (pausedSegment.effect.type === "draw") {
       const drawn = applyDrawSegment(
         nextState,
@@ -187,7 +188,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           savedReferences: frame.savedReferences,
           segmentResults: frame.segmentResults,
         },
-        segment: pausedSegment,
+        segment: supportedPausedSegment,
         segmentKey: frameSegmentKey,
         state: nextState,
       });

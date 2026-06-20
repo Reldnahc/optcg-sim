@@ -1,4 +1,4 @@
-import type { Condition, Effect } from "@optcg/types";
+import type { Condition, Effect, PayCostEffect } from "@optcg/types";
 
 export const hasCondition = (
   condition: Condition | undefined,
@@ -29,7 +29,12 @@ export const effectUsesAttachedDonCount = (effect: Effect): boolean => {
   return false;
 };
 
-export const effectSelectsRestedDon = (effect: Effect): boolean => {
+export const effectSelectsRestedDon = (
+  effect: Effect | PayCostEffect,
+): boolean => {
+  if (effect.type === "payCost") {
+    return false;
+  }
   if (
     effect.type === "selectCards" &&
     effect.zone === "costArea" &&

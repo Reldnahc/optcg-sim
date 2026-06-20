@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { CardInstance, EffectDefinition, EffectId } from "@optcg/types";
+
 import { applyAction, getLegalActions } from "../actions.js";
-import { must, p1, p2 } from "../action-test-fixtures.js";
+import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import { applyDeclareAttack } from "./actions.js";
 import {
   cardRef,
@@ -10,6 +12,63 @@ import {
   installSupportedCounterReplacementEvent,
   setupAttackState,
 } from "./test-fixtures.js";
+
+const installSupportedCounterSequenceEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  card: CardInstance,
+) => {
+  const definitionId = `${String(card.cardId)}:counter-sequence`;
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "event",
+    cost: 1,
+    effectText:
+      "[Counter] Draw 1 card and your Leader gains +3000 power during this battle.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+    },
+  });
+  const effect: EffectDefinition["effects"][number] = {
+    id: `${String(card.cardId)}:counter-sequence:1` as EffectId,
+    category: "auto",
+    trigger: { type: "counter" },
+    sourcePresencePolicy: "resolveFromDestinationZone",
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          connector: "always",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          connector: "then",
+          effect: {
+            type: "modifyPower",
+            target: { type: "myLeader" },
+            value: 3000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      cardId: card.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [effect],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+};
 
 test("supported non-power Counter Event grants battle K.O. replacement after printed cost", () => {
   const state = setupAttackState();
@@ -106,4 +165,72 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
     passed.state.replacementState.map((process) => process.type),
     ["ko"],
   );
+});
+
+test("supported Counter Event sequence resolves after printed cost", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  ensureActiveDonInCostArea(state, p2, 1);
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterSequenceEvent(state, counterEvent);
+  const initialDeckSize = p2State.deck.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
+
+  const use = applyAction(opened.state, {
+    type: "useCounter",
+    cardInstanceId: counterEvent.instanceId,
+    target: must(opened.state.battle, "battle").currentTarget,
+  });
+  assert.equal(use.errors, undefined);
+  assert.equal(use.state.pendingDecision?.type, "payCost");
+
+  const activeDon = must(use.state.players[p2], "p2").costArea.filter(
+    (card) => card.state === "active",
+  );
+  const paid = applyAction(use.state, {
+    type: "respondToDecision",
+    decisionId: must(use.state.pendingDecision, "decision").id,
+    response: {
+      type: "payment",
+      optionId: "restDon",
+      selectedDonInstanceIds: [must(activeDon[0], "active DON").instanceId],
+    },
+  });
+
+  assert.equal(paid.errors, undefined);
+  assert.equal(
+    must(paid.state.players[p2], "p2").deck.length,
+    initialDeckSize - 1,
+  );
+  assert.equal(
+    must(paid.state.players[p2], "p2").trash.some(
+      (card) => card.instanceId === counterEvent.instanceId,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    paid.state.continuousEffects.map((effect) => effect.modifier.layer),
+    ["powerAdd"],
+  );
+  const eventTypes = paid.events.map((event) => event.type);
+  assert.equal(eventTypes.includes("costPaid"), true);
+  assert.equal(eventTypes.includes("counterUsed"), true);
+  assert.equal(eventTypes.includes("cardTrashed"), true);
+  assert.equal(eventTypes.includes("cardDrawn"), true);
+  assert.equal(eventTypes.includes("effectResolved"), true);
 });

@@ -31,6 +31,7 @@ import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
   getSupportedCounterEventRuntime,
+  getSupportedCounterEventSequence,
 } from "./counter-event-support.js";
 import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import {
@@ -272,11 +273,22 @@ export const applyCounterStepDecisionResponse = (
             selectedRuntimeTarget,
           )
         : null;
+    const supportedSequenceEvent =
+      supportedCounterEvent === null && supportedRuntimeEvent === null
+        ? getSupportedCounterEventSequence(
+            state,
+            handCard,
+            selectedRuntimeTarget,
+          )
+        : null;
     if (
-      (supportedCounterEvent === null && supportedRuntimeEvent === null) ||
+      (supportedCounterEvent === null &&
+        supportedRuntimeEvent === null &&
+        supportedSequenceEvent === null) ||
       (context.kind === "printed" &&
         (supportedCounterEvent?.printedCost ??
           supportedRuntimeEvent?.printedCost ??
+          supportedSequenceEvent?.printedCost ??
           0) <= 0) ||
       (context.kind === "effect" &&
         supportedCounterEvent?.effectCost === undefined)
@@ -307,7 +319,9 @@ export const applyCounterStepDecisionResponse = (
     }
     const selected = action.response.selectedDonInstanceIds;
     const printedCost =
-      supportedCounterEvent?.printedCost ?? supportedRuntimeEvent?.printedCost;
+      supportedCounterEvent?.printedCost ??
+      supportedRuntimeEvent?.printedCost ??
+      supportedSequenceEvent?.printedCost;
     if (
       selected === undefined ||
       printedCost === undefined ||
@@ -387,6 +401,27 @@ export const applyCounterStepDecisionResponse = (
         counterValue: 0,
         usesBattleCounterPower: false,
         runtimeEffects: supportedRuntimeEvent.effects,
+        costArea: nextCostArea,
+        decisionResolvedId: decision.id,
+        applyCounterPower: false,
+        pendingDecision:
+          createCounterStepPassDecision(stagedState, {
+            requirePotentialCounterActions: false,
+          }) ?? undefined,
+        priorEvents: events,
+        options,
+      });
+    }
+    if (supportedSequenceEvent !== null) {
+      return resolveCounterCardUse({
+        state: stagedState,
+        decisionPlayerId: decision.playerId,
+        battle,
+        handCard,
+        target: supportedSequenceEvent.target,
+        counterValue: 0,
+        usesBattleCounterPower: false,
+        sequenceEffects: supportedSequenceEvent.effects,
         costArea: nextCostArea,
         decisionResolvedId: decision.id,
         applyCounterPower: false,

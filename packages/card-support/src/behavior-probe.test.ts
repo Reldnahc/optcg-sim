@@ -702,4 +702,48 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: counter");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("runs Counter Event sequences with reusable rest-from-field costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] You may rest 1 of your cards: Up to 1 of your Leader or Character cards gains +4000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Counter Event sequences with draw before battle power", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] Draw 1 card and your Leader gains +3000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Counter Event sequences with reusable return-DON costs and continued power", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] DON!! \u22121: If your Leader has the {Donquixote Pirates} type, up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, that card gains an additional +2000 power during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("runs Counter Event sequences with non-power target restrictions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] If you have 2 or less Life cards, up to 1 of your opponent's active Characters cannot attack during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });

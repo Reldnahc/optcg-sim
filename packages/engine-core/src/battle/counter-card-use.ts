@@ -8,8 +8,6 @@ import type {
   LegalAction,
   OptionalCost,
   PlayerId,
-  SelectTargetsDecision,
-  TargetCandidate,
 } from "@optcg/types";
 
 type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
@@ -26,12 +24,11 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { reifyCardRef } from "../actions/state.js";
-import {
-  counterPayCostDecisionId,
-  counterTargetDecisionId,
-} from "./counter-event-payment-context.js";
+import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
 import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
 import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
+import { resolveCounterEventSequences } from "./counter-event-sequence-resolution.js";
+import { createCounterEventTargetDecision } from "./counter-event-target-decision.js";
 import {
   continueCounterEventTrailingSequence,
   type CounterEventTrailingSequence,
@@ -41,8 +38,10 @@ import {
   getSupportedCounterEventPower,
   getSupportedCounterEventPowerTargets,
   getSupportedCounterEventRuntime,
+  getSupportedCounterEventSequence,
   type SupportedCounterEventPower,
   type SupportedCounterEventRuntime,
+  type SupportedCounterEventSequence,
 } from "./counter-event-support.js";
 import {
   isSupportedBattleResolutionEnvelope,
@@ -119,6 +118,10 @@ export const getLegalCharacterCounterActions = (
       card,
       battle.currentTarget,
     );
+    const supportedSequenceEvent =
+      supportedRuntimeEvent === null
+        ? getSupportedCounterEventSequence(state, card, battle.currentTarget)
+        : null;
     if (
       !(
         (metadata?.category === "character" &&
@@ -129,7 +132,10 @@ export const getLegalCharacterCounterActions = (
         ) ||
         (supportedRuntimeEvent !== null &&
           getActiveDonCount(defender.costArea) >=
-            supportedRuntimeEvent.printedCost)
+            supportedRuntimeEvent.printedCost) ||
+        (supportedSequenceEvent !== null &&
+          getActiveDonCount(defender.costArea) >=
+            supportedSequenceEvent.printedCost)
       )
     ) {
       return [];
@@ -141,6 +147,15 @@ export const getLegalCharacterCounterActions = (
             type: "useCounter" as const,
             cardInstanceId: card.instanceId,
             target: supportedRuntimeEvent.target,
+          },
+        ];
+      }
+      if (supportedSequenceEvent !== null) {
+        return [
+          {
+            type: "useCounter" as const,
+            cardInstanceId: card.instanceId,
+            target: supportedSequenceEvent.target,
           },
         ];
       }
@@ -271,6 +286,7 @@ export const applyUseCounter = (
   let trailingSequence: CounterEventTrailingSequence | undefined;
   let effectCost: Extract<OptionalCost, { type: "trashFromHand" }> | undefined;
   let runtimeEffects: SupportedCounterEventRuntime["effects"] | undefined;
+  let sequenceEffects: SupportedCounterEventSequence["effects"] | undefined;
   let counterDuration: SupportedCounterEventPower["duration"] | undefined;
   const effectiveCharacterCounter = getEffectiveCharacterCounterValue(
     state,
@@ -299,7 +315,15 @@ export const applyUseCounter = (
       supportedCounterEvent === null
         ? getSupportedCounterEventRuntime(state, handCard, action.target)
         : null;
-    if (supportedCounterEvent === null && supportedRuntimeEvent === null) {
+    const supportedSequenceEvent =
+      supportedCounterEvent === null && supportedRuntimeEvent === null
+        ? getSupportedCounterEventSequence(state, handCard, action.target)
+        : null;
+    if (
+      supportedCounterEvent === null &&
+      supportedRuntimeEvent === null &&
+      supportedSequenceEvent === null
+    ) {
       return illegalAction(
         state,
         metadata?.category === "event"
@@ -319,6 +343,11 @@ export const applyUseCounter = (
       printedCost = supportedRuntimeEvent.printedCost;
       usesBattleCounterPower = false;
       runtimeEffects = supportedRuntimeEvent.effects;
+    } else if (supportedSequenceEvent !== null) {
+      counterValue = 0;
+      printedCost = supportedSequenceEvent.printedCost;
+      usesBattleCounterPower = false;
+      sequenceEffects = supportedSequenceEvent.effects;
     } else {
       return illegalAction(
         state,
@@ -396,9 +425,11 @@ export const applyUseCounter = (
     ...(counterDuration === undefined ? {} : { counterDuration }),
     ...(trailingSequence === undefined ? {} : { trailingSequence }),
     ...(runtimeEffects === undefined ? {} : { runtimeEffects }),
+    ...(sequenceEffects === undefined ? {} : { sequenceEffects }),
     costArea: defender.costArea,
     decisionResolvedId: undefined,
-    applyCounterPower: runtimeEffects === undefined,
+    applyCounterPower:
+      runtimeEffects === undefined && sequenceEffects === undefined,
     pendingDecision: state.pendingDecision,
     priorEvents: [],
     options,
@@ -475,49 +506,6 @@ export const createCounterEventEffectCostDecision = (params: {
   assertGameStateInvariantsIfEnabled(nextState, params.options);
   return toEngineResult(nextState, events, undefined, params.options);
 };
-
-const counterEventTargetRequest = (): SelectTargetsDecision["request"] => ({
-  timing: "onResolution",
-  chooser: "self",
-  player: "self",
-  zones: ["leaderArea", "characterArea"],
-  min: 0,
-  max: 1,
-  allowFewerIfUnavailable: true,
-  visibility: "public",
-  filter: { categories: ["leader", "character"] },
-});
-
-const counterEventTargetCandidates = (
-  supportedTargets: readonly SupportedCounterEventPower[],
-): TargetCandidate[] =>
-  supportedTargets.map((supportedTarget) => ({
-    card: supportedTarget.target,
-    visibility: { type: "public" },
-  }));
-
-const createCounterEventTargetDecision = (params: {
-  counterEvent: CardInstance;
-  decisionPlayerId: PlayerId;
-  previousDecisionId: SelectTargetsDecision["id"];
-  state: GameState;
-  supportedTargets: readonly SupportedCounterEventPower[];
-}): SelectTargetsDecision => ({
-  id: toDecisionId(
-    counterTargetDecisionId(
-      String(params.counterEvent.instanceId),
-      params.state.seq + 1,
-    ),
-  ),
-  type: "selectTargets",
-  playerId: params.decisionPlayerId,
-  prompt: "Choose Counter target.",
-  causedBy: { type: "decision", decisionId: params.previousDecisionId },
-  visibility: { type: "public" },
-  request: counterEventTargetRequest(),
-  candidates: counterEventTargetCandidates(params.supportedTargets),
-  defaultResponse: { type: "targets", targets: [] },
-});
 
 export const applyCounterEventEffectCostDecisionResponse = (params: {
   action: Extract<Action, { type: "respondToDecision" }>;
@@ -777,6 +765,7 @@ export const resolveCounterCardUse = (params: {
   usesBattleCounterPower: boolean;
   trailingSequence?: CounterEventTrailingSequence;
   runtimeEffects?: SupportedCounterEventRuntime["effects"];
+  sequenceEffects?: SupportedCounterEventSequence["effects"];
   costArea: GameState["players"][PlayerId]["costArea"];
   decisionResolvedId: string | undefined;
   applyCounterPower?: boolean;
@@ -795,6 +784,7 @@ export const resolveCounterCardUse = (params: {
     usesBattleCounterPower,
     trailingSequence,
     runtimeEffects,
+    sequenceEffects,
     costArea,
     decisionResolvedId,
     applyCounterPower = true,
@@ -938,6 +928,18 @@ export const resolveCounterCardUse = (params: {
       ...nextState,
       continuousEffects: [...nextState.continuousEffects, ...records],
     };
+  }
+  if (sequenceEffects !== undefined) {
+    return resolveCounterEventSequences({
+      decisionPlayerId,
+      events,
+      ...(options === undefined ? {} : { options }),
+      originalState: state,
+      priorEvents,
+      sequenceEffects,
+      state: nextState,
+      trashedCard,
+    });
   }
   if (trailingSequence !== undefined) {
     const trailing = continueCounterEventTrailingSequence(

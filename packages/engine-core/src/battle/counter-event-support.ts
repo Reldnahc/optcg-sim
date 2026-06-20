@@ -16,12 +16,14 @@ import type {
 import { reifyCardRef } from "../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
+import { isSupportedSequenceBlock } from "../effect-runtime-sequence/support.js";
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
 import {
   continuousChooseTargetRequest,
   type ContinuousQueueEffect,
 } from "../runtime/continuous/targeting.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
+import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
 
 export interface SupportedCounterEventPower {
   effectCost?: Extract<OptionalCost, { type: "trashFromHand" }>;
@@ -41,6 +43,14 @@ export interface SupportedCounterEventRuntime {
   target: CardRef;
   effects: readonly (EffectDefinition["effects"][number] & {
     effect: ContinuousQueueEffect;
+  })[];
+}
+
+export interface SupportedCounterEventSequence {
+  printedCost: number;
+  target: CardRef;
+  effects: readonly (EffectDefinition["effects"][number] & {
+    effect: Extract<Effect, { type: "sequence" }>;
   })[];
 }
 
@@ -455,6 +465,77 @@ export const getSupportedCounterEventRuntime = (
   const printedCost = metadata.cost ?? 0;
   if (!Number.isInteger(printedCost) || printedCost < 0) {
     return null;
+  }
+  return { printedCost, target, effects };
+};
+
+export const getSupportedCounterEventSequence = (
+  state: GameState,
+  card: CardInstance,
+  target: CardRef | undefined,
+  options: { evaluateCondition?: boolean } = {},
+): SupportedCounterEventSequence | null => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (
+    target === undefined ||
+    metadata?.category !== "event" ||
+    metadata.support.status !== "implemented-dsl" ||
+    metadata.support.effectDefinitionId === undefined ||
+    (metadata.support.customHandlerIds?.length ?? 0) > 0
+  ) {
+    return null;
+  }
+  const definition =
+    state.cardManifest.effectDefinitions?.[metadata.support.effectDefinitionId];
+  const counterEffects =
+    definition?.effects.filter((effect) => effect.trigger.type === "counter") ??
+    [];
+  if (
+    definition?.implementationStatus !== "implemented-dsl" ||
+    counterEffects.length === 0
+  ) {
+    return null;
+  }
+  const printedCost = metadata.cost ?? 0;
+  if (!Number.isInteger(printedCost) || printedCost < 0) {
+    return null;
+  }
+  const effects: (EffectDefinition["effects"][number] & {
+    effect: Extract<Effect, { type: "sequence" }>;
+  })[] = [];
+  for (const counterEffect of counterEffects) {
+    if (
+      counterEffect.category !== "auto" ||
+      counterEffect.trigger.type !== "counter" ||
+      counterEffect.optional === true ||
+      counterEffect.oncePerTurn === true ||
+      counterEffect.conditionTiming !== undefined ||
+      counterEffect.cost !== undefined ||
+      counterEffect.failurePolicy !== undefined ||
+      counterEffect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
+      counterEffect.effect.type !== "sequence" ||
+      counterPowerEffect(counterEffect) !== null ||
+      (options.evaluateCondition !== false &&
+        !counterEventConditionPasses(
+          state,
+          card,
+          metadata,
+          counterEffect,
+          target.playerId,
+        ))
+    ) {
+      return null;
+    }
+    const entry = toCounterEventRuntimeQueueEntry(
+      state,
+      target.playerId,
+      card,
+      counterEffect,
+    );
+    if (!isSupportedSequenceBlock(entry, counterEffect)) {
+      return null;
+    }
+    effects.push({ ...counterEffect, effect: counterEffect.effect });
   }
   return { printedCost, target, effects };
 };
