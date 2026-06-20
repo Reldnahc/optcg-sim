@@ -76,6 +76,7 @@ export const getSupportedFrameContext = (
   const supportedBlock = toSupportedSequenceBlock(
     entry,
     findSequenceEffectBlock(state, entry),
+    { allowInitialTrashFromHand: true },
   );
   if (supportedBlock === undefined) {
     return {

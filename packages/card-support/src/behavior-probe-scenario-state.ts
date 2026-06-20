@@ -33,6 +33,7 @@ import {
 } from "./behavior-probe-scenario-profiles.js";
 import {
   effectSelectsRestedDon,
+  effectUsesAttachedDonCards,
   effectUsesAttachedDonCount,
   hasCondition,
 } from "./behavior-probe-scenario-effect-analysis.js";
@@ -134,6 +135,8 @@ export const setupProbeMainState = (input: {
   addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
   installScenarioDeckMetadata(active, p1, input.setupFilters);
   installScenarioDeckMetadata(active, p2, []);
+  installScenarioLifeMetadata(active, p1);
+  installScenarioLifeMetadata(active, p2);
   installScenarioFieldMetadata(active, p1, input.setupFilters);
   installScenarioFieldMetadata(active, p2, input.setupFilters);
   installScenarioConditionFacts(active, input.definition.effects);
@@ -206,12 +209,11 @@ export const configureProbeFieldSourceForScenario = (
     effects.some(
       (block) =>
         hasCondition(block.condition, "attachedDonCount") ||
-        effectUsesAttachedDonCount(block.effect),
+        effectUsesAttachedDonCount(block.effect) ||
+        effectUsesAttachedDonCards(block.effect),
     )
   ) {
-    source.attachedDon =
-      state.players[p1]?.costArea.slice(0, 5).map((card) => card.instanceId) ??
-      [];
+    attachProbeDonToSource(state, source, 5);
   }
   if (effects.some((block) => effectSelectsRestedDon(block.effect))) {
     const player = state.players[p1];
@@ -226,6 +228,30 @@ export const configureProbeFieldSourceForScenario = (
       }));
     }
   }
+};
+
+const attachProbeDonToSource = (
+  state: GameState,
+  source: CardInstance,
+  count: number,
+): void => {
+  const player = state.players[source.controller];
+  if (player === undefined) {
+    return;
+  }
+  const attachedIds = player.costArea
+    .slice(0, count)
+    .map((card) => card.instanceId);
+  source.attachedDon = attachedIds;
+  const attachedIdSet = new Set(attachedIds);
+  player.costArea = player.costArea.map((card) => {
+    if (!attachedIdSet.has(card.instanceId)) {
+      return card;
+    }
+    const attached = { ...card };
+    delete attached.state;
+    return attached;
+  });
 };
 
 export const installProbeSourceMetadata = (
@@ -390,6 +416,22 @@ const installScenarioDeckMetadata = (
     });
   }
   player.deck = deck;
+};
+
+const installScenarioLifeMetadata = (
+  state: GameState,
+  playerId: PlayerId,
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  for (const life of player.life) {
+    state.cardManifest.cards[life.card.cardId] =
+      state.cardManifest.cards[life.card.cardId] ??
+      resolvedProbeCard({
+        cardId: life.card.cardId,
+        category: "character",
+        effectText: "",
+      });
+  }
 };
 
 const installScenarioFieldMetadata = (

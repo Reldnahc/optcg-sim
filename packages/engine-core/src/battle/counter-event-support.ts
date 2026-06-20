@@ -15,7 +15,10 @@ import type {
 
 import { reifyCardRef } from "../actions/state.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
-import { flattenSequenceEffect } from "../effect-runtime-sequence/support-normalization.js";
+import {
+  flattenSequenceEffect,
+  toSingleEffectSequence,
+} from "../effect-runtime-sequence/support-normalization.js";
 import { isSupportedSequenceBlock } from "../effect-runtime-sequence/support.js";
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
 import {
@@ -514,7 +517,6 @@ export const getSupportedCounterEventSequence = (
       counterEffect.cost !== undefined ||
       counterEffect.failurePolicy !== undefined ||
       counterEffect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
-      counterEffect.effect.type !== "sequence" ||
       counterPowerEffect(counterEffect) !== null ||
       (options.evaluateCondition !== false &&
         !counterEventConditionPasses(
@@ -527,16 +529,21 @@ export const getSupportedCounterEventSequence = (
     ) {
       return null;
     }
+    const sequenceEffect =
+      counterEffect.effect.type === "sequence"
+        ? counterEffect.effect
+        : toSingleEffectSequence(counterEffect.effect);
+    const sequenceBlock = { ...counterEffect, effect: sequenceEffect };
     const entry = toCounterEventRuntimeQueueEntry(
       state,
       target.playerId,
       card,
-      counterEffect,
+      sequenceBlock,
     );
-    if (!isSupportedSequenceBlock(entry, counterEffect)) {
+    if (!isSupportedSequenceBlock(entry, sequenceBlock)) {
       return null;
     }
-    effects.push({ ...counterEffect, effect: counterEffect.effect });
+    effects.push(sequenceBlock);
   }
   return { printedCost, target, effects };
 };

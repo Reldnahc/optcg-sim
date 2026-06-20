@@ -240,7 +240,9 @@ export const createSupportedSequenceFrameDecision = (
   ) {
     return undefined;
   }
-  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock);
+  const supportedBlock = toSupportedSequenceBlock(entry, effectBlock, {
+    allowInitialTrashFromHand: true,
+  });
   if (supportedBlock === undefined) {
     return { ok: false };
   }
@@ -312,6 +314,7 @@ export const continueSupportedSequenceFrameFromSegment = (params: {
   const supportedBlock = toSupportedSequenceBlock(
     params.entry,
     params.effectBlock,
+    { allowInitialTrashFromHand: true },
   );
   if (supportedBlock === undefined) {
     return {

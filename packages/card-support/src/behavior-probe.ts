@@ -4,7 +4,6 @@ import {
   getLegalActions,
 } from "@optcg/engine-core";
 import type {
-  Action,
   CardId,
   CardFilter,
   EffectBlock,
@@ -50,6 +49,7 @@ import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scen
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
 import { runReplacementScenario } from "./behavior-probe-replacement-scenario.js";
 import { runLifeTriggerScenario } from "./behavior-probe-life-trigger-scenario.js";
+import { runCounterScenario } from "./behavior-probe-counter-scenario.js";
 import {
   scenarioPlansForEffects,
   type RunnableScenario,
@@ -266,7 +266,10 @@ const runScenario = (
           ),
       );
     case "counter":
-      return runCounterScenario({ ...scenarioInput, category: "event" });
+      return runCounterScenario(
+        { ...scenarioInput, category: "event" },
+        drainRuntime,
+      );
     case "cardDrawn":
       return runCardDrawnScenario(
         {
@@ -468,6 +471,7 @@ const runScenario = (
             initialResult,
             setupFilterCount,
             scenarioInput.definition.effects,
+            { allowBattleRemainder: true },
           ),
       );
     case "opponentActivated":
@@ -673,137 +677,6 @@ const runDeclareAttackScenario = (
     input.setupFilters.length,
     input.definition.effects,
     { allowBattleRemainder },
-  );
-};
-
-const runCounterScenario = (input: {
-  readonly category: "event";
-  readonly definition: NonNullable<
-    ReturnType<typeof materializeEffectDefinition>["definition"]
-  >;
-  readonly setupFilters: readonly CardFilter[];
-  readonly text: string;
-}): {
-  readonly ok: boolean;
-  readonly reason?: string;
-  readonly pendingDecisionDrained: boolean;
-  readonly effectQueueDrained: boolean;
-  readonly eventCount: number;
-  readonly decisionsResolved: number;
-  readonly setupFilterCount: number;
-} => {
-  const state = setupProbeMainState(input);
-  state.turn.globalTurn = 3;
-  state.turn.playerTurnCounts[p1] = 2;
-  state.turn.playerTurnCounts[p2] = 1;
-  const attacker = must(state.players[p1], `player ${String(p1)}`);
-  const defender = must(state.players[p2], `player ${String(p2)}`);
-  attacker.leader.state = "active";
-  defender.leader.state = "active";
-  const probeHandIndex = attacker.hand.findIndex(
-    (candidate) => candidate.cardId === probeCardId,
-  );
-  const probeCard = attacker.hand[probeHandIndex];
-  if (probeCard === undefined) {
-    return drainResult(
-      false,
-      state,
-      0,
-      0,
-      input.setupFilters.length,
-      "probe counter event was not in hand",
-    );
-  }
-  attacker.hand = attacker.hand
-    .filter((_, index) => index !== probeHandIndex)
-    .map((card, index) => ({
-      ...card,
-      zone: {
-        zone: "hand" as const,
-        playerId: p1,
-        slot: "hand" as const,
-        index,
-      },
-    }));
-  const costCard = defender.hand.find(
-    (candidate) => candidate.cardId !== probeCardId,
-  );
-  defender.hand = [
-    {
-      ...probeCard,
-      owner: p2,
-      controller: p2,
-      zone: {
-        zone: "hand" as const,
-        playerId: p2,
-        slot: "hand" as const,
-        index: 0,
-      },
-    },
-    ...(costCard === undefined
-      ? []
-      : [
-          {
-            ...costCard,
-            owner: p2,
-            controller: p2,
-            zone: {
-              zone: "hand" as const,
-              playerId: p2,
-              slot: "hand" as const,
-              index: 1,
-            },
-          },
-        ]),
-  ];
-  if (costCard !== undefined) {
-    state.cardManifest.cards[costCard.cardId] = resolvedProbeCard({
-      cardId: costCard.cardId,
-      category: "character",
-      effectText: "",
-    });
-  }
-  const opened = applyAction(state, {
-    type: "declareAttack",
-    attacker: {
-      instanceId: attacker.leader.instanceId,
-      cardId: attacker.leader.cardId,
-      playerId: p1,
-      zone: attacker.leader.zone,
-    },
-    target: {
-      instanceId: defender.leader.instanceId,
-      cardId: defender.leader.cardId,
-      playerId: p2,
-      zone: defender.leader.zone,
-    },
-  });
-  if (opened.errors !== undefined) {
-    return drainRuntime(
-      opened,
-      input.setupFilters.length,
-      input.definition.effects,
-    );
-  }
-  const counterAction = getLegalActions(opened.state, p2).find(
-    (action): action is Extract<Action, { type: "useCounter" }> =>
-      action.type === "useCounter" &&
-      action.cardInstanceId === probeCard.instanceId,
-  );
-  if (counterAction === undefined) {
-    return drainResult(
-      false,
-      opened.state,
-      opened.events.length,
-      0,
-      input.setupFilters.length,
-      "no legal useCounter action",
-    );
-  }
-  return drainRuntime(
-    applyAction(opened.state, counterAction),
-    input.setupFilters.length,
-    input.definition.effects,
   );
 };
 

@@ -80,7 +80,6 @@ import type {
   SequenceEffect,
   SequenceFrameRunResult,
   SequenceSegmentEffect,
-  TrashFromHandEffect,
 } from "./types.js";
 
 export const continueNoDecisionSegments = (
@@ -548,17 +547,26 @@ export const continueNoDecisionSegments = (
         state: decisionResult.state,
       });
     }
+    const trashPauseParams = {
+      createTrashDecision,
+      effectPath,
+      entry,
+      events,
+      index,
+      ledgers: pausedLedgers,
+      state: nextState,
+    };
+    if (segment.effect.type === "trashFromHand") {
+      return pauseForTrashFromHandSegment({
+        ...trashPauseParams,
+        effect: segment.effect,
+      });
+    }
     if (segment.effect.type === "trashFromHandUntilCount") {
       const trashResult = pauseForTrashFromHandUntilCountSegment({
-        createTrashDecision,
+        ...trashPauseParams,
         effect: segment.effect,
-        effectPath,
-        entry,
-        events,
-        index,
-        ledgers: pausedLedgers,
         segmentResultKey: ledgerKey(segment, index),
-        state: nextState,
       });
       if (trashResult.kind === "continue") {
         nextLedgers = trashResult.ledgers;
@@ -980,16 +988,7 @@ export const continueNoDecisionSegments = (
       }
       continue;
     }
-    return pauseForTrashFromHandSegment({
-      createTrashDecision,
-      effect: segment.effect as TrashFromHandEffect,
-      effectPath,
-      entry,
-      events,
-      index,
-      ledgers: pausedLedgers,
-      state: nextState,
-    });
+    return { ok: false };
   }
   return {
     events,

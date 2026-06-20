@@ -879,6 +879,66 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
+  it("proves On Block removal without requiring the rest of battle to resolve", () => {
+    const report = createBehaviorProbeReport({
+      text: "[DON!! x1] [On Block] Place up to 1 Character with a cost of 2 or less at the bottom of the owner's deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: onBlock");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves On Block optional life-cost power effects without requiring counter closeout", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Block] You may add 1 card from the top or bottom of your Life cards to your hand: This Character gains +4000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: onBlock");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves Main and Counter event alternatives through both legal paths", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Main]/[Counter] Rest up to 1 of your opponent's Leader or Character cards with a cost of 4 or less.\n[Trigger] Activate this card's [Main] effect.",
+      focusLineNumber: 1,
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.scenarios.map((scenario) => scenario.entrypoint)).toContain(
+      "playCard",
+    );
+    expect(report.scenarios.map((scenario) => scenario.entrypoint)).toContain(
+      "counter",
+    );
+  });
+
+  it("continues conditional On Play sequences through hand trash into draw", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] If you have 8 or more DON!! cards on your field, trash 1 card from your hand and draw 2 cards.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds attached DON for activation costs that return given DON", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may return 2 total of your currently given DON!! cards to your cost area rested: This Character gains [Rush] and +1000 power during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("routes start-of-turn activations through behavior scenarios", () => {
     const report = createBehaviorProbeReport({
       text: "This effect can be activated at the start of your turn. If you have 8 or more DON!! cards on your field, look at 5 cards from the top of your deck; reveal up to 1 {Straw Hat Crew} type card and add it to your hand. Then, place the rest at the top or bottom of the deck in any order.",

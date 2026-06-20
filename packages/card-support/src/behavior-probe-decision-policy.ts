@@ -141,7 +141,7 @@ const choosePendingDecisionAction = (
       decisionId: decision.id,
       response: {
         type: "targets",
-        targets: decision.candidates
+        targets: orderTargetCandidatesForProbe(state, decision.candidates)
           .slice(0, targetCount)
           .map((candidate) => candidate.card),
       },
@@ -546,3 +546,64 @@ const targetUsesSelectedTarget = (
   target.type === "savedFieldObject" &&
   target.binding.family === "selectedTargets" &&
   target.binding.saveResultAs === saveResultAs;
+
+type TargetCandidate = Extract<
+  NonNullable<GameState["pendingDecision"]>,
+  { type: "selectTargets" }
+>["candidates"][number];
+
+const orderTargetCandidatesForProbe = (
+  state: GameState,
+  candidates: readonly TargetCandidate[],
+): readonly TargetCandidate[] => {
+  if (state.battle === undefined) {
+    return candidates;
+  }
+  return [...candidates].sort(
+    (left, right) =>
+      battleInstabilityScore(state, left) -
+      battleInstabilityScore(state, right),
+  );
+};
+
+const battleInstabilityScore = (
+  state: GameState,
+  candidate: TargetCandidate,
+): number => {
+  const battle = state.battle;
+  if (battle === undefined) {
+    return 0;
+  }
+  const refs = [battle.attacker, battle.currentTarget, battle.blocker].filter(
+    (ref): ref is NonNullable<typeof ref> => ref !== undefined,
+  );
+  const card = candidate.card;
+  if (
+    refs.some(
+      (ref) =>
+        ref.instanceId === card.instanceId &&
+        ref.cardId === card.cardId &&
+        ref.playerId === card.playerId,
+    )
+  ) {
+    return 100;
+  }
+  const zone = card.zone;
+  if (
+    zone === undefined ||
+    zone.zone !== "characterArea" ||
+    zone.index === undefined
+  ) {
+    return 0;
+  }
+  const candidateIndex = zone.index;
+  return refs.some(
+    (ref) =>
+      ref.playerId === card.playerId &&
+      ref.zone?.zone === "characterArea" &&
+      ref.zone.index !== undefined &&
+      candidateIndex < ref.zone.index,
+  )
+    ? 50
+    : 0;
+};

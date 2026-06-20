@@ -29,6 +29,14 @@ export const effectUsesAttachedDonCount = (effect: Effect): boolean => {
   return false;
 };
 
+export const effectUsesAttachedDonCards = (effect: Effect): boolean => {
+  const serialized = JSON.stringify(effect);
+  return (
+    serialized.includes('"categories":["don"]') &&
+    serialized.includes('"state":"attached"')
+  );
+};
+
 export const effectSelectsRestedDon = (
   effect: Effect | PayCostEffect,
 ): boolean => {

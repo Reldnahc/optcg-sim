@@ -94,6 +94,7 @@ export const resumeSequenceFrameAfterTrashFromHand = (params: {
   const effectBlock = toSupportedSequenceBlock(
     entry,
     params.findSequenceEffectBlock(params.state, entry),
+    { allowInitialTrashFromHand: true },
   );
   if (effectBlock === undefined) {
     return {
@@ -193,6 +194,7 @@ export const resumeSequenceFrameAfterHandSelection = (params: {
   const effectBlock = toSupportedSequenceBlock(
     entry,
     params.findSequenceEffectBlock(params.state, entry),
+    { allowInitialTrashFromHand: true },
   );
   if (effectBlock === undefined) {
     return {
