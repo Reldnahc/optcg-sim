@@ -313,7 +313,7 @@ const runEng027dSupportedOnKOBattleScript = () => {
   return [result] as const;
 };
 
-const assertEng027dUnsupportedOnKOMetadataFailsClosed = () => {
+const assertEng027dDestinationPolicyOnKOResolves = () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "ENG-027D unsupported p1");
   const p2State = must(state.players[p2], "ENG-027D unsupported p2");
@@ -371,15 +371,23 @@ const assertEng027dUnsupportedOnKOMetadataFailsClosed = () => {
     step: "counter",
     damageCount: 1,
   };
-  const before = JSON.stringify(state);
-
   const result = resolveSupportedVanillaBattle(state);
 
-  const error = must(result.errors?.[0], "unsupported On K.O. metadata error");
-  assert.equal(error.type, "effectRuntimeError");
-  assert.deepEqual(result.events, []);
-  assert.equal(JSON.stringify(state), before);
-  assert.equal(JSON.stringify(result.state), before);
+  assertNoBattleContextAfterCleanup(
+    state,
+    result,
+    "ENG-027D destination-policy On K.O.",
+    ["cardKOd", "cardMoved", "effectQueued"],
+  );
+  assert.equal(
+    result.events.some(
+      (event) =>
+        event.type === "effectResolved" &&
+        (event.payload as Partial<{ effectBlockId: string }>).effectBlockId ===
+          onKOEffect.id,
+    ),
+    true,
+  );
 };
 
 test("ENG-027D: supported battle K.O. triggers resolve safely before cleanup", () => {
@@ -387,5 +395,5 @@ test("ENG-027D: supported battle K.O. triggers resolve safely before cleanup", (
     "ENG-027D supported On K.O. trigger",
     runEng027dSupportedOnKOBattleScript,
   );
-  assertEng027dUnsupportedOnKOMetadataFailsClosed();
+  assertEng027dDestinationPolicyOnKOResolves();
 });

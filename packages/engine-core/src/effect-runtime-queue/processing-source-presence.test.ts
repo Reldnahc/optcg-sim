@@ -42,7 +42,7 @@ const assertUnsupportedEffectQueueError = (
   assert.equal(details.count, count);
 };
 
-test("queued On K.O. draw with unsupported source-presence policy fails closed without mutation", () => {
+test("queued On K.O. draw with no-source-required policy resolves through sequence frames", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   const p2State = must(state.players[p2], "p2");
@@ -90,15 +90,18 @@ test("queued On K.O. draw with unsupported source-presence policy fails closed w
     sourcePresencePolicy: "noSourceRequired",
   };
   state.effectQueue = [entry];
-  const before = structuredClone(state);
-  const beforeHash = hashCanonicalStateValue(state);
-
   const result = processEffectRuntime(state);
 
-  assert.deepEqual(result.events, []);
-  assertUnsupportedEffectQueueError(result.errors);
-  assert.deepEqual(result.state, before);
-  assert.equal(result.stateHash, beforeHash);
+  assert.equal(result.errors, undefined);
+  assert.equal(
+    result.events.some((event) => event.type === "cardDrawn"),
+    true,
+  );
+  assert.equal(
+    result.events.some((event) => event.type === "effectResolved"),
+    true,
+  );
+  assert.equal(result.state.effectQueue.length, 0);
 });
 
 test("queued source-presence policy mismatch with effect definition fails closed without mutation or events", () => {
