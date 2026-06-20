@@ -2,6 +2,7 @@ import type {
   CardInstance,
   CardRef,
   CardSnapshot,
+  Duration,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -27,6 +28,7 @@ export interface SupportedCounterEventPower {
   value: number;
   printedCost: number;
   target: CardRef;
+  duration: Duration;
   usesBattleCounterPower: boolean;
   trailingSequence?: {
     effectBlockId: EffectDefinition["effects"][number]["id"];
@@ -128,20 +130,19 @@ const counterPowerTargetCanApplyToSelectedTarget = (
     );
   }
 
-  const locatedTarget = reifyCardRef(state, selectedTarget);
-  if (locatedTarget === null || locatedTarget.playerId !== controllerId) {
-    return false;
-  }
-  const metadata = state.cardManifest.cards[locatedTarget.card.cardId];
-  if (metadata === undefined) {
-    return false;
-  }
-
   if (target.type === "myLeader") {
+    const locatedTarget = reifyCardRef(state, selectedTarget);
+    if (locatedTarget === null || locatedTarget.playerId !== controllerId) {
+      return false;
+    }
+    const metadata = state.cardManifest.cards[locatedTarget.card.cardId];
+    if (metadata === undefined) {
+      return false;
+    }
     return locatedTarget.isLeader;
   }
 
-  if (target.type !== "chooseFromZones") {
+  if (target.type !== "choose" && target.type !== "chooseFromZones") {
     return false;
   }
   const resolved = resolvePublicTargetCandidatesForRequest(
@@ -222,9 +223,10 @@ const supportedCounterEventPower = (
 ): {
   effectCost?: SupportedCounterEventPower["effectCost"];
   value: number;
+  duration: Duration;
   trailingSequence?: SupportedCounterEventPower["trailingSequence"];
 } | null => {
-  const controllerId = target.playerId;
+  const controllerId = card.controller;
   const parsed = counterPowerEffect(effect);
   if (
     parsed === null ||
@@ -235,10 +237,13 @@ const supportedCounterEventPower = (
     effect.cost !== undefined ||
     effect.failurePolicy !== undefined ||
     effect.sourcePresencePolicy !== "resolveFromDestinationZone" ||
-    parsed.power.duration.type !== "thisBattle" ||
+    !(
+      parsed.power.duration.type === "thisBattle" ||
+      parsed.power.duration.type === "thisTurn"
+    ) ||
     typeof parsed.power.value !== "number" ||
     !Number.isInteger(parsed.power.value) ||
-    parsed.power.value <= 0 ||
+    parsed.power.value === 0 ||
     (parsed.effectCost !== undefined &&
       (parsed.effectCost.chooser !== "self" ||
         parsed.effectCost.filter !== undefined ||
@@ -267,6 +272,7 @@ const supportedCounterEventPower = (
       ? {}
       : { effectCost: parsed.effectCost }),
     value: parsed.power.value,
+    duration: parsed.power.duration,
     ...(parsed.trailingStartIndex === undefined
       ? {}
       : {
@@ -337,6 +343,7 @@ export const getSupportedCounterEventPower = (
     return null;
   }
   let value = 0;
+  let duration: Duration | undefined;
   let effectCost: SupportedCounterEventPower["effectCost"];
   let trailingSequence: SupportedCounterEventPower["trailingSequence"];
   for (const counterEffect of counterEffects) {
@@ -353,6 +360,13 @@ export const getSupportedCounterEventPower = (
       return null;
     }
     value += counterValue.value;
+    if (
+      duration !== undefined &&
+      duration.type !== counterValue.duration.type
+    ) {
+      return null;
+    }
+    duration = counterValue.duration;
     if (counterValue.effectCost !== undefined) {
       if (effectCost !== undefined) {
         return null;
@@ -383,8 +397,12 @@ export const getSupportedCounterEventPower = (
     value,
     printedCost,
     target,
+    duration: duration ?? { type: "thisBattle" },
     usesBattleCounterPower:
-      battleTarget !== undefined && sameCardRef(target, battleTarget),
+      duration?.type === "thisBattle" &&
+      value > 0 &&
+      battleTarget !== undefined &&
+      sameCardRef(target, battleTarget),
     ...(trailingSequence === undefined ? {} : { trailingSequence }),
   };
 };
@@ -457,16 +475,60 @@ const countEligibleHandCardsForEffectCost = (
 
 const counterEventPowerCandidateTargets = (
   state: GameState,
+  card: CardInstance,
   defenderId: PlayerId,
 ): CardRef[] => {
   const defender = state.players[defenderId];
-  if (defender === undefined) {
-    return [];
+  const targets =
+    defender === undefined
+      ? []
+      : [
+          toCardRef(defender.leader, defenderId),
+          ...defender.characters.map((candidate) =>
+            toCardRef(candidate, defenderId),
+          ),
+        ];
+  const metadata = state.cardManifest.cards[card.cardId];
+  const definition =
+    metadata?.support.effectDefinitionId === undefined
+      ? undefined
+      : state.cardManifest.effectDefinitions?.[
+          metadata.support.effectDefinitionId
+        ];
+  for (const effect of definition?.effects ?? []) {
+    if (effect.trigger.type !== "counter") {
+      continue;
+    }
+    const parsed = counterPowerEffect(effect);
+    const target = parsed?.power.target;
+    if (target?.type !== "choose" && target?.type !== "chooseFromZones") {
+      continue;
+    }
+    const resolved = resolvePublicTargetCandidatesForRequest(
+      state,
+      target.request,
+      { sourceControllerId: card.controller },
+    );
+    if (!resolved.ok) {
+      continue;
+    }
+    targets.push(...resolved.candidates.map((candidate) => candidate.card));
   }
-  return [
-    toCardRef(defender.leader, defenderId),
-    ...defender.characters.map((card) => toCardRef(card, defenderId)),
-  ];
+  return uniqueCardRefs(targets);
+};
+
+const uniqueCardRefs = (targets: readonly CardRef[]): CardRef[] => {
+  const seen = new Set<string>();
+  const unique: CardRef[] = [];
+  for (const target of targets) {
+    const key = `${String(target.playerId)}:${String(target.instanceId)}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(target);
+  }
+  return unique;
 };
 
 export const getSupportedCounterEventPowerTargets = (
@@ -476,16 +538,18 @@ export const getSupportedCounterEventPowerTargets = (
   battleTarget: CardRef | undefined,
   options: { evaluateCondition?: boolean; effectCostPaid?: boolean } = {},
 ): SupportedCounterEventPower[] =>
-  counterEventPowerCandidateTargets(state, defenderId).flatMap((target) => {
-    const supported = getSupportedCounterEventPower(
-      state,
-      card,
-      target,
-      battleTarget,
-      options,
-    );
-    return supported === null ? [] : [supported];
-  });
+  counterEventPowerCandidateTargets(state, card, defenderId).flatMap(
+    (target) => {
+      const supported = getSupportedCounterEventPower(
+        state,
+        card,
+        target,
+        battleTarget,
+        options,
+      );
+      return supported === null ? [] : [supported];
+    },
+  );
 
 export const getSupportedCounterEventPowerShapeTargets = (
   state: GameState,

@@ -4,6 +4,7 @@ import type {
   ContinuousEffectRecord,
   GameState,
   PlayerId,
+  Duration,
 } from "@optcg/types";
 
 export const createCounterEventPowerRecord = (
@@ -12,6 +13,7 @@ export const createCounterEventPowerRecord = (
   handCard: CardInstance,
   target: CardRef,
   value: number,
+  duration: Duration = { type: "thisBattle" },
 ): ContinuousEffectRecord | null => {
   const metadata = state.cardManifest.cards[handCard.cardId];
   if (metadata === undefined) {
@@ -54,7 +56,7 @@ export const createCounterEventPowerRecord = (
       },
       operation: { type: "addPower", value },
     },
-    duration: { type: "thisBattle" },
+    duration,
     createdBy: { type: "ruleProcess", name: "counterStep" },
     createdAtStateSeq: state.seq,
   };

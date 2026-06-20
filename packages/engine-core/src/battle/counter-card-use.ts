@@ -2,8 +2,6 @@ import type {
   Action,
   CardRef,
   CardInstance,
-  EffectDefinition,
-  EffectQueueEntry,
   EngineEvent,
   EngineResult,
   GameState,
@@ -33,6 +31,7 @@ import {
   counterTargetDecisionId,
 } from "./counter-event-payment-context.js";
 import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
+import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
 import {
   continueCounterEventTrailingSequence,
   type CounterEventTrailingSequence,
@@ -59,60 +58,11 @@ import { detectPendingRuntimeWork } from "../effect-runtime.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
 import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
-import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 
 type CreateCounterStepPassDecision = (
   state: GameState,
   options?: { requirePotentialCounterActions?: boolean },
 ) => NonNullable<GameState["pendingDecision"]> | null;
-
-const toCounterEventRuntimeQueueEntry = (
-  state: GameState,
-  controllerId: PlayerId,
-  source: CardInstance,
-  effectBlock: EffectDefinition["effects"][number],
-): EffectQueueEntry => {
-  const metadata = state.cardManifest.cards[source.cardId];
-  const entrySource = {
-    instanceId: source.instanceId,
-    cardId: source.cardId,
-    playerId: controllerId,
-    zone: source.zone,
-  };
-  return {
-    id: `queue-entry:counter-event-runtime:${String(source.instanceId)}:${String(effectBlock.id)}` as EffectQueueEntry["id"],
-    state: "resolving",
-    timingWindowId:
-      `timing-window:counter-event-runtime:${String(source.instanceId)}` as EffectQueueEntry["timingWindowId"],
-    generation: 0,
-    controllerId,
-    source: entrySource,
-    sourceSnapshot: {
-      instanceId: source.instanceId,
-      cardId: source.cardId,
-      ownerId: source.owner,
-      controllerId,
-      zone: source.zone,
-      category: metadata?.category ?? "event",
-      colors: metadata?.colors ?? [],
-      ...(metadata?.cost === undefined ? {} : { cost: metadata.cost }),
-      keywords: metadata?.printedKeywords ?? [],
-    },
-    effectBlockId: effectBlock.id,
-    orderingGroup: "nonTurnPlayer",
-    createdAtEventSeq: state.eventJournal.length,
-    queuedAtStateSeq: state.seq,
-    sourcePresencePolicy: "resolveFromDestinationZone",
-    causedBy: { type: "ruleProcess", name: "counterStep" },
-    ...(metadata === undefined
-      ? {}
-      : effectQueueEntryPresentationForEffectBlock({
-          effectBlock,
-          resolvedCard: metadata,
-          source: entrySource,
-        })),
-  };
-};
 
 export const getLegalCharacterCounterActions = (
   state: GameState,
@@ -321,6 +271,7 @@ export const applyUseCounter = (
   let trailingSequence: CounterEventTrailingSequence | undefined;
   let effectCost: Extract<OptionalCost, { type: "trashFromHand" }> | undefined;
   let runtimeEffects: SupportedCounterEventRuntime["effects"] | undefined;
+  let counterDuration: SupportedCounterEventPower["duration"] | undefined;
   const effectiveCharacterCounter = getEffectiveCharacterCounterValue(
     state,
     handCard,
@@ -360,6 +311,7 @@ export const applyUseCounter = (
       counterValue = supportedCounterEvent.value;
       printedCost = supportedCounterEvent.printedCost;
       usesBattleCounterPower = supportedCounterEvent.usesBattleCounterPower;
+      counterDuration = supportedCounterEvent.duration;
       trailingSequence = supportedCounterEvent.trailingSequence;
       effectCost = supportedCounterEvent.effectCost;
     } else if (supportedRuntimeEvent !== null) {
@@ -441,6 +393,7 @@ export const applyUseCounter = (
     target: action.target,
     counterValue,
     usesBattleCounterPower,
+    ...(counterDuration === undefined ? {} : { counterDuration }),
     ...(trailingSequence === undefined ? {} : { trailingSequence }),
     ...(runtimeEffects === undefined ? {} : { runtimeEffects }),
     costArea: defender.costArea,
@@ -797,6 +750,7 @@ export const applyCounterEventTargetDecisionResponse = (params: {
     counterValue: selectedTarget === undefined ? 0 : selectedTarget.value,
     usesBattleCounterPower:
       selectedTarget !== undefined && selectedTarget.usesBattleCounterPower,
+    counterDuration: resolvedTarget.duration,
     ...(resolvedTarget.trailingSequence === undefined
       ? {}
       : { trailingSequence: resolvedTarget.trailingSequence }),
@@ -819,6 +773,7 @@ export const resolveCounterCardUse = (params: {
   handCard: CardInstance;
   target: CardRef;
   counterValue: number;
+  counterDuration?: SupportedCounterEventPower["duration"];
   usesBattleCounterPower: boolean;
   trailingSequence?: CounterEventTrailingSequence;
   runtimeEffects?: SupportedCounterEventRuntime["effects"];
@@ -836,6 +791,7 @@ export const resolveCounterCardUse = (params: {
     handCard,
     target,
     counterValue,
+    counterDuration,
     usesBattleCounterPower,
     trailingSequence,
     runtimeEffects,
@@ -922,6 +878,7 @@ export const resolveCounterCardUse = (params: {
           handCard,
           target,
           counterValue,
+          counterDuration,
         )
       : null;
   if (

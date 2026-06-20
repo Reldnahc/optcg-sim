@@ -19,6 +19,7 @@ import {
   parseRawKeywordLine,
 } from "@optcg/cards";
 import {
+  configureProbeFieldSourceForScenario,
   fieldProbeSource,
   installProbeSourceMetadata,
   resolvedProbeCard,
@@ -29,6 +30,7 @@ import {
   runCardPlayedScenario,
   runEndOfYourTurnScenario,
   runFieldRemovedScenario,
+  runOpponentActivatedScenario,
 } from "./behavior-probe-event-scenarios.js";
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
@@ -70,6 +72,7 @@ export interface BehaviorProbeScenario {
     | "lifeTrigger"
     | "lifeRemoved"
     | "onKO"
+    | "opponentActivated"
     | "opponentAttack"
     | "permanent"
     | "playCard"
@@ -297,6 +300,19 @@ const runScenario = (
             scenarioInput.definition.effects,
           ),
       );
+    case "opponentActivated":
+      return runOpponentActivatedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "permanent":
       return runPermanentScenario(
         {
@@ -428,6 +444,7 @@ const runActivateEffectScenario = (input: {
       setupFilterCount: input.setupFilters.length,
     };
   }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
 
   const action = getLegalActions(state, p1).find(
     (candidate): candidate is Extract<Action, { type: "activateEffect" }> =>

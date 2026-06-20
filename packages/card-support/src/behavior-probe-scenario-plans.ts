@@ -14,6 +14,7 @@ export type SupportedScenario =
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "lifeRemoved"; readonly category: "character" }
   | { readonly kind: "onKO"; readonly category: "character" }
+  | { readonly kind: "opponentActivated"; readonly category: "character" }
   | { readonly kind: "permanent"; readonly category: "character" }
   | { readonly kind: "replacement"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
@@ -90,6 +91,7 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
     effect.trigger.type === "trigger" ||
     effect.trigger.type === "lifeRemoved" ||
     effect.trigger.type === "onKO" ||
+    effect.trigger.type === "opponentActivated" ||
     effect.trigger.type === "permanent" ||
     effect.trigger.type === "endOfYourTurn" ||
     effect.trigger.type === "replacement"
@@ -147,6 +149,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "onKO")) {
     return { kind: "onKO", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "opponentActivated")) {
+    return { kind: "opponentActivated", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "permanent")) {
     return { kind: "permanent", category: "character" };

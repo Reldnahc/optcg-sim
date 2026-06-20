@@ -8,13 +8,19 @@ import type {
   CardId,
   CardInstance,
   Condition,
+  Cost,
   EffectBlock,
   EffectDefinition,
+  EngineEventId,
+  Effect,
   EffectId,
   GameState,
+  InstanceId,
   MatchCardManifest,
   MatchId,
+  OptionalCost,
   PlayerId,
+  PlayerRef,
   ResolvedCard,
 } from "@optcg/types";
 
@@ -28,6 +34,7 @@ const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const probeCardId = "probe-card" as CardId;
 const probeDefinitionId = "probe-card.behavior-probe";
+type ProbePlayerRef = PlayerRef | "anyPlayer";
 
 export const setupProbeMainState = (input: {
   readonly category: "leader" | "character" | "event";
@@ -110,11 +117,17 @@ export const setupProbeMainState = (input: {
   installScenarioDeckMetadata(active, p2, []);
   installScenarioFieldMetadata(active, p1, input.setupFilters);
   installScenarioFieldMetadata(active, p2, input.setupFilters);
+  installScenarioConditionFacts(active, input.definition.effects);
+  installScenarioEffectZoneFacts(active, input.definition.effects);
   return active;
 };
 
 export const fieldProbeSource = (
   player: NonNullable<GameState["players"][PlayerId]>,
+  params: {
+    readonly attachedDon?: readonly InstanceId[];
+    readonly turnPlayed?: number;
+  } = {},
 ): CardInstance | undefined => {
   const handIndex = player.hand.findIndex(
     (candidate) => candidate.cardId === probeCardId,
@@ -135,7 +148,8 @@ export const fieldProbeSource = (
       index: player.characters.length,
     },
     state: "active",
-    turnPlayed: 0,
+    attachedDon: [...(params.attachedDon ?? handCard.attachedDon)],
+    turnPlayed: params.turnPlayed ?? 0,
   };
   player.hand = reindexHand(
     player.hand.filter((_, index) => index !== handIndex),
@@ -143,6 +157,25 @@ export const fieldProbeSource = (
   );
   player.characters = [...player.characters, source];
   return source;
+};
+
+export const configureProbeFieldSourceForScenario = (
+  state: GameState,
+  source: CardInstance,
+  effects: readonly EffectBlock[],
+): void => {
+  if (
+    effects.some((block) =>
+      hasCondition(block.condition, "sourcePlayedThisTurn"),
+    )
+  ) {
+    source.turnPlayed = state.turn.globalTurn;
+  }
+  if (effects.some((block) => effectUsesAttachedDonCount(block.effect))) {
+    source.attachedDon =
+      state.players[p1]?.costArea.slice(0, 2).map((card) => card.instanceId) ??
+      [];
+  }
 };
 
 export const installProbeSourceMetadata = (
@@ -418,6 +451,7 @@ const installScenarioFieldMetadata = (
         cardId,
         index: 0,
         playerId,
+        state: filter.state === "rested" ? "rested" : "active",
         zone: "stageArea",
       });
       continue;
@@ -433,6 +467,7 @@ const installScenarioFieldMetadata = (
           cardId,
           index: player.characters.length,
           playerId,
+          state: filter.state === "rested" ? "rested" : "active",
           zone: "characterArea",
         }),
       ];
@@ -444,6 +479,7 @@ const probeFieldCard = (params: {
   readonly cardId: CardId;
   readonly index: number;
   readonly playerId: PlayerId;
+  readonly state?: CardInstance["state"];
   readonly zone: "characterArea" | "stageArea";
 }): CardInstance => ({
   instanceId:
@@ -457,10 +493,345 @@ const probeFieldCard = (params: {
     slot: params.zone === "stageArea" ? "stage" : "character",
     index: params.index,
   },
-  state: "active",
+  state: params.state ?? "active",
   attachedDon: [],
   turnPlayed: 0,
 });
+
+const installScenarioConditionFacts = (
+  state: GameState,
+  effects: readonly EffectBlock[],
+): void => {
+  for (const effect of effects) {
+    installConditionFact(state, effect.condition);
+    installEffectConditionFacts(state, effect.effect);
+  }
+};
+
+const installEffectConditionFacts = (
+  state: GameState,
+  effect: Effect,
+): void => {
+  if (effect.type === "conditional") {
+    installConditionFact(state, effect.if);
+    installEffectConditionFacts(state, effect.then);
+    if (effect.else !== undefined) {
+      installEffectConditionFacts(state, effect.else);
+    }
+    return;
+  }
+  if (effect.type === "sequence") {
+    for (const segment of effect.effects) {
+      if (segment.effect.type === "payCost") {
+        installCostFacts(state, segment.effect.cost);
+      } else {
+        installEffectConditionFacts(state, segment.effect);
+      }
+    }
+    return;
+  }
+  if (effect.type === "choice") {
+    for (const option of effect.options) {
+      installEffectConditionFacts(state, option.effect);
+    }
+    return;
+  }
+  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
+    installEffectConditionFacts(state, effect.effect);
+    return;
+  }
+  if (effect.type === "replacement") {
+    installEffectConditionFacts(state, effect.instead);
+  }
+};
+
+const installConditionFact = (
+  state: GameState,
+  condition: Condition | undefined,
+): void => {
+  if (condition === undefined) {
+    return;
+  }
+  if (condition.type === "and" || condition.type === "or") {
+    for (const child of condition.conditions) {
+      installConditionFact(state, child);
+    }
+    return;
+  }
+  if (condition.type === "not") {
+    return;
+  }
+  if (condition.type === "turnCount") {
+    for (const playerId of resolvePlayerRefsForSetup(condition.player)) {
+      setPlayerTurnCount(
+        state,
+        playerId,
+        passingCount(condition.op, condition.value),
+      );
+    }
+    return;
+  }
+  if (condition.type === "trashCount") {
+    for (const playerId of resolvePlayerRefsForSetup(condition.player)) {
+      addProbeTrashCards(
+        state,
+        playerId,
+        passingCount(condition.op, condition.value),
+        condition.filter,
+      );
+    }
+    return;
+  }
+  if (condition.type === "eventHistory") {
+    const count = passingCount(condition.op, condition.value);
+    for (const playerId of resolvePlayerRefsForSetup(condition.player)) {
+      for (let index = 0; index < count; index += 1) {
+        const cardId =
+          `probe-history-${String(playerId)}-${String(index)}` as CardId;
+        const profile =
+          condition.filter === undefined
+            ? { category: "event" as const }
+            : profileForCardFilter(condition.filter, index);
+        state.cardManifest.cards[cardId] = resolvedProbeCard({
+          cardId,
+          category: profile.category ?? "event",
+          effectText: "",
+          profile,
+        });
+        state.eventJournal.push({
+          id: `event:behavior-probe-history:${String(playerId)}:${String(index)}` as EngineEventId,
+          seq: state.eventJournal.length + 1,
+          type: condition.event,
+          payload: {
+            playerId,
+            instanceId: `${String(cardId)}:instance`,
+            cardId,
+            category: profile.category ?? "event",
+            turnNumber: state.turn.globalTurn,
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: state.seq,
+        });
+      }
+    }
+  }
+};
+
+const installCostFacts = (
+  state: GameState,
+  cost: OptionalCost | Cost,
+): void => {
+  if (cost.type === "sequence") {
+    for (const child of cost.costs) {
+      installCostFacts(state, child);
+    }
+    return;
+  }
+  if (cost.type === "setLifeFaceUp" || cost.type === "turnLifeFaceUp") {
+    const playerId = resolvePlayerRef(cost.player);
+    const player = playerId === undefined ? undefined : state.players[playerId];
+    if (player === undefined) {
+      return;
+    }
+    const life = player.life[0];
+    if (life !== undefined) {
+      player.life[0] = {
+        ...life,
+        faceUp: cost.type === "setLifeFaceUp" ? !cost.faceUp : false,
+      };
+    }
+  }
+};
+
+const installScenarioEffectZoneFacts = (
+  state: GameState,
+  effects: readonly EffectBlock[],
+): void => {
+  for (const block of effects) {
+    installEffectZoneFacts(state, block.effect);
+  }
+};
+
+const installEffectZoneFacts = (state: GameState, effect: Effect): void => {
+  if (effect.type === "moveSelected") {
+    addCardsForZone(state, p2, effect.from, 2, undefined);
+    return;
+  }
+  if (effect.type === "selectCards") {
+    const count = effect.max === "available" ? 2 : Math.max(1, effect.max);
+    if (effect.zone !== undefined) {
+      const playerId = resolvePlayerRef(effect.player) ?? p1;
+      addCardsForZone(state, playerId, effect.zone, count, effect.filter);
+    }
+    for (const zone of effect.zones ?? []) {
+      const playerId = resolvePlayerRef(effect.player) ?? p1;
+      addCardsForZone(state, playerId, zone, count, effect.filter);
+    }
+    return;
+  }
+  if (effect.type === "conditional") {
+    installEffectZoneFacts(state, effect.then);
+    if (effect.else !== undefined) {
+      installEffectZoneFacts(state, effect.else);
+    }
+    return;
+  }
+  if (effect.type === "sequence") {
+    for (const segment of effect.effects) {
+      if (segment.effect.type !== "payCost") {
+        installEffectZoneFacts(state, segment.effect);
+      }
+    }
+    return;
+  }
+  if (effect.type === "choice") {
+    for (const option of effect.options) {
+      installEffectZoneFacts(state, option.effect);
+    }
+    return;
+  }
+  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
+    installEffectZoneFacts(state, effect.effect);
+    return;
+  }
+  if (effect.type === "replacement") {
+    installEffectZoneFacts(state, effect.instead);
+  }
+};
+
+const addCardsForZone = (
+  state: GameState,
+  playerId: PlayerId,
+  zone: string,
+  count: number,
+  filter: CardFilter | undefined,
+): void => {
+  if (zone === "trash") {
+    addProbeTrashCards(state, playerId, count, filter);
+  }
+};
+
+const addProbeTrashCards = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+  filter: CardFilter | undefined,
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  const startIndex = player.trash.length;
+  const cards = Array.from({ length: count }, (_, offset): CardInstance => {
+    const index = startIndex + offset;
+    const profile =
+      filter === undefined ? {} : profileForCardFilter(filter, index);
+    const cardId =
+      profile.cardId ??
+      (`probe-trash-${String(playerId)}-${String(index)}` as CardId);
+    state.cardManifest.cards[cardId] = resolvedProbeCard({
+      cardId,
+      category: profile.category ?? "character",
+      effectText: "",
+      profile,
+    });
+    return {
+      instanceId:
+        `probe-trash-${String(playerId)}-${String(index)}:instance` as CardInstance["instanceId"],
+      cardId,
+      owner: playerId,
+      controller: playerId,
+      zone: {
+        zone: "trash",
+        playerId,
+        slot: "trash",
+        index,
+      },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 0,
+    };
+  });
+  player.trash = [...player.trash, ...cards];
+};
+
+const hasCondition = (
+  condition: Condition | undefined,
+  type: Condition["type"],
+): boolean => {
+  if (condition === undefined) {
+    return false;
+  }
+  if (condition.type === type) {
+    return true;
+  }
+  if (condition.type === "and" || condition.type === "or") {
+    return condition.conditions.some((child) => hasCondition(child, type));
+  }
+  if (condition.type === "not") {
+    return hasCondition(condition.condition, type);
+  }
+  return false;
+};
+
+const effectUsesAttachedDonCount = (effect: Effect): boolean => {
+  if (JSON.stringify(effect).includes('"attachedDonCount"')) {
+    return true;
+  }
+  if (JSON.stringify(effect).includes('"countAttachedDon"')) {
+    return true;
+  }
+  return false;
+};
+
+const passingCount = (
+  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte",
+  value: number,
+): number => {
+  switch (op) {
+    case "gt":
+      return value + 1;
+    case "gte":
+    case "eq":
+      return value;
+    case "lt":
+      return Math.max(0, value - 1);
+    case "lte":
+      return value;
+    case "neq":
+      return value + 1;
+  }
+};
+
+const resolvePlayerRef = (player: ProbePlayerRef): PlayerId | undefined => {
+  switch (player) {
+    case "opponent":
+    case "nonTurnPlayer":
+      return p2;
+    case "anyPlayer":
+      return undefined;
+    case "self":
+    case "owner":
+    case "turnPlayer":
+    case "controller":
+    default:
+      return p1;
+  }
+};
+
+const resolvePlayerRefsForSetup = (
+  player: ProbePlayerRef,
+): readonly PlayerId[] =>
+  player === "anyPlayer" ? [p1, p2] : player === "owner" ? [p1] : [p1, p2];
+
+const setPlayerTurnCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  state.turn.playerTurnCounts[playerId] = count;
+  const player = state.players[playerId];
+  if (player !== undefined) {
+    player.turnCount = count;
+  }
+};
 
 const installScenarioLeaderMetadata = (
   state: GameState,

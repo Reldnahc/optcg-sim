@@ -117,6 +117,37 @@ export const runFieldRemovedScenario = (
   );
 };
 
+export const runOpponentActivatedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  state.turn.turnPlayerId = p2;
+  state.turn.playerTurnCounts[p2] = Math.max(
+    state.turn.playerTurnCounts[p2] ?? 0,
+    1,
+  );
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  const event = addOpponentActivationEventCard(state);
+  return drainRuntime(
+    applyAction(state, { type: "playCard", cardInstanceId: event.instanceId }),
+    input.setupFilters.length,
+  );
+};
+
 const failedProbeFielding = (
   state: GameState,
   setupFilterCount: number,
@@ -235,6 +266,50 @@ const addFieldRemovalEventCard = (state: GameState): CardInstance => {
     },
   });
   return addProbeHandCard(state, p1, {
+    cardId,
+    category: "event",
+    effectText,
+  });
+};
+
+const addOpponentActivationEventCard = (state: GameState): CardInstance => {
+  const cardId = "probe-opponent-activation-event" as CardId;
+  const effectText = "[Main] Draw 1 card.";
+  const materialized = materializeEffectDefinition(
+    cardId,
+    [effectText],
+    "behavior-probe-opponent-activation-event",
+    {
+      effectDefinitionsVersion: "behavior-probe",
+      rulesVersion: "behavior-probe",
+    },
+    { evaluateRuntimeSupport: evaluateEffectBlockRuntimeSupport },
+  );
+  const definition = must(
+    materialized.definition,
+    "opponent activation event definition",
+  );
+  const effectDefinitionId = "probe-opponent-activation-event.behavior-probe";
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[cardId] = resolvedProbeCard({
+    cardId,
+    category: "event",
+    effectText,
+    support: {
+      cardId,
+      status: "implemented-dsl",
+      tested: true,
+      rulesVersion: "behavior-probe",
+      cardDataVersion: "behavior-probe",
+      sourceTextHash: "behavior-probe-opponent-activation-event",
+      behaviorHash: "behavior-probe-opponent-activation-event",
+      effectDefinitionId,
+    },
+  });
+  return addProbeHandCard(state, p2, {
     cardId,
     category: "event",
     effectText,

@@ -546,4 +546,70 @@ describe("card behavior probe", () => {
       ]),
     );
   });
+
+  it("seeds event history for Activate Main conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If you have activated an Event with a base cost of 3 or more during this turn, draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("profiles Activate Main sources that must have been played this turn with attached DON", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] If this Character was played on this turn, give all of your opponent's Characters \u22121000 power during this turn for every DON!! card given to that Character.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds trash-count conditions for counter event scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] If you have 15 or more cards in your trash, up to 1 of your Leader or Character cards gains +4000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("selects optional saved targets when a following condition consumes them", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Select up to 1 of your opponent's rested Characters. If the chosen Character has a cost equal to the number of DON!! cards given to it, K.O. it.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("seeds opponent trash cards for opponent trash-to-deck movement", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] Place up to 1 card from your opponent's trash at the bottom of the owner's deck.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves opponent-activated event reactions through a generated scenario", () => {
+    const report = createBehaviorProbeReport({
+      text: "When your opponent activates an Event or [Blocker], draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: opponentActivated");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });
