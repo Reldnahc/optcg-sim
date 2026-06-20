@@ -108,16 +108,14 @@ export const setupProbeMainState = (input: {
   installActiveDon(active, p1);
   installActiveDon(active, p2);
   installProbeManifest(active, input);
-  installScenarioLeaderMetadata(
-    active,
-    p1,
-    collectLeaderConditionFilters(input.definition.effects, "self"),
-  );
-  installScenarioLeaderMetadata(
-    active,
-    p2,
-    collectLeaderConditionFilters(input.definition.effects, "opponent"),
-  );
+  installScenarioLeaderMetadata(active, p1, [
+    ...collectLeaderConditionFilters(input.definition.effects, "self"),
+    ...input.setupFilters,
+  ]);
+  installScenarioLeaderMetadata(active, p2, [
+    ...collectLeaderConditionFilters(input.definition.effects, "opponent"),
+    ...input.setupFilters,
+  ]);
   addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
   installScenarioDeckMetadata(active, p1, input.setupFilters);
   installScenarioDeckMetadata(active, p2, []);

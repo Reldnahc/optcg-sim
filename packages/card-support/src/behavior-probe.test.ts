@@ -691,4 +691,15 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("builds matching Counter Event targets from type-filtered Leader or Character requests", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Counter] Up to 1 of your {Thriller Bark Pirates} type Leader or Character cards gains +3000 power during this battle.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: counter");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });
