@@ -403,6 +403,20 @@ export const behaviorCoverageFixtureCorpus = [
     expectedPrimitiveTypes: ["playSource"],
   },
   {
+    label: "fixture:op13-096:trigger-activate-referenced-main",
+    text: `[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [The Five Elders Are at Your Service!!!] and add it to your hand. Then, trash the rest.
+[Trigger] Activate this card's [Main] effect.`,
+    expectedPrimitiveTypes: [
+      "activateReferencedEffect",
+      "moveSelected",
+      "placeSetRemainder",
+      "revealSelected",
+      "revealTop",
+      "selectFromSet",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:eb02-030:counter-ko-replacement",
     text: "[Counter] If any of your Characters would be K.O.'d in battle during this turn, you may trash 1 card from your hand instead.",
     expectedPrimitiveTypes: [

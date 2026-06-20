@@ -253,6 +253,9 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effect.trigger.type === "trigger")) {
     return { kind: "lifeTrigger", category: "character" };
   }
+  if (effects.some((effect) => effect.trigger.type === "trigger")) {
+    return { kind: "lifeTrigger", category: "character" };
+  }
   if (effects.every((effect) => effect.trigger.type === "lifeRemoved")) {
     return { kind: "lifeRemoved", category: "character" };
   }

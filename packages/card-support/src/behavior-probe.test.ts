@@ -294,6 +294,23 @@ describe("card behavior probe", () => {
     ]);
   });
 
+  it("proves referenced Main activation triggers with same-card context", () => {
+    const report = createBehaviorProbeReport({
+      text: [
+        "[Main] Look at 3 cards from the top of your deck; reveal up to 1 {Celestial Dragons} type card other than [The Five Elders Are at Your Service!!!] and add it to your hand. Then, trash the rest.",
+        "[Trigger] Activate this card's [Main] effect.",
+      ].join("\n"),
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: lifeTrigger");
+    expect(report.lines).toContain(
+      "Scenario 1 engine primitives: activateReferencedEffect, moveSelected, placeSetRemainder, revealSelected, revealTop, selectFromSet, sequence",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("proves Life-removed reactions through combat damage", () => {
     const report = createBehaviorProbeReport({
       text: "[Your Turn] When a card is removed from your or your opponent's Life cards, draw 1 card. Then, you cannot draw cards using your own effects during this turn.",
