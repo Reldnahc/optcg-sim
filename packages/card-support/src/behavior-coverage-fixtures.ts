@@ -417,6 +417,16 @@ export const behaviorCoverageFixtureCorpus = [
     ],
   },
   {
+    label: "fixture:eb03-053:on-ko-life-face-up-cost-play",
+    text: "[On K.O.] You may turn 1 card from the top of your Life cards face-up: Play up to 1 Character card with 6000 power or less from your hand.",
+    expectedPrimitiveTypes: [
+      "payCost",
+      "playSelected",
+      "selectCards",
+      "sequence",
+    ],
+  },
+  {
     label: "fixture:eb02-030:counter-ko-replacement",
     text: "[Counter] If any of your Characters would be K.O.'d in battle during this turn, you may trash 1 card from your hand instead.",
     expectedPrimitiveTypes: [
