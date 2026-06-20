@@ -33,6 +33,7 @@ import {
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
 import { runOpponentAttackScenario } from "./behavior-probe-opponent-attack-scenario.js";
 import { runPermanentScenario } from "./behavior-probe-permanent-scenario.js";
+import { runReplacementScenario } from "./behavior-probe-replacement-scenario.js";
 import { collectScenarioSetupFilters } from "./behavior-probe-setup-filters.js";
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
 
@@ -68,7 +69,8 @@ export interface BehaviorProbeScenario {
     | "onKO"
     | "opponentAttack"
     | "permanent"
-    | "playCard";
+    | "playCard"
+    | "replacement";
   readonly cardCategory?: "leader" | "character" | "event";
   readonly status: "passed" | "failed" | "skipped";
   readonly primitiveTypes: readonly string[];
@@ -88,6 +90,7 @@ type SupportedScenario =
   | { readonly kind: "lifeRemoved"; readonly category: "character" }
   | { readonly kind: "onKO"; readonly category: "character" }
   | { readonly kind: "permanent"; readonly category: "character" }
+  | { readonly kind: "replacement"; readonly category: "character" }
   | { readonly kind: "skipped"; readonly reason: string };
 
 const p1 = "p1" as PlayerId;
@@ -274,6 +277,19 @@ export const createBehaviorProbeReport = (
           ...scenarioInput,
           category: scenario.category,
         });
+      case "replacement":
+        return runReplacementScenario(
+          {
+            ...scenarioInput,
+            category: "character",
+          },
+          (initialResult, setupFilterCount) =>
+            drainRuntime(
+              initialResult,
+              setupFilterCount,
+              scenarioInput.definition.effects,
+            ),
+        );
     }
   })();
   const passed = result.ok;
@@ -357,6 +373,9 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effect.trigger.type === "permanent")) {
     return { kind: "permanent", category: "character" };
+  }
+  if (effects.every((effect) => effect.trigger.type === "replacement")) {
+    return { kind: "replacement", category: "character" };
   }
   return {
     kind: "skipped",

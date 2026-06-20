@@ -4,17 +4,21 @@ import type {
   Cost,
   Effect,
   OptionalCost,
+  ReplacementTrigger,
   Target,
+  Trigger,
 } from "@optcg/types";
 
 export const collectScenarioSetupFilters = (
   effects: readonly {
     readonly condition?: Condition;
     readonly effect: Effect;
+    readonly trigger?: Trigger;
   }[],
 ): readonly CardFilter[] =>
   uniqueFilters(
     effects.flatMap((block) => [
+      ...collectTriggerFilters(block.trigger),
       ...collectConditionFilters(block.condition),
       ...collectEffectFilters(block.effect),
     ]),
@@ -88,6 +92,81 @@ const collectTargetFilters = (target: Target): readonly CardFilter[] => {
   }
   if (target.type === "choose" || target.type === "chooseFromZones") {
     return target.request.filter === undefined ? [] : [target.request.filter];
+  }
+  return [];
+};
+
+const collectTriggerFilters = (
+  trigger: Trigger | undefined,
+): readonly CardFilter[] => {
+  if (trigger === undefined) {
+    return [];
+  }
+  if (trigger.type === "anyOf") {
+    return trigger.triggers.flatMap(collectTriggerFilters);
+  }
+  if (trigger.type === "eventCount") {
+    return collectTriggerFilters(trigger.trigger);
+  }
+  if (trigger.type === "replacement") {
+    return collectReplacementTriggerFilters(trigger.replacement);
+  }
+  if (trigger.type === "fieldRemoved" || trigger.type === "cardRested") {
+    return [
+      ...(trigger.filter === undefined ? [] : [trigger.filter]),
+      ...(trigger.sourceFilter === undefined ? [] : [trigger.sourceFilter]),
+    ];
+  }
+  if (trigger.type === "donAttached") {
+    return trigger.filter === undefined ? [] : [trigger.filter];
+  }
+  if (trigger.type === "cardPlayed") {
+    return [
+      ...(trigger.filter === undefined ? [] : [trigger.filter]),
+      ...(trigger.sourceFilter === undefined ? [] : [trigger.sourceFilter]),
+      ...(trigger.anyOf ?? []).flatMap((option) => [
+        ...(option.filter === undefined ? [] : [option.filter]),
+        ...(option.sourceFilter === undefined ? [] : [option.sourceFilter]),
+      ]),
+    ];
+  }
+  if (trigger.type === "onOpponentAttack") {
+    return trigger.attackerFilter === undefined ? [] : [trigger.attackerFilter];
+  }
+  if (
+    trigger.type === "handTrashedByEffect" ||
+    trigger.type === "effectQueued" ||
+    trigger.type === "effectResolved" ||
+    trigger.type === "triggerActivated"
+  ) {
+    return trigger.sourceFilter === undefined ? [] : [trigger.sourceFilter];
+  }
+  if (trigger.type === "attackDeclared" || trigger.type === "endOfBattle") {
+    return [
+      ...(trigger.filter === undefined ? [] : [trigger.filter]),
+      ...(trigger.targetFilter === undefined ? [] : [trigger.targetFilter]),
+      ...(trigger.counterpartFilter === undefined
+        ? []
+        : [trigger.counterpartFilter]),
+    ];
+  }
+  return [];
+};
+
+const collectReplacementTriggerFilters = (
+  trigger: ReplacementTrigger,
+): readonly CardFilter[] => {
+  if (trigger.type === "anyOf") {
+    return trigger.replacements.flatMap(collectReplacementTriggerFilters);
+  }
+  if (
+    trigger.type === "wouldBeKOd" ||
+    trigger.type === "wouldBeRested" ||
+    trigger.type === "wouldBeTrashed" ||
+    trigger.type === "wouldMoveZone" ||
+    trigger.type === "wouldTakeDamage"
+  ) {
+    return collectTargetFilters(trigger.target);
   }
   return [];
 };

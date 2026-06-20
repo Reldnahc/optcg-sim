@@ -408,6 +408,57 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 effect queue: drained");
   });
 
+  it("proves self K.O. replacement effects through a real replacement decision", () => {
+    const report = createBehaviorProbeReport({
+      text: "If this Character would be K.O.'d, you may rest 2 of your cards instead.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: replacement");
+    expect(report.lines).toContain("Scenario 1 card category: character");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 engine primitives: .*replacement/u),
+      ]),
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+  });
+
+  it("proves field-removal replacement effects that protect another matching Character", () => {
+    const report = createBehaviorProbeReport({
+      text: "If one of your Characters would be removed from the field by your opponent's effect, you may K.O. this Character instead.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: replacement");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 engine primitives: .*replacement/u),
+      ]),
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves replacement effects with reusable hand-trash costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Once Per Turn] If your {Red-Haired Pirates} type Character would be K.O.'d, you may trash 1 Character card with 6000 power or more from your hand instead.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: replacement");
+    expect(report.lines).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^Scenario 1 engine primitives: .*replacement/u),
+      ]),
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
   it("proves On K.O. effects through combat K.O.", () => {
     const report = createBehaviorProbeReport({
       text: "[On K.O.] You may turn 1 card from the top of your Life cards face-up: Play up to 1 Character card with 6000 power or less from your hand.",
