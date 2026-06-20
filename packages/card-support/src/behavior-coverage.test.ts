@@ -18,12 +18,17 @@ describe("behavior coverage", () => {
     expect(report.exitCode).toBe(0);
     expect(report.errors).toEqual([]);
     expect(report.lines).toContain("Behavior coverage entries: 2");
-    expect(report.lines).toContain("Behavior coverage primitive coverage: 1/2");
+    expect(report.lines).toContain("Behavior coverage primitive coverage: 1/1");
+    expect(report.lines).toContain(
+      "Behavior coverage inventory primitive coverage: 1/2",
+    );
     expect(report.lines).toContain("Behavior coverage passed scenarios: 2");
     expect(report.lines).toContain("Behavior coverage failed scenarios: 0");
     expect(report.lines).toContain("Behavior coverage skipped scenarios: 0");
     expect(report.lines).toContain("Behavior coverage covered primitive: draw");
-    expect(report.lines).toContain("Behavior coverage missing primitive: ko");
+    expect(report.lines).toContain(
+      "Behavior coverage inventory missing primitive: ko",
+    );
   });
 
   it("fails coverage when a behavior probe fails to materialize", () => {
@@ -107,6 +112,7 @@ describe("behavior coverage", () => {
         "Behavior coverage source: card OP01-001",
         "Behavior coverage entries: 0",
         "Behavior coverage primitive coverage: 0/0",
+        "Behavior coverage inventory primitive coverage: 0/0",
         "Behavior coverage passed scenarios: 0",
         "Behavior coverage failed scenarios: 0",
         "Behavior coverage skipped scenarios: 0",

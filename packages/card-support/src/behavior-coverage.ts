@@ -53,6 +53,7 @@ export const createBehaviorCoverageReport = (
 ): BehaviorCoverageReport => {
   const inventoryPrimitiveTypes = uniqueSorted(request.inventoryPrimitiveTypes);
   const coveredPrimitiveTypes = new Set<string>();
+  const sourcePrimitiveTypes = new Set<string>();
   const skippedReasons = new Map<string, number>();
   const probeFailures: string[] = [];
   const bucketSummary = emptyMutableBucketSummary();
@@ -81,6 +82,9 @@ export const createBehaviorCoverageReport = (
       });
     }
     for (const scenario of probe.scenarios) {
+      for (const primitive of scenario.primitiveTypes) {
+        sourcePrimitiveTypes.add(primitive);
+      }
       if (scenario.status === "passed") {
         passedScenarioCount += 1;
         bucketSummary.behaviorPassed += 1;
@@ -109,22 +113,38 @@ export const createBehaviorCoverageReport = (
   const missingInventoryPrimitives = inventoryPrimitiveTypes.filter(
     (primitive) => !coveredPrimitiveTypes.has(primitive),
   );
+  const sourcePrimitives = uniqueSorted([...sourcePrimitiveTypes]);
+  const coveredSourcePrimitives = sourcePrimitives.filter((primitive) =>
+    coveredPrimitiveTypes.has(primitive),
+  );
+  const missingSourcePrimitives = sourcePrimitives.filter(
+    (primitive) => !coveredPrimitiveTypes.has(primitive),
+  );
 
   return {
     exitCode: hasFailingBuckets(bucketSummary) ? 1 : 0,
     lines: [
       `Behavior coverage entries: ${String(request.entries.length)}`,
-      `Behavior coverage primitive coverage: ${String(coveredInventoryPrimitives.length)}/${String(inventoryPrimitiveTypes.length)}`,
+      `Behavior coverage primitive coverage: ${String(coveredSourcePrimitives.length)}/${String(sourcePrimitives.length)}`,
+      `Behavior coverage inventory primitive coverage: ${String(coveredInventoryPrimitives.length)}/${String(inventoryPrimitiveTypes.length)}`,
       `Behavior coverage passed scenarios: ${String(passedScenarioCount)}`,
       `Behavior coverage failed scenarios: ${String(failedScenarioCount)}`,
       `Behavior coverage skipped scenarios: ${String(skippedScenarioCount)}`,
       `Behavior coverage probe failures: ${String(probeFailures.length)}`,
       ...bucketLines(bucketSummary),
-      ...coveredInventoryPrimitives.map(
+      ...coveredSourcePrimitives.map(
         (primitive) => `Behavior coverage covered primitive: ${primitive}`,
       ),
-      ...missingInventoryPrimitives.map(
+      ...missingSourcePrimitives.map(
         (primitive) => `Behavior coverage missing primitive: ${primitive}`,
+      ),
+      ...coveredInventoryPrimitives.map(
+        (primitive) =>
+          `Behavior coverage inventory covered primitive: ${primitive}`,
+      ),
+      ...missingInventoryPrimitives.map(
+        (primitive) =>
+          `Behavior coverage inventory missing primitive: ${primitive}`,
       ),
       ...[...skippedReasons.entries()]
         .sort(([left], [right]) => left.localeCompare(right))
@@ -157,6 +177,7 @@ export const createBehaviorCoverageSourceFailureReport = (input: {
       `Behavior coverage source: ${input.sourceLabel}`,
       "Behavior coverage entries: 0",
       "Behavior coverage primitive coverage: 0/0",
+      "Behavior coverage inventory primitive coverage: 0/0",
       "Behavior coverage passed scenarios: 0",
       "Behavior coverage failed scenarios: 0",
       "Behavior coverage skipped scenarios: 0",
