@@ -867,6 +867,91 @@ test("forEachSavedTarget attaches separately selected rested DON to each saved t
   );
 });
 
+test("forEachSavedTarget DON attachment allows choosing zero for a later target", () => {
+  const state = createActiveState();
+  setupDefinition(state, distributedAttachDonSequence());
+  const p1State = must(state.players[p1], "p1");
+  const secondTarget = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[1], "second target character"),
+    zone: "characterArea",
+    index: 1,
+  });
+  state.cardManifest.cards[secondTarget.cardId] = resolvedCard({
+    cardId: secondTarget.cardId,
+    category: "character",
+  });
+
+  const targetPause = processEffectRuntime(state);
+  assert.equal(targetPause.errors, undefined);
+  const targetDecision = must(
+    targetPause.state.pendingDecision,
+    "target selection",
+  );
+  assert.equal(targetDecision.type, "selectTargets");
+  const selectedTargets = targetDecision.candidates.map(
+    (candidate) => candidate.card,
+  );
+
+  const firstDonPause = applyAction(targetPause.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: selectedTargets },
+  });
+  assert.equal(firstDonPause.errors, undefined);
+  const firstDonDecision = must(
+    firstDonPause.state.pendingDecision,
+    "first DON selection",
+  );
+  assert.equal(firstDonDecision.type, "selectCards");
+  const firstDon = firstDonDecision.candidates
+    .slice(0, 1)
+    .map((candidate) => candidate.card);
+
+  const secondDonPause = applyAction(firstDonPause.state, {
+    type: "respondToDecision",
+    decisionId: firstDonDecision.id,
+    response: { type: "cards", cards: firstDon },
+  });
+  assert.equal(secondDonPause.errors, undefined);
+  const secondDonDecision = must(
+    secondDonPause.state.pendingDecision,
+    "second DON selection",
+  );
+  assert.equal(secondDonDecision.type, "selectCards");
+
+  const completed = applyAction(secondDonPause.state, {
+    type: "respondToDecision",
+    decisionId: secondDonDecision.id,
+    response: { type: "cards", cards: [] },
+  });
+
+  assert.equal(completed.errors, undefined);
+  assert.equal(completed.state.pendingDecision, undefined);
+  const afterCharacters = must(
+    completed.state.players[p1],
+    "after p1",
+  ).characters;
+  const firstTargetAfter = must(
+    afterCharacters.find(
+      (card) => card.instanceId === selectedTargets[0]?.instanceId,
+    ),
+    "first target after",
+  );
+  const secondTargetAfter = must(
+    afterCharacters.find(
+      (card) => card.instanceId === selectedTargets[1]?.instanceId,
+    ),
+    "second target after",
+  );
+  assert.deepEqual(
+    firstTargetAfter.attachedDon,
+    firstDon.map((card) => card.instanceId),
+  );
+  assert.deepEqual(secondTargetAfter.attachedDon, []);
+});
+
 test("parser-emitted nested DON sequence resumes after the first quantity decision", () => {
   const state = createActiveState();
   setupDefinition(state, parserNestedAttachDonSequence());

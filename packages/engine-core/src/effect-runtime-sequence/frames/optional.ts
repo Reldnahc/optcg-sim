@@ -14,16 +14,20 @@ import {
   frameForPausedSequenceDecision,
   stateWithPausedSequenceFrame,
 } from "../frame-decisions.js";
-import { applyDrawSegment, saveReference } from "../segments.js";
+import {
+  applyDrawSegment,
+  applyMoveCardsSegment,
+  saveReference,
+} from "../segments.js";
 import { applyFieldMutationSequenceSegment } from "../field-segments.js";
 import { resumeSequenceFrameFromLedgers } from "../resume.js";
 import { type SupportedSequenceSegment } from "../support.js";
 import {
   emptySegmentResult,
   getSupportedFrameContext,
-  segmentKey,
   sequenceRuntimeError,
 } from "./shared.js";
+import { resolveSequenceForPath, segmentKeyForPath } from "../paths.js";
 import { consumeOncePerTurnForQueueEntry } from "../../rules/once-per-turn.js";
 import type {
   CreateTrashFromHandSequenceDecision,
@@ -44,8 +48,12 @@ export const resumeSequenceFrameAfterOptionalActivation = (
     return context.result;
   }
   const { entry, frame, supportedBlock } = context;
+  const pausedSequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
-    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    pausedSequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (pausedSegment === undefined || pausedSegment.optional !== true) {
     return {
       error: sequenceRuntimeError(
@@ -55,6 +63,10 @@ export const resumeSequenceFrameAfterOptionalActivation = (
       ok: false,
     };
   }
+  const frameSegmentKey = (
+    segment: NonNullable<typeof pausedSequence>["effects"][number],
+    index: number,
+  ): string => segmentKeyForPath(frame.effectPath, segment, index);
 
   let nextState = state;
   let events: EngineEvent[] = [];
@@ -77,7 +89,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
         },
         { incrementStateSeq: false },
         emptySegmentResult,
-        segmentKey,
+        frameSegmentKey,
       );
       if (!drawn.ok) {
         return {
@@ -133,6 +145,33 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           nextFrame,
         ),
       };
+    } else if (pausedSegment.effect.type === "moveCards") {
+      const moved = applyMoveCardsSegment(
+        nextState,
+        entry,
+        pausedSegment as SupportedSequenceSegment & {
+          effect: Extract<Effect, { type: "moveCards" }>;
+        },
+        frame.pendingDecision.resumeAtSegmentIndex,
+        {
+          savedReferences: frame.savedReferences,
+          segmentResults: frame.segmentResults,
+        },
+        emptySegmentResult,
+        frameSegmentKey,
+      );
+      if (!moved.ok) {
+        return {
+          error: sequenceRuntimeError(
+            entry.effectBlockId,
+            "segment-execution-failed",
+          ),
+          ok: false,
+        };
+      }
+      nextState = moved.state;
+      events = moved.events;
+      ledgers = moved.ledgers;
     } else {
       const mutation = applyFieldMutationSequenceSegment({
         effectPath: frame.effectPath,
@@ -149,7 +188,7 @@ export const resumeSequenceFrameAfterOptionalActivation = (
           segmentResults: frame.segmentResults,
         },
         segment: pausedSegment,
-        segmentKey,
+        segmentKey: frameSegmentKey,
         state: nextState,
       });
       if (!mutation.handled || !mutation.ok) {
@@ -182,8 +221,10 @@ export const resumeSequenceFrameAfterOptionalActivation = (
       savedReferences: frame.savedReferences,
       segmentResults: {
         ...frame.segmentResults,
-        [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
-          declinedResult,
+        [frameSegmentKey(
+          pausedSegment,
+          frame.pendingDecision.resumeAtSegmentIndex,
+        )]: declinedResult,
       },
     };
   }
@@ -229,8 +270,12 @@ export const resumeSequenceFrameAfterOptionalCost = (
     return context.result;
   }
   const { entry, frame, supportedBlock } = context;
+  const pausedSequence = resolveSequenceForPath(
+    supportedBlock.effect,
+    frame.effectPath,
+  );
   const pausedSegment =
-    supportedBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+    pausedSequence?.effects[frame.pendingDecision.resumeAtSegmentIndex];
   if (pausedSegment === undefined || pausedSegment.effect.type !== "payCost") {
     return {
       error: sequenceRuntimeError(
@@ -253,6 +298,11 @@ export const resumeSequenceFrameAfterOptionalCost = (
         attempted: true,
         playerDeclined: true,
       };
+  const pausedSegmentKey = segmentKeyForPath(
+    frame.effectPath,
+    pausedSegment,
+    frame.pendingDecision.resumeAtSegmentIndex,
+  );
   const savedReferences =
     paidCost && pausedSegment.saveResultAs !== undefined
       ? saveReference(frame.savedReferences, pausedSegment, {
@@ -279,8 +329,7 @@ export const resumeSequenceFrameAfterOptionalCost = (
       savedReferences,
       segmentResults: {
         ...frame.segmentResults,
-        [segmentKey(pausedSegment, frame.pendingDecision.resumeAtSegmentIndex)]:
-          segmentResult,
+        [pausedSegmentKey]: segmentResult,
       },
     },
     state: nextState,

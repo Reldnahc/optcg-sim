@@ -68,6 +68,7 @@ export const applySequenceSelectCardsChoiceResponse = (
     stateWithoutPendingDecision,
     decision,
     selectedCardsFromResponse(action),
+    createSupportedTrashFromHandChoiceDecision,
   );
   if (resumed === undefined) {
     return null;

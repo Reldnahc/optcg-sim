@@ -19,6 +19,7 @@ import {
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
 import {
   effectDefinition,
+  ensureActiveDonInCostArea,
   passCounterStep,
   protectTargetFromOpponentEffectKO,
   setupAttackState,
@@ -778,6 +779,86 @@ test("reviewed supported On K.O. metadata resolves after battle K.O. events", ()
   assert.equal(nextP2.trash[0]?.instanceId, target.instanceId);
   assert.equal(nextP2.deck.length, beforeDeck - 1);
   assert.equal(nextP2.hand.length, beforeHand + 1);
+});
+
+test("attached-DON On K.O. marker uses last-known source state after battle K.O.", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const target = must(p2State.characters[0], "target");
+  ensureActiveDonInCostArea(state, p2, 2);
+  target.attachedDon = p2State.costArea
+    .slice(0, 2)
+    .map((card) => card.instanceId);
+  const beforeHand = p2State.hand.length;
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "character",
+    power: 7000,
+  });
+  const definition = effectDefinition(target.cardId, { type: "onKO" });
+  const onKOEffect = must(definition.effects[0], "onKO effect");
+  const onKODefinition: EffectDefinition = {
+    ...definition,
+    effects: [
+      {
+        ...onKOEffect,
+        condition: {
+          type: "attachedDonCount",
+          target: { type: "self" },
+          op: "gte",
+          value: 2,
+        },
+        sourcePresencePolicy: "resolveFromDestinationZone",
+      },
+    ],
+  };
+  state.cardManifest.effectDefinitionsVersion =
+    onKODefinition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-supported-on-ko-attached-don": onKODefinition,
+  };
+  state.cardManifest.cards[target.cardId] = resolvedCard({
+    cardId: target.cardId,
+    category: "character",
+    power: 3000,
+    effectText: "[DON!! x2] [On K.O.] Draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-supported-on-ko-attached-don",
+      rulesVersion: onKODefinition.metadata.rulesVersion,
+      sourceTextHash: onKODefinition.metadata.sourceTextHash,
+    },
+  });
+  state.battle = {
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    originalTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    currentTarget: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+    step: "counter",
+    damageCount: 1,
+  };
+
+  const result = resolveSupportedVanillaBattle(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    must(result.state.players[p2], "p2 after").hand.length,
+    beforeHand + 1,
+  );
 });
 
 test("On K.O. rest target effect pauses, resolves, and resumes battle cleanup", () => {

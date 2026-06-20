@@ -115,6 +115,7 @@ export const createKOTriggerQueueing = (
   const detectBattleKOTriggerCandidates = (
     state: GameState,
     events: readonly EngineEvent[],
+    sourceState: GameState = state,
   ): DetectBattleKOTriggerCandidatesResult => {
     const candidates: BattleKOTriggerCandidate[] = [];
     const queuedTriggerEventIds = queuedOnKOTriggerEventIds(state, events);
@@ -202,6 +203,11 @@ export const createKOTriggerQueueing = (
         payload.playerId,
         payload.instanceId,
       );
+      const lastKnownSource = findCardInstance(
+        sourceState,
+        payload.playerId,
+        payload.instanceId,
+      );
       for (const effectBlock of matching) {
         const source =
           effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
@@ -248,7 +254,13 @@ export const createKOTriggerQueueing = (
             playerId: payload.playerId,
             zone: candidateSource.zone,
           },
-          sourceSnapshot: toSnapshot(candidateSource, resolved),
+          sourceSnapshot: {
+            ...toSnapshot(candidateSource, resolved),
+            ...(lastKnownSource === undefined ||
+            lastKnownSource.attachedDon.length === 0
+              ? {}
+              : { attachedDonCount: lastKnownSource.attachedDon.length }),
+          },
           triggerEventId: event.id,
           sourcePresencePolicy: effectBlock.sourcePresencePolicy,
           ...(candidatePresentation === undefined
@@ -270,7 +282,11 @@ export const createKOTriggerQueueing = (
     eventBaseState: GameState,
     events: EngineEvent[],
   ): QueueBattleKOTriggersResult => {
-    const detected = detectBattleKOTriggerCandidates(state, events);
+    const detected = detectBattleKOTriggerCandidates(
+      state,
+      events,
+      eventBaseState,
+    );
     if (!detected.ok) {
       return detected;
     }

@@ -28,6 +28,7 @@ import {
 } from "./actions/state.js";
 import { clearPendingDecision } from "./decisions/continuation-gate.js";
 import { resumeSequenceFrameAfterHandSelection } from "./effect-runtime-sequence/frames.js";
+import { createSupportedTrashFromHandChoiceDecision } from "./runtime/primitives/trash-from-hand.js";
 
 type SequenceSelectCardsEffect = Extract<Effect, { type: "selectCards" }>;
 
@@ -799,6 +800,7 @@ export const applySupportedHandSelectionChoiceResponse = (
     nextState,
     decision,
     selectedCards,
+    createSupportedTrashFromHandChoiceDecision,
   );
   if (resumed === undefined) {
     return null;

@@ -216,18 +216,31 @@ const shouldProbeSelectOptionalCard = (
   const effectBlock = effectBlocks.find(
     (candidate) => candidate.id === frame.effectBlockId,
   );
-  if (effectBlock?.effect.type !== "sequence") {
+  const sequence =
+    effectBlock?.effect.type === "sequence"
+      ? resolveSequenceForPath(effectBlock.effect, frame.effectPath)
+      : undefined;
+  if (sequence === undefined) {
     return false;
   }
-  const segment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (segment?.effect.type !== "selectCards") {
+  const segment = sequence.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  if (
+    segment?.effect.type !== "selectCards" &&
+    segment?.effect.type !== "selectFromSet"
+  ) {
     return false;
   }
-  const saveAs = segment.effect.saveAs;
-  return effectBlock.effect.effects
+  const saveAs =
+    segment.effect.type === "selectCards"
+      ? segment.effect.saveAs
+      : segment.effect.saveAs;
+  return sequence.effects
     .slice(frame.pendingDecision.resumeAtSegmentIndex + 1)
-    .some((candidate) => consumesSelectedCards(candidate.effect, saveAs));
+    .some(
+      (candidate) =>
+        consumesSelectedCards(candidate.effect, saveAs) ||
+        candidate.connector === "ifPreviousSucceeded",
+    );
 };
 
 const shouldProbeSelectOptionalTarget = (
@@ -251,16 +264,19 @@ const shouldProbeSelectOptionalTarget = (
   const effectBlock = effectBlocks.find(
     (candidate) => candidate.id === frame.effectBlockId,
   );
-  if (effectBlock?.effect.type !== "sequence") {
+  const sequence =
+    effectBlock?.effect.type === "sequence"
+      ? resolveSequenceForPath(effectBlock.effect, frame.effectPath)
+      : undefined;
+  if (sequence === undefined) {
     return false;
   }
-  const segment =
-    effectBlock.effect.effects[frame.pendingDecision.resumeAtSegmentIndex];
+  const segment = sequence.effects[frame.pendingDecision.resumeAtSegmentIndex];
   const saveResultAs = segment?.saveResultAs;
   if (segment?.effect.type !== "selectTargets" || saveResultAs === undefined) {
     return false;
   }
-  return effectBlock.effect.effects
+  return sequence.effects
     .slice(frame.pendingDecision.resumeAtSegmentIndex + 1)
     .some(
       (candidate) =>
@@ -270,6 +286,117 @@ const shouldProbeSelectOptionalTarget = (
           saveResultAs,
         ),
     );
+};
+
+type SequenceEffect = Extract<Effect, { type: "sequence" }>;
+
+const rootSequencePath = ["effect", "sequence"] as const;
+
+const isRootSequencePath = (path: readonly string[]): boolean =>
+  path.length === rootSequencePath.length &&
+  path.every((part, index) => part === rootSequencePath[index]);
+
+const asSingleEffectSequence = (effect: Effect): SequenceEffect => ({
+  type: "sequence",
+  effects: [{ connector: "always", effect }],
+});
+
+const resolveSequenceForPath = (
+  effect: SequenceEffect,
+  path: readonly string[],
+): SequenceEffect | undefined => {
+  if (
+    path.length < rootSequencePath.length ||
+    !isRootSequencePath(path.slice(0, rootSequencePath.length))
+  ) {
+    return undefined;
+  }
+  let current = effect;
+  let index = rootSequencePath.length;
+  while (index < path.length) {
+    const segmentIndex = Number(path[index]);
+    const branchToken = path[index + 1];
+    const sequenceToken = path[index + 2];
+    if (!Number.isSafeInteger(segmentIndex)) {
+      return undefined;
+    }
+    const segment = current.effects[segmentIndex];
+    if (segment === undefined) {
+      return undefined;
+    }
+    if (branchToken === "nested" && sequenceToken === "sequence") {
+      if (segment.effect.type !== "sequence") {
+        return undefined;
+      }
+      current = segment.effect;
+    } else if (branchToken === "forEachSavedTarget") {
+      if (segment.effect.type !== "forEachSavedTarget") {
+        return undefined;
+      }
+      const itemIndex = Number(sequenceToken);
+      const itemSequenceToken = path[index + 3];
+      if (
+        !Number.isSafeInteger(itemIndex) ||
+        itemSequenceToken !== "sequence"
+      ) {
+        return undefined;
+      }
+      current =
+        segment.effect.effect.type === "sequence"
+          ? segment.effect.effect
+          : asSingleEffectSequence(segment.effect.effect);
+      index += 1;
+    } else if (branchToken === "choice") {
+      if (segment.effect.type !== "choice") {
+        return undefined;
+      }
+      const optionIndex = Number(sequenceToken);
+      const optionSequenceToken = path[index + 3];
+      const option = segment.effect.options[optionIndex];
+      if (
+        !Number.isSafeInteger(optionIndex) ||
+        optionSequenceToken !== "sequence" ||
+        option === undefined
+      ) {
+        return undefined;
+      }
+      current =
+        option.effect.type === "sequence"
+          ? option.effect
+          : asSingleEffectSequence(option.effect);
+      index += 1;
+    } else if (
+      (branchToken === "then" || branchToken === "else") &&
+      sequenceToken === "sequence"
+    ) {
+      if (segment.effect.type !== "conditional") {
+        return undefined;
+      }
+      const branch =
+        branchToken === "then" ? segment.effect.then : segment.effect.else;
+      if (branch?.type !== "sequence") {
+        return undefined;
+      }
+      current = branch;
+    } else if (
+      (branchToken === "then" || branchToken === "else") &&
+      sequenceToken === "single"
+    ) {
+      if (segment.effect.type !== "conditional") {
+        return undefined;
+      }
+      const branch =
+        branchToken === "then" ? segment.effect.then : segment.effect.else;
+      if (branch === undefined || branch.type === "sequence") {
+        return undefined;
+      }
+      current = asSingleEffectSequence(branch);
+    } else {
+      return undefined;
+    }
+    index += 3;
+  }
+  return current;
 };
 
 const sequenceSegmentCondition = (

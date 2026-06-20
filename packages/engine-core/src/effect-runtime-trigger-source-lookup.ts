@@ -125,6 +125,9 @@ export const toSnapshot = (
   ...(resolved.power !== undefined ? { power: resolved.power } : {}),
   ...(resolved.counter !== undefined ? { counter: resolved.counter } : {}),
   ...(resolved.life !== undefined ? { life: resolved.life } : {}),
+  ...(card.attachedDon.length === 0
+    ? {}
+    : { attachedDonCount: card.attachedDon.length }),
   keywords: resolved.printedKeywords,
 });
 

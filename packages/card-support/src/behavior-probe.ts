@@ -28,8 +28,11 @@ import {
 import { chooseProbeDecisionAction } from "./behavior-probe-decision-policy.js";
 import {
   runCardPlayedScenario,
+  runCardRestedScenario,
+  runDonReturnedScenario,
   runEndOfYourTurnScenario,
   runFieldRemovedScenario,
+  runHandTrashedByEffectScenario,
   runOpponentActivatedScenario,
 } from "./behavior-probe-event-scenarios.js";
 import { runOnKOScenario } from "./behavior-probe-on-ko-scenario.js";
@@ -66,9 +69,12 @@ export interface BehaviorProbeScenario {
     | "activateEffect"
     | "counter"
     | "cardPlayed"
+    | "cardRested"
     | "declareAttack"
+    | "donReturned"
     | "endOfYourTurn"
     | "fieldRemoved"
+    | "handTrashedByEffect"
     | "lifeTrigger"
     | "lifeRemoved"
     | "onKO"
@@ -233,11 +239,37 @@ const runScenario = (
             scenarioInput.definition.effects,
           ),
       );
+    case "cardRested":
+      return runCardRestedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "declareAttack":
       return runDeclareAttackScenario({
         ...scenarioInput,
         category: "character",
       });
+    case "donReturned":
+      return runDonReturnedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
     case "endOfYourTurn":
       return runEndOfYourTurnScenario(
         {
@@ -253,6 +285,19 @@ const runScenario = (
       );
     case "fieldRemoved":
       return runFieldRemovedScenario(
+        {
+          ...scenarioInput,
+          category: "character",
+        },
+        (initialResult, setupFilterCount) =>
+          drainRuntime(
+            initialResult,
+            setupFilterCount,
+            scenarioInput.definition.effects,
+          ),
+      );
+    case "handTrashedByEffect":
+      return runHandTrashedByEffectScenario(
         {
           ...scenarioInput,
           category: "character",

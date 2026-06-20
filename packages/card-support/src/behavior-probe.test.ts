@@ -612,4 +612,83 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: opponentActivated");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("proves card-rested reactions through a generated rest scenario", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Your Turn] When this Character becomes rested, rest up to 1 of your opponent's Characters with 7000 base power or less.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: cardRested");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves hand-trashed-by-effect reactions through a generated discard scenario", () => {
+    const report = createBehaviorProbeReport({
+      text: "When a card is trashed from your hand by an effect, this Character gains [Rush] during this turn.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain(
+      "Scenario 1 entrypoint: handTrashedByEffect",
+    );
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves DON-returned reactions through a generated return-DON scenario", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Opponent's Turn] [Once Per Turn] When a DON!! card on your field is returned to your DON!! deck, if your Leader has the {Donquixote Pirates} type, add up to 1 DON!! card from your DON!! deck and rest it.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: donReturned");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("proves On K.O. effects with attached-DON marker conditions", () => {
+    const report = createBehaviorProbeReport({
+      text: "[DON!! x2] [On K.O.] Draw 1 card.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: onKO");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("resolves reveal-top conditional effects that require a matching revealed card", () => {
+    const report = createBehaviorProbeReport({
+      text: '[On Play] Reveal 1 card from the top of your deck. If that card\'s type includes "Whitebeard Pirates", draw 2 cards and trash 1 card from your hand.',
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("builds hand cards for reveal-from-hand activation costs", () => {
+    const report = createBehaviorProbeReport({
+      text: "[Activate: Main] [Once Per Turn] You may reveal 3 {Amazon Lily} or {Kuja Pirates} type cards from your hand: Give your Leader and all of your Characters up to 1 rested DON!! card each.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
+
+  it("resolves optional field-cost bodies with nested optional sequence tails", () => {
+    const report = createBehaviorProbeReport({
+      text: '[Activate: Main] [Once Per Turn] You may K.O. 1 of your Characters with a type including "Baroque Works": Give up to 1 of your opponent\'s Characters \u221210 cost during this turn. Then, you may trash 2 cards from the top of your deck.',
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: activateEffect");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });

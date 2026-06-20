@@ -7,6 +7,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  configureProbeFieldSourceForScenario,
   fieldProbeSource,
   resolvedProbeCard,
   setupProbeMainState,
@@ -56,6 +57,7 @@ export const runOnKOScenario = (
       setupFilterCount: input.setupFilters.length,
     };
   }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
   source.state = "rested";
   attacker.leader.state = "active";
   for (const card of defender.hand) {

@@ -111,23 +111,35 @@ const evaluateAttachedDonCount = (
     return { supported: false };
   }
   const sourceZone = entry.source.zone;
-  if (sourceZone === undefined || !isFieldZone(sourceZone.zone)) {
-    return { supported: false };
+  const source =
+    sourceZone === undefined || !isFieldZone(sourceZone.zone)
+      ? undefined
+      : findLiveSourceFieldCard(state, entry);
+  if (source !== undefined) {
+    if (
+      source.cardId !== entry.source.cardId ||
+      source.controller !== entry.source.playerId ||
+      !isFieldZone(source.zone.zone)
+    ) {
+      return { supported: false };
+    }
+    return {
+      supported: true,
+      passed: compareComparator(
+        condition.op,
+        source.attachedDon.length,
+        condition.value,
+      ),
+    };
   }
-  const source = findLiveSourceFieldCard(state, entry);
-  if (
-    source === undefined ||
-    source.cardId !== entry.source.cardId ||
-    source.controller !== entry.source.playerId ||
-    !isFieldZone(source.zone.zone)
-  ) {
+  if (entry.sourceSnapshot.attachedDonCount === undefined) {
     return { supported: false };
   }
   return {
     supported: true,
     passed: compareComparator(
       condition.op,
-      source.attachedDon.length,
+      entry.sourceSnapshot.attachedDonCount,
       condition.value,
     ),
   };

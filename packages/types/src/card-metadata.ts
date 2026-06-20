@@ -76,6 +76,7 @@ export interface CardSnapshot {
   power?: number;
   counter?: number;
   life?: number;
+  attachedDonCount?: number;
   keywords: Keyword[];
 }
 

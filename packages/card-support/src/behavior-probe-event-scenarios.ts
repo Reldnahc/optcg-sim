@@ -14,6 +14,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  configureProbeFieldSourceForScenario,
   fieldProbeSource,
   installProbeSourceMetadata,
   resolvedProbeCard,
@@ -87,6 +88,90 @@ export const runEndOfYourTurnScenario = (
   );
 };
 
+export const runCardRestedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  state.turn.globalTurn = 3;
+  state.turn.playerTurnCounts[p1] = 2;
+  state.turn.playerTurnCounts[p2] = 1;
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const defender = must(state.players[p2], `player ${String(p2)}`);
+  defender.hand = [];
+  return drainRuntime(
+    applyAction(state, {
+      type: "declareAttack",
+      attacker: {
+        instanceId: source.instanceId,
+        cardId: source.cardId,
+        playerId: p1,
+        zone: source.zone,
+      },
+      target: {
+        instanceId: defender.leader.instanceId,
+        cardId: defender.leader.cardId,
+        playerId: p2,
+        zone: defender.leader.zone,
+      },
+    }),
+    input.setupFilters.length,
+  );
+};
+
+export const runDonReturnedScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  state.turn.turnPlayerId = p2;
+  state.turn.playerTurnCounts[p2] = Math.max(
+    state.turn.playerTurnCounts[p2] ?? 0,
+    1,
+  );
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const event = addSupportedEventCard({
+    state,
+    playerId: p2,
+    cardId: "probe-don-return-event" as CardId,
+    effectText:
+      "[Main] Your opponent returns 1 DON!! card from their field to their DON!! deck.",
+    sourceTextHash: "behavior-probe-don-return-event",
+  });
+  return drainRuntime(
+    applyAction(state, { type: "playCard", cardInstanceId: event.instanceId }),
+    input.setupFilters.length,
+  );
+};
+
 export const runFieldRemovedScenario = (
   input: {
     readonly category: "character";
@@ -113,6 +198,46 @@ export const runFieldRemovedScenario = (
       type: "playCard",
       cardInstanceId: removalEvent.instanceId,
     }),
+    input.setupFilters.length,
+  );
+};
+
+export const runHandTrashedByEffectScenario = (
+  input: {
+    readonly category: "character";
+    readonly definition: EffectDefinition;
+    readonly setupFilters: readonly CardFilter[];
+    readonly text: string;
+  },
+  drainRuntime: (
+    initialResult: EngineResult,
+    setupFilterCount: number,
+  ) => BehaviorProbeRunResult,
+): BehaviorProbeRunResult => {
+  const state = setupProbeMainState(input);
+  installProbeSourceMetadata(state, "character", input.setupFilters);
+  const player = must(state.players[p1], `player ${String(p1)}`);
+  const source = fieldProbeSource(player);
+  if (source === undefined) {
+    return failedProbeFielding(state, input.setupFilters.length);
+  }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  for (const card of player.hand) {
+    state.cardManifest.cards[card.cardId] = resolvedProbeCard({
+      cardId: card.cardId,
+      category: "character",
+      effectText: "",
+    });
+  }
+  const event = addSupportedEventCard({
+    state,
+    playerId: p1,
+    cardId: "probe-hand-trash-event" as CardId,
+    effectText: "[Main] Trash 1 card from your hand.",
+    sourceTextHash: "behavior-probe-hand-trash-event",
+  });
+  return drainRuntime(
+    applyAction(state, { type: "playCard", cardInstanceId: event.instanceId }),
     input.setupFilters.length,
   );
 };
@@ -229,56 +354,36 @@ const addProbeFieldCharacter = (
 };
 
 const addFieldRemovalEventCard = (state: GameState): CardInstance => {
-  const cardId = "probe-field-removal-event" as CardId;
-  const effectText = "[Main] K.O. up to 1 of your opponent's Characters.";
-  const materialized = materializeEffectDefinition(
-    cardId,
-    [effectText],
-    "behavior-probe-field-removal-event",
-    {
-      effectDefinitionsVersion: "behavior-probe",
-      rulesVersion: "behavior-probe",
-    },
-    { evaluateRuntimeSupport: evaluateEffectBlockRuntimeSupport },
-  );
-  const definition = must(
-    materialized.definition,
-    "field removal event definition",
-  );
-  const effectDefinitionId = "probe-field-removal-event.behavior-probe";
-  state.cardManifest.effectDefinitions = {
-    ...state.cardManifest.effectDefinitions,
-    [effectDefinitionId]: definition,
-  };
-  state.cardManifest.cards[cardId] = resolvedProbeCard({
-    cardId,
-    category: "event",
-    effectText,
-    support: {
-      cardId,
-      status: "implemented-dsl",
-      tested: true,
-      rulesVersion: "behavior-probe",
-      cardDataVersion: "behavior-probe",
-      sourceTextHash: "behavior-probe-field-removal-event",
-      behaviorHash: "behavior-probe-field-removal-event",
-      effectDefinitionId,
-    },
-  });
-  return addProbeHandCard(state, p1, {
-    cardId,
-    category: "event",
-    effectText,
+  return addSupportedEventCard({
+    state,
+    playerId: p1,
+    cardId: "probe-field-removal-event" as CardId,
+    effectText: "[Main] K.O. up to 1 of your opponent's Characters.",
+    sourceTextHash: "behavior-probe-field-removal-event",
   });
 };
 
 const addOpponentActivationEventCard = (state: GameState): CardInstance => {
-  const cardId = "probe-opponent-activation-event" as CardId;
-  const effectText = "[Main] Draw 1 card.";
+  return addSupportedEventCard({
+    state,
+    playerId: p2,
+    cardId: "probe-opponent-activation-event" as CardId,
+    effectText: "[Main] Draw 1 card.",
+    sourceTextHash: "behavior-probe-opponent-activation-event",
+  });
+};
+
+const addSupportedEventCard = (params: {
+  readonly state: GameState;
+  readonly playerId: PlayerId;
+  readonly cardId: CardId;
+  readonly effectText: string;
+  readonly sourceTextHash: string;
+}): CardInstance => {
   const materialized = materializeEffectDefinition(
-    cardId,
-    [effectText],
-    "behavior-probe-opponent-activation-event",
+    params.cardId,
+    [params.effectText],
+    params.sourceTextHash,
     {
       effectDefinitionsVersion: "behavior-probe",
       rulesVersion: "behavior-probe",
@@ -287,32 +392,32 @@ const addOpponentActivationEventCard = (state: GameState): CardInstance => {
   );
   const definition = must(
     materialized.definition,
-    "opponent activation event definition",
+    `${String(params.cardId)} event definition`,
   );
-  const effectDefinitionId = "probe-opponent-activation-event.behavior-probe";
-  state.cardManifest.effectDefinitions = {
-    ...state.cardManifest.effectDefinitions,
+  const effectDefinitionId = `${String(params.cardId)}.behavior-probe`;
+  params.state.cardManifest.effectDefinitions = {
+    ...params.state.cardManifest.effectDefinitions,
     [effectDefinitionId]: definition,
   };
-  state.cardManifest.cards[cardId] = resolvedProbeCard({
-    cardId,
+  params.state.cardManifest.cards[params.cardId] = resolvedProbeCard({
+    cardId: params.cardId,
     category: "event",
-    effectText,
+    effectText: params.effectText,
     support: {
-      cardId,
+      cardId: params.cardId,
       status: "implemented-dsl",
       tested: true,
       rulesVersion: "behavior-probe",
       cardDataVersion: "behavior-probe",
-      sourceTextHash: "behavior-probe-opponent-activation-event",
-      behaviorHash: "behavior-probe-opponent-activation-event",
+      sourceTextHash: params.sourceTextHash,
+      behaviorHash: params.sourceTextHash,
       effectDefinitionId,
     },
   });
-  return addProbeHandCard(state, p2, {
-    cardId,
+  return addProbeHandCard(params.state, params.playerId, {
+    cardId: params.cardId,
     category: "event",
-    effectText,
+    effectText: params.effectText,
   });
 };
 

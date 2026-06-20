@@ -29,6 +29,12 @@ import {
   profileForLeaderFilters,
   type ProbeCardProfile,
 } from "./behavior-probe-scenario-profiles.js";
+import {
+  effectSelectsRestedDon,
+  effectUsesAttachedDonCount,
+  hasCondition,
+} from "./behavior-probe-scenario-effect-analysis.js";
+import { collectLeaderConditionFilters } from "./behavior-probe-scenario-leader-filters.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -171,10 +177,29 @@ export const configureProbeFieldSourceForScenario = (
   ) {
     source.turnPlayed = state.turn.globalTurn;
   }
-  if (effects.some((block) => effectUsesAttachedDonCount(block.effect))) {
+  if (
+    effects.some(
+      (block) =>
+        hasCondition(block.condition, "attachedDonCount") ||
+        effectUsesAttachedDonCount(block.effect),
+    )
+  ) {
     source.attachedDon =
       state.players[p1]?.costArea.slice(0, 2).map((card) => card.instanceId) ??
       [];
+  }
+  if (effects.some((block) => effectSelectsRestedDon(block.effect))) {
+    const player = state.players[p1];
+    if (player !== undefined) {
+      const restedDonCount = Math.min(
+        player.costArea.length,
+        Math.max(1, player.characters.length + 1),
+      );
+      player.costArea = player.costArea.map((card, index) => ({
+        ...card,
+        state: index < restedDonCount ? "rested" : card.state,
+      }));
+    }
   }
 };
 
@@ -627,6 +652,13 @@ const installCostFacts = (
     }
     return;
   }
+  if (cost.type === "trashFromHand" || cost.type === "revealFromHand") {
+    const playerId = resolvePlayerRef(cost.chooser);
+    if (playerId !== undefined) {
+      installHandCostCards(state, playerId, cost.count, cost.filter);
+    }
+    return;
+  }
   if (cost.type === "setLifeFaceUp" || cost.type === "turnLifeFaceUp") {
     const playerId = resolvePlayerRef(cost.player);
     const player = playerId === undefined ? undefined : state.players[playerId];
@@ -641,6 +673,62 @@ const installCostFacts = (
       };
     }
   }
+};
+
+const installHandCostCards = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+  filter: CardFilter | undefined,
+): void => {
+  const player = must(state.players[playerId], `player ${String(playerId)}`);
+  const mutableHand = [...player.hand];
+  const usableIndexes = mutableHand
+    .map((card, index) => ({ card, index }))
+    .filter(({ card }) => card.cardId !== probeCardId)
+    .map(({ index }) => index);
+  while (usableIndexes.length < count) {
+    const index = mutableHand.length;
+    const cardId = `probe-hand-${String(playerId)}-${String(index)}` as CardId;
+    mutableHand.push({
+      instanceId:
+        `probe-hand-${String(playerId)}-${String(index)}:instance` as InstanceId,
+      cardId,
+      owner: playerId,
+      controller: playerId,
+      zone: {
+        zone: "hand",
+        playerId,
+        slot: "hand",
+        index,
+      },
+      state: "active",
+      attachedDon: [],
+      turnPlayed: 0,
+    });
+    usableIndexes.push(index);
+  }
+  for (let offset = 0; offset < count; offset += 1) {
+    const index = usableIndexes[offset];
+    const card = index === undefined ? undefined : mutableHand[index];
+    if (card === undefined) {
+      continue;
+    }
+    const profile =
+      filter === undefined ? {} : profileForCardFilter(filter, offset);
+    const cardId = profile.cardId ?? card.cardId;
+    mutableHand[index] = {
+      ...card,
+      cardId,
+    };
+    state.cardManifest.cards[cardId] = resolvedProbeCard({
+      cardId,
+      category: profile.category ?? "character",
+      effectText: "",
+      profile,
+    });
+  }
+  player.hand = reindexHand(mutableHand, playerId);
 };
 
 const installScenarioEffectZoneFacts = (
@@ -752,35 +840,6 @@ const addProbeTrashCards = (
   player.trash = [...player.trash, ...cards];
 };
 
-const hasCondition = (
-  condition: Condition | undefined,
-  type: Condition["type"],
-): boolean => {
-  if (condition === undefined) {
-    return false;
-  }
-  if (condition.type === type) {
-    return true;
-  }
-  if (condition.type === "and" || condition.type === "or") {
-    return condition.conditions.some((child) => hasCondition(child, type));
-  }
-  if (condition.type === "not") {
-    return hasCondition(condition.condition, type);
-  }
-  return false;
-};
-
-const effectUsesAttachedDonCount = (effect: Effect): boolean => {
-  if (JSON.stringify(effect).includes('"attachedDonCount"')) {
-    return true;
-  }
-  if (JSON.stringify(effect).includes('"countAttachedDon"')) {
-    return true;
-  }
-  return false;
-};
-
 const passingCount = (
   op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte",
   value: number,
@@ -846,60 +905,6 @@ const installScenarioLeaderMetadata = (
     effectText: "",
     profile,
   });
-};
-
-const collectLeaderConditionFilters = (
-  effects: readonly EffectBlock[],
-  player: "self" | "opponent",
-): readonly CardFilter[] =>
-  uniqueFilters(
-    effects.flatMap((block) =>
-      collectLeaderConditionFiltersFromCondition(block.condition, player),
-    ),
-  );
-
-const collectLeaderConditionFiltersFromCondition = (
-  condition: Condition | undefined,
-  player: "self" | "opponent",
-): readonly CardFilter[] => {
-  if (condition === undefined) {
-    return [];
-  }
-  if (
-    condition.type === "hasCardInZone" &&
-    condition.zone === "leaderArea" &&
-    condition.player === player
-  ) {
-    return [condition.filter];
-  }
-  if (condition.type === "and" || condition.type === "or") {
-    return condition.conditions.flatMap((child) =>
-      collectLeaderConditionFiltersFromCondition(child, player),
-    );
-  }
-  if (condition.type === "not") {
-    return collectLeaderConditionFiltersFromCondition(
-      condition.condition,
-      player,
-    );
-  }
-  return [];
-};
-
-const uniqueFilters = (
-  filters: readonly CardFilter[],
-): readonly CardFilter[] => {
-  const seen = new Set<string>();
-  const unique: CardFilter[] = [];
-  for (const filter of filters) {
-    const key = JSON.stringify(filter);
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    unique.push(filter);
-  }
-  return unique;
 };
 
 const probeDonCardIds = (player: "p1" | "p2"): CardId[] =>

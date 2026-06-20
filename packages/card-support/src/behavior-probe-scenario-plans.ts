@@ -7,9 +7,12 @@ export type SupportedScenario =
   | { readonly kind: "activateEffect"; readonly category: "character" }
   | { readonly kind: "counter"; readonly category: "event" }
   | { readonly kind: "cardPlayed"; readonly category: "character" }
+  | { readonly kind: "cardRested"; readonly category: "character" }
   | { readonly kind: "declareAttack"; readonly category: "character" }
+  | { readonly kind: "donReturned"; readonly category: "character" }
   | { readonly kind: "endOfYourTurn"; readonly category: "character" }
   | { readonly kind: "fieldRemoved"; readonly category: "character" }
+  | { readonly kind: "handTrashedByEffect"; readonly category: "character" }
   | { readonly kind: "opponentAttack"; readonly category: "leader" }
   | { readonly kind: "lifeTrigger"; readonly category: "character" }
   | { readonly kind: "lifeRemoved"; readonly category: "character" }
@@ -99,7 +102,12 @@ const scenarioFamilyKey = (effect: EffectBlock): string => {
     return effect.trigger.type;
   }
   if (effectHasTrigger(effect, "cardPlayed")) return "cardPlayed";
+  if (effectHasTrigger(effect, "cardRested")) return "cardRested";
+  if (effectHasTrigger(effect, "donReturned")) return "donReturned";
   if (effectHasTrigger(effect, "fieldRemoved")) return "fieldRemoved";
+  if (effectHasTrigger(effect, "handTrashedByEffect")) {
+    return "handTrashedByEffect";
+  }
   if (effectHasTrigger(effect, "trigger")) return "trigger";
   return `unsupported:${effect.trigger.type}`;
 };
@@ -126,6 +134,12 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
     return { kind: "cardPlayed", category: "character" };
   }
+  if (effects.every((effect) => effectHasTrigger(effect, "cardRested"))) {
+    return { kind: "cardRested", category: "character" };
+  }
+  if (effects.every((effect) => effectHasTrigger(effect, "donReturned"))) {
+    return { kind: "donReturned", category: "character" };
+  }
   if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
     return { kind: "declareAttack", category: "character" };
   }
@@ -134,6 +148,11 @@ const scenarioForDefinition = (
   }
   if (effects.every((effect) => effectHasTrigger(effect, "fieldRemoved"))) {
     return { kind: "fieldRemoved", category: "character" };
+  }
+  if (
+    effects.every((effect) => effectHasTrigger(effect, "handTrashedByEffect"))
+  ) {
+    return { kind: "handTrashedByEffect", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
     return { kind: "opponentAttack", category: "leader" };

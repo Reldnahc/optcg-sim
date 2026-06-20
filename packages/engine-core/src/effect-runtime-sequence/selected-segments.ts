@@ -205,6 +205,25 @@ export const applyAttachSelectedDonSequenceSegment = (params: {
   if (selectedDon === null || target === null) {
     return { ok: false };
   }
+  if (selectedDon.length === 0) {
+    return {
+      events: [],
+      ledgers: {
+        ...params.ledgers,
+        segmentResults: {
+          ...params.ledgers.segmentResults,
+          [params.segmentKey(params.segment, params.index)]: {
+            ...params.emptySegmentResult(),
+            attempted: true,
+            succeeded: true,
+            selectedTargets: [target],
+          },
+        },
+      },
+      ok: true,
+      state: params.state,
+    };
+  }
   const selectedDonPlayerId = selectedRefsPlayerId(selectedDon);
   const sourcePlayer =
     selectedDonPlayerId === null
