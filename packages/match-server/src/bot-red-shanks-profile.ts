@@ -81,6 +81,17 @@ const hasShanksInHand = ({
 const isOp16CheatLineLive = (context: BotActionContext): boolean =>
   botDonOnField(context) >= 10 && hasShanksInHand(context);
 
+const hasBennOverflowFodder = ({
+  snapshot,
+  botPlayerId,
+}: BotActionContext): boolean => {
+  const characters = snapshot.players[botPlayerId]?.view.self.characters ?? [];
+  return (
+    characters.length < 5 ||
+    characters.some((character) => !shanksCardIds.has(String(character.cardId)))
+  );
+};
+
 const cardPower = (card: PublicCardView | undefined): number | undefined =>
   card?.currentPower ?? card?.printedPower;
 
@@ -353,6 +364,9 @@ export const redShanksBotProfile: BotBehaviorProfile = {
     }
     const card = actionCard(context);
     if (card?.cardId === (op16BennBeckman as CardId)) {
+      if (!hasBennOverflowFodder(context)) {
+        return false;
+      }
       return isOp16CheatLineLive(context) ? -80 : hardCastOp16FallbackScore;
     }
     return card === undefined ? undefined : setupPlayScores.get(card.cardId);

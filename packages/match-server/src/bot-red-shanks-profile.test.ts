@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 import type {
   CardId,
+  CardRef,
   DecisionId,
   InstanceId,
   PlayerId,
@@ -20,6 +21,7 @@ const snapshotWithActions = (
     readonly selfLeader?: Partial<PublicCardView>;
     readonly selfHand?: readonly Partial<PublicCardView>[];
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
+    readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
     readonly opponentCharacters?: readonly Partial<PublicCardView>[];
   } = {},
@@ -54,7 +56,7 @@ const snapshotWithActions = (
             },
             hand: cards.selfHand ?? [],
             characters: cards.selfCharacters ?? [],
-            costArea: [],
+            costArea: cards.selfCostArea ?? [],
             life: { count: 2, faceUpCards: [] },
           },
           opponent: {
@@ -369,6 +371,161 @@ describe("red Shanks bot profile", () => {
       type: "respondToDecision",
       decisionId: "decision:op09-011-target",
       response: { type: "targets", targets: [usefulTarget] },
+    });
+  });
+
+  test("does not play OP16-012 into a full field of preserved Shanks cards", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play Benn.Beckman",
+            placement: { instanceId: "op16-benn" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "op16-benn" as InstanceId,
+              cardId: "OP16-012" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+            {
+              instanceId: "hand-shanks" as InstanceId,
+              cardId: "ST23-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: Array.from({ length: 5 }, (_, index) => ({
+            instanceId: `field-shanks-${String(index)}` as InstanceId,
+            cardId: "ST23-002" as CardId,
+            zone: { playerId: botId, zone: "characterArea", index },
+            currentPower: 10000,
+          })),
+          selfCostArea: Array.from({ length: 10 }, (_, index) => ({
+            instanceId: `don-${String(index)}` as InstanceId,
+            cardId: "DON!!" as CardId,
+            zone: { playerId: botId, zone: "costArea" },
+          })),
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("plays OP16-012 into a full field when a setup character can be overflowed", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play Benn.Beckman",
+            placement: { instanceId: "op16-benn" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "endMainPhase",
+            label: "End main phase",
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "op16-benn" as InstanceId,
+              cardId: "OP16-012" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+            {
+              instanceId: "hand-shanks" as InstanceId,
+              cardId: "ST23-002" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "searcher" as InstanceId,
+              cardId: "OP09-002" as CardId,
+              zone: { playerId: botId, zone: "characterArea", index: 0 },
+              currentPower: 3000,
+            },
+            ...Array.from({ length: 4 }, (_, index) => ({
+              instanceId: `field-shanks-${String(index)}` as InstanceId,
+              cardId: "ST23-002" as CardId,
+              zone: {
+                playerId: botId,
+                zone: "characterArea" as const,
+                index: index + 1,
+              },
+              currentPower: 10000,
+            })),
+          ],
+          selfCostArea: Array.from({ length: 10 }, (_, index) => ({
+            instanceId: `don-${String(index)}` as InstanceId,
+            cardId: "DON!!" as CardId,
+            zone: { playerId: botId, zone: "costArea" },
+          })),
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("trashes setup characters for OP16-012 play-card overflow before preserved Shanks cards", () => {
+    const setupCharacter: CardRef = {
+      instanceId: "searcher" as InstanceId,
+      cardId: "OP09-002" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 0 },
+    };
+    const shanksCharacter: CardRef = {
+      instanceId: "field-shanks" as InstanceId,
+      cardId: "ST23-002" as CardId,
+      playerId: botId,
+      zone: { zone: "characterArea", playerId: botId, index: 1 },
+    };
+    const snapshot = snapshotWithActions([]);
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:playCard:overflow:op16-benn:11" as DecisionId,
+      type: "selectCards",
+      playerId: botId,
+      prompt: "Choose a Character to trash.",
+      causedBy: { type: "ruleProcess", name: "characterOverflow" },
+      source: {
+        instanceId: "op16-benn" as InstanceId,
+        cardId: "OP16-012" as CardId,
+        playerId: botId,
+      },
+      presentation: {
+        title: "Character overflow",
+        instruction: "Choose a Character to trash.",
+      },
+      min: 1,
+      max: 1,
+      candidates: [{ card: shanksCharacter }, { card: setupCharacter }],
+      choices: [
+        { card: shanksCharacter, selectable: true },
+        { card: setupCharacter, selectable: true },
+      ],
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:playCard:overflow:op16-benn:11",
+      response: { type: "cards", cards: [setupCharacter] },
     });
   });
 });
