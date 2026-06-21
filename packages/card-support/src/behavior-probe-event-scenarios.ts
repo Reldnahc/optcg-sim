@@ -24,6 +24,11 @@ import {
   resolvedProbeCard,
   setupProbeMainState,
 } from "./behavior-probe-scenario-state.js";
+import { addSupportedEventCard } from "./behavior-probe-card-factory.js";
+import {
+  cardPlayedCandidateConfig,
+  installCardPlayedCandidate,
+} from "./behavior-probe-card-played-candidate.js";
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -59,9 +64,15 @@ export const runCardPlayedScenario = (
     return failedProbeFielding(state, input.setupFilters.length);
   }
   configureProbeFieldSourceForScenario(state, source, input.definition.effects);
-  const played = addProbeHandCard(state, p1, {
-    cardId: "probe-card-played-match" as CardId,
-    category: "character",
+  const cardPlayed = cardPlayedCandidateConfig(input.definition);
+  state.turn.turnPlayerId = cardPlayed.playerId;
+  state.turn.playerTurnCounts[cardPlayed.playerId] = Math.max(
+    state.turn.playerTurnCounts[cardPlayed.playerId] ?? 0,
+    1,
+  );
+  const played = installCardPlayedCandidate({
+    state,
+    ...cardPlayed,
   });
   return drainRuntime(
     applyAction(state, { type: "playCard", cardInstanceId: played.instanceId }),
@@ -722,43 +733,6 @@ const failedScenarioResult = (
   setupFilterCount,
 });
 
-const addProbeHandCard = (
-  state: GameState,
-  playerId: PlayerId,
-  params: {
-    readonly cardId: CardId;
-    readonly category: "character" | "event";
-    readonly effectText?: string;
-  },
-): CardInstance => {
-  const player = must(state.players[playerId], `player ${String(playerId)}`);
-  state.cardManifest.cards[params.cardId] =
-    state.cardManifest.cards[params.cardId] ??
-    resolvedProbeCard({
-      cardId: params.cardId,
-      category: params.category,
-      effectText: params.effectText ?? "",
-    });
-  const card: CardInstance = {
-    instanceId:
-      `${String(params.cardId)}:instance` as CardInstance["instanceId"],
-    cardId: params.cardId,
-    owner: playerId,
-    controller: playerId,
-    zone: {
-      zone: "hand",
-      playerId,
-      slot: "hand",
-      index: player.hand.length,
-    },
-    state: "active",
-    attachedDon: [],
-    turnPlayed: 0,
-  };
-  player.hand = [...player.hand, card];
-  return card;
-};
-
 const addProbeFieldCharacter = (
   state: GameState,
   playerId: PlayerId,
@@ -880,54 +854,6 @@ const installLifeTriggerProbeCard = (
       cardId: triggerCardId,
     },
   };
-};
-
-const addSupportedEventCard = (params: {
-  readonly state: GameState;
-  readonly playerId: PlayerId;
-  readonly cardId: CardId;
-  readonly effectText: string;
-  readonly sourceTextHash: string;
-}): CardInstance => {
-  const materialized = materializeEffectDefinition(
-    params.cardId,
-    [params.effectText],
-    params.sourceTextHash,
-    {
-      effectDefinitionsVersion: "behavior-probe",
-      rulesVersion: "behavior-probe",
-    },
-    { evaluateRuntimeSupport: evaluateEffectBlockRuntimeSupport },
-  );
-  const definition = must(
-    materialized.definition,
-    `${String(params.cardId)} event definition`,
-  );
-  const effectDefinitionId = `${String(params.cardId)}.behavior-probe`;
-  params.state.cardManifest.effectDefinitions = {
-    ...params.state.cardManifest.effectDefinitions,
-    [effectDefinitionId]: definition,
-  };
-  params.state.cardManifest.cards[params.cardId] = resolvedProbeCard({
-    cardId: params.cardId,
-    category: "event",
-    effectText: params.effectText,
-    support: {
-      cardId: params.cardId,
-      status: "implemented-dsl",
-      tested: true,
-      rulesVersion: "behavior-probe",
-      cardDataVersion: "behavior-probe",
-      sourceTextHash: params.sourceTextHash,
-      behaviorHash: params.sourceTextHash,
-      effectDefinitionId,
-    },
-  });
-  return addProbeHandCard(params.state, params.playerId, {
-    cardId: params.cardId,
-    category: "event",
-    effectText: params.effectText,
-  });
 };
 
 const must = <T>(value: T | undefined, label: string): T => {
