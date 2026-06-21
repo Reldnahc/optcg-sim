@@ -52,6 +52,8 @@ export const runLifeTriggerScenario = (
   attacker.leader.state = "active";
   defender.leader.state = "active";
   defender.hand = [];
+  ensureProbePlayerHandCount(state, p2, 5);
+  ensureProbePlayerDeckCount(state, p2, 5);
   ensureProbePlayerLifeCount(state, p2, 1);
   const topLife = must(defender.life[0], "defender top Life");
   defender.life[0] = {
@@ -102,10 +104,6 @@ export const runLifeTriggerScenario = (
     counterStepPass === undefined
       ? attacked
       : applyAction(attacked.state, counterStepPass);
-  if (readyForTrigger.errors === undefined) {
-    ensureProbePlayerHandCount(readyForTrigger.state, p2, 5);
-    ensureProbePlayerDeckCount(readyForTrigger.state, p2, 5);
-  }
   return drainRuntime(
     readyForTrigger,
     input.setupFilters.length,

@@ -11,6 +11,7 @@ import type {
 import { toStateSeq } from "../action-results.js";
 import { buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess } from "../replacement/field-removal-process.js";
 import { executeSelectedTargetFieldRemovalReplacementProcess } from "../runtime/primitives/field-removal.js";
+import { resolveSavedFieldObjectKoSelection } from "../runtime/primitives/execute.js";
 import { resolvePublicTargetCandidatesForRequest } from "../selection/candidates.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
@@ -218,9 +219,15 @@ const resolveBounceTargets = (params: {
 
   const selected =
     params.ledgers.savedReferences[params.effect.target.binding.saveResultAs];
-  if (selected?.kind !== "selectedTargets") {
-    return undefined;
+  if (selected?.kind === "selectedTargets") {
+    return selected.targets.map((target) => target.object);
   }
 
-  return selected.targets.map((target) => target.object);
+  const resolved = resolveSavedFieldObjectKoSelection({
+    controllerId: params.entry.controllerId,
+    savedReferences: params.ledgers.savedReferences,
+    state: params.state,
+    target: params.effect.target,
+  });
+  return resolved.ok ? [...resolved.selectedTargets] : undefined;
 };

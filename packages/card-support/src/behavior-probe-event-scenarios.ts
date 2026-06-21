@@ -58,6 +58,7 @@ export const runCardPlayedScenario = (
   if (source === undefined) {
     return failedProbeFielding(state, input.setupFilters.length);
   }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
   const played = addProbeHandCard(state, p1, {
     cardId: "probe-card-played-match" as CardId,
     category: "character",

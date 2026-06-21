@@ -500,7 +500,7 @@ const matchDonAttachedTarget = (
     );
   }
   const target = cardRefFromUnknown(payload["target"]);
-  const targetPlayerId = payload["targetPlayerId"];
+  const targetPlayerId = payload["targetPlayerId"] ?? target?.playerId;
   const rawTarget = payload["target"];
   const nestedTargetZone = isRecord(rawTarget)
     ? zoneRefFromUnknown(rawTarget["zone"])?.zone
@@ -537,6 +537,7 @@ const matchDonAttached = (
   if (!matchDonAttachedTarget(source, trigger, payload)) {
     return false;
   }
+  const target = cardRefFromUnknown(payload["target"]);
   return (
     matchesSourceEvidence(
       state,
@@ -547,7 +548,7 @@ const matchDonAttached = (
     ) &&
     matchesResolvedFilter(
       state,
-      resolvedCardForId(state, payload["targetCardId"]),
+      resolvedCardForId(state, payload["targetCardId"] ?? target?.cardId),
       trigger.filter,
     )
   );

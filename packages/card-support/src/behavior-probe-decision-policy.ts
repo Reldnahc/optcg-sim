@@ -124,6 +124,16 @@ const choosePendingDecisionAction = (
   if (decision === undefined) {
     return undefined;
   }
+  if (decision.type === "chooseQuantity") {
+    return {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "chooseQuantity",
+        quantity: decision.max,
+      },
+    };
+  }
   if (decision.type === "selectTargets") {
     if (decision.request.min === 0 && !selectOptionalTarget) {
       return undefined;

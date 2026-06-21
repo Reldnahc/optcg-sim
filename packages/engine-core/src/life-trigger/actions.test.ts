@@ -163,6 +163,49 @@ test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for supported d
   assert.equal(decision.card.cardId, cardId);
 });
 
+test("getSupportedLifeTriggerDecision evaluates life-count trigger conditions after the damaged Life card leaves Life", () => {
+  const state = setupAttackState();
+  const p2State = must(state.players[p2], "p2");
+  p2State.life = p2State.life.slice(0, 1);
+  const topLife = must(p2State.life[0], "top life");
+  const cardId = toCardId("trigger-life-zero-after-damage");
+  const definition = supportedLifeTriggerDefinition(cardId);
+  const effect = must(definition.effects[0], "effect");
+  const supported: EffectDefinition = {
+    ...definition,
+    effects: [
+      {
+        ...effect,
+        condition: { type: "lifeCount", player: "self", op: "eq", value: 0 },
+      },
+    ],
+  };
+
+  topLife.card.cardId = cardId;
+  state.cardManifest.cards[cardId] = resolvedCard({
+    cardId,
+    category: "character",
+    power: 1000,
+    triggerText: "[Trigger] If you have 0 Life cards, draw 1 card.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-trigger-life-zero-after-damage",
+      rulesVersion: supported.metadata.rulesVersion,
+      sourceTextHash: supported.metadata.sourceTextHash,
+    },
+  });
+  state.cardManifest.effectDefinitionsVersion =
+    supported.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    "def-trigger-life-zero-after-damage": supported,
+  };
+
+  const decision = getSupportedLifeTriggerDecision(state, p2, topLife.card);
+
+  assert.ok(decision);
+  assert.equal(decision.type, "confirmLifeTrigger");
+});
+
 test("getSupportedLifeTriggerDecision returns confirmLifeTrigger for optional trigger body", () => {
   const state = setupAttackState();
   const p2State = must(state.players[p2], "p2");

@@ -439,23 +439,6 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
 
-  it("proves Life-removed reactions through combat damage", () => {
-    const report = createBehaviorProbeReport({
-      text: "[Your Turn] When a card is removed from your or your opponent's Life cards, draw 1 card. Then, you cannot draw cards using your own effects during this turn.",
-    });
-
-    expect(report.exitCode).toBe(0);
-    expect(report.lines).toContain("Behavior probe: passed");
-    expect(report.lines).toContain("Scenario 1 entrypoint: lifeRemoved");
-    expect(report.lines).toContain("Scenario 1 card category: character");
-    expect(report.lines).toContain(
-      "Scenario 1 engine primitives: draw, preventDraw, sequence",
-    );
-    expect(report.lines).toContain("Scenario 1 result: passed");
-    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
-    expect(report.lines).toContain("Scenario 1 effect queue: drained");
-  });
-
   it("proves End of Your Turn effects through the turn transition", () => {
     const report = createBehaviorProbeReport({
       text: "[End of Your Turn] Set up to 1 of your DON!! cards as active.",

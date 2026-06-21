@@ -2,6 +2,7 @@ import {
   applyAction,
   evaluateEffectBlockRuntimeSupport,
   getLegalActions,
+  processEffectRuntime,
 } from "@optcg/engine-core";
 import type {
   CardId,
@@ -18,6 +19,7 @@ import {
   parseRawKeywordLine,
 } from "@optcg/cards";
 import {
+  configureProbeFieldSourceForScenario,
   fieldProbeSource,
   resolvedProbeCard,
   setupProbeMainState,
@@ -116,6 +118,17 @@ interface ScenarioInput {
   readonly text: string;
 }
 
+interface BehaviorProbeRunResult {
+  readonly ok: boolean;
+  readonly reason?: string;
+  readonly pendingDecisionDrained: boolean;
+  readonly effectQueueDrained: boolean;
+  readonly eventCount: number;
+  readonly decisionsResolved: number;
+  readonly effectResolutionCount?: number;
+  readonly setupFilterCount: number;
+}
+
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 const probeCardId = "probe-card" as CardId;
@@ -207,6 +220,7 @@ export const createBehaviorProbeReport = (
           `Scenario ${String(scenarioIndex)} pending decisions: ${result.pendingDecisionDrained ? "drained" : "pending"}`,
           `Scenario ${String(scenarioIndex)} effect queue: ${result.effectQueueDrained ? "drained" : "pending"}`,
           `Scenario ${String(scenarioIndex)} decisions resolved: ${String(result.decisionsResolved)}`,
+          `Scenario ${String(scenarioIndex)} effect resolutions: ${String(result.effectResolutionCount ?? 0)}`,
           `Scenario ${String(scenarioIndex)} events: ${String(result.eventCount)}`,
         ],
         scenario: {
@@ -237,7 +251,7 @@ export const createBehaviorProbeReport = (
 const runScenario = (
   scenario: RunnableScenario,
   scenarioInput: ScenarioInput,
-) => {
+): BehaviorProbeRunResult => {
   switch (scenario.kind) {
     case "activateEffect":
       return runActivateEffectScenario(
@@ -498,6 +512,7 @@ const runScenario = (
             initialResult,
             setupFilterCount,
             scenarioInput.definition.effects,
+            { allowMissingEffectResolution: true },
           ),
       );
     case "playCard":
@@ -583,6 +598,7 @@ const runPlayCardScenario = (input: {
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly effectResolutionCount: number;
   readonly setupFilterCount: number;
 } => {
   const state = setupProbeMainState(input);
@@ -598,6 +614,7 @@ const runPlayCardScenario = (input: {
       effectQueueDrained: state.effectQueue.length === 0,
       eventCount: 0,
       decisionsResolved: 0,
+      effectResolutionCount: 0,
       setupFilterCount: input.setupFilters.length,
     };
   }
@@ -630,6 +647,7 @@ const runDeclareAttackScenario = (
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly effectResolutionCount: number;
   readonly setupFilterCount: number;
 } => {
   const state = setupProbeMainState(input);
@@ -646,9 +664,11 @@ const runDeclareAttackScenario = (
       effectQueueDrained: state.effectQueue.length === 0,
       eventCount: 0,
       decisionsResolved: 0,
+      effectResolutionCount: 0,
       setupFilterCount: input.setupFilters.length,
     };
   }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
   const defender = must(state.players[p2], `player ${String(p2)}`);
   for (const card of defender.hand) {
     state.cardManifest.cards[card.cardId] = resolvedProbeCard({
@@ -694,6 +714,7 @@ const runLifeRemovedScenario = (input: {
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly effectResolutionCount: number;
   readonly setupFilterCount: number;
 } => {
   const state = setupProbeMainState(input);
@@ -714,9 +735,11 @@ const runLifeRemovedScenario = (input: {
       effectQueueDrained: state.effectQueue.length === 0,
       eventCount: 0,
       decisionsResolved: 0,
+      effectResolutionCount: 0,
       setupFilterCount: input.setupFilters.length,
     };
   }
+  configureProbeFieldSourceForScenario(state, source, input.definition.effects);
 
   return drainRuntime(
     applyAction(state, {
@@ -743,7 +766,10 @@ const drainRuntime = (
   initialResult: EngineResult,
   setupFilterCount = 0,
   effectBlocks: readonly EffectBlock[] = [],
-  options: { readonly allowBattleRemainder?: boolean } = {},
+  options: {
+    readonly allowBattleRemainder?: boolean;
+    readonly allowMissingEffectResolution?: boolean;
+  } = {},
 ): {
   readonly ok: boolean;
   readonly reason?: string;
@@ -751,12 +777,14 @@ const drainRuntime = (
   readonly effectQueueDrained: boolean;
   readonly eventCount: number;
   readonly decisionsResolved: number;
+  readonly effectResolutionCount: number;
   readonly setupFilterCount: number;
 } => {
   let result = initialResult;
   let state = result.state;
   let eventCount = result.events.length;
   let decisionsResolved = 0;
+  let effectResolutionCount = countEffectResolvedEvents(result.events);
   for (let step = 0; step < maxDecisionSteps; step += 1) {
     if (result.errors !== undefined && result.errors.length > 0) {
       return drainResult(
@@ -764,20 +792,50 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        effectResolutionCount,
         setupFilterCount,
         engineErrorReason(result.errors[0]),
       );
+    }
+    if (state.pendingDecision === undefined) {
+      const runtimeResult = processEffectRuntime(state);
+      if (
+        runtimeResult.errors !== undefined ||
+        runtimeResult.events.length > 0 ||
+        runtimeResult.state !== state
+      ) {
+        result = runtimeResult;
+        state = result.state;
+        eventCount += result.events.length;
+        effectResolutionCount += countEffectResolvedEvents(result.events);
+        continue;
+      }
     }
     if (
       state.pendingDecision === undefined &&
       state.effectQueue.length === 0 &&
       state.deferredTriggers.length === 0
     ) {
+      if (
+        options.allowMissingEffectResolution !== true &&
+        effectResolutionCount === 0
+      ) {
+        return drainResult(
+          false,
+          state,
+          eventCount,
+          decisionsResolved,
+          effectResolutionCount,
+          setupFilterCount,
+          "no effectResolved event observed",
+        );
+      }
       return drainResult(
         true,
         state,
         eventCount,
         decisionsResolved,
+        effectResolutionCount,
         setupFilterCount,
       );
     }
@@ -792,6 +850,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        effectResolutionCount,
         setupFilterCount,
       );
     }
@@ -803,6 +862,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        effectResolutionCount,
         setupFilterCount,
         "runtime work did not drain",
       );
@@ -818,6 +878,7 @@ const drainRuntime = (
         state,
         eventCount,
         decisionsResolved,
+        effectResolutionCount,
         setupFilterCount,
         `no legal response for ${decision.type}`,
       );
@@ -825,6 +886,7 @@ const drainRuntime = (
     result = applyAction(state, nextAction);
     state = result.state;
     eventCount += result.events.length;
+    effectResolutionCount += countEffectResolvedEvents(result.events);
     decisionsResolved += 1;
   }
 
@@ -833,6 +895,7 @@ const drainRuntime = (
     state,
     eventCount,
     decisionsResolved,
+    effectResolutionCount,
     setupFilterCount,
     "decision drain step limit hit",
   );
@@ -843,6 +906,7 @@ const drainResult = (
   state: GameState,
   eventCount: number,
   decisionsResolved: number,
+  effectResolutionCount: number,
   setupFilterCount: number,
   reason?: string,
 ) => ({
@@ -852,8 +916,13 @@ const drainResult = (
   effectQueueDrained: state.effectQueue.length === 0,
   eventCount,
   decisionsResolved,
+  effectResolutionCount,
   setupFilterCount,
 });
+
+const countEffectResolvedEvents = (
+  events: readonly EngineResult["events"][number][],
+): number => events.filter((event) => event.type === "effectResolved").length;
 
 const engineErrorReason = (
   error: EngineResult["errors"] extends readonly (infer T)[] | undefined

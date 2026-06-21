@@ -40,3 +40,4 @@ export { filterStateForPlayer } from "./view/filter-state-for-player.js";
 export { toPublicTimerState } from "./view/public-timers.js";
 export { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 export type { RuntimeSupportAdmissionResult } from "./effect-runtime-admission.js";
+export { processEffectRuntime } from "./effect-runtime.js";

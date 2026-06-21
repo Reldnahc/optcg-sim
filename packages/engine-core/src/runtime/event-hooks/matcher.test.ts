@@ -536,6 +536,29 @@ test("canonical event matcher matches donReturned and donAttached primitives", (
     ),
     { matched: true, triggerTypes: ["donAttached"] },
   );
+  assert.deepEqual(
+    matchEventTrigger(
+      state,
+      source,
+      {
+        type: "donAttached",
+        player: "self",
+        target: "yourLeaderOrCharacters",
+        filter: { categories: ["character"] },
+      },
+      publicEvent(state, "donAttached", {
+        playerId: source.controller,
+        donInstanceId: "don-2",
+        target: {
+          instanceId: character.instanceId,
+          cardId: character.cardId,
+          playerId: character.controller,
+          zone: character.zone,
+        },
+      }),
+    ),
+    { matched: true, triggerTypes: ["donAttached"] },
+  );
 });
 
 test("canonical event matcher matches attackDeclared roles for this leader attacking or being attacked", () => {
