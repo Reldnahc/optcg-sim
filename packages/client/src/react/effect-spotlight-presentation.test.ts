@@ -59,6 +59,21 @@ const combatEntry = (): CombatSpotlightActiveSourceInput => ({
   },
 });
 
+const counterEntry = (): CombatSpotlightActiveSourceInput => ({
+  kind: "combat",
+  key: "event:counter",
+  semanticKey: "combat|counter",
+  mode: "resolved",
+  status: "resolved",
+  combat: {
+    eventKind: "counterUsed",
+    attacker: ref("counter-1", "OP00-030", "p2"),
+    defender: ref("defender-1", "OP00-020", "p2"),
+    attackerPower: 2000,
+    defenderPower: 5000,
+  },
+});
+
 describe("effect spotlight presentation", () => {
   it("normalizes combat and targeting spotlights into linked card presentations", () => {
     const combatPresentation = buildEffectSpotlightPresentation({
@@ -77,6 +92,25 @@ describe("effect spotlight presentation", () => {
     expect(combatPresentation.relationLabel).toBe("attacks");
     expect(combatPresentation.sourcePower).toBe(7000);
     expect(combatPresentation.relatedPowers).toEqual([5000]);
+  });
+
+  it("labels counter spotlights as counters instead of attacks", () => {
+    const presentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: counterEntry(),
+    });
+
+    expect(presentation?.kind).toBe("cardLink");
+    if (presentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(presentation.sourceCard.name).toBe("Card counter-1");
+    expect(presentation.relatedCards.map((card) => card.instanceId)).toEqual([
+      "defender-1",
+    ]);
+    expect(presentation.relationLabel).toBe("counters");
+    expect(presentation.sourcePower).toBe(2000);
+    expect(presentation.relatedPowers).toEqual([5000]);
   });
 
   it("builds targeting presentation from current active span target links", () => {

@@ -268,6 +268,45 @@ const combatEntryForEvent = (
     };
   }
 
+  if (event.type === "counterUsed") {
+    const playerId = event.payload["playerId"];
+    const instanceId = event.payload["instanceId"];
+    const cardId = event.payload["cardId"];
+    const defender = event.payload["target"];
+    if (
+      typeof playerId !== "string" ||
+      typeof instanceId !== "string" ||
+      typeof cardId !== "string" ||
+      !isCardRef(defender)
+    ) {
+      return undefined;
+    }
+    const attackerPower = numberPayloadValue(event.payload, "value");
+    const defenderPower = numberPayloadValue(event.payload, "targetPower");
+    const attacker: CardRef = {
+      playerId: playerId as PlayerId,
+      instanceId: instanceId as InstanceId,
+      cardId: cardId as CardId,
+    };
+    const combat: CombatSpotlightPresentation = {
+      eventKind: "counterUsed",
+      attacker,
+      defender,
+      ...(attackerPower === undefined ? {} : { attackerPower }),
+      ...(defenderPower === undefined ? {} : { defenderPower }),
+    };
+    return {
+      kind: "combat",
+      id: `combat:${String(event.id)}`,
+      key: String(event.id),
+      semanticKey: combatSemanticKey(combat),
+      mode: "resolved",
+      status: "resolved",
+      combat,
+      resolvedEventId: event.id,
+    };
+  }
+
   return undefined;
 };
 

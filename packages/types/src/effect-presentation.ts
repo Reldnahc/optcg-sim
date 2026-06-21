@@ -80,7 +80,10 @@ export interface EffectTextSpotlightHistoryEntry extends EffectSpotlightHistoryE
   readonly effectBlockId?: EffectId;
 }
 
-export type CombatSpotlightEventKind = "attackDeclared" | "blockerActivated";
+export type CombatSpotlightEventKind =
+  | "attackDeclared"
+  | "blockerActivated"
+  | "counterUsed";
 
 export interface CombatSpotlightPresentation {
   readonly eventKind: CombatSpotlightEventKind;

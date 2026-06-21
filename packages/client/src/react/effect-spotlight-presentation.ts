@@ -42,6 +42,11 @@ const targetCardsForEntry = (
   return targetCards;
 };
 
+const combatRelationLabel = (
+  entry: Extract<EffectSpotlightPlaybackEntry, { readonly kind: "combat" }>,
+): string =>
+  entry.combat.eventKind === "counterUsed" ? "counters" : "attacks";
+
 export const buildEffectSpotlightPresentation = ({
   cardModel,
   entry,
@@ -56,7 +61,7 @@ export const buildEffectSpotlightPresentation = ({
       kind: "cardLink",
       sourceCard: cardModel(entry.combat.attacker),
       relatedCards: [cardModel(entry.combat.defender)],
-      relationLabel: "attacks",
+      relationLabel: combatRelationLabel(entry),
       tone: "combat",
       sourcePower: entry.combat.attackerPower,
       relatedPowers: [entry.combat.defenderPower],

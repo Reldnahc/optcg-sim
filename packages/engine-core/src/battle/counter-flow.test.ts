@@ -371,6 +371,7 @@ test("Character Counter moves from hand to trash, emits deterministic events, an
           cardId: counterCard.cardId,
           target,
           value: 1000,
+          targetPower: 5000,
         },
         visibility: { type: "public" },
       },

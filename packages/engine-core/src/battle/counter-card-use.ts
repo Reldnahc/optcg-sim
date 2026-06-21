@@ -808,12 +808,15 @@ export const resolveCounterCardUse = (params: {
   }
   const isCounterEvent =
     state.cardManifest.cards[handCard.cardId]?.category === "event";
+  const targetPower = getSupportedBattleCombatViewOrNull(state, battle)
+    ?.targetView.currentPower;
   appendEvent(state, events, "counterUsed", {
     playerId: decisionPlayerId,
     instanceId: handCard.instanceId,
     cardId: handCard.cardId,
     target,
     value: counterValue,
+    ...(targetPower === undefined ? {} : { targetPower }),
   });
   const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
     cardMovedPayloadShape: "zoneRefs",

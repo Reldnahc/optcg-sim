@@ -668,6 +668,58 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     });
   });
 
+  it("projects counter usage as counter card versus defended target", () => {
+    const counterCard = {
+      playerId: "p2" as PlayerId,
+      instanceId: "counter-1" as InstanceId,
+      cardId: "OP00-006" as CardId,
+    };
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      activeEffectText: undefined,
+      events: [
+        {
+          id: "event:counter" as EngineEventId,
+          seq: 1,
+          type: "counterUsed",
+          payload: {
+            playerId: counterCard.playerId,
+            instanceId: counterCard.instanceId,
+            cardId: counterCard.cardId,
+            target: defender,
+            value: 2000,
+            targetPower: 5000,
+          },
+          visibility: { type: "public" },
+          createdAtStateSeq: 1 as StateSeq,
+        },
+      ],
+      pendingDecisionId: undefined,
+    });
+
+    expect(history).toEqual({
+      entries: [
+        {
+          kind: "combat",
+          id: "combat:event:counter",
+          key: "event:counter",
+          semanticKey:
+            "combat|counterUsed|p2|counter-1|OP00-006|p2|defender-1|OP00-004|2000|5000",
+          mode: "resolved",
+          status: "resolved",
+          combat: {
+            eventKind: "counterUsed",
+            attacker: counterCard,
+            defender,
+            attackerPower: 2000,
+            defenderPower: 5000,
+          },
+          resolvedEventId: "event:counter",
+        },
+      ],
+      presentKey: "event:counter",
+    });
+  });
+
   it("skips malformed combat spotlight payloads", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
       activeEffectText: undefined,
