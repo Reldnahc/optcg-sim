@@ -16,6 +16,143 @@ import {
   withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
 
+const setupActivatedOpponentActivationDefinition = (
+  state: ReturnType<typeof createActiveState>,
+): EffectDefinition["effects"][number]["id"] => {
+  const p1State = must(state.players[p1], "p1");
+  const source = withCardInZone({
+    state,
+    playerId: p1,
+    card: must(p1State.hand[0], "source"),
+    zone: "characterArea",
+  });
+  p1State.hand = p1State.hand.filter(
+    (card) => card.instanceId !== source.instanceId,
+  );
+  const supportCard = resolvedCard({
+    cardId: source.cardId,
+    category: "character",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: "def-activated-opponent-activation",
+      rulesVersion: "activated-opponent-activation-rules",
+      sourceTextHash: "activated-opponent-activation-source",
+    },
+  });
+  const base = reviewedOnPlayDrawDefinition(source.cardId, supportCard.support);
+  const effectId =
+    "activated-opponent-activation-draw" as EffectDefinition["effects"][number]["id"];
+  state.cardManifest.effectDefinitionsVersion = "0.1.0";
+  state.cardManifest.effectDefinitions = {
+    "def-activated-opponent-activation": {
+      ...base,
+      effects: [
+        {
+          ...must(base.effects[0], "draw effect"),
+          id: effectId,
+          category: "activate",
+          trigger: {
+            type: "opponentActivated",
+            activations: ["event", "trigger"],
+          },
+          sourcePresencePolicy: "mustRemainInSameZone",
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                connector: "always",
+                effect: { type: "draw", count: 1, player: "self" },
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  state.cardManifest.cards[source.cardId] = supportCard;
+  return effectId;
+};
+
+const appendOpponentEventActivation = (
+  state: ReturnType<typeof createActiveState>,
+): void => {
+  const opponentEventCardId = toCardId("opponent-event");
+  state.cardManifest.cards[opponentEventCardId] = resolvedCard({
+    cardId: opponentEventCardId,
+    category: "event",
+  });
+  state.eventJournal.push({
+    id: toEngineEventId("event:activated-opponent-event-played"),
+    seq: state.eventJournal.length + 1,
+    type: "cardPlayed",
+    payload: {
+      playerId: p2,
+      instanceId: "opponent-event-instance",
+      cardId: opponentEventCardId,
+      category: "event",
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:opponent-event" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+const appendOpponentTriggerActivation = (
+  state: ReturnType<typeof createActiveState>,
+): void => {
+  state.eventJournal.push({
+    id: toEngineEventId("event:activated-opponent-trigger"),
+    seq: state.eventJournal.length + 1,
+    type: "triggerActivated",
+    payload: {
+      playerId: p2,
+      sourceCardId: toCardId("opponent-trigger-card"),
+    },
+    visibility: { type: "public" },
+    causedBy: { type: "ruleProcess", name: "test:opponent-trigger" },
+    createdAtStateSeq: state.seq,
+  });
+};
+
+test.each([
+  {
+    name: "Event",
+    appendActivation: appendOpponentEventActivation,
+  },
+  {
+    name: "Trigger",
+    appendActivation: appendOpponentTriggerActivation,
+  },
+])(
+  "activated opponent $name reactions pause for optional activation",
+  ({ appendActivation }) => {
+    const state = createActiveState();
+    state.turn.turnPlayerId = p1;
+    state.eventJournal = [];
+    const effectId = setupActivatedOpponentActivationDefinition(state);
+    appendActivation(state);
+
+    const queued = processEffectRuntime(state);
+
+    assert.equal(queued.errors, undefined);
+    assert.equal(queued.state.effectQueue.length, 1);
+    const entry = must(queued.state.effectQueue[0], "activated reaction entry");
+    assert.equal(entry.effectBlockId, effectId);
+    assert.deepEqual(entry.queueOrigin, { type: "activatedReaction" });
+
+    const paused = processEffectRuntime(queued.state);
+    const decision = must(
+      paused.state.pendingDecision,
+      "activated opponent activation decision",
+    );
+
+    assert.equal(paused.errors, undefined);
+    assert.equal(decision.type, "chooseOptionalActivation");
+    assert.equal(decision.playerId, p1);
+    assert.equal(decision.effectId, effectId);
+  },
+);
+
 test("live opponent activation queueing preserves omitted state hash", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;

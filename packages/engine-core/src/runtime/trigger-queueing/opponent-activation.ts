@@ -22,6 +22,8 @@ import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
 } from "../../effect-runtime-block-support.js";
+import { activatedReactionQueueingName } from "../optional-activation/event-reaction-support.js";
+import { isSupportedActivatedReactionEffect } from "../optional-activation/event-reaction-runtime-support.js";
 import type {
   EffectRuntimeTriggerQueueingDependencies,
   OpponentActivationTriggerQueueingFailureReason,
@@ -36,6 +38,7 @@ import {
   canAdmitTriggerQueueEntry,
   hasPendingTriggerRuntimeWork,
 } from "./admission.js";
+import { matchEventTrigger } from "../event-hooks/matcher.js";
 
 const queuedOpponentActivationTriggerEventIds = (
   state: GameState,
@@ -131,6 +134,13 @@ const opponentActivationFromEvent = (
     };
     const playerId = payload.blocker?.playerId;
     return playerId === undefined ? undefined : { kind: "blocker", playerId };
+  }
+  if (event.type === "triggerActivated") {
+    if (!isRecord(event.payload)) {
+      return undefined;
+    }
+    const playerId = playerIdFromPayload(event.payload);
+    return playerId === undefined ? undefined : { kind: "trigger", playerId };
   }
   return undefined;
 };
@@ -250,25 +260,106 @@ export const createOpponentActivationTriggerQueueing = (
         if (!lookup.ok) {
           return toEngineResult(state, [], [lookup.error], options);
         }
-        const activationEffects = lookup.definition.effects.filter(
-          (effect) =>
-            isAutoRuntimeTriggerCandidate(
-              effect,
-              opponentActivatedAutoAdapter,
-            ) &&
-            effect.trigger.type === "opponentActivated" &&
-            effect.trigger.activations.includes(activation.kind),
+        const activationEffects: Array<{
+          readonly effectBlock: EffectDefinition["effects"][number];
+          readonly entryOverride?: Pick<
+            EffectQueueEntry,
+            "effectBlockOverride" | "queueOrigin"
+          >;
+          readonly causedByName: string;
+        }> = [];
+        const unsupportedActivationEffects = lookup.definition.effects.filter(
+          (effect) => {
+            const entrySource = {
+              instanceId: source.instanceId,
+              cardId: source.cardId,
+              playerId: source.controller,
+              zone: source.zone,
+            };
+            const candidateEntry: EffectQueueEntry = {
+              id: `queue-entry:${String(event.id)}:opponentActivated:${String(source.instanceId)}:${String(effect.id)}` as EffectQueueEntry["id"],
+              state: "pending",
+              timingWindowId:
+                `timing-window:${String(event.id)}:opponentActivated` as EffectQueueEntry["timingWindowId"],
+              generation: 0,
+              controllerId: source.controller,
+              source: entrySource,
+              sourceSnapshot: toSnapshot(source, resolved),
+              triggerEventId: event.id,
+              effectBlockId: effect.id,
+              orderingGroup:
+                source.controller === state.turn.turnPlayerId
+                  ? "turnPlayer"
+                  : "nonTurnPlayer",
+              createdAtEventSeq: event.seq,
+              queuedAtStateSeq: toStateSeq(state.seq + 1),
+              sourcePresencePolicy:
+                effect.sourcePresencePolicy ?? "mustRemainInSameZone",
+              causedBy: {
+                type: "ruleProcess",
+                name: "effectRuntime:opponentActivationTriggerQueueing",
+              },
+            };
+            if (
+              isAutoRuntimeTriggerCandidate(
+                effect,
+                opponentActivatedAutoAdapter,
+              ) &&
+              effect.trigger.type === "opponentActivated" &&
+              effect.trigger.activations.includes(activation.kind)
+            ) {
+              if (
+                !isSupportedAutoRuntimeEffectBlock(
+                  effect,
+                  opponentActivatedAutoAdapter,
+                )
+              ) {
+                return true;
+              }
+              activationEffects.push({
+                effectBlock: effect,
+                causedByName: "effectRuntime:opponentActivationTriggerQueueing",
+              });
+              return false;
+            }
+            if (effect.category !== "activate") {
+              return false;
+            }
+            const match = matchEventTrigger(
+              state,
+              source,
+              effect.trigger,
+              event,
+            );
+            if (
+              !match.matched ||
+              !match.triggerTypes.includes("opponentActivated")
+            ) {
+              return false;
+            }
+            if (
+              !isSupportedActivatedReactionEffect(effect, {
+                ...candidateEntry,
+                queueOrigin: { type: "activatedReaction" },
+              })
+            ) {
+              return true;
+            }
+            activationEffects.push({
+              effectBlock: effect,
+              entryOverride: {
+                queueOrigin: { type: "activatedReaction" },
+                effectBlockOverride: { ...effect, optional: true },
+              },
+              causedByName: activatedReactionQueueingName,
+            });
+            return false;
+          },
         );
         if (activationEffects.length === 0) {
           continue;
         }
-        const matching = activationEffects.filter((effect) =>
-          isSupportedAutoRuntimeEffectBlock(
-            effect,
-            opponentActivatedAutoAdapter,
-          ),
-        );
-        if (matching.length !== activationEffects.length) {
+        if (unsupportedActivationEffects.length > 0) {
           return toEngineResult(
             state,
             [],
@@ -280,7 +371,23 @@ export const createOpponentActivationTriggerQueueing = (
             options,
           );
         }
-        for (const effectBlock of matching) {
+        for (const {
+          causedByName,
+          effectBlock,
+          entryOverride,
+        } of activationEffects) {
+          if (effectBlock.sourcePresencePolicy === undefined) {
+            return toEngineResult(
+              state,
+              [],
+              [
+                opponentActivationTriggerQueueingError(
+                  "unsupported-opponent-activation-definition",
+                ),
+              ],
+              options,
+            );
+          }
           const entrySource = {
             instanceId: source.instanceId,
             cardId: source.cardId,
@@ -307,8 +414,9 @@ export const createOpponentActivationTriggerQueueing = (
             sourcePresencePolicy: effectBlock.sourcePresencePolicy,
             causedBy: {
               type: "ruleProcess",
-              name: "effectRuntime:opponentActivationTriggerQueueing",
+              name: causedByName,
             },
+            ...entryOverride,
             ...effectQueueEntryPresentationForEffectBlock({
               effectBlock,
               resolvedCard: resolved,
