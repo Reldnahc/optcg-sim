@@ -176,6 +176,32 @@ const attachOneDonToLeader = (state: GameState, playerId: PlayerId): void => {
   player.leader.attachedDon = [don.instanceId];
 };
 
+const growHandToCount = (
+  state: GameState,
+  playerId: PlayerId,
+  count: number,
+): void => {
+  const player = must(state.players[playerId], "player");
+  while (player.hand.length < count) {
+    const index = player.hand.length;
+    player.hand.push({
+      instanceId:
+        `test:${String(playerId)}:hand-count:${String(index)}` as CardInstance["instanceId"],
+      cardId:
+        `test:${String(playerId)}:hand-count-card:${String(index)}` as CardInstance["cardId"],
+      owner: playerId,
+      controller: playerId,
+      attachedDon: [],
+      zone: {
+        zone: "hand",
+        playerId,
+        slot: "hand",
+        index,
+      },
+    });
+  }
+};
+
 const installSelfLifeMoveSource = (state: GameState): CardInstance => {
   const player = must(state.players[p1], "p1");
   const source = withCardInZone({
@@ -394,6 +420,68 @@ test("OP11 Nami leader can activate after an effect removes Life", () => {
   assert.equal(
     must(activated.state.players[p1], "after p1").hand.length,
     beforeHand + 2,
+  );
+});
+
+test("OP11 Nami leader checks hand count after own Life is added to hand", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  state.eventJournal = [];
+  installOp11NamiLeader(state, p1);
+  installSelfLifeMoveSource(state);
+  growHandToCount(state, p1, 7);
+  const beforeP1 = must(state.players[p1], "p1 before");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+  const beforeLife = beforeP1.life.length;
+
+  const moved = processEffectRuntime(state);
+  assert.equal(moved.errors, undefined);
+  assert.equal(
+    must(moved.state.players[p1], "after move").life.length,
+    beforeLife - 1,
+  );
+  assert.equal(must(moved.state.players[p1], "after move").hand.length, 8);
+
+  const actions = namiLifeActivationActions(moved.state, p1);
+  assert.equal(actions.length, 1);
+
+  const activated = applyAction(moved.state, must(actions[0], "Nami draw"));
+  assert.equal(activated.errors, undefined);
+  assert.equal(
+    must(activated.state.players[p1], "after p1").deck.length,
+    beforeDeck,
+  );
+  assert.equal(
+    must(activated.state.players[p1], "after p1").hand.length,
+    beforeHand + 1,
+  );
+});
+
+test("OP11 Nami leader draws at 7 when opponent Life is removed", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  installOp11NamiLeader(state, p1);
+  growHandToCount(state, p1, 7);
+  const beforeP1 = must(state.players[p1], "p1 before");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+  appendLifeRemovedEvent(state, p2);
+
+  const actions = namiLifeActivationActions(state, p1);
+  assert.equal(actions.length, 1);
+
+  const activated = applyAction(state, must(actions[0], "Nami draw"));
+  assert.equal(activated.errors, undefined);
+  assert.equal(
+    must(activated.state.players[p1], "after p1").deck.length,
+    beforeDeck - 1,
+  );
+  assert.equal(
+    must(activated.state.players[p1], "after p1").hand.length,
+    beforeHand + 1,
   );
 });
 
