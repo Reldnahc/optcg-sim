@@ -423,6 +423,54 @@ test("OP11 Nami leader can activate after an effect removes Life", () => {
   );
 });
 
+test("OP11 Nami leader life-removal activation is queued into the normal optional timing flow", () => {
+  const state = createActiveState();
+  state.turn.turnPlayerId = p1;
+  state.turn.phase = "main";
+  state.eventJournal = [];
+  installOp11NamiLeader(state, p1);
+  installSelfLifeMoveSource(state);
+  const beforeP1 = must(state.players[p1], "p1 before");
+  const beforeDeck = beforeP1.deck.length;
+  const beforeHand = beforeP1.hand.length;
+
+  const moved = processEffectRuntime(state);
+  assert.equal(moved.errors, undefined);
+
+  const queued = processEffectRuntime(moved.state);
+  assert.equal(queued.errors, undefined);
+  assert.equal(queued.state.effectQueue.length, 1);
+  const entry = must(queued.state.effectQueue[0], "Nami queued reaction");
+  assert.equal(entry.effectBlockId, op11NamiLifeEffectId);
+  assert.deepEqual(entry.queueOrigin, { type: "activatedReaction" });
+
+  const paused = processEffectRuntime(queued.state);
+  const decision = must(
+    paused.state.pendingDecision,
+    "Nami optional activation",
+  );
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseOptionalActivation");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.effectId, op11NamiLifeEffectId);
+
+  const activated = applyAction(paused.state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice: "activate" },
+  });
+
+  assert.equal(activated.errors, undefined);
+  assert.equal(
+    must(activated.state.players[p1], "after p1").deck.length,
+    beforeDeck - 1,
+  );
+  assert.equal(
+    must(activated.state.players[p1], "after p1").hand.length,
+    beforeHand + 2,
+  );
+});
+
 test("OP11 Nami leader checks hand count after own Life is added to hand", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;

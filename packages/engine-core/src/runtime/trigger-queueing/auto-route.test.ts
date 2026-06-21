@@ -131,7 +131,7 @@ const setupAutoLifeRemovedDefinition = (
   state.cardManifest.cards[source.cardId] = supportCard;
 };
 
-test("automatic lifeRemoved queueing ignores activated lifeRemoved reactions", () => {
+test("lifeRemoved queueing pauses activated lifeRemoved reactions for optional activation", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p1;
   state.eventJournal = [];
@@ -170,7 +170,30 @@ test("automatic lifeRemoved queueing ignores activated lifeRemoved reactions", (
   const queued = processEffectRuntime(state);
 
   assert.equal(queued.errors, undefined);
-  assert.equal(queued.state.effectQueue.length, 0);
+  assert.equal(queued.state.effectQueue.length, 1);
+  const entry = must(queued.state.effectQueue[0], "activated reaction entry");
+  assert.equal(entry.effectBlockId, "activated-life-removed-draw");
+  assert.deepEqual(entry.queueOrigin, { type: "activatedReaction" });
+  assert.equal(
+    queued.state.eventJournal.some(
+      (event) =>
+        event.type === "effectQueued" &&
+        (event.payload as { triggerEventId?: string }).triggerEventId ===
+          "event:activated-life-removed:public",
+    ),
+    true,
+  );
+
+  const paused = processEffectRuntime(queued.state);
+  const decision = must(
+    paused.state.pendingDecision,
+    "activated reaction decision",
+  );
+
+  assert.equal(paused.errors, undefined);
+  assert.equal(decision.type, "chooseOptionalActivation");
+  assert.equal(decision.playerId, p1);
+  assert.equal(decision.effectId, entry.effectBlockId);
 });
 
 test("automatic lifeRemoved queueing uses canonical event matching for composed triggers", () => {

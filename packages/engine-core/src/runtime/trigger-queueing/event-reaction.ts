@@ -32,6 +32,8 @@ import {
   matchEventTrigger,
   type EventReactionTriggerType,
 } from "../event-hooks/matcher.js";
+import { activatedReactionQueueingName } from "../optional-activation/event-reaction-support.js";
+import { isSupportedActivatedReactionEffect } from "../optional-activation/event-reaction-runtime-support.js";
 import {
   isAutoEventReactionRuntimeEventType,
   isAutoEventReactionTimingWindowId,
@@ -86,6 +88,16 @@ const isRuntimeEffectEvent = (event: EngineEvent): boolean =>
 interface EventReactionSourceCandidate {
   readonly source: CardInstance;
   readonly lastKnownZone?: CardInstance["zone"];
+}
+
+interface EventReactionEffectCandidate {
+  readonly effect: EffectDefinition["effects"][number];
+  readonly triggerTypesForEvent: readonly EventReactionTriggerType[];
+  readonly causedByName: string;
+  readonly entryOverride?: Pick<
+    EffectQueueEntry,
+    "effectBlockOverride" | "queueOrigin"
+  >;
 }
 
 const isFieldZone = (zone: string): boolean =>
@@ -247,33 +259,59 @@ export const createEventReactionTriggerQueueing = (
           const triggerTypesForEvent = match.triggerTypes.filter(
             (triggerType) =>
               isSupportedAutoEventReactionTriggerType(triggerType) &&
-              isAutoRuntimeTriggerCandidate(
+              (isAutoRuntimeTriggerCandidate(
                 effect,
                 autoEventReactionAdapter(triggerType),
-              ),
+              ) ||
+                effect.category === "activate"),
           );
           return triggerTypesForEvent.length === 0
             ? []
-            : [{ effect, triggerTypesForEvent }];
+            : [
+                {
+                  effect,
+                  triggerTypesForEvent,
+                  causedByName:
+                    effect.category === "activate"
+                      ? activatedReactionQueueingName
+                      : "effectRuntime:eventReactionTriggerQueueing",
+                  ...(effect.category === "activate"
+                    ? {
+                        entryOverride: {
+                          queueOrigin: { type: "activatedReaction" },
+                          effectBlockOverride: { ...effect, optional: true },
+                        },
+                      }
+                    : {}),
+                } satisfies EventReactionEffectCandidate,
+              ];
         });
         if (reactionEffects.length === 0) {
           continue;
         }
-        const matching = reactionEffects.filter(
-          ({ effect, triggerTypesForEvent }) =>
-            triggerTypesForEvent.every(
-              (triggerType) =>
-                triggerContainsType(effect.trigger, triggerType) &&
-                isSupportedAutoRuntimeEffectBlock(
-                  effect,
-                  autoEventReactionAdapter(triggerType),
-                ),
-            ),
+        const matching = reactionEffects.filter((candidate) =>
+          candidate.triggerTypesForEvent.every((triggerType) => {
+            if (!triggerContainsType(candidate.effect.trigger, triggerType)) {
+              return false;
+            }
+            if (candidate.effect.category === "activate") {
+              return true;
+            }
+            return isSupportedAutoRuntimeEffectBlock(
+              candidate.effect,
+              autoEventReactionAdapter(triggerType),
+            );
+          }),
         );
         if (matching.length === 0) {
           continue;
         }
-        for (const { effect, triggerTypesForEvent } of matching) {
+        for (const {
+          causedByName,
+          effect,
+          entryOverride,
+          triggerTypesForEvent,
+        } of matching) {
           if (
             candidate.lastKnownZone !== undefined &&
             effect.sourcePresencePolicy !== "resolveFromLastKnownInformation"
@@ -327,14 +365,21 @@ export const createEventReactionTriggerQueueing = (
             sourcePresencePolicy: effect.sourcePresencePolicy,
             causedBy: {
               type: "ruleProcess",
-              name: "effectRuntime:eventReactionTriggerQueueing",
+              name: causedByName,
             },
+            ...entryOverride,
             ...effectQueueEntryPresentationForEffectBlock({
               effectBlock: effect,
               resolvedCard: resolved,
               source: entrySource,
             }),
           };
+          if (
+            entryOverride !== undefined &&
+            !isSupportedActivatedReactionEffect(effect, entry)
+          ) {
+            continue;
+          }
           if (!canAdmitTriggerQueueEntry(state, entry, effect).ok) {
             continue;
           }
