@@ -25,4 +25,15 @@ describe("card behavior probe coverage regressions", () => {
     expect(report.lines).toContain("Scenario 1 entrypoint: counter");
     expect(report.lines).toContain("Scenario 1 result: passed");
   });
+
+  it("keeps the opponent alive when probing opponent life-count scenarios", () => {
+    const report = createBehaviorProbeReport({
+      text: "[On Play] \u2781 (You may rest the specified number of DON!! cards in your cost area.): If your opponent has 3 or more Life cards, set up to 1 of your <Slash> attribute Characters with a cost of 4 or less as active.",
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior probe: passed");
+    expect(report.lines).toContain("Scenario 1 entrypoint: playCard");
+    expect(report.lines).toContain("Scenario 1 result: passed");
+  });
 });

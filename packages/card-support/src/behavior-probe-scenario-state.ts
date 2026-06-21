@@ -132,7 +132,9 @@ export const setupProbeMainState = (input: {
     ...collectLeaderConditionFilters(input.definition.effects, "opponent"),
     ...input.setupFilters,
   ]);
-  addProbeDeckCards(active, p1, Math.max(4, input.setupFilters.length));
+  const scenarioDeckBuffer = Math.max(4, input.setupFilters.length);
+  addProbeDeckCards(active, p1, scenarioDeckBuffer);
+  addProbeDeckCards(active, p2, scenarioDeckBuffer);
   installScenarioDeckMetadata(active, p1, input.setupFilters);
   installScenarioDeckMetadata(active, p2, []);
   installScenarioLifeMetadata(active, p1);
