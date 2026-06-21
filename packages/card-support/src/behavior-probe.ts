@@ -7,6 +7,7 @@ import {
 import type {
   CardId,
   CardFilter,
+  CardInstance,
   EffectBlock,
   EffectDefinition,
   EngineResult,
@@ -669,6 +670,7 @@ const runDeclareAttackScenario = (
     };
   }
   configureProbeFieldSourceForScenario(state, source, input.definition.effects);
+  const currentSource = currentFieldCard(state, source) ?? source;
   const defender = must(state.players[p2], `player ${String(p2)}`);
   for (const card of defender.hand) {
     state.cardManifest.cards[card.cardId] = resolvedProbeCard({
@@ -682,10 +684,10 @@ const runDeclareAttackScenario = (
     applyAction(state, {
       type: "declareAttack",
       attacker: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
+        instanceId: currentSource.instanceId,
+        cardId: currentSource.cardId,
         playerId: p1,
-        zone: source.zone,
+        zone: currentSource.zone,
       },
       target: {
         instanceId: target.instanceId,
@@ -923,6 +925,14 @@ const drainResult = (
 const countEffectResolvedEvents = (
   events: readonly EngineResult["events"][number][],
 ): number => events.filter((event) => event.type === "effectResolved").length;
+
+const currentFieldCard = (
+  state: GameState,
+  source: CardInstance,
+): CardInstance | undefined =>
+  state.players[source.controller]?.characters.find(
+    (candidate) => candidate.instanceId === source.instanceId,
+  );
 
 const engineErrorReason = (
   error: EngineResult["errors"] extends readonly (infer T)[] | undefined

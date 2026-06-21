@@ -1,8 +1,15 @@
-import { applyAction } from "@optcg/engine-core";
+import {
+  applyAction,
+  getLegalActions,
+  resolveSupportedVanillaBattle,
+} from "@optcg/engine-core";
 import type {
+  Action,
+  CardInstance,
   CardFilter,
   EffectDefinition,
   EngineResult,
+  GameState,
   PlayerId,
 } from "@optcg/types";
 
@@ -58,7 +65,8 @@ export const runOnKOScenario = (
     };
   }
   configureProbeFieldSourceForScenario(state, source, input.definition.effects);
-  source.state = "rested";
+  const currentSource = currentFieldCard(state, source) ?? source;
+  currentSource.state = "rested";
   attacker.leader.state = "active";
   for (const card of defender.hand) {
     state.cardManifest.cards[card.cardId] = resolvedProbeCard({
@@ -68,25 +76,50 @@ export const runOnKOScenario = (
     });
   }
 
+  const attacked = applyAction(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.leader.instanceId,
+      cardId: attacker.leader.cardId,
+      playerId: p2,
+      zone: attacker.leader.zone,
+    },
+    target: {
+      instanceId: currentSource.instanceId,
+      cardId: currentSource.cardId,
+      playerId: p1,
+      zone: currentSource.zone,
+    },
+  });
+  if (attacked.errors !== undefined) {
+    return drainRuntime(attacked, input.setupFilters.length);
+  }
+  const counterStepPass = getLegalActions(attacked.state, p1).find(
+    (action): action is Extract<Action, { type: "respondToDecision" }> =>
+      action.type === "respondToDecision" &&
+      action.response.type === "cards" &&
+      action.response.cards.length === 0,
+  );
+  const readyForResolution =
+    counterStepPass === undefined
+      ? attacked
+      : applyAction(attacked.state, counterStepPass);
   return drainRuntime(
-    applyAction(state, {
-      type: "declareAttack",
-      attacker: {
-        instanceId: attacker.leader.instanceId,
-        cardId: attacker.leader.cardId,
-        playerId: p2,
-        zone: attacker.leader.zone,
-      },
-      target: {
-        instanceId: source.instanceId,
-        cardId: source.cardId,
-        playerId: p1,
-        zone: source.zone,
-      },
-    }),
+    readyForResolution.state.battle === undefined ||
+      readyForResolution.errors !== undefined
+      ? readyForResolution
+      : resolveSupportedVanillaBattle(readyForResolution.state),
     input.setupFilters.length,
   );
 };
+
+const currentFieldCard = (
+  state: GameState,
+  source: CardInstance,
+): CardInstance | undefined =>
+  state.players[source.controller]?.characters.find(
+    (candidate) => candidate.instanceId === source.instanceId,
+  );
 
 const must = <T>(value: T | undefined, label: string): T => {
   if (value === undefined) {
