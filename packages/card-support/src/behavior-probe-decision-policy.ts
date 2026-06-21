@@ -517,6 +517,9 @@ const consumesSelectedCards = (
   }
   if (
     (effect.type === "moveSelected" && effect.selection === selection) ||
+    (effect.type === "attachSelectedDon" && effect.selection === selection) ||
+    (effect.type === "activateSelectedEvent" &&
+      effect.selection === selection) ||
     (effect.type === "playSelected" && effect.selection === selection) ||
     (effect.type === "revealSelected" && effect.selection === selection)
   ) {
