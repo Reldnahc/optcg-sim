@@ -3,6 +3,8 @@ import { test } from "vitest";
 
 import type {
   CardId,
+  CardRef,
+  EffectQueueEntry,
   CardInstance,
   GameState,
   InstanceId,
@@ -48,6 +50,38 @@ const getPlayer = (state: GameState, playerId: string): PlayerState => {
   assert.ok(player !== undefined, `missing player ${playerId}`);
   return player;
 };
+
+const createLifeTriggerQueueEntry = (source: CardRef): EffectQueueEntry => ({
+  id: "queue-entry:life-trigger" as EffectQueueEntry["id"],
+  state: "pending",
+  timingWindowId:
+    "timing-window:life-trigger" as EffectQueueEntry["timingWindowId"],
+  orderingGroup: "turnPlayer",
+  createdAtEventSeq: 1,
+  queuedAtStateSeq: toStateSeq(2),
+  generation: 1,
+  controllerId: source.playerId,
+  source,
+  sourceSnapshot: {
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    ownerId: source.playerId,
+    controllerId: source.playerId,
+    zone: { zone: "noZone", playerId: source.playerId, slot: "temporary" },
+    category: "character",
+    colors: [],
+    keywords: [],
+  },
+  triggerEventId: "event:life-trigger" as NonNullable<
+    EffectQueueEntry["triggerEventId"]
+  >,
+  effectBlockId: "effect:life-trigger" as EffectQueueEntry["effectBlockId"],
+  sourcePresencePolicy: "resolveFromLastKnownInformation",
+  causedBy: {
+    type: "decision",
+    decisionId: "decision:life-trigger" as never,
+  },
+});
 
 const createBaseState = (): GameState => {
   const p1 = toPlayerId("p1");
@@ -198,6 +232,139 @@ test("duplicate zone placement fails with stable invariant name", () => {
       (violation) => violation.invariant === "cards.exactlyOneLocation",
     ),
   );
+});
+
+test("active life trigger reveal is a legal temporary card holder", () => {
+  const state = createBaseState();
+  const p1 = toPlayerId("p1");
+  const lifeCard = getPlayer(state, "p1").life.shift();
+  assert.ok(lifeCard !== undefined);
+  state.revealedCards = [
+    {
+      id: "reveal:life-trigger:p1-life-1:2",
+      cards: [
+        {
+          instanceId: lifeCard.card.instanceId,
+          cardId: lifeCard.card.cardId,
+          playerId: p1,
+          zone: { zone: "noZone", playerId: p1, slot: "temporary" },
+        },
+      ],
+      visibility: { type: "public" },
+      origin: "lifeDamage",
+      createdAtStateSeq: toStateSeq(2),
+      cleanupPolicy: "trashAfterResolution",
+    },
+  ];
+
+  assert.deepEqual(collectGameStateInvariantViolations(state), []);
+});
+
+test("active life trigger reveal cannot duplicate a card already in a normal zone", () => {
+  const state = createBaseState();
+  const p1 = toPlayerId("p1");
+  const lifeCard = getPlayer(state, "p1").life[0];
+  assert.ok(lifeCard !== undefined);
+  state.revealedCards = [
+    {
+      id: "reveal:life-trigger:p1-life-1:2",
+      cards: [
+        {
+          instanceId: lifeCard.card.instanceId,
+          cardId: lifeCard.card.cardId,
+          playerId: p1,
+          zone: { zone: "noZone", playerId: p1, slot: "temporary" },
+        },
+      ],
+      visibility: { type: "public" },
+      origin: "lifeDamage",
+      createdAtStateSeq: toStateSeq(2),
+      cleanupPolicy: "trashAfterResolution",
+    },
+  ];
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.ok(
+    violations.some(
+      (violation) => violation.invariant === "cards.exactlyOneLocation",
+    ),
+  );
+});
+
+test("malformed active life trigger reveal does not satisfy card conservation", () => {
+  const state = createBaseState();
+  const p1 = toPlayerId("p1");
+  const lifeCard = getPlayer(state, "p1").life.shift();
+  assert.ok(lifeCard !== undefined);
+  state.revealedCards = [
+    {
+      id: "reveal:life-trigger:p1-life-1:2",
+      cards: [
+        {
+          instanceId: lifeCard.card.instanceId,
+          cardId: lifeCard.card.cardId,
+          playerId: p1,
+          zone: { zone: "noZone", playerId: p1, slot: "temporary" },
+        },
+      ],
+      visibility: { type: "public" },
+      origin: "custom",
+      createdAtStateSeq: toStateSeq(2),
+      cleanupPolicy: "trashAfterResolution",
+    },
+  ];
+
+  const violations = collectGameStateInvariantViolations(state);
+  assert.ok(
+    violations.some(
+      (violation) => violation.invariant === "cards.revealedCardHolder",
+    ),
+  );
+});
+
+test("no-zone life trigger queue source is valid after the card moves to hand", () => {
+  const state = createBaseState();
+  const p1 = toPlayerId("p1");
+  const lifeCard = getPlayer(state, "p1").life.shift();
+  assert.ok(lifeCard !== undefined);
+  getPlayer(state, "p1").hand.push({
+    ...lifeCard.card,
+    zone: { zone: "hand", playerId: p1, slot: "hand", index: 0 },
+  });
+  state.effectQueue.push(
+    createLifeTriggerQueueEntry({
+      instanceId: lifeCard.card.instanceId,
+      cardId: lifeCard.card.cardId,
+      playerId: p1,
+      zone: { zone: "noZone", playerId: p1, slot: "temporary" },
+    }),
+  );
+
+  assert.deepEqual(collectGameStateInvariantViolations(state), []);
+});
+
+test("no-zone life trigger queue source is valid after the card moves to life", () => {
+  const state = createBaseState();
+  const p1 = toPlayerId("p1");
+  const lifeCard = getPlayer(state, "p1").life.shift();
+  assert.ok(lifeCard !== undefined);
+  getPlayer(state, "p1").life.push({
+    card: {
+      ...lifeCard.card,
+      zone: { zone: "life", playerId: p1, slot: "life", index: 0 },
+    },
+    faceUp: true,
+  });
+  state.effectQueue.push(
+    createLifeTriggerQueueEntry({
+      instanceId: lifeCard.card.instanceId,
+      cardId: lifeCard.card.cardId,
+      playerId: p1,
+      zone: { zone: "noZone", playerId: p1, slot: "temporary" },
+    }),
+  );
+
+  assert.deepEqual(collectGameStateInvariantViolations(state), []);
 });
 
 test("invalid attached DON!! ownership or missing attached instance fails with stable invariant name", () => {

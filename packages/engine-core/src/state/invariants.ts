@@ -87,6 +87,54 @@ const zoneCardsForPlayer = (
   return cards;
 };
 
+const activeLifeTriggerRevealCardRecords = (
+  state: GameState,
+  violations: GameStateInvariantViolation[],
+): CardRecord[] => {
+  const cards: CardRecord[] = [];
+  for (const record of state.revealedCards) {
+    for (const card of record.cards) {
+      if (card.zone?.zone !== "noZone") {
+        continue;
+      }
+      if (
+        record.origin !== "lifeDamage" ||
+        record.cleanupPolicy !== "trashAfterResolution" ||
+        card.zone.slot !== "temporary" ||
+        card.zone.playerId !== card.playerId ||
+        !Object.hasOwn(state.players, card.playerId)
+      ) {
+        violations.push({
+          invariant: "cards.revealedCardHolder",
+          message:
+            "no-zone revealed cards must be active life trigger cards waiting for cleanup",
+          details: {
+            revealId: record.id,
+            instanceId: card.instanceId,
+            origin: record.origin,
+            cleanupPolicy: record.cleanupPolicy,
+            zone: card.zone,
+            playerId: card.playerId,
+          },
+        });
+        continue;
+      }
+      cards.push({
+        card: {
+          instanceId: card.instanceId,
+          cardId: card.cardId,
+          owner: card.playerId,
+          controller: card.playerId,
+          attachedDon: [],
+          zone: card.zone,
+        },
+        location: `revealedCards.${record.id}`,
+      });
+    }
+  }
+  return cards;
+};
+
 export const collectGameStateInvariantViolations = (
   state: GameState,
 ): GameStateInvariantViolation[] => {
@@ -291,6 +339,40 @@ export const collectGameStateInvariantViolations = (
           },
         });
       }
+    }
+  }
+
+  const revealedNoZoneRecords = activeLifeTriggerRevealCardRecords(
+    state,
+    violations,
+  );
+  const revealedNoZoneInstanceIds = new Set(
+    revealedNoZoneRecords.map((record) => record.card.instanceId),
+  );
+  for (const entry of revealedNoZoneRecords) {
+    const existing = placedByInstance.get(entry.card.instanceId) ?? [];
+    existing.push(entry);
+    placedByInstance.set(entry.card.instanceId, existing);
+  }
+
+  for (const entry of state.effectQueue) {
+    if (
+      (entry.source.zone?.zone === "noZone" ||
+        entry.sourceSnapshot.zone.zone === "noZone") &&
+      !revealedNoZoneInstanceIds.has(entry.source.instanceId) &&
+      !placedByInstance.has(entry.source.instanceId)
+    ) {
+      violations.push({
+        invariant: "cards.revealedCardHolder",
+        message:
+          "no-zone effect queue source must have an active reveal holder",
+        details: {
+          queueEntryId: entry.id,
+          instanceId: entry.source.instanceId,
+          sourceZone: entry.source.zone,
+          sourceSnapshotZone: entry.sourceSnapshot.zone,
+        },
+      });
     }
   }
 
