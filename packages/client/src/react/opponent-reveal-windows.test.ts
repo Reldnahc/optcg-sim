@@ -232,4 +232,41 @@ describe("opponent reveal windows", () => {
 
     assert.deepEqual(windows, []);
   });
+
+  test("keeps active life trigger reveals visible even after dismissal", () => {
+    const triggerRevealId = "reveal:life-trigger:trigger-card-1:12";
+    const snapshot: ClientPlayerSnapshot = {
+      view: {
+        events: [],
+        revealedCards: [
+          {
+            id: triggerRevealId,
+            cards: [cardRef],
+            visibility: "public",
+            origin: "lifeDamage",
+            cleanupPolicy: "trashAfterResolution",
+            createdAtStateSeq: 12 as StateSeq,
+          },
+        ],
+      } as unknown as PlayerView,
+      actions: [],
+    };
+
+    const windows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: snapshot,
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set([triggerRevealId]),
+      cardModel,
+    });
+
+    assert.equal(windows.length, 1);
+    assert.equal(windows[0]?.revealId, triggerRevealId);
+    assert.equal(windows[0].model.title, "Revealed");
+  });
 });

@@ -53,6 +53,10 @@ const isPrivateLookedSetRecord = (record: PublicRevealRecord): boolean =>
   record.origin === "topOfDeck" &&
   record.cleanupPolicy === "returnToOrigin";
 
+const isActiveLifeTriggerReveal = (record: PublicRevealRecord): boolean =>
+  record.origin === "lifeDamage" &&
+  record.cleanupPolicy === "trashAfterResolution";
+
 export const opponentRevealWindowsFromState = ({
   currentPlayerId,
   playerSnapshot,
@@ -112,7 +116,8 @@ export const opponentRevealWindowsFromState = ({
       (record) =>
         isWindowRevealRecord(record) &&
         !isPrivateLookedSetRecord(record) &&
-        !activeDismissedRevealIds.has(record.id) &&
+        (isActiveLifeTriggerReveal(record) ||
+          !activeDismissedRevealIds.has(record.id)) &&
         !eventRevealIds.has(record.id) &&
         record.cards.length > 0,
     )
