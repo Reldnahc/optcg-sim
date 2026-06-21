@@ -14,11 +14,10 @@ export const chooseProbeDecisionAction = (
   legalActions: readonly LegalAction[],
   effectBlocks: readonly EffectBlock[],
 ): Extract<Action, { type: "respondToDecision" }> | undefined => {
-  const legalAction = chooseDecisionAction(legalActions);
+  const legalAction = chooseDecisionAction(state, legalActions);
   const pendingAction = choosePendingDecisionAction(
     state,
     shouldProbeSelectOptionalTarget(state, effectBlocks),
-    shouldProbeSelectOptionalCard(state, effectBlocks),
   );
   return shouldPreferPendingDecisionAction(legalAction, pendingAction)
     ? pendingAction
@@ -26,6 +25,7 @@ export const chooseProbeDecisionAction = (
 };
 
 const chooseDecisionAction = (
+  state: GameState,
   legalActions: readonly LegalAction[],
 ): Extract<Action, { type: "respondToDecision" }> | undefined => {
   const responses = legalActions.filter(
@@ -35,7 +35,9 @@ const chooseDecisionAction = (
   if (responses.length === 0) {
     return undefined;
   }
-  return [...responses].sort(compareDecisionProgress)[0];
+  return [...responses].sort((left, right) =>
+    compareDecisionProgress(state, left, right),
+  )[0];
 };
 
 const shouldPreferPendingDecisionAction = (
@@ -58,20 +60,47 @@ const shouldPreferPendingDecisionAction = (
     legalAction.response.type === "cards" &&
     pendingAction.response.type === "cards"
   ) {
-    return (
-      legalAction.response.cards.length === 0 &&
-      pendingAction.response.cards.length > 0
-    );
+    return eitherCardResponseMakesProgress(legalAction, pendingAction)
+      ? !sameCardResponse(legalAction, pendingAction)
+      : false;
   }
   return false;
 };
 
-const compareDecisionProgress = (
+const eitherCardResponseMakesProgress = (
+  legalAction: Extract<Action, { type: "respondToDecision" }>,
+  pendingAction: Extract<Action, { type: "respondToDecision" }>,
+): boolean =>
+  legalAction.response.type === "cards" &&
+  pendingAction.response.type === "cards" &&
+  (legalAction.response.cards.length > 0 ||
+    pendingAction.response.cards.length > 0);
+
+const sameCardResponse = (
   left: Extract<Action, { type: "respondToDecision" }>,
   right: Extract<Action, { type: "respondToDecision" }>,
-): number => decisionScore(right) - decisionScore(left);
+): boolean => {
+  if (left.response.type !== "cards" || right.response.type !== "cards") {
+    return false;
+  }
+  if (left.response.cards.length !== right.response.cards.length) {
+    return false;
+  }
+  return left.response.cards.every((card, index) => {
+    const other =
+      right.response.type === "cards" ? right.response.cards[index] : undefined;
+    return other?.instanceId === card.instanceId;
+  });
+};
+
+const compareDecisionProgress = (
+  state: GameState,
+  left: Extract<Action, { type: "respondToDecision" }>,
+  right: Extract<Action, { type: "respondToDecision" }>,
+): number => decisionScore(state, right) - decisionScore(state, left);
 
 const decisionScore = (
+  state: GameState,
   action: Extract<Action, { type: "respondToDecision" }>,
 ): number => {
   const response = action.response;
@@ -82,7 +111,8 @@ const decisionScore = (
       return (
         90 +
         selectionCount(response.selectedCardInstanceIds) +
-        selectionCount(response.selectedDonInstanceIds)
+        selectionCount(response.selectedDonInstanceIds) -
+        paymentSourceSelectionPenalty(state, response)
       );
     case "paymentDeclined":
       return 0;
@@ -115,10 +145,36 @@ const decisionScore = (
 const selectionCount = (values: readonly unknown[] | undefined): number =>
   values?.length ?? 0;
 
+const paymentSourceSelectionPenalty = (
+  state: GameState,
+  response: Extract<Action, { type: "respondToDecision" }>["response"] & {
+    readonly type: "payment";
+  },
+): number => {
+  const decision = state.pendingDecision;
+  const option =
+    decision?.type === "payCost"
+      ? decision.paymentOptions.find(
+          (candidate) => candidate.id === response.optionId,
+        )
+      : undefined;
+  if (
+    option?.type !== "moveCards" ||
+    response.selectedCardInstanceIds === undefined
+  ) {
+    return 0;
+  }
+  const sourceIds = effectSourceInstanceIds(state);
+  return response.selectedCardInstanceIds.some((id) =>
+    sourceIds.has(String(id)),
+  )
+    ? 50
+    : 0;
+};
+
 const choosePendingDecisionAction = (
   state: GameState,
   selectOptionalTarget: boolean,
-  selectOptionalCard: boolean,
 ): Extract<Action, { type: "respondToDecision" }> | undefined => {
   const decision = state.pendingDecision;
   if (decision === undefined) {
@@ -131,6 +187,18 @@ const choosePendingDecisionAction = (
       response: {
         type: "chooseQuantity",
         quantity: decision.max,
+      },
+    };
+  }
+  if (decision.type === "confirmLifeTrigger") {
+    return {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: {
+        type: "lifeTrigger",
+        choice: decision.options.includes("activateTrigger")
+          ? "activateTrigger"
+          : "addToHand",
       },
     };
   }
@@ -158,15 +226,36 @@ const choosePendingDecisionAction = (
     };
   }
   if (decision.type === "selectCards") {
-    if (decision.request.min === 0 && !selectOptionalCard) {
-      return undefined;
-    }
-    const max = decision.request.max;
+    const orderedCandidates = orderCardCandidatesForProbe(
+      state,
+      decision.candidates,
+      {
+        avoidEffectSource: true,
+        distinctNames: decision.request.filter?.custom === "differentNames",
+      },
+    );
+    const max =
+      decision.request.filter?.custom === "differentNames"
+        ? Math.min(
+            decision.request.max,
+            distinctNameCount(state, orderedCandidates),
+          )
+        : decision.request.max;
     const cardCount = Math.min(
       max,
-      decision.candidates.length,
+      orderedCandidates.length,
       Math.max(1, decision.request.min),
     );
+    if (decision.request.min === 0 && orderedCandidates.length === 0) {
+      return {
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: {
+          type: "cards",
+          cards: [],
+        },
+      };
+    }
     if (cardCount < decision.request.min || cardCount === 0) {
       return undefined;
     }
@@ -175,7 +264,7 @@ const choosePendingDecisionAction = (
       decisionId: decision.id,
       response: {
         type: "cards",
-        cards: decision.candidates
+        cards: orderedCandidates
           .slice(0, cardCount)
           .map((candidate) => candidate.card),
       },
@@ -207,54 +296,6 @@ const choosePendingDecisionAction = (
       ids: decision.cards.map((card) => String(card.instanceId)),
     },
   };
-};
-
-const shouldProbeSelectOptionalCard = (
-  state: GameState,
-  effectBlocks: readonly EffectBlock[],
-): boolean => {
-  const decision = state.pendingDecision;
-  if (
-    decision === undefined ||
-    decision.type !== "selectCards" ||
-    decision.request.min !== 0
-  ) {
-    return false;
-  }
-  const frame = state.effectExecutionFrames.find(
-    (candidate) => candidate.pendingDecision.decisionId === decision.id,
-  );
-  if (frame === undefined) {
-    return false;
-  }
-  const effectBlock = effectBlocks.find(
-    (candidate) => candidate.id === frame.effectBlockId,
-  );
-  const sequence =
-    effectBlock?.effect.type === "sequence"
-      ? resolveSequenceForPath(effectBlock.effect, frame.effectPath)
-      : undefined;
-  if (sequence === undefined) {
-    return false;
-  }
-  const segment = sequence.effects[frame.pendingDecision.resumeAtSegmentIndex];
-  if (
-    segment?.effect.type !== "selectCards" &&
-    segment?.effect.type !== "selectFromSet"
-  ) {
-    return false;
-  }
-  const saveAs =
-    segment.effect.type === "selectCards"
-      ? segment.effect.saveAs
-      : segment.effect.saveAs;
-  return sequence.effects
-    .slice(frame.pendingDecision.resumeAtSegmentIndex + 1)
-    .some(
-      (candidate) =>
-        consumesSelectedCards(candidate.effect, saveAs) ||
-        candidate.connector === "ifPreviousSucceeded",
-    );
 };
 
 const shouldProbeSelectOptionalTarget = (
@@ -508,50 +549,6 @@ const consumesSelectedTarget = (
   return false;
 };
 
-const consumesSelectedCards = (
-  effect: Effect | { type: "payCost" },
-  selection: string,
-): boolean => {
-  if (effect.type === "payCost") {
-    return false;
-  }
-  if (
-    (effect.type === "moveSelected" && effect.selection === selection) ||
-    (effect.type === "attachSelectedDon" && effect.selection === selection) ||
-    (effect.type === "activateSelectedEvent" &&
-      effect.selection === selection) ||
-    (effect.type === "playSelected" && effect.selection === selection) ||
-    (effect.type === "revealSelected" && effect.selection === selection)
-  ) {
-    return true;
-  }
-  if (effect.type === "sequence") {
-    return effect.effects.some((segment) =>
-      consumesSelectedCards(segment.effect, selection),
-    );
-  }
-  if (effect.type === "conditional") {
-    return (
-      consumesSelectedCards(effect.then, selection) ||
-      (effect.else === undefined
-        ? false
-        : consumesSelectedCards(effect.else, selection))
-    );
-  }
-  if (effect.type === "delayed" || effect.type === "forEachSavedTarget") {
-    return consumesSelectedCards(effect.effect, selection);
-  }
-  if (effect.type === "replacement") {
-    return consumesSelectedCards(effect.instead, selection);
-  }
-  if (effect.type === "choice") {
-    return effect.options.some((option) =>
-      consumesSelectedCards(option.effect, selection),
-    );
-  }
-  return false;
-};
-
 const targetUsesSelectedTarget = (
   target: Target,
   saveResultAs: string,
@@ -564,6 +561,63 @@ type TargetCandidate = Extract<
   NonNullable<GameState["pendingDecision"]>,
   { type: "selectTargets" }
 >["candidates"][number];
+
+type CardCandidate = Extract<
+  NonNullable<GameState["pendingDecision"]>,
+  { type: "selectCards" }
+>["candidates"][number];
+
+const orderCardCandidatesForProbe = (
+  state: GameState,
+  candidates: readonly CardCandidate[],
+  options: {
+    readonly avoidEffectSource: boolean;
+    readonly distinctNames: boolean;
+  },
+): readonly CardCandidate[] => {
+  const sourceIds = options.avoidEffectSource
+    ? effectSourceInstanceIds(state)
+    : new Set<string>();
+  const seen = new Set<string>();
+  const distinct: CardCandidate[] = [];
+  const duplicates: CardCandidate[] = [];
+  const sourceMatches: CardCandidate[] = [];
+  for (const candidate of candidates) {
+    if (sourceIds.has(String(candidate.card.instanceId))) {
+      sourceMatches.push(candidate);
+      continue;
+    }
+    if (!options.distinctNames) {
+      distinct.push(candidate);
+      continue;
+    }
+    const name =
+      state.cardManifest.cards[candidate.card.cardId]?.name ??
+      String(candidate.card.cardId);
+    if (seen.has(name)) {
+      duplicates.push(candidate);
+      continue;
+    }
+    seen.add(name);
+    distinct.push(candidate);
+  }
+  return [...distinct, ...duplicates, ...sourceMatches];
+};
+
+const distinctNameCount = (
+  state: GameState,
+  candidates: readonly CardCandidate[],
+): number =>
+  new Set(
+    candidates.map(
+      (candidate) =>
+        state.cardManifest.cards[candidate.card.cardId]?.name ??
+        String(candidate.card.cardId),
+    ),
+  ).size;
+
+const effectSourceInstanceIds = (state: GameState): Set<string> =>
+  new Set(state.effectQueue.map((entry) => String(entry.source.instanceId)));
 
 const orderTargetCandidatesForProbe = (
   state: GameState,
