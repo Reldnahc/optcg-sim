@@ -17,6 +17,10 @@ const defaultSelectableCardCount = (
   return Math.min(Math.max(min, 1), max, availableCount);
 };
 
+const unhandledBotDecision = (decision: never): never => {
+  throw new Error(`Unhandled bot decision type: ${JSON.stringify(decision)}`);
+};
+
 export const chooseDefaultBotDecision = ({
   snapshot,
   botPlayerId,
@@ -148,4 +152,5 @@ export const chooseDefaultBotDecision = ({
         response: { type: "paymentDeclined" },
       };
   }
+  return unhandledBotDecision(decision);
 };

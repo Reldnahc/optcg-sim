@@ -30,36 +30,7 @@ const isCounterStepPassDecision = (
   decision.min === 0 &&
   decision.max === 0;
 
-const shouldPreferVisibleDecisionAction = (
-  decision: BotPendingDecision | undefined,
-  battleStep: string | undefined,
-): boolean => {
-  if (
-    decision === undefined ||
-    isCounterStepPassDecision(decision, battleStep)
-  ) {
-    return false;
-  }
-  switch (decision.type) {
-    case "payCost":
-    case "mulligan":
-    case "chooseEffectOption":
-    case "chooseReplacement":
-      return true;
-    case "chooseQuantity":
-    case "selectCards":
-    case "selectTargets":
-    case "orderCards":
-    case "chooseTriggerOrder":
-    case "confirmLifeTrigger":
-    case "chooseOptionalActivation":
-    case "declareLoopCount":
-    case "rollbackConsent":
-      return false;
-  }
-};
-
-const choosePendingDecision = ({
+const chooseProfilePendingDecision = ({
   snapshot,
   botPlayerId,
   profile,
@@ -71,16 +42,11 @@ const choosePendingDecision = ({
   if (
     decision === undefined ||
     decision.playerId !== botPlayerId ||
-    decision.type === "payCost" ||
-    decision.type === "mulligan" ||
     isCounterStepPassDecision(decision, battle?.step)
   ) {
     return undefined;
   }
-  return (
-    profile.chooseDecision?.({ snapshot, botPlayerId }) ??
-    chooseDefaultBotDecision({ snapshot, botPlayerId })
-  );
+  return profile.chooseDecision?.({ snapshot, botPlayerId });
 };
 
 const evaluatedVisibleActions = ({
@@ -171,6 +137,7 @@ export const createBotStrategy = (
     const player = snapshot.players[botPlayerId];
     const pendingDecision = player?.view.pendingDecision;
     const battleStep = player?.view.battle?.step;
+    const botOwnsPendingDecision = pendingDecision?.playerId === botPlayerId;
     const counterStepPass = chooseCounterStepPass(
       pendingDecision,
       battleStep,
@@ -179,21 +146,23 @@ export const createBotStrategy = (
     if (counterStepPass !== undefined) {
       return counterStepPass;
     }
-    if (
-      pendingDecision?.playerId === botPlayerId &&
-      shouldPreferVisibleDecisionAction(pendingDecision, battleStep)
-    ) {
+    if (botOwnsPendingDecision) {
+      const profileDecisionChoice = chooseProfilePendingDecision({
+        snapshot,
+        botPlayerId,
+        profile,
+      });
+      if (profileDecisionChoice !== undefined) {
+        return profileDecisionChoice;
+      }
       const decisionAction = chooseBestVisibleDecisionAction(evaluated);
       if (decisionAction !== undefined) {
         return { type: "submitAction", actionIndex: decisionAction.index };
       }
-    }
-    const pendingDecisionChoice = choosePendingDecision({
-      snapshot,
-      botPlayerId,
-      profile,
-    });
-    if (pendingDecisionChoice !== undefined) {
+      const pendingDecisionChoice = chooseDefaultBotDecision({
+        snapshot,
+        botPlayerId,
+      });
       return pendingDecisionChoice;
     }
     const chosen = chooseBestAction(evaluated);

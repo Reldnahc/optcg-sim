@@ -4,9 +4,11 @@ import type {
   CardId,
   CardRef,
   DecisionId,
+  DecisionResponse,
   InstanceId,
   PlayerId,
   PublicPendingDecisionId,
+  Zone,
 } from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
@@ -16,6 +18,40 @@ import type {
 } from "./dev-snapshot-types.js";
 
 const botId = "p2" as PlayerId;
+type BotPendingDecision = NonNullable<
+  DevMatchSnapshot["players"][PlayerId]["view"]["pendingDecision"]
+>;
+type BotPendingDecisionBase<TType extends BotPendingDecision["type"]> = Pick<
+  Extract<BotPendingDecision, { type: TType }>,
+  | "id"
+  | "spotlightPendingId"
+  | "type"
+  | "playerId"
+  | "prompt"
+  | "causedBy"
+  | "presentation"
+>;
+
+const cardRef = (instanceId: string, cardId: string = "OP01-001"): CardRef => ({
+  instanceId: instanceId as InstanceId,
+  cardId: cardId as CardId,
+  playerId: botId,
+});
+
+const baseDecision = <TType extends BotPendingDecision["type"]>(
+  id: string,
+  type: TType,
+): BotPendingDecisionBase<TType> =>
+  ({
+    id: id as DecisionId,
+    spotlightPendingId:
+      `spotlight:pending:test:${id}` as PublicPendingDecisionId,
+    type,
+    playerId: botId,
+    prompt: "Choose.",
+    causedBy: { type: "ruleProcess", name: "test" },
+    presentation: { title: "Choose", instruction: "Choose." },
+  }) as BotPendingDecisionBase<TType>;
 
 const snapshotWithDecision = (
   pendingDecision: NonNullable<
@@ -45,6 +81,191 @@ const snapshotWithDecision = (
   }) as unknown as DevMatchSnapshot;
 
 describe("bot decision liveness", () => {
+  test("answers every public pending decision type without visible actions", () => {
+    const orderedCard = cardRef("ordered-card");
+    const targetCard = cardRef("target-card", "OP01-002");
+    const selectedCard = cardRef("selected-card", "OP01-003");
+    const destination = "deck" as Zone;
+    const cases: readonly {
+      readonly name: string;
+      readonly decision: BotPendingDecision;
+      readonly response: DecisionResponse;
+    }[] = [
+      {
+        name: "payCost",
+        decision: {
+          ...baseDecision("decision:matrix:pay-cost", "payCost"),
+        },
+        response: { type: "paymentDeclined" },
+      },
+      {
+        name: "chooseTriggerOrder",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:choose-trigger-order",
+            "chooseTriggerOrder",
+          ),
+          choices: [{ triggerId: "trigger-1", source: cardRef("source-card") }],
+        },
+        response: { type: "orderedIds", ids: ["trigger-1"] },
+      },
+      {
+        name: "chooseEffectOption",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:choose-effect-option",
+            "chooseEffectOption",
+          ),
+        },
+        response: { type: "effectOptionDeclined" },
+      },
+      {
+        name: "chooseReplacement",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:choose-replacement",
+            "chooseReplacement",
+          ),
+        },
+        response: { type: "replacement" },
+      },
+      {
+        name: "chooseQuantity",
+        decision: {
+          ...baseDecision("decision:matrix:choose-quantity", "chooseQuantity"),
+          mode: "upTo",
+          min: 1,
+          max: 3,
+        },
+        response: { type: "chooseQuantity", quantity: 1 },
+      },
+      {
+        name: "selectCards",
+        decision: {
+          ...baseDecision("decision:matrix:select-cards", "selectCards"),
+          min: 1,
+          max: 2,
+          candidates: [{ card: selectedCard }],
+          choices: [{ card: selectedCard, selectable: true }],
+        },
+        response: { type: "cards", cards: [selectedCard] },
+      },
+      {
+        name: "selectTargets",
+        decision: {
+          ...baseDecision("decision:matrix:select-targets", "selectTargets"),
+          min: 1,
+          max: 1,
+          candidates: [{ card: targetCard }],
+        },
+        response: { type: "targets", targets: [targetCard] },
+      },
+      {
+        name: "orderCards",
+        decision: {
+          ...baseDecision("decision:matrix:order-cards", "orderCards"),
+          cards: [orderedCard],
+          destination,
+        },
+        response: { type: "orderedIds", ids: [String(orderedCard.instanceId)] },
+      },
+      {
+        name: "confirmLifeTrigger",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:confirm-life-trigger",
+            "confirmLifeTrigger",
+          ),
+          card: cardRef("life-card"),
+        },
+        response: { type: "lifeTrigger", choice: "addToHand" },
+      },
+      {
+        name: "chooseOptionalActivation",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:choose-optional-activation",
+            "chooseOptionalActivation",
+          ),
+        },
+        response: { type: "optionalActivation", choice: "decline" },
+      },
+      {
+        name: "mulligan",
+        decision: {
+          ...baseDecision("decision:matrix:mulligan", "mulligan"),
+        },
+        response: { type: "mulligan", keep: true },
+      },
+      {
+        name: "declareLoopCount",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:declare-loop-count",
+            "declareLoopCount",
+          ),
+        },
+        response: { type: "loopCount", count: 1 },
+      },
+      {
+        name: "rollbackConsent",
+        decision: {
+          ...baseDecision(
+            "decision:matrix:rollback-consent",
+            "rollbackConsent",
+          ),
+        },
+        response: { type: "rollbackConsent", allow: true },
+      },
+    ];
+
+    for (const { name, decision, response } of cases) {
+      const chosen = chooseBotAction(snapshotWithDecision(decision), botId);
+
+      assert.deepEqual(
+        chosen,
+        {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response,
+        },
+        name,
+      );
+    }
+  });
+
+  test("does not take normal visible actions while fallback can answer a pending decision", () => {
+    const chosen = chooseBotAction(
+      snapshotWithDecision(
+        {
+          ...baseDecision("decision:normal-action-blocked", "chooseQuantity"),
+          mode: "upTo",
+          min: 0,
+          max: 2,
+        },
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+          },
+          {
+            index: 1,
+            type: "endMainPhase",
+            label: "End turn",
+          },
+        ],
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:normal-action-blocked",
+      response: { type: "chooseQuantity", quantity: 0 },
+    });
+  });
+
   test("declines a pending cost when no visible payment action exists", () => {
     const chosen = chooseBotAction(
       snapshotWithDecision({
@@ -185,6 +406,82 @@ describe("bot decision liveness", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("uses a visible card selection response instead of synthesizing one", () => {
+    const chosen = chooseBotAction(
+      snapshotWithDecision(
+        {
+          id: "decision:select-visible" as DecisionId,
+          spotlightPendingId:
+            "spotlight:pending:test:select-visible" as PublicPendingDecisionId,
+          type: "selectCards",
+          playerId: botId,
+          prompt: "Choose cards.",
+          causedBy: { type: "ruleProcess", name: "test" },
+          presentation: { title: "Choose", instruction: "Choose." },
+          min: 1,
+          max: 1,
+          candidates: [
+            {
+              card: {
+                instanceId: "card-1" as InstanceId,
+                cardId: "OP01-001" as CardId,
+                playerId: botId,
+              },
+            },
+          ],
+          choices: [],
+        },
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play another card",
+          },
+          {
+            index: 7,
+            type: "respondToDecision",
+            label: "Choose legal selection",
+            responseKey: "cards:card-1",
+          },
+        ],
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 7 });
+  });
+
+  test("uses a visible quantity response instead of synthesizing one", () => {
+    const chosen = chooseBotAction(
+      snapshotWithDecision(
+        {
+          id: "decision:quantity-visible" as DecisionId,
+          spotlightPendingId:
+            "spotlight:pending:test:quantity-visible" as PublicPendingDecisionId,
+          type: "chooseQuantity",
+          playerId: botId,
+          prompt: "Choose quantity.",
+          causedBy: { type: "ruleProcess", name: "test" },
+          presentation: { title: "Choose", instruction: "Choose." },
+          mode: "upTo",
+          min: 0,
+          max: 3,
+        },
+        [
+          {
+            index: 2,
+            type: "respondToDecision",
+            label: "Choose 2",
+            responseKey: "quantity:2",
+          },
+        ],
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 2 });
   });
 
   test("still activates an effect before ending main phase", () => {
