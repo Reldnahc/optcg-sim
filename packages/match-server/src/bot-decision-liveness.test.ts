@@ -6,6 +6,7 @@ import type {
   DecisionId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
@@ -48,6 +49,8 @@ describe("bot decision liveness", () => {
     const chosen = chooseBotAction(
       snapshotWithDecision({
         id: "decision:cost" as DecisionId,
+        spotlightPendingId:
+          "spotlight:pending:test:cost" as PublicPendingDecisionId,
         type: "payCost",
         playerId: botId,
         prompt: "Pay the cost?",
@@ -68,6 +71,8 @@ describe("bot decision liveness", () => {
     const chosen = chooseBotAction(
       snapshotWithDecision({
         id: "decision:trigger-order" as DecisionId,
+        spotlightPendingId:
+          "spotlight:pending:test:trigger-order" as PublicPendingDecisionId,
         type: "chooseTriggerOrder",
         playerId: botId,
         prompt: "Choose trigger order.",
@@ -93,6 +98,8 @@ describe("bot decision liveness", () => {
       snapshotWithDecision(
         {
           id: "decision:effect-option" as DecisionId,
+          spotlightPendingId:
+            "spotlight:pending:test:effect-option" as PublicPendingDecisionId,
           type: "chooseEffectOption",
           playerId: botId,
           prompt: "Choose one.",
@@ -119,6 +126,8 @@ describe("bot decision liveness", () => {
       snapshotWithDecision(
         {
           id: "decision:replacement" as DecisionId,
+          spotlightPendingId:
+            "spotlight:pending:test:replacement" as PublicPendingDecisionId,
           type: "chooseReplacement",
           playerId: botId,
           prompt: "Choose replacement.",
@@ -148,6 +157,8 @@ describe("bot decision liveness", () => {
       snapshotWithDecision(
         {
           id: "decision:activation-cost" as DecisionId,
+          spotlightPendingId:
+            "spotlight:pending:test:activation-cost" as PublicPendingDecisionId,
           type: "payCost",
           playerId: botId,
           prompt: "Pay the cost?",
@@ -225,6 +236,8 @@ describe("bot decision liveness", () => {
     const chosen = chooseBotAction(
       snapshotWithDecision({
         id: "decision:character-overflow:played-card" as DecisionId,
+        spotlightPendingId:
+          "spotlight:pending:test:character-overflow:played-card" as PublicPendingDecisionId,
         type: "selectCards",
         playerId: botId,
         prompt: "Choose a Character to trash.",
@@ -264,6 +277,8 @@ describe("bot decision liveness", () => {
     const chosen = chooseBotAction(
       snapshotWithDecision({
         id: "decision:runtime:playSelected:overflow:played-card:11" as DecisionId,
+        spotlightPendingId:
+          "spotlight:pending:test:runtime:playSelected:overflow:played-card:11" as PublicPendingDecisionId,
         type: "selectCards",
         playerId: botId,
         prompt: "Choose a Character to trash.",

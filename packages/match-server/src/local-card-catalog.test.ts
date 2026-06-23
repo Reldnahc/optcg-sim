@@ -95,10 +95,7 @@ describe("local dev card catalog", () => {
     if (p1State === undefined) {
       throw new Error("Missing p1 state.");
     }
-    const source = p1State.deck[0];
-    if (source === undefined) {
-      throw new Error("Missing deck source.");
-    }
+    const source = p1State.leader;
     const card = match.state.cardManifest.cards[source.cardId];
     if (card === undefined) {
       throw new Error("Missing active effect source card.");
@@ -153,16 +150,13 @@ describe("local dev card catalog", () => {
     assert.equal(span.id, "span:body:draw");
   });
 
-  test("includes resolved effect presentation sources for brief spotlight display", () => {
+  test("includes authored spotlight effect sources for brief spotlight display", () => {
     const match = createTestMatch();
     const p1State = match.state.players[p1];
     if (p1State === undefined) {
       throw new Error("Missing p1 state.");
     }
-    const source = p1State.deck[0];
-    if (source === undefined) {
-      throw new Error("Missing deck source.");
-    }
+    const source = p1State.leader;
     const card = match.state.cardManifest.cards[source.cardId];
     if (card === undefined) {
       throw new Error("Missing resolved effect source card.");
@@ -172,16 +166,32 @@ describe("local dev card catalog", () => {
       id: "event:test:effect-resolved" as EngineEventId,
       seq: 1,
       type: "effectResolved",
+      payload: { status: "resolved" },
+      visibility: { type: "public" },
+      createdAtStateSeq: match.state.seq,
+    });
+    match.state.eventJournal.push({
+      id: "event:test:spotlight-entry" as EngineEventId,
+      seq: 2,
+      type: "spotlightEntryCreated",
       payload: {
-        status: "resolved",
-        presentation: {
-          source: {
-            instanceId: source.instanceId,
-            cardId: source.cardId,
-            playerId: p1,
+        entry: {
+          kind: "effectText",
+          id: "spotlight:effectText:event:test:effect-resolved:0",
+          key: "spotlight:effectText:event:test:effect-resolved:0",
+          semanticKey: "effectText|event:test:effect-resolved|0",
+          mode: "resolved",
+          status: "resolved",
+          active: {
+            source: {
+              instanceId: source.instanceId,
+              cardId: source.cardId,
+              playerId: p1,
+            },
+            textKind: "effect",
+            activeSpanIds: ["span:body:draw"],
           },
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
+          resolvedEventId: "event:test:effect-resolved",
         },
       },
       visibility: { type: "public" },

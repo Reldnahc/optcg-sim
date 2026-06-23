@@ -210,17 +210,38 @@ const addVisibleCatalogEntriesForCardIdentityEvents = (
   }
 };
 
-const activeEffectTextSourceFromPayload = (
+const spotlightEffectTextSourceFromPayload = (
   payload: unknown,
 ): CardRef | undefined => {
   if (!isRecord(payload)) {
     return undefined;
   }
-  const presentation = payload["presentation"];
-  if (!isRecord(presentation)) {
+  const entry = payload["entry"];
+  if (!isRecord(entry)) {
     return undefined;
   }
-  return revealPayloadCardRef(presentation["source"]);
+  const active = entry["active"];
+  if (!isRecord(active)) {
+    return undefined;
+  }
+  return revealPayloadCardRef(active["source"]);
+};
+
+const spotlightEffectTextSourceFromEntry = (
+  entry: unknown,
+): CardRef | undefined => {
+  if (!isRecord(entry)) {
+    return undefined;
+  }
+  const kind = entry["kind"];
+  if (kind !== undefined && kind !== "effectText") {
+    return undefined;
+  }
+  const active = entry["active"];
+  if (!isRecord(active)) {
+    return undefined;
+  }
+  return revealPayloadCardRef(active["source"]);
 };
 
 const addVisibleCatalogEntriesForActiveEffectText = (
@@ -232,11 +253,15 @@ const addVisibleCatalogEntriesForActiveEffectText = (
   const activeSources = [
     view.activeEffectText?.source,
     view.pendingDecision?.presentation.activeEffectText?.source,
+    ...(view.effectSpotlightHistory?.entries.flatMap((entry) => {
+      const source = spotlightEffectTextSourceFromEntry(entry);
+      return source === undefined ? [] : [source];
+    }) ?? []),
     ...view.events.flatMap((event) => {
-      if (event.type !== "effectResolved") {
+      if (event.type !== "spotlightEntryCreated") {
         return [];
       }
-      const source = activeEffectTextSourceFromPayload(event.payload);
+      const source = spotlightEffectTextSourceFromPayload(event.payload);
       return source === undefined ? [] : [source];
     }),
   ];

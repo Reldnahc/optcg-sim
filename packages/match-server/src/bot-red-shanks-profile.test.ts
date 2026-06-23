@@ -6,6 +6,7 @@ import type {
   DecisionId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
   PublicCardView,
 } from "@optcg/types";
 
@@ -132,6 +133,8 @@ describe("red Shanks bot profile", () => {
     );
     viewForBot(snapshot).pendingDecision = {
       id: "decision:op09-leader-defense" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op09-leader-defense" as PublicPendingDecisionId,
       type: "chooseOptionalActivation",
       playerId: botId,
       prompt: "Activate leader effect?",
@@ -182,6 +185,8 @@ describe("red Shanks bot profile", () => {
     );
     viewForBot(snapshot).pendingDecision = {
       id: "decision:op09-leader-counter-setup" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op09-leader-counter-setup" as PublicPendingDecisionId,
       type: "chooseOptionalActivation",
       playerId: botId,
       prompt: "Activate leader effect?",
@@ -228,6 +233,8 @@ describe("red Shanks bot profile", () => {
     ]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:op09-leader-target" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op09-leader-target" as PublicPendingDecisionId,
       type: "selectTargets",
       playerId: botId,
       prompt: "Choose a target.",
@@ -350,6 +357,8 @@ describe("red Shanks bot profile", () => {
     );
     viewForBot(snapshot).pendingDecision = {
       id: "decision:op09-011-target" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op09-011-target" as PublicPendingDecisionId,
       type: "selectTargets",
       playerId: botId,
       prompt: "Choose a target.",

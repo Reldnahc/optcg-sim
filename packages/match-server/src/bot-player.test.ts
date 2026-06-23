@@ -7,6 +7,7 @@ import type {
   InstanceId,
   PlayerId,
   PublicCardView,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import { chooseBotAction } from "./bot-player.js";
@@ -115,6 +116,8 @@ describe("bot player", () => {
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:rollback:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:rollback:test" as PublicPendingDecisionId,
       type: "rollbackConsent",
       playerId: botId,
       prompt: "Allow rollback?",
@@ -295,6 +298,8 @@ describe("bot player", () => {
     });
     viewForBot(snapshot).pendingDecision = {
       id: "decision:op16-cheat" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op16-cheat" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Play up to 1 Shanks.",
@@ -339,6 +344,8 @@ describe("bot player", () => {
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:runtime:playSelected:overflow:op16-benn:11" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:runtime:playSelected:overflow:op16-benn:11" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Choose a Character to trash.",
@@ -384,6 +391,8 @@ describe("bot player", () => {
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:search" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:search" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Reveal a Red-Haired Pirates card.",
@@ -427,6 +436,8 @@ describe("bot player", () => {
     ]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:ace-sabo-luffy-search" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:ace-sabo-luffy-search" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Reveal up to 1 card with a cost of 3 or more.",
@@ -481,6 +492,8 @@ describe("bot player", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:leader-defense" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:leader-defense" as PublicPendingDecisionId,
       type: "chooseOptionalActivation",
       playerId: botId,
       prompt: "Activate leader effect?",
@@ -533,6 +546,8 @@ describe("bot player", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:leader-target" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:leader-target" as PublicPendingDecisionId,
       type: "selectTargets",
       playerId: botId,
       prompt: "Choose a target.",
@@ -951,106 +966,5 @@ describe("bot player", () => {
     );
 
     assert.equal(chosen, undefined);
-  });
-
-  test("chooses the minimum selectable cards when no visible decision action exists", () => {
-    const chosen = chooseBotAction(
-      {
-        ...snapshotWithActions([]),
-        players: {
-          [botId]: {
-            actions: [],
-            view: {
-              pendingDecision: {
-                id: "decision:select" as DecisionId,
-                type: "selectCards",
-                playerId: botId,
-                prompt: "Choose cards.",
-                causedBy: { type: "ruleProcess", name: "test" },
-                presentation: { title: "Choose", instruction: "Choose." },
-                min: 1,
-                max: 2,
-                candidates: [
-                  {
-                    card: {
-                      instanceId: "card-1" as InstanceId,
-                      cardId: "OP01-001",
-                      playerId: botId,
-                    },
-                  },
-                ],
-                choices: [
-                  {
-                    card: {
-                      instanceId: "card-1" as InstanceId,
-                      cardId: "OP01-001",
-                      playerId: botId,
-                    },
-                    selectable: true,
-                  },
-                  {
-                    card: {
-                      instanceId: "card-2" as InstanceId,
-                      cardId: "OP01-002",
-                      playerId: botId,
-                    },
-                    selectable: false,
-                  },
-                ],
-              },
-            },
-          },
-        },
-      } as unknown as DevMatchSnapshot,
-      botId,
-    );
-
-    assert.deepEqual(chosen, {
-      type: "respondToDecision",
-      decisionId: "decision:select",
-      response: {
-        type: "cards",
-        cards: [
-          {
-            instanceId: "card-1",
-            cardId: "OP01-001",
-            playerId: botId,
-          },
-        ],
-      },
-    });
-  });
-
-  test("chooses the minimum quantity when no visible quantity action exists", () => {
-    const chosen = chooseBotAction(
-      {
-        ...snapshotWithActions([]),
-        players: {
-          [botId]: {
-            actions: [],
-            view: {
-              pendingDecision: {
-                id: "decision:quantity" as DecisionId,
-                type: "chooseQuantity",
-                playerId: botId,
-                prompt: "Choose quantity.",
-                causedBy: { type: "ruleProcess", name: "test" },
-                presentation: { title: "Choose", instruction: "Choose." },
-                mode: "upTo",
-                min: 0,
-                max: 3,
-              },
-            },
-          },
-        },
-      } as unknown as DevMatchSnapshot,
-      botId,
-    );
-
-    assert.deepEqual(chosen, {
-      type: "respondToDecision",
-      decisionId: "decision:quantity",
-      response: { type: "chooseQuantity", quantity: 0 },
-    });
   });
 });

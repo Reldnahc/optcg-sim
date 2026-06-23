@@ -5,6 +5,7 @@ import type {
   DecisionId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
   PublicCardView,
 } from "@optcg/types";
 
@@ -309,6 +310,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:counterStep:pass:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:counterStep:pass:test" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Use counter or end step.",
@@ -495,6 +498,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:counterStep:pass:opponent-leader:12" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:counterStep:pass:opponent-leader:12" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Use counter or end step.",
@@ -610,6 +615,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:counterStep:select:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:counterStep:select:test" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Use counter or end step.",
@@ -653,6 +660,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:counterStep:pass:opponent-leader:11" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:counterStep:pass:opponent-leader:11" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Use counter or end step.",
@@ -726,6 +735,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:blockStep:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:blockStep:test" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Choose blocker or decline.",
@@ -790,6 +801,8 @@ describe("bot combat evaluation", () => {
     };
     viewForBot(snapshot).pendingDecision = {
       id: "decision:blockStep:reduced:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:blockStep:reduced:test" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Choose blocker or decline.",
@@ -819,6 +832,8 @@ describe("bot combat evaluation", () => {
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:optional-search" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:optional-search" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Reveal up to 1 card.",
