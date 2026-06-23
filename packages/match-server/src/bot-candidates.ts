@@ -10,6 +10,8 @@ import type { DevVisibleAction } from "./dev-snapshot-types.js";
 const emptyVisibleActionFacts: BotVisibleActionFacts = {
   relatedCards: [],
   hasRemainingAttackAfterAttachment: true,
+  hasUsefulDonAttachment: true,
+  donAttachmentUse: "unknown",
 };
 
 export interface BotActionCandidate {
@@ -45,7 +47,7 @@ export const botCandidateIsLegalForScoring = ({
     return false;
   }
   if (action.type === "attachDon") {
-    return candidate.facts.hasRemainingAttackAfterAttachment;
+    return candidate.facts.hasUsefulDonAttachment;
   }
   if (action.type !== "declareAttack") {
     return true;

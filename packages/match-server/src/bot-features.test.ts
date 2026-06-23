@@ -182,4 +182,127 @@ describe("buildBotFeatures", () => {
       false,
     );
   });
+
+  test("marks single DON attachment as not useful when it cannot make a remaining attack live", () => {
+    const features = buildBotFeatures(
+      snapshotWithActions(
+        [
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to low-power character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 2,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "low-power-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "low-power-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              currentPower: 3_000,
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+            },
+          ],
+          opponentLeader: { currentPower: 6_000 },
+        },
+      ),
+      botPlayerId,
+    );
+
+    assert.equal(
+      features.actions.byIndex.get(1)?.hasUsefulDonAttachment,
+      false,
+    );
+    assert.equal(features.actions.hasUsefulDonAttachment, false);
+  });
+
+  test("marks DON attachment as useful when available DON can make a remaining attack live", () => {
+    const features = buildBotFeatures(
+      snapshotWithActions(
+        [
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach first DON to low-power character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 2,
+            type: "attachDon",
+            label: "Attach second DON to low-power character",
+            attachment: {
+              donInstanceId: "don-2" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 3,
+            type: "attachDon",
+            label: "Attach third DON to low-power character",
+            attachment: {
+              donInstanceId: "don-3" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 4,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "low-power-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfCharacters: [
+            {
+              instanceId: "low-power-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              currentPower: 3_000,
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+            },
+            {
+              instanceId: "don-2" as InstanceId,
+              cardId: "DON!!" as CardId,
+            },
+            {
+              instanceId: "don-3" as InstanceId,
+              cardId: "DON!!" as CardId,
+            },
+          ],
+          opponentLeader: { currentPower: 6_000 },
+        },
+      ),
+      botPlayerId,
+    );
+
+    assert.equal(features.actions.byIndex.get(1)?.hasUsefulDonAttachment, true);
+    assert.equal(features.actions.hasUsefulDonAttachment, true);
+  });
 });

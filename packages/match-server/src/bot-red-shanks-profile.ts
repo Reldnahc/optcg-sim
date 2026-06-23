@@ -239,9 +239,16 @@ const chooseLeaderDefenseFromProfile = (
   ) {
     return undefined;
   }
+  const activationChoice = (
+    choice: "activate" | "decline",
+  ): BotDecisionChoice => ({
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "optionalActivation", choice },
+  });
   const battle = context.snapshot.players[context.botPlayerId]?.view.battle;
   if (battle === undefined) {
-    return undefined;
+    return activationChoice("decline");
   }
   const attackerPower = cardPower(
     findVisibleBattleCard(context, String(battle.attacker.instanceId)),
@@ -250,14 +257,14 @@ const chooseLeaderDefenseFromProfile = (
     findVisibleBattleCard(context, String(battle.currentTarget.instanceId)),
   );
   if (attackerPower === undefined || targetPower === undefined) {
-    return undefined;
+    return activationChoice("decline");
   }
   const currentCounterNeeded = counterPowerNeededToStop(
     attackerPower,
     targetPower,
   );
   if (currentCounterNeeded === 0) {
-    return undefined;
+    return activationChoice("decline");
   }
   const reducedCounterNeeded = counterPowerNeededToStop(
     attackerPower - policy.amount,
@@ -266,20 +273,20 @@ const chooseLeaderDefenseFromProfile = (
   const view = context.snapshot.players[context.botPlayerId]?.view;
   const isLeaderTarget =
     view?.self.leader.instanceId === battle.currentTarget.instanceId;
+  const visibleCounterPower = visibleHandCounterPower(context);
+  if (visibleCounterPower >= currentCounterNeeded) {
+    return activationChoice("decline");
+  }
   if (
     reducedCounterNeeded > 0 &&
     (!isLeaderTarget ||
       view.self.life.count > 2 ||
       reducedCounterNeeded >= currentCounterNeeded ||
-      visibleHandCounterPower(context) < reducedCounterNeeded)
+      visibleCounterPower < reducedCounterNeeded)
   ) {
-    return undefined;
+    return activationChoice("decline");
   }
-  return {
-    type: "respondToDecision",
-    decisionId: decision.id,
-    response: { type: "optionalActivation", choice: "activate" },
-  };
+  return activationChoice("activate");
 };
 
 const cheatTargetScore = (

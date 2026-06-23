@@ -409,6 +409,156 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("does not attach a single DON to a character that still cannot hit", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+            placement: { instanceId: "generic-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach DON to low-power character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 2,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "low-power-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "generic-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "low-power-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              zone: { playerId: botId, zone: "characterArea" },
+              currentPower: 3_000,
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 6_000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+  });
+
+  test("attaches DON when available DON can make a low-power character attack live", () => {
+    const chosen = chooseBotAction(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play card",
+            placement: { instanceId: "generic-card" as InstanceId },
+          },
+          {
+            index: 1,
+            type: "attachDon",
+            label: "Attach first DON to low-power character",
+            attachment: {
+              donInstanceId: "don-1" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 2,
+            type: "attachDon",
+            label: "Attach second DON to low-power character",
+            attachment: {
+              donInstanceId: "don-2" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 3,
+            type: "attachDon",
+            label: "Attach third DON to low-power character",
+            attachment: {
+              donInstanceId: "don-3" as InstanceId,
+              targetInstanceId: "low-power-character" as InstanceId,
+            },
+          },
+          {
+            index: 4,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "low-power-character" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "generic-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "low-power-character" as InstanceId,
+              cardId: "OP01-005" as CardId,
+              zone: { playerId: botId, zone: "characterArea" },
+              currentPower: 3_000,
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "don-1" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+            {
+              instanceId: "don-2" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+            {
+              instanceId: "don-3" as InstanceId,
+              cardId: "DON!!" as CardId,
+              zone: { playerId: botId, zone: "costArea" },
+            },
+          ],
+          opponentLeader: { currentPower: 6_000 },
+        },
+      ),
+      botId,
+    );
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
   test("does not attach DON to a character with no remaining attack", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(

@@ -240,6 +240,58 @@ describe("red Shanks bot profile", () => {
     });
   });
 
+  test("declines OP09-001 when visible counter already covers the attack", () => {
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "respondToDecision",
+          label: "Decline",
+          responseKey: "decline",
+        },
+        {
+          index: 1,
+          type: "respondToDecision",
+          label: "Activate",
+          responseKey: "activate",
+        },
+      ],
+      {
+        selfHand: [
+          {
+            instanceId: "counter-card" as InstanceId,
+            cardId: "OP01-003" as CardId,
+            printedCounter: 2000,
+          },
+        ],
+        opponentLeader: { currentPower: 6000 },
+      },
+    );
+    viewForBot(snapshot).pendingDecision = {
+      id: "decision:op09-leader-counter-not-needed" as DecisionId,
+      spotlightPendingId:
+        "spotlight:pending:test:op09-leader-counter-not-needed" as PublicPendingDecisionId,
+      type: "chooseOptionalActivation",
+      playerId: botId,
+      prompt: "Activate leader effect?",
+      causedBy: { type: "ruleProcess", name: "test" },
+      source: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP09-001" as CardId,
+        playerId: botId,
+      },
+      presentation: { title: "Choose", instruction: "Choose." },
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:op09-leader-counter-not-needed",
+      response: { type: "optionalActivation", choice: "decline" },
+    });
+  });
+
   test("targets the current attacker for OP09-001 during counter-step target decisions", () => {
     const opponentCharacter = {
       instanceId: "opponent-character" as InstanceId,

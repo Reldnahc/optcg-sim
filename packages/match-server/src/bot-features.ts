@@ -42,9 +42,18 @@ export interface BotActionFeatures {
   readonly hasAttack: boolean;
 }
 
+export type BotDonAttachmentUse =
+  | "unknown"
+  | "none"
+  | "pressure"
+  | "makeLive"
+  | "setup";
+
 export interface BotVisibleActionFacts {
   readonly relatedCards: readonly BotVisibleCard[];
   readonly hasRemainingAttackAfterAttachment: boolean;
+  readonly hasUsefulDonAttachment: boolean;
+  readonly donAttachmentUse: BotDonAttachmentUse;
 }
 
 export interface BotCombatFeatures {
@@ -73,6 +82,12 @@ export const counterCardsToStopAttack = (
     : Math.ceil(
         (attackerPower - targetPower + 1_000) / assumedCounterPowerPerHandCard,
       );
+
+const counterPowerToStopAttack = (
+  attackerPower: number,
+  targetPower: number,
+): number | undefined =>
+  attackerPower < targetPower ? undefined : attackerPower - targetPower + 1_000;
 
 const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
@@ -195,6 +210,96 @@ export const hasRemainingAttackForAttachment = (
   );
 };
 
+const availableDonAttachmentsForTarget = (
+  actions: readonly DevVisibleAction[],
+  targetId: InstanceId,
+): number =>
+  new Set(
+    actions.flatMap((action) =>
+      action.type === "attachDon" &&
+      action.attachment?.targetInstanceId === targetId
+        ? [String(action.attachment.donInstanceId)]
+        : [],
+    ),
+  ).size;
+
+const donAttachmentUseForAttack = ({
+  attackerPower,
+  targetPower,
+  availableDonAttachments,
+}: {
+  readonly attackerPower: number;
+  readonly targetPower: number;
+  readonly availableDonAttachments: number;
+}): BotDonAttachmentUse => {
+  const oneDonPower = attackerPower + 1_000;
+  const allDonPower = attackerPower + availableDonAttachments * 1_000;
+  const currentCounterPower = counterPowerToStopAttack(
+    attackerPower,
+    targetPower,
+  );
+  const oneDonCounterPower = counterPowerToStopAttack(oneDonPower, targetPower);
+  if (currentCounterPower === undefined) {
+    if (oneDonPower >= targetPower) {
+      return "makeLive";
+    }
+    return allDonPower >= targetPower ? "setup" : "none";
+  }
+  return oneDonCounterPower !== undefined &&
+    oneDonCounterPower > currentCounterPower
+    ? "pressure"
+    : "none";
+};
+
+export const donAttachmentUse = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+  action: DevVisibleAction,
+): BotDonAttachmentUse => {
+  const targetId = action.attachment?.targetInstanceId;
+  if (action.type !== "attachDon" || targetId === undefined) {
+    return "unknown";
+  }
+  const actions = snapshot.players[botPlayerId]?.actions ?? [];
+  const attacks = actions.filter(
+    (candidate) =>
+      candidate.type === "declareAttack" &&
+      candidate.attack?.attackerInstanceId === targetId,
+  );
+  if (attacks.length === 0) {
+    return "none";
+  }
+  const attackerPower = cardPower(
+    findVisibleCard(snapshot, botPlayerId, targetId),
+  );
+  if (attackerPower === undefined) {
+    return "none";
+  }
+  const availableDonAttachments = availableDonAttachmentsForTarget(
+    actions,
+    targetId,
+  );
+  for (const attack of attacks) {
+    const attackTargetId = attack.attack?.targetInstanceId;
+    const targetPower =
+      attackTargetId === undefined
+        ? undefined
+        : cardPower(findVisibleCard(snapshot, botPlayerId, attackTargetId));
+    if (targetPower === undefined) {
+      continue;
+    }
+    const use = donAttachmentUseForAttack({
+      attackerPower,
+      targetPower,
+      availableDonAttachments,
+    });
+    if (use !== "none") {
+      return use;
+    }
+  }
+  return "none";
+};
+
 const visibleCardMap = (
   cards: readonly BotVisibleCard[],
 ): ReadonlyMap<string, BotVisibleCard> =>
@@ -232,14 +337,19 @@ const actionFacts = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
   action: DevVisibleAction,
-): BotVisibleActionFacts => ({
-  relatedCards: relatedCardsForAction(snapshot, botPlayerId, action),
-  hasRemainingAttackAfterAttachment: hasRemainingAttackForAttachment(
-    snapshot,
-    botPlayerId,
-    action,
-  ),
-});
+): BotVisibleActionFacts => {
+  const attachmentUse = donAttachmentUse(snapshot, botPlayerId, action);
+  return {
+    relatedCards: relatedCardsForAction(snapshot, botPlayerId, action),
+    hasRemainingAttackAfterAttachment: hasRemainingAttackForAttachment(
+      snapshot,
+      botPlayerId,
+      action,
+    ),
+    hasUsefulDonAttachment: attachmentUse !== "none",
+    donAttachmentUse: attachmentUse,
+  };
+};
 
 const actionFeatureMap = (
   snapshot: DevMatchSnapshot,
@@ -269,7 +379,7 @@ const actionFeatures = (
     hasUsefulDonAttachment: actions.some(
       (action) =>
         action.type === "attachDon" &&
-        (byIndex.get(action.index)?.hasRemainingAttackAfterAttachment ?? true),
+        (byIndex.get(action.index)?.hasUsefulDonAttachment ?? true),
     ),
     hasAttack: actions.some((action) => action.type === "declareAttack"),
   };

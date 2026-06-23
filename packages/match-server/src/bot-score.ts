@@ -8,6 +8,7 @@ import {
   findVisibleCard,
   visibleCardValue,
   type BotFeatures,
+  type BotDonAttachmentUse,
 } from "./bot-features.js";
 import type { BotActionContext } from "./bot-types.js";
 import type { BotTurnIntent } from "./bot-turn-intent.js";
@@ -402,6 +403,7 @@ const leaderAttackBreakdown = (
 
 const attachDonBreakdown = (
   context: BotActionContext,
+  donAttachmentUse: BotDonAttachmentUse,
 ): BotScoreBreakdown | undefined => {
   const attachment = context.action.attachment;
   const opponent = opponentView(context);
@@ -421,6 +423,14 @@ const attachDonBreakdown = (
   const leaderPower = cardPower(opponent.leader);
   if (targetPower === undefined || leaderPower === undefined) {
     return undefined;
+  }
+  if (donAttachmentUse === "setup") {
+    return addTerm(
+      emptyBreakdown(),
+      "resource",
+      95,
+      "resource:setup-live-attack",
+    );
   }
   const currentCardsToStop = counterCardsToStopAttack(targetPower, leaderPower);
   const boostedCardsToStop = counterCardsToStopAttack(
@@ -582,7 +592,10 @@ export const scoreBotCandidate = (input: BotScoreInput): ScoredBotCandidate => {
     tacticalBreakdown({ context, tacticalScore }),
   );
   breakdown = mergeBreakdown(breakdown, attackBreakdown(context));
-  breakdown = mergeBreakdown(breakdown, attachDonBreakdown(context));
+  breakdown = mergeBreakdown(
+    breakdown,
+    attachDonBreakdown(context, input.candidate.facts.donAttachmentUse),
+  );
   breakdown = mergeBreakdown(breakdown, playCardBreakdown(context));
   breakdown = mergeBreakdown(breakdown, activeEffectBreakdown(context));
   if (breakdown.reasons.length === 0) {

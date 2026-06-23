@@ -29,6 +29,8 @@ const candidateFromEvaluationInput = ({
   const facts = features.actions.byIndex.get(context.action.index) ?? {
     relatedCards: context.relatedCards,
     hasRemainingAttackAfterAttachment: true,
+    hasUsefulDonAttachment: true,
+    donAttachmentUse: "unknown" as const,
   };
   return {
     action: context.action,
