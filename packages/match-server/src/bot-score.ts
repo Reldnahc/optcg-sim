@@ -10,6 +10,7 @@ import {
   type BotFeatures,
 } from "./bot-features.js";
 import type { BotActionContext } from "./bot-types.js";
+import type { BotTurnIntent } from "./bot-turn-intent.js";
 
 type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
 
@@ -35,6 +36,7 @@ export interface BotScoreInput {
   readonly features: BotFeatures;
   readonly context?: BotActionContext;
   readonly pendingDecision?: BotPendingDecision | undefined;
+  readonly intent?: BotTurnIntent | undefined;
   readonly tacticalScore?: number | undefined;
   readonly profileScore?: number | undefined;
   readonly cardScores?: readonly number[] | undefined;
@@ -133,6 +135,103 @@ const opponentView = ({
     return undefined;
   }
   return player.view.opponent;
+};
+
+const actionAttacksOpponentLeader = (
+  context: BotActionContext,
+  features: BotFeatures,
+): boolean => {
+  const attack = context.action.attack;
+  const opponent = opponentView(context);
+  return (
+    context.action.type === "declareAttack" &&
+    attack !== undefined &&
+    opponent !== undefined &&
+    attack.targetInstanceId === opponent.leader.instanceId &&
+    features.combat.hasAvailableLethalLine &&
+    features.combat.leaderAttackPressure.some(
+      (pressure) =>
+        pressure.attackerInstanceId === String(attack.attackerInstanceId) &&
+        pressure.targetInstanceId === String(attack.targetInstanceId),
+    )
+  );
+};
+
+const actionAttacksOpponentCharacter = (context: BotActionContext): boolean => {
+  const targetId = context.action.attack?.targetInstanceId;
+  const opponent = opponentView(context);
+  return (
+    context.action.type === "declareAttack" &&
+    targetId !== undefined &&
+    opponent !== undefined &&
+    opponent.characters.some((card) => card.instanceId === targetId)
+  );
+};
+
+const intentBreakdown = ({
+  context,
+  features,
+  intent,
+  tacticalScore,
+}: {
+  readonly context: BotActionContext;
+  readonly features: BotFeatures;
+  readonly intent: BotTurnIntent | undefined;
+  readonly tacticalScore: number | undefined;
+}): BotScoreBreakdown | undefined => {
+  switch (intent?.type) {
+    case "answerDecision":
+      return context.action.type === "respondToDecision"
+        ? addTerm(emptyBreakdown(), "intent", 250, "intent:answer-decision")
+        : undefined;
+    case "surviveLethal":
+      return context.action.type === "useCounter" ||
+        context.action.type === "activateBlocker" ||
+        context.action.type === "respondToDecision"
+        ? addTerm(emptyBreakdown(), "intent", 600, "intent:survive-lethal")
+        : undefined;
+    case "findLethal":
+      return actionAttacksOpponentLeader(context, features) ||
+        (context.action.type === "attachDon" &&
+          tacticalScore !== undefined &&
+          tacticalScore <= -900)
+        ? addTerm(emptyBreakdown(), "intent", 600, "intent:find-lethal")
+        : undefined;
+    case "removeThreat":
+      return actionAttacksOpponentCharacter(context)
+        ? addTerm(emptyBreakdown(), "intent", 220, "intent:remove-threat")
+        : undefined;
+    case "developBoard":
+      if (context.action.type === "playCard") {
+        return addTerm(emptyBreakdown(), "intent", 10, "intent:develop-board");
+      }
+      return context.action.type === "attachDon" && !features.actions.hasAttack
+        ? addTerm(emptyBreakdown(), "intent", -5, "intent:develop-board")
+        : undefined;
+    case "useProfitableEffect":
+      return context.action.type === "activateEffect"
+        ? addTerm(
+            emptyBreakdown(),
+            "intent",
+            180,
+            "intent:use-profitable-effect",
+          )
+        : undefined;
+    case "allocateDon":
+      return context.action.type === "attachDon"
+        ? addTerm(emptyBreakdown(), "intent", 160, "intent:allocate-don")
+        : undefined;
+    case "attack":
+      return context.action.type === "declareAttack"
+        ? addTerm(emptyBreakdown(), "intent", 120, "intent:attack")
+        : undefined;
+    case "endTurn":
+      return context.action.type === "endMainPhase"
+        ? addTerm(emptyBreakdown(), "intent", 220, "intent:end-turn")
+        : undefined;
+    case undefined:
+      return undefined;
+  }
 };
 
 const decisionBreakdown = ({
@@ -477,6 +576,15 @@ export const scoreBotCandidate = (input: BotScoreInput): ScoredBotCandidate => {
   const profileScore = input.profileScore;
   const cardScores = input.cardScores ?? [];
   let breakdown = emptyBreakdown();
+  breakdown = mergeBreakdown(
+    breakdown,
+    intentBreakdown({
+      context,
+      features: input.features,
+      intent: input.intent,
+      tacticalScore,
+    }),
+  );
   breakdown = mergeBreakdown(
     breakdown,
     decisionBreakdown({ context, pendingDecision }),

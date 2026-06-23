@@ -26,6 +26,7 @@ const snapshotWithActions = (
     readonly selfLeader?: Partial<PublicCardView>;
     readonly selfHand?: readonly Partial<PublicCardView>[];
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
+    readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
     readonly opponentHandCount?: number;
     readonly opponentLifeCount?: number;
@@ -60,7 +61,7 @@ const snapshotWithActions = (
             },
             hand: cards.selfHand ?? [],
             characters: cards.selfCharacters ?? [],
-            costArea: [],
+            costArea: cards.selfCostArea ?? [],
             life: { count: 5, faceUpCards: [] },
           },
           opponent: {
@@ -90,6 +91,17 @@ const onlyCandidate = (snapshot: DevMatchSnapshot) => {
   const candidate = buildBotActionCandidates(features)[0];
   if (candidate === undefined) {
     throw new Error("Expected one candidate.");
+  }
+  return { features, candidate };
+};
+
+const candidateByIndex = (snapshot: DevMatchSnapshot, actionIndex: number) => {
+  const features = buildBotFeatures(snapshot, botPlayerId);
+  const candidate = buildBotActionCandidates(features).find(
+    ({ action }) => action.index === actionIndex,
+  );
+  if (candidate === undefined) {
+    throw new Error(`Expected candidate ${String(actionIndex)}.`);
   }
   return { features, candidate };
 };
@@ -159,6 +171,53 @@ describe("scoreBotCandidate", () => {
     );
   });
 
+  test("explains find-lethal intent for multi-attack lethal lines", () => {
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "declareAttack",
+          label: "Attack leader with leader",
+          attack: {
+            attackerInstanceId: "bot-leader" as InstanceId,
+            targetInstanceId: "opponent-leader" as InstanceId,
+          },
+        },
+        {
+          index: 1,
+          type: "declareAttack",
+          label: "Attack leader with character",
+          attack: {
+            attackerInstanceId: "bot-character" as InstanceId,
+            targetInstanceId: "opponent-leader" as InstanceId,
+          },
+        },
+      ],
+      {
+        selfLeader: { currentPower: 6_000 },
+        selfCharacters: [
+          {
+            instanceId: "bot-character" as InstanceId,
+            cardId: "OP01-005" as CardId,
+            currentPower: 6_000,
+          },
+        ],
+        opponentLeader: { currentPower: 5_000 },
+        opponentHandCount: 0,
+        opponentLifeCount: 1,
+      },
+    );
+    const { features, candidate } = candidateByIndex(snapshot, 0);
+
+    const scored = scoreBotCandidate({
+      candidate,
+      features,
+      intent: { type: "findLethal" },
+    });
+
+    assert.equal(scored.breakdown.reasons.includes("intent:find-lethal"), true);
+  });
+
   test("explains high-counter preservation when scoring card plays", () => {
     const { features, candidate } = onlyCandidate(
       snapshotWithActions(
@@ -189,5 +248,71 @@ describe("scoreBotCandidate", () => {
       scored.breakdown.reasons.includes("resource:preserve-counter"),
       true,
     );
+  });
+
+  test("develop-board intent can select development over weak pressure", () => {
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "playCard",
+          label: "Play attacker",
+          placement: { instanceId: "attacker-card" as InstanceId },
+        },
+        {
+          index: 1,
+          type: "attachDon",
+          label: "Attach DON to leader",
+          attachment: {
+            donInstanceId: "don-1" as InstanceId,
+            targetInstanceId: "bot-leader" as InstanceId,
+          },
+        },
+      ],
+      {
+        selfLeader: { currentPower: 5_000 },
+        selfHand: [
+          {
+            instanceId: "attacker-card" as InstanceId,
+            cardId: "OP01-004" as CardId,
+            printedCost: 5,
+          },
+        ],
+        selfCostArea: [
+          {
+            instanceId: "don-1" as InstanceId,
+            cardId: "DON!!" as CardId,
+          },
+        ],
+        opponentLeader: { currentPower: 5_000 },
+      },
+    );
+    const play = candidateByIndex(snapshot, 0);
+    const attach = candidateByIndex(snapshot, 1);
+
+    const playWithoutIntent = scoreBotCandidate(play);
+    const attachWithoutIntent = scoreBotCandidate(attach);
+    const playWithIntent = scoreBotCandidate({
+      ...play,
+      intent: { type: "developBoard" },
+    });
+    const attachWithIntent = scoreBotCandidate({
+      ...attach,
+      intent: { type: "developBoard" },
+    });
+
+    assert.equal(
+      attachWithoutIntent.breakdown.total > playWithoutIntent.breakdown.total,
+      true,
+    );
+    assert.equal(
+      playWithIntent.breakdown.total > attachWithIntent.breakdown.total,
+      true,
+    );
+    assert.equal(
+      playWithIntent.breakdown.reasons.includes("intent:develop-board"),
+      true,
+    );
+    assert.equal(playWithIntent.breakdown.intent > 0, true);
   });
 });

@@ -36,6 +36,10 @@ export interface BotCardFeatures {
 
 export interface BotActionFeatures {
   readonly byIndex: ReadonlyMap<number, BotVisibleActionFacts>;
+  readonly hasProfitableEffect: boolean;
+  readonly hasPlayableDevelopmentCard: boolean;
+  readonly hasUsefulDonAttachment: boolean;
+  readonly hasAttack: boolean;
 }
 
 export interface BotVisibleActionFacts {
@@ -45,6 +49,9 @@ export interface BotVisibleActionFacts {
 
 export interface BotCombatFeatures {
   readonly leaderAttackPressure: readonly BotLeaderAttackPressure[];
+  readonly incomingBattleIsLethal: boolean;
+  readonly hasAvailableLethalLine: boolean;
+  readonly hasHighValueThreatAttack: boolean;
 }
 
 export interface BotLeaderAttackPressure {
@@ -245,6 +252,29 @@ const actionFeatureMap = (
     ]),
   );
 
+const actionFeatures = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+  byIndex: ReadonlyMap<number, BotVisibleActionFacts>,
+): BotActionFeatures => {
+  const actions = snapshot.players[botPlayerId]?.actions ?? [];
+  return {
+    byIndex,
+    hasProfitableEffect: actions.some(
+      (action) => action.type === "activateEffect",
+    ),
+    hasPlayableDevelopmentCard: actions.some(
+      (action) => action.type === "playCard",
+    ),
+    hasUsefulDonAttachment: actions.some(
+      (action) =>
+        action.type === "attachDon" &&
+        (byIndex.get(action.index)?.hasRemainingAttackAfterAttachment ?? true),
+    ),
+    hasAttack: actions.some((action) => action.type === "declareAttack"),
+  };
+};
+
 const leaderAttackPressureForAction = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
@@ -291,12 +321,87 @@ const leaderAttackPressure = (
     return pressure === undefined ? [] : [pressure];
   });
 
+const incomingBattleIsLethal = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+): boolean => {
+  const view = partialPlayerView(snapshot, botPlayerId);
+  const battle = view?.battle;
+  if (
+    view?.self === undefined ||
+    battle === undefined ||
+    battle.currentTarget.instanceId !== view.self.leader.instanceId ||
+    battle.damageCount <= view.self.life.count
+  ) {
+    return false;
+  }
+  const attackerPower = cardPower(
+    findVisibleCard(snapshot, botPlayerId, battle.attacker.instanceId),
+  );
+  const targetPower = cardPower(view.self.leader);
+  return (
+    attackerPower !== undefined &&
+    targetPower !== undefined &&
+    attackerPower >= targetPower
+  );
+};
+
+const hasAvailableLethalLine = ({
+  pressure,
+  opponent,
+}: {
+  readonly pressure: readonly BotLeaderAttackPressure[];
+  readonly opponent: BotOpponentFeatures;
+}): boolean => {
+  const byAttacker = new Map<string, BotLeaderAttackPressure>();
+  for (const attack of pressure) {
+    const existing = byAttacker.get(attack.attackerInstanceId);
+    if (existing === undefined || attack.cardsToStop > existing.cardsToStop) {
+      byAttacker.set(attack.attackerInstanceId, attack);
+    }
+  }
+  const attacksToStop = byAttacker.size - opponent.lifeCount;
+  if (attacksToStop <= 0) {
+    return false;
+  }
+  const counterCardsNeeded = [...byAttacker.values()]
+    .map((attack) => attack.cardsToStop)
+    .sort((left, right) => left - right)
+    .slice(0, attacksToStop)
+    .reduce((total, cardsToStop) => total + cardsToStop, 0);
+  return opponent.handCount < counterCardsNeeded;
+};
+
+const hasHighValueThreatAttack = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+): boolean => {
+  const opponentCharacters =
+    partialPlayerView(snapshot, botPlayerId)?.opponent?.characters ?? [];
+  return (snapshot.players[botPlayerId]?.actions ?? []).some((action) => {
+    const targetId = action.attack?.targetInstanceId;
+    if (action.type !== "declareAttack" || targetId === undefined) {
+      return false;
+    }
+    const target = opponentCharacters.find(
+      (card) => card.instanceId === targetId,
+    );
+    return visibleCardValue(target, { includeCounter: true }) >= 8_000;
+  });
+};
+
 export const buildBotFeatures = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
 ): BotFeatures => {
   const view = partialPlayerView(snapshot, botPlayerId);
   const cards = visibleCards(snapshot, botPlayerId);
+  const byIndex = actionFeatureMap(snapshot, botPlayerId);
+  const pressure = leaderAttackPressure(snapshot, botPlayerId);
+  const opponent = {
+    lifeCount: view?.opponent?.life.count ?? 0,
+    handCount: view?.opponent?.hand?.length ?? view?.opponent?.handCount ?? 0,
+  };
   return {
     snapshot,
     botPlayerId,
@@ -305,19 +410,17 @@ export const buildBotFeatures = (
       handCounterPower: selfHandCounterPower(snapshot, botPlayerId),
       donOnField: botDonOnField(snapshot, botPlayerId),
     },
-    opponent: {
-      lifeCount: view?.opponent?.life.count ?? 0,
-      handCount: view?.opponent?.hand?.length ?? view?.opponent?.handCount ?? 0,
-    },
+    opponent,
     cards: {
       visibleCards: cards,
       byInstanceId: visibleCardMap(cards),
     },
-    actions: {
-      byIndex: actionFeatureMap(snapshot, botPlayerId),
-    },
+    actions: actionFeatures(snapshot, botPlayerId, byIndex),
     combat: {
-      leaderAttackPressure: leaderAttackPressure(snapshot, botPlayerId),
+      leaderAttackPressure: pressure,
+      incomingBattleIsLethal: incomingBattleIsLethal(snapshot, botPlayerId),
+      hasAvailableLethalLine: hasAvailableLethalLine({ pressure, opponent }),
+      hasHighValueThreatAttack: hasHighValueThreatAttack(snapshot, botPlayerId),
     },
   };
 };

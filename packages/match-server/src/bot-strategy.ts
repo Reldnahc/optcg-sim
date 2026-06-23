@@ -13,6 +13,7 @@ import {
   type BotScoreBreakdown,
   type ScoredBotCandidate,
 } from "./bot-score.js";
+import { chooseBotTurnIntent, type BotTurnIntent } from "./bot-turn-intent.js";
 import type {
   BotActionChoice,
   BotActionContext,
@@ -26,6 +27,7 @@ type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
 export interface BotStrategyActionReport {
   readonly choice: BotActionChoice;
   readonly score?: BotScoreBreakdown | undefined;
+  readonly intent?: BotTurnIntent | undefined;
   readonly decisionReason?: BotDecisionReason | undefined;
 }
 
@@ -43,9 +45,11 @@ const isCounterStepPassDecision = (
 const scoredVisibleActions = ({
   features,
   profile,
+  intent,
 }: {
   readonly features: BotFeatures;
   readonly profile: BotBehaviorProfile;
+  readonly intent: BotTurnIntent;
 }): readonly ScoredBotCandidate[] => {
   const { snapshot, botPlayerId } = features;
   const candidates = buildBotActionCandidates(features);
@@ -76,6 +80,7 @@ const scoredVisibleActions = ({
       features,
       context,
       pendingDecision,
+      intent,
       tacticalScore: scoreCombatAction(context, features),
       profileScore,
       cardScores: cardScores.filter(
@@ -99,6 +104,7 @@ const chooseCounterStepPass = (
   decision: BotPendingDecision | undefined,
   battleStep: string | undefined,
   scored: readonly ScoredBotCandidate[],
+  intent: BotTurnIntent,
 ): BotStrategyActionReport | undefined => {
   if (
     decision === undefined ||
@@ -118,6 +124,7 @@ const chooseCounterStepPass = (
           decisionId: decision.id,
           response: { type: "cards", cards: [] },
         },
+        intent,
         decisionReason: { kind: "counter-step-pass" },
       }
     : {
@@ -126,16 +133,19 @@ const chooseCounterStepPass = (
           actionIndex: counterCandidate.candidate.action.index,
         },
         score: counterCandidate.breakdown,
+        intent,
       };
 };
 
 const decisionReport = (
   decisionResponse: ReturnType<typeof chooseBotDecisionResponse>,
+  intent?: BotTurnIntent,
 ): BotStrategyActionReport | undefined =>
   decisionResponse === undefined
     ? undefined
     : {
         choice: decisionResponse.choice,
+        intent,
         decisionReason: decisionResponse.reason,
       };
 
@@ -171,17 +181,21 @@ const chooseStrategyActionReport = ({
         profile,
         visibleActions: actions,
       }),
+      { type: "answerDecision" },
     );
   }
   const features = buildBotFeatures(snapshot, botPlayerId);
+  const intent = chooseBotTurnIntent(features);
   const scored = scoredVisibleActions({
     features,
     profile,
+    intent,
   });
   const counterStepPass = chooseCounterStepPass(
     pendingDecision,
     battleStep,
     scored,
+    intent,
   );
   if (counterStepPass !== undefined) {
     return counterStepPass;
@@ -194,6 +208,7 @@ const chooseStrategyActionReport = ({
         profile,
         visibleActions: actions,
       }),
+      intent,
     );
   }
   const chosen = chooseBestScoredCandidate(scored);
@@ -204,6 +219,7 @@ const chooseStrategyActionReport = ({
         actionIndex: chosen.candidate.action.index,
       },
       score: chosen.breakdown,
+      intent,
     };
   }
   const profileDecision = profile.chooseDecision?.({ snapshot, botPlayerId });
