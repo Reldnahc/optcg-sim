@@ -124,6 +124,22 @@ const profileAdjustment = (scores: readonly number[]): number => {
   return Math.max(-70, 35 - best);
 };
 
+const profileBreakdown = ({
+  profileScore,
+  cardScores,
+}: {
+  readonly profileScore: number | undefined;
+  readonly cardScores: readonly number[];
+}): BotScoreBreakdown | undefined => {
+  const profileValue = profileAdjustment([
+    ...(profileScore === undefined ? [] : [profileScore]),
+    ...cardScores,
+  ]);
+  return profileValue === 0
+    ? undefined
+    : addTerm(emptyBreakdown(), "profile", profileValue, "profile:action");
+};
+
 const opponentView = ({
   snapshot,
   botPlayerId,
@@ -438,15 +454,9 @@ const attackBreakdown = (
 ): BotScoreBreakdown | undefined =>
   characterAttackBreakdown(context) ?? leaderAttackBreakdown(context);
 
-const playCardBreakdown = ({
-  context,
-  profileScore,
-  cardScores,
-}: {
-  readonly context: BotActionContext;
-  readonly profileScore: number | undefined;
-  readonly cardScores: readonly number[];
-}): BotScoreBreakdown | undefined => {
+const playCardBreakdown = (
+  context: BotActionContext,
+): BotScoreBreakdown | undefined => {
   if (context.action.type !== "playCard") {
     return undefined;
   }
@@ -456,10 +466,6 @@ const playCardBreakdown = ({
     counter >= 2_000 ? 45 : counter >= 1_000 ? 14 : 0;
   const developmentValue =
     25 + Math.min(55, visibleCardValue(card, { includeCounter: true }) / 400);
-  const profileValue = profileAdjustment([
-    ...(profileScore === undefined ? [] : [profileScore]),
-    ...cardScores,
-  ]);
   let breakdown = addTerm(
     emptyBreakdown(),
     "tempo",
@@ -474,38 +480,21 @@ const playCardBreakdown = ({
       "resource:preserve-counter",
     );
   }
-  if (profileValue !== 0) {
-    breakdown = addTerm(breakdown, "profile", profileValue, "profile:action");
-  }
   return breakdown;
 };
 
-const activeEffectBreakdown = ({
-  context,
-  profileScore,
-  cardScores,
-}: {
-  readonly context: BotActionContext;
-  readonly profileScore: number | undefined;
-  readonly cardScores: readonly number[];
-}): BotScoreBreakdown | undefined => {
+const activeEffectBreakdown = (
+  context: BotActionContext,
+): BotScoreBreakdown | undefined => {
   if (context.action.type !== "activateEffect") {
     return undefined;
   }
-  const profileValue = profileAdjustment([
-    ...(profileScore === undefined ? [] : [profileScore]),
-    ...cardScores,
-  ]);
-  let breakdown = addTerm(
+  return addTerm(
     emptyBreakdown(),
     "tempo",
     60,
     "tempo:profitable-effect",
   );
-  if (profileValue !== 0) {
-    breakdown = addTerm(breakdown, "profile", profileValue, "profile:action");
-  }
-  return breakdown;
 };
 
 const fallbackBreakdown = (context: BotActionContext): BotScoreBreakdown => {
@@ -578,6 +567,10 @@ export const scoreBotCandidate = (input: BotScoreInput): ScoredBotCandidate => {
   let breakdown = emptyBreakdown();
   breakdown = mergeBreakdown(
     breakdown,
+    profileBreakdown({ profileScore, cardScores }),
+  );
+  breakdown = mergeBreakdown(
+    breakdown,
     intentBreakdown({
       context,
       features: input.features,
@@ -595,14 +588,8 @@ export const scoreBotCandidate = (input: BotScoreInput): ScoredBotCandidate => {
   );
   breakdown = mergeBreakdown(breakdown, attackBreakdown(context));
   breakdown = mergeBreakdown(breakdown, attachDonBreakdown(context));
-  breakdown = mergeBreakdown(
-    breakdown,
-    playCardBreakdown({ context, profileScore, cardScores }),
-  );
-  breakdown = mergeBreakdown(
-    breakdown,
-    activeEffectBreakdown({ context, profileScore, cardScores }),
-  );
+  breakdown = mergeBreakdown(breakdown, playCardBreakdown(context));
+  breakdown = mergeBreakdown(breakdown, activeEffectBreakdown(context));
   if (breakdown.reasons.length === 0) {
     breakdown = fallbackBreakdown(context);
   }
