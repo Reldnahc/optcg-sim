@@ -121,6 +121,7 @@ export interface TurnState {
   turnPlayerId: PlayerId;
   phase: "refresh" | "draw" | "don" | "main" | "end";
   step?: BattleStep;
+  extraTurnPlayerIds?: PlayerId[];
 }
 
 export interface SetupContinuationState {

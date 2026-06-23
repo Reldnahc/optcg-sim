@@ -227,6 +227,11 @@ async function makeFixtureRepo() {
   );
   await writeFixtureFile(
     tempRoot,
+    "contracts/types/dynamic-number-values.ts",
+    "export type DynamicNumberValue = number;\n",
+  );
+  await writeFixtureFile(
+    tempRoot,
     "contracts/types/effect-continuous.ts",
     "export interface EffectContinuousRow { id: string; }\n",
   );

@@ -21,8 +21,10 @@ import type { OptionalCost } from "./effect-costs.js";
 import type { KeywordOrAttributeContinuousEffect } from "./effect-continuous.js";
 import type { EffectEntryPointFilter, Trigger } from "./effect-triggers.js";
 import type { EffectDslProtection } from "./effect-protection.js";
+import type { DynamicNumberValue } from "./dynamic-number-values.js";
 
 export type { FailurePolicy, SourcePresencePolicy } from "./effect-policies.js";
+export type { DynamicNumberValue } from "./dynamic-number-values.js";
 
 export type {
   EffectCategory,
@@ -120,6 +122,12 @@ export type Condition =
     }
   | { type: "handCount"; player: PlayerRef; op: Comparator; value: number }
   | {
+      type: "zoneCountTotal";
+      counts: Array<{ player: PlayerRef; zone: Zone }>;
+      op: Comparator;
+      value: number;
+    }
+  | {
       type: "handCountDifference";
       minuend: { player: PlayerRef };
       subtrahend: { player: PlayerRef };
@@ -134,8 +142,17 @@ export type Condition =
       op: Comparator;
       value: number;
     }
-  // prettier-ignore
-  | { type: "eventHistory"; event: "cardPlayed" | "cardKOd"; player: PlayerRef; filter?: CardFilter; window: "thisTurn"; op: Comparator; value: number }
+  | {
+      type: "eventHistory";
+      event: "cardPlayed" | "cardKOd" | "cardDrawn";
+      player: PlayerRef;
+      filter?: CardFilter;
+      sourceTarget?: "self";
+      sourceFilter?: CardFilter;
+      window: "thisTurn";
+      op: Comparator;
+      value: number;
+    }
   | {
       type: "leaderColorCount";
       player: PlayerRef;
@@ -229,67 +246,6 @@ export interface CardSelectionRequest {
   remainingCards?: RemainingCardsPlacement;
 }
 
-export type DynamicNumberValue =
-  | {
-      type: "savedNumber";
-      selection: SelectionId;
-    }
-  | {
-      type: "selectedCardCount";
-      selection: SelectionId;
-      multiplier: number;
-    }
-  | {
-      type: "sumSelectedCardCosts";
-      selection: SelectionSetId;
-      multiplier: number;
-    }
-  | {
-      type: "paidCostCardCount";
-      cost: string;
-      multiplier: number;
-    }
-  | {
-      type: "countDistinctMatchingFieldNames";
-      player: PlayerRef;
-      zone: "characterArea";
-      filter: CardFilter;
-      multiplier: number;
-    }
-  | {
-      type: "countMatchingFieldCards";
-      player: PlayerRef;
-      zone: "characterArea";
-      filter: CardFilter;
-      multiplier: number;
-    }
-  | {
-      type: "countMatchingZoneCards";
-      player: PlayerRef;
-      zone: "trash" | "life" | "costArea";
-      filter?: CardFilter;
-      per: number;
-      multiplier: number;
-      offset?: number;
-      minimum?: number;
-    }
-  | {
-      type: "countMatchingZoneCardsAcrossPlayers";
-      players: PlayerRef[];
-      zone: "life";
-      filter?: CardFilter;
-      per: number;
-      multiplier: number;
-      offset?: number;
-      minimum?: number;
-    }
-  | {
-      type: "countAttachedDon";
-      target: Target;
-      per: number;
-      multiplier: number;
-    };
-
 export type SnapshotNumberValue = {
   type: "snapshotCardStat";
   target: Target;
@@ -335,6 +291,7 @@ export interface CardFilter {
   typesNotIncludeAny?: string[];
   typesAll?: string[];
   attributesAny?: Attribute[];
+  attributesFromSource?: true;
   attributesNotAny?: Attribute[];
   attributesAll?: Attribute[];
   baseCost?: { op: Comparator; value: number } | { min?: number; max?: number };
@@ -575,6 +532,8 @@ export type SequenceSavedResultReference =
 
 export type HandSelectionId = SelectionId & `handSelection:${string}`;
 
+export type SelectCardMax = number | "available";
+
 export type SelectCardsEffect =
   | {
       type: "selectCards";
@@ -583,7 +542,7 @@ export type SelectCardsEffect =
       player: PlayerRef;
       chooser: PlayerRef;
       min: number;
-      max: number;
+      max: SelectCardMax;
       filter?: CardFilter;
       saveAs: SelectionId;
       visibility: Visibility;
@@ -595,7 +554,7 @@ export type SelectCardsEffect =
       player: PlayerRef;
       chooser: PlayerRef;
       min: number;
-      max: number;
+      max: SelectCardMax;
       filter?: CardFilter;
       saveAs: SelectionId;
       visibility: Visibility;
@@ -829,6 +788,7 @@ export type Effect =
       order: "chooser" | "owner" | "original" | "random";
     }
   | { type: "shuffleDeck"; player: PlayerRef }
+  | { type: "takeExtraTurn"; player: PlayerRef }
   | {
       type: "bounce";
       target: Target;
@@ -947,7 +907,7 @@ export type Effect =
       target: Target;
       targetOwner?: "selectedDonOwner";
     }
-  | { type: "returnDon"; count: number; player: PlayerRef }
+  | { type: "returnDon"; count: number | DynamicNumberValue; player: PlayerRef }
   | { type: "winGame"; player: PlayerRef }
   | {
       type: "addLife";

@@ -7,6 +7,7 @@ import type {
   StateSeq,
 } from "./primitives.js";
 import type { CardRef } from "./card-metadata.js";
+import type { SpotlightEntryCreatedPayload } from "./effect-presentation.js";
 
 export type EventVisibility =
   | { type: "public" }
@@ -55,6 +56,7 @@ export type EngineEventType =
   | "effectQueued"
   | "effectResolved"
   | "replacementApplied"
+  | "spotlightEntryCreated"
   | "decisionCreated"
   | "decisionResolved"
   | "ruleProcessingChecked"
@@ -66,3 +68,8 @@ export type CausalityRef =
   | { type: "ruleProcess"; name: string }
   | { type: "replacement"; replacementId: string }
   | { type: "decision"; decisionId: DecisionId };
+
+export type SpotlightEntryCreatedEngineEvent = EngineEvent & {
+  readonly type: "spotlightEntryCreated";
+  readonly payload: SpotlightEntryCreatedPayload;
+};

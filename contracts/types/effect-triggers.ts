@@ -16,6 +16,7 @@ export type EffectEntryPointFilter = {
     | "damageDealt"
     | "lifeRemoved"
     | "fieldRemoved"
+    | "cardDrawn"
     | "cardPlayed"
     | "cardRested"
     | "donReturned"
@@ -57,16 +58,23 @@ export type Trigger =
   | { type: "trigger" }
   | { type: "anyOf"; triggers: Trigger[] }
   | EventCountPredicate
-  | { type: "damageDealt"; players: PlayerRef[] }
+  | { type: "damageDealt"; players: PlayerRef[]; attacker?: "self" }
   | { type: "lifeRemoved"; players: PlayerRef[]; destination?: Zone }
   | {
       type: "fieldRemoved";
       target?: "self" | "any";
       player: PlayerRef;
       filter?: CardFilter;
+      sourceTarget?: "self";
       sourceController?: PlayerRef;
-      sourceKind?: "effect" | "ko" | "any";
+      sourceKind?: "battle" | "effect" | "ko" | "any";
+      sourceFilter?: CardFilter;
       destination?: Zone;
+    }
+  | {
+      type: "cardDrawn";
+      player: PlayerRef;
+      phase?: { not: "draw" };
     }
   | {
       type: "cardPlayed";

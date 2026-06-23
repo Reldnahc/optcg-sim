@@ -2,10 +2,15 @@ import { expect, test } from "vitest";
 
 import type {
   ActiveEffectTextPresentation,
+  CombatSpotlightHistoryEntry,
   EffectSpotlightHistoryEntry,
   EffectTextSourceMap,
+  EffectTextSpotlightHistoryEntry,
   EffectTextSpan,
   EffectTextTargetLink,
+  PlayedCardSpotlightHistoryEntry,
+  SpotlightEntryCreatedPayload,
+  SpotlightEntryDisclosure,
 } from "./effect-presentation.js";
 import type {
   CardId,
@@ -15,6 +20,9 @@ import type {
   InstanceId,
   PlayerId,
   QueueEntryId,
+  PublicPendingDecisionId,
+  SpotlightEntryCreatedEngineEvent,
+  StateSeq,
 } from "./index.js";
 
 test("effect presentation source map describes exact original text ranges", () => {
@@ -120,4 +128,129 @@ test("allows combat spotlight timeline entries without effect text", () => {
 
   expect(entry.kind).toBe("combat");
   expect(entry.combat.defenderPower).toBe(5000);
+});
+
+test("spotlight entry event payload carries authored timeline entries", () => {
+  const source: CardRef = {
+    instanceId: "source-spotlight" as InstanceId,
+    cardId: "OP00-010" as CardId,
+    playerId: "p1" as PlayerId,
+  };
+  const attacker: CardRef = {
+    instanceId: "attacker-spotlight" as InstanceId,
+    cardId: "OP00-011" as CardId,
+    playerId: "p1" as PlayerId,
+  };
+  const defender: CardRef = {
+    instanceId: "defender-spotlight" as InstanceId,
+    cardId: "OP00-012" as CardId,
+    playerId: "p2" as PlayerId,
+  };
+  const effectEntry: EffectTextSpotlightHistoryEntry = {
+    id: "spotlight:event:1:effect",
+    key: "spotlight:event:1:effect",
+    semanticKey: "effect|spotlight:event:1:0|span:body:draw",
+    mode: "resolved",
+    status: "resolved",
+    active: {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:body:draw"],
+    },
+    resolvedEventId: "event:1" as EngineEventId,
+    queueEntryId: "queue-entry:1" as QueueEntryId,
+    effectBlockId: "effect:1" as EffectId,
+  };
+  const combatEntry: CombatSpotlightHistoryEntry = {
+    kind: "combat",
+    id: "spotlight:event:combat",
+    key: "spotlight:event:combat",
+    semanticKey: "combat|spotlight:event:combat",
+    mode: "resolved",
+    status: "resolved",
+    combat: {
+      eventKind: "attackDeclared",
+      attacker,
+      defender,
+      attackerPower: 7000,
+      defenderPower: 5000,
+    },
+    resolvedEventId: "event:combat" as EngineEventId,
+  };
+  const playedCardEntry: PlayedCardSpotlightHistoryEntry = {
+    kind: "playedCard",
+    id: "spotlight:event:played:card",
+    key: "spotlight:event:played:card",
+    semanticKey: "playedCard|spotlight:event:played",
+    mode: "resolved",
+    status: "resolved",
+    source,
+    resolvedEventId: "event:played" as EngineEventId,
+  };
+  const disclosure: SpotlightEntryDisclosure = {
+    entryRefs: [
+      {
+        role: "effectSource",
+        cardInstanceId: source.instanceId,
+        visibility: { type: "public" },
+      },
+    ],
+    targetLinks: [
+      {
+        spanId: "span:body:draw",
+        relation: "affectedCard",
+        cardInstanceId: source.instanceId,
+        visibility: { type: "private", playerId: "p1" as PlayerId },
+      },
+    ],
+  };
+  const effectPayload: SpotlightEntryCreatedPayload = {
+    entry: effectEntry,
+    disclosure,
+  };
+  const combatPayload: SpotlightEntryCreatedPayload = { entry: combatEntry };
+  const playedPayload: SpotlightEntryCreatedPayload = {
+    entry: playedCardEntry,
+  };
+  const event: SpotlightEntryCreatedEngineEvent = {
+    id: "event:spotlight" as EngineEventId,
+    seq: 5,
+    type: "spotlightEntryCreated",
+    payload: effectPayload,
+    visibility: { type: "public" },
+    createdAtStateSeq: 1 as StateSeq,
+  };
+
+  expect(effectPayload.entry.mode).toBe("resolved");
+  expect(combatPayload.entry.kind).toBe("combat");
+  expect(playedPayload.entry.kind).toBe("playedCard");
+  expect(event.type).toBe("spotlightEntryCreated");
+});
+
+test("public spotlight entries can omit raw private engine metadata", () => {
+  const source: CardRef = {
+    instanceId: "source-public" as InstanceId,
+    cardId: "OP00-013" as CardId,
+    playerId: "p1" as PlayerId,
+  };
+  const pendingDecisionId =
+    "public-pending:event:1:p1" as PublicPendingDecisionId;
+  const entry: EffectSpotlightHistoryEntry = {
+    id: "spotlight:decision:event:1:0",
+    key: "spotlight:decision:event:1:0",
+    semanticKey: "effect|decision:event:1|span:body:draw",
+    mode: "live",
+    status: "pending",
+    active: {
+      source,
+      textKind: "effect",
+      activeSpanIds: ["span:body:draw"],
+    },
+    pendingDecisionId,
+  };
+
+  expect(entry.pendingDecisionId).toBe(pendingDecisionId);
+  expect(entry.resolvedEventId).toBeUndefined();
+  expect(entry.queueEntryId).toBeUndefined();
+  expect(entry.effectBlockId).toBeUndefined();
 });

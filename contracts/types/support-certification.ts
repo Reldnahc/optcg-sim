@@ -9,6 +9,7 @@ export type SupportEvidenceFamily =
   | "sourcePresence"
   | "activation"
   | "trigger"
+  | "attacker"
   | "entrySupport"
   | "cost"
   | "condition"

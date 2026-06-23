@@ -1,8 +1,10 @@
 import type { CardRef } from "./card-metadata.js";
+import type { PublicPendingDecisionId } from "./decisions.js";
 import type {
-  DecisionId,
   EffectId,
   EngineEventId,
+  InstanceId,
+  PlayerId,
   QueueEntryId,
 } from "./primitives.js";
 
@@ -74,7 +76,7 @@ export interface EffectSpotlightHistoryEntryBase {
 export interface EffectTextSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {
   readonly kind?: "effectText";
   readonly active: ActiveEffectTextPresentation;
-  readonly pendingDecisionId?: DecisionId;
+  readonly pendingDecisionId?: PublicPendingDecisionId;
   readonly resolvedEventId?: EngineEventId;
   readonly queueEntryId?: QueueEntryId;
   readonly effectBlockId?: EffectId;
@@ -99,11 +101,49 @@ export interface CombatSpotlightHistoryEntry extends EffectSpotlightHistoryEntry
   readonly resolvedEventId: EngineEventId;
 }
 
+export interface PlayedCardSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {
+  readonly kind: "playedCard";
+  readonly source: CardRef;
+  readonly resolvedEventId: EngineEventId;
+}
+
 export type EffectSpotlightHistoryEntry =
   | EffectTextSpotlightHistoryEntry
-  | CombatSpotlightHistoryEntry;
+  | CombatSpotlightHistoryEntry
+  | PlayedCardSpotlightHistoryEntry;
 
 export interface EffectSpotlightHistory {
   readonly entries: readonly EffectSpotlightHistoryEntry[];
   readonly presentKey?: string;
+}
+
+export type SpotlightDisclosureVisibility =
+  | { readonly type: "public" }
+  | { readonly type: "private"; readonly playerId: PlayerId };
+
+export interface SpotlightTargetLinkDisclosure {
+  readonly spanId: EffectTextSpanId;
+  readonly relation: EffectTextTargetLink["relation"];
+  readonly cardInstanceId: InstanceId;
+  readonly visibility: SpotlightDisclosureVisibility;
+}
+
+export interface SpotlightEntryCardRefDisclosure {
+  readonly role:
+    | "effectSource"
+    | "playedCardSource"
+    | "combatAttacker"
+    | "combatDefender";
+  readonly cardInstanceId: InstanceId;
+  readonly visibility: SpotlightDisclosureVisibility;
+}
+
+export interface SpotlightEntryDisclosure {
+  readonly entryRefs?: readonly SpotlightEntryCardRefDisclosure[];
+  readonly targetLinks?: readonly SpotlightTargetLinkDisclosure[];
+}
+
+export interface SpotlightEntryCreatedPayload {
+  readonly entry: EffectSpotlightHistoryEntry;
+  readonly disclosure?: SpotlightEntryDisclosure;
 }

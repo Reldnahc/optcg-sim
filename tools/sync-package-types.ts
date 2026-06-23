@@ -19,6 +19,7 @@ const CANONICAL_PROJECTION_FILE_NAMES = [
   "view.ts",
   "game-state.ts",
   "effects.ts",
+  "dynamic-number-values.ts",
   "effect-continuous.ts",
   "effect-costs.ts",
   "effect-definition.ts",

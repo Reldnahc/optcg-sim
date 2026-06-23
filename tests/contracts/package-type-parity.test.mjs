@@ -124,6 +124,7 @@ async function makeFixtureRepo() {
     "view.ts",
     "game-state.ts",
     "effects.ts",
+    "dynamic-number-values.ts",
     "effect-continuous.ts",
     "effect-costs.ts",
     "effect-definition.ts",

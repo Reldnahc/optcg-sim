@@ -17,6 +17,7 @@ import type {
   PublicLegalAction,
   PublicLifeView,
   PublicPendingDecision,
+  PublicPendingDecisionId,
   PublicRevealRecord,
   PublicTurnState,
   SpectatorEvent,
@@ -101,6 +102,8 @@ test("TYP-002A canonical player and spectator view DTO contracts compile", () =>
   };
   const decision: PublicPendingDecision = {
     id: "decision-1" as PublicDecision["id"],
+    spotlightPendingId:
+      "public-pending:event-1:player-a" as PublicPendingDecisionId,
     type: "chooseQuantity",
     playerId: playerA,
     prompt: "Choose how many cards to draw.",
@@ -259,6 +262,45 @@ test("public decision presentation can expose active effect text spans", () => {
   expect(presentation.activeEffectText?.activeSpanIds).toEqual([
     "span:body:ko",
   ]);
+});
+
+test("public pending decision exposes spotlight-safe pinning identity", () => {
+  const playerId = "player-a" as PlayerId;
+  const spotlightPendingId =
+    "public-pending:event-decision:player-a" as PublicPendingDecisionId;
+  const decision: PublicPendingDecision = {
+    id: "decision-private-engine-id" as PublicDecision["id"],
+    spotlightPendingId,
+    type: "chooseQuantity",
+    playerId,
+    prompt: "Choose how many cards to draw.",
+    presentation: {
+      title: "Choose quantity",
+      instruction: "Choose how many cards to draw.",
+    },
+    causedBy: { type: "playerAction", actionId: "action-1" },
+    mode: "upTo",
+    min: 0,
+    max: 2,
+  };
+  const spotlightEntry = {
+    id: "spotlight:decision:event-decision:0",
+    key: "spotlight:decision:event-decision:0",
+    semanticKey: "effect|decision:event-decision|span:body:draw",
+    mode: "live",
+    status: "pending",
+    active: {
+      source: cardRef("source", playerId),
+      textKind: "effect",
+      activeSpanIds: ["span:body:draw"],
+    },
+    pendingDecisionId: spotlightPendingId,
+  } satisfies NonNullable<
+    PlayerView["effectSpotlightHistory"]
+  >["entries"][number];
+
+  expect(spotlightEntry.pendingDecisionId).toBe(spotlightPendingId);
+  expect(spotlightEntry.pendingDecisionId).not.toBe(decision.id);
 });
 
 test("TYP-002A initial spectator view excludes hidden identities and player-only choices", () => {

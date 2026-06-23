@@ -2,6 +2,7 @@ import type {
   DecisionId,
   EffectId,
   CardId,
+  EngineEventId,
   InstanceId,
   PlayerRef,
   PlayerId,
@@ -23,6 +24,10 @@ import type {
   Target,
   TargetRequest,
 } from "./effects.js";
+
+export type PublicPendingDecisionId = string & {
+  readonly __brand: "PublicPendingDecisionId";
+};
 
 export interface PaymentSpec {
   optionId: string;
@@ -97,6 +102,7 @@ export type PaymentOption =
       id: string;
       type: "moveCards";
       count: number;
+      maxCount?: number | "available";
       from: {
         player: PlayerRef;
         zone: Zone;
@@ -117,6 +123,7 @@ export type PaymentOption =
       faceUp?: boolean;
     }
   | { id: string; type: "discard"; count: number; filter?: CardFilter }
+  | { id: string; type: "shuffleDeck"; player: PlayerRef }
   | { id: string; type: "custom"; action: string };
 
 export interface TargetCandidate {
@@ -170,6 +177,7 @@ export interface BaseDecision {
   causedBy: CausalityRef;
   timeoutMs?: number;
   defaultResponse?: DecisionResponse;
+  decisionAnchorEventId?: EngineEventId;
   visibility: EventVisibility;
 }
 

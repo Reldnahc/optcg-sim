@@ -10,8 +10,12 @@ import type {
   Zone,
 } from "./primitives.js";
 import type { CardRef, Keyword, ZoneRef } from "./card-metadata.js";
-import type { CardSelectionCandidate, TargetCandidate } from "./decisions.js";
-import type { PendingDecision } from "./decisions.js";
+import type {
+  CardSelectionCandidate,
+  PendingDecision,
+  PublicPendingDecisionId,
+  TargetCandidate,
+} from "./decisions.js";
 import type { CausalityRef, EngineEvent } from "./events.js";
 import type { PublicTimerState } from "./runtime.js";
 import type {
@@ -128,6 +132,7 @@ export interface PublicDecisionPresentation {
 
 export interface PublicDecision<TType extends string = string> {
   id: DecisionId;
+  spotlightPendingId: PublicPendingDecisionId;
   type: TType;
   playerId: PlayerId;
   prompt: string;

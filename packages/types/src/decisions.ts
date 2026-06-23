@@ -2,6 +2,7 @@ import type {
   DecisionId,
   EffectId,
   CardId,
+  EngineEventId,
   InstanceId,
   PlayerRef,
   PlayerId,
@@ -23,6 +24,10 @@ import type {
   Target,
   TargetRequest,
 } from "./effects.js";
+
+export type PublicPendingDecisionId = string & {
+  readonly __brand: "PublicPendingDecisionId";
+};
 
 export interface PaymentSpec {
   optionId: string;
@@ -173,6 +178,7 @@ export interface BaseDecision {
   causedBy: CausalityRef;
   timeoutMs?: number;
   defaultResponse?: DecisionResponse;
+  decisionAnchorEventId?: EngineEventId;
   visibility: EventVisibility;
 }
 

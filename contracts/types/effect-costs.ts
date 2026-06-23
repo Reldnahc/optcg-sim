@@ -73,6 +73,7 @@ export type Cost =
   | {
       type: "moveCards";
       count: number;
+      maxCount?: number | "available";
       chooser: PlayerRef;
       from: {
         player: PlayerRef;
@@ -82,6 +83,7 @@ export type Cost =
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       order: "chooserChoice";
+      filter?: CardFilter;
       optional?: boolean;
     }
   | {
@@ -102,6 +104,7 @@ export type Cost =
       duration: Duration;
       optional?: boolean;
     }
+  | { type: "shuffleDeck"; player: PlayerRef; optional?: boolean }
   | { type: "trashSelf"; filter?: CardFilter }
   | {
       type: "trashFromField";
@@ -146,6 +149,7 @@ export type OptionalRevealFromHandCost = {
 export type OptionalMoveCardsCost = {
   type: "moveCards";
   count: number;
+  maxCount?: number | "available";
   chooser: PlayerRef;
   from: {
     player: PlayerRef;
@@ -248,5 +252,6 @@ export type OptionalCost =
   | OptionalRevealFromHandCost
   | OptionalMoveCardsCost
   | OptionalMoveFieldToLifeCost
+  | { type: "shuffleDeck"; player: PlayerRef; optional: true }
   | OptionalChooseOneTrashCost
   | { type: "sequence"; costs: Cost[]; optional: true };
