@@ -9,7 +9,7 @@ import type {
   PublicCardView,
 } from "@optcg/types";
 
-import { chooseBotAction } from "./bot-player.js";
+import { chooseBotAction, chooseBotActionReport } from "./bot-player.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 
 const botId = "p2" as PlayerId;
@@ -92,8 +92,8 @@ const viewForBot = (snapshot: DevMatchSnapshot) => {
 
 describe("bot combat evaluation", () => {
   test("starts a lethal leader attack sequence when opponent hand cannot counter every hit", () => {
-    const chosen = chooseBotAction(
-      snapshotWithActions(
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
         [
           {
             index: 0,
@@ -142,10 +142,15 @@ describe("bot combat evaluation", () => {
           ],
         },
       ),
-      botId,
-    );
+      botPlayerId: botId,
+    });
 
-    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
+    assert.notEqual(report, undefined);
+    if (report === undefined) {
+      throw new Error("Expected bot action report.");
+    }
+    assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 0 });
+    assert.equal(report.score?.reasons.includes("combat:leader-lethal"), true);
   });
 
   test("prefers the highest-value character target when lethal is not available", () => {

@@ -1,12 +1,11 @@
 import type { PlayerView } from "@optcg/types";
 
 import {
-  cardPower,
-  counterCardsToStopAttack,
-  findVisibleCard,
-  visibleCardValue,
-  type BotFeatures,
-} from "./bot-features.js";
+  botCandidateIsLegalForScoring,
+  type BotActionCandidate,
+} from "./bot-candidates.js";
+import type { BotFeatures } from "./bot-features.js";
+import { scoreBotCandidate } from "./bot-score.js";
 import type { BotActionContext } from "./bot-types.js";
 
 type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
@@ -20,294 +19,44 @@ export interface BotActionEvaluationInput {
   readonly cardScores: readonly number[];
 }
 
-const actionPlacementCard = ({
-  action,
-  relatedCards,
-}: Pick<BotActionContext, "action" | "relatedCards">) => {
-  const placementId = action.placement?.instanceId;
-  return placementId === undefined
-    ? undefined
-    : relatedCards.find((card) => card.instanceId === placementId);
-};
-
-const profileAdjustment = (scores: readonly number[]): number => {
-  const best = [...scores].sort((left, right) => left - right)[0];
-  if (best === undefined) {
-    return 0;
-  }
-  if (best <= 0) {
-    return Math.min(140, 70 + Math.abs(best));
-  }
-  return Math.max(-70, 35 - best);
-};
-
-const opponentView = ({
-  snapshot,
-  botPlayerId,
-}: Pick<BotActionContext, "snapshot" | "botPlayerId">):
-  | PlayerView["opponent"]
-  | undefined => {
-  const player = snapshot.players[botPlayerId];
-  if (player === undefined || !("opponent" in player.view)) {
-    return undefined;
-  }
-  return player.view.opponent;
-};
-
-const actionIsLegalForEvaluation = ({
+const candidateFromEvaluationInput = ({
   context,
   features,
-}: Pick<BotActionEvaluationInput, "context" | "features">): boolean => {
-  const { action, snapshot, botPlayerId } = context;
-  if (action.type === "concede") {
-    return false;
-  }
-  if (action.type === "attachDon") {
-    return (
-      features.actions.byIndex.get(action.index)
-        ?.hasRemainingAttackAfterAttachment ?? true
-    );
-  }
-  if (action.type !== "declareAttack") {
-    return true;
-  }
-  const attack = action.attack;
-  if (attack === undefined) {
-    return false;
-  }
-  const attackerPower = cardPower(
-    findVisibleCard(snapshot, botPlayerId, attack.attackerInstanceId),
-  );
-  const targetPower = cardPower(
-    findVisibleCard(snapshot, botPlayerId, attack.targetInstanceId),
-  );
-  return (
-    attackerPower !== undefined &&
-    targetPower !== undefined &&
-    attackerPower >= targetPower
-  );
-};
-
-const decisionUtility = ({
-  context,
-  pendingDecision,
-}: BotActionEvaluationInput): number | undefined => {
-  const { action } = context;
-  if (action.type !== "respondToDecision") {
-    return undefined;
-  }
-  if (action.decisionPayment?.kind === "cardCost") {
-    return 1_200;
-  }
-  if (
-    action.decisionPayment?.kind === "paymentDeclined" ||
-    action.responseKey === "decline"
-  ) {
-    return pendingDecision?.type === "payCost" ? 100 : 50;
-  }
-  if (pendingDecision?.type === "payCost") {
-    return 1_200;
-  }
-  if (action.responseKey === "keep" || action.responseKey === "deny") {
-    return 1_000;
-  }
-  return 150;
-};
-
-const tacticalUtility = ({
-  context,
-  tacticalScore,
-}: BotActionEvaluationInput): number | undefined => {
-  if (tacticalScore === undefined) {
-    return undefined;
-  }
-  if (tacticalScore < 0) {
-    return 2_000 + Math.abs(tacticalScore);
-  }
-  if (context.action.type === "useCounter") {
-    return 650 - tacticalScore;
-  }
-  return undefined;
-};
-
-const characterAttackUtility = (
-  context: BotActionContext,
-): number | undefined => {
-  const targetId = context.action.attack?.targetInstanceId;
-  const opponent = opponentView(context);
-  if (
-    context.action.type !== "declareAttack" ||
-    targetId === undefined ||
-    opponent === undefined ||
-    !opponent.characters.some((card) => card.instanceId === targetId)
-  ) {
-    return undefined;
-  }
-  const target = findVisibleCard(
-    context.snapshot,
-    context.botPlayerId,
-    targetId,
-  );
-  if (target === undefined) {
-    return undefined;
-  }
-  return (
-    75 + Math.min(55, visibleCardValue(target, { includeCounter: true }) / 400)
-  );
-};
-
-const leaderAttackUtility = (context: BotActionContext): number | undefined => {
-  const attack = context.action.attack;
-  const opponent = opponentView(context);
-  if (
-    context.action.type !== "declareAttack" ||
-    attack === undefined ||
-    opponent === undefined ||
-    attack.targetInstanceId !== opponent.leader.instanceId
-  ) {
-    return undefined;
-  }
-  const attackerPower = cardPower(
-    findVisibleCard(
-      context.snapshot,
-      context.botPlayerId,
-      attack.attackerInstanceId,
-    ),
-  );
-  const targetPower = cardPower(opponent.leader);
-  if (attackerPower === undefined || targetPower === undefined) {
-    return undefined;
-  }
-  const cardsToStop = counterCardsToStopAttack(attackerPower, targetPower);
-  if (cardsToStop === undefined) {
-    return undefined;
-  }
-  const opponentHandCount =
-    opponent.hand === undefined ? opponent.handCount : opponent.hand.length;
-  const handPressure = cardsToStop * 12;
-  const lifePressure = Math.max(0, 5 - opponent.life.count) * 8;
-  const lowHandPressure =
-    opponent.life.count <= 1 && opponentHandCount < cardsToStop ? 20 : 0;
-  return 30 + handPressure + lifePressure + lowHandPressure;
-};
-
-const attackUtility = (context: BotActionContext): number | undefined =>
-  characterAttackUtility(context) ?? leaderAttackUtility(context);
-
-const attachDonUtility = (context: BotActionContext): number | undefined => {
-  const attachment = context.action.attachment;
-  const opponent = opponentView(context);
-  if (
-    context.action.type !== "attachDon" ||
-    attachment === undefined ||
-    opponent === undefined
-  ) {
-    return undefined;
-  }
-  const target = findVisibleCard(
-    context.snapshot,
-    context.botPlayerId,
-    attachment.targetInstanceId,
-  );
-  const targetPower = cardPower(target);
-  const leaderPower = cardPower(opponent.leader);
-  if (targetPower === undefined || leaderPower === undefined) {
-    return undefined;
-  }
-  const currentCardsToStop = counterCardsToStopAttack(targetPower, leaderPower);
-  const boostedCardsToStop = counterCardsToStopAttack(
-    targetPower + 1_000,
-    leaderPower,
-  );
-  if (boostedCardsToStop === undefined) {
-    return 20;
-  }
-  if (currentCardsToStop === undefined) {
-    return 95;
-  }
-  if (boostedCardsToStop > currentCardsToStop) {
-    return 75 + boostedCardsToStop * 8;
-  }
-  return 45;
-};
-
-const playCardUtility = ({
-  context,
-  profileScore,
-  cardScores,
-}: BotActionEvaluationInput): number | undefined => {
-  if (context.action.type !== "playCard") {
-    return undefined;
-  }
-  const card = actionPlacementCard(context);
-  const counter = card?.printedCounter ?? 0;
-  const counterReservePenalty =
-    counter >= 2_000 ? 45 : counter >= 1_000 ? 14 : 0;
-  const developmentValue =
-    25 + Math.min(55, visibleCardValue(card, { includeCounter: true }) / 400);
-  return (
-    developmentValue -
-    counterReservePenalty +
-    profileAdjustment([
-      ...(profileScore === undefined ? [] : [profileScore]),
-      ...cardScores,
-    ])
-  );
-};
-
-const activeEffectUtility = ({
-  context,
-  profileScore,
-  cardScores,
-}: BotActionEvaluationInput): number | undefined =>
-  context.action.type === "activateEffect"
-    ? 60 +
-      profileAdjustment([
-        ...(profileScore === undefined ? [] : [profileScore]),
-        ...cardScores,
-      ])
-    : undefined;
-
-const fallbackUtility = ({ context }: BotActionEvaluationInput): number => {
-  switch (context.action.type) {
-    case "advanceToMainPhase":
-      return 80;
-    case "endMainPhase":
-      return -100;
-    case "useCounter":
-      return 20;
-    case "activateBlocker":
-      return 25;
-    case "attachDon":
-      return 35;
-    case "playCard":
-      return 30;
-    case "activateEffect":
-      return 60;
-    case "declareAttack":
-      return 40;
-    case "respondToDecision":
-      return 150;
-    case "concede":
-      return -10_000;
-    default:
-      return 0;
-  }
+}: Pick<
+  BotActionEvaluationInput,
+  "context" | "features"
+>): BotActionCandidate => {
+  const facts = features.actions.byIndex.get(context.action.index) ?? {
+    relatedCards: context.relatedCards,
+    hasRemainingAttackAfterAttachment: true,
+  };
+  return {
+    action: context.action,
+    relatedCards: context.relatedCards,
+    facts,
+  };
 };
 
 export const evaluateBotAction = (
   input: BotActionEvaluationInput,
 ): number | undefined => {
-  if (!actionIsLegalForEvaluation(input)) {
+  const candidate = candidateFromEvaluationInput(input);
+  if (
+    !botCandidateIsLegalForScoring({
+      candidate,
+      features: input.features,
+    })
+  ) {
     return undefined;
   }
-  return (
-    decisionUtility(input) ??
-    tacticalUtility(input) ??
-    attackUtility(input.context) ??
-    attachDonUtility(input.context) ??
-    playCardUtility(input) ??
-    activeEffectUtility(input) ??
-    fallbackUtility(input)
-  );
+  const scored = scoreBotCandidate({
+    candidate,
+    features: input.features,
+    context: input.context,
+    pendingDecision: input.pendingDecision,
+    tacticalScore: input.tacticalScore,
+    profileScore: input.profileScore,
+    cardScores: input.cardScores,
+  });
+  return scored.breakdown.total;
 };

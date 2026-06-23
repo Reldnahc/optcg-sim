@@ -10,7 +10,7 @@ import type {
   PublicCardView,
 } from "@optcg/types";
 
-import { chooseBotAction } from "./bot-player.js";
+import { chooseBotAction, chooseBotActionReport } from "./bot-player.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 
 const botId = "p2" as PlayerId;
@@ -147,12 +147,20 @@ describe("red Shanks bot profile", () => {
       presentation: { title: "Choose", instruction: "Choose." },
     };
 
-    const chosen = chooseBotAction(snapshot, botId);
+    const report = chooseBotActionReport({ snapshot, botPlayerId: botId });
 
-    assert.deepEqual(chosen, {
+    assert.notEqual(report, undefined);
+    if (report === undefined) {
+      throw new Error("Expected bot action report.");
+    }
+    assert.deepEqual(report.choice, {
       type: "respondToDecision",
       decisionId: "decision:op09-leader-defense",
       response: { type: "optionalActivation", choice: "activate" },
+    });
+    assert.deepEqual(report.decisionReason, {
+      kind: "profile",
+      profileId: "red-shanks",
     });
   });
 

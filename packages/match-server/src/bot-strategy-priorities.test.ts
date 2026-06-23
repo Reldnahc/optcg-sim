@@ -7,7 +7,7 @@ import type {
   PublicCardView,
 } from "@optcg/types";
 
-import { chooseBotAction } from "./bot-player.js";
+import { chooseBotAction, chooseBotActionReport } from "./bot-player.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -309,8 +309,8 @@ describe("bot strategy priorities", () => {
   });
 
   test("attacks before playing a high-counter card", () => {
-    const chosen = chooseBotAction(
-      snapshotWithActions(
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
         [
           {
             index: 0,
@@ -341,10 +341,18 @@ describe("bot strategy priorities", () => {
           opponentLeader: { currentPower: 5000 },
         },
       ),
-      botId,
-    );
+      botPlayerId: botId,
+    });
 
-    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+    assert.notEqual(report, undefined);
+    if (report === undefined) {
+      throw new Error("Expected bot action report.");
+    }
+    assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 1 });
+    assert.equal(
+      report.score?.reasons.includes("combat:leader-pressure"),
+      true,
+    );
   });
 
   test("attaches DON for combat pressure before making a generic play", () => {

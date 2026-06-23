@@ -8,7 +8,12 @@ export type {
   BotBehaviorProfile,
   BotStrategy,
 } from "./bot-types.js";
-export { createBotStrategy, defaultBotStrategy } from "./bot-strategy.js";
+export {
+  chooseBotActionReport,
+  createBotStrategy,
+  defaultBotStrategy,
+  type BotStrategyActionReport,
+} from "./bot-strategy.js";
 
 export const chooseBotAction = (
   snapshot: DevMatchSnapshot,
