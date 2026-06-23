@@ -60,8 +60,9 @@ const evaluatedVisibleActions = ({
     }
     const utility = evaluateBotAction({
       context,
+      features,
       pendingDecision,
-      tacticalScore: scoreCombatAction(context),
+      tacticalScore: scoreCombatAction(context, features),
       profileScore,
       cardScores: cardScores.filter(
         (score): score is number => typeof score === "number",
@@ -107,7 +108,6 @@ export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
   chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
-    const features = buildBotFeatures(snapshot, botPlayerId);
     const player = snapshot.players[botPlayerId];
     const actions = player?.actions ?? [];
     const pendingDecision = player?.view.pendingDecision;
@@ -125,6 +125,7 @@ export const createBotStrategy = (
       });
       return decisionResponse?.choice;
     }
+    const features = buildBotFeatures(snapshot, botPlayerId);
     const evaluated = evaluatedVisibleActions({
       features,
       profile,

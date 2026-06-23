@@ -5,6 +5,7 @@ import {
   counterCardsToStopAttack,
   findVisibleCard,
   visibleCardValue,
+  type BotFeatures,
 } from "./bot-features.js";
 import type { BotActionContext } from "./bot-types.js";
 
@@ -12,6 +13,7 @@ type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
 
 export interface BotActionEvaluationInput {
   readonly context: BotActionContext;
+  readonly features: BotFeatures;
   readonly pendingDecision?: BotPendingDecision | undefined;
   readonly tacticalScore?: number | undefined;
   readonly profileScore?: number | undefined;
@@ -52,31 +54,19 @@ const opponentView = ({
   return player.view.opponent;
 };
 
-const hasRemainingAttackForAttachment = ({
-  action,
-  snapshot,
-  botPlayerId,
-}: BotActionContext): boolean => {
-  const targetId = action.attachment?.targetInstanceId;
-  if (action.type !== "attachDon" || targetId === undefined) {
-    return true;
-  }
-  return (snapshot.players[botPlayerId]?.actions ?? []).some(
-    (candidate) =>
-      candidate.type === "declareAttack" &&
-      candidate.attack?.attackerInstanceId === targetId,
-  );
-};
-
 const actionIsLegalForEvaluation = ({
   context,
-}: Pick<BotActionEvaluationInput, "context">): boolean => {
+  features,
+}: Pick<BotActionEvaluationInput, "context" | "features">): boolean => {
   const { action, snapshot, botPlayerId } = context;
   if (action.type === "concede") {
     return false;
   }
   if (action.type === "attachDon") {
-    return hasRemainingAttackForAttachment(context);
+    return (
+      features.actions.byIndex.get(action.index)
+        ?.hasRemainingAttackAfterAttachment ?? true
+    );
   }
   if (action.type !== "declareAttack") {
     return true;

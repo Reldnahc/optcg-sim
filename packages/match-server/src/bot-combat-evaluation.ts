@@ -5,6 +5,7 @@ import {
   counterCardsToStopAttack,
   findVisibleCard,
   visibleCardValue,
+  type BotFeatures,
 } from "./bot-features.js";
 import type {
   DevMatchSnapshot,
@@ -191,15 +192,6 @@ const counterPowerForAction = ({
         ?.printedCounter ?? 0);
 };
 
-const visibleCounterPower = ({
-  snapshot,
-  botPlayerId,
-}: BotActionContext): number =>
-  snapshot.players[botPlayerId]?.view.self.hand.reduce(
-    (total, card) => total + (card.printedCounter ?? 0),
-    0,
-  ) ?? 0;
-
 export const scoreLeaderLethalAttack = ({
   snapshot,
   botPlayerId,
@@ -356,12 +348,10 @@ const scoreAttachDonForLeaderPressure = ({
   return 26 - pressureBonus;
 };
 
-const scoreCounterAction = ({
-  snapshot,
-  botPlayerId,
-  action,
-  relatedCards,
-}: BotActionContext): number | undefined => {
+const scoreCounterAction = (
+  { snapshot, botPlayerId, action, relatedCards }: BotActionContext,
+  features: BotFeatures,
+): number | undefined => {
   const battle = snapshot.players[botPlayerId]?.view.battle;
   if (
     action.type !== "useCounter" ||
@@ -391,11 +381,7 @@ const scoreCounterAction = ({
     action,
     relatedCards,
   });
-  if (
-    counterValue <= 0 ||
-    visibleCounterPower({ snapshot, botPlayerId, action, relatedCards }) <
-      counterNeeded
-  ) {
+  if (counterValue <= 0 || features.self.handCounterPower < counterNeeded) {
     return undefined;
   }
   if (isLethalBattleDamage(snapshot, botPlayerId)) {
@@ -424,11 +410,12 @@ const scoreCounterAction = ({
 
 export const scoreCombatAction = (
   context: BotActionContext,
+  features: BotFeatures,
 ): number | undefined =>
   scoreLeaderLethalAttack(context) ??
   scoreAttachDonForLethal(context) ??
   scoreAttachDonForLeaderPressure(context) ??
-  scoreCounterAction(context) ??
+  scoreCounterAction(context, features) ??
   scoreCharacterAttack(context);
 
 const bestBlockerChoice = ({

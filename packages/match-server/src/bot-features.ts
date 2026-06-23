@@ -1,4 +1,4 @@
-import type { InstanceId, PlayerId } from "@optcg/types";
+import type { InstanceId, PlayerId, PlayerView } from "@optcg/types";
 
 import type {
   DevMatchSnapshot,
@@ -70,6 +70,11 @@ export const counterCardsToStopAttack = (
 const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
 
+const partialPlayerView = (
+  snapshot: DevMatchSnapshot,
+  playerId: PlayerId,
+): Partial<PlayerView> | undefined => snapshot.players[playerId]?.view;
+
 export const visibleCardValue = (
   card: BotVisibleCard | undefined,
   options: { readonly includeCounter?: boolean } = {},
@@ -89,21 +94,23 @@ export const visibleCards = (
   snapshot: DevMatchSnapshot,
   playerId: PlayerId,
 ): readonly BotVisibleCard[] => {
-  const view = snapshot.players[playerId]?.view;
-  if (view === undefined) {
+  const view = partialPlayerView(snapshot, playerId);
+  const self = view?.self;
+  const opponent = view?.opponent;
+  if (self === undefined || opponent === undefined) {
     return [];
   }
   return [
-    view.self.leader,
-    ...view.self.hand,
-    ...view.self.characters,
-    ...view.self.costArea,
-    ...(view.self.stage === undefined ? [] : [view.self.stage]),
-    view.opponent.leader,
-    ...(view.opponent.hand ?? []),
-    ...view.opponent.characters,
-    ...view.opponent.costArea,
-    ...(view.opponent.stage === undefined ? [] : [view.opponent.stage]),
+    self.leader,
+    ...self.hand,
+    ...self.characters,
+    ...self.costArea,
+    ...(self.stage === undefined ? [] : [self.stage]),
+    opponent.leader,
+    ...(opponent.hand ?? []),
+    ...opponent.characters,
+    ...opponent.costArea,
+    ...(opponent.stage === undefined ? [] : [opponent.stage]),
   ];
 };
 
@@ -190,7 +197,7 @@ const selfHandCounterPower = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
 ): number =>
-  snapshot.players[botPlayerId]?.view.self.hand.reduce(
+  partialPlayerView(snapshot, botPlayerId)?.self?.hand.reduce(
     (total, card) => total + (card.printedCounter ?? 0),
     0,
   ) ?? 0;
@@ -199,7 +206,7 @@ const botDonOnField = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
 ): number => {
-  const self = snapshot.players[botPlayerId]?.view.self;
+  const self = partialPlayerView(snapshot, botPlayerId)?.self;
   if (self === undefined) {
     return 0;
   }
@@ -243,7 +250,8 @@ const leaderAttackPressureForAction = (
   botPlayerId: PlayerId,
   action: DevVisibleAction,
 ): BotLeaderAttackPressure | undefined => {
-  const opponentLeader = snapshot.players[botPlayerId]?.view.opponent.leader;
+  const opponentLeader = partialPlayerView(snapshot, botPlayerId)?.opponent
+    ?.leader;
   const attack = action.attack;
   if (
     action.type !== "declareAttack" ||
@@ -287,19 +295,19 @@ export const buildBotFeatures = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
 ): BotFeatures => {
-  const view = snapshot.players[botPlayerId]?.view;
+  const view = partialPlayerView(snapshot, botPlayerId);
   const cards = visibleCards(snapshot, botPlayerId);
   return {
     snapshot,
     botPlayerId,
     self: {
-      lifeCount: view?.self.life.count ?? 0,
+      lifeCount: view?.self?.life.count ?? 0,
       handCounterPower: selfHandCounterPower(snapshot, botPlayerId),
       donOnField: botDonOnField(snapshot, botPlayerId),
     },
     opponent: {
-      lifeCount: view?.opponent.life.count ?? 0,
-      handCount: view?.opponent.hand?.length ?? view?.opponent.handCount ?? 0,
+      lifeCount: view?.opponent?.life.count ?? 0,
+      handCount: view?.opponent?.hand?.length ?? view?.opponent?.handCount ?? 0,
     },
     cards: {
       visibleCards: cards,
