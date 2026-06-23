@@ -3,7 +3,7 @@ import type { PlayerView } from "@optcg/types";
 import { evaluateBotAction } from "./bot-action-evaluator.js";
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import { relatedCardsForAction } from "./bot-context.js";
-import { chooseDefaultBotDecision } from "./bot-default-profile.js";
+import { chooseBotDecisionResponse } from "./bot-decision-responder.js";
 import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import type {
   BotActionChoice,
@@ -29,25 +29,6 @@ const isCounterStepPassDecision = (
   decision.type === "selectCards" &&
   decision.min === 0 &&
   decision.max === 0;
-
-const chooseProfilePendingDecision = ({
-  snapshot,
-  botPlayerId,
-  profile,
-}: Parameters<BotStrategy["chooseAction"]>[0] & {
-  readonly profile: BotBehaviorProfile;
-}): BotActionChoice | undefined => {
-  const decision = snapshot.players[botPlayerId]?.view.pendingDecision;
-  const battle = snapshot.players[botPlayerId]?.view.battle;
-  if (
-    decision === undefined ||
-    decision.playerId !== botPlayerId ||
-    isCounterStepPassDecision(decision, battle?.step)
-  ) {
-    return undefined;
-  }
-  return profile.chooseDecision?.({ snapshot, botPlayerId });
-};
 
 const evaluatedVisibleActions = ({
   snapshot,
@@ -93,42 +74,8 @@ const chooseBestAction = (
 ): BotActionContext["action"] | undefined =>
   [...evaluated].sort((left, right) => right.utility - left.utility)[0]?.action;
 
-const visibleDecisionActionUtility = (
-  action: BotActionContext["action"],
-  pendingDecision: BotPendingDecision | undefined,
-): number | undefined => {
-  if (action.type !== "respondToDecision") {
-    return undefined;
-  }
-  if (action.decisionPayment?.kind === "cardCost") {
-    return 1_200;
-  }
-  if (
-    action.decisionPayment?.kind === "paymentDeclined" ||
-    action.responseKey === "decline"
-  ) {
-    return pendingDecision?.type === "payCost" ? 100 : 50;
-  }
-  if (pendingDecision?.type === "payCost") {
-    return 1_200;
-  }
-  if (action.responseKey === "keep" || action.responseKey === "deny") {
-    return 1_000;
-  }
-  return 150;
-};
-
-const chooseBestVisibleDecisionAction = (
-  actions: readonly BotActionContext["action"][],
-  pendingDecision: BotPendingDecision | undefined,
-): BotActionContext["action"] | undefined =>
-  chooseBestAction(
-    actions.flatMap((action) => {
-      const utility = visibleDecisionActionUtility(action, pendingDecision);
-      return utility === undefined ? [] : [{ action, utility }];
-    }),
-  );
-
+// Counter-step pass still needs evaluated useCounter utilities. Move this into
+// the responder after score breakdown exposes a structured counter term.
 const chooseCounterStepPass = (
   decision: BotPendingDecision | undefined,
   battleStep: string | undefined,
@@ -167,26 +114,13 @@ export const createBotStrategy = (
       botOwnsPendingDecision &&
       !isCounterStepPassDecision(pendingDecision, battleStep)
     ) {
-      const profileDecisionChoice = chooseProfilePendingDecision({
+      const decisionResponse = chooseBotDecisionResponse({
         snapshot,
         botPlayerId,
         profile,
+        visibleActions: actions,
       });
-      if (profileDecisionChoice !== undefined) {
-        return profileDecisionChoice;
-      }
-      const decisionAction = chooseBestVisibleDecisionAction(
-        actions,
-        pendingDecision,
-      );
-      if (decisionAction !== undefined) {
-        return { type: "submitAction", actionIndex: decisionAction.index };
-      }
-      const pendingDecisionChoice = chooseDefaultBotDecision({
-        snapshot,
-        botPlayerId,
-      });
-      return pendingDecisionChoice;
+      return decisionResponse?.choice;
     }
     const evaluated = evaluatedVisibleActions({
       snapshot,
@@ -202,18 +136,13 @@ export const createBotStrategy = (
       return counterStepPass;
     }
     if (botOwnsPendingDecision) {
-      const decisionAction = chooseBestVisibleDecisionAction(
-        actions,
-        pendingDecision,
-      );
-      if (decisionAction !== undefined) {
-        return { type: "submitAction", actionIndex: decisionAction.index };
-      }
-      const pendingDecisionChoice = chooseDefaultBotDecision({
+      const decisionResponse = chooseBotDecisionResponse({
         snapshot,
         botPlayerId,
+        profile,
+        visibleActions: actions,
       });
-      return pendingDecisionChoice;
+      return decisionResponse?.choice;
     }
     const chosen = chooseBestAction(evaluated);
     if (chosen !== undefined) {
@@ -221,7 +150,12 @@ export const createBotStrategy = (
     }
     return (
       profile.chooseDecision?.({ snapshot, botPlayerId }) ??
-      chooseDefaultBotDecision({ snapshot, botPlayerId })
+      chooseBotDecisionResponse({
+        snapshot,
+        botPlayerId,
+        profile: {},
+        visibleActions: actions,
+      })?.choice
     );
   },
 });

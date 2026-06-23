@@ -23,6 +23,17 @@ export interface BotDecisionChoice {
 
 export type BotActionChoice = BotSubmitActionChoice | BotDecisionChoice;
 
+export type BotDecisionReason =
+  | { readonly kind: "profile"; readonly profileId?: string }
+  | { readonly kind: "visible-action"; readonly actionIndex: number }
+  | { readonly kind: "fallback"; readonly decisionType: string }
+  | { readonly kind: "counter-step-pass" };
+
+export interface BotDecisionResponseChoice {
+  readonly choice: BotActionChoice;
+  readonly reason: BotDecisionReason;
+}
+
 export interface BotActionContext {
   readonly snapshot: DevMatchSnapshot;
   readonly botPlayerId: PlayerId;
