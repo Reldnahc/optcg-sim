@@ -1,6 +1,11 @@
 import type { CardRef, PlayerId } from "@optcg/types";
 
-import { cardPower, findVisibleCard } from "./bot-context.js";
+import {
+  cardPower,
+  counterCardsToStopAttack,
+  findVisibleCard,
+  visibleCardValue,
+} from "./bot-features.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -12,7 +17,6 @@ import type {
   BotVisibleCard,
 } from "./bot-types.js";
 
-const assumedCounterPowerPerHandCard = 2_000;
 const leaderLethalBaseScore = -1_000;
 const lethalSetupBaseScore = -900;
 const lethalDefenseScore = -950;
@@ -21,18 +25,6 @@ interface LeaderAttackCandidate {
   readonly attackerInstanceId: string;
   readonly cardsToStop: number;
 }
-
-const counterCardsToStopAttack = (
-  attackerPower: number,
-  targetPower: number,
-): number | undefined => {
-  if (attackerPower < targetPower) {
-    return undefined;
-  }
-  return Math.ceil(
-    (attackerPower - targetPower + 1_000) / assumedCounterPowerPerHandCard,
-  );
-};
 
 const opponentHandCardCount = (
   snapshot: DevMatchSnapshot,
@@ -118,16 +110,6 @@ const counterCardsNeededToSurvive = (
     .sort((left, right) => left - right)
     .slice(0, attacksToStop)
     .reduce((total, cardsToStop) => total + cardsToStop, 0);
-};
-
-const visibleCardValue = (card: BotVisibleCard | undefined): number => {
-  if (card === undefined) {
-    return 0;
-  }
-  const power = cardPower(card) ?? 0;
-  const cost = card.currentCost ?? card.printedCost ?? 0;
-  const blockerBonus = card.keywords?.includes("blocker") === true ? 2_000 : 0;
-  return power + cost * 1_000 + blockerBonus;
 };
 
 const findCardRef = (

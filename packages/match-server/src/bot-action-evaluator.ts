@@ -1,6 +1,11 @@
 import type { PlayerView } from "@optcg/types";
 
-import { cardPower, findVisibleCard } from "./bot-context.js";
+import {
+  cardPower,
+  counterCardsToStopAttack,
+  findVisibleCard,
+  visibleCardValue,
+} from "./bot-features.js";
 import type { BotActionContext } from "./bot-types.js";
 
 type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
@@ -13,8 +18,6 @@ export interface BotActionEvaluationInput {
   readonly cardScores: readonly number[];
 }
 
-const assumedCounterPowerPerHandCard = 2_000;
-
 const actionPlacementCard = ({
   action,
   relatedCards,
@@ -23,19 +26,6 @@ const actionPlacementCard = ({
   return placementId === undefined
     ? undefined
     : relatedCards.find((card) => card.instanceId === placementId);
-};
-
-const visibleCardValue = (
-  card: BotActionContext["relatedCards"][number] | undefined,
-): number => {
-  if (card === undefined) {
-    return 0;
-  }
-  const power = cardPower(card) ?? 0;
-  const cost = card.currentCost ?? card.printedCost ?? 0;
-  const counter = card.printedCounter ?? 0;
-  const blockerBonus = card.keywords?.includes("blocker") === true ? 2_000 : 0;
-  return power + cost * 1_000 + blockerBonus + counter / 2;
 };
 
 const profileAdjustment = (scores: readonly number[]): number => {
@@ -61,16 +51,6 @@ const opponentView = ({
   }
   return player.view.opponent;
 };
-
-const attackCardsToStop = (
-  attackerPower: number,
-  targetPower: number,
-): number | undefined =>
-  attackerPower < targetPower
-    ? undefined
-    : Math.ceil(
-        (attackerPower - targetPower + 1_000) / assumedCounterPowerPerHandCard,
-      );
 
 const hasRemainingAttackForAttachment = ({
   action,
@@ -181,7 +161,9 @@ const characterAttackUtility = (
   if (target === undefined) {
     return undefined;
   }
-  return 75 + Math.min(55, visibleCardValue(target) / 400);
+  return (
+    75 + Math.min(55, visibleCardValue(target, { includeCounter: true }) / 400)
+  );
 };
 
 const leaderAttackUtility = (context: BotActionContext): number | undefined => {
@@ -206,7 +188,7 @@ const leaderAttackUtility = (context: BotActionContext): number | undefined => {
   if (attackerPower === undefined || targetPower === undefined) {
     return undefined;
   }
-  const cardsToStop = attackCardsToStop(attackerPower, targetPower);
+  const cardsToStop = counterCardsToStopAttack(attackerPower, targetPower);
   if (cardsToStop === undefined) {
     return undefined;
   }
@@ -242,8 +224,8 @@ const attachDonUtility = (context: BotActionContext): number | undefined => {
   if (targetPower === undefined || leaderPower === undefined) {
     return undefined;
   }
-  const currentCardsToStop = attackCardsToStop(targetPower, leaderPower);
-  const boostedCardsToStop = attackCardsToStop(
+  const currentCardsToStop = counterCardsToStopAttack(targetPower, leaderPower);
+  const boostedCardsToStop = counterCardsToStopAttack(
     targetPower + 1_000,
     leaderPower,
   );
@@ -271,7 +253,8 @@ const playCardUtility = ({
   const counter = card?.printedCounter ?? 0;
   const counterReservePenalty =
     counter >= 2_000 ? 45 : counter >= 1_000 ? 14 : 0;
-  const developmentValue = 25 + Math.min(55, visibleCardValue(card) / 400);
+  const developmentValue =
+    25 + Math.min(55, visibleCardValue(card, { includeCounter: true }) / 400);
   return (
     developmentValue -
     counterReservePenalty +

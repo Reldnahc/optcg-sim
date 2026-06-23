@@ -2,8 +2,8 @@ import type { PlayerView } from "@optcg/types";
 
 import { evaluateBotAction } from "./bot-action-evaluator.js";
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
-import { relatedCardsForAction } from "./bot-context.js";
 import { chooseBotDecisionResponse } from "./bot-decision-responder.js";
+import { buildBotFeatures, type BotFeatures } from "./bot-features.js";
 import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import type {
   BotActionChoice,
@@ -31,12 +31,13 @@ const isCounterStepPassDecision = (
   decision.max === 0;
 
 const evaluatedVisibleActions = ({
-  snapshot,
-  botPlayerId,
+  features,
   profile,
-}: Parameters<BotStrategy["chooseAction"]>[0] & {
+}: {
+  readonly features: BotFeatures;
   readonly profile: BotBehaviorProfile;
 }): readonly EvaluatedBotAction[] => {
+  const { snapshot, botPlayerId } = features;
   const actions = snapshot.players[botPlayerId]?.actions ?? [];
   const pendingDecision = snapshot.players[botPlayerId]?.view.pendingDecision;
   return actions.flatMap((action) => {
@@ -44,7 +45,8 @@ const evaluatedVisibleActions = ({
       snapshot,
       botPlayerId,
       action,
-      relatedCards: relatedCardsForAction(snapshot, botPlayerId, action),
+      relatedCards:
+        features.actions.byIndex.get(action.index)?.relatedCards ?? [],
     };
     const profileScore = profile.scoreAction?.(context);
     if (profileScore === false) {
@@ -105,6 +107,7 @@ export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
   chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const features = buildBotFeatures(snapshot, botPlayerId);
     const player = snapshot.players[botPlayerId];
     const actions = player?.actions ?? [];
     const pendingDecision = player?.view.pendingDecision;
@@ -123,8 +126,7 @@ export const createBotStrategy = (
       return decisionResponse?.choice;
     }
     const evaluated = evaluatedVisibleActions({
-      snapshot,
-      botPlayerId,
+      features,
       profile,
     });
     const counterStepPass = chooseCounterStepPass(
