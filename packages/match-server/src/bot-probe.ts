@@ -11,10 +11,7 @@ import type {
 import { chooseBotActionReport } from "./bot-player.js";
 import type { BotScoreBreakdown } from "./bot-score.js";
 import type { BotTurnIntent } from "./bot-turn-intent.js";
-import type {
-  BotActionChoice,
-  BotDecisionReason,
-} from "./bot-types.js";
+import type { BotActionChoice, BotDecisionReason } from "./bot-types.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -74,17 +71,16 @@ const publicCard = (
   instanceId: string,
   cardId: string,
   fields: Partial<PublicCardView> = {},
-): PublicCardView =>
-  ({
-    instanceId: instanceId as InstanceId,
-    cardId: cardId as CardId,
-    owner: fields.owner ?? botPlayerId,
-    controller: fields.controller ?? botPlayerId,
-    zone: fields.zone ?? { playerId: botPlayerId, zone: "characterArea" },
-    attachedDonCount: fields.attachedDonCount ?? 0,
-    attachedDonIds: fields.attachedDonIds ?? [],
-    ...fields,
-  });
+): PublicCardView => ({
+  instanceId: instanceId as InstanceId,
+  cardId: cardId as CardId,
+  owner: fields.owner ?? botPlayerId,
+  controller: fields.controller ?? botPlayerId,
+  zone: fields.zone ?? { playerId: botPlayerId, zone: "characterArea" },
+  attachedDonCount: fields.attachedDonCount ?? 0,
+  attachedDonIds: fields.attachedDonIds ?? [],
+  ...fields,
+});
 
 const baseDecision = <TType extends BotPendingDecision["type"]>(
   id: string,
@@ -512,7 +508,8 @@ export const evaluateBotProbeFailures = (
     failures.push({
       scenarioId: report.id,
       kind: "missing-decision-response",
-      message: "Bot-owned pending decision did not produce a decision response.",
+      message:
+        "Bot-owned pending decision did not produce a decision response.",
     });
   }
   if (report.intent === undefined && report.decisionReason === undefined) {

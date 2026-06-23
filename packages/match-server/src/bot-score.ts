@@ -489,12 +489,7 @@ const activeEffectBreakdown = (
   if (context.action.type !== "activateEffect") {
     return undefined;
   }
-  return addTerm(
-    emptyBreakdown(),
-    "tempo",
-    60,
-    "tempo:profitable-effect",
-  );
+  return addTerm(emptyBreakdown(), "tempo", 60, "tempo:profitable-effect");
 };
 
 const fallbackBreakdown = (context: BotActionContext): BotScoreBreakdown => {
