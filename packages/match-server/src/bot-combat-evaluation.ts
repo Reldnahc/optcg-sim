@@ -36,47 +36,33 @@ const opponentHandCardCount = (
 };
 
 const leaderAttackCandidateForAction = (
-  snapshot: DevMatchSnapshot,
-  botPlayerId: PlayerId,
+  features: BotFeatures,
   action: DevVisibleAction,
 ): LeaderAttackCandidate | undefined => {
-  const opponent = snapshot.players[botPlayerId]?.view.opponent;
   const attack = action.attack;
-  if (
-    opponent === undefined ||
-    attack === undefined ||
-    attack.targetInstanceId !== opponent.leader.instanceId
-  ) {
+  if (attack === undefined) {
     return undefined;
   }
-  const attackerPower = cardPower(
-    findVisibleCard(snapshot, botPlayerId, attack.attackerInstanceId),
+  const pressure = features.combat.leaderAttackPressure.find(
+    (candidate) =>
+      candidate.attackerInstanceId === String(attack.attackerInstanceId) &&
+      candidate.targetInstanceId === String(attack.targetInstanceId),
   );
-  const targetPower = cardPower(opponent.leader);
-  if (attackerPower === undefined || targetPower === undefined) {
-    return undefined;
-  }
-  const cardsToStop = counterCardsToStopAttack(attackerPower, targetPower);
-  return cardsToStop === undefined
+  return pressure === undefined
     ? undefined
     : {
-        attackerInstanceId: String(attack.attackerInstanceId),
-        cardsToStop,
+        attackerInstanceId: pressure.attackerInstanceId,
+        cardsToStop: pressure.cardsToStop,
       };
 };
 
 const legalLeaderAttackCandidates = (
-  snapshot: DevMatchSnapshot,
-  botPlayerId: PlayerId,
+  features: BotFeatures,
 ): readonly LeaderAttackCandidate[] =>
-  (snapshot.players[botPlayerId]?.actions ?? []).flatMap((action) => {
-    const candidate = leaderAttackCandidateForAction(
-      snapshot,
-      botPlayerId,
-      action,
-    );
-    return candidate === undefined ? [] : [candidate];
-  });
+  features.combat.leaderAttackPressure.map((pressure) => ({
+    attackerInstanceId: pressure.attackerInstanceId,
+    cardsToStop: pressure.cardsToStop,
+  }));
 
 const candidateKey = (candidate: LeaderAttackCandidate): string =>
   candidate.attackerInstanceId;
@@ -192,21 +178,16 @@ const counterPowerForAction = ({
         ?.printedCounter ?? 0);
 };
 
-export const scoreLeaderLethalAttack = ({
-  snapshot,
-  botPlayerId,
-  action,
-}: BotActionContext): number | undefined => {
-  const currentCandidate = leaderAttackCandidateForAction(
-    snapshot,
-    botPlayerId,
-    action,
-  );
+export const scoreLeaderLethalAttack = (
+  { snapshot, botPlayerId, action }: BotActionContext,
+  features: BotFeatures,
+): number | undefined => {
+  const currentCandidate = leaderAttackCandidateForAction(features, action);
   const opponent = snapshot.players[botPlayerId]?.view.opponent;
   if (currentCandidate === undefined || opponent === undefined) {
     return undefined;
   }
-  const candidates = legalLeaderAttackCandidates(snapshot, botPlayerId);
+  const candidates = legalLeaderAttackCandidates(features);
   const counterCardsNeeded = counterCardsNeededToSurvive(
     candidates,
     opponent.life.count,
@@ -253,11 +234,10 @@ const canAttackLeaderWithBoostedCard = (
         snapshot.players[botPlayerId]?.view.opponent.leader.instanceId,
   );
 
-const scoreAttachDonForLethal = ({
-  snapshot,
-  botPlayerId,
-  action,
-}: BotActionContext): number | undefined => {
+const scoreAttachDonForLethal = (
+  { snapshot, botPlayerId, action }: BotActionContext,
+  features: BotFeatures,
+): number | undefined => {
   const attachment = action.attachment;
   const opponent = snapshot.players[botPlayerId]?.view.opponent;
   if (
@@ -291,7 +271,7 @@ const scoreAttachDonForLethal = ({
   }
   const counterCardsNeeded = counterCardsNeededToSurvive(
     [
-      ...legalLeaderAttackCandidates(snapshot, botPlayerId),
+      ...legalLeaderAttackCandidates(features),
       {
         attackerInstanceId: String(attachment.targetInstanceId),
         cardsToStop: boostedCardsToStop,
@@ -412,8 +392,8 @@ export const scoreCombatAction = (
   context: BotActionContext,
   features: BotFeatures,
 ): number | undefined =>
-  scoreLeaderLethalAttack(context) ??
-  scoreAttachDonForLethal(context) ??
+  scoreLeaderLethalAttack(context, features) ??
+  scoreAttachDonForLethal(context, features) ??
   scoreAttachDonForLeaderPressure(context) ??
   scoreCounterAction(context, features) ??
   scoreCharacterAttack(context);
