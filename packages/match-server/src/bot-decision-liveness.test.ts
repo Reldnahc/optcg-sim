@@ -11,7 +11,7 @@ import type {
   Zone,
 } from "@optcg/types";
 
-import { chooseBotAction } from "./bot-player.js";
+import { chooseBotAction, createBotStrategy } from "./bot-player.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -116,6 +116,11 @@ describe("bot decision liveness", () => {
             "decision:matrix:choose-effect-option",
             "chooseEffectOption",
           ),
+          presentation: {
+            title: "Choose one",
+            instruction: "Choose one.",
+            choices: [{ responseKey: "decline", label: "Do nothing" }],
+          },
         },
         response: { type: "effectOptionDeclined" },
       },
@@ -126,6 +131,11 @@ describe("bot decision liveness", () => {
             "decision:matrix:choose-replacement",
             "chooseReplacement",
           ),
+          presentation: {
+            title: "Choose replacement",
+            instruction: "Choose replacement.",
+            choices: [{ responseKey: "decline", label: "Do not replace" }],
+          },
         },
         response: { type: "replacement" },
       },
@@ -482,6 +492,88 @@ describe("bot decision liveness", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 2 });
+  });
+
+  test("chooses an effect option from public presentation choices when decline is not legal", () => {
+    const chosen = chooseBotAction(
+      snapshotWithDecision({
+        ...baseDecision(
+          "decision:mandatory-effect-option",
+          "chooseEffectOption",
+        ),
+        presentation: {
+          title: "Choose one",
+          instruction: "Choose one.",
+          choices: [{ responseKey: "option:draw", label: "Draw 1 card" }],
+        },
+      }),
+      botId,
+    );
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:mandatory-effect-option",
+      response: { type: "effectOption", optionId: "option:draw" },
+    });
+  });
+
+  test("chooses a replacement from public presentation choices when decline is not legal", () => {
+    const chosen = chooseBotAction(
+      snapshotWithDecision({
+        ...baseDecision("decision:mandatory-replacement", "chooseReplacement"),
+        presentation: {
+          title: "Choose replacement",
+          instruction: "Choose replacement.",
+          choices: [
+            {
+              responseKey: "replacement:would-be-ko-draw-1",
+              label: "Use replacement",
+            },
+          ],
+        },
+      }),
+      botId,
+    );
+
+    assert.deepEqual(chosen, {
+      type: "respondToDecision",
+      decisionId: "decision:mandatory-replacement",
+      response: {
+        type: "replacement",
+        replacementId: "replacement:would-be-ko-draw-1",
+      },
+    });
+  });
+
+  test("profile scoring cannot suppress a projected visible decision action", () => {
+    const strategy = createBotStrategy({
+      scoreAction: ({ action }) =>
+        action.type === "respondToDecision" ? false : undefined,
+    });
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithDecision(
+        {
+          ...baseDecision(
+            "decision:profile-cannot-suppress-visible",
+            "chooseQuantity",
+          ),
+          mode: "upTo",
+          min: 0,
+          max: 3,
+        },
+        [
+          {
+            index: 4,
+            type: "respondToDecision",
+            label: "Choose 2",
+            responseKey: "2",
+          },
+        ],
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 4 });
   });
 
   test("still activates an effect before ending main phase", () => {

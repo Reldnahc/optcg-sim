@@ -93,11 +93,40 @@ const chooseBestAction = (
 ): BotActionContext["action"] | undefined =>
   [...evaluated].sort((left, right) => right.utility - left.utility)[0]?.action;
 
+const visibleDecisionActionUtility = (
+  action: BotActionContext["action"],
+  pendingDecision: BotPendingDecision | undefined,
+): number | undefined => {
+  if (action.type !== "respondToDecision") {
+    return undefined;
+  }
+  if (action.decisionPayment?.kind === "cardCost") {
+    return 1_200;
+  }
+  if (
+    action.decisionPayment?.kind === "paymentDeclined" ||
+    action.responseKey === "decline"
+  ) {
+    return pendingDecision?.type === "payCost" ? 100 : 50;
+  }
+  if (pendingDecision?.type === "payCost") {
+    return 1_200;
+  }
+  if (action.responseKey === "keep" || action.responseKey === "deny") {
+    return 1_000;
+  }
+  return 150;
+};
+
 const chooseBestVisibleDecisionAction = (
-  evaluated: readonly EvaluatedBotAction[],
+  actions: readonly BotActionContext["action"][],
+  pendingDecision: BotPendingDecision | undefined,
 ): BotActionContext["action"] | undefined =>
   chooseBestAction(
-    evaluated.filter(({ action }) => action.type === "respondToDecision"),
+    actions.flatMap((action) => {
+      const utility = visibleDecisionActionUtility(action, pendingDecision);
+      return utility === undefined ? [] : [{ action, utility }];
+    }),
   );
 
 const chooseCounterStepPass = (
@@ -129,15 +158,41 @@ export const createBotStrategy = (
   profile: BotBehaviorProfile = {},
 ): BotStrategy => ({
   chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const player = snapshot.players[botPlayerId];
+    const actions = player?.actions ?? [];
+    const pendingDecision = player?.view.pendingDecision;
+    const battleStep = player?.view.battle?.step;
+    const botOwnsPendingDecision = pendingDecision?.playerId === botPlayerId;
+    if (
+      botOwnsPendingDecision &&
+      !isCounterStepPassDecision(pendingDecision, battleStep)
+    ) {
+      const profileDecisionChoice = chooseProfilePendingDecision({
+        snapshot,
+        botPlayerId,
+        profile,
+      });
+      if (profileDecisionChoice !== undefined) {
+        return profileDecisionChoice;
+      }
+      const decisionAction = chooseBestVisibleDecisionAction(
+        actions,
+        pendingDecision,
+      );
+      if (decisionAction !== undefined) {
+        return { type: "submitAction", actionIndex: decisionAction.index };
+      }
+      const pendingDecisionChoice = chooseDefaultBotDecision({
+        snapshot,
+        botPlayerId,
+      });
+      return pendingDecisionChoice;
+    }
     const evaluated = evaluatedVisibleActions({
       snapshot,
       botPlayerId,
       profile,
     });
-    const player = snapshot.players[botPlayerId];
-    const pendingDecision = player?.view.pendingDecision;
-    const battleStep = player?.view.battle?.step;
-    const botOwnsPendingDecision = pendingDecision?.playerId === botPlayerId;
     const counterStepPass = chooseCounterStepPass(
       pendingDecision,
       battleStep,
@@ -147,15 +202,10 @@ export const createBotStrategy = (
       return counterStepPass;
     }
     if (botOwnsPendingDecision) {
-      const profileDecisionChoice = chooseProfilePendingDecision({
-        snapshot,
-        botPlayerId,
-        profile,
-      });
-      if (profileDecisionChoice !== undefined) {
-        return profileDecisionChoice;
-      }
-      const decisionAction = chooseBestVisibleDecisionAction(evaluated);
+      const decisionAction = chooseBestVisibleDecisionAction(
+        actions,
+        pendingDecision,
+      );
       if (decisionAction !== undefined) {
         return { type: "submitAction", actionIndex: decisionAction.index };
       }

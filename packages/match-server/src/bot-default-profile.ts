@@ -1,3 +1,5 @@
+import type { PlayerView } from "@optcg/types";
+
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
 import {
   chooseCharacterOverflowDecision,
@@ -20,6 +22,17 @@ const defaultSelectableCardCount = (
 const unhandledBotDecision = (decision: never): never => {
   throw new Error(`Unhandled bot decision type: ${JSON.stringify(decision)}`);
 };
+
+type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
+
+const firstEnabledPresentationChoice = (
+  decision: BotPendingDecision,
+):
+  | {
+      readonly responseKey: string;
+    }
+  | undefined =>
+  decision.presentation.choices?.find((choice) => choice.disabled !== true);
 
 export const chooseDefaultBotDecision = ({
   snapshot,
@@ -104,11 +117,20 @@ export const chooseDefaultBotDecision = ({
           };
     }
     case "chooseReplacement":
-      return {
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: { type: "replacement" },
-      };
+      return (() => {
+        const choice = firstEnabledPresentationChoice(decision);
+        if (choice === undefined) {
+          return undefined;
+        }
+        return {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response:
+            choice.responseKey === "decline"
+              ? { type: "replacement" }
+              : { type: "replacement", replacementId: choice.responseKey },
+        };
+      })();
     case "confirmLifeTrigger":
       return {
         type: "respondToDecision",
@@ -122,11 +144,20 @@ export const chooseDefaultBotDecision = ({
         response: { type: "optionalActivation", choice: "decline" },
       };
     case "chooseEffectOption":
-      return {
-        type: "respondToDecision",
-        decisionId: decision.id,
-        response: { type: "effectOptionDeclined" },
-      };
+      return (() => {
+        const choice = firstEnabledPresentationChoice(decision);
+        if (choice === undefined) {
+          return undefined;
+        }
+        return {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response:
+            choice.responseKey === "decline"
+              ? { type: "effectOptionDeclined" }
+              : { type: "effectOption", optionId: choice.responseKey },
+        };
+      })();
     case "mulligan":
       return {
         type: "respondToDecision",
