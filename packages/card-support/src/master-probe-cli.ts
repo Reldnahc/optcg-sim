@@ -7,6 +7,8 @@ interface MasterProbeCliArgs {
 }
 
 const usage = "Usage: master:probe [-- --base-url <url>]";
+export const masterProbeFetchDelayMs = 50;
+export const masterProbeRetryDelaysMs = [2000, 4000, 8000] as const;
 
 export const createMasterProbeCliReport = async (argv: readonly string[]) => {
   const parsed = parseArgs(argsAfterPassthrough(argv));
@@ -22,8 +24,8 @@ export const createMasterProbeCliReport = async (argv: readonly string[]) => {
       ? {}
       : { baseUrl: parsed.args.baseUrl }),
     fetchPoneglyph: createThrottledPoneglyphFetch(fetchPoneglyphCard, {
-      delayMs: 500,
-      retryDelaysMs: [2000, 4000, 8000],
+      delayMs: masterProbeFetchDelayMs,
+      retryDelaysMs: masterProbeRetryDelaysMs,
     }),
   });
 };
@@ -61,8 +63,8 @@ const main = async (): Promise<number> => {
       ? {}
       : { baseUrl: parsed.args.baseUrl }),
     fetchPoneglyph: createThrottledPoneglyphFetch(fetchPoneglyphCard, {
-      delayMs: 500,
-      retryDelaysMs: [2000, 4000, 8000],
+      delayMs: masterProbeFetchDelayMs,
+      retryDelaysMs: masterProbeRetryDelaysMs,
     }),
     onProgress: writeProgress,
   });
