@@ -1,6 +1,7 @@
 import type { DynamicNumberValue } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { sourceSpan } from "../source-slices.js";
 import type { ExpressionParseResult, ParseInput } from "../types.js";
 
 const parseFieldCardFilter = (text: string) => {
@@ -38,6 +39,17 @@ export const drawForEachFieldTrashSameExpressionParser = (
     multiplier: 1,
   };
 
+  const evidence = [
+    "expression:sequence",
+    "instruction:draw",
+    "valueSource:fieldCount",
+    ...parsedFilter.evidence,
+    "connector:then",
+    "instruction:trashFromHand",
+    "player:self",
+    "chooser:self",
+  ] satisfies ExpressionParseResult["evidence"];
+
   return {
     effect: {
       type: "sequence",
@@ -57,16 +69,14 @@ export const drawForEachFieldTrashSameExpressionParser = (
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "instruction:draw",
-      "valueSource:fieldCount",
-      ...parsedFilter.evidence,
-      "connector:then",
-      "instruction:trashFromHand",
-      "player:self",
-      "chooser:self",
-    ],
+    evidence,
     rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
   };
 };

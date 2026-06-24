@@ -6,7 +6,7 @@ import type {
 } from "@optcg/types";
 
 import type { ExpressionParseResult, ParseInput } from "../types.js";
-import type { SourceSlice } from "../source-slices.js";
+import { sourceSpan, type SourceSlice } from "../source-slices.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseAngleAttribute } from "../filters/predicates/types.js";
 import {
@@ -978,11 +978,24 @@ export function activatedReactionExpressionParser(options: {
       if (refined === undefined) {
         continue;
       }
+      const originalBodySource = bodySource(input, split.body);
       for (const expressionParser of options.expressions) {
         const parsed = parseReactionBody(expressionParser, input, refined.body);
         if (parsed === undefined || parsed.rest.length > 0) {
           continue;
         }
+        const presentationSpans =
+          parsed.presentationSpans ??
+          (originalBodySource === undefined
+            ? undefined
+            : [
+                sourceSpan(
+                  "span:body",
+                  "body",
+                  originalBodySource,
+                  parsed.evidence,
+                ),
+              ]);
         return {
           effect: toSequenceExpression(parsed),
           evidence: [
@@ -1002,9 +1015,7 @@ export function activatedReactionExpressionParser(options: {
               ? {}
               : { condition: refined.predicate.condition }),
           },
-          ...(parsed.presentationSpans === undefined
-            ? {}
-            : { presentationSpans: parsed.presentationSpans }),
+          ...(presentationSpans === undefined ? {} : { presentationSpans }),
         };
       }
     }

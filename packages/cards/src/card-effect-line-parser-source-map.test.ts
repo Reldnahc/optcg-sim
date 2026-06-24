@@ -444,4 +444,102 @@ describe("card effect parser source maps", () => {
       ),
     ).toBe(true);
   });
+
+  it("emits a body span for activated reaction bodies rewritten for optional costs", () => {
+    const text =
+      "This effect can be activated when this Character is rested by your opponent's effect. You may trash this Character and draw 2 cards.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "body" &&
+          span.text === "You may trash this Character and draw 2 cards." &&
+          span.primitiveEvidence?.includes("instruction:draw"),
+      ),
+    ).toBe(true);
+  });
+
+  it("emits a body span for draw-for-each-field then trash-same effects", () => {
+    const text =
+      "[On Play] Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(
+      spans.some((span) => {
+        const evidence = span.primitiveEvidence ?? [];
+        return (
+          span.role === "body" &&
+          span.text ===
+            "Draw a card for each of your {Neptunian} type Characters. Then, trash the same number of cards from your hand." &&
+          evidence.includes("instruction:draw") &&
+          evidence.includes("instruction:trashFromHand")
+        );
+      }),
+    ).toBe(true);
+  });
+
+  it("emits cost and body spans for returned-count power effects", () => {
+    const text =
+      "[Counter] If your Leader is [Uta], you may return any number of Characters on your field to the owner's hand. Up to 1 of your Leader or Character cards gains +2000 power during this battle for every returned Character.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:cost:optional",
+          role: "cost",
+          text: "you may return any number of Characters on your field to the owner's hand",
+        }),
+        expect.objectContaining({
+          role: "body",
+          text: "Up to 1 of your Leader or Character cards gains +2000 power during this battle for every returned Character.",
+        }),
+      ]),
+    );
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "cost" &&
+          span.primitiveEvidence?.includes("cost:returnToOwnerHand"),
+      ),
+    ).toBe(true);
+    expect(
+      spans.some(
+        (span) =>
+          span.role === "body" &&
+          span.primitiveEvidence?.includes("instruction:modifyPower"),
+      ),
+    ).toBe(true);
+  });
 });
