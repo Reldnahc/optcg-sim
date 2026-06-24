@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { hashCanonicalStateValue } from "@optcg/engine-core";
+import {
+  hashCanonicalStateValue,
+  hashReplayStateForScope,
+} from "@optcg/engine-core";
 import type { PlayerId } from "@optcg/types";
 
 import { canonicalJson } from "./canonical-json.js";
@@ -19,7 +22,8 @@ import type {
 import type {
   FirstPlayerChoiceState,
   MatchCreationSource,
-  StoredSessionRecord,
+  StoredDeterministicCheckpointRecord,
+  StoredDeterministicSessionRecord,
 } from "./session-types.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
@@ -35,7 +39,8 @@ export interface BuildLocalCompletedMatchRecordInput {
   readonly setup: DevMatchSetup;
   readonly seats: Record<string, CompletedMatchSeatContext>;
   readonly firstPlayerChoice: FirstPlayerChoiceState;
-  readonly records: readonly StoredSessionRecord[];
+  readonly deterministicRecords: readonly StoredDeterministicSessionRecord[];
+  readonly deterministicCheckpoints: readonly StoredDeterministicCheckpointRecord[];
   readonly endedAt: string;
 }
 
@@ -217,8 +222,13 @@ export const buildLocalCompletedMatchRecord = (
     return undefined;
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
-  const initialStateHash = hashCanonicalStateValue(
+  const replayFinalStateHash = hashReplayStateForScope(
+    input.match.state,
+    "gameplay-v1",
+  );
+  const initialStateHash = hashReplayStateForScope(
     createLocalDevMatch(input.setup).state,
+    "gameplay-v1",
   );
   const initialDeckOrders = jsonObject({
     playerOrder: input.setup.playerOrder,
@@ -268,7 +278,7 @@ export const buildLocalCompletedMatchRecord = (
     errorPayload: null,
     players,
     replay: {
-      replayFormatVersion: "dev-local-v1",
+      replayFormatVersion: "dev-local-v2",
       engineVersion: input.match.state.version.engineVersion,
       rulesVersion: input.match.state.version.rulesVersion,
       cardDataVersion: input.match.state.version.cardDataVersion,
@@ -283,12 +293,21 @@ export const buildLocalCompletedMatchRecord = (
       manifestHash: hashJson(input.match.state.cardManifest),
       manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
       initialStateHash,
-      finalStateHash,
+      finalStateHash: replayFinalStateHash,
       initialSnapshot: null,
       initialDeckOrders,
-      deterministicEntries: input.records.map((record) => jsonObject(record)),
-      auditEntries: input.match.state.audit.map((entry) => jsonObject(entry)),
-      checkpoints: [],
+      deterministicEntries: input.deterministicRecords.map((record) =>
+        jsonObject(record.deterministicEntry),
+      ),
+      auditEntries: [
+        ...input.deterministicRecords.map((record) =>
+          jsonObject(record.audit),
+        ),
+        ...input.match.state.audit.map((entry) => jsonObject(entry)),
+      ],
+      checkpoints: input.deterministicCheckpoints.map((record) =>
+        jsonObject(record.checkpoint),
+      ),
       finalState: null,
       compressed: false,
       artifactStorage: null,

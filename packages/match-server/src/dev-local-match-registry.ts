@@ -438,15 +438,15 @@ export const createLocalDevMatchRegistry = async (
     ) {
       return;
     }
+    const runtime = sessionService.getRuntime(session.match.state.matchId);
     const record = recordActionTimingSpan("completedMatchRecordBuild", () =>
       buildLocalCompletedMatchRecord({
         match: session.match,
         setup: session.setup,
         seats: session.seats,
         firstPlayerChoice: session.firstPlayerChoice,
-        records:
-          sessionService.getRuntime(session.match.state.matchId)?.records() ??
-          [],
+        deterministicRecords: runtime?.deterministicRecords() ?? [],
+        deterministicCheckpoints: runtime?.deterministicCheckpoints() ?? [],
         endedAt: new Date().toISOString(),
       }),
     );

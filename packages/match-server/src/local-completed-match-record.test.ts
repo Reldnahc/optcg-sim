@@ -8,10 +8,12 @@ import {
   createLocalDevMatch,
   createPremadeDevMatchSetup,
 } from "./local-match.js";
-import type { CardId, MatchId } from "@optcg/types";
+import type { CardId, MatchId, StateSeq } from "@optcg/types";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import { requestHash } from "./action-envelope.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
+import type { StoredDeterministicSessionRecord } from "./session-types.js";
 
 const readySubmission = (
   hash: string,
@@ -86,7 +88,8 @@ describe("local completed match record mapping", () => {
         choice: "goFirst",
         resolvedFirstPlayerId: setup.playerOrder[0],
       },
-      records: [],
+      deterministicRecords: [],
+      deterministicCheckpoints: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -115,7 +118,7 @@ describe("local completed match record mapping", () => {
       },
     });
     expect(record?.replay.initialStateHash).toBeTruthy();
-    expect(record?.replay.finalStateHash).toBe(record?.finalStateHash);
+    expect(record?.replay.finalStateHash).toBeTruthy();
     expect(record?.replay.manifestSnapshot).toMatchObject({
       customHandlerVersion: setup.cardManifest.customHandlerVersion,
       banlistVersion: setup.cardManifest.banlistVersion,
@@ -163,7 +166,8 @@ describe("local completed match record mapping", () => {
         choice: "goFirst",
         resolvedFirstPlayerId: setup.playerOrder[0],
       },
-      records: [],
+      deterministicRecords: [],
+      deterministicCheckpoints: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -234,7 +238,8 @@ describe("local completed match record mapping", () => {
         choice: "goSecond",
         resolvedFirstPlayerId: setup.playerOrder[1],
       },
-      records: [],
+      deterministicRecords: [],
+      deterministicCheckpoints: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -245,5 +250,99 @@ describe("local completed match record mapping", () => {
       displayName: "Bot",
       isWinner: true,
     });
+  });
+
+  test("stores exact deterministic entries separately from audit envelopes", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "44444444-4444-4444-4444-444444444444" as MatchId,
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    match.state.status = { type: "completed", winner: setup.playerOrder[0] };
+    const request = {
+      type: "submitAction" as const,
+      playerId: setup.playerOrder[0],
+      actionIndex: 0,
+      expectedStateSeq: 0,
+    };
+    const storedRecord: StoredDeterministicSessionRecord = {
+      deterministicEntry: {
+        formatVersion: "deterministic-entry-v1",
+        matchId: setup.matchId,
+        entrySeq: 0,
+        kind: "action",
+        playerId: setup.playerOrder[0],
+        action: { type: "endMainPhase" },
+        verification: {
+          stateSeqBefore: 0 as StateSeq,
+          actionSeqBefore: 0,
+          stateHashBefore: "before-hash",
+          stateSeqAfter: 1 as StateSeq,
+          actionSeqAfter: 1,
+          stateHashAfter: "after-hash",
+          hashScope: "gameplay-v1",
+        },
+      },
+      audit: {
+        type: "clientEnvelope",
+        envelope: {
+          protocolVersion: "dev-http-v1",
+          matchId: setup.matchId,
+          playerId: setup.playerOrder[0],
+          clientActionId: "accepted-action-1",
+          expectedStateSeq: 0,
+          requestHash: requestHash(request),
+          request,
+        },
+        result: {
+          type: "actionResult",
+          matchId: setup.matchId,
+          clientActionId: "accepted-action-1",
+          accepted: true,
+          stateSeq: 1,
+          actionSeq: 1,
+          errors: [],
+        },
+        recordedAt: "2026-06-08T00:00:01.000Z",
+      },
+    };
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          deckSubmission: readySubmission("first-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          deckSubmission: readySubmission("second-hash", "OP05-060"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.playerOrder[0],
+      },
+      deterministicRecords: [storedRecord],
+      deterministicCheckpoints: [],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+
+    expect(record).toBeDefined();
+    const deterministicEntry = record?.replay.deterministicEntries[0] as
+      | Record<string, unknown>
+      | undefined;
+    const auditEntry = record?.replay.auditEntries[0] as
+      | Record<string, unknown>
+      | undefined;
+    expect(record?.replay.replayFormatVersion).toBe("dev-local-v2");
+    expect(deterministicEntry?.["kind"]).toBe("action");
+    expect(
+      Object.hasOwn(deterministicEntry ?? {}, "envelope"),
+    ).toBe(false);
+    expect(auditEntry?.["type"]).toBe("clientEnvelope");
   });
 });
