@@ -1,6 +1,7 @@
 import type { CardId, CardRef, InstanceId, PublicCardView } from "@optcg/types";
 
 import { cardPower, findVisibleCard } from "./bot-context.js";
+import type { BotDeckProfileData } from "./bot-profile-types.js";
 import type {
   BotActionContext,
   BotDecisionChoice,
@@ -9,7 +10,7 @@ import type {
 
 export interface BotPowerReductionBehavior {
   readonly amount: number;
-  readonly target: "opponentCharacter";
+  readonly target: "opponentCharacter" | "currentAttacker";
   readonly restsSource?: boolean;
 }
 
@@ -160,6 +161,45 @@ const opponentCharacterTargets = (
 ): readonly PublicCardView[] =>
   context.snapshot.players[context.botPlayerId]?.view.opponent.characters ?? [];
 
+const currentAttackerTarget = (
+  context: BotDecisionContext,
+  candidates: readonly PowerReductionTarget[],
+): readonly PowerReductionTarget[] => {
+  const attacker =
+    context.snapshot.players[context.botPlayerId]?.view.battle?.attacker;
+  if (attacker === undefined) {
+    return [];
+  }
+  return candidates.filter(
+    (candidate) => candidate.instanceId === attacker.instanceId,
+  );
+};
+
+const targetsForBehavior = (
+  context: BotDecisionContext,
+  behavior: BotPowerReductionBehavior,
+  candidates?: readonly PowerReductionTarget[],
+): readonly PowerReductionTarget[] => {
+  if (behavior.target === "currentAttacker") {
+    return currentAttackerTarget(context, candidates ?? []);
+  }
+  return candidates ?? opponentCharacterTargets(context);
+};
+
+export const powerReductionBehaviorsFromProfile = (
+  profile: BotDeckProfileData,
+): BotPowerReductionBehaviors =>
+  Object.fromEntries(
+    profile.effectPolicies.map((policy) => [
+      policy.sourceCardId,
+      {
+        amount: policy.amount,
+        target: policy.target,
+        restsSource: policy.restsSource,
+      },
+    ]),
+  );
+
 export const scorePowerReductionAction = (
   context: BotActionContext,
   behaviors: BotPowerReductionBehaviors,
@@ -172,7 +212,7 @@ export const scorePowerReductionAction = (
   if (behavior === undefined) {
     return undefined;
   }
-  const targets = opponentCharacterTargets(context);
+  const targets = targetsForBehavior(context, behavior);
   const bestTarget = sortedTargetEvaluations(
     context,
     behavior,
@@ -200,6 +240,23 @@ export const choosePowerReductionTarget = (
   const behavior = sourceBehavior(decision.source?.cardId, behaviors);
   if (behavior === undefined) {
     return undefined;
+  }
+  if (behavior.target === "currentAttacker") {
+    const attacker =
+      context.snapshot.players[context.botPlayerId]?.view.battle?.attacker;
+    const chosen =
+      attacker === undefined
+        ? undefined
+        : decision.candidates.find(
+            (candidate) => candidate.card.instanceId === attacker.instanceId,
+          )?.card;
+    return chosen === undefined
+      ? undefined
+      : {
+          type: "respondToDecision",
+          decisionId: decision.id,
+          response: { type: "targets", targets: [chosen] },
+        };
   }
   const chosen = sortedTargetEvaluations(
     context,

@@ -1,6 +1,7 @@
 import type { CardRef, PlayerView, PublicCardView } from "@optcg/types";
 
 import { cardPower, findVisibleCard } from "./bot-context.js";
+import type { BotDeckProfileData } from "./bot-profile-types.js";
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
 
 type SelectCardsDecision = Extract<
@@ -87,3 +88,11 @@ export const chooseCharacterOverflowDecision = (
     response: { type: "cards", cards: [chosen] },
   };
 };
+
+export const chooseCharacterOverflowFromProfile = (
+  context: BotDecisionContext,
+  profile: BotDeckProfileData,
+): BotDecisionChoice | undefined =>
+  chooseCharacterOverflowDecision(context, {
+    preserveCardIds: new Set(profile.preserveCards),
+  });

@@ -11,6 +11,7 @@ import type {
 } from "@optcg/types";
 
 import { chooseBotAction, chooseBotActionReport } from "./bot-player.js";
+import { redShanksProfileData } from "./bot-red-shanks-profile.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 
 const botId = "p2" as PlayerId;
@@ -111,6 +112,29 @@ const viewForBot = (snapshot: DevMatchSnapshot) => {
 };
 
 describe("red Shanks bot profile", () => {
+  test("Red Shanks cheat targets are data, not decision callback branches", () => {
+    assert.deepEqual(
+      redShanksProfileData.cheatTargets.map((target) => target.cardId),
+      ["OP06-007", "OP09-004", "ST23-002", "OP12-008"],
+    );
+  });
+
+  test("Red Shanks search priorities are data-driven", () => {
+    assert.deepEqual(redShanksProfileData.searchPriorities["OP09-002"], [
+      "OP16-012",
+      "OP09-004",
+      "OP06-007",
+      "ST23-002",
+      "OP12-008",
+      "OP09-011",
+      "OP09-020",
+      "OP09-002",
+      "OP09-009",
+      "OP09-014",
+      "OP16-018",
+    ]);
+  });
+
   test("activates OP09-001 leader reduction during counter-step decisions", () => {
     const snapshot = snapshotWithActions(
       [
