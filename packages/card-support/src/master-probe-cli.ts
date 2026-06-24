@@ -1,4 +1,6 @@
 import { createMasterProbeReport } from "./master-probe.js";
+import { fetchPoneglyphCard } from "./poneglyph-card-source.js";
+import { createThrottledPoneglyphFetch } from "./poneglyph-throttled-fetch.js";
 
 interface MasterProbeCliArgs {
   readonly baseUrl?: string;
@@ -19,6 +21,10 @@ export const createMasterProbeCliReport = async (argv: readonly string[]) => {
     ...(parsed.args.baseUrl === undefined
       ? {}
       : { baseUrl: parsed.args.baseUrl }),
+    fetchPoneglyph: createThrottledPoneglyphFetch(fetchPoneglyphCard, {
+      delayMs: 500,
+      retryDelaysMs: [2000, 4000, 8000],
+    }),
   });
 };
 
@@ -45,7 +51,21 @@ const argsAfterPassthrough = (argv: readonly string[]): readonly string[] => {
 };
 
 const main = async (): Promise<number> => {
-  const report = await createMasterProbeCliReport(process.argv.slice(2));
+  const parsed = parseArgs(argsAfterPassthrough(process.argv.slice(2)));
+  if (!parsed.ok) {
+    writeError(parsed.error);
+    return 1;
+  }
+  const report = await createMasterProbeReport({
+    ...(parsed.args.baseUrl === undefined
+      ? {}
+      : { baseUrl: parsed.args.baseUrl }),
+    fetchPoneglyph: createThrottledPoneglyphFetch(fetchPoneglyphCard, {
+      delayMs: 500,
+      retryDelaysMs: [2000, 4000, 8000],
+    }),
+    onProgress: writeProgress,
+  });
   for (const line of report.lines) {
     writeLine(line);
   }
@@ -60,6 +80,10 @@ const writeLine = (message: string): void => {
 };
 
 const writeError = (message: string): void => {
+  process.stderr.write(`${message}\n`);
+};
+
+const writeProgress = (message: string): void => {
   process.stderr.write(`${message}\n`);
 };
 

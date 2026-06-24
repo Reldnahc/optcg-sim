@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createMasterProbeReport,
   type MasterProbeDependencies,
+  type MasterProbeRequest,
 } from "./master-probe.js";
 
 const passingReport = (lines: readonly string[] = []) => ({
@@ -122,6 +123,52 @@ describe("master probe", () => {
       "OP01 spotlight errors: Spotlight probe manifest build failed",
     );
     expect(report.lines).toContain("Master probe failures: 1");
+  });
+
+  it("reports progress while each set probe runs", async () => {
+    const progress: string[] = [];
+    const request: MasterProbeRequest & {
+      readonly onProgress: (message: string) => void;
+    } = {
+      onProgress: (message) => {
+        progress.push(message);
+      },
+    };
+    const dependencies: MasterProbeDependencies = {
+      fetchSetCodes: () => Promise.resolve({ ok: true, setCodes: ["OP01"] }),
+      createSupportProbeReport: () =>
+        Promise.resolve(passingReport(["Failures: none"])),
+      createBehaviorCoverageReport: () =>
+        Promise.resolve(
+          passingReport([
+            "Behavior coverage entries: 1",
+            "Behavior coverage passed scenarios: 1",
+            "Behavior coverage failed scenarios: 0",
+            "Behavior coverage skipped scenarios: 0",
+            "Behavior coverage probe failures: 0",
+          ]),
+        ),
+      createSpotlightProbeReport: () =>
+        Promise.resolve(
+          passingReport([
+            "Runtime-supported effect blocks: 1",
+            "Spotlight-ready effect blocks: 1",
+            "Failures: none",
+          ]),
+        ),
+    };
+
+    await createMasterProbeReport(request, dependencies);
+
+    expect(progress).toEqual([
+      "Master probe: fetching set catalog",
+      "Master probe: discovered 1 set",
+      "Master probe: OP01 starting (1/1)",
+      "Master probe: OP01 support passed",
+      "Master probe: OP01 behavior passed",
+      "Master probe: OP01 spotlight passed",
+      "Master probe: complete with 0 failures",
+    ]);
   });
 });
 

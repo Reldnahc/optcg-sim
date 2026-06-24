@@ -17,6 +17,7 @@ import {
 export interface MasterProbeRequest {
   readonly baseUrl?: string;
   readonly fetchPoneglyph?: PoneglyphFetch;
+  readonly onProgress?: ((message: string) => void) | undefined;
 }
 
 export interface MasterProbeReport {
@@ -54,6 +55,8 @@ export const createMasterProbeReport = async (
 ): Promise<MasterProbeReport> => {
   const baseUrl = request.baseUrl ?? defaultPoneglyphBaseUrl;
   const fetchPoneglyph = request.fetchPoneglyph ?? fetchPoneglyphCard;
+  const reportProgress = request.onProgress ?? (() => undefined);
+  reportProgress("Master probe: fetching set catalog");
   const setCodesResult =
     dependencies.fetchSetCodes === undefined
       ? await fetchPoneglyphSetCodes({ baseUrl, fetchPoneglyph })
@@ -65,13 +68,22 @@ export const createMasterProbeReport = async (
       errors: [setCodesResult.error],
     };
   }
+  reportProgress(
+    `Master probe: discovered ${String(setCodesResult.setCodes.length)} ${
+      setCodesResult.setCodes.length === 1 ? "set" : "sets"
+    }`,
+  );
 
   const setReports: SetProbeReport[] = [];
-  for (const setCode of setCodesResult.setCodes) {
+  for (const [index, setCode] of setCodesResult.setCodes.entries()) {
+    reportProgress(
+      `Master probe: ${setCode} starting (${String(index + 1)}/${String(setCodesResult.setCodes.length)})`,
+    );
     setReports.push(
       await runSetProbes(setCode, {
         baseUrl,
         fetchPoneglyph,
+        reportProgress,
         createSupportProbeReport:
           dependencies.createSupportProbeReport ?? createSupportProbeReport,
         createBehaviorCoverageReport:
@@ -91,6 +103,11 @@ export const createMasterProbeReport = async (
     (count, report) => count + failingProbeCount(report),
     0,
   );
+  reportProgress(
+    `Master probe: complete with ${String(failureCount)} ${
+      failureCount === 1 ? "failure" : "failures"
+    }`,
+  );
   return {
     exitCode: failureCount === 0 ? 0 : 1,
     lines: [
@@ -109,6 +126,7 @@ const runSetProbes = async (
   dependencies: {
     readonly baseUrl: string;
     readonly fetchPoneglyph: PoneglyphFetch;
+    readonly reportProgress: (message: string) => void;
     readonly createSupportProbeReport: (
       request: SupportProbeRequest,
     ) => Promise<MasterProbeReport>;
@@ -125,16 +143,25 @@ const runSetProbes = async (
     baseUrl: dependencies.baseUrl,
     fetchCard: dependencies.fetchPoneglyph,
   });
+  dependencies.reportProgress(
+    `Master probe: ${setCode} support ${statusText(support)}`,
+  );
   const behavior = await dependencies.createBehaviorCoverageReport([
     "--",
     "--set",
     setCode,
   ]);
+  dependencies.reportProgress(
+    `Master probe: ${setCode} behavior ${statusText(behavior)}`,
+  );
   const spotlight = await dependencies.createSpotlightProbeReport({
     setCode,
     baseUrl: dependencies.baseUrl,
     fetchCard: dependencies.fetchPoneglyph,
   });
+  dependencies.reportProgress(
+    `Master probe: ${setCode} spotlight ${statusText(spotlight)}`,
+  );
   return { setCode, support, behavior, spotlight };
 };
 
