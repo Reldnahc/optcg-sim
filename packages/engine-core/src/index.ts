@@ -47,3 +47,8 @@ export type {
   ReplayArtifactReconstructionResult,
   ReplayArtifactStateFrame,
 } from "./replay/artifact-reducer.js";
+export {
+  applyDeterministicOperation,
+  type ApplyDeterministicOperationResult,
+  type DeterministicCheckpointResolver,
+} from "./replay/deterministic-operation.js";
