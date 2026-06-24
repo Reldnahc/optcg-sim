@@ -63,6 +63,7 @@ export interface PublicCardView {
   printedCounter?: number;
   keywords?: Keyword[];
   restrictions?: string[];
+  effectsInvalidated?: boolean;
 }
 
 export interface PublicLifeView {

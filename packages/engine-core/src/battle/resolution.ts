@@ -20,6 +20,7 @@ type EngineInternalGameState = GameState & {
 };
 
 import {
+  appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
   createEvent,
   type EngineResultOptions,
@@ -79,6 +80,47 @@ const unsupportedBattleResolution = (
   reason: string,
 ): EngineResult => illegalAction(state, reason);
 
+const cardRefForCombat = (card: CardInstance, playerId: PlayerId): CardRef => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
+
+const appendDamageSpotlightEntry = ({
+  attacker,
+  attackerPower,
+  defender,
+  defenderPower,
+  events,
+  state,
+}: {
+  readonly state: GameState;
+  readonly events: EngineEvent[];
+  readonly attacker: CardRef;
+  readonly defender: CardRef;
+  readonly attackerPower: number;
+  readonly defenderPower: number;
+}): void => {
+  const damageDealt = events.at(-1);
+  if (damageDealt === undefined || damageDealt.type !== "damageDealt") {
+    return;
+  }
+  appendCombatSpotlightEntryCreatedEvent({
+    state,
+    events,
+    anchorEvent: damageDealt,
+    combat: {
+      eventKind: "damageDealt",
+      attacker,
+      defender,
+      attackerPower,
+      defenderPower,
+      amount: 1,
+    },
+  });
+};
+
 const toErrorTuple = (
   errors: readonly EngineError[],
 ): readonly [EngineError, ...EngineError[]] => {
@@ -94,11 +136,6 @@ const toErrorTuple = (
   }
   return [first, ...errors.slice(1)];
 };
-
-const hasPrintedDoubleAttackDamageSource = (
-  card: ResolvedCard | undefined,
-): card is ResolvedCard =>
-  (card?.printedKeywords ?? []).includes("doubleAttack");
 
 const hasOnKODefinitionMetadata = (
   state: GameState,
@@ -198,8 +235,6 @@ export const resolveSupportedVanillaBattle = (
   if (initialAttacker === null || initialTarget === null) {
     return illegalAction(state, "Battle participants are stale or invalid.");
   }
-  const attackerManifestCard =
-    resolutionState.cardManifest.cards[initialBattle.attacker.cardId];
   if (!initialTarget.isLeader && initialBattle.damageCount !== 1) {
     return unsupportedBattleResolution(
       state,
@@ -252,8 +287,6 @@ export const resolveSupportedVanillaBattle = (
           },
         };
   const battleWithInternal = battle as EngineInternalBattleState;
-  const attackerHasPrintedDoubleAttack =
-    hasPrintedDoubleAttackDamageSource(attackerManifestCard);
   const combatMetadataState = baseCombatMetadataState;
   const combatState =
     withDamageDeferredEffectQueueMetadataHidden(combatMetadataState);
@@ -263,18 +296,27 @@ export const resolveSupportedVanillaBattle = (
   }
   const { attackerView, targetView } = combat;
   const attackerHasBanish = attackerView.keywords.includes("banish");
-  const battleDamageCount = battle.damageCount;
-  if (battleDamageCount !== 1 && battleDamageCount !== 2) {
+  const attackerHasDoubleAttack =
+    attackerView.keywords.includes("doubleAttack");
+  const declaredDoubleAttackDamage =
+    battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack";
+  const declaredBattleDamageCount = battle.damageCount;
+  if (declaredBattleDamageCount !== 1 && declaredBattleDamageCount !== 2) {
     return unsupportedBattleResolution(
       state,
       "Battle requires unsupported blocker, step, or multi-damage behavior.",
     );
   }
+  const battleDamageCount =
+    declaredBattleDamageCount === 2 &&
+    !attackerHasDoubleAttack &&
+    declaredDoubleAttackDamage
+      ? 1
+      : declaredBattleDamageCount;
   if (
     battleDamageCount === 2 &&
-    !attackerView.keywords.includes("doubleAttack") &&
-    !attackerHasPrintedDoubleAttack &&
-    battleWithInternal.damageProcess?.sourceKeyword !== "doubleAttack"
+    !attackerHasDoubleAttack &&
+    !declaredDoubleAttackDamage
   ) {
     return unsupportedBattleResolution(
       state,
@@ -295,9 +337,13 @@ export const resolveSupportedVanillaBattle = (
           state,
           nextState,
           events,
+          attacker: cardRefForCombat(attacker.card, attacker.playerId),
+          defender: cardRefForCombat(target.card, target.playerId),
           attackerInstanceId: attacker.card.instanceId,
           targetInstanceId: target.card.instanceId,
           targetPlayerId: target.playerId,
+          attackerPower: attackerView.currentPower,
+          defenderPower: targetView.currentPower,
           attackerHasBanish,
           remainingDamagePoints,
           options,
@@ -334,6 +380,14 @@ export const resolveSupportedVanillaBattle = (
         attacker: attacker.card.instanceId,
         target: target.card.instanceId,
         amount: 1,
+      });
+      appendDamageSpotlightEntry({
+        state,
+        events,
+        attacker: cardRefForCombat(attacker.card, attacker.playerId),
+        defender: cardRefForCombat(target.card, target.playerId),
+        attackerPower: attackerView.currentPower,
+        defenderPower: targetView.currentPower,
       });
       const battleKoProcessSource: CardRef = {
         instanceId: attacker.card.instanceId,
@@ -480,9 +534,13 @@ const processLeaderDamagePoint = ({
   state,
   nextState,
   events,
+  attacker,
+  defender,
   attackerInstanceId,
   targetInstanceId,
   targetPlayerId,
+  attackerPower,
+  defenderPower,
   attackerHasBanish,
   remainingDamagePoints,
   options,
@@ -490,9 +548,13 @@ const processLeaderDamagePoint = ({
   state: GameState;
   nextState: GameState;
   events: EngineEvent[];
+  attacker: CardRef;
+  defender: CardRef;
   attackerInstanceId: CardInstance["instanceId"];
   targetInstanceId: CardInstance["instanceId"];
   targetPlayerId: PlayerId;
+  attackerPower: number;
+  defenderPower: number;
   attackerHasBanish: boolean;
   remainingDamagePoints: number;
   options: EngineResultOptions;
@@ -511,6 +573,14 @@ const processLeaderDamagePoint = ({
       attacker: attackerInstanceId,
       target: targetInstanceId,
       amount: 1,
+    });
+    appendDamageSpotlightEntry({
+      state,
+      events,
+      attacker,
+      defender,
+      attackerPower,
+      defenderPower,
     });
     return {
       result: finalizeSupportedEndOfBattleCleanup({
@@ -535,6 +605,14 @@ const processLeaderDamagePoint = ({
     attacker: attackerInstanceId,
     target: targetInstanceId,
     amount: 1,
+  });
+  appendDamageSpotlightEntry({
+    state,
+    events,
+    attacker,
+    defender,
+    attackerPower,
+    defenderPower,
   });
   if (lifeDamageDecision === undefined) {
     const lifeRuleReplacement = attackerHasBanish

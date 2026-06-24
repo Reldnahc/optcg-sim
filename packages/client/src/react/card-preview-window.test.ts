@@ -184,6 +184,22 @@ describe("card preview window", () => {
     assert.match(source, /zoom \* previewRenderedScale/u);
   });
 
+  test("preview rules preserve authored line breaks in every host", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "CardPreviewWindow.tsx"),
+      "utf8",
+    );
+
+    assert.match(
+      source,
+      /<EffectRulesText\s+text=\{card\.effectText\}\s+preserveNewlines\s+sourceMap=\{card\.effectTextSourceMap\}/u,
+    );
+    assert.match(
+      source,
+      /<EffectRulesText\s+text=\{card\.triggerText\}\s+preserveNewlines\s+sourceMap=\{card\.triggerTextSourceMap\}/u,
+    );
+  });
+
   test("preview text panel can be dragged to the top of the preview stage", async () => {
     const [source, styles] = await Promise.all([
       readFile(join(sourceDirectory, "CardPreviewWindow.tsx"), "utf8"),

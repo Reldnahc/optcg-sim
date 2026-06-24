@@ -128,14 +128,23 @@ const combatAnchorKey = (
 ): string => `spotlight:combat:${String(anchorEventId)}:${combat.eventKind}`;
 
 const combatSemanticKey = (combat: CombatSpotlightPresentation): string =>
-  [
-    "combat",
-    combat.eventKind,
-    String(combat.attacker.playerId),
-    String(combat.attacker.instanceId),
-    String(combat.defender.playerId),
-    String(combat.defender.instanceId),
-  ].join("|");
+  combat.eventKind === "counterUsed"
+    ? [
+        "combat",
+        combat.eventKind,
+        String(combat.source.playerId),
+        String(combat.source.instanceId),
+        String(combat.target.playerId),
+        String(combat.target.instanceId),
+      ].join("|")
+    : [
+        "combat",
+        combat.eventKind,
+        String(combat.attacker.playerId),
+        String(combat.attacker.instanceId),
+        String(combat.defender.playerId),
+        String(combat.defender.instanceId),
+      ].join("|");
 
 export const combatSpotlightEntry = ({
   anchorEventId,

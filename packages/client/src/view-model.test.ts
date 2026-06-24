@@ -408,6 +408,34 @@ describe("board view model", () => {
     assert.deepEqual(model.self.leader.attachedDonCards, []);
   });
 
+  test("projects public board card effect invalidation status", () => {
+    const view = minimalView();
+    const character = view.self.characters[0];
+    if (character === undefined) {
+      throw new Error("Expected the character in the fixture view.");
+    }
+    character.effectsInvalidated = true;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(model.self.characters[0]?.effectsInvalidated, true);
+    assert.equal(model.self.hand[0]?.effectsInvalidated, undefined);
+  });
+
   test("prefers per-instance catalog art for visible board cards", () => {
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,

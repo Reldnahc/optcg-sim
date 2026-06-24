@@ -68,13 +68,14 @@ test("leader damage at zero life still routes through end-of-battle cleanup orde
     [
       "decisionResolved",
       "damageDealt",
+      "spotlightEntryCreated",
       "battleEnded",
       "ruleProcessingChecked",
       "gameEnded",
       "effectResolved",
     ],
   );
-  assert.deepEqual(passed.events[5]?.payload, {
+  assert.deepEqual(passed.events[6]?.payload, {
     systemStep: "endBattle",
     battleCleared: true,
   });

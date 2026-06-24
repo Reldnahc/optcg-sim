@@ -127,7 +127,10 @@ test("allows combat spotlight timeline entries without effect text", () => {
   };
 
   expect(entry.kind).toBe("combat");
-  expect(entry.combat.defenderPower).toBe(5000);
+  expect(entry.combat.eventKind).toBe("attackDeclared");
+  if (entry.combat.eventKind !== "counterUsed") {
+    expect(entry.combat.defenderPower).toBe(5000);
+  }
 });
 
 test("spotlight entry event payload carries authored timeline entries", () => {

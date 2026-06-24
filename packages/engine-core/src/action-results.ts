@@ -271,22 +271,38 @@ export const appendCombatSpotlightEntryCreatedEvent = ({
     {
       causedBy: anchorEvent.causedBy,
       disclosure: {
-        entryRefs: [
-          entryCardRefDisclosure({
-            card: combat.attacker,
-            role: "combatAttacker",
-            visibility: spotlightDisclosureVisibilityForCardRef(
-              combat.attacker,
-            ),
-          }),
-          entryCardRefDisclosure({
-            card: combat.defender,
-            role: "combatDefender",
-            visibility: spotlightDisclosureVisibilityForCardRef(
-              combat.defender,
-            ),
-          }),
-        ],
+        entryRefs:
+          combat.eventKind === "counterUsed"
+            ? [
+                entryCardRefDisclosure({
+                  card: combat.source,
+                  role: "combatSource",
+                  visibility: { type: "public" },
+                }),
+                entryCardRefDisclosure({
+                  card: combat.target,
+                  role: "combatTarget",
+                  visibility: spotlightDisclosureVisibilityForCardRef(
+                    combat.target,
+                  ),
+                }),
+              ]
+            : [
+                entryCardRefDisclosure({
+                  card: combat.attacker,
+                  role: "combatAttacker",
+                  visibility: spotlightDisclosureVisibilityForCardRef(
+                    combat.attacker,
+                  ),
+                }),
+                entryCardRefDisclosure({
+                  card: combat.defender,
+                  role: "combatDefender",
+                  visibility: spotlightDisclosureVisibilityForCardRef(
+                    combat.defender,
+                  ),
+                }),
+              ],
       },
       visibility: { type: "public" },
     },

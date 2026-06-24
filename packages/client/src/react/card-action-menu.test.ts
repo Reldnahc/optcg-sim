@@ -334,11 +334,11 @@ describe("card action menu", () => {
     assert.match(markup, /card-preview-minimized-button/u);
     assert.match(
       styles,
-      /\.control-tool-strip\s*\{[^}]*bottom:\s*var\(--control-panel-padding\);/u,
+      /\.controls-panel\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+var\(--control-window-dock-height\)\s+var\(--control-icon-button-size\);/u,
     );
     assert.match(
       styles,
-      /\.control-window-dock\s*\{[\s\S]*bottom:\s*calc\([\s\S]*var\(--control-icon-button-size\)[\s\S]*var\(--control-panel-padding\)[\s\S]*\);/u,
+      /\.control-tool-strip\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;/u,
     );
   });
 

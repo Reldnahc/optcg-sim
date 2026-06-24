@@ -48,7 +48,7 @@ const spanId = (value: string): EffectTextSpanId => value as EffectTextSpanId;
 const cardRef = (
   label: string,
   playerId: PlayerId,
-  zone: "characterArea" | "leaderArea" = "characterArea",
+  zone: "characterArea" | "hand" | "leaderArea" = "characterArea",
 ): CardRef => ({
   instanceId: toInstanceId(`probe:${label}:instance`),
   cardId: toCardId(`probe:${label}:card`),
@@ -56,7 +56,14 @@ const cardRef = (
   zone:
     zone === "leaderArea"
       ? { zone, playerId }
-      : { zone, playerId, slot: "character", index: playerId === p1 ? 0 : 1 },
+      : zone === "hand"
+        ? { zone, playerId, slot: "hand", index: 0 }
+        : {
+            zone,
+            playerId,
+            slot: "character",
+            index: playerId === p1 ? 0 : 1,
+          },
 });
 
 const effectPresentation = ({
@@ -155,6 +162,7 @@ test("spotlight probe covers authored game spotlight families through player vie
   const target = cardRef("target", p2);
   const selfTarget = cardRef("replacement-self", p1);
   const defender = cardRef("defender", p2);
+  const counterSource = cardRef("counter", p2, "hand");
   const played = cardRef("played", p1);
   const events: EngineEvent[] = [];
 
@@ -268,6 +276,60 @@ test("spotlight probe covers authored game spotlight families through player vie
   appendEvent(
     state,
     events,
+    "counterUsed",
+    {
+      playerId: p2,
+      instanceId: counterSource.instanceId,
+      cardId: counterSource.cardId,
+      target: defender,
+      value: 1000,
+    },
+    { type: "public" },
+  );
+  const counterUsed = events.at(-1);
+  assert.ok(counterUsed !== undefined);
+  appendCombatSpotlightEntryCreatedEvent({
+    state,
+    events,
+    anchorEvent: counterUsed,
+    combat: {
+      eventKind: "counterUsed",
+      source: counterSource,
+      target: defender,
+      counterPower: 1000,
+    },
+  });
+
+  appendEvent(
+    state,
+    events,
+    "damageDealt",
+    {
+      attacker: source.instanceId,
+      target: defender.instanceId,
+      amount: 1,
+    },
+    { type: "public" },
+  );
+  const damageDealt = events.at(-1);
+  assert.ok(damageDealt !== undefined);
+  appendCombatSpotlightEntryCreatedEvent({
+    state,
+    events,
+    anchorEvent: damageDealt,
+    combat: {
+      eventKind: "damageDealt",
+      attacker: source,
+      defender,
+      attackerPower: 5000,
+      defenderPower: 6000,
+      amount: 1,
+    },
+  });
+
+  appendEvent(
+    state,
+    events,
     "cardPlayed",
     {
       playerId: p1,
@@ -291,6 +353,8 @@ test("spotlight probe covers authored game spotlight families through player vie
   expectSpotlightCreatedAfter(events, "decisionCreated");
   expectSpotlightCreatedAfter(events, "replacementApplied");
   expectSpotlightCreatedAfter(events, "attackDeclared");
+  expectSpotlightCreatedAfter(events, "counterUsed");
+  expectSpotlightCreatedAfter(events, "damageDealt");
   expectSpotlightCreatedAfter(events, "cardPlayed");
 
   state.eventJournal = events.map((event, index) => ({
@@ -302,7 +366,15 @@ test("spotlight probe covers authored game spotlight families through player vie
 
   assert.deepEqual(
     entries.map((entry) => entry.kind ?? "effectText"),
-    ["effectText", "effectText", "effectText", "combat", "playedCard"],
+    [
+      "effectText",
+      "effectText",
+      "effectText",
+      "combat",
+      "combat",
+      "combat",
+      "playedCard",
+    ],
   );
   assert.equal(view.effectSpotlightHistory?.presentKey, entries.at(-1)?.key);
 
@@ -310,7 +382,9 @@ test("spotlight probe covers authored game spotlight families through player vie
     resolvedEntry,
     pendingEntry,
     replacementEntry,
-    combatEntryCandidate,
+    attackEntryCandidate,
+    counterEntryCandidate,
+    damageEntryCandidate,
     playedEntryCandidate,
   ] = entries;
   const resolvedEffectEntry = expectEffectTextEntry(resolvedEntry);
@@ -332,11 +406,44 @@ test("spotlight probe covers authored game spotlight families through player vie
       playerId: selfTarget.playerId,
     },
   ]);
-  const combatEntry = expectCombatEntry(combatEntryCandidate);
-  assert.deepEqual(combatEntry.combat.defender, {
+  const attackEntry = expectCombatEntry(attackEntryCandidate);
+  assert.equal(attackEntry.combat.eventKind, "attackDeclared");
+  assert.deepEqual(attackEntry.combat.defender, {
     instanceId: defender.instanceId,
     cardId: defender.cardId,
     playerId: defender.playerId,
+  });
+  const counterEntry = expectCombatEntry(counterEntryCandidate);
+  assert.deepEqual(counterEntry.combat, {
+    eventKind: "counterUsed",
+    source: {
+      instanceId: counterSource.instanceId,
+      cardId: counterSource.cardId,
+      playerId: counterSource.playerId,
+    },
+    target: {
+      instanceId: defender.instanceId,
+      cardId: defender.cardId,
+      playerId: defender.playerId,
+    },
+    counterPower: 1000,
+  });
+  const damageEntry = expectCombatEntry(damageEntryCandidate);
+  assert.deepEqual(damageEntry.combat, {
+    eventKind: "damageDealt",
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: source.playerId,
+    },
+    defender: {
+      instanceId: defender.instanceId,
+      cardId: defender.cardId,
+      playerId: defender.playerId,
+    },
+    attackerPower: 5000,
+    defenderPower: 6000,
+    amount: 1,
   });
   const playedEntry = expectPlayedCardEntry(playedEntryCandidate);
   assert.deepEqual(playedEntry.source, {

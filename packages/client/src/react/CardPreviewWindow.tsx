@@ -230,6 +230,7 @@ export const CardPreviewContent = ({
                     <section>
                       <EffectRulesText
                         text={card.effectText}
+                        preserveNewlines
                         sourceMap={card.effectTextSourceMap}
                       />
                     </section>
@@ -238,6 +239,7 @@ export const CardPreviewContent = ({
                     <section>
                       <EffectRulesText
                         text={card.triggerText}
+                        preserveNewlines
                         sourceMap={card.triggerTextSourceMap}
                       />
                     </section>

@@ -308,6 +308,7 @@ export interface ComputedCardView {
   currentCost?: number;
   keywords: Keyword[];
   restrictions: string[];
+  effectsInvalidated: boolean;
   canAttack: boolean;
   canBlock: boolean;
   cannotBeAttacked: boolean;

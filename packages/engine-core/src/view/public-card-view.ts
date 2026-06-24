@@ -15,6 +15,7 @@ export interface ComputedBoardCardStats {
   currentCost?: number;
   keywords?: readonly Keyword[];
   restrictions?: readonly string[];
+  effectsInvalidated?: boolean;
 }
 
 export const toPublicCardView = (
@@ -64,14 +65,16 @@ export const toBoardPublicCardView = (
     ...(computedStats?.currentCost === undefined
       ? {}
       : { currentCost: computedStats.currentCost }),
-    ...(computedStats?.keywords === undefined ||
-    computedStats.keywords.length === 0
+    ...(computedStats?.keywords === undefined
       ? {}
       : { keywords: [...computedStats.keywords] }),
     ...(computedStats?.restrictions === undefined ||
     computedStats.restrictions.length === 0
       ? {}
       : { restrictions: [...computedStats.restrictions] }),
+    ...(computedStats?.effectsInvalidated === true
+      ? { effectsInvalidated: true }
+      : {}),
   };
 };
 
@@ -131,10 +134,11 @@ export const computedBoardCardStatsByInstance = (
         ...(card.currentCost === undefined
           ? {}
           : { currentCost: card.currentCost }),
-        ...(card.keywords.length === 0 ? {} : { keywords: card.keywords }),
+        keywords: card.keywords,
         ...(card.restrictions.length === 0
           ? {}
           : { restrictions: card.restrictions }),
+        ...(card.effectsInvalidated ? { effectsInvalidated: true } : {}),
       },
     ]),
   );

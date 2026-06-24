@@ -560,14 +560,20 @@ describe("playmat structure", () => {
 
     assert.match(
       controlsStyles,
-      /--control-window-dock-height:\s*clamp\(\s*260px,\s*calc\(var\(--card-height\) \* 2\.15\),\s*460px\s*\);/u,
+      /--control-window-dock-available-height:\s*max\(\s*0vh,\s*calc\(\s*100vh\s*-\s*\(var\(--control-rail-gap\) \* 4\)\s*-\s*\(var\(--control-summary-height\) \* 2\)\s*-\s*var\(--control-icon-button-size\)\s*-\s*\(var\(--control-panel-padding\) \* 2\)\s*\)\s*\);/u,
     );
-    assert.match(controlsStyles, /\.control-window-dock\s*\{[^}]*right:\s*0;/u);
     assert.match(
       controlsStyles,
-      /\.control-window-dock\s*\{[^}]*bottom:\s*0;/u,
+      /--control-window-dock-height:\s*calc\(\s*var\(--control-window-dock-available-height\) \* 0\.75\s*\);/u,
     );
-    assert.match(controlsStyles, /\.control-window-dock\s*\{[^}]*left:\s*0;/u);
+    assert.doesNotMatch(
+      controlsStyles,
+      /--control-window-dock-height:\s*clamp\([^;]*px/u,
+    );
+    assert.match(
+      controlsStyles,
+      /\.control-window-dock\s*\{[^}]*margin-right:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-bottom:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-left:\s*calc\(var\(--control-panel-padding\) \* -1\);/u,
+    );
     assert.match(
       controlsStyles,
       /\.control-window-dock\s*\{[^}]*height:\s*var\(--control-window-dock-height\);/u,

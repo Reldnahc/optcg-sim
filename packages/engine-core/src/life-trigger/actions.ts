@@ -41,6 +41,7 @@ import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.j
 import { triggerContainsType } from "../effect-runtime-block-support.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { continueRuntimeAfterDecisionResult } from "../effect-runtime-decision-continuation.js";
+import { isEffectBlockInvalidated } from "../effect-invalidation.js";
 import { effectQueueEntryPresentationForEffectBlock } from "../runtime/effect-presentation.js";
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import {
@@ -142,6 +143,12 @@ const resolveSupportedLifeTriggerEffect = (
   if (effects === undefined) {
     return undefined;
   }
+  const source = noZoneLifeTriggerSource(card);
+  if (
+    effects.some((effect) => isEffectBlockInvalidated(state, source, effect))
+  ) {
+    return undefined;
+  }
   if (
     effects.some(
       (effect) =>
@@ -157,6 +164,21 @@ const resolveSupportedLifeTriggerEffect = (
   }
   return { resolved, effects };
 };
+
+const noZoneLifeTriggerSource = (
+  card: Pick<CardRef, "instanceId" | "cardId" | "playerId">,
+): CardInstance => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  owner: card.playerId,
+  controller: card.playerId,
+  zone: {
+    zone: "noZone",
+    playerId: card.playerId,
+    slot: "temporary",
+  },
+  attachedDon: [],
+});
 
 const isSupportedLifeTriggerConditionInNoZoneContext = (
   state: GameState,

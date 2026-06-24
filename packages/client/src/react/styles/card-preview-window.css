@@ -217,7 +217,6 @@
   gap: calc(var(--floating-window-body-padding) * 0.55);
   min-height: var(--card-preview-control-height);
   border-top: 1px solid var(--match-border-soft);
-  background: rgba(8, 19, 16, 0.96);
   padding: calc(var(--floating-window-body-padding) * 0.2)
     calc(var(--floating-window-body-padding) * 0.55);
   font-size: var(--card-preview-control-font-size);

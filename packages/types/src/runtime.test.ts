@@ -351,6 +351,7 @@ test("TYP-001F runtime support fixtures compile for replacement, queue, context,
     canAttack: true,
     canBlock: false,
     cannotBeAttacked: false,
+    effectsInvalidated: false,
     protectedFrom: [protection],
   };
   const restrictions: RestrictionIndex = {

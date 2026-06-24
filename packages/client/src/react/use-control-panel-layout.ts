@@ -4,10 +4,8 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import type { WindowRect } from "./FloatingWindow.js";
 import {
   controlDockSlotRect,
-  defaultControlDockHeightForViewport,
   defaultControlRailWidthForViewport,
   controlRailWidthFromDrag,
-  defaultControlDockHeight,
   defaultControlRailWidth,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
@@ -16,7 +14,6 @@ import type { RevealWindowStateStore } from "./window-state-store.js";
 
 export interface ControlPanelLayoutController {
   controlRailWidth: number;
-  controlDockHeight: number;
   controlDockActive: boolean;
   startControlRailResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
@@ -66,22 +63,11 @@ const defaultControlRailWidthForCurrentViewport = (): number =>
         viewportHeight: window.innerHeight,
       });
 
-const defaultControlDockHeightForCurrentViewport = (): number =>
-  typeof window === "undefined"
-    ? defaultControlDockHeight
-    : defaultControlDockHeightForViewport({
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      });
-
 export const useControlPanelLayout = ({
   layoutStore,
 }: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
   const [controlRailWidth, setControlRailWidth] = useState(() =>
     defaultControlRailWidthForCurrentViewport(),
-  );
-  const [controlDockHeight, setControlDockHeight] = useState(() =>
-    defaultControlDockHeightForCurrentViewport(),
   );
   const [controlDockActive, setControlDockActive] = useState(false);
 
@@ -89,7 +75,6 @@ export const useControlPanelLayout = ({
     const layout = layoutStore?.loadControlPanelLayout();
     if (typeof window === "undefined") {
       setControlRailWidth(layout?.controlRailWidth ?? defaultControlRailWidth);
-      setControlDockHeight(defaultControlDockHeight);
       return;
     }
     const normalizedLayout = normalizeControlPanelLayoutForViewport({
@@ -101,7 +86,6 @@ export const useControlPanelLayout = ({
       ),
     });
     setControlRailWidth(normalizedLayout.controlRailWidth);
-    setControlDockHeight(normalizedLayout.controlDockHeight);
     if (
       layout !== undefined &&
       layout.controlRailWidth !== undefined &&
@@ -180,7 +164,6 @@ export const useControlPanelLayout = ({
 
   return {
     controlRailWidth,
-    controlDockHeight,
     controlDockActive,
     startControlRailResize,
     updateControlDockTarget,

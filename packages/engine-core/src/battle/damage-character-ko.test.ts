@@ -8,6 +8,7 @@ import type {
   EffectId,
   Protection,
   ReplacementTrigger,
+  SpotlightEntryCreatedPayload,
   Target,
 } from "@optcg/types";
 
@@ -234,6 +235,58 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
     sourceKind: "battle",
     sourceInstanceId: attacker.instanceId,
     sourceCardId: attacker.cardId,
+  });
+  const damageDealtIndex = result.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+  assert.notEqual(damageDealtIndex, -1);
+  assert.equal(
+    result.events[damageDealtIndex + 1]?.type,
+    "spotlightEntryCreated",
+  );
+  const damageDealt = must(
+    result.events[damageDealtIndex],
+    "damageDealt event",
+  );
+  const damageSpotlights = result.events.filter(
+    (event) => event.type === "spotlightEntryCreated",
+  );
+  assert.equal(damageSpotlights.length, 1);
+  const damageSpotlightPayload = must(damageSpotlights[0], "damage spotlight")
+    .payload as SpotlightEntryCreatedPayload;
+  assert.deepEqual(damageSpotlightPayload.entry, {
+    kind: "combat",
+    id: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
+    key: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
+    semanticKey: [
+      "combat",
+      "damageDealt",
+      String(attacker.controller),
+      String(attacker.instanceId),
+      String(target.controller),
+      String(target.instanceId),
+    ].join("|"),
+    mode: "resolved",
+    status: "resolved",
+    combat: {
+      eventKind: "damageDealt",
+      attacker: {
+        instanceId: attacker.instanceId,
+        cardId: attacker.cardId,
+        playerId: p1,
+        zone: attacker.zone,
+      },
+      defender: {
+        instanceId: target.instanceId,
+        cardId: target.cardId,
+        playerId: p2,
+        zone: target.zone,
+      },
+      attackerPower: 7000,
+      defenderPower: 3000,
+      amount: 1,
+    },
+    resolvedEventId: damageDealt.id,
   });
 });
 

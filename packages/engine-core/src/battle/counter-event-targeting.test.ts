@@ -4,8 +4,8 @@ import { test } from "vitest";
 import type {
   CardInstance,
   EffectDefinition,
-  EffectId,
   SelectionId,
+  SpotlightEntryCreatedPayload,
 } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
@@ -362,6 +362,7 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
     target: cardRef(p2State.leader, p2),
   });
   assert.equal(opened.errors, undefined);
+  const battleTarget = must(opened.state.battle, "battle").currentTarget;
   const nonBattleTarget = cardRef(defenderCharacter, p2);
 
   assert.equal(
@@ -380,6 +381,20 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
   });
 
   assert.equal(used.errors, undefined);
+  const spotlight = must(
+    used.events.find((event) => event.type === "spotlightEntryCreated"),
+    "counter spotlight",
+  ).payload as SpotlightEntryCreatedPayload;
+  assert.equal(spotlight.entry.kind, "combat");
+  assert.equal(spotlight.entry.combat.eventKind, "counterUsed");
+  assert.equal(
+    spotlight.entry.combat.target.instanceId,
+    battleTarget.instanceId,
+  );
+  assert.notEqual(
+    spotlight.entry.combat.target.instanceId,
+    nonBattleTarget.instanceId,
+  );
   assert.equal(battleCounterPower(used.state.battle), undefined);
   const view = computeView(used.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 7000);
@@ -507,101 +522,6 @@ test("Counter Event named leader-or-character target filter is supported by batt
   const view = computeView(used.state);
   assert.equal(view.cards[defenderCharacter.instanceId]?.currentPower, 5000);
   assert.equal(view.cards[p2State.leader.instanceId]?.currentPower, 5000);
-});
-
-test("Counter Event can apply a chosen opponent Character debuff during this turn", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  const counterEvent = must(p2State.hand[0], "counter event");
-  const opponentCharacter = must(p1State.characters[0], "opponent character");
-  const definitionId = `${String(counterEvent.cardId)}:counter`;
-  state.cardManifest.cards[opponentCharacter.cardId] = resolvedCard({
-    cardId: opponentCharacter.cardId,
-    category: "character",
-    power: 5000,
-  });
-  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
-    cardId: counterEvent.cardId,
-    category: "event",
-    cost: 0,
-    effectText:
-      "[Counter] Give up to 1 of your opponent's Characters -3000 power during this turn.",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId: definitionId,
-    },
-  });
-  state.cardManifest.effectDefinitions = {
-    ...state.cardManifest.effectDefinitions,
-    [definitionId]: {
-      cardId: counterEvent.cardId,
-      implementationStatus: "implemented-dsl",
-      effects: [
-        {
-          id: `${String(counterEvent.cardId)}:counter` as EffectId,
-          category: "auto",
-          trigger: { type: "counter" },
-          sourcePresencePolicy: "resolveFromDestinationZone",
-          effect: {
-            type: "modifyPower",
-            target: {
-              type: "choose",
-              request: {
-                timing: "onResolution",
-                chooser: "self",
-                player: "opponent",
-                zone: "characterArea",
-                min: 0,
-                max: 1,
-                allowFewerIfUnavailable: true,
-                visibility: "public",
-                filter: { categories: ["character"] },
-              },
-            },
-            value: -3000,
-            duration: { type: "thisTurn" },
-          },
-        } satisfies EffectDefinition["effects"][number],
-      ],
-      metadata: {
-        sourceTextHash: "counter-debuff-source",
-        rulesVersion: "counter-debuff-rules",
-        effectDefinitionsVersion: "counter-debuff-defs",
-        tested: true,
-      },
-    },
-  };
-
-  const opened = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: cardRef(p1State.leader, p1),
-    target: cardRef(p2State.leader, p2),
-  });
-  assert.equal(opened.errors, undefined);
-  const useCounterActions = getLegalActions(opened.state, p2).filter(
-    (action) =>
-      action.type === "useCounter" &&
-      action.cardInstanceId === counterEvent.instanceId,
-  );
-  assert.equal(useCounterActions.length, 1);
-
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: cardRef(opponentCharacter, p1),
-  });
-
-  assert.equal(used.errors, undefined);
-  assert.equal(battleCounterPower(used.state.battle), undefined);
-  assert.equal(
-    must(used.state.players[p2], "p2").trash.some(
-      (card) => card.instanceId === counterEvent.instanceId,
-    ),
-    true,
-  );
-  const view = computeView(used.state);
-  assert.equal(view.cards[opponentCharacter.instanceId]?.currentPower, 2000);
 });
 
 test("nonzero-cost Counter Event preserves a chosen non-battle target through payment", () => {

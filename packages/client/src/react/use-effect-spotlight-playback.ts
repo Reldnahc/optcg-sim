@@ -130,6 +130,35 @@ const playbackEntryConsumptionSignature = (
   entry: EffectSpotlightPlaybackEntry,
 ): string => {
   if (isCombatSpotlightSource(entry)) {
+    if (entry.combat.eventKind === "counterUsed") {
+      return [
+        "combat",
+        entry.key,
+        entry.id,
+        entry.combat.eventKind,
+        cardRefSignature(entry.combat.source),
+        cardRefSignature(entry.combat.target),
+        entry.combat.counterPower === undefined
+          ? ""
+          : String(entry.combat.counterPower),
+        entry.combat.targetPower === undefined
+          ? ""
+          : String(entry.combat.targetPower),
+      ].join("|");
+    }
+    if (entry.combat.eventKind === "damageDealt") {
+      return [
+        "combat",
+        entry.key,
+        entry.id,
+        entry.combat.eventKind,
+        cardRefSignature(entry.combat.attacker),
+        cardRefSignature(entry.combat.defender),
+        String(entry.combat.attackerPower),
+        String(entry.combat.defenderPower),
+        String(entry.combat.amount),
+      ].join("|");
+    }
     return [
       "combat",
       entry.key,

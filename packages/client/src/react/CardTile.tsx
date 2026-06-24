@@ -188,6 +188,15 @@ export const CardTile = ({
       ? undefined
       : `${card.costDelta > 0 ? "+" : ""}${String(card.costDelta)}`;
   const statusBadges = [
+    ...(card.effectsInvalidated === true
+      ? [
+          {
+            id: "status:negated",
+            label: "negated",
+            tone: "negative" as const,
+          },
+        ]
+      : []),
     ...(card.keywords ?? []).map((keyword) => ({
       id: `keyword:${keyword}`,
       label: keywordLabel(keyword),

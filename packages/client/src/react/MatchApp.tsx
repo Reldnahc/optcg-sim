@@ -155,7 +155,6 @@ export const MatchApp = ({
   });
   const {
     controlRailWidth,
-    controlDockHeight,
     controlDockActive,
     startControlRailResize,
     updateControlDockTarget,
@@ -469,7 +468,6 @@ export const MatchApp = ({
     }
   }, [
     activeDockedWindowIds.size,
-    controlDockHeight,
     controlRailWidth,
     currentControlDockSlotRect,
     updateDockedWindowRects,
@@ -605,7 +603,6 @@ export const MatchApp = ({
           matchStatus={matchState?.snapshot.status}
           rematchStatus={client.state.rematchStatus}
           width={controlRailWidth}
-          dockHeight={controlDockHeight}
           dockActive={controlDockActive}
           dockTabs={controlDockTabs}
           activeDockTabId={controlDockActiveTabId}

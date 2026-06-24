@@ -10,6 +10,11 @@ import type {
 } from "@optcg/types";
 
 import { isSpotlightCardRefVisibleToPlayer } from "./card-ref-visibility.js";
+import {
+  isSafeCombatSpotlightVisibleToPlayer,
+  safeCombatSpotlightSemanticKey,
+  toAllowedCombatSpotlightPresentation,
+} from "./filter-state-combat-spotlight.js";
 
 export const isEventVisibleToPlayer = (
   event: EngineEvent,
@@ -118,14 +123,6 @@ type SafeEffectTextPresentation = {
   readonly textKind?: "effect" | "trigger";
   readonly activeSpanIds: readonly `span:${string}`[];
   readonly targetLinks?: readonly SafeEffectTextTargetLink[];
-};
-
-type SafeCombatSpotlightPresentation = {
-  readonly eventKind: "attackDeclared" | "blockerActivated";
-  readonly attacker: CardRef;
-  readonly defender: CardRef;
-  readonly attackerPower?: number;
-  readonly defenderPower?: number;
 };
 
 const allowedEffectTextTargetLinkRelations = new Set<
@@ -267,34 +264,6 @@ const toRecipientSafeTargetLinks = (
   return safeLinks.length === 0 ? undefined : safeLinks;
 };
 
-const toAllowedCombatSpotlightPresentation = (
-  value: unknown,
-): SafeCombatSpotlightPresentation | undefined => {
-  const combat = asRecord(value);
-  if (combat === undefined) {
-    return undefined;
-  }
-  const eventKind = combat["eventKind"];
-  const attacker = toAllowedCardRef(combat["attacker"]);
-  const defender = toAllowedCardRef(combat["defender"]);
-  if (
-    (eventKind !== "attackDeclared" && eventKind !== "blockerActivated") ||
-    attacker === undefined ||
-    defender === undefined
-  ) {
-    return undefined;
-  }
-  const attackerPower = combat["attackerPower"];
-  const defenderPower = combat["defenderPower"];
-  return {
-    eventKind,
-    attacker,
-    defender,
-    ...(typeof attackerPower === "number" ? { attackerPower } : {}),
-    ...(typeof defenderPower === "number" ? { defenderPower } : {}),
-  };
-};
-
 interface PlayerEventViewContext {
   readonly playerId: PlayerId;
   readonly visiblePublicPendingDecisionId?: PublicPendingDecisionId | undefined;
@@ -414,18 +383,10 @@ const toAllowedSpotlightEntry = (
     const resolvedEventId = entry["resolvedEventId"];
     if (
       combat === undefined ||
-      !isSpotlightCardRefVisibleToPlayer(
+      !isSafeCombatSpotlightVisibleToPlayer(
         state,
         context.playerId,
-        combat.attacker,
-        "combatAttacker",
-        disclosure,
-      ) ||
-      !isSpotlightCardRefVisibleToPlayer(
-        state,
-        context.playerId,
-        combat.defender,
-        "combatDefender",
+        combat,
         disclosure,
       ) ||
       mode !== "resolved" ||
@@ -451,14 +412,11 @@ const toAllowedSpotlightEntry = (
       kind: "combat",
       id,
       key: id,
-      semanticKey: [
-        "combat",
+      semanticKey: safeCombatSpotlightSemanticKey(
         String(anchorId),
-        String(ordinal),
-        combat.eventKind,
-        combat.attackerPower === undefined ? "" : String(combat.attackerPower),
-        combat.defenderPower === undefined ? "" : String(combat.defenderPower),
-      ].join("|"),
+        ordinal,
+        combat,
+      ),
       mode,
       status,
       combat,

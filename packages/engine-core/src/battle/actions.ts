@@ -10,6 +10,12 @@ import type {
   PlayerId,
   SelectCardsDecision,
 } from "@optcg/types";
+type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
+  damageProcess?: {
+    type: "declaredDamage";
+    sourceKeyword: "doubleAttack";
+  };
+};
 
 import {
   appendCombatSpotlightEntryCreatedEvent,
@@ -391,17 +397,33 @@ const applyDeclareAttackInternal = (
       },
     });
   }
+  const declaredDamageCount =
+    target.isLeader && attackerHasDoubleAttack ? 2 : 1;
+  const battle =
+    declaredDamageCount === 2
+      ? ({
+          attacker: toCardRef(attacker.card, attacker.playerId),
+          originalTarget: toCardRef(target.card, target.playerId),
+          currentTarget: toCardRef(target.card, target.playerId),
+          step: "attack",
+          damageCount: declaredDamageCount,
+          damageProcess: {
+            type: "declaredDamage",
+            sourceKeyword: "doubleAttack",
+          },
+        } satisfies EngineInternalBattleState)
+      : {
+          attacker: toCardRef(attacker.card, attacker.playerId),
+          originalTarget: toCardRef(target.card, target.playerId),
+          currentTarget: toCardRef(target.card, target.playerId),
+          step: "attack" as const,
+          damageCount: declaredDamageCount,
+        };
   const baseState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,
-    battle: {
-      attacker: toCardRef(attacker.card, attacker.playerId),
-      originalTarget: toCardRef(target.card, target.playerId),
-      currentTarget: toCardRef(target.card, target.playerId),
-      step: "attack",
-      damageCount: target.isLeader && attackerHasDoubleAttack ? 2 : 1,
-    },
+    battle,
   };
   const rested = restFieldObjects(
     baseState,

@@ -37,6 +37,7 @@ export interface ClientCardModel {
   types?: string[];
   keywords?: Keyword[];
   restrictions?: string[];
+  effectsInvalidated?: boolean;
   freshlyPlayedAttackRestricted?: boolean;
   state?: PublicCardView["state"];
   attachedDonCount: number;
@@ -203,6 +204,7 @@ const cardModel = (
     ...(card.restrictions === undefined || card.restrictions.length === 0
       ? {}
       : { restrictions: [...card.restrictions] }),
+    ...(card.effectsInvalidated === true ? { effectsInvalidated: true } : {}),
     ...(options.freshlyPlayedAttackRestricted === true
       ? { freshlyPlayedAttackRestricted: true }
       : {}),

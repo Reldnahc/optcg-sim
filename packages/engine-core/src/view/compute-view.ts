@@ -25,6 +25,7 @@ import {
   continuousBaseCostForCard,
   continuousCostBonusForCard,
 } from "./cost-projection.js";
+import { isCardEffectInvalidated } from "../effect-invalidation.js";
 import { fieldRemovalProtectionsForCard } from "../replacement/field-removal-protection.js";
 import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import { cardMatchesSearchFilter, getOpponentId } from "../actions/state.js";
@@ -322,8 +323,11 @@ const computedKeywordsForCard = (
   state: GameState,
   card: CardInstance,
   metadata: ResolvedCard,
+  effectsInvalidated = isCardEffectInvalidated(state, card),
 ): Keyword[] => {
-  const keywords = [...metadata.printedKeywords] as Keyword[];
+  const keywords = effectsInvalidated
+    ? []
+    : ([...metadata.printedKeywords] as Keyword[]);
   for (const keyword of continuousKeywordsForCard(state, card)) {
     if (!keywords.includes(keyword)) {
       keywords.push(keyword);
@@ -529,7 +533,13 @@ const computeCardView = (
       : 0;
   const continuousPowerBonus = continuousPowerBonusForCard(state, card);
   const continuousPowerSet = continuousPowerSetForCard(state, card);
-  const keywords = computedKeywordsForCard(state, card, metadata);
+  const effectsInvalidated = isCardEffectInvalidated(state, card);
+  const keywords = computedKeywordsForCard(
+    state,
+    card,
+    metadata,
+    effectsInvalidated,
+  );
   const restrictions = continuousRestrictionLabelsForCard(state, card);
   const fieldRemovalProtections = fieldRemovalProtectionsForCard(state, card);
   if (!fieldRemovalProtections.ok) {
@@ -555,6 +565,7 @@ const computeCardView = (
         }),
     keywords,
     restrictions,
+    effectsInvalidated,
     canAttack: canAttackNow(state, card, keywords, options),
     canBlock: canBlockNow(state, card, keywords),
     cannotBeAttacked: false,

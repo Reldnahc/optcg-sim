@@ -533,19 +533,21 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
 
   const openedForDecline = openLifeTrigger();
   const expectedOpenedSignature = {
-    eventSeq: [10, 11, 12, 13, 14, 15, 16],
+    eventSeq: [10, 11, 12, 13, 14, 15, 16, 17],
     eventIds: [
       "event:4:1:decisionResolved",
       "event:4:1:damageDealt",
-      "event:4:2:lifeTaken",
-      "event:4:3:decisionCreated",
-      "event:4:4:battleEnded",
-      "event:4:5:effectResolved",
-      "event:4:6:ruleProcessingChecked",
+      "event:4:2:spotlightEntryCreated",
+      "event:4:3:lifeTaken",
+      "event:4:4:decisionCreated",
+      "event:4:5:battleEnded",
+      "event:4:6:effectResolved",
+      "event:4:7:ruleProcessingChecked",
     ],
     eventTypes: [
       "decisionResolved",
       "damageDealt",
+      "spotlightEntryCreated",
       "lifeTaken",
       "decisionCreated",
       "battleEnded",
@@ -553,7 +555,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "ruleProcessingChecked",
     ],
     stateHash:
-      "f7ab10896db47e02214a6cc96cbe51070a245d1e8a65b4fc1ff8fe477bfc4378",
+      "298e55c585bb1d21dbf479efc6a6c617a1313d3c191d8e6879883363195855a2",
   };
   assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
@@ -572,7 +574,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   );
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
   assert.deepEqual(signature(declined), {
-    eventSeq: [17, 18, 19],
+    eventSeq: [18, 19, 20],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardMoved",
@@ -580,7 +582,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "9481fcc1872eea1efb17b4e59430d70240727eb869f168ea63e8537ed4af18a9",
+      "b1ad9ff286ae858b4d33ef0e0b70f80fa3d74b353623b719b3be27e4df80b3b2",
   });
 
   const openedForActivation = openLifeTrigger();
@@ -603,7 +605,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   assert.equal(activated.state.effectQueue.length, 0);
   assert.equal(activated.state.revealedCards.length, 0);
   assert.deepEqual(signature(activated), {
-    eventSeq: [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
+    eventSeq: [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardRevealed",
@@ -633,7 +635,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "7055ecd48c80ce1dddef83febdef6b7c578a44ee813e38e8639921f647b3eaa1",
+      "c08d8493295e92870f9266860565c692b6db126f854331bd39c71f39f302c206",
   });
 
   return {

@@ -20,10 +20,16 @@
   --control-icon-size: calc(var(--control-icon-button-size) * 0.66);
   --control-action-height: clamp(30px, calc(var(--card-height) / 5), 38px);
   --control-dock-tab-height: clamp(26px, calc(var(--card-height) / 5.4), 34px);
-  --control-window-dock-height: clamp(
-    260px,
-    calc(var(--card-height) * 2.15),
-    460px
+  --control-window-dock-available-height: max(
+    0vh,
+    calc(
+      100vh - (var(--control-rail-gap) * 4) -
+        (var(--control-summary-height) * 2) - var(--control-icon-button-size) -
+        (var(--control-panel-padding) * 2)
+    )
+  );
+  --control-window-dock-height: calc(
+    var(--control-window-dock-available-height) * 0.75
   );
   --control-resize-hit-area: calc(var(--control-rail-gap) * 1.45);
   --control-grab-nub-width: calc(var(--control-dock-tab-height) * 0.58);
@@ -541,25 +547,36 @@
 
 .controls-panel {
   position: relative;
-  overflow: auto;
-  padding-top: var(--control-panel-padding);
-  padding-bottom: calc(
-    var(--control-window-dock-height) + var(--control-icon-button-size) +
-      (var(--control-panel-padding) * 3)
-  );
+  display: grid;
+  grid-template-rows:
+    minmax(0, 1fr) var(--control-window-dock-height)
+    var(--control-icon-button-size);
+  gap: var(--control-panel-padding);
+  overflow: hidden;
+  padding: var(--control-panel-padding);
 }
 
+.control-action-stack {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-width: thin;
+}
+
+.control-action-stack > :first-child {
+  margin-top: 0;
+}
+
+.control-action-stack > :last-child {
+  margin-bottom: 0;
+}
 .end-match-actions {
   display: grid;
   gap: calc(var(--control-rail-gap) * 0.75);
   margin-top: var(--control-rail-gap);
 }
-
 .control-tool-strip {
-  position: absolute;
-  bottom: var(--control-panel-padding);
-  left: var(--control-panel-padding);
-  z-index: 1;
   display: flex;
   gap: calc(var(--control-rail-gap) * 0.5);
   align-items: center;
@@ -690,18 +707,14 @@
 }
 
 .control-window-dock {
-  position: absolute;
-  right: 0;
-  bottom: calc(
-    var(--control-icon-button-size) + (var(--control-panel-padding) * 2)
-  );
-  left: 0;
   display: grid;
   height: var(--control-window-dock-height);
+  margin-right: calc(var(--control-panel-padding) * -1);
+  margin-bottom: calc(var(--control-panel-padding) * -1);
+  margin-left: calc(var(--control-panel-padding) * -1);
   place-items: center;
-  border: var(--card-outline-thin) dashed var(--match-border-soft);
+  border: var(--card-outline-thin) solid var(--match-border-soft);
   border-right: 0;
-  border-bottom: 0;
   border-left: 0;
   border-radius: 0 0 var(--control-panel-radius) var(--control-panel-radius);
   color: var(--match-text-subtle);
@@ -717,7 +730,7 @@
   pointer-events: auto;
 }
 
-.control-window-dock span {
+.control-window-dock > span {
   font-size: var(--control-small-font-size);
   text-transform: uppercase;
 }

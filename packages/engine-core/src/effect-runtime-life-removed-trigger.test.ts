@@ -566,6 +566,7 @@ test("opponent activation reaction queues after the opponent Counter Event effec
     countered.events.map((event) => event.type),
     [
       "counterUsed",
+      "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
       "effectResolved",

@@ -1,4 +1,4 @@
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 import type { PublicTurnState } from "@optcg/types";
 import type {
@@ -37,7 +37,6 @@ export interface ControlRailProps {
   matchStatus?: string | undefined;
   rematchStatus?: "requestedBySelf" | "requestedByOpponent" | undefined;
   width?: number | undefined;
-  dockHeight?: number | undefined;
   dockActive?: boolean | undefined;
   dockTabs?: readonly ControlDockTab[] | undefined;
   activeDockTabId?: string | undefined;
@@ -89,7 +88,6 @@ export const ControlRail = ({
   matchStatus,
   rematchStatus,
   width,
-  dockHeight,
   dockActive = false,
   dockTabs = [],
   activeDockTabId,
@@ -144,12 +142,6 @@ export const ControlRail = ({
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
   const tabDragOutDistance = 32;
-  const controlsPanelStyle:
-    | (CSSProperties & { "--control-window-dock-height"?: string })
-    | undefined =
-    dockHeight === undefined
-      ? undefined
-      : { "--control-window-dock-height": `${String(dockHeight)}px` };
 
   return (
     <aside
@@ -180,91 +172,67 @@ export const ControlRail = ({
           timer={opponentTimer}
         />
       </section>
-      <section className="controls-panel" style={controlsPanelStyle}>
-        {turnState === undefined ? null : (
-          <div className="control-turn-status" aria-label="Current turn">
-            <span className="control-turn-number">
-              Turn {turnState.globalTurn}
-            </span>
-            <span className="control-turn-phase">
-              {turnStatusLabel(turnState)}
-            </span>
-          </div>
-        )}
-        {errors.map((error) => (
-          <p key={error} className="error-text">
-            {error}
-          </p>
-        ))}
-        {rollbackStatus === undefined ? null : (
-          <section className="rollback-status-panel">
-            <p>{rollbackStatus.message}</p>
-            {rollbackStatus.canCancel ? (
+      <section className="controls-panel">
+        <div className="control-action-stack">
+          {turnState === undefined ? null : (
+            <div className="control-turn-status" aria-label="Current turn">
+              <span className="control-turn-number">
+                Turn {turnState.globalTurn}
+              </span>
+              <span className="control-turn-phase">
+                {turnStatusLabel(turnState)}
+              </span>
+            </div>
+          )}
+          {errors.map((error) => (
+            <p key={error} className="error-text">
+              {error}
+            </p>
+          ))}
+          {rollbackStatus === undefined ? null : (
+            <section className="rollback-status-panel">
+              <p>{rollbackStatus.message}</p>
+              {rollbackStatus.canCancel ? (
+                <button
+                  className="action-button"
+                  type="button"
+                  disabled={disabled}
+                  onClick={onCancelRollback}
+                >
+                  Cancel rollback request
+                </button>
+              ) : null}
+            </section>
+          )}
+          <ActionMenu
+            actions={globalActions}
+            disabled={disabled}
+            onAction={onAction}
+          />
+          {matchIsOver ? (
+            <div className="end-match-actions" aria-label="Match ended actions">
               <button
-                className="action-button"
+                className="action-button is-primary end-match-action"
+                type="button"
+                disabled={rematchDisabled}
+                aria-label={rematchLabel}
+                onClick={() => {
+                  void onRematch?.();
+                }}
+              >
+                {rematchLabel}
+              </button>
+              <button
+                className="action-button end-match-action"
                 type="button"
                 disabled={disabled}
-                onClick={onCancelRollback}
+                aria-label="Home"
+                onClick={onHome}
               >
-                Cancel rollback request
+                Home
               </button>
-            ) : null}
-          </section>
-        )}
-        <ActionMenu
-          actions={globalActions}
-          disabled={disabled}
-          onAction={onAction}
-        />
-        {matchIsOver ? (
-          <div className="end-match-actions" aria-label="Match ended actions">
-            <button
-              className="action-button is-primary end-match-action"
-              type="button"
-              disabled={rematchDisabled}
-              aria-label={rematchLabel}
-              onClick={() => {
-                void onRematch?.();
-              }}
-            >
-              {rematchLabel}
-            </button>
-            <button
-              className="action-button end-match-action"
-              type="button"
-              disabled={disabled}
-              aria-label="Home"
-              onClick={onHome}
-            >
-              Home
-            </button>
-          </div>
-        ) : null}
-        <div className="control-tool-strip">
-          {previewControl === undefined ? null : (
-            <div className="control-preview-slot">{previewControl}</div>
-          )}
-          {actionLogControl === undefined ? null : (
-            <div className="control-action-log-slot">{actionLogControl}</div>
-          )}
-          {settingsControl === undefined ? null : (
-            <div className="control-settings-slot">{settingsControl}</div>
-          )}
-          <button
-            className={`control-icon-button concede-button ${
-              concedeConfirming ? "is-confirming" : ""
-            }`}
-            type="button"
-            disabled={concedeDisabled}
-            aria-label={concedeLabel}
-            title={concedeLabel}
-            onClick={onConcede}
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 3v18" />
-              <path d="M5 4h12l-2 4 2 4H5" />
-            </svg>
-          </button>
+            </div>
+          ) : null}
         </div>
         <div
           className={[
@@ -483,6 +451,32 @@ export const ControlRail = ({
               </div>
             </section>
           )}
+        </div>
+        <div className="control-tool-strip">
+          {previewControl === undefined ? null : (
+            <div className="control-preview-slot">{previewControl}</div>
+          )}
+          {actionLogControl === undefined ? null : (
+            <div className="control-action-log-slot">{actionLogControl}</div>
+          )}
+          {settingsControl === undefined ? null : (
+            <div className="control-settings-slot">{settingsControl}</div>
+          )}
+          <button
+            className={`control-icon-button concede-button ${
+              concedeConfirming ? "is-confirming" : ""
+            }`}
+            type="button"
+            disabled={concedeDisabled}
+            aria-label={concedeLabel}
+            title={concedeLabel}
+            onClick={onConcede}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 3v18" />
+              <path d="M5 4h12l-2 4 2 4H5" />
+            </svg>
+          </button>
         </div>
       </section>
       <section

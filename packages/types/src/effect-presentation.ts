@@ -85,15 +85,38 @@ export interface EffectTextSpotlightHistoryEntry extends EffectSpotlightHistoryE
 export type CombatSpotlightEventKind =
   | "attackDeclared"
   | "blockerActivated"
-  | "counterUsed";
+  | "counterUsed"
+  | "damageDealt";
 
-export interface CombatSpotlightPresentation {
-  readonly eventKind: CombatSpotlightEventKind;
+interface BattleStepCombatSpotlightPresentation {
+  readonly eventKind: "attackDeclared" | "blockerActivated";
   readonly attacker: CardRef;
   readonly defender: CardRef;
   readonly attackerPower?: number;
   readonly defenderPower?: number;
 }
+
+interface DamageDealtCombatSpotlightPresentation {
+  readonly eventKind: "damageDealt";
+  readonly attacker: CardRef;
+  readonly defender: CardRef;
+  readonly attackerPower: number;
+  readonly defenderPower: number;
+  readonly amount: number;
+}
+
+interface CounterCombatSpotlightPresentation {
+  readonly eventKind: "counterUsed";
+  readonly source: CardRef;
+  readonly target: CardRef;
+  readonly counterPower?: number;
+  readonly targetPower?: number;
+}
+
+export type CombatSpotlightPresentation =
+  | BattleStepCombatSpotlightPresentation
+  | DamageDealtCombatSpotlightPresentation
+  | CounterCombatSpotlightPresentation;
 
 export interface CombatSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {
   readonly kind: "combat";
@@ -133,7 +156,9 @@ export interface SpotlightEntryCardRefDisclosure {
     | "effectSource"
     | "playedCardSource"
     | "combatAttacker"
-    | "combatDefender";
+    | "combatDefender"
+    | "combatSource"
+    | "combatTarget";
   readonly cardInstanceId: InstanceId;
   readonly visibility: SpotlightDisclosureVisibility;
 }

@@ -15,6 +15,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 };
 
 import {
+  appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
   assertGameStateInvariantsIfEnabled,
   type EngineResultOptions,
@@ -818,6 +819,25 @@ export const resolveCounterCardUse = (params: {
     value: counterValue,
     ...(targetPower === undefined ? {} : { targetPower }),
   });
+  const counterUsed = events.at(-1);
+  if (counterUsed !== undefined && counterUsed.type === "counterUsed") {
+    appendCombatSpotlightEntryCreatedEvent({
+      state,
+      events,
+      anchorEvent: counterUsed,
+      combat: {
+        eventKind: "counterUsed",
+        source: {
+          instanceId: handCard.instanceId,
+          cardId: handCard.cardId,
+          playerId: decisionPlayerId,
+          zone: handCard.zone,
+        },
+        target: battle.currentTarget,
+        counterPower: counterValue,
+      },
+    });
+  }
   const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
     cardMovedPayloadShape: "zoneRefs",
     cardMovedVisibility: { type: "public" },

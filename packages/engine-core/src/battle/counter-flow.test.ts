@@ -259,6 +259,7 @@ test("counter-step pass emits deterministic decisionResolved sequence and resume
     [
       "decisionResolved",
       "damageDealt",
+      "spotlightEntryCreated",
       "lifeTaken",
       "decisionCreated",
       "battleEnded",
@@ -357,11 +358,13 @@ test("Character Counter moves from hand to trash, emits deterministic events, an
     true,
   );
   assert.deepEqual(
-    result.events.map((event) => ({
-      type: event.type,
-      payload: event.payload,
-      visibility: event.visibility,
-    })),
+    result.events
+      .filter((event) => event.type !== "spotlightEntryCreated")
+      .map((event) => ({
+        type: event.type,
+        payload: event.payload,
+        visibility: event.visibility,
+      })),
     [
       {
         type: "counterUsed",
@@ -479,7 +482,7 @@ test("Character Counter power changes Damage Step outcome after pass", () => {
 
   assert.equal(result.errors, undefined);
   assert.equal(result.state.battle, undefined);
-  assert.equal(JSON.stringify(result.state).includes("counterPower"), false);
+  assert.equal(battleCounterPower(result.state.battle), undefined);
   assert.equal(
     must(result.state.players[p2], "p2").characters.some(
       (character) => character.instanceId === target.instanceId,
@@ -566,6 +569,7 @@ test("supported Counter Event appears in defender legal actions and resolves to 
     used.events.map((event) => event.type),
     [
       "counterUsed",
+      "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
       "effectResolved",
@@ -1021,6 +1025,7 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
       "costPaid",
       "decisionResolved",
       "counterUsed",
+      "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
       "effectResolved",

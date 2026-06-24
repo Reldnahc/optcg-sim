@@ -7,7 +7,6 @@ import { describe, test } from "vitest";
 import {
   controlDockSlotRect,
   controlRailWidthFromDrag,
-  defaultControlDockHeightForViewport,
   defaultControlRailWidthForViewport,
   defaultControlRailWidth,
   desktopCardHeightForViewport,
@@ -35,25 +34,11 @@ describe("control panel layout", () => {
       248,
     );
     assert.equal(
-      defaultControlDockHeightForViewport({
-        viewportWidth: 1024,
-        viewportHeight: 720,
-      }),
-      260,
-    );
-    assert.equal(
       defaultControlRailWidthForViewport({
         viewportWidth: 2560,
         viewportHeight: 1440,
       }),
       375,
-    );
-    assert.equal(
-      defaultControlDockHeightForViewport({
-        viewportWidth: 2560,
-        viewportHeight: 1440,
-      }),
-      418,
     );
   });
 
@@ -93,7 +78,6 @@ describe("control panel layout", () => {
       }),
       {
         controlRailWidth: 244,
-        controlDockHeight: 260,
       },
     );
 
@@ -108,7 +92,6 @@ describe("control panel layout", () => {
       }),
       {
         controlRailWidth: 220,
-        controlDockHeight: 260,
       },
     );
   });

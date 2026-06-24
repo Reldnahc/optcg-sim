@@ -65,7 +65,9 @@ const liveEntryMatchesPendingDecision = (
 
 const entrySourceInstanceId = (entry: EffectSpotlightPlaybackEntry): string =>
   isCombatSpotlightSource(entry)
-    ? String(entry.combat.attacker.instanceId)
+    ? entry.combat.eventKind === "counterUsed"
+      ? String(entry.combat.source.instanceId)
+      : String(entry.combat.attacker.instanceId)
     : isPlayedCardSpotlightSource(entry)
       ? String(entry.source.instanceId)
       : String(entry.active.source.instanceId);

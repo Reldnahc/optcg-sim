@@ -482,6 +482,58 @@ test("player view projects resolved spotlight history from visible authored spot
   });
 });
 
+test("player view drops malformed damage spotlight entries", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const p2State = must(state.players[p2], "p2 state");
+  const attacker: CardRef = {
+    instanceId: p1State.leader.instanceId,
+    cardId: p1State.leader.cardId,
+    playerId: p1,
+    zone: p1State.leader.zone,
+  };
+  const defender: CardRef = {
+    instanceId: p2State.leader.instanceId,
+    cardId: p2State.leader.cardId,
+    playerId: p2,
+    zone: p2State.leader.zone,
+  };
+
+  state.eventJournal.push({
+    id: toEngineEventId("event:malformed-damage-spotlight"),
+    seq: 100,
+    type: "spotlightEntryCreated",
+    payload: {
+      entry: {
+        kind: "combat",
+        id: "unsafe-damage-id",
+        key: "unsafe-damage-key",
+        semanticKey: "unsafe-damage-semantic",
+        mode: "resolved",
+        status: "resolved",
+        combat: {
+          eventKind: "damageDealt",
+          attacker,
+          defender,
+          attackerPower: 7000,
+        },
+        resolvedEventId: toEngineEventId("event:malformed-damage-anchor"),
+      },
+    },
+    visibility: { type: "public" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.deepEqual(
+    view.events.find((event) => event.type === "spotlightEntryCreated")
+      ?.payload,
+    {},
+  );
+  assert.equal(view.effectSpotlightHistory, undefined);
+});
+
 test("player view only projects private authored spotlight history for its recipient", () => {
   const state = createActiveState();
   const p1State = must(state.players[p1], "p1 state");

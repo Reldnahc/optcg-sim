@@ -84,19 +84,74 @@ const spotlightEntryForEvent = (
       return undefined;
     }
     const eventKind = combat["eventKind"];
+    if (mode !== "resolved" || status !== "resolved") {
+      return undefined;
+    }
+    if (eventKind === "counterUsed") {
+      const source = combat["source"];
+      const target = combat["target"];
+      if (!isCardRef(source) || !isCardRef(target)) {
+        return undefined;
+      }
+      const counterPower = combat["counterPower"];
+      const targetPower = combat["targetPower"];
+      return {
+        kind: "combat",
+        id,
+        key,
+        semanticKey,
+        mode,
+        status,
+        combat: {
+          eventKind,
+          source,
+          target,
+          ...(typeof counterPower === "number" ? { counterPower } : {}),
+          ...(typeof targetPower === "number" ? { targetPower } : {}),
+        },
+        resolvedEventId: resolvedEventId as EngineEvent["id"],
+      };
+    }
     const attacker = combat["attacker"];
     const defender = combat["defender"];
     if (
-      (eventKind !== "attackDeclared" && eventKind !== "blockerActivated") ||
+      (eventKind !== "attackDeclared" &&
+        eventKind !== "blockerActivated" &&
+        eventKind !== "damageDealt") ||
       !isCardRef(attacker) ||
-      !isCardRef(defender) ||
-      mode !== "resolved" ||
-      status !== "resolved"
+      !isCardRef(defender)
     ) {
       return undefined;
     }
     const attackerPower = combat["attackerPower"];
     const defenderPower = combat["defenderPower"];
+    const amount = combat["amount"];
+    if (eventKind === "damageDealt") {
+      if (
+        typeof attackerPower !== "number" ||
+        typeof defenderPower !== "number" ||
+        typeof amount !== "number"
+      ) {
+        return undefined;
+      }
+      return {
+        kind: "combat",
+        id,
+        key,
+        semanticKey,
+        mode,
+        status,
+        combat: {
+          eventKind,
+          attacker,
+          defender,
+          attackerPower,
+          defenderPower,
+          amount,
+        },
+        resolvedEventId: resolvedEventId as EngineEvent["id"],
+      };
+    }
     return {
       kind: "combat",
       id,

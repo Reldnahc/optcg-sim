@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import type { SpotlightEntryCreatedPayload } from "@optcg/types";
+
 import {
   applyDeclareAttack,
   resolveSupportedVanillaBattle,
@@ -63,6 +65,48 @@ test("supported declareAttack resolves vanilla battle internally without continu
     result.events.some((event) => event.type === "damageDealt"),
     true,
   );
+  const damageDealtIndex = result.events.findIndex(
+    (event) => event.type === "damageDealt",
+  );
+  assert.notEqual(damageDealtIndex, -1);
+  assert.equal(
+    result.events[damageDealtIndex + 1]?.type,
+    "spotlightEntryCreated",
+  );
+  const damageDealt = must(
+    result.events[damageDealtIndex],
+    "damageDealt event",
+  );
+  const damageSpotlights = result.events.filter(
+    (event) => event.type === "spotlightEntryCreated",
+  );
+  assert.equal(damageSpotlights.length, 1);
+  const damageSpotlightPayload = must(damageSpotlights[0], "damage spotlight")
+    .payload as SpotlightEntryCreatedPayload;
+  assert.deepEqual(damageSpotlightPayload.entry, {
+    kind: "combat",
+    id: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
+    key: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
+    semanticKey: [
+      "combat",
+      "damageDealt",
+      String(attacker.controller),
+      String(attacker.instanceId),
+      String(target.controller),
+      String(target.instanceId),
+    ].join("|"),
+    mode: "resolved",
+    status: "resolved",
+    combat: {
+      eventKind: "damageDealt",
+      attacker: cardRef(attacker, p1),
+      defender: cardRef(target, p2),
+      attackerPower: 5000,
+      defenderPower: 5000,
+      amount: 1,
+    },
+    resolvedEventId: damageDealt.id,
+  });
   assert.equal(must(result.state.players[p1], "p1").life.length, beforeLifeP1);
   assert.equal(
     must(result.state.players[p2], "p2").life.length,

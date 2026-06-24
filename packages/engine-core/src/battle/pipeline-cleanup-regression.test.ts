@@ -652,7 +652,16 @@ const runEng021dCounterPowerCleanupScript = () => {
     passed.events.some((event) => event.type === "cardKOd"),
     false,
   );
-  assert.equal(JSON.stringify(passed.state).includes("counterPower"), false);
+  assert.equal(
+    (
+      passed.state.battle as
+        | (NonNullable<typeof passed.state.battle> & {
+            counterPower?: number;
+          })
+        | undefined
+    )?.counterPower,
+    undefined,
+  );
 
   return [opened, countered, passed] as const;
 };
