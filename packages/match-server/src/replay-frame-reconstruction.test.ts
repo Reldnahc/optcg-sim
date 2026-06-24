@@ -76,7 +76,7 @@ describe("reconstructReplayFrames", () => {
     ]);
   });
 
-  test("reconstructs frames from initial engine state when saved snapshots are absent", async () => {
+  test("reconstructs frames from compact seed and deck source when saved snapshots are absent", async () => {
     const setup = await createPremadeDevMatchSetup({
       fetchCard: createDefaultDevFixtureFetch(),
     });
@@ -84,8 +84,27 @@ describe("reconstructReplayFrames", () => {
     const result = reconstructReplayFrames(
       detail({
         replayFormatVersion: "dev-local-v1",
-        initialSnapshot: match.state,
-        finalState: match.state,
+        rngSeedRevealed: String(setup.rngSeed),
+        manifestSnapshot: setup.cardManifest,
+        initialStateHash: "",
+        initialSnapshot: null,
+        finalState: null,
+        initialDeckOrders: {
+          playerOrder: setup.playerOrder,
+          firstPlayerId: setup.firstPlayerId,
+          shuffleDecks: setup.shuffleDecks ?? false,
+          players: Object.fromEntries(
+            setup.players.map((player) => [
+              player.playerId,
+              {
+                leaderCardId: player.leaderCardId,
+                leaderLifeCount: player.leaderLifeCount,
+                deckCardIds: player.deckCardIds.map(String),
+                donDeckCardIds: player.donDeckCardIds.map(String),
+              },
+            ]),
+          ),
+        },
         deterministicEntries: [],
       }),
     );

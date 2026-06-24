@@ -93,17 +93,26 @@ describe("local completed match record mapping", () => {
     const firstSetupPlayer = setup.players[0];
     const secondSetupPlayer = setup.players[1];
     expect(record).toBeDefined();
-    expect(record?.replay.initialSnapshot).toMatchObject({
-      matchId: setup.matchId,
-      status: { type: "setup" },
-    });
-    expect(record?.replay.finalState).toMatchObject({
-      matchId: setup.matchId,
-      status: { type: "completed", winner: setup.playerOrder[0] },
-    });
+    expect(record?.replay.initialSnapshot).toBeNull();
+    expect(record?.replay.finalState).toBeNull();
     expect(record?.replay.initialDeckOrders).toEqual({
-      [setup.playerOrder[0]]: firstSetupPlayer.deckCardIds.map(String),
-      [setup.playerOrder[1]]: secondSetupPlayer.deckCardIds.map(String),
+      playerOrder: setup.playerOrder,
+      firstPlayerId: setup.firstPlayerId,
+      shuffleDecks: setup.shuffleDecks ?? false,
+      players: {
+        [setup.playerOrder[0]]: {
+          leaderCardId: firstSetupPlayer.leaderCardId,
+          leaderLifeCount: firstSetupPlayer.leaderLifeCount,
+          deckCardIds: firstSetupPlayer.deckCardIds.map(String),
+          donDeckCardIds: firstSetupPlayer.donDeckCardIds.map(String),
+        },
+        [setup.playerOrder[1]]: {
+          leaderCardId: secondSetupPlayer.leaderCardId,
+          leaderLifeCount: secondSetupPlayer.leaderLifeCount,
+          deckCardIds: secondSetupPlayer.deckCardIds.map(String),
+          donDeckCardIds: secondSetupPlayer.donDeckCardIds.map(String),
+        },
+      },
     });
     expect(record?.replay.initialStateHash).toBeTruthy();
     expect(record?.replay.finalStateHash).toBe(record?.finalStateHash);

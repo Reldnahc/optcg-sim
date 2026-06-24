@@ -1,9 +1,17 @@
 import {
+  createInitialState,
   filterStateForPlayer,
   reconstructReplayArtifactStates,
+  startMulliganFlow,
   type ReplayArtifactStateFrame,
 } from "@optcg/engine-core";
-import type { GameState, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  GameState,
+  MatchCardManifest,
+  MatchId,
+  PlayerId,
+} from "@optcg/types";
 
 import type { CompletedMatchReplayDetail } from "./postgres-completed-match.js";
 
@@ -30,6 +38,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const stringValue = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
+
+const stringArray = (value: unknown): readonly string[] | undefined =>
+  Array.isArray(value) && value.every((entry) => typeof entry === "string")
+    ? value
+    : undefined;
+
+const numberValue = (value: unknown): number | undefined =>
+  typeof value === "number" ? value : undefined;
 
 const labelForEntry = (entry: unknown, index: number): string => {
   if (!isRecord(entry) || !isRecord(entry["envelope"])) {
@@ -96,16 +112,13 @@ const snapshotForFrame = (frame: ReplayArtifactStateFrame): unknown => ({
   ),
 });
 
-const replayFramesFromEngineState = (
-  detail: CompletedMatchReplayDetail,
+const replayFramesFromInitialState = (
+  initialState: GameState,
+  detail: Pick<CompletedMatchReplayDetail, "replay">,
   deterministicEntries: readonly unknown[],
 ): ReplayFrameReconstructionResult | undefined => {
-  const initialSnapshot = detail.replay["initialSnapshot"];
-  if (!isRecord(initialSnapshot) || !isRecord(detail.replay["finalState"])) {
-    return undefined;
-  }
   const result = reconstructReplayArtifactStates({
-    initialState: initialSnapshot as unknown as GameState,
+    initialState,
     deterministicEntries,
     expectedFinalStateHash: stringValue(detail.replay["finalStateHash"]),
   });
@@ -133,6 +146,99 @@ const replayFramesFromEngineState = (
   }
 };
 
+const replayFramesFromEngineState = (
+  detail: CompletedMatchReplayDetail,
+  deterministicEntries: readonly unknown[],
+): ReplayFrameReconstructionResult | undefined => {
+  const initialSnapshot = detail.replay["initialSnapshot"];
+  if (!isRecord(initialSnapshot)) {
+    return undefined;
+  }
+  return replayFramesFromInitialState(
+    initialSnapshot as unknown as GameState,
+    detail,
+    deterministicEntries,
+  );
+};
+
+const initialStateFromCompactSource = (
+  detail: CompletedMatchReplayDetail,
+): GameState | undefined => {
+  const source = detail.replay["initialDeckOrders"];
+  const manifestSnapshot = detail.replay["manifestSnapshot"];
+  const rngSeed = detail.replay["rngSeedRevealed"];
+  if (
+    !isRecord(source) ||
+    !isRecord(source["players"]) ||
+    !isRecord(manifestSnapshot) ||
+    typeof rngSeed !== "string"
+  ) {
+    return undefined;
+  }
+  const playerOrder = stringArray(source["playerOrder"]);
+  const firstPlayerId = stringValue(source["firstPlayerId"]);
+  if (
+    playerOrder === undefined ||
+    playerOrder.length !== 2 ||
+    firstPlayerId === undefined
+  ) {
+    return undefined;
+  }
+
+  const deckCardIds: Record<PlayerId, CardId[]> = {};
+  const donDeckCardIds: Record<PlayerId, CardId[]> = {};
+  const leaderCardIds: Record<PlayerId, CardId> = {};
+  const leaderLifeCounts: Record<PlayerId, number> = {};
+  for (const playerId of playerOrder) {
+    const player = source["players"][playerId];
+    if (!isRecord(player)) {
+      return undefined;
+    }
+    const deck = stringArray(player["deckCardIds"]);
+    const donDeck = stringArray(player["donDeckCardIds"]);
+    const leaderCardId = stringValue(player["leaderCardId"]);
+    const leaderLifeCount = numberValue(player["leaderLifeCount"]);
+    if (
+      deck === undefined ||
+      donDeck === undefined ||
+      leaderCardId === undefined ||
+      leaderLifeCount === undefined
+    ) {
+      return undefined;
+    }
+    const typedPlayerId = playerId as PlayerId;
+    deckCardIds[typedPlayerId] = deck.map((cardId) => cardId as CardId);
+    donDeckCardIds[typedPlayerId] = donDeck.map((cardId) => cardId as CardId);
+    leaderCardIds[typedPlayerId] = leaderCardId as CardId;
+    leaderLifeCounts[typedPlayerId] = leaderLifeCount;
+  }
+
+  try {
+    const setupState = createInitialState({
+      matchId: detail.matchId as MatchId,
+      playerOrder: [playerOrder[0] as PlayerId, playerOrder[1] as PlayerId],
+      firstPlayerId: firstPlayerId as PlayerId,
+      deckCardIds,
+      donDeckCardIds,
+      leaderCardIds,
+      leaderLifeCounts,
+      cardManifest: manifestSnapshot as unknown as MatchCardManifest,
+      rngSeed,
+      shuffleDecks: source["shuffleDecks"] === true,
+    });
+    if (setupState.pendingDecision !== undefined) {
+      return setupState;
+    }
+    const started = startMulliganFlow(setupState);
+    if (started.errors !== undefined && started.errors.length > 0) {
+      return undefined;
+    }
+    return started.state;
+  } catch {
+    return undefined;
+  }
+};
+
 export const reconstructReplayFrames = (
   detail: CompletedMatchReplayDetail,
 ): ReplayFrameReconstructionResult => {
@@ -144,6 +250,17 @@ export const reconstructReplayFrames = (
   const frames = savedSnapshotFrames(deterministicEntries);
   if (frames.length > 0) {
     return { status: "ready", frames };
+  }
+  const compactInitialState = initialStateFromCompactSource(detail);
+  if (compactInitialState !== undefined) {
+    const result = replayFramesFromInitialState(
+      compactInitialState,
+      detail,
+      deterministicEntries,
+    );
+    if (result !== undefined) {
+      return result;
+    }
   }
   const engineFrames = replayFramesFromEngineState(
     detail,

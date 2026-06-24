@@ -224,18 +224,25 @@ export const buildLocalCompletedMatchRecord = (
     return undefined;
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
-  const initialMatch = createLocalDevMatch(input.setup);
-  const initialSnapshot = jsonObject(initialMatch.state);
-  const finalState = jsonObject(input.match.state);
-  const initialStateHash = hashCanonicalStateValue(initialMatch.state);
-  const initialDeckOrders = jsonObject(
-    Object.fromEntries(
+  const initialStateHash = hashCanonicalStateValue(
+    createLocalDevMatch(input.setup).state,
+  );
+  const initialDeckOrders = jsonObject({
+    playerOrder: input.setup.playerOrder,
+    firstPlayerId: input.setup.firstPlayerId,
+    shuffleDecks: input.setup.shuffleDecks ?? false,
+    players: Object.fromEntries(
       input.setup.players.map((player) => [
         player.playerId,
-        player.deckCardIds.map(String),
+        {
+          leaderCardId: player.leaderCardId,
+          leaderLifeCount: player.leaderLifeCount,
+          deckCardIds: player.deckCardIds.map(String),
+          donDeckCardIds: player.donDeckCardIds.map(String),
+        },
       ]),
     ),
-  );
+  });
   return {
     matchId: input.match.state.matchId,
     status: status.winner === "draw" ? "draw" : "completed",
@@ -284,12 +291,12 @@ export const buildLocalCompletedMatchRecord = (
       manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
       initialStateHash,
       finalStateHash,
-      initialSnapshot,
+      initialSnapshot: null,
       initialDeckOrders,
       deterministicEntries: input.records.map((record) => jsonObject(record)),
       auditEntries: input.match.state.audit.map((entry) => jsonObject(entry)),
       checkpoints: [],
-      finalState,
+      finalState: null,
       compressed: false,
       artifactStorage: null,
       artifactKey: null,
