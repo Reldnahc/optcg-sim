@@ -169,10 +169,15 @@ export type DeterministicSystemOperation =
       readonly type: "requestRollbackConsent";
       readonly playerId: PlayerId;
       readonly rollbackPointId: string;
+      readonly approvingPlayerId: PlayerId;
+      readonly decisionId: DecisionId;
+      readonly prompt: string;
     }
   | {
       readonly type: "cancelRollbackConsent";
       readonly playerId: PlayerId;
+      readonly rollbackPointId: string;
+      readonly decisionId?: DecisionId;
     }
   | {
       readonly type: "restoreRollbackPoint";
@@ -241,6 +246,7 @@ Implementation notes:
 
 - If `StateSeq` is not exported cleanly through `@optcg/types`, export it from `packages/types/src/primitives.ts` through `index.ts` before adding this file.
 - `DeterministicSystemOperation` is deliberately narrow. Do not add a catch-all `{ type: string; payload: unknown }` for new rows.
+- `requestRollbackConsent` and `cancelRollbackConsent` are included because both mutate `pendingDecision`/rollback state today. If implementation cannot replay them deterministically in the first pass, new recovery snapshots must fail closed around in-flight rollback consent instead of pretending those transitions are covered.
 - The rollback restore operation records what was restored, but live rollback restore must still use the checkpoint snapshot, not replay reduction.
 - `ReplayHashScope` fixes the timer problem. `gameplay-v1` excludes wall-clock timer drift; `operational-v1` includes timer state only after timer operations are logged deterministically.
 
@@ -254,20 +260,44 @@ Implement a named hash helper:
 export const hashReplayGameplayState = (state: GameState): string => {
   const clone = structuredClone(state);
   clone.timers = {
-    ...clone.timers,
-    playerClocks: {},
-    lastUpdatedAt: undefined,
+    drainingPlayerId: clone.timers.drainingPlayerId,
+    players: Object.fromEntries(
+      Object.entries(clone.timers.players).map(([playerId, timer]) => [
+        playerId,
+        { ...timer, remainingMs: 0, isRunning: false },
+      ]),
+    ),
+    ...(clone.timers.disconnects === undefined
+      ? {}
+      : {
+          disconnects: Object.fromEntries(
+            Object.entries(clone.timers.disconnects).map(
+              ([playerId, timer]) => [
+                playerId,
+                {
+                  ...timer,
+                  remainingMs: 0,
+                  isRunning: false,
+                  currentDisconnectElapsedMs: undefined,
+                  disconnectStartedRemainingMs: undefined,
+                },
+              ],
+            ),
+          ),
+        }),
   };
   return hashCanonicalStateValue(clone);
 };
 ```
 
-Adjust the exact fields to the actual `TimerState` type in `packages/types/src/runtime.ts`. The required behavior is:
+This uses the current `TimerState` shape from `packages/types/src/runtime.ts`: `drainingPlayerId`, `players`, and optional `disconnects`. The required behavior is:
 
 - `gameplay-v1` replay hashes must ignore wall-clock elapsed timer fields.
+- `gameplay-v1` may keep timer ownership/active-player identity, but must normalize all remaining elapsed milliseconds and running flags so local wall-clock drain cannot change replay verification.
 - `operational-v1` hashes must include timer fields only after accepted timer operations are recorded as deterministic entries.
 - Every deterministic entry stores its hash scope.
 - Completed replay `finalStateHash` must use the same scope declared by entries/checkpoints.
+- Add a unit test that changes only `TimerState.players[*].remainingMs`, `isRunning`, and disconnect elapsed fields and proves `hashReplayStateForScope(state, "gameplay-v1")` remains stable while `hashReplayStateForScope(state, "operational-v1")` changes.
 
 ## Task 1: Add Failing Contract Tests For The Current Drift
 
@@ -341,7 +371,8 @@ test("recovers from deterministic entries without re-resolving audit envelope ac
   const fixture = createRecoverableMatchWithOneExactAction();
   const snapshot = {
     ...fixture.snapshot,
-    deterministicEntries: [fixture.entry],
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [fixture.entry],
     actions: [
       {
         envelope: {
@@ -384,12 +415,9 @@ Expected result:
 - At least one failure shows envelope entries are still accepted or written as deterministic entries.
 - At least one failure shows recovery still depends on `record.envelope`.
 
-- [ ] **Step 5: Commit only the failing tests**
+- [ ] **Step 5: Do not commit the red state**
 
-```bash
-git add packages/engine-core/src/replay/artifact-reducer.test.ts packages/match-server/src/local-completed-match-record.test.ts packages/match-server/src/dev-local-match-recovery.test.ts
-git commit -m "test: lock replay deterministic log contract"
-```
+Do not commit intentionally failing tests. Keep the test changes in the worktree while implementing the next tasks, or fold each red test into the task that makes it pass. The first commit containing these tests must be green. If the executor needs to pause after this task, stash only these test edits with an explicit message instead of leaving the branch in a red committed state.
 
 ## Task 2: Add Shared Replay Types
 
@@ -410,21 +438,22 @@ import type {
   DeterministicMatchEntry,
   DeterministicCheckpoint,
 } from "./replay.js";
+import type { MatchId, PlayerId, StateSeq } from "./primitives.js";
 
 describe("replay shared types", () => {
   test("represents deterministic action entries without transport envelopes", () => {
     const entry: DeterministicMatchEntry = {
       formatVersion: "deterministic-entry-v1",
-      matchId: "match-1",
+      matchId: "match-1" as MatchId,
       entrySeq: 0,
       kind: "action",
-      playerId: "player-1",
+      playerId: "player-1" as PlayerId,
       action: { type: "endMainPhase" },
       verification: {
-        stateSeqBefore: 1,
+        stateSeqBefore: 1 as StateSeq,
         actionSeqBefore: 0,
         stateHashBefore: "before",
-        stateSeqAfter: 2,
+        stateSeqAfter: 2 as StateSeq,
         actionSeqAfter: 1,
         stateHashAfter: "after",
         hashScope: "gameplay-v1",
@@ -437,10 +466,10 @@ describe("replay shared types", () => {
   test("represents rollback checkpoints with optional snapshots", () => {
     const checkpoint: DeterministicCheckpoint = {
       checkpointVersion: "deterministic-checkpoint-v1",
-      matchId: "match-1",
+      matchId: "match-1" as MatchId,
       checkpointId: "rollback:1:0:event-1",
       reason: "rollbackPoint",
-      stateSeq: 1,
+      stateSeq: 1 as StateSeq,
       actionSeq: 0,
       stateHash: "hash",
       hashScope: "gameplay-v1",
@@ -746,14 +775,56 @@ export const applyDeterministicOperation = (
         reason: `Rollback checkpoint ${entry.operation.rollbackPointId} is not available.`,
       };
     }
+    const restored = structuredClone(checkpoint.snapshot);
+    restored.seq = entry.operation.restoredStateSeq;
+    restored.actionSeq = entry.operation.restoredActionSeq;
     return {
       status: "applied",
       result: {
-        state: structuredClone(checkpoint.snapshot),
+        state: restored,
         events: [],
         stateHash: entry.operation.restoredStateHash,
       },
       label: "restoreRollbackPoint",
+    };
+  }
+  if (entry.operation.type === "requestRollbackConsent") {
+    const next = structuredClone(state);
+    next.seq = (Number(state.seq) + 1) as GameState["seq"];
+    next.pendingDecision = {
+      id: entry.operation.decisionId,
+      type: "rollbackConsent",
+      playerId: entry.operation.approvingPlayerId,
+      prompt: entry.operation.prompt,
+      causedBy: { type: "ruleProcess", name: "rollbackRequest" },
+      visibility: {
+        type: "private",
+        playerId: entry.operation.approvingPlayerId,
+      },
+      rollbackPointId: entry.operation.rollbackPointId,
+    };
+    return {
+      status: "applied",
+      result: {
+        state: next,
+        events: [],
+        stateHash: "",
+      },
+      label: "requestRollbackConsent",
+    };
+  }
+  if (entry.operation.type === "cancelRollbackConsent") {
+    const next = structuredClone(state);
+    next.seq = (Number(state.seq) + 1) as GameState["seq"];
+    delete next.pendingDecision;
+    return {
+      status: "applied",
+      result: {
+        state: next,
+        events: [],
+        stateHash: "",
+      },
+      label: "cancelRollbackConsent",
     };
   }
   return {
@@ -762,6 +833,8 @@ export const applyDeterministicOperation = (
   };
 };
 ```
+
+The request/cancel branches must be backed by tests. They intentionally replay the state transition, not the match-server consent bookkeeping; match-server rollback bookkeeping is restored from recovery context, while `GameState.pendingDecision` must be deterministic.
 
 Adjust imports if `@optcg/types` exposes paths differently. Keep all code in engine-core free of React, Redis, Postgres, and HTTP.
 
@@ -776,6 +849,19 @@ export {
   type DeterministicCheckpointResolver,
 } from "./replay/deterministic-operation.js";
 ```
+
+Task 4 adds `hashReplayStateForScope`; when that helper exists, extend this same export block or add a second export:
+
+```ts
+export {
+  applyDeterministicEntry,
+  checkpointResolverFromList,
+  hashReplayStateForScope,
+  type DeterministicEntryApplyResult,
+} from "./replay/deterministic-entry.js";
+```
+
+Update `packages/engine-core/src/package-boundary.test.ts` so the package-root export is covered before match-server imports it.
 
 - [ ] **Step 4: Run tests**
 
@@ -878,9 +964,31 @@ export const hashReplayStateForScope = (
   if (hashScope === "gameplay-v1") {
     const clone = structuredClone(state);
     clone.timers = {
-      ...clone.timers,
-      playerClocks: {},
-      lastUpdatedAt: undefined,
+      drainingPlayerId: clone.timers.drainingPlayerId,
+      players: Object.fromEntries(
+        Object.entries(clone.timers.players).map(([playerId, timer]) => [
+          playerId,
+          { ...timer, remainingMs: 0, isRunning: false },
+        ]),
+      ),
+      ...(clone.timers.disconnects === undefined
+        ? {}
+        : {
+            disconnects: Object.fromEntries(
+              Object.entries(clone.timers.disconnects).map(
+                ([playerId, timer]) => [
+                  playerId,
+                  {
+                    ...timer,
+                    remainingMs: 0,
+                    isRunning: false,
+                    currentDisconnectElapsedMs: undefined,
+                    disconnectStartedRemainingMs: undefined,
+                  },
+                ],
+              ),
+            ),
+          }),
     };
     return hashCanonicalStateValue(clone);
   }
@@ -1109,7 +1217,34 @@ interface ResolvedExecutableAction {
 
 The important rule is that `ResolvedExecutableAction.action` must be the serializable engine `Action` that will be persisted.
 
-- [ ] **Step 4: Return deterministic operation after accepted apply**
+- [ ] **Step 4: Add rollback metadata before returning deterministic operations**
+
+Before editing `applyLocalDevDecision`, extend `LocalRollbackMutationResult` in `local-rollback.ts` with the final metadata shape used by the deterministic log:
+
+```ts
+readonly rollbackRequest?: {
+  readonly rollbackPointId: string;
+  readonly requestedBy: PlayerId;
+  readonly approvingPlayerId: PlayerId;
+  readonly decisionId: DecisionId;
+  readonly prompt: string;
+};
+readonly rollbackRestore?: {
+  readonly rollbackPointId: string;
+  readonly requestedBy: PlayerId;
+  readonly approvedBy: PlayerId;
+  readonly checkpoint: DeterministicCheckpoint;
+};
+readonly rollbackCancel?: {
+  readonly rollbackPointId: string;
+  readonly playerId: PlayerId;
+  readonly decisionId?: DecisionId;
+};
+```
+
+Populate `rollbackRequest` in `requestRollbackConsent`, `rollbackRestore` in approved `resolveRollbackConsent`, and `rollbackCancel` in declined `resolveRollbackConsent` plus `cancelRollbackConsent`. Do this before returning deterministic rollback operations so Task 5 and Task 10 use the same shape.
+
+- [ ] **Step 5: Return deterministic operation after accepted apply**
 
 In `applyLocalDevAction`, after errors are empty and before returning:
 
@@ -1135,28 +1270,83 @@ return localActionResult(match, errors, input.includeSnapshot, {
 For rollback consent:
 
 ```ts
-return localActionResult(match, result.errors, input.includeSnapshot, {
-  kind: "system",
-  operation: input.response.allow
+if (result.errors.length > 0) {
+  return localActionResult(match, result.errors, input.includeSnapshot);
+}
+
+const operation =
+  input.response.allow && result.rollbackRestore !== undefined
     ? {
-        type: "restoreRollbackPoint",
-        rollbackPointId: result.restoredRollbackPointId,
-        requestedBy: result.requestedBy,
+        type: "restoreRollbackPoint" as const,
+        rollbackPointId: result.rollbackRestore.rollbackPointId,
+        requestedBy: result.rollbackRestore.requestedBy,
         approvedBy: input.playerId,
         restoredStateHash: hashReplayStateForScope(result.state, "gameplay-v1"),
         restoredStateSeq: result.state.seq,
         restoredActionSeq: result.state.actionSeq,
       }
-    : {
-        type: "cancelRollbackConsent",
-        playerId: input.playerId,
-      },
+    : result.rollbackCancel === undefined
+      ? undefined
+      : {
+          type: "cancelRollbackConsent" as const,
+          playerId: result.rollbackCancel.playerId,
+          rollbackPointId: result.rollbackCancel.rollbackPointId,
+          ...(result.rollbackCancel.decisionId === undefined
+            ? {}
+            : { decisionId: result.rollbackCancel.decisionId }),
+        };
+
+if (operation === undefined) {
+  return localActionResult(
+    match,
+    ["Rollback consent resolved without deterministic rollback metadata."],
+    input.includeSnapshot,
+  );
+}
+
+return localActionResult(match, result.errors, input.includeSnapshot, {
+  kind: "system",
+  operation,
 });
 ```
 
-If `resolveRollbackConsent` does not currently return restored point metadata, extend `LocalRollbackMutationResult` with optional metadata rather than trying to infer it from mutated state.
+For direct rollback requests and cancellations, also return deterministic system operations:
 
-- [ ] **Step 5: Run narrow tests**
+```ts
+export const requestLocalDevRollback = (
+  match: LocalDevMatch,
+  input: RequestLocalDevRollbackInput,
+): ApplyLocalDevActionResult => {
+  const result = requestRollbackConsent(match.state, match.rollback, input);
+  match.state = result.state;
+  match.rollback = result.rollback;
+  if (result.errors.length > 0) {
+    return localActionResult(match, result.errors, undefined);
+  }
+  if (result.rollbackRequest === undefined) {
+    return localActionResult(
+      match,
+      ["Rollback request accepted without deterministic rollback metadata."],
+      undefined,
+    );
+  }
+  return localActionResult(match, result.errors, undefined, {
+    kind: "system",
+    operation: {
+      type: "requestRollbackConsent",
+      playerId: input.playerId,
+      rollbackPointId: result.rollbackRequest.rollbackPointId,
+      approvingPlayerId: result.rollbackRequest.approvingPlayerId,
+      decisionId: result.rollbackRequest.decisionId,
+      prompt: result.rollbackRequest.prompt,
+    },
+  });
+};
+```
+
+Use the same pattern for `cancelLocalDevRollback`, returning `cancelRollbackConsent` with `rollbackCancel` metadata. Accepted rollback mutations without matching metadata must return a server error instead of persisting a partial deterministic entry.
+
+- [ ] **Step 6: Run narrow tests**
 
 ```bash
 corepack pnpm exec vitest run packages/match-server/src/match-session.test.ts packages/match-server/src/local-rollback.test.ts
@@ -1165,7 +1355,7 @@ corepack pnpm exec tsc -p packages/match-server/tsconfig.json --noEmit
 
 Expected result: local apply result tests pass and rollback tests still pass.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add packages/match-server/src/local-match.ts packages/match-server/src/local-rollback.ts packages/match-server/src/match-session.test.ts packages/match-server/src/local-rollback.test.ts
@@ -1211,13 +1401,14 @@ export interface MatchPersistenceSnapshot {
   readonly state: GameState;
   readonly manifest: MatchCardManifest;
   readonly recoveryContext?: MatchRecoveryContext;
-  readonly deterministicEntries?: readonly StoredDeterministicSessionRecord[];
+  readonly deterministicLogVersion?: "deterministic-entry-v1";
+  readonly deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
   readonly actions: readonly StoredSessionRecord[];
   readonly decisions: readonly StoredSessionRecord[];
 }
 ```
 
-Keep `actions` and `decisions` for legacy active snapshots until a cleanup migration removes them.
+Keep `actions` and `decisions` for legacy active snapshots until a cleanup migration removes them. Do not store the full deterministic match log in active Redis snapshots. A Redis snapshot generation is a base `state` plus a tail list of deterministic entries accepted after that exact state was saved. Completed replay persistence gets the full log from runtime memory, not from `MatchPersistenceSnapshot`.
 
 - [ ] **Step 2: Add builder tests**
 
@@ -1412,37 +1603,45 @@ git commit -m "feat: record accepted deterministic match entries"
 
 - [ ] **Step 1: Add Redis persistence tests**
 
-Add a test that saves a snapshot with deterministic entries and reloads the exact same entries:
+Add a test that saves a base snapshot with an empty deterministic tail, appends a post-snapshot entry, and reloads the exact tail entry:
 
 ```ts
 test("persists deterministic session records for recovery", async () => {
   const persistence = createTestRedisMatchPersistence();
   const snapshot = createPersistenceSnapshot({
-    deterministicEntries: [createStoredDeterministicRecord()],
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [],
     actions: [],
     decisions: [],
   });
+  const tailRecord = createStoredDeterministicRecord();
 
   await persistence.saveSnapshot(snapshot);
+  await persistence.appendDeterministicEntry({
+    matchId: snapshot.metadata.matchId,
+    record: tailRecord,
+  });
   const loaded = await persistence.loadSnapshot(snapshot.metadata.matchId);
 
   assert.deepEqual(
-    loaded?.deterministicEntries?.map((record) => record.deterministicEntry),
-    snapshot.deterministicEntries.map((record) => record.deterministicEntry),
+    loaded?.deterministicEntriesSinceSnapshot?.map(
+      (record) => record.deterministicEntry,
+    ),
+    [tailRecord.deterministicEntry],
   );
 });
 ```
 
 - [ ] **Step 2: Update persistence interface implementation**
 
-In `redis-match-persistence.ts`, add one Redis list for deterministic records:
+In `redis-match-persistence.ts`, add one Redis list for deterministic tail records on each snapshot generation:
 
 ```ts
-const deterministicEntriesKey = (matchId: MatchId): string =>
-  `${matchKey(matchId)}:deterministic-entries`;
+const snapshotKeys = matchKeys.snapshot(generation);
+snapshotKeys.deterministicEntriesSinceSnapshot;
 ```
 
-Write deterministic entries in `saveSnapshot` and append them in a new method:
+Write deterministic tail entries in `saveSnapshot` and append post-snapshot accepted entries in a new method:
 
 ```ts
 appendDeterministicEntry(input: {
@@ -1468,15 +1667,18 @@ for (const record of pendingDeterministicRecords.splice(0)) {
 
 If a persistence write fails, preserve the existing error behavior; do not silently drop pending deterministic records.
 
-- [ ] **Step 4: Save deterministic records in snapshots**
+- [ ] **Step 4: Save only post-snapshot deterministic tail entries in snapshots**
 
 In `saveSnapshot()`, include:
 
 ```ts
-deterministicEntries: deterministicRecords.map(compactStoredDeterministicRecord),
+deterministicLogVersion: "deterministic-entry-v1",
+deterministicEntriesSinceSnapshot: [],
 ```
 
-The compact form must remove action snapshots from the audit result just like `compactStoredSessionRecord` does for legacy records.
+The snapshot `state` is already current, so replaying the full log from that same state would double-apply old entries. After a snapshot save succeeds, clear any pending deterministic append records whose mutations are already represented by the saved state. Future accepted requests append to the current generation's `deterministicEntriesSinceSnapshot` list. Keep a separate in-memory `deterministicRecords` array for completed replay persistence.
+
+The compact form for tail records must remove action snapshots from the audit result just like `compactStoredSessionRecord` does for legacy records.
 
 - [ ] **Step 5: Run Redis/session tests**
 
@@ -1520,7 +1722,7 @@ export const replayDeterministicRecoveryEntries = (
   match: LocalDevMatch,
   snapshot: MatchPersistenceSnapshot,
 ): string | undefined => {
-  const records = snapshot.deterministicEntries;
+  const records = snapshot.deterministicEntriesSinceSnapshot;
   if (records === undefined || records.length === 0) {
     if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
       return "deterministic recovery entries missing for legacy action log";
@@ -1552,7 +1754,7 @@ export const replayDeterministicRecoveryEntries = (
 };
 ```
 
-The checkpoint resolver line must match the actual rollback checkpoint shape after Task 10. Before that task, pass no checkpoint resolver and keep rollback restore entries out of recovery tests.
+This helper starts from `match.state`, which is the recovered base snapshot state. Therefore it must read only `deterministicEntriesSinceSnapshot`, never the completed-match full deterministic log. The checkpoint resolver line must match the actual rollback checkpoint shape after Task 10. Before that task, pass no checkpoint resolver and keep rollback restore entries out of recovery tests.
 
 - [ ] **Step 2: Replace envelope recovery replay**
 
@@ -1572,19 +1774,45 @@ Keep the old `replayRecoveryRecords` function only inside `deterministic-entry-l
 
 - [ ] **Step 3: Fail closed on missing deterministic entries for new snapshots**
 
-Add a version field to `MatchPersistenceSnapshot.metadata` or use a top-level optional `deterministicLogVersion`. New snapshots must include deterministic entries even if empty:
+Add a top-level optional `deterministicLogVersion`. New snapshots must include `deterministicEntriesSinceSnapshot` even if empty:
 
 ```ts
 readonly deterministicLogVersion?: "deterministic-entry-v1";
+readonly deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
 ```
 
 Recovery behavior:
 
-- `deterministicLogVersion === "deterministic-entry-v1"` and entries missing: freeze match with `"deterministic recovery entries missing"`.
+- `deterministicLogVersion === "deterministic-entry-v1"` and `deterministicEntriesSinceSnapshot` missing: freeze match with `"deterministic recovery tail entries missing"`.
 - no version and legacy actions/decisions present: use legacy adapter if allowed for active dev recovery.
 - no version and no records: recover initial snapshot.
 
 - [ ] **Step 4: Run recovery tests**
+
+Before running, add a focused test that proves a recovered base snapshot is not double-applied:
+
+```ts
+test("recovery replays only entries accepted after the saved snapshot", async () => {
+  const fixture = createRecoverableMatchWithTwoExactActions();
+  const snapshot = {
+    ...fixture.snapshotAfterFirstAction,
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [fixture.secondEntry],
+    actions: [],
+    decisions: [],
+  };
+
+  const recovered = await recoverOneSnapshot(snapshot);
+
+  assert.equal(recovered.status, "active");
+  assert.equal(
+    recovered.match.state.seq,
+    fixture.secondEntry.verification.stateSeqAfter,
+  );
+});
+```
+
+This test must fail if `snapshot.deterministicEntriesSinceSnapshot` is replaced with the full completed-match deterministic log.
 
 ```bash
 corepack pnpm exec vitest run packages/match-server/src/dev-local-match-recovery.test.ts packages/match-server/src/dev-local-match-registry.test.ts
@@ -1742,9 +1970,9 @@ const checkpoint: DeterministicCheckpoint = {
 
 The `state` field remains the source for live restore in this task.
 
-- [ ] **Step 2: Return rollback restore metadata**
+- [ ] **Step 2: Populate the metadata shape defined in Task 5**
 
-Extend `LocalRollbackMutationResult`:
+Task 5 defines `rollbackRequest`, `rollbackRestore`, and `rollbackCancel` on `LocalRollbackMutationResult`. In this task, make sure the checkpoint projection is attached to the same `rollbackRestore` shape:
 
 ```ts
 readonly rollbackRestore?: {
@@ -1755,7 +1983,7 @@ readonly rollbackRestore?: {
 };
 ```
 
-In `resolveRollbackConsent`, when `allow` is true, return that metadata. When `allow` is false, do not create a restore operation.
+In `resolveRollbackConsent`, when `allow` is true, return that metadata with the selected rollback point checkpoint. When `allow` is false, return `rollbackCancel`; do not create a restore operation.
 
 - [ ] **Step 3: Add rollback non-regression tests**
 
@@ -1789,16 +2017,20 @@ test("approved rollback still restores from saved GameState checkpoint", () => {
     result.rollbackRestore?.checkpoint.checkpointId,
     beforeRestorePoint.rollbackPointId,
   );
+  assert.equal(
+    result.rollbackRestore?.checkpoint.stateHash,
+    beforeRestorePoint.checkpoint.stateHash,
+  );
+  assert.equal(Number(result.state.seq), Number(fixture.currentState.seq) + 1);
+  assert.equal(result.state.actionSeq, fixture.currentState.actionSeq + 1);
 });
 ```
 
-Normalize `seq` and `actionSeq` in the assertion because current restore intentionally bumps them.
+Normalize `seq` and `actionSeq` in the deep-equality assertion because current restore intentionally bumps them. Then assert the bumped values explicitly so the deterministic replay executor has to reproduce the live behavior.
 
 - [ ] **Step 4: Build deterministic rollback entries**
 
-In `applyLocalDevDecision`, when rollback consent is approved, create a `system` deterministic operation of type `restoreRollbackPoint` using `result.rollbackRestore`.
-
-When rollback consent is declined, record a `decision` entry for the declined decision response if and only if that state transition must be replayed for recovery. If declining only clears a pending decision and does not affect gameplay, record it as a `system` operation `cancelRollbackConsent` so replay can reach the same state without implying an effect occurred.
+In `applyLocalDevDecision`, when rollback consent is approved, create a `system` deterministic operation of type `restoreRollbackPoint` using `result.rollbackRestore`. When rollback consent is declined, record a `system` operation `cancelRollbackConsent` using `result.rollbackCancel` so replay can reach the same state without implying a gameplay effect occurred.
 
 - [ ] **Step 5: Run rollback tests**
 
@@ -1943,9 +2175,11 @@ test("dev-local-v2 fails closed when deterministic entries are envelope-shaped",
     replayDetail({
       replayFormatVersion: "dev-local-v2",
       deterministicEntries: [
-        { envelope: { request: { type: "submitAction" } } },
+        {
+          envelope: { request: { type: "submitAction" } },
+          result: { snapshot: validSavedSnapshot() },
+        },
       ],
-      savedSnapshots: [validSavedSnapshot()],
     }),
   );
 
@@ -1953,6 +2187,8 @@ test("dev-local-v2 fails closed when deterministic entries are envelope-shaped",
   assert.match(result.reason, /deterministic/i);
 });
 ```
+
+This intentionally uses the current legacy fallback shape, where saved frame data is embedded under `deterministicEntries[].result.snapshot`. For `dev-local-v2`, that legacy snapshot must not rescue an invalid deterministic entry.
 
 Add:
 
