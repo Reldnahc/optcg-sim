@@ -1,6 +1,8 @@
 import type {
   DecisionId,
   DecisionResponse,
+  DeterministicCheckpoint,
+  DeterministicMatchEntry,
   GameState,
   InstanceId,
   MatchCardManifest,
@@ -139,6 +141,23 @@ export interface StoredSessionRecord {
   readonly recordedAt: string;
 }
 
+export interface StoredSessionAuditRecord {
+  readonly type: "clientEnvelope";
+  readonly envelope: ClientActionEnvelope;
+  readonly result: SessionActionResult;
+  readonly recordedAt: string;
+}
+
+export interface StoredDeterministicSessionRecord {
+  readonly deterministicEntry: DeterministicMatchEntry;
+  readonly audit: StoredSessionAuditRecord;
+}
+
+export interface StoredDeterministicCheckpointRecord {
+  readonly checkpoint: DeterministicCheckpoint;
+  readonly recordedAt: string;
+}
+
 export interface SessionObservation {
   readonly matchId: MatchId;
   readonly clientActionId: string;
@@ -176,6 +195,9 @@ export interface MatchPersistenceSnapshot {
   readonly recoveryContext?: MatchRecoveryContext;
   readonly actions: readonly StoredSessionRecord[];
   readonly decisions: readonly StoredSessionRecord[];
+  readonly deterministicLogVersion?: "deterministic-entry-v1";
+  readonly deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
+  readonly deterministicCheckpoints?: readonly StoredDeterministicCheckpointRecord[];
 }
 
 export interface RecoveryLock {

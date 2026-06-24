@@ -1,4 +1,7 @@
 import {
+  hashReplayStateForScope,
+} from "@optcg/engine-core";
+import {
   applyLocalDevAction,
   applyLocalDevDecision,
   cancelLocalDevRollback,
@@ -7,6 +10,7 @@ import {
   type LocalDevMatch,
 } from "./local-match.js";
 import { idempotencyKey, requestHash } from "./action-envelope.js";
+import { buildStoredDeterministicSessionRecord } from "./deterministic-entry-builder.js";
 import type {
   ActionRejectionReason,
   ClientActionEnvelope,
@@ -15,6 +19,8 @@ import type {
   MatchSessionMetadata,
   SessionActionResult,
   SessionActionRequest,
+  StoredDeterministicCheckpointRecord,
+  StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -23,6 +29,8 @@ export interface MatchSessionRuntime {
   flushPersistence: () => Promise<void>;
   saveSnapshot: () => Promise<void>;
   records: () => readonly StoredSessionRecord[];
+  deterministicRecords: () => readonly StoredDeterministicSessionRecord[];
+  deterministicCheckpoints: () => readonly StoredDeterministicCheckpointRecord[];
 }
 
 export interface CreateMatchSessionRuntimeOptions {
@@ -157,8 +165,11 @@ export const createMatchSessionRuntime = ({
     ...initialActions,
     ...initialDecisions,
   ]);
+  const deterministicRecords: StoredDeterministicSessionRecord[] = [];
+  const deterministicCheckpoints: StoredDeterministicCheckpointRecord[] = [];
   const pendingActions: StoredSessionRecord[] = [];
   const pendingDecisions: StoredSessionRecord[] = [];
+  const pendingDeterministicRecords: StoredDeterministicSessionRecord[] = [];
 
   for (const record of records) {
     idempotency.set(
@@ -174,11 +185,12 @@ export const createMatchSessionRuntime = ({
   const storeRecord = (
     envelope: ClientActionEnvelope,
     result: SessionActionResult,
+    recordedAt: string,
   ): SessionActionResult => {
     const record: StoredSessionRecord = {
       envelope,
       result,
-      recordedAt: now(),
+      recordedAt,
     };
     const compactRecord = compactStoredSessionRecord(record);
     idempotency.set(
@@ -272,16 +284,45 @@ export const createMatchSessionRuntime = ({
         );
       }
 
-      const result = resultFromLocal(
-        envelope,
-        applyRequest(local, envelope.request, includeActionSnapshots),
+      const stateSeqBefore = local.state.seq;
+      const actionSeqBefore = local.state.actionSeq;
+      const stateHashBefore = hashReplayStateForScope(
+        local.state,
+        "gameplay-v1",
       );
-      return storeRecord(envelope, result);
+      const applied = applyRequest(
+        local,
+        envelope.request,
+        includeActionSnapshots,
+      );
+      const result = resultFromLocal(envelope, applied);
+      const recordedAt = now();
+      const storedResult = storeRecord(envelope, result, recordedAt);
+      if (result.accepted && applied.deterministicOperation !== undefined) {
+        const deterministicRecord = buildStoredDeterministicSessionRecord({
+          matchId: local.state.matchId,
+          entrySeq: deterministicRecords.length,
+          envelope,
+          result: compactSessionResult(result),
+          deterministicOperation: applied.deterministicOperation,
+          stateSeqBefore,
+          actionSeqBefore,
+          stateHashBefore,
+          stateSeqAfter: local.state.seq,
+          actionSeqAfter: local.state.actionSeq,
+          stateHashAfter: hashReplayStateForScope(local.state, "gameplay-v1"),
+          recordedAt,
+        });
+        deterministicRecords.push(deterministicRecord);
+        pendingDeterministicRecords.push(deterministicRecord);
+      }
+      return storedResult;
     },
     async flushPersistence() {
       if (persistence === undefined) {
         pendingActions.length = 0;
         pendingDecisions.length = 0;
+        pendingDeterministicRecords.length = 0;
         return;
       }
       while (pendingActions.length > 0) {
@@ -322,8 +363,11 @@ export const createMatchSessionRuntime = ({
       });
       pendingActions.length = 0;
       pendingDecisions.length = 0;
+      pendingDeterministicRecords.length = 0;
     },
     records: () => records,
+    deterministicRecords: () => deterministicRecords,
+    deterministicCheckpoints: () => deterministicCheckpoints,
   };
 };
 

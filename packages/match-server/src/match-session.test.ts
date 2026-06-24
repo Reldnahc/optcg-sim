@@ -70,6 +70,31 @@ describe("match session runtime", () => {
     const second = runtime.applyEnvelope(input);
 
     expect(second).toEqual(first);
+    expect(runtime.deterministicRecords()).toHaveLength(1);
+  });
+
+  test("records accepted deterministic entries separately from client envelopes", async () => {
+    const { local, runtime } = await createRuntime();
+    const input = envelope(submitRequest(local.state.seq), local.state.seq);
+
+    const accepted = runtime.applyEnvelope(input);
+    const deterministicRecords = runtime.deterministicRecords();
+    const deterministicRecord = deterministicRecords[0];
+
+    expect(accepted.accepted).toBe(true);
+    expect(deterministicRecords).toHaveLength(1);
+    expect(deterministicRecord).toBeDefined();
+    if (deterministicRecord === undefined) {
+      throw new Error("Expected one deterministic record.");
+    }
+    expect(deterministicRecord.deterministicEntry.formatVersion).toBe(
+      "deterministic-entry-v1",
+    );
+    expect("envelope" in deterministicRecord.deterministicEntry).toBe(false);
+    expect(deterministicRecord.audit.type).toBe("clientEnvelope");
+    expect(deterministicRecord.audit.envelope.clientActionId).toBe(
+      input.clientActionId,
+    );
   });
 
   test("rejects duplicate client action id with different request hash", async () => {
