@@ -1783,10 +1783,11 @@ const applyDeterministicRecoveryEntry = (
   checkpointResolver: ReturnType<typeof checkpointResolverFromList>,
 ): string | undefined => {
   const entry = record.deterministicEntry;
+  let nextRollback = match.rollback;
   if (entry.kind === "system") {
     const operation = entry.operation;
     if (operation.type === "requestRollbackConsent") {
-      match.rollback = {
+      nextRollback = {
         ...match.rollback,
         pendingRequest: {
           rollbackPointId: operation.rollbackPointId,
@@ -1798,7 +1799,7 @@ const applyDeterministicRecoveryEntry = (
     if (operation.type === "cancelRollbackConsent") {
       const { pendingRequest: _pendingRequest, ...withoutPending } =
         match.rollback;
-      match.rollback = withoutPending;
+      nextRollback = withoutPending;
     }
     if (operation.type === "restoreRollbackPoint") {
       const checkpoint = checkpointResolver(operation.rollbackPointId);
@@ -1807,7 +1808,7 @@ const applyDeterministicRecoveryEntry = (
       }
       const { pendingRequest: _pendingRequest, ...withoutPending } =
         match.rollback;
-      match.rollback = {
+      nextRollback = {
         ...withoutPending,
         points: match.rollback.points.filter(
           (point) => point.stateSeq <= checkpoint.stateSeq,
@@ -1826,6 +1827,7 @@ const applyDeterministicRecoveryEntry = (
     return result.reason;
   }
   match.state = result.state;
+  match.rollback = nextRollback;
   return undefined;
 };
 
@@ -1841,9 +1843,12 @@ export const replayDeterministicRecoveryEntries = (
     if (records.length === 0) {
       return undefined;
     }
-  } else if (records === undefined || records.length === 0) {
+  } else {
     if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
       return replayLegacyRecoveryRecords(match, snapshot);
+    }
+    if (records !== undefined && records.length > 0) {
+      return "deterministic recovery entries missing deterministic log version";
     }
     return undefined;
   }
@@ -1901,6 +1906,7 @@ Recovery behavior:
 
 - `deterministicLogVersion === "deterministic-entry-v1"` and `deterministicEntriesSinceSnapshot` missing: freeze match with `"deterministic recovery tail entries missing"`.
 - no version and legacy actions/decisions present: use legacy adapter if allowed for active dev recovery.
+- no version and deterministic entries present: freeze match with `"deterministic recovery entries missing deterministic log version"`.
 - no version and no records: recover initial snapshot.
 
 - [ ] **Step 4: Run recovery tests**
@@ -2765,7 +2771,7 @@ Rollback is the risk area. Keep these rules during implementation:
 - The rollback point checkpoint must include a snapshot until object-storage snapshot references exist.
 - Declined rollback consent must not be rendered or stored as if a gameplay effect resolved.
 - Recovery must fail closed if a rollback restore entry references a missing checkpoint snapshot.
-- Rollback point trimming must trim checkpoint snapshots and rollback point views together.
+- Rollback point trimming may trim visible rollback point views, but must not trim archived deterministic checkpoint snapshots during the match. Completed replay and recovery restore entries may still reference older checkpoint ids.
 
 ## Self-Review Checklist
 
