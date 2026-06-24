@@ -514,8 +514,8 @@
   position: relative;
   display: grid;
   grid-template-rows:
-    minmax(0, 1fr) var(--control-window-dock-height)
-    var(--control-icon-button-size);
+    var(--control-window-dock-height) var(--control-icon-button-size)
+    minmax(0, 1fr);
   gap: var(--control-panel-padding);
   overflow: hidden;
   padding: var(--control-panel-padding);
@@ -674,14 +674,14 @@
 .control-window-dock {
   display: grid;
   height: var(--control-window-dock-height);
+  margin-top: calc(var(--control-panel-padding) * -1);
   margin-right: calc(var(--control-panel-padding) * -1);
-  margin-bottom: calc(var(--control-panel-padding) * -1);
   margin-left: calc(var(--control-panel-padding) * -1);
   place-items: center;
   border: var(--card-outline-thin) solid var(--match-border-soft);
   border-right: 0;
   border-left: 0;
-  border-radius: 0 0 var(--control-panel-radius) var(--control-panel-radius);
+  border-radius: var(--control-panel-radius) var(--control-panel-radius) 0 0;
   color: var(--match-text-subtle);
   background: rgba(5, 14, 12, 0.22);
   pointer-events: auto;

@@ -17,7 +17,7 @@ const buttonWithAriaLabel = (markup: string, label: string): string => {
   return match[0];
 };
 
-test("control rail shows turn and phase at the top of the controls panel", () => {
+test("control rail orders dock, tools, turn status, then main controls", () => {
   const markup = renderToStaticMarkup(
     createElement(ControlRail, {
       errors: [],
@@ -30,18 +30,32 @@ test("control rail shows turn and phase at the top of the controls panel", () =>
         phase: "main",
         step: "counter",
       },
+      dockTabs: [
+        {
+          id: "action-log",
+          title: "Log",
+          renderContent: () => createElement("p", null, "docked log body"),
+        },
+      ],
+      previewControl: createElement("button", { type: "button" }, "Preview"),
       onAction: () => undefined,
       onHome: () => undefined,
     }),
   );
 
+  const dockPosition = markup.indexOf("control-window-dock");
+  const toolStripPosition = markup.indexOf("control-tool-strip");
   const statusPosition = markup.indexOf("control-turn-status");
   const actionPosition = markup.indexOf("End turn");
 
   assert.match(markup, /Turn 4/u);
   assert.match(markup, /Counter Step/u);
+  assert.equal(dockPosition >= 0, true);
+  assert.equal(toolStripPosition >= 0, true);
   assert.equal(statusPosition >= 0, true);
   assert.equal(actionPosition >= 0, true);
+  assert.equal(dockPosition < toolStripPosition, true);
+  assert.equal(toolStripPosition < statusPosition, true);
   assert.equal(statusPosition < actionPosition, true);
 });
 

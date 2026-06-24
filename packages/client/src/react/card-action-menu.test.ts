@@ -264,7 +264,7 @@ describe("card action menu", () => {
     assert.equal(styles.includes(".match-facts"), false);
   });
 
-  test("control rail renders preview control in the lower controls panel slot", async () => {
+  test("control rail renders preview control below the dock slot", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
         errors: [],
@@ -288,7 +288,7 @@ describe("card action menu", () => {
     assert.match(markup, /card-preview-minimized-button/u);
     assert.match(
       styles,
-      /\.controls-panel\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\)\s+var\(--control-window-dock-height\)\s+var\(--control-icon-button-size\);/u,
+      /\.controls-panel\s*\{[^}]*grid-template-rows:\s*var\(--control-window-dock-height\)\s+var\(--control-icon-button-size\)\s+minmax\(0,\s*1fr\);/u,
     );
     assert.match(
       styles,
@@ -296,7 +296,7 @@ describe("card action menu", () => {
     );
   });
 
-  test("control rail places icon controls after global actions", () => {
+  test("control rail places icon controls before global actions", () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
         errors: [],
@@ -322,11 +322,11 @@ describe("card action menu", () => {
     );
 
     const positions = [
-      "End turn",
       'aria-label="Preview"',
       'aria-label="Log"',
       'aria-label="Settings"',
       'aria-label="Concede"',
+      "End turn",
     ].map((needle) => markup.indexOf(needle));
 
     assert.deepEqual(

@@ -141,67 +141,6 @@ export const ControlRail = ({
         onPointerDown={onResizePointerDown}
       />
       <section className="controls-panel">
-        <div className="control-action-stack">
-          {turnState === undefined ? null : (
-            <div className="control-turn-status" aria-label="Current turn">
-              <span className="control-turn-number">
-                Turn {turnState.globalTurn}
-              </span>
-              <span className="control-turn-phase">
-                {turnStatusLabel(turnState)}
-              </span>
-            </div>
-          )}
-          {errors.map((error) => (
-            <p key={error} className="error-text">
-              {error}
-            </p>
-          ))}
-          {rollbackStatus === undefined ? null : (
-            <section className="rollback-status-panel">
-              <p>{rollbackStatus.message}</p>
-              {rollbackStatus.canCancel ? (
-                <button
-                  className="action-button"
-                  type="button"
-                  disabled={disabled}
-                  onClick={onCancelRollback}
-                >
-                  Cancel rollback request
-                </button>
-              ) : null}
-            </section>
-          )}
-          <ActionMenu
-            actions={globalActions}
-            disabled={disabled}
-            onAction={onAction}
-          />
-          {matchIsOver ? (
-            <div className="end-match-actions" aria-label="Match ended actions">
-              <button
-                className="action-button is-primary end-match-action"
-                type="button"
-                disabled={rematchDisabled}
-                aria-label={rematchLabel}
-                onClick={() => {
-                  void onRematch?.();
-                }}
-              >
-                {rematchLabel}
-              </button>
-              <button
-                className="action-button end-match-action"
-                type="button"
-                disabled={disabled}
-                aria-label="Home"
-                onClick={onHome}
-              >
-                Home
-              </button>
-            </div>
-          ) : null}
-        </div>
         <div
           className={[
             "control-window-dock",
@@ -445,6 +384,67 @@ export const ControlRail = ({
               <path d="M5 4h12l-2 4 2 4H5" />
             </svg>
           </button>
+        </div>
+        <div className="control-action-stack">
+          {turnState === undefined ? null : (
+            <div className="control-turn-status" aria-label="Current turn">
+              <span className="control-turn-number">
+                Turn {turnState.globalTurn}
+              </span>
+              <span className="control-turn-phase">
+                {turnStatusLabel(turnState)}
+              </span>
+            </div>
+          )}
+          {errors.map((error) => (
+            <p key={error} className="error-text">
+              {error}
+            </p>
+          ))}
+          {rollbackStatus === undefined ? null : (
+            <section className="rollback-status-panel">
+              <p>{rollbackStatus.message}</p>
+              {rollbackStatus.canCancel ? (
+                <button
+                  className="action-button"
+                  type="button"
+                  disabled={disabled}
+                  onClick={onCancelRollback}
+                >
+                  Cancel rollback request
+                </button>
+              ) : null}
+            </section>
+          )}
+          <ActionMenu
+            actions={globalActions}
+            disabled={disabled}
+            onAction={onAction}
+          />
+          {matchIsOver ? (
+            <div className="end-match-actions" aria-label="Match ended actions">
+              <button
+                className="action-button is-primary end-match-action"
+                type="button"
+                disabled={rematchDisabled}
+                aria-label={rematchLabel}
+                onClick={() => {
+                  void onRematch?.();
+                }}
+              >
+                {rematchLabel}
+              </button>
+              <button
+                className="action-button end-match-action"
+                type="button"
+                disabled={disabled}
+                aria-label="Home"
+                onClick={onHome}
+              >
+                Home
+              </button>
+            </div>
+          ) : null}
         </div>
       </section>
     </aside>

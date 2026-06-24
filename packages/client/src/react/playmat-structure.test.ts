@@ -566,7 +566,7 @@ describe("playmat structure", () => {
     assert.doesNotMatch(joinedClientSources, /effect-spotlight-source/u);
   });
 
-  test("control dock is tall and flush inside the panel", async () => {
+  test("control dock is tall and flush at the top of the panel", async () => {
     const controlsStyles = await readFile(controlsStylesPath, "utf8");
 
     assert.match(
@@ -583,7 +583,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       controlsStyles,
-      /\.control-window-dock\s*\{[^}]*margin-right:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-bottom:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-left:\s*calc\(var\(--control-panel-padding\) \* -1\);/u,
+      /\.control-window-dock\s*\{[^}]*margin-top:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-right:\s*calc\(var\(--control-panel-padding\) \* -1\);[^}]*margin-left:\s*calc\(var\(--control-panel-padding\) \* -1\);/u,
     );
     assert.match(
       controlsStyles,
