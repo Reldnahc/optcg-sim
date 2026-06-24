@@ -271,10 +271,21 @@ export const BoardLayout = ({
   reduceDeckStackRendering = false,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
-  const tabletopClassName = [
-    "tabletop-board",
-    board.selfIsTurnPlayer ? "is-turn-player" : "",
-    pendingChoiceInstanceIds.length > 0 ? "is-choice-active" : "",
+  const playerFieldClassName = [
+    "playmat-field",
+    "player-field",
+    board.selfIsTurnPlayer || pendingChoiceInstanceIds.length > 0
+      ? "is-active-player-side"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const opponentFieldClassName = [
+    "playmat-field",
+    "opponent-field",
+    !board.selfIsTurnPlayer && pendingChoiceInstanceIds.length === 0
+      ? "is-active-player-side"
+      : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -336,7 +347,7 @@ export const BoardLayout = ({
           onMoveCard={onMoveHandCard}
         />
       </div>
-      <div className={tabletopClassName}>
+      <div className="tabletop-board">
         <TurnStatusBannerHost banner={board.statusBanner} />
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-row opponent-resource-row">
@@ -395,7 +406,7 @@ export const BoardLayout = ({
             />
           </div>
         </div>
-        <div className="playmat-field opponent-field">
+        <div className={opponentFieldClassName}>
           <div className="playmat-zone opponent-life">
             <Zone
               label="Life"
@@ -508,7 +519,7 @@ export const BoardLayout = ({
           <div className="opponent-center-spacer" />
           <div className="player-center-spacer" />
         </div>
-        <div className="playmat-field player-field">
+        <div className={playerFieldClassName}>
           <div className="playmat-zone player-characters">
             <Zone
               label="Character Area"

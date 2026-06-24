@@ -597,13 +597,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       playmatStyles.includes(
-        '"opponent-deck opponent-summary opponent-restrictions opponent-stage opponent-leader opponent-life"',
+        '"opponent-deck opponent-summary opponent-restrictions opponent-leader opponent-stage opponent-life"',
       ),
       true,
     );
     assert.equal(
       playmatStyles.includes(
-        '"player-life player-leader player-stage player-restrictions player-summary player-deck"',
+        '"player-life player-stage player-leader player-restrictions player-summary player-deck"',
       ),
       true,
     );
@@ -659,9 +659,33 @@ describe("playmat structure", () => {
     );
     assert.equal(
       styles.includes(
-        '"opponent-deck opponent-summary opponent-restrictions opponent-stage opponent-leader opponent-life"',
+        '"opponent-deck opponent-summary opponent-restrictions opponent-leader opponent-stage opponent-life"',
       ),
       true,
+    );
+  });
+
+  test("turn and choice highlight only the active player field", async () => {
+    const [boardLayout, playmatStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
+      readFile(playmatStylesPath, "utf8"),
+    ]);
+
+    assert.match(
+      boardLayout,
+      /const playerFieldClassName = \[[\s\S]*"player-field"[\s\S]*board\.selfIsTurnPlayer \|\| pendingChoiceInstanceIds\.length > 0[\s\S]*"is-active-player-side"/u,
+    );
+    assert.match(
+      boardLayout,
+      /const opponentFieldClassName = \[[\s\S]*"opponent-field"[\s\S]*!board\.selfIsTurnPlayer[\s\S]*"is-active-player-side"/u,
+    );
+    assert.doesNotMatch(boardLayout, /is-turn-player/u);
+    assert.doesNotMatch(boardLayout, /is-choice-active/u);
+    assert.doesNotMatch(playmatStyles, /\.tabletop-board\.is-turn-player/u);
+    assert.doesNotMatch(playmatStyles, /\.tabletop-board\.is-choice-active/u);
+    assert.match(
+      playmatStyles,
+      /\.playmat-field\.is-active-player-side\s*\{[^}]*border-color:\s*var\(--match-accent-strong\);[^}]*box-shadow:/u,
     );
   });
 
