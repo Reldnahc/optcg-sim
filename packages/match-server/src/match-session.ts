@@ -190,17 +190,26 @@ export const createMatchSessionRuntime = ({
   const pendingActions: StoredSessionRecord[] = [];
   const pendingDecisions: StoredSessionRecord[] = [];
   const pendingDeterministicRecords: StoredDeterministicSessionRecord[] = [];
+  const pendingDeterministicCheckpoints: StoredDeterministicCheckpointRecord[] =
+    [];
 
-  const recordDeterministicCheckpoints = (recordedAt: string): void => {
+  const recordDeterministicCheckpoints = (
+    recordedAt: string,
+    persist: boolean,
+  ): void => {
     for (const checkpoint of local.rollback.checkpoints) {
       if (deterministicCheckpointIds.has(checkpoint.checkpointId)) {
         continue;
       }
       deterministicCheckpointIds.add(checkpoint.checkpointId);
-      deterministicCheckpoints.push({ checkpoint, recordedAt });
+      const record = { checkpoint, recordedAt };
+      deterministicCheckpoints.push(record);
+      if (persist) {
+        pendingDeterministicCheckpoints.push(record);
+      }
     }
   };
-  recordDeterministicCheckpoints(now());
+  recordDeterministicCheckpoints(now(), false);
 
   for (const record of records) {
     idempotency.set(
@@ -330,7 +339,7 @@ export const createMatchSessionRuntime = ({
       const recordedAt = now();
       const storedResult = storeRecord(envelope, result, recordedAt);
       if (result.accepted) {
-        recordDeterministicCheckpoints(recordedAt);
+        recordDeterministicCheckpoints(recordedAt, true);
       }
       if (result.accepted && applied.deterministicOperation !== undefined) {
         const deterministicRecord = buildStoredDeterministicSessionRecord({
@@ -357,7 +366,19 @@ export const createMatchSessionRuntime = ({
         pendingActions.length = 0;
         pendingDecisions.length = 0;
         pendingDeterministicRecords.length = 0;
+        pendingDeterministicCheckpoints.length = 0;
         return;
+      }
+      while (pendingDeterministicCheckpoints.length > 0) {
+        const record = pendingDeterministicCheckpoints[0];
+        if (record === undefined) {
+          break;
+        }
+        await persistence.appendDeterministicCheckpoint({
+          matchId: local.state.matchId,
+          record: compactStoredDeterministicCheckpointRecord(record),
+        });
+        pendingDeterministicCheckpoints.shift();
       }
       while (pendingDeterministicRecords.length > 0) {
         const record = pendingDeterministicRecords[0];
@@ -414,6 +435,7 @@ export const createMatchSessionRuntime = ({
       pendingActions.length = 0;
       pendingDecisions.length = 0;
       pendingDeterministicRecords.length = 0;
+      pendingDeterministicCheckpoints.length = 0;
     },
     records: () => records,
     deterministicRecords: () => deterministicRecords,

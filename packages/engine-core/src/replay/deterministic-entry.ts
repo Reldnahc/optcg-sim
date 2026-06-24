@@ -57,6 +57,31 @@ const stableGameplayTimers = (timers: TimerState): TimerState => ({
       }),
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stableGameplayCardManifest = (
+  manifest: GameState["cardManifest"],
+): GameState["cardManifest"] => {
+  const clone = structuredClone(manifest);
+  if (!isRecord(clone)) {
+    return clone;
+  }
+  if (!isRecord(clone.cards)) {
+    return clone;
+  }
+  clone.cards = Object.fromEntries(
+    Object.entries(clone.cards).map(([cardId, card]) => {
+      if (!isRecord(card)) {
+        return [cardId, card];
+      }
+      const { variants: _variants, ...stableCard } = card;
+      return [cardId, stableCard];
+    }),
+  ) as GameState["cardManifest"]["cards"];
+  return clone;
+};
+
 export const hashReplayStateForScope = (
   state: GameState,
   hashScope: DeterministicMatchEntry["verification"]["hashScope"],
@@ -64,6 +89,7 @@ export const hashReplayStateForScope = (
   if (hashScope === "gameplay-v1") {
     const clone = structuredClone(state);
     clone.timers = stableGameplayTimers(clone.timers);
+    clone.cardManifest = stableGameplayCardManifest(clone.cardManifest);
     return hashCanonicalStateValue(clone);
   }
   return hashCanonicalStateValue(state);

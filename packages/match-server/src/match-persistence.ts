@@ -4,6 +4,7 @@ import type {
   MatchPersistence,
   MatchPersistenceSnapshot,
   RecoveryLock,
+  StoredDeterministicCheckpointRecord,
   StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
@@ -36,6 +37,10 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
   const deterministicEntries = new Map<
     MatchId,
     StoredDeterministicSessionRecord[]
+  >();
+  const deterministicCheckpoints = new Map<
+    MatchId,
+    StoredDeterministicCheckpointRecord[]
   >();
   const locks = new Map<MatchId, RecoveryLock>();
   const freezes: FreezeRecord[] = [];
@@ -77,12 +82,22 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
         input.metadata.matchId,
         clone([...(input.deterministicEntriesSinceSnapshot ?? [])]),
       );
+      deterministicCheckpoints.set(
+        input.metadata.matchId,
+        clone([...(input.deterministicCheckpoints ?? [])]),
+      );
       return Promise.resolve();
     },
     appendDeterministicEntry({ matchId, record }) {
       const existing = deterministicEntries.get(matchId) ?? [];
       existing.push(clone(record));
       deterministicEntries.set(matchId, existing);
+      return Promise.resolve();
+    },
+    appendDeterministicCheckpoint({ matchId, record }) {
+      const existing = deterministicCheckpoints.get(matchId) ?? [];
+      existing.push(clone(record));
+      deterministicCheckpoints.set(matchId, existing);
       return Promise.resolve();
     },
     appendAction({ matchId, record }) {
@@ -105,6 +120,7 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
           decisions: decisions.get(matchId) ?? [],
           deterministicEntriesSinceSnapshot:
             deterministicEntries.get(matchId) ?? [],
+          deterministicCheckpoints: deterministicCheckpoints.get(matchId) ?? [],
         }),
       );
     },

@@ -63,6 +63,7 @@ const state = (
     actionSeq,
     status: { type: "active" },
     players: {},
+    cardManifest: { cards: {} },
     eventJournal: [],
     timers: { players: {} },
     turn: {
@@ -246,5 +247,11 @@ describe("reconstructReplayFrames", () => {
     );
 
     expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
+      return;
+    }
+    expect(result.frames.at(-1)?.snapshot).toMatchObject({
+      stateHash: hashReplayStateForScope(finalState, "gameplay-v1"),
+    });
   });
 });

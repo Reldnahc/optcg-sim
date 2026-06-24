@@ -10,6 +10,7 @@ const minimalState = (): GameState =>
     actionSeq: 0,
     status: { type: "completed", winner: "p1" },
     players: {},
+    cardManifest: { cards: {} },
     eventJournal: [],
     timers: { players: {} },
   }) as unknown as GameState;

@@ -270,6 +270,16 @@ export const createRedisMatchPersistence = (
       serialize(record),
     );
   },
+  async appendDeterministicCheckpoint({ matchId, record }) {
+    const matchKeys = keys(matchId);
+    const generation = await redis.get(matchKeys.current);
+    await redis.rPush(
+      generation === null
+        ? matchKeys.deterministicCheckpoints
+        : matchKeys.snapshot(generation).deterministicCheckpoints,
+      serialize(record),
+    );
+  },
   async appendAction({ matchId, record }) {
     const matchKeys = keys(matchId);
     const generation = await redis.get(matchKeys.current);

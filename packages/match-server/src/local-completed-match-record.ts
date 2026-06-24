@@ -226,13 +226,18 @@ export const buildLocalCompletedMatchRecord = (
     input.match.state,
     "gameplay-v1",
   );
+  const replayFirstPlayerId =
+    input.firstPlayerChoice.resolvedFirstPlayerId ?? input.setup.firstPlayerId;
   const initialStateHash = hashReplayStateForScope(
-    createLocalDevMatch(input.setup).state,
+    createLocalDevMatch({
+      ...input.setup,
+      firstPlayerId: replayFirstPlayerId,
+    }).state,
     "gameplay-v1",
   );
   const initialDeckOrders = jsonObject({
     playerOrder: input.setup.playerOrder,
-    firstPlayerId: input.setup.firstPlayerId,
+    firstPlayerId: replayFirstPlayerId,
     shuffleDecks: input.setup.shuffleDecks ?? false,
     players: Object.fromEntries(
       input.setup.players.map((player) => [

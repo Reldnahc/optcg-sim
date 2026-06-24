@@ -213,6 +213,10 @@ export interface MatchPersistence {
     readonly matchId: MatchId;
     readonly record: StoredDeterministicSessionRecord;
   }): Promise<void>;
+  appendDeterministicCheckpoint(input: {
+    readonly matchId: MatchId;
+    readonly record: StoredDeterministicCheckpointRecord;
+  }): Promise<void>;
   appendAction(input: {
     readonly matchId: MatchId;
     readonly record: StoredSessionRecord;

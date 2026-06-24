@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "vitest";
 
-import { hashCanonicalStateValue } from "@optcg/engine-core";
+import { hashReplayStateForScope } from "@optcg/engine-core";
 import type { MatchId, StateSeq } from "@optcg/types";
 
 import { requestHash } from "./action-envelope.js";
@@ -81,10 +81,16 @@ test("recovers from deterministic entries without re-resolving audit envelope ac
           verification: {
             stateSeqBefore: snapshotState.seq,
             actionSeqBefore: snapshotState.actionSeq,
-            stateHashBefore: hashCanonicalStateValue(snapshotState),
+            stateHashBefore: hashReplayStateForScope(
+              snapshotState,
+              "gameplay-v1",
+            ),
             stateSeqAfter: applied.stateSeq as StateSeq,
             actionSeqAfter: applied.actionSeq,
-            stateHashAfter: hashCanonicalStateValue(expected.state),
+            stateHashAfter: hashReplayStateForScope(
+              expected.state,
+              "gameplay-v1",
+            ),
             hashScope: "gameplay-v1",
           },
         },
@@ -143,6 +149,9 @@ test("recovers from deterministic entries without re-resolving audit envelope ac
       return Promise.resolve();
     },
     appendDeterministicEntry() {
+      return Promise.resolve();
+    },
+    appendDeterministicCheckpoint() {
       return Promise.resolve();
     },
     appendAction() {

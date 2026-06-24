@@ -139,4 +139,38 @@ describe("hashReplayStateForScope", () => {
       hashReplayStateForScope(second, "operational-v1"),
     );
   });
+
+  test("gameplay hash ignores card manifest variant presentation data", () => {
+    const first = makeMainPhaseLegalActionState();
+    const second = structuredClone(first);
+    const firstCards = first.cardManifest.cards as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+    const secondCards = second.cardManifest.cards as unknown as Record<
+      string,
+      Record<string, unknown>
+    >;
+    const cardId = "presentation-card";
+    firstCards[cardId] = {
+      cardId,
+      name: "Presentation Card",
+      variants: [
+        { stockImageFull: "full-a", scanImageDisplay: "scan-a" },
+        { stockImageFull: "full-b", scanImageDisplay: "scan-b" },
+      ],
+    };
+    secondCards[cardId] = {
+      cardId,
+      name: "Presentation Card",
+      variants: [{ stockImageFull: "full-a" }],
+    };
+
+    expect(hashReplayStateForScope(first, "gameplay-v1")).toBe(
+      hashReplayStateForScope(second, "gameplay-v1"),
+    );
+    expect(hashReplayStateForScope(first, "operational-v1")).not.toBe(
+      hashReplayStateForScope(second, "operational-v1"),
+    );
+  });
 });

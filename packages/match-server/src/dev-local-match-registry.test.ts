@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { afterEach, beforeAll, test, vi } from "vitest";
 
+import { hashReplayStateForScope } from "@optcg/engine-core";
 import type { MatchId, PlayerId } from "@optcg/types";
 
 import { requestHash } from "./action-envelope.js";
@@ -10,6 +11,7 @@ import {
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
 import type { AuthContext } from "./dev-auth.js";
+import type { DevVisibleAction } from "./dev-snapshot-types.js";
 import { getLocalDevSnapshot } from "./local-match.js";
 import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type { BotStrategy } from "./bot-types.js";
@@ -21,9 +23,14 @@ import type {
   MatchPersistenceSnapshot,
   SessionActionRequest,
 } from "./session-types.js";
-import type { CompletedMatchRepository } from "./postgres-completed-match.js";
+import type {
+  CompletedMatchRecord,
+  CompletedMatchRepository,
+} from "./postgres-completed-match.js";
+import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
 let premadeSetup: DevMatchSetup;
+type CreatedSnapshot = NonNullable<CreatedDevMatchResponse["snapshot"]>;
 
 const shortTimerPolicy: MatchTimerPolicy = {
   gameTimeMs: 1_000,
@@ -88,6 +95,63 @@ const authContext = (
     displayName,
   },
 });
+
+const firstVisibleAction = (
+  snapshot: CreatedSnapshot,
+  predicate: (action: DevVisibleAction) => boolean = () => true,
+): { readonly playerId: PlayerId; readonly action: DevVisibleAction } => {
+  for (const [playerId, player] of Object.entries(snapshot.players)) {
+    const action = player.actions.find(predicate);
+    if (action !== undefined) {
+      return { playerId: playerId as PlayerId, action };
+    }
+  }
+  throw new Error("Expected a visible action.");
+};
+
+const envelopeForRequest = (
+  matchId: MatchId,
+  request: SessionActionRequest,
+  expectedStateSeq: number,
+  clientActionId: string,
+): ClientActionEnvelope => ({
+  protocolVersion: "dev",
+  matchId,
+  playerId: request.playerId,
+  clientActionId,
+  expectedStateSeq,
+  ...(request.type !== "respondToDecision"
+    ? {}
+    : { expectedDecisionId: request.decisionId }),
+  requestHash: requestHash(request),
+  request,
+});
+
+const submitFirstVisibleAction = async (
+  registry: Awaited<ReturnType<typeof createLocalDevMatchRegistry>>,
+  matchId: MatchId,
+  snapshot: CreatedSnapshot,
+  clientActionId: string,
+  predicate?: (action: DevVisibleAction) => boolean,
+): Promise<CreatedSnapshot> => {
+  const { playerId, action } = firstVisibleAction(snapshot, predicate);
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex: action.index,
+    expectedStateSeq: snapshot.stateSeq,
+  };
+  const result = await registry.applyEnvelope(
+    envelopeForRequest(matchId, request, snapshot.stateSeq, clientActionId),
+  );
+  if (result === "matchNotFound" || !result.accepted) {
+    throw new Error("Expected visible action to be accepted.");
+  }
+  if (result.snapshot === undefined) {
+    throw new Error("Expected accepted action snapshot.");
+  }
+  return result.snapshot;
+};
 
 test("can create active matches without game timers", async () => {
   const registry = await createLocalDevMatchRegistry(
@@ -318,6 +382,245 @@ test("active persistence rehydrates a match from checkpoint and compact action l
     assert.equal(duplicate.stateSeq, accepted.stateSeq);
   }
   assert.equal(getLocalDevSnapshot(recoveredMatch).stateSeq, accepted.stateSeq);
+});
+
+test("active recovery ignores drifted audit envelope action indexes", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const matchId = "active-deterministic-audit-drift-match" as MatchId;
+  const firstRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const created = await firstRegistry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+  const advanced = await submitFirstVisibleAction(
+    firstRegistry,
+    matchId,
+    created.snapshot,
+    "audit-drift-action",
+  );
+  const liveMatch = firstRegistry.getMatch(matchId);
+  if (liveMatch === undefined) {
+    throw new Error("Expected live match.");
+  }
+  const expectedHash = hashReplayStateForScope(liveMatch.state, "gameplay-v1");
+
+  const driftedPersistence: MatchPersistence = {
+    ...persistence,
+    async loadSnapshot(requestedMatchId) {
+      const snapshot = await persistence.loadSnapshot(requestedMatchId);
+      if (snapshot === undefined || requestedMatchId !== matchId) {
+        return snapshot;
+      }
+      const records = snapshot.deterministicEntriesSinceSnapshot ?? [];
+      return {
+        ...snapshot,
+        deterministicEntriesSinceSnapshot: records.map((record, index) => {
+          if (
+            index !== 0 ||
+            record.audit.envelope.request.type !== "submitAction"
+          ) {
+            return record;
+          }
+          return {
+            ...record,
+            audit: {
+              ...record.audit,
+              envelope: {
+                ...record.audit.envelope,
+                request: {
+                  ...record.audit.envelope.request,
+                  actionIndex:
+                    record.audit.envelope.request.actionIndex + 10_000,
+                },
+              },
+            },
+          };
+        }),
+      };
+    },
+  };
+
+  const recoveredRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: driftedPersistence,
+    },
+  );
+  const recoveredMatch = recoveredRegistry.getMatch(matchId);
+
+  assert.ok(recoveredMatch !== undefined);
+  assert.equal(advanced.stateSeq, liveMatch.state.seq);
+  assert.equal(
+    hashReplayStateForScope(recoveredMatch.state, "gameplay-v1"),
+    expectedHash,
+  );
+});
+
+test("rollback restore recovery uses deterministic entries and checkpoints", async () => {
+  const persistence = createInMemoryMatchPersistence();
+  const matchId = "active-deterministic-rollback-recovery-match" as MatchId;
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+  let snapshot = created.snapshot;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const endTurn = Object.values(snapshot.players).some((player) =>
+      player.actions.some((action) => action.label === "End turn"),
+    );
+    if (endTurn) {
+      break;
+    }
+    snapshot = await submitFirstVisibleAction(
+      registry,
+      matchId,
+      snapshot,
+      `rollback-setup-${String(attempt)}`,
+    );
+  }
+  const selected = firstVisibleAction(
+    snapshot,
+    (action) => action.label === "End turn",
+  );
+  const submitted = await submitFirstVisibleAction(
+    registry,
+    matchId,
+    snapshot,
+    "rollback-source-action",
+    (action) => action.index === selected.action.index,
+  );
+  const rollbackPoint = submitted.rollback?.points[0];
+  if (rollbackPoint === undefined) {
+    throw new Error("Expected accepted action to create a rollback point.");
+  }
+  const rollbackRequest: SessionActionRequest = {
+    type: "requestRollback",
+    playerId: selected.playerId,
+    rollbackPointId: rollbackPoint.rollbackPointId,
+    expectedStateSeq: submitted.stateSeq,
+  };
+  const requested = await registry.applyEnvelope(
+    envelopeForRequest(
+      matchId,
+      rollbackRequest,
+      submitted.stateSeq,
+      "rollback-request",
+    ),
+  );
+  if (
+    requested === "matchNotFound" ||
+    !requested.accepted ||
+    requested.snapshot === undefined
+  ) {
+    throw new Error("Expected rollback request to be accepted.");
+  }
+  const pendingDecision = Object.values(requested.snapshot.players)
+    .map((player) => player.view.pendingDecision)
+    .find((decision) => decision?.type === "rollbackConsent");
+  if (pendingDecision?.type !== "rollbackConsent") {
+    throw new Error("Expected rollback consent decision.");
+  }
+  const approveRequest: SessionActionRequest = {
+    type: "respondToDecision",
+    playerId: pendingDecision.playerId,
+    decisionId: pendingDecision.id,
+    response: { type: "rollbackConsent", allow: true },
+  };
+  const approved = await registry.applyEnvelope(
+    envelopeForRequest(
+      matchId,
+      approveRequest,
+      requested.snapshot.stateSeq,
+      "rollback-approve",
+    ),
+  );
+  if (
+    approved === "matchNotFound" ||
+    !approved.accepted ||
+    approved.snapshot === undefined
+  ) {
+    throw new Error("Expected rollback approval to be accepted.");
+  }
+  const liveMatch = registry.getMatch(matchId);
+  const persistedSnapshot = await persistence.loadSnapshot(matchId);
+  const deterministicEntries =
+    persistedSnapshot?.deterministicEntriesSinceSnapshot?.map(
+      (record) => record.deterministicEntry,
+    ) ?? [];
+  const restoreEntry = deterministicEntries.find(
+    (entry) =>
+      entry.kind === "system" &&
+      entry.operation.type === "restoreRollbackPoint",
+  );
+  const checkpoint = persistedSnapshot?.deterministicCheckpoints
+    ?.map((record) => record.checkpoint)
+    .find(
+      (candidate) =>
+        candidate.checkpointId === rollbackPoint.rollbackPointId,
+    );
+
+  assert.ok(liveMatch !== undefined);
+  assert.ok(restoreEntry !== undefined);
+  assert.ok(checkpoint?.snapshot !== undefined);
+
+  const recoveredRegistry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      createDefaultMatch: false,
+      matchPersistence: persistence,
+    },
+  );
+  const recoveredMatch = recoveredRegistry.getMatch(matchId);
+
+  assert.ok(recoveredMatch !== undefined);
+  assert.equal(
+    hashReplayStateForScope(recoveredMatch.state, "gameplay-v1"),
+    hashReplayStateForScope(liveMatch.state, "gameplay-v1"),
+  );
 });
 
 test("active persistence rehydrates claimed seats for account reconnect", async () => {
@@ -567,9 +870,11 @@ test("completed-match save does not block the terminal action response", async (
   const saveStarted = deferredVoid();
   const saveFinished = deferredVoid();
   let saveCount = 0;
+  let savedRecord: CompletedMatchRecord | undefined;
   const completedMatchRepository: CompletedMatchRepository = {
-    async saveCompletedMatch() {
+    async saveCompletedMatch(record) {
       saveCount += 1;
+      savedRecord = record;
       saveStarted.resolve();
       await saveFinished.promise;
     },
@@ -679,6 +984,57 @@ test("completed-match save does not block the terminal action response", async (
   }
   assert.equal(actionReturnedBeforeSaveFinished, true);
   assert.equal(saveCount, 1);
+  assert.ok(savedRecord !== undefined);
+  assert.equal(
+    savedRecord.replay.deterministicEntries.some(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "envelope" in entry,
+    ),
+    false,
+  );
+  const frameReconstruction = reconstructReplayFrames({
+    matchId: savedRecord.matchId,
+    status: savedRecord.status,
+    gameType: savedRecord.gameType,
+    formatId: savedRecord.formatId,
+    lobbyId: savedRecord.lobbyId,
+    winnerUserId: savedRecord.winnerUserId,
+    winnerSeatId: savedRecord.winnerSeatId,
+    startedAt: savedRecord.startedAt,
+    endedAt: savedRecord.endedAt,
+    turnCount: savedRecord.turnCount,
+    actionCount: savedRecord.actionCount,
+    players: savedRecord.players.map((player) => ({
+      seatId: player.seatId,
+      userId: player.userId,
+      displayName: player.displayName,
+      leaderCardNumber: player.leaderCardNumber,
+      result: player.result,
+      isWinner: player.isWinner,
+    })),
+    replay: JSON.parse(JSON.stringify(savedRecord.replay)) as Record<
+      string,
+      unknown
+    >,
+  });
+  if (frameReconstruction.status !== "ready") {
+    const firstEntry = savedRecord.replay.deterministicEntries[0] as
+      | { readonly verification?: { readonly stateHashBefore?: unknown } }
+      | undefined;
+    throw new Error(
+      `${frameReconstruction.reason}; initial=${
+        savedRecord.replay.initialStateHash
+      }; firstBefore=${String(firstEntry?.verification?.stateHashBefore)}`,
+    );
+  }
+  if (frameReconstruction.status === "ready") {
+    assert.equal(
+      frameReconstruction.frames.length,
+      savedRecord.replay.deterministicEntries.length + 1,
+    );
+  }
 });
 
 test("registry can omit action result snapshots for live socket traffic", async () => {
