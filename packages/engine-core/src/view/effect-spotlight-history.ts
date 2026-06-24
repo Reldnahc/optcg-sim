@@ -262,14 +262,34 @@ const removeStalePendingEffectTextEntries = (
   return kept.reverse();
 };
 
+const hasLaterEffectResolved = (
+  events: readonly EngineEvent[],
+  eventIndex: number,
+): boolean =>
+  events.some(
+    (event, candidateIndex) =>
+      candidateIndex > eventIndex && event.type === "effectResolved",
+  );
+
 export const effectSpotlightHistoryFromPlayerViewState = ({
   events,
 }: {
   readonly events: readonly EngineEvent[];
 }): EffectSpotlightHistory | undefined => {
-  const rawEntries = events.flatMap((event) => {
+  const rawEntries = events.flatMap((event, eventIndex) => {
     const entry = spotlightEntryForEvent(event);
-    return entry === undefined ? [] : [entry];
+    if (entry === undefined) {
+      return [];
+    }
+    if (
+      isEffectTextSpotlightEntry(entry) &&
+      entry.mode === "live" &&
+      entry.status === "pending" &&
+      hasLaterEffectResolved(events, eventIndex)
+    ) {
+      return [];
+    }
+    return [entry];
   });
   const entries = removeStalePendingEffectTextEntries(rawEntries);
   const presentKey = entries.at(-1)?.key;

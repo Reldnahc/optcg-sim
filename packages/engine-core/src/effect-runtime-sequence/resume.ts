@@ -112,11 +112,14 @@ const narrowedActiveSpanIdsForCompletedFrame = (
   if (presentation === undefined) {
     return undefined;
   }
+  if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
+    if (segmentPresentationSpanIdsForFrame(effectBlock, entry, frame)) {
+      return undefined;
+    }
+    return activeSpanIdsWithoutCost(presentation.activeSpanIds);
+  }
   if (segmentPresentationSpanIdsForFrame(effectBlock, entry, frame)) {
     return undefined;
-  }
-  if (frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix)) {
-    return activeSpanIdsWithoutCost(presentation.activeSpanIds);
   }
   const topLevelIndex = topLevelSequenceIndexForFrame(frame);
   const sequenceSpanIds =
@@ -130,11 +133,30 @@ const narrowedActiveSpanIdsForCompletedFrame = (
   return narrowed.length === 0 ? undefined : narrowed;
 };
 
+const payCostFrameWasDeclined = (
+  frame: EffectExecutionFrame,
+  segmentResults: EffectExecutionFrame["segmentResults"],
+): boolean =>
+  frame.pendingDecision.decisionId.startsWith(payCostDecisionPrefix) &&
+  Object.values(segmentResults).some(
+    (segmentResult) => segmentResult.playerDeclined,
+  );
+
+const withoutPresentation = (entry: EffectQueueEntry): EffectQueueEntry => {
+  const next = { ...entry };
+  delete next.presentation;
+  return next;
+};
+
 const entryWithCompletedFramePresentation = (
   entry: EffectQueueEntry,
   frame: EffectExecutionFrame,
   effectBlock: SupportedSequenceBlock,
+  segmentResults: EffectExecutionFrame["segmentResults"],
 ): EffectQueueEntry => {
+  if (payCostFrameWasDeclined(frame, segmentResults)) {
+    return withoutPresentation(entry);
+  }
   const activeSpanIds = narrowedActiveSpanIdsForCompletedFrame(
     entry,
     frame,
@@ -272,6 +294,7 @@ export const resumeSequenceFrameFromLedgers = (params: {
     params.entry,
     params.frame,
     params.effectBlock,
+    params.ledgers.segmentResults,
   );
   const resumedState =
     resumedEntry === params.entry

@@ -313,6 +313,16 @@ const payTrashFromHandWithFirstHandCard = (state: GameState) => {
   });
 };
 
+const declinePayment = (state: GameState): EngineResult => {
+  const decision = must(state.pendingDecision, "payment decision");
+  assert.equal(decision.type, "payCost");
+  return applyAction(state, {
+    type: "respondToDecision",
+    decisionId: decision.id,
+    response: { type: "paymentDeclined" },
+  });
+};
+
 const payRestSelf = (state: GameState): EngineResult => {
   const decision = must(state.pendingDecision, "payment decision");
   assert.equal(decision.type, "payCost");
@@ -474,6 +484,18 @@ test("optional cost presentation highlights the cost while paying and the body a
       activeSpanIds: ["span:body:line:1"],
     },
   );
+});
+
+test("declined optional costs do not leave a pending cost spotlight as present history", () => {
+  const state = createQueuedCostPresentationState();
+
+  const paused = processEffectRuntime(state);
+  const declined = declinePayment(paused.state);
+  const view = filterStateForPlayer(declined.state, p1);
+
+  assert.equal(declined.errors, undefined);
+  assert.equal(declined.state.pendingDecision, undefined);
+  assert.equal(view.effectSpotlightHistory, undefined);
 });
 
 test("return-to-hand cost spotlight stays on cost before hand play body", () => {
