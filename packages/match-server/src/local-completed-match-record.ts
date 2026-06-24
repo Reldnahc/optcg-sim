@@ -6,7 +6,11 @@ import type { PlayerId } from "@optcg/types";
 import { canonicalJson } from "./canonical-json.js";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
 import type { AuthContext } from "./dev-auth.js";
-import type { DevMatchSetup, LocalDevMatch } from "./local-match.js";
+import {
+  createLocalDevMatch,
+  type DevMatchSetup,
+  type LocalDevMatch,
+} from "./local-match.js";
 import type {
   CompletedMatchPlayerRecord,
   CompletedMatchRecord,
@@ -220,6 +224,10 @@ export const buildLocalCompletedMatchRecord = (
     return undefined;
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
+  const initialMatch = createLocalDevMatch(input.setup);
+  const initialSnapshot = jsonObject(initialMatch.state);
+  const finalState = jsonObject(input.match.state);
+  const initialStateHash = hashCanonicalStateValue(initialMatch.state);
   const initialDeckOrders = jsonObject(
     Object.fromEntries(
       input.setup.players.map((player) => [
@@ -274,14 +282,14 @@ export const buildLocalCompletedMatchRecord = (
       rngSeedRevealed: seedText(input.setup.rngSeed),
       manifestHash: hashJson(input.match.state.cardManifest),
       manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
-      initialStateHash: hashJson(input.setup),
+      initialStateHash,
       finalStateHash,
-      initialSnapshot: null,
+      initialSnapshot,
       initialDeckOrders,
       deterministicEntries: input.records.map((record) => jsonObject(record)),
       auditEntries: input.match.state.audit.map((entry) => jsonObject(entry)),
       checkpoints: [],
-      finalState: null,
+      finalState,
       compressed: false,
       artifactStorage: null,
       artifactKey: null,

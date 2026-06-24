@@ -59,7 +59,7 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
 });
 
 describe("local completed match record mapping", () => {
-  test("stores a compact replay payload instead of full match snapshots", async () => {
+  test("stores reconstructable replay state for completed matches", async () => {
     const setup = await createPremadeDevMatchSetup({
       matchId: "22222222-2222-2222-2222-222222222222" as MatchId,
       fetchCard: createDefaultDevFixtureFetch(),
@@ -93,18 +93,20 @@ describe("local completed match record mapping", () => {
     const firstSetupPlayer = setup.players[0];
     const secondSetupPlayer = setup.players[1];
     expect(record).toBeDefined();
-    expect(record?.replay.initialSnapshot).toBeNull();
-    expect(record?.replay.finalState).toBeNull();
+    expect(record?.replay.initialSnapshot).toMatchObject({
+      matchId: setup.matchId,
+      status: { type: "setup" },
+    });
+    expect(record?.replay.finalState).toMatchObject({
+      matchId: setup.matchId,
+      status: { type: "completed", winner: setup.playerOrder[0] },
+    });
     expect(record?.replay.initialDeckOrders).toEqual({
       [setup.playerOrder[0]]: firstSetupPlayer.deckCardIds.map(String),
       [setup.playerOrder[1]]: secondSetupPlayer.deckCardIds.map(String),
     });
-
-    const persistedReplayBytes = Buffer.byteLength(
-      JSON.stringify(record?.replay),
-      "utf8",
-    );
-    expect(persistedReplayBytes).toBeLessThan(100_000);
+    expect(record?.replay.initialStateHash).toBeTruthy();
+    expect(record?.replay.finalStateHash).toBe(record?.finalStateHash);
     expect(JSON.stringify(record?.replay.manifestSnapshot)).not.toContain(
       "generated-dev-support",
     );
