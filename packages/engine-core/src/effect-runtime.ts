@@ -18,6 +18,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 
 import {
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   type EngineResultOptions,
   toEngineResult,
   toStateSeq,
@@ -202,12 +203,21 @@ export const createChooseQuantityDecisionForQueuedEffect = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility,
+  });
 
   return toEngineResult(
     {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
     events,

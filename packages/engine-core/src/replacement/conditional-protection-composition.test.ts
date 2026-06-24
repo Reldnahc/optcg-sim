@@ -563,6 +563,7 @@ test("rule-process trash remains allowed and does not fire ordinary On K.O. trig
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
   assert.equal(

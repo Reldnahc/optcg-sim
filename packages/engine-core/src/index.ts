@@ -41,3 +41,4 @@ export { toPublicTimerState } from "./view/public-timers.js";
 export { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 export type { RuntimeSupportAdmissionResult } from "./effect-runtime-admission.js";
 export { processEffectRuntime } from "./effect-runtime.js";
+export { splitEffectTextSpotlightPresentation } from "./spotlight/spotlight-entry.js";

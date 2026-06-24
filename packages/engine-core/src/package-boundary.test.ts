@@ -32,6 +32,7 @@ import {
   resolveSupportedVanillaBattle,
   enterMainPhase,
   respondToMulliganDecision,
+  splitEffectTextSpotlightPresentation,
   startMulliganFlow,
   toPublicTimerState,
 } from "./index.js";
@@ -62,6 +63,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "reindexZoneCards",
     "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
+    "splitEffectTextSpotlightPresentation",
     "startMulliganFlow",
     "toPublicTimerState",
   ]);
@@ -114,6 +116,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
     respondToMulliganDecision,
   );
   assert.equal(engineCorePackage.startMulliganFlow, startMulliganFlow);
+  assert.equal(
+    engineCorePackage.splitEffectTextSpotlightPresentation,
+    splitEffectTextSpotlightPresentation,
+  );
   assert.equal(engineCorePackage.toPublicTimerState, toPublicTimerState);
 });
 

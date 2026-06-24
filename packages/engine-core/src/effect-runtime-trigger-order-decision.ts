@@ -5,7 +5,12 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toEngineResult, toStateSeq } from "./action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toEngineResult,
+  toStateSeq,
+} from "./action-results.js";
 import type { EffectQueueGroup } from "./effect-runtime-queue/group-ordering.js";
 
 export const createChooseTriggerOrderDecision = (
@@ -47,10 +52,19 @@ export const createChooseTriggerOrderDecision = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: undefined,
+    visibility: pendingDecision.visibility,
+  });
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
-    pendingDecision,
+    pendingDecision: anchored.pendingDecision,
     eventJournal: [...state.eventJournal, ...events],
   };
   return toEngineResult(nextState, events);

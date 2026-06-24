@@ -15,6 +15,7 @@ import type {
 
 import {
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   type EngineResultOptions,
   toDecisionId,
   toEngineResult,
@@ -306,6 +307,15 @@ export const createSupportedTrashFromHandChoiceDecision = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility,
+  });
 
   return {
     events,
@@ -313,7 +323,7 @@ export const createSupportedTrashFromHandChoiceDecision = (
     state: {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
   };

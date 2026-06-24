@@ -1,17 +1,12 @@
 import type {
   ActiveEffectTextPresentation,
-  CardId,
   CardRef,
-  CombatSpotlightPresentation,
-  DecisionId,
-  EffectId,
   EffectSpotlightHistory,
   EffectSpotlightHistoryEntry,
+  EffectTextSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEvent,
-  InstanceId,
-  PlayerId,
-  QueueEntryId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
@@ -28,24 +23,14 @@ const isCardRef = (value: unknown): value is CardRef => {
   );
 };
 
-const numberPayloadValue = (
-  payload: Record<string, unknown>,
-  key: string,
-): number | undefined =>
-  typeof payload[key] === "number" ? payload[key] : undefined;
-
 const isActiveEffectTextPresentation = (
   value: unknown,
 ): value is ActiveEffectTextPresentation => {
-  if (!isObjectRecord(value) || !isObjectRecord(value["source"])) {
+  if (!isObjectRecord(value) || !isCardRef(value["source"])) {
     return false;
   }
-  const source = value["source"];
   const activeSpanIds = value["activeSpanIds"];
   return (
-    typeof source["instanceId"] === "string" &&
-    typeof source["cardId"] === "string" &&
-    typeof source["playerId"] === "string" &&
     (value["textKind"] === undefined ||
       value["textKind"] === "effect" ||
       value["textKind"] === "trigger") &&
@@ -57,628 +42,183 @@ const isActiveEffectTextPresentation = (
   );
 };
 
-const sequenceSpanPrefix = "span:sequence:";
-const searchSpanPrefix = "span:search:";
-const costSpanPrefix = "span:cost";
-const bodySpanPrefix = "span:body";
-const choiceOptionSpanPattern = /^span:choice:\d+:/u;
+const stringArrayField = (
+  value: unknown,
+): readonly EffectTextSpanId[] | null =>
+  Array.isArray(value) &&
+  value.every((entry) => typeof entry === "string" && entry.startsWith("span:"))
+    ? (value as readonly EffectTextSpanId[])
+    : null;
 
-const isResolvedStepSpanId = (spanId: EffectTextSpanId): boolean =>
-  (spanId.startsWith(sequenceSpanPrefix) ||
-    spanId.startsWith(searchSpanPrefix) ||
-    spanId.startsWith(costSpanPrefix) ||
-    spanId === bodySpanPrefix ||
-    spanId.startsWith(`${bodySpanPrefix}:`) ||
-    choiceOptionSpanPattern.test(spanId)) &&
-  spanId !== "span:search:then";
-
-const splitResolvedSpanIds = (
-  activeSpanIds: readonly EffectTextSpanId[],
-): readonly EffectTextSpanId[] => {
-  const splitSpanIds = activeSpanIds.filter(isResolvedStepSpanId);
-  return splitSpanIds.length > 1 ? splitSpanIds : [];
-};
-
-const presentationForEvent = (
+const spotlightEntryForEvent = (
   event: EngineEvent,
-): ActiveEffectTextPresentation | undefined => {
+): EffectSpotlightHistoryEntry | undefined => {
   if (
-    (event.type !== "effectResolved" && event.type !== "replacementApplied") ||
+    event.type !== "spotlightEntryCreated" ||
     !isObjectRecord(event.payload)
   ) {
     return undefined;
   }
-  const presentation = event.payload["presentation"];
-  return isActiveEffectTextPresentation(presentation)
-    ? presentation
-    : undefined;
-};
-
-const effectEventPayload = (
-  event: EngineEvent,
-): {
-  readonly queueEntryId?: string;
-  readonly effectBlockId?: string;
-} => {
-  if (!isObjectRecord(event.payload)) {
-    return {};
-  }
-  const queueEntryId = event.payload["queueEntryId"];
-  const effectBlockId = event.payload["effectBlockId"];
-  return {
-    ...(typeof queueEntryId === "string" ? { queueEntryId } : {}),
-    ...(typeof effectBlockId === "string" ? { effectBlockId } : {}),
-  };
-};
-
-const semanticKeyForActive = (active: ActiveEffectTextPresentation): string =>
-  [
-    String(active.source.playerId),
-    String(active.source.instanceId),
-    String(active.source.cardId),
-    active.textKind ?? "effect",
-    active.activeSpanIds.join("\n"),
-  ].join("|");
-
-const combatSemanticKey = (combat: CombatSpotlightPresentation): string =>
-  [
-    "combat",
-    combat.eventKind,
-    String(combat.attacker.playerId),
-    String(combat.attacker.instanceId),
-    String(combat.attacker.cardId),
-    String(combat.defender.playerId),
-    String(combat.defender.instanceId),
-    String(combat.defender.cardId),
-    combat.attackerPower === undefined ? "" : String(combat.attackerPower),
-    combat.defenderPower === undefined ? "" : String(combat.defenderPower),
-  ].join("|");
-
-const sameEffectTextSource = (
-  left: ActiveEffectTextPresentation["source"],
-  right: ActiveEffectTextPresentation["source"],
-): boolean =>
-  left.instanceId === right.instanceId &&
-  left.cardId === right.cardId &&
-  left.playerId === right.playerId;
-
-const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
-  spanIds.join("\n");
-
-const pendingEntryId = (
-  pendingDecisionId: DecisionId | string,
-  active: ActiveEffectTextPresentation,
-): string =>
-  `pending:${String(pendingDecisionId)}:${semanticKeyForActive(active)}`;
-
-const resolvedEntryId = (
-  event: EngineEvent,
-  active: ActiveEffectTextPresentation,
-): string => `resolved:${String(event.id)}:${active.activeSpanIds.join("\n")}`;
-
-const resolvedEntryForActive = ({
-  active,
-  event,
-  key,
-}: {
-  readonly active: ActiveEffectTextPresentation;
-  readonly event: EngineEvent;
-  readonly key: string;
-}): EffectSpotlightHistoryEntry => {
-  const metadata = effectEventPayload(event);
-  return {
-    id: resolvedEntryId(event, active),
-    key,
-    semanticKey: semanticKeyForActive(active),
-    mode: "resolved",
-    status: "resolved",
-    active,
-    resolvedEventId: event.id,
-    ...(metadata.queueEntryId === undefined
-      ? {}
-      : { queueEntryId: metadata.queueEntryId as QueueEntryId }),
-    ...(metadata.effectBlockId === undefined
-      ? {}
-      : { effectBlockId: metadata.effectBlockId as EffectId }),
-  };
-};
-
-const completedFrameEntryForActive = ({
-  active,
-  effectBlockId,
-  key,
-  queueEntryId,
-}: {
-  readonly active: ActiveEffectTextPresentation;
-  readonly effectBlockId?: EffectId | undefined;
-  readonly key: string;
-  readonly queueEntryId?: QueueEntryId | undefined;
-}): EffectSpotlightHistoryEntry => ({
-  id: `completed:${key}`,
-  key,
-  semanticKey: semanticKeyForActive(active),
-  mode: "resolved",
-  status: "resolved",
-  active,
-  ...(queueEntryId === undefined ? {} : { queueEntryId }),
-  ...(effectBlockId === undefined ? {} : { effectBlockId }),
-});
-
-const isCompletedFrameEntry = (entry: EffectSpotlightHistoryEntry): boolean =>
-  entry.key.startsWith("completed-frame:");
-
-const combatEntryForEvent = (
-  event: EngineEvent,
-): EffectSpotlightHistoryEntry | undefined => {
-  if (event.visibility.type !== "public" || !isObjectRecord(event.payload)) {
+  const entry = event.payload["entry"];
+  if (!isObjectRecord(entry)) {
     return undefined;
   }
-
-  if (event.type === "attackDeclared") {
-    const attacker = event.payload["attacker"];
-    const defender = event.payload["target"];
-    if (!isCardRef(attacker) || !isCardRef(defender)) {
-      return undefined;
-    }
-    const attackerPower = numberPayloadValue(event.payload, "attackerPower");
-    const defenderPower = numberPayloadValue(event.payload, "defenderPower");
-    const combat: CombatSpotlightPresentation = {
-      eventKind: "attackDeclared",
-      attacker,
-      defender,
-      ...(attackerPower === undefined ? {} : { attackerPower }),
-      ...(defenderPower === undefined ? {} : { defenderPower }),
-    };
-    return {
-      kind: "combat",
-      id: `combat:${String(event.id)}`,
-      key: String(event.id),
-      semanticKey: combatSemanticKey(combat),
-      mode: "resolved",
-      status: "resolved",
-      combat,
-      resolvedEventId: event.id,
-    };
-  }
-
-  if (event.type === "blockerActivated") {
-    const attacker = event.payload["attacker"];
-    const defender = event.payload["blocker"];
-    if (!isCardRef(attacker) || !isCardRef(defender)) {
-      return undefined;
-    }
-    const attackerPower = numberPayloadValue(event.payload, "attackerPower");
-    const defenderPower = numberPayloadValue(event.payload, "defenderPower");
-    const combat: CombatSpotlightPresentation = {
-      eventKind: "blockerActivated",
-      attacker,
-      defender,
-      ...(attackerPower === undefined ? {} : { attackerPower }),
-      ...(defenderPower === undefined ? {} : { defenderPower }),
-    };
-    return {
-      kind: "combat",
-      id: `combat:${String(event.id)}`,
-      key: String(event.id),
-      semanticKey: combatSemanticKey(combat),
-      mode: "resolved",
-      status: "resolved",
-      combat,
-      resolvedEventId: event.id,
-    };
-  }
-
-  if (event.type === "counterUsed") {
-    const playerId = event.payload["playerId"];
-    const instanceId = event.payload["instanceId"];
-    const cardId = event.payload["cardId"];
-    const defender = event.payload["target"];
-    if (
-      typeof playerId !== "string" ||
-      typeof instanceId !== "string" ||
-      typeof cardId !== "string" ||
-      !isCardRef(defender)
-    ) {
-      return undefined;
-    }
-    const attackerPower = numberPayloadValue(event.payload, "value");
-    const defenderPower = numberPayloadValue(event.payload, "targetPower");
-    const attacker: CardRef = {
-      playerId: playerId as PlayerId,
-      instanceId: instanceId as InstanceId,
-      cardId: cardId as CardId,
-    };
-    const combat: CombatSpotlightPresentation = {
-      eventKind: "counterUsed",
-      attacker,
-      defender,
-      ...(attackerPower === undefined ? {} : { attackerPower }),
-      ...(defenderPower === undefined ? {} : { defenderPower }),
-    };
-    return {
-      kind: "combat",
-      id: `combat:${String(event.id)}`,
-      key: String(event.id),
-      semanticKey: combatSemanticKey(combat),
-      mode: "resolved",
-      status: "resolved",
-      combat,
-      resolvedEventId: event.id,
-    };
-  }
-
-  return undefined;
-};
-
-const playedCardEntryForEvent = (
-  event: EngineEvent,
-): EffectSpotlightHistoryEntry | undefined => {
-  if (event.type !== "cardPlayed" || !isObjectRecord(event.payload)) {
-    return undefined;
-  }
-  const playerId = event.payload["playerId"];
-  const instanceId = event.payload["instanceId"];
-  const cardId = event.payload["cardId"];
-  const category = event.payload["category"];
+  const id = entry["id"];
+  const key = entry["key"];
+  const semanticKey = entry["semanticKey"];
+  const mode = entry["mode"];
+  const status = entry["status"];
   if (
-    typeof playerId !== "string" ||
-    typeof instanceId !== "string" ||
-    typeof cardId !== "string" ||
-    (category !== "character" && category !== "stage")
+    typeof id !== "string" ||
+    typeof key !== "string" ||
+    typeof semanticKey !== "string" ||
+    (mode !== "live" && mode !== "resolved") ||
+    (status !== "pending" && status !== "resolved")
   ) {
     return undefined;
   }
-
-  const active: ActiveEffectTextPresentation = {
-    source: {
-      playerId: playerId as PlayerId,
-      instanceId: instanceId as InstanceId,
-      cardId: cardId as CardId,
-    },
-    textKind: "effect",
-    activeSpanIds: [],
-  };
-  return {
-    id: resolvedEntryId(event, active),
-    key: String(event.id),
-    semanticKey: semanticKeyForActive(active),
-    mode: "resolved",
-    status: "resolved",
-    active,
-    resolvedEventId: event.id,
-  };
-};
-
-const resolvedEntriesForEvent = (
-  event: EngineEvent,
-): readonly EffectSpotlightHistoryEntry[] => {
-  const combatEntry = combatEntryForEvent(event);
-  if (combatEntry !== undefined) {
-    return [combatEntry];
-  }
-
-  const presentation = presentationForEvent(event);
-  if (presentation === undefined) {
-    return [];
-  }
-  const splitSpanIds = splitResolvedSpanIds(presentation.activeSpanIds);
-  if (splitSpanIds.length === 0) {
-    return [
-      resolvedEntryForActive({
-        active: presentation,
-        event,
-        key: String(event.id),
-      }),
-    ];
-  }
-  return splitSpanIds.map((spanId) =>
-    resolvedEntryForActive({
-      active: {
-        ...presentation,
-        activeSpanIds: [spanId],
-      },
-      event,
-      key: `${String(event.id)}:${spanId}`,
-    }),
-  );
-};
-
-const noEffectDecisionResponseTypes = new Set(["paymentDeclined"]);
-
-const isNoEffectDecisionResolvedEvent = (event: EngineEvent): boolean => {
-  if (event.type !== "decisionResolved" || !isObjectRecord(event.payload)) {
-    return false;
-  }
-  const responseType = event.payload["responseType"];
-  return (
-    typeof responseType === "string" &&
-    noEffectDecisionResponseTypes.has(responseType)
-  );
-};
-
-const clearsNoEffectDecisionCandidate = (event: EngineEvent): boolean =>
-  event.type !== "decisionResolved" &&
-  event.type !== "effectResolved" &&
-  event.type !== "ruleProcessingChecked";
-
-const isEffectTextEntry = (
-  entry: EffectSpotlightHistoryEntry,
-): entry is EffectSpotlightHistoryEntry & {
-  readonly active: ActiveEffectTextPresentation;
-} => entry.kind !== "combat";
-
-const isEffectSpotlightForPlayedCard = (
-  entry: EffectSpotlightHistoryEntry,
-  playedCard: EffectSpotlightHistoryEntry,
-): boolean =>
-  isEffectTextEntry(entry) &&
-  isEffectTextEntry(playedCard) &&
-  entry.active.activeSpanIds.length > 0 &&
-  sameEffectTextSource(entry.active.source, playedCard.active.source);
-
-const hasEffectSpotlightForPlayedCard = (
-  entries: readonly EffectSpotlightHistoryEntry[],
-  playedCard: EffectSpotlightHistoryEntry,
-): boolean =>
-  entries.some((entry) => isEffectSpotlightForPlayedCard(entry, playedCard));
-
-const sourceMatchesPlayedCardEntry = (
-  source: CardRef | undefined,
-  playedCard: EffectSpotlightHistoryEntry,
-): boolean =>
-  source === undefined ||
-  (isEffectTextEntry(playedCard) &&
-    sameEffectTextSource(source, playedCard.active.source));
-
-const resolvedSpotlightEntriesForEvents = (
-  events: readonly EngineEvent[],
-  activeEffectText?: ActiveEffectTextPresentation,
-): readonly EffectSpotlightHistoryEntry[] => {
-  const entries: EffectSpotlightHistoryEntry[] = [];
-  let pendingPlayedCard: EffectSpotlightHistoryEntry | undefined;
-  let skipNextEffectResolved = false;
-  for (const event of events) {
-    if (isNoEffectDecisionResolvedEvent(event)) {
-      skipNextEffectResolved = true;
-    } else if (clearsNoEffectDecisionCandidate(event)) {
-      skipNextEffectResolved = false;
-    }
-    if (event.type === "effectResolved" && skipNextEffectResolved) {
-      skipNextEffectResolved = false;
-      continue;
-    }
-    if (event.type === "cardPlayed") {
-      if (pendingPlayedCard !== undefined) {
-        entries.push(pendingPlayedCard);
-      }
-      pendingPlayedCard = playedCardEntryForEvent(event);
-      continue;
-    }
-    if (event.type === "effectQueued") {
-      if (
-        pendingPlayedCard !== undefined &&
-        sourceMatchesPlayedCardEntry(event.source, pendingPlayedCard)
-      ) {
-        pendingPlayedCard = undefined;
-      }
-      continue;
-    }
-    const resolvedEntries = resolvedEntriesForEvent(event);
-    if (pendingPlayedCard !== undefined && resolvedEntries.length > 0) {
-      if (
-        !hasEffectSpotlightForPlayedCard(resolvedEntries, pendingPlayedCard)
-      ) {
-        entries.push(pendingPlayedCard);
-      }
-      pendingPlayedCard = undefined;
-    }
-    entries.push(...resolvedEntries);
-  }
-  if (pendingPlayedCard !== undefined) {
-    const liveEntrySuppressesPlayedCard =
-      activeEffectText !== undefined &&
-      activeEffectText.activeSpanIds.length > 0 &&
-      isEffectTextEntry(pendingPlayedCard) &&
-      sameEffectTextSource(
-        activeEffectText.source,
-        pendingPlayedCard.active.source,
-      );
-    if (!liveEntrySuppressesPlayedCard) {
-      entries.push(pendingPlayedCard);
-    }
-  }
-  return entries;
-};
-
-export interface CompletedEffectTextSpotlight {
-  readonly active: ActiveEffectTextPresentation;
-  readonly effectBlockId?: EffectId | undefined;
-  readonly key: string;
-  readonly queueEntryId?: QueueEntryId | undefined;
-}
-
-export interface CurrentEffectTextSpotlight {
-  readonly effectBlockId: EffectId;
-  readonly resolvedEventIds?: ReadonlySet<EngineEvent["id"]> | undefined;
-  readonly queueEntryId: QueueEntryId;
-}
-
-const completedSpotlightEntriesForActiveTexts = (
-  completedEffectTexts: readonly CompletedEffectTextSpotlight[],
-): readonly EffectSpotlightHistoryEntry[] =>
-  completedEffectTexts.flatMap((completed) => {
-    const splitSpanIds = splitResolvedSpanIds(completed.active.activeSpanIds);
-    if (splitSpanIds.length === 0) {
-      return [completedFrameEntryForActive(completed)];
-    }
-    return splitSpanIds.map((spanId) =>
-      completedFrameEntryForActive({
-        ...completed,
-        active: {
-          ...completed.active,
-          activeSpanIds: [spanId],
-        },
-        key: `${completed.key}:${spanId}`,
-      }),
-    );
-  });
-
-const sameEffectTextPresentation = (
-  left: ActiveEffectTextPresentation,
-  right: ActiveEffectTextPresentation,
-): boolean =>
-  sameEffectTextSource(left.source, right.source) &&
-  (left.textKind ?? "effect") === (right.textKind ?? "effect") &&
-  spanKey(left.activeSpanIds) === spanKey(right.activeSpanIds);
-
-const matchingResolvedEntryKeySinceLastQueue = ({
-  activeEffectText,
-  events,
-}: {
-  readonly activeEffectText: ActiveEffectTextPresentation;
-  readonly events: readonly EngineEvent[];
-}): string | undefined => {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (event === undefined || event.type === "effectQueued") {
+  if (entry["kind"] === "combat") {
+    const combat = entry["combat"];
+    const resolvedEventId = entry["resolvedEventId"];
+    if (!isObjectRecord(combat) || typeof resolvedEventId !== "string") {
       return undefined;
     }
-    const matchingEntry = resolvedEntriesForEvent(event).find(
-      (entry) =>
-        entry.kind !== "combat" &&
-        sameEffectTextPresentation(entry.active, activeEffectText),
-    );
-    if (matchingEntry !== undefined) {
-      return matchingEntry.key;
+    const eventKind = combat["eventKind"];
+    const attacker = combat["attacker"];
+    const defender = combat["defender"];
+    if (
+      (eventKind !== "attackDeclared" && eventKind !== "blockerActivated") ||
+      !isCardRef(attacker) ||
+      !isCardRef(defender) ||
+      mode !== "resolved" ||
+      status !== "resolved"
+    ) {
+      return undefined;
     }
+    const attackerPower = combat["attackerPower"];
+    const defenderPower = combat["defenderPower"];
+    return {
+      kind: "combat",
+      id,
+      key,
+      semanticKey,
+      mode,
+      status,
+      combat: {
+        eventKind,
+        attacker,
+        defender,
+        ...(typeof attackerPower === "number" ? { attackerPower } : {}),
+        ...(typeof defenderPower === "number" ? { defenderPower } : {}),
+      },
+      resolvedEventId: resolvedEventId as EngineEvent["id"],
+    };
   }
-  return undefined;
-};
-
-const matchingResolvedEntryKeyForCurrentEffect = ({
-  activeEffectText,
-  currentEffectText,
-  events,
-}: {
-  readonly activeEffectText: ActiveEffectTextPresentation;
-  readonly currentEffectText: CurrentEffectTextSpotlight | undefined;
-  readonly events: readonly EngineEvent[];
-}): string | undefined => {
-  if (currentEffectText === undefined) {
+  if (entry["kind"] === "playedCard") {
+    const source = entry["source"];
+    const resolvedEventId = entry["resolvedEventId"];
+    if (
+      !isCardRef(source) ||
+      mode !== "resolved" ||
+      status !== "resolved" ||
+      typeof resolvedEventId !== "string"
+    ) {
+      return undefined;
+    }
+    return {
+      kind: "playedCard",
+      id,
+      key,
+      semanticKey,
+      mode,
+      status,
+      source,
+      resolvedEventId: resolvedEventId as EngineEvent["id"],
+    };
+  }
+  const active = entry["active"];
+  if (
+    !isActiveEffectTextPresentation(active) ||
+    (entry["kind"] !== undefined && entry["kind"] !== "effectText")
+  ) {
     return undefined;
   }
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const event = events[index];
-    if (event === undefined) {
-      continue;
-    }
-    const matchingEntry = resolvedEntriesForEvent(event).find(
-      (entry) =>
-        entry.kind !== "combat" &&
-        (currentEffectText.resolvedEventIds?.has(event.id) === true ||
-          (entry.queueEntryId === currentEffectText.queueEntryId &&
-            entry.effectBlockId === currentEffectText.effectBlockId)) &&
-        sameEffectTextPresentation(entry.active, activeEffectText),
-    );
-    if (matchingEntry !== undefined) {
-      return matchingEntry.key;
-    }
+  const pendingDecisionId = entry["pendingDecisionId"];
+  const resolvedEventId = entry["resolvedEventId"];
+  const activeSpanIds = stringArrayField(active.activeSpanIds);
+  if (activeSpanIds === null) {
+    return undefined;
   }
-  return undefined;
+  return {
+    ...(entry["kind"] === "effectText" ? { kind: "effectText" as const } : {}),
+    id,
+    key,
+    semanticKey,
+    mode,
+    status,
+    active,
+    ...(typeof pendingDecisionId === "string"
+      ? { pendingDecisionId: pendingDecisionId as PublicPendingDecisionId }
+      : {}),
+    ...(typeof resolvedEventId === "string"
+      ? { resolvedEventId: resolvedEventId as EngineEvent["id"] }
+      : {}),
+  };
 };
 
-const liveEntryKey = (
-  active: ActiveEffectTextPresentation,
-  pendingDecisionId: DecisionId | string | undefined,
+const isEffectTextSpotlightEntry = (
+  entry: EffectSpotlightHistoryEntry,
+): entry is EffectTextSpotlightHistoryEntry =>
+  entry.kind === undefined || entry.kind === "effectText";
+
+const effectTextContinuityKey = (
+  entry: EffectTextSpotlightHistoryEntry,
 ): string =>
   [
-    pendingDecisionId === undefined
-      ? "active"
-      : `decision:${String(pendingDecisionId)}`,
-    String(active.source.instanceId),
-    active.textKind ?? "",
-    active.activeSpanIds.join("\n"),
+    entry.active.textKind ?? "effect",
+    String(entry.active.source.playerId),
+    String(entry.active.source.instanceId),
+    String(entry.active.source.cardId),
+    entry.active.activeSpanIds.join("+"),
   ].join("|");
 
+const removeStalePendingEffectTextEntries = (
+  entries: readonly EffectSpotlightHistoryEntry[],
+): readonly EffectSpotlightHistoryEntry[] => {
+  const seenEffectTextKeys = new Set<string>();
+  const kept: EffectSpotlightHistoryEntry[] = [];
+  for (const entry of [...entries].reverse()) {
+    if (!isEffectTextSpotlightEntry(entry)) {
+      kept.push(entry);
+      continue;
+    }
+    const key = effectTextContinuityKey(entry);
+    if (entry.mode === "live" && entry.status === "pending") {
+      if (seenEffectTextKeys.has(key)) {
+        continue;
+      }
+      seenEffectTextKeys.add(key);
+      kept.push(entry);
+      continue;
+    }
+    seenEffectTextKeys.add(key);
+    kept.push(entry);
+  }
+  return kept.reverse();
+};
+
 export const effectSpotlightHistoryFromPlayerViewState = ({
-  activeEffectText,
-  completedEffectTexts = [],
-  currentEffectText,
   events,
-  pendingDecisionId,
 }: {
-  readonly activeEffectText: ActiveEffectTextPresentation | undefined;
-  readonly completedEffectTexts?: readonly CompletedEffectTextSpotlight[];
-  readonly currentEffectText?: CurrentEffectTextSpotlight | undefined;
   readonly events: readonly EngineEvent[];
-  readonly pendingDecisionId?: DecisionId | string | undefined;
 }): EffectSpotlightHistory | undefined => {
-  const eventEntries = resolvedSpotlightEntriesForEvents(
-    events,
-    activeEffectText,
-  );
-  const completedEntries =
-    completedSpotlightEntriesForActiveTexts(completedEffectTexts);
-  const eventSemanticKeys = new Set(
-    eventEntries.map((entry) => entry.semanticKey),
-  );
-  const entries = [
-    ...eventEntries,
-    ...completedEntries.filter(
-      (entry) => !eventSemanticKeys.has(entry.semanticKey),
-    ),
-  ];
-  const matchingResolvedEntryKey =
-    activeEffectText === undefined
-      ? undefined
-      : matchingResolvedEntryKeySinceLastQueue({ activeEffectText, events });
-  const liveDuplicateResolvedEntryKey =
-    matchingResolvedEntryKey ??
-    (activeEffectText === undefined
-      ? undefined
-      : matchingResolvedEntryKeyForCurrentEffect({
-          activeEffectText,
-          currentEffectText,
-          events,
-        }));
-  const liveEntry =
-    activeEffectText === undefined ||
-    (matchingResolvedEntryKey !== undefined && pendingDecisionId === undefined)
-      ? undefined
-      : {
-          id:
-            pendingDecisionId === undefined
-              ? `active:${semanticKeyForActive(activeEffectText)}`
-              : pendingEntryId(pendingDecisionId, activeEffectText),
-          key: liveEntryKey(activeEffectText, pendingDecisionId),
-          semanticKey: semanticKeyForActive(activeEffectText),
-          mode: "live" as const,
-          status: "pending" as const,
-          active: activeEffectText,
-          ...(pendingDecisionId === undefined
-            ? {}
-            : { pendingDecisionId: pendingDecisionId as DecisionId }),
-        };
-  const historyEntries =
-    liveEntry === undefined
-      ? entries
-      : [
-          ...(liveDuplicateResolvedEntryKey === undefined
-            ? entries
-            : entries.filter(
-                (entry) => entry.key !== liveDuplicateResolvedEntryKey,
-              )
-          ).filter(
-            (entry) =>
-              !(
-                isCompletedFrameEntry(entry) &&
-                entry.semanticKey === liveEntry.semanticKey
-              ),
-          ),
-          liveEntry,
-        ];
-  const presentKey = historyEntries.at(-1)?.key;
-  return historyEntries.length === 0 || presentKey === undefined
+  const rawEntries = events.flatMap((event) => {
+    const entry = spotlightEntryForEvent(event);
+    return entry === undefined ? [] : [entry];
+  });
+  const entries = removeStalePendingEffectTextEntries(rawEntries);
+  const presentKey = entries.at(-1)?.key;
+  return entries.length === 0 || presentKey === undefined
     ? undefined
-    : { entries: historyEntries, presentKey };
+    : { entries, presentKey };
 };

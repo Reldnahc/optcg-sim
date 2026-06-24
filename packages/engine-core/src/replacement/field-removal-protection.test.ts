@@ -353,6 +353,7 @@ test("sixth-character overflow rule-process trash removes a protected Character 
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
   assert.equal(

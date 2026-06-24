@@ -15,6 +15,7 @@ import type {
 
 import {
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -140,13 +141,22 @@ export const createLifeReorderDecisionForSequenceSegment = (params: {
   if (event !== undefined) {
     event.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: params.entry.presentation,
+    visibility,
+  });
   return {
     events,
     ok: true,
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      pendingDecision: decision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };
@@ -210,13 +220,22 @@ export const createTopLifePlacementDecisionForSequenceSegment = (params: {
   if (event !== undefined) {
     event.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: params.entry.presentation,
+    visibility,
+  });
   return {
     events,
     ok: true,
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      pendingDecision: decision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };
@@ -289,13 +308,22 @@ export const createLifeToDeckTopDecisionForSequenceSegment = (params: {
   if (event !== undefined) {
     event.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: params.entry.presentation,
+    visibility,
+  });
   return {
     events,
     ok: true,
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      pendingDecision: decision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };

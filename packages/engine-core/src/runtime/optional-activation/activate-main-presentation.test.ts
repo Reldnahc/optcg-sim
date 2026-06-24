@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
+import type {
+  EffectTextSpotlightHistoryEntry,
+  SpotlightEntryCreatedPayload,
+} from "@optcg/types";
 
 import { applyAction } from "../../actions.js";
 import {
@@ -10,6 +14,23 @@ import {
 } from "../../action-dispatcher-test-support.js";
 import { must, p1 } from "../../action-test-fixtures.js";
 import { filterStateForPlayer } from "../../view/filter-state-for-player.js";
+
+const authoredPendingSpotlights = (
+  state: Parameters<typeof filterStateForPlayer>[0],
+) =>
+  state.eventJournal
+    .filter((event) => event.type === "spotlightEntryCreated")
+    .map((event) => event.payload as SpotlightEntryCreatedPayload)
+    .filter(
+      (
+        payload,
+      ): payload is SpotlightEntryCreatedPayload & {
+        entry: EffectTextSpotlightHistoryEntry;
+      } =>
+        payload.entry.kind === undefined &&
+        payload.entry.mode === "live" &&
+        payload.entry.status === "pending",
+    );
 
 test("optional activate main prompt carries source effect spotlight", () => {
   const state = makeMainPhaseLegalActionState();
@@ -61,6 +82,15 @@ test("optional activate main prompt carries source effect spotlight", () => {
 
   assert.equal(prompted.errors, undefined);
   assert.equal(view.pendingDecision?.type, "chooseOptionalActivation");
+  const pendingSpotlight = must(
+    authoredPendingSpotlights(prompted.state)[0],
+    "pending spotlight",
+  );
+  assert.equal(
+    pendingSpotlight.entry.pendingDecisionId,
+    view.pendingDecision.spotlightPendingId,
+  );
+  assert.deepEqual(pendingSpotlight.entry.active.activeSpanIds, ["span:body"]);
   assert.deepEqual(view.pendingDecision.presentation.activeEffectText, {
     source: {
       instanceId: leader.instanceId,
@@ -167,6 +197,17 @@ test("activate main pay cost decision narrows spotlight to cost spans", () => {
   const view = filterStateForPlayer(result.state, p1);
 
   assert.equal(result.errors, undefined);
+  const pendingSpotlight = must(
+    authoredPendingSpotlights(result.state)[0],
+    "pay-cost pending spotlight",
+  );
+  assert.equal(
+    pendingSpotlight.entry.pendingDecisionId,
+    view.pendingDecision?.spotlightPendingId,
+  );
+  assert.deepEqual(pendingSpotlight.entry.active.activeSpanIds, [
+    "span:cost:optional",
+  ]);
   assert.deepEqual(view.pendingDecision?.presentation.activeEffectText, {
     source: {
       instanceId: leader.instanceId,

@@ -375,11 +375,11 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "92d65a78ca2bd042f7896bf467bbe2220d6b43aedae8849734366a01b7c8a346",
+            "fullStateHash": "fa7cc7654118690b743a8b09219b104c184db51d9e6def83d2cc096553134f92",
             "snapshotRef": "paid-character:action-2"
           }
         ],
-        "finalStateHash": "92d65a78ca2bd042f7896bf467bbe2220d6b43aedae8849734366a01b7c8a346",
+        "finalStateHash": "fa7cc7654118690b743a8b09219b104c184db51d9e6def83d2cc096553134f92",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],
@@ -424,25 +424,25 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "72b2f05fb94721e8359b4cddb1b62d48ddd2ed12e92b0df5bbffd88f974075eb",
+            "fullStateHash": "4c88bf9d4d14588dd19ec4e867bf1cfe7a9abc026c644e1a93b7e8db55ad94a3",
             "snapshotRef": "stage-replacement:action-2"
           },
           {
             "stateSeq": 6,
             "actionSeq": 5,
             "turnNumber": 3,
-            "fullStateHash": "19c02622e098447faf51a75d2fad69cd2909d7be04a641fd1fe0cfff1c1e5694",
+            "fullStateHash": "cf4ab6dbda82b1c8191318a7c2afc7650496fdfc70c21bf3272dcfca168218b2",
             "snapshotRef": "stage-replacement:action-3"
           },
           {
             "stateSeq": 7,
             "actionSeq": 6,
             "turnNumber": 3,
-            "fullStateHash": "d43a52b53c22db016b7a32d329efbae04d85fc6d915e4d2564b89ea7165a339b",
+            "fullStateHash": "e564abaf277cc14e8523153086c4f41fdb1154287077a257d555ab644c05a7ec",
             "snapshotRef": "stage-replacement:action-4"
           }
         ],
-        "finalStateHash": "d43a52b53c22db016b7a32d329efbae04d85fc6d915e4d2564b89ea7165a339b",
+        "finalStateHash": "e564abaf277cc14e8523153086c4f41fdb1154287077a257d555ab644c05a7ec",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],
@@ -501,11 +501,11 @@
             "stateSeq": 6,
             "actionSeq": 5,
             "turnNumber": 3,
-            "fullStateHash": "4d3214733b056221997bcc9c61991341e49d42852366e0feb56b8176f509f493",
+            "fullStateHash": "a93f7162bad7ec62ee6d69d4df077eac6ba2090187ed542d6a431a53bd9aa6aa",
             "snapshotRef": "character-overflow:action-3"
           }
         ],
-        "finalStateHash": "4d3214733b056221997bcc9c61991341e49d42852366e0feb56b8176f509f493",
+        "finalStateHash": "a93f7162bad7ec62ee6d69d4df077eac6ba2090187ed542d6a431a53bd9aa6aa",
         "finalStatus": { "type": "active" },
         "finalState": {
           "paidDonIndices": [0, 1],

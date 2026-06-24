@@ -10,6 +10,7 @@ import type {
   GameState,
   HandSelectionId,
   SelectionId,
+  SpotlightEntryCreatedPayload,
 } from "@optcg/types";
 
 import {
@@ -381,6 +382,14 @@ const fillCharacterAreaToFive = (state: GameState): void => {
 const eventTypes = (result: EngineResult): string[] =>
   result.events.map((event) => event.type);
 
+const hasPlayedCardSpotlight = (events: EngineResult["events"]): boolean =>
+  events.some(
+    (event) =>
+      event.type === "spotlightEntryCreated" &&
+      (event.payload as SpotlightEntryCreatedPayload).entry.kind ===
+        "playedCard",
+  );
+
 const chooseNonSelectedOverflowTarget = (
   result: EngineResult,
   selectedIds: ReadonlySet<CardInstance["instanceId"]>,
@@ -418,6 +427,7 @@ test("Character playSelected plays selected hand card rested without cost paymen
     resolved.events.some((event) => event.type === "costPaid"),
     false,
   );
+  assert.equal(hasPlayedCardSpotlight(resolved.events), false);
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
@@ -575,6 +585,7 @@ test("playSelected plays selected Stage card from trash without cost payment", (
     resolved.events.some((event) => event.type === "costPaid"),
     false,
   );
+  assert.equal(hasPlayedCardSpotlight(resolved.events), false);
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });
 
@@ -623,6 +634,7 @@ test("trash-origin Character playSelected resolves overflow then resumes play", 
   );
   assert.equal(player.characters.length, 5);
   assert.equal(originalCharacters.includes(overflowTarget.instanceId), true);
+  assert.equal(hasPlayedCardSpotlight(resolved.events), false);
 });
 
 test("Character playSelected supports multiple selected Characters in order", () => {
@@ -768,6 +780,12 @@ test("multi-card Character playSelected resumes remaining selections after overf
     "frame",
   );
   const segment = must(frame.segmentResults["3"], "playSelected result");
+  const overflowEvents = [
+    ...firstOverflow.events,
+    ...afterFirstOverflow.events,
+    ...afterSecondOverflow.events,
+    ...afterThirdOverflow.events,
+  ];
   assert.equal(afterThirdOverflow.errors, undefined);
   assert.equal(
     afterThirdOverflow.state.actionSeq,
@@ -789,14 +807,10 @@ test("multi-card Character playSelected resumes remaining selections after overf
   assert.equal(segment.succeeded, true);
   assert.equal(segment.changedState, true);
   assert.equal(
-    [
-      ...firstOverflow.events,
-      ...afterFirstOverflow.events,
-      ...afterSecondOverflow.events,
-      ...afterThirdOverflow.events,
-    ].some((event) => event.type === "costPaid"),
+    overflowEvents.some((event) => event.type === "costPaid"),
     false,
   );
+  assert.equal(hasPlayedCardSpotlight(overflowEvents), false);
   assert.equal(
     afterThirdOverflow.stateHash,
     hashCanonicalStateValue(afterThirdOverflow.state),
@@ -833,6 +847,7 @@ test("runtime playSelected overflow response follows decision player during off-
   );
   assert.equal(resolved.errors, undefined);
   assert.equal(played?.state, "rested");
+  assert.equal(hasPlayedCardSpotlight(resolved.events), false);
 });
 
 test("full Character area creates forced-trash decision before play completion and resumes deterministically", () => {
@@ -879,6 +894,7 @@ test("full Character area creates forced-trash decision before play completion a
     first.events.some((event) => event.type === "effectResolved"),
     false,
   );
+  assert.equal(hasPlayedCardSpotlight(first.events), false);
   assert.equal(first.stateHash, second.stateHash);
 });
 

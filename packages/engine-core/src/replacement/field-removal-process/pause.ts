@@ -1,6 +1,11 @@
 import type { EngineEvent, GameState, ReplacementProcess } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "../../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../../action-results.js";
 import { replacementOptionLabel } from "../instead-effects.js";
 import { replacementStateWithProcess } from "../process-gate.js";
 import type { SelectedTargetKoReplacementCandidate } from "../primitives.js";
@@ -65,12 +70,21 @@ export const pauseSelectedTargetKoReplacementProcess = (
   if (created !== undefined) {
     created.causedBy = process.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: undefined,
+    visibility: pendingDecision.visibility,
+  });
 
   return {
     state: {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       replacementState: replacementStateWithProcess(
         state,
         process,

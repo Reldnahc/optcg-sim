@@ -23,6 +23,7 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 import {
   appendEffectQueuedEvent,
   appendEvent,
+  appendReplacementSpotlightEntryCreatedEvents,
   assertGameStateInvariantsIfEnabled,
   type EngineResultOptions,
   toDecisionId,
@@ -891,6 +892,13 @@ export const applyLifeTriggerDecisionResponse = (
         type: "replacement",
         replacementId: lifeRuleReplacement.record.id,
       };
+      appendReplacementSpotlightEntryCreatedEvents({
+        state,
+        events,
+        replacementAppliedEvent: replacementEvent,
+        replacementId: lifeRuleReplacement.record.id,
+        presentation: undefined,
+      });
     }
   }
   appendEvent(

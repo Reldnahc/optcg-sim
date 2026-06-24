@@ -199,6 +199,7 @@ const assertPublicDecisionShape = (
     "playerId",
     "presentation",
     "prompt",
+    "spotlightPendingId",
     "type",
   ].sort();
   const publicDecisionSpecificKeys =

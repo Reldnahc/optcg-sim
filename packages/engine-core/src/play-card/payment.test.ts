@@ -6,6 +6,7 @@ import type {
   CardInstance,
   EngineResult,
   GameState,
+  SpotlightEntryCreatedPayload,
 } from "@optcg/types";
 
 import { hashCanonicalStateValue } from "../state/canonical-state.js";
@@ -155,6 +156,7 @@ test("valid respondToDecision payment resolves nonzero Character play", () => {
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
   assert.deepEqual(
@@ -165,6 +167,7 @@ test("valid respondToDecision payment resolves nonzero Character play", () => {
       { type: "public" },
       { type: "public" },
       { type: "replayOnly" },
+      { type: "public" },
     ],
   );
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
@@ -238,8 +241,47 @@ test("zero-cost playCard resolves directly for Character without payCost decisio
   assert.equal(played.turnPlayed, state.turn.globalTurn);
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+      "spotlightEntryCreated",
+    ],
   );
+  const cardPlayed = must(
+    result.events.find((event) => event.type === "cardPlayed"),
+    "cardPlayed event",
+  );
+  const spotlight = must(
+    result.events.find((event) => event.type === "spotlightEntryCreated"),
+    "played-card spotlight",
+  );
+  assert.equal(
+    result.events.indexOf(spotlight),
+    result.events.findIndex((event) => event.type === "ruleProcessingChecked") +
+      1,
+  );
+  const spotlightPayload = spotlight.payload as SpotlightEntryCreatedPayload;
+  assert.deepEqual(spotlightPayload.entry, {
+    kind: "playedCard",
+    id: `spotlight:playedCard:${String(cardPlayed.id)}`,
+    key: `spotlight:playedCard:${String(cardPlayed.id)}`,
+    semanticKey: [
+      "playedCard",
+      String(cardPlayed.id),
+      String(p1),
+      String(character.instanceId),
+    ].join("|"),
+    mode: "resolved",
+    status: "resolved",
+    source: {
+      playerId: p1,
+      instanceId: character.instanceId,
+      cardId: character.cardId,
+    },
+    resolvedEventId: cardPlayed.id,
+  });
 });
 
 test("zero-cost playCard resolves directly for Stage without payCost decision", () => {
@@ -264,7 +306,13 @@ test("zero-cost playCard resolves directly for Stage without payCost decision", 
   );
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+      "spotlightEntryCreated",
+    ],
   );
   assert.deepEqual(
     result.events.map((event) => event.visibility),
@@ -273,6 +321,7 @@ test("zero-cost playCard resolves directly for Stage without payCost decision", 
       { type: "public" },
       { type: "public" },
       { type: "replayOnly" },
+      { type: "public" },
     ],
   );
 });

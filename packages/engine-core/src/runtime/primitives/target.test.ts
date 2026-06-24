@@ -456,6 +456,7 @@ test("targeted KO primitive pauses on a private chooseReplacement decision for s
     prompt: "Choose replacement effect.",
     causedBy: entry.causedBy,
     visibility: { type: "private", playerId: p2 },
+    decisionAnchorEventId: result.events[0]?.id,
     processId: `${String(entry.id)}:ko:${String(targetA.instanceId)}:0`,
     replacementIds: [replacementId],
     replacementOptions: [

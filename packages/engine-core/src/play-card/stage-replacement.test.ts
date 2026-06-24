@@ -72,6 +72,7 @@ test("zero-cost Stage replacement trashes old Stage before placing new Stage", (
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
   const oldStageMove = must(
@@ -119,7 +120,13 @@ test("zero-cost Stage play does not create Character overflow when Character are
   assert.equal(p1State.characters.length, 5);
   assert.deepEqual(
     result.events.map((event) => event.type),
-    ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+    [
+      "cardRevealed",
+      "cardMoved",
+      "cardPlayed",
+      "ruleProcessingChecked",
+      "spotlightEntryCreated",
+    ],
   );
 });
 
@@ -185,6 +192,7 @@ test("nonzero occupied-Stage play pays before replacing old Stage", () => {
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
 });

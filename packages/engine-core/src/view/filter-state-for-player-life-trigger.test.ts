@@ -11,6 +11,7 @@ import {
   resolvedCard,
   toCardId,
 } from "../action-test-fixtures.js";
+import { publicPendingDecisionIdForPendingDecision } from "../spotlight/public-pending-identity.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
@@ -49,6 +50,10 @@ test("confirmLifeTrigger projection shows the damaged card only to decision play
     playerId: p2,
     prompt: "Activate life trigger?",
     causedBy: { type: "ruleProcess", name: "battle:lifeTriggerDecision" },
+    spotlightPendingId: publicPendingDecisionIdForPendingDecision({
+      pending: state.pendingDecision,
+      recipientPlayerId: p2,
+    }),
     presentation: {
       title: "Life trigger",
       instruction:

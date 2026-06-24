@@ -22,6 +22,7 @@ import {
   resolvedCard,
   reviewedOnPlayDrawDefinition,
 } from "../action-test-fixtures.js";
+import { publicPendingDecisionIdForPendingDecision } from "../spotlight/public-pending-identity.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
@@ -137,9 +138,18 @@ const assertPublicDecisionShape = (
           "playerId",
           "presentation",
           "prompt",
+          "spotlightPendingId",
           "type",
         ].sort()
-      : ["causedBy", "id", "playerId", "presentation", "prompt", "type"].sort();
+      : [
+          "causedBy",
+          "id",
+          "playerId",
+          "presentation",
+          "prompt",
+          "spotlightPendingId",
+          "type",
+        ].sort();
   const required = (
     "source" in pending ? [...requiredBase, "source"] : requiredBase
   ).sort();
@@ -540,6 +550,7 @@ test("real selectTargets views expose public candidates without legal responses 
 
   const recipientView = filterStateForPlayer(state, p1);
   const opponentView = filterStateForPlayer(state, p2);
+  const pendingDecision = must(state.pendingDecision, "target decision");
   const source = must(state.players[p1], "p1").leader;
   const publicSource = {
     instanceId: source.instanceId,
@@ -558,6 +569,10 @@ test("real selectTargets views expose public candidates without legal responses 
       source: publicSource,
     },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    spotlightPendingId: publicPendingDecisionIdForPendingDecision({
+      pending: pendingDecision,
+      recipientPlayerId: p1,
+    }),
     source: publicSource,
     min: 1,
     max: 1,
@@ -586,7 +601,6 @@ test("real selectTargets views expose public candidates without legal responses 
     recipientView.opponent.characters[0]?.instanceId,
     target.instanceId,
   );
-  const pendingDecision = must(state.pendingDecision, "target decision");
   assert.equal(pendingDecision.type, "selectTargets");
   assert.deepEqual(pendingDecision.candidates, [
     { card: target, visibility: { type: "public" } },

@@ -46,17 +46,13 @@ export const appendEffectResolvedForCompletedSequence = (
     seq: toStateSeq(state.seq - 1),
   };
   appendEffectResolvedEvent(resolvedEventBaseState, resolvedEvents, entry);
-  const resolvedEvent = resolvedEvents[0];
-  if (resolvedEvent === undefined) {
-    return { ok: true, state };
-  }
-  events.push(resolvedEvent);
+  events.push(...resolvedEvents);
   let nextState: GameState = {
     ...state,
     effectQueue: state.effectQueue.filter(
       (candidate) => candidate.id !== entry.id,
     ),
-    eventJournal: [...state.eventJournal, resolvedEvent],
+    eventJournal: [...state.eventJournal, ...resolvedEvents],
   };
 
   const queueableKOEvents = events.filter(

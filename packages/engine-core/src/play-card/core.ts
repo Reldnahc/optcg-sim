@@ -56,6 +56,11 @@ import { moveConcreteCardsToTrash } from "../concrete-card-movement.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
 import { findRuntimePlaySelectedOverflowEnterRested } from "../runtime-play-selected-overflow-entry-state.js";
 import { placePlayedCardResult } from "./placement.js";
+import {
+  appendNoEffectPlayedCardSpotlightIfAdmitted,
+  countQueuedEffectsForSource,
+  publicPlayedCardRef,
+} from "./no-effect-spotlight.js";
 
 export const getPlayCardLegalActions = (
   state: GameState,
@@ -225,6 +230,7 @@ export const applyPlayCard = (
         sourceCard: handCard,
         supported,
         costArea: payment.nextCostArea,
+        admitNoEffectPlayedCardSpotlight: true,
         resolvePlayCardEffectRuntime: resolveRuntime,
         engineOptions: options,
       });
@@ -248,6 +254,7 @@ export const applyPlayCard = (
     sourceCard: handCard,
     supported,
     costArea: player.costArea,
+    admitNoEffectPlayedCardSpotlight: true,
     resolvePlayCardEffectRuntime: resolveRuntime,
     engineOptions: options,
   });
@@ -273,8 +280,28 @@ const resolvePlayCardEffectRuntime = (
   supported: SupportedPlayMetadata,
   options: EngineResultOptions = {},
 ): EngineResult => {
+  const source = publicPlayedCardRef(handCard, acceptedState.turn.turnPlayerId);
   if (!shouldResolveOnPlayRuntime(acceptedState, handCard, supported)) {
-    return toEngineResult(acceptedState, acceptedEvents, undefined, options);
+    appendNoEffectPlayedCardSpotlightIfAdmitted({
+      state: originalState,
+      events: acceptedEvents,
+      source,
+      category: supported.category,
+      outcome: {
+        queuedEffectCount: countQueuedEffectsForSource(acceptedEvents, source),
+        supportedEffectAttempted: false,
+        failedClosedEffectAttempted: false,
+      },
+    });
+    return toEngineResult(
+      {
+        ...acceptedState,
+        eventJournal: [...originalState.eventJournal, ...acceptedEvents],
+      },
+      acceptedEvents,
+      undefined,
+      options,
+    );
   }
 
   const continued = continueRuntimeUntilIdle(
@@ -747,12 +774,24 @@ const applyCharacterOverflowResponse = (
           playerId: runtimePlaySource.source.playerId,
           slot: "temporary" as const,
         });
+  const runtimePlaySourceTrashIndex =
+    runtimePlaySourceOverflow && runtimePlaySource !== undefined
+      ? player.trash.findIndex(
+          (card) =>
+            card.instanceId === runtimePlaySource.source.instanceId &&
+            card.cardId === runtimePlaySource.source.cardId,
+        )
+      : -1;
+  const runtimePlaySourceTrashCard =
+    runtimePlaySourceTrashIndex < 0
+      ? undefined
+      : player.trash[runtimePlaySourceTrashIndex];
   const source =
     runtimePlaySourceOverflow &&
     runtimePlaySource !== undefined &&
     runtimePlaySourceZone !== undefined
       ? {
-          sourceCard: {
+          sourceCard: runtimePlaySourceTrashCard ?? {
             instanceId: runtimePlaySource.source.instanceId,
             cardId: runtimePlaySource.source.cardId,
             owner: runtimePlaySource.source.playerId,
@@ -760,8 +799,14 @@ const applyCharacterOverflowResponse = (
             attachedDon: [] as CardInstance["attachedDon"],
             zone: runtimePlaySourceZone,
           },
-          sourceIndex: -1,
-          sourceZone: "noZone" as const,
+          sourceIndex:
+            runtimePlaySourceTrashCard === undefined
+              ? -1
+              : runtimePlaySourceTrashIndex,
+          sourceZone:
+            runtimePlaySourceTrashCard === undefined
+              ? ("noZone" as const)
+              : ("trash" as const),
         }
       : findPlayCardOverflowSource(player, playCardInstanceId);
   if (source === null) {

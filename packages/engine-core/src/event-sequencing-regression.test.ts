@@ -38,6 +38,7 @@ import {
   withOnOpponentAttackDrawEffect,
   withWhenAttackingDrawEffect,
 } from "./battle/test-fixtures.js";
+import { createEvent } from "./action-results.js";
 
 const assertStrictlyIncreasingSeq = (
   events: readonly EngineEvent[],
@@ -93,6 +94,38 @@ const signature = (result: EngineResult) => ({
   stateHash: result.stateHash,
 });
 
+const triggerEventIdFromPayload = (
+  payload: unknown,
+): EngineEvent["id"] | null => {
+  if (typeof payload !== "object" || payload === null) {
+    return null;
+  }
+  const triggerEventId = (payload as { readonly triggerEventId?: unknown })
+    .triggerEventId;
+  return typeof triggerEventId === "string"
+    ? (triggerEventId as EngineEvent["id"])
+    : null;
+};
+
+const assertSpotlightsDoNotAnchorTriggers = (
+  events: readonly EngineEvent[],
+  label: string,
+) => {
+  const spotlightIds = new Set(
+    events
+      .filter((event) => event.type === "spotlightEntryCreated")
+      .map((event) => event.id),
+  );
+  for (const event of events) {
+    const triggerEventId = triggerEventIdFromPayload(event.payload);
+    assert.equal(
+      triggerEventId !== null && spotlightIds.has(triggerEventId),
+      false,
+      `${label} should not anchor ${event.type} to a spotlight event`,
+    );
+  }
+};
+
 const assertDeterministicScript = (
   name: string,
   run: () => { results: EngineResult[] },
@@ -105,6 +138,55 @@ const assertDeterministicScript = (
     `${name} should be deterministic`,
   );
 };
+
+test("spotlight presentation events are inert for gameplay sequencing", () => {
+  // Engine-core does not expose an event-journal replay reducer; replay
+  // determinism here is action re-execution. This covers the local
+  // reducer-equivalent surface by proving spotlight events can be filtered out
+  // without disturbing gameplay ordering or trigger anchors.
+  const state = createActiveState();
+  const source = must(state.players[p1], "sequencing p1").leader;
+  const cardPlayed = createEvent(state, 1, "cardPlayed", {
+    playerId: p1,
+    instanceId: source.instanceId,
+    cardId: source.cardId,
+    category: "leader",
+    turnNumber: state.turn.globalTurn,
+  });
+  const spotlight = createEvent(state, 2, "spotlightEntryCreated", {
+    entry: {
+      id: "spotlight:sequencing",
+      key: "spotlight:sequencing",
+      semanticKey: "spotlight:sequencing",
+      mode: "resolved",
+      status: "resolved",
+      active: {
+        source: {
+          instanceId: source.instanceId,
+          cardId: source.cardId,
+          playerId: p1,
+          zone: source.zone,
+        },
+        activeSpanIds: ["span:body"],
+      },
+    },
+  });
+  const effectQueued = createEvent(state, 3, "effectQueued", {
+    playerId: p1,
+    sourceInstanceId: source.instanceId,
+    sourceCardId: source.cardId,
+    triggerEventId: cardPlayed.id,
+  });
+  const events = [cardPlayed, spotlight, effectQueued];
+
+  assert.deepEqual(
+    events
+      .filter((event) => event.type !== "spotlightEntryCreated")
+      .map((event) => event.id),
+    [cardPlayed.id, effectQueued.id],
+  );
+  assertSpotlightsDoNotAnchorTriggers(events, "synthetic-sequencing");
+});
 
 const ensureDeckHasAtLeast = (
   state: ReturnType<typeof setupAttackState>,
@@ -451,7 +533,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
 
   const openedForDecline = openLifeTrigger();
   const expectedOpenedSignature = {
-    eventSeq: [9, 10, 11, 12, 13, 14, 15],
+    eventSeq: [10, 11, 12, 13, 14, 15, 16],
     eventIds: [
       "event:4:1:decisionResolved",
       "event:4:1:damageDealt",
@@ -471,7 +553,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "ruleProcessingChecked",
     ],
     stateHash:
-      "dc9d91c536f2782f71d145ea65124241be02085dfc7d198872c0963841c995a7",
+      "f7ab10896db47e02214a6cc96cbe51070a245d1e8a65b4fc1ff8fe477bfc4378",
   };
   assert.deepEqual(signature(openedForDecline), expectedOpenedSignature);
   const declineDecision = must(
@@ -490,7 +572,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   );
   assert.equal(declined.stateHash, hashCanonicalStateValue(declined.state));
   assert.deepEqual(signature(declined), {
-    eventSeq: [16, 17, 18],
+    eventSeq: [17, 18, 19],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardMoved",
@@ -498,7 +580,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
     ],
     eventTypes: ["decisionResolved", "cardMoved", "cardMoved"],
     stateHash:
-      "723551463cacbc1064eb1bd7c6e7aa1ceae6a7f4e15f57ba27b8f978e92ad4b1",
+      "9481fcc1872eea1efb17b4e59430d70240727eb869f168ea63e8537ed4af18a9",
   });
 
   const openedForActivation = openLifeTrigger();
@@ -521,7 +603,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
   assert.equal(activated.state.effectQueue.length, 0);
   assert.equal(activated.state.revealedCards.length, 0);
   assert.deepEqual(signature(activated), {
-    eventSeq: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27],
+    eventSeq: [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28],
     eventIds: [
       "event:5:1:decisionResolved",
       "event:5:2:cardRevealed",
@@ -551,7 +633,7 @@ const runEng028LifeTriggerDeclineAndActivationScripts = () => {
       "cardTrashed",
     ],
     stateHash:
-      "717d6221e928e381f8b3c7db1a6f2be719476e8f11cdcce62cd98dca68058b4a",
+      "7055ecd48c80ce1dddef83febdef6b7c578a44ee813e38e8639921f647b3eaa1",
   });
 
   return {
@@ -754,6 +836,23 @@ test("ENG-016: accepted engine paths keep EngineResult/eventJournal sequencing a
         played.events.some((event) => event.type === "effectResolved"),
         true,
       );
+      const gameplayTypes = played.events
+        .filter((event) => event.type !== "spotlightEntryCreated")
+        .map((event) => event.type);
+      assert.deepEqual(gameplayTypes, [
+        "cardRevealed",
+        "cardMoved",
+        "cardPlayed",
+        "ruleProcessingChecked",
+        "effectQueued",
+        "cardDrawn",
+        "cardMoved",
+        "cardMoved",
+        "effectResolved",
+        "ruleProcessingChecked",
+        "gameEnded",
+      ]);
+      assertSpotlightsDoNotAnchorTriggers(played.events, "on-play-draw");
       assert.equal(
         played.events.some((event) => event.type === "cardDrawn"),
         true,

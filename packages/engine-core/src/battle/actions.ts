@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
   assertGameStateInvariantsIfEnabled,
   createEvent,
@@ -375,6 +376,21 @@ const applyDeclareAttackInternal = (
       { type: "public" },
     ),
   ];
+  const attackDeclared = events[0];
+  if (attackDeclared !== undefined) {
+    appendCombatSpotlightEntryCreatedEvent({
+      state,
+      events,
+      anchorEvent: attackDeclared,
+      combat: {
+        eventKind: "attackDeclared",
+        attacker: toCardRef(attacker.card, attacker.playerId),
+        defender: toCardRef(target.card, target.playerId),
+        ...(attackPower === undefined ? {} : { attackerPower: attackPower }),
+        ...(defendPower === undefined ? {} : { defenderPower: defendPower }),
+      },
+    });
+  }
   const baseState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),

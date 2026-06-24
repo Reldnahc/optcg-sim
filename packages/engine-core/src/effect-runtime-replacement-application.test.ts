@@ -16,6 +16,7 @@ import type {
   LegalAction,
   QueueEntryId,
   ReplacementProcess,
+  SpotlightEntryCreatedPayload,
   TargetRequest,
   TimingWindowId,
 } from "@optcg/types";
@@ -389,12 +390,16 @@ const executeAcceptedReplacementDirectly = (
   return { events, result };
 };
 
-test("accepting optional chooseReplacement applies deterministic draw replacement without KO mutation", () => {
+test("projects a spotlight entry for every authored replacement-applied step", () => {
   const first = acceptReplacement();
   const second = acceptReplacement();
   const replacementApplied = must(
     first.accepted.events[1],
     "replacementApplied event",
+  );
+  const replacementSpotlight = must(
+    first.accepted.events[2],
+    "replacement spotlight event",
   );
   const pausedP2 = must(first.result.state.players[p2], "paused p2");
   const nextP2 = must(first.accepted.state.players[p2], "next p2");
@@ -411,6 +416,7 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
     [
       "decisionResolved",
       "replacementApplied",
+      "spotlightEntryCreated",
       "cardDrawn",
       "cardMoved",
       "cardMoved",
@@ -443,6 +449,51 @@ test("accepting optional chooseReplacement applies deterministic draw replacemen
   assert.deepEqual(replacementApplied.causedBy, {
     type: "replacement",
     replacementId: first.replacementId,
+  });
+  assert.equal(replacementSpotlight.type, "spotlightEntryCreated");
+  assert.deepEqual(replacementSpotlight.causedBy, {
+    type: "replacement",
+    replacementId: first.replacementId,
+  });
+  const spotlightPayload =
+    replacementSpotlight.payload as SpotlightEntryCreatedPayload;
+  assert.equal(spotlightPayload.entry.mode, "resolved");
+  assert.equal(spotlightPayload.entry.status, "resolved");
+  assert.equal(spotlightPayload.entry.resolvedEventId, replacementApplied.id);
+  assert.deepEqual(
+    spotlightPayload.entry.kind === undefined ||
+      spotlightPayload.entry.kind === "effectText"
+      ? spotlightPayload.entry.active
+      : undefined,
+    {
+      source: first.targetRef,
+      textKind: "effect",
+      activeSpanIds: [toEffectTextSpanId("span:replacement")],
+      targetLinks: [
+        {
+          spanId: toEffectTextSpanId("span:replacement"),
+          relation: "affectedCard",
+          cards: [first.targetRef],
+        },
+      ],
+    },
+  );
+  assert.deepEqual(spotlightPayload.disclosure, {
+    entryRefs: [
+      {
+        role: "effectSource",
+        cardInstanceId: first.targetRef.instanceId,
+        visibility: { type: "public" },
+      },
+    ],
+    targetLinks: [
+      {
+        spanId: toEffectTextSpanId("span:replacement"),
+        relation: "affectedCard",
+        cardInstanceId: first.targetRef.instanceId,
+        visibility: { type: "public" },
+      },
+    ],
   });
   assert.equal(
     nextP2.characters.some(
@@ -577,6 +628,7 @@ test.each([
     expectedEvents: [
       "decisionResolved",
       "replacementApplied",
+      "spotlightEntryCreated",
       "cardDrawn",
       "cardMoved",
       "cardMoved",
@@ -713,6 +765,7 @@ test("chooseReplacement response validation accepts mandatory selected replaceme
     [
       "decisionResolved",
       "replacementApplied",
+      "spotlightEntryCreated",
       "cardDrawn",
       "cardMoved",
       "cardMoved",

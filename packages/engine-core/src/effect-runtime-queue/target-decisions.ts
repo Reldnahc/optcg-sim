@@ -19,6 +19,7 @@ import type {
 import {
   appendEffectResolvedEvent,
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   createEvent,
   type EngineResultOptions,
   toDecisionId,
@@ -480,19 +481,16 @@ export const createEffectRuntimeQueueTargetDecisions = (
         ...nextState,
         seq: toStateSeq(nextState.seq - 1),
       };
-      appendEffectResolvedEvent(
+      const resolvedEvent = appendEffectResolvedEvent(
         resolvedEventBaseState,
         resolvedEvents,
         resolvedEntry,
       );
-      const resolvedEvent = resolvedEvents[0];
-      if (resolvedEvent !== undefined) {
-        nextState = {
-          ...nextState,
-          eventJournal: [...nextState.eventJournal, resolvedEvent],
-        };
-        allEvents.push(resolvedEvent);
-      }
+      nextState = {
+        ...nextState,
+        eventJournal: [...nextState.eventJournal, ...resolvedEvents],
+      };
+      allEvents.push(...resolvedEvents);
 
       const checkpointEvents: EngineEvent[] = [];
       const checkpointEventBaseState: GameState = {
@@ -551,7 +549,7 @@ export const createEffectRuntimeQueueTargetDecisions = (
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
         nextState,
         resolvedEntry,
-        [...resolutionEvents, ...resolvedEvents, ...cleanup.events],
+        [...resolutionEvents, resolvedEvent, ...cleanup.events],
         options,
       );
       if (triggered !== undefined) {
@@ -734,11 +732,20 @@ export const createEffectRuntimeQueueTargetDecisions = (
     if (created !== undefined) {
       created.causedBy = causedBy;
     }
+    const anchored = appendPendingSpotlightEntryCreatedEvents({
+      state,
+      events,
+      pendingDecision,
+      decisionCreatedEvent: created,
+      recipientPlayerId: pendingDecision.playerId,
+      activeEffectText: entry.presentation,
+      visibility: pendingDecision.visibility,
+    });
 
     const nextState: GameState = {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     };
     return toEngineResult(

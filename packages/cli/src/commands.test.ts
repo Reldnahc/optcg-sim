@@ -348,7 +348,13 @@ describe("dispatchCliCommand", () => {
     );
     assert.deepEqual(
       result.events.map((event) => event.type),
-      ["cardRevealed", "cardMoved", "cardPlayed", "ruleProcessingChecked"],
+      [
+        "cardRevealed",
+        "cardMoved",
+        "cardPlayed",
+        "ruleProcessingChecked",
+        "spotlightEntryCreated",
+      ],
     );
     assertSummaryOutput(result.output);
   });

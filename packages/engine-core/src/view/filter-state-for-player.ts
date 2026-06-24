@@ -19,25 +19,24 @@ import type {
 } from "@optcg/types";
 
 import { getLegalActions } from "../actions.js";
-import { toCardRef, zonesEqual } from "../actions/state.js";
-import { entryWithCompletedSequencePresentation } from "../effect-runtime-sequence/completed-presentation.js";
-import { sequenceEffectBlockForEntry } from "../effect-runtime-sequence/segment-presentation.js";
-import {
-  effectSpotlightHistoryFromPlayerViewState,
-  type CompletedEffectTextSpotlight,
-  type CurrentEffectTextSpotlight,
-} from "./effect-spotlight-history.js";
+import { toCardRef } from "../actions/state.js";
+import { effectSpotlightHistoryFromPlayerViewState } from "./effect-spotlight-history.js";
 import {
   isEventVisibleToPlayer,
   isVisibleToPlayer,
   toPlayerEventForView,
 } from "./filter-state-events.js";
 import {
+  isCardRefVisibleToPlayer,
+  visibleCardsForPlayer,
+} from "./card-ref-visibility.js";
+import {
   computedBoardCardStatsByInstance,
   toBoardPublicCardView,
   toPublicCardView,
   toPublicLifeView,
 } from "./public-card-view.js";
+import { publicPendingDecisionIdForPendingDecision } from "../spotlight/public-pending-identity.js";
 import type { ComputedBoardCardStats } from "./public-card-view.js";
 import {
   publicDecisionActiveEffectTextFromEffectQueue,
@@ -312,6 +311,10 @@ const toPublicDecision = (
         };
   const base = {
     id: pending.id,
+    spotlightPendingId: publicPendingDecisionIdForPendingDecision({
+      pending,
+      recipientPlayerId: playerId,
+    }),
     type: pending.type,
     playerId: pending.playerId,
     prompt: pending.prompt,
@@ -407,67 +410,6 @@ const toPublicDecision = (
   return { ...base, type: pending.type };
 };
 
-type LocatedVisibleCard = {
-  card: CardInstance;
-  playerId: PlayerId;
-};
-
-const visibleCardsForPlayer = (
-  state: GameState,
-  playerId: PlayerId,
-): LocatedVisibleCard[] => {
-  const self = state.players[playerId];
-  if (self === undefined) {
-    return [];
-  }
-  const opponentId = (Object.keys(state.players) as PlayerId[]).find(
-    (id) => id !== playerId,
-  );
-  const opponent =
-    opponentId === undefined ? undefined : state.players[opponentId];
-
-  const visible: LocatedVisibleCard[] = [
-    ...self.hand.map((card) => ({ card, playerId: self.playerId })),
-    ...self.trash.map((card) => ({ card, playerId: self.playerId })),
-    { card: self.leader, playerId: self.playerId },
-    ...self.characters.map((card) => ({ card, playerId: self.playerId })),
-    ...self.costArea.map((card) => ({ card, playerId: self.playerId })),
-    ...self.life
-      .filter((lifeCard) => lifeCard.faceUp)
-      .map((lifeCard) => ({ card: lifeCard.card, playerId: self.playerId })),
-  ];
-
-  if (self.stage !== undefined) {
-    visible.push({ card: self.stage, playerId: self.playerId });
-  }
-
-  if (opponent !== undefined) {
-    visible.push(
-      ...opponent.trash.map((card) => ({ card, playerId: opponent.playerId })),
-      { card: opponent.leader, playerId: opponent.playerId },
-      ...opponent.characters.map((card) => ({
-        card,
-        playerId: opponent.playerId,
-      })),
-      ...opponent.costArea.map((card) => ({
-        card,
-        playerId: opponent.playerId,
-      })),
-      ...opponent.life
-        .filter((lifeCard) => lifeCard.faceUp)
-        .map((lifeCard) => ({
-          card: lifeCard.card,
-          playerId: opponent.playerId,
-        })),
-    );
-    if (opponent.stage !== undefined) {
-      visible.push({ card: opponent.stage, playerId: opponent.playerId });
-    }
-  }
-
-  return visible;
-};
-
 const findSelfHandCardRef = (
   state: GameState,
   playerId: PlayerId,
@@ -491,26 +433,6 @@ const findSelfCostAreaCardRef = (
   );
   return card === undefined ? undefined : toCardRef(card, playerId);
 };
-
-const zoneMatchesIfPresent = (
-  expected: CardRef["zone"],
-  actual: CardRef["zone"],
-): boolean =>
-  expected === undefined ||
-  (actual !== undefined && zonesEqual(actual, expected));
-
-const isCardRefVisibleToPlayer = (
-  state: GameState,
-  playerId: PlayerId,
-  ref: CardRef,
-): boolean =>
-  visibleCardsForPlayer(state, playerId).some(
-    ({ card, playerId: visiblePlayerId }) =>
-      ref.instanceId === card.instanceId &&
-      ref.cardId === card.cardId &&
-      ref.playerId === visiblePlayerId &&
-      zoneMatchesIfPresent(ref.zone, card.zone),
-  );
 
 const toPublicLegalAction = (
   state: GameState,
@@ -704,107 +626,6 @@ const toPublicRevealRecord = (
   return [...runtimeRecords, ...setupCandidateRecord];
 };
 
-const completedEffectTextsForCurrentFrame = ({
-  activeEffectText,
-  pendingDecisionId,
-  state,
-}: {
-  readonly activeEffectText: PlayerView["activeEffectText"] | undefined;
-  readonly pendingDecisionId: PublicPendingDecision["id"] | undefined;
-  readonly state: GameState;
-}): readonly CompletedEffectTextSpotlight[] => {
-  if (activeEffectText === undefined || pendingDecisionId === undefined) {
-    return [];
-  }
-  const frame = state.effectExecutionFrames.find(
-    (candidate) => candidate.pendingDecision.decisionId === pendingDecisionId,
-  );
-  if (frame === undefined) {
-    return [];
-  }
-  const entry = state.effectQueue.find(
-    (candidate) =>
-      candidate.id === frame.queueEntryId &&
-      candidate.effectBlockId === frame.effectBlockId,
-  );
-  if (entry === undefined || entry.presentation === undefined) {
-    return [];
-  }
-  const completedEntry = entryWithCompletedSequencePresentation(
-    entry,
-    frame.segmentResults,
-    sequenceEffectBlockForEntry(state, entry),
-  );
-  if (
-    completedEntry === entry ||
-    completedEntry.presentation === undefined ||
-    completedEntry.presentation.activeSpanIds.length === 0
-  ) {
-    return [];
-  }
-  return [
-    {
-      active: completedEntry.presentation,
-      effectBlockId: entry.effectBlockId,
-      key: [
-        "completed-frame",
-        String(frame.queueEntryId),
-        String(frame.effectBlockId),
-        String(frame.pendingDecision.decisionId),
-      ].join(":"),
-      queueEntryId: entry.id,
-    },
-  ];
-};
-
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const currentEffectResolvedEventIds = ({
-  causedBy,
-  events,
-}: {
-  readonly causedBy: Extract<
-    NonNullable<GameState["pendingDecision"]>["causedBy"],
-    { type: "effect" }
-  >;
-  readonly events: readonly GameState["eventJournal"][number][];
-}): ReadonlySet<GameState["eventJournal"][number]["id"]> | undefined => {
-  const ids = new Set<GameState["eventJournal"][number]["id"]>();
-  for (const event of events) {
-    if (
-      event.type !== "effectResolved" &&
-      event.type !== "replacementApplied"
-    ) {
-      continue;
-    }
-    if (!isObjectRecord(event.payload)) {
-      continue;
-    }
-    if (
-      event.payload["queueEntryId"] === causedBy.queueEntryId &&
-      event.payload["effectBlockId"] === causedBy.effectId
-    ) {
-      ids.add(event.id);
-    }
-  }
-  return ids.size === 0 ? undefined : ids;
-};
-
-const currentEffectTextSpotlight = (
-  state: GameState,
-  events: readonly GameState["eventJournal"][number][],
-): CurrentEffectTextSpotlight | undefined => {
-  const causedBy = state.pendingDecision?.causedBy;
-  return causedBy?.type === "effect"
-    ? {
-        effectBlockId: causedBy.effectId,
-        queueEntryId: causedBy.queueEntryId,
-        resolvedEventIds: currentEffectResolvedEventIds({ causedBy, events }),
-      }
-    : undefined;
-};
-
 export const filterStateForPlayer = (
   state: GameState,
   playerId: PlayerId,
@@ -869,18 +690,13 @@ export const filterStateForPlayer = (
     isEventVisibleToPlayer(event, playerId),
   );
   const events = visibleEvents.map((event) =>
-    toPlayerEventForView(state, event),
+    toPlayerEventForView(state, event, {
+      playerId,
+      visiblePublicPendingDecisionId: pendingDecision?.spotlightPendingId,
+    }),
   );
   const effectSpotlightHistory = effectSpotlightHistoryFromPlayerViewState({
-    activeEffectText,
-    completedEffectTexts: completedEffectTextsForCurrentFrame({
-      activeEffectText,
-      pendingDecisionId: pendingDecision?.id,
-      state,
-    }),
-    currentEffectText: currentEffectTextSpotlight(state, visibleEvents),
     events,
-    pendingDecisionId: pendingDecision?.id,
   });
   // Keep computeView validation fail-closed for unsupported board-power metadata.
   const computedStatsByInstance = computedBoardCardStatsByInstance(state);

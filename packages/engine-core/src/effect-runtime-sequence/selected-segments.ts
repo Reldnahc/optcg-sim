@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActiveEffectTextPresentation,
   CardInstance,
   CardRef,
   Effect,
@@ -17,7 +18,16 @@ import {
   cardMatchesHandSelectionFilter,
   reindexZoneCards,
 } from "../actions/state.js";
-import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../action-results.js";
+import {
+  activeSpanIdsForSearchRemaining,
+  activeSpanIdsForSearchSelection,
+} from "../runtime/effect-presentation.js";
 import { applyDonAttachment } from "../runtime/primitives/don-attachment.js";
 import { moveConcreteCardsToTrash } from "../movement/concrete-card-movement.js";
 import {
@@ -46,6 +56,34 @@ type SegmentLedgers = {
   segmentResults: NonNullable<
     GameState["effectExecutionFrames"][number]
   >["segmentResults"];
+};
+
+const searchSelectionActiveEffectText = (
+  entry: EffectQueueEntry,
+): ActiveEffectTextPresentation | undefined => {
+  if (entry.presentation === undefined) {
+    return undefined;
+  }
+  const activeSpanIds = activeSpanIdsForSearchSelection(
+    entry.presentation.activeSpanIds,
+  );
+  return activeSpanIds === undefined || activeSpanIds.length === 0
+    ? undefined
+    : { ...entry.presentation, activeSpanIds };
+};
+
+const searchRemainingActiveEffectText = (
+  entry: EffectQueueEntry,
+): ActiveEffectTextPresentation | undefined => {
+  if (entry.presentation === undefined) {
+    return undefined;
+  }
+  const activeSpanIds = activeSpanIdsForSearchRemaining(
+    entry.presentation.activeSpanIds,
+  );
+  return activeSpanIds === undefined || activeSpanIds.length === 0
+    ? undefined
+    : { ...entry.presentation, activeSpanIds };
 };
 
 const findCurrentCardByRef = (
@@ -373,13 +411,22 @@ export const createSelectFromSetDecision = (params: {
   if (event !== undefined) {
     event.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: searchSelectionActiveEffectText(params.entry),
+    visibility,
+  });
   return {
     events,
     ok: true,
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      pendingDecision: decision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };
@@ -707,6 +754,15 @@ const applyHandToDeckSelectedCardMoveSegment = (
     if (event !== undefined) {
       event.causedBy = decision.causedBy;
     }
+    const anchored = appendPendingSpotlightEntryCreatedEvents({
+      state: params.state,
+      events,
+      pendingDecision: decision,
+      decisionCreatedEvent: event,
+      recipientPlayerId: decision.playerId,
+      activeEffectText: searchRemainingActiveEffectText(params.entry),
+      visibility: decision.visibility,
+    });
     return {
       events,
       ledgers: {
@@ -725,7 +781,7 @@ const applyHandToDeckSelectedCardMoveSegment = (
       state: {
         ...params.state,
         seq: toStateSeq(params.state.seq + 1),
-        pendingDecision: decision,
+        pendingDecision: anchored.pendingDecision,
         eventJournal: [...params.state.eventJournal, ...events],
       },
     };

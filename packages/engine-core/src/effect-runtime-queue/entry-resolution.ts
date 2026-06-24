@@ -723,21 +723,18 @@ export const createQueueEntryResolver = (
         ...nextState,
         seq: toStateSeq(nextState.seq - 1),
       };
-      appendEffectResolvedEvent(
+      const resolvedEvent = appendEffectResolvedEvent(
         resolvedEventBaseState,
         resolvedEvents,
         selectedForBodyResolution,
         queuedEffectForBodyResolution,
         nextState.cardManifest.cards[selectedForBodyResolution.source.cardId],
       );
-      const resolvedEvent = resolvedEvents[0];
-      if (resolvedEvent !== undefined) {
-        nextState = {
-          ...nextState,
-          eventJournal: [...nextState.eventJournal, resolvedEvent],
-        };
-        allEvents.push(resolvedEvent);
-      }
+      nextState = {
+        ...nextState,
+        eventJournal: [...nextState.eventJournal, ...resolvedEvents],
+      };
+      allEvents.push(...resolvedEvents);
 
       const checkpointEvents: EngineEvent[] = [];
       const checkpointEventBaseState: GameState = {
@@ -785,7 +782,7 @@ export const createQueueEntryResolver = (
       const triggered = dependencies.queueEffectResolvedCustomTriggers(
         nextState,
         selectedForBodyResolution,
-        [...resolutionEventsForTrigger, ...resolvedEvents, ...cleanup.events],
+        [...resolutionEventsForTrigger, resolvedEvent, ...cleanup.events],
         options,
       );
       if (triggered !== undefined) {

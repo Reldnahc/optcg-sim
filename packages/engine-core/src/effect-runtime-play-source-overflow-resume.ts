@@ -72,14 +72,15 @@ export const resumePlaySourceOverflowDecision = (params: {
     ...nextState,
     seq: toStateSeq(nextState.seq - 1),
   };
-  appendEffectResolvedEvent(resolvedEventBaseState, resolvedEvents, selected);
-  const resolvedEvent = resolvedEvents[0];
-  if (resolvedEvent !== undefined) {
-    nextState = {
-      ...nextState,
-      eventJournal: [...nextState.eventJournal, resolvedEvent],
-    };
-  }
+  const resolvedEvent = appendEffectResolvedEvent(
+    resolvedEventBaseState,
+    resolvedEvents,
+    selected,
+  );
+  nextState = {
+    ...nextState,
+    eventJournal: [...nextState.eventJournal, ...resolvedEvents],
+  };
   const cleanup = cleanupResolvedLifeTrigger(nextState, selected);
   nextState = cleanup.state;
   const allEvents = [
@@ -91,7 +92,7 @@ export const resumePlaySourceOverflowDecision = (params: {
   const triggered = queueEffectResolvedCustomTriggers(
     nextState,
     selected,
-    allEvents,
+    [...playCardResult.events, resolvedEvent, ...cleanup.events],
     options,
   );
   if (triggered !== undefined) {

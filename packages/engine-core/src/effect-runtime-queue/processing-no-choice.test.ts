@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectTextSpanId, Trigger } from "@optcg/types";
+import type { Trigger } from "@optcg/types";
 
 import type {
   CardInstance,
@@ -125,50 +125,6 @@ test("resolves one queued supported On Play draw entry and removes it from effec
   assert.deepEqual(
     result.state.eventJournal.slice(-result.events.length),
     result.events,
-  );
-});
-
-test("preserves queued effect presentation on no-choice effectResolved events", () => {
-  const { state, played } = queueingState();
-  const supportCard = resolvedCard({
-    cardId: played.cardId,
-    category: "character",
-  });
-  setupOnPlayDefinition(
-    state,
-    played,
-    reviewedOnPlayDrawDefinition(played.cardId, supportCard.support),
-    "def-queue-resolve-presentation",
-  );
-  const queued = processEffectRuntime(state);
-  const queuedEntry = must(queued.state.effectQueue[0], "queued entry");
-  const presentation = {
-    source: queuedEntry.source,
-    textKind: "effect" as const,
-    activeSpanIds: ["span:body:draw" as EffectTextSpanId],
-  };
-  const queuedState = {
-    ...queued.state,
-    effectQueue: [
-      {
-        ...queuedEntry,
-        presentation,
-      },
-    ],
-  };
-
-  const result = processEffectRuntime(queuedState);
-  const resolvedEvent = must(
-    result.events.find((event) => event.type === "effectResolved"),
-    "effectResolved event",
-  );
-
-  assert.deepEqual(
-    resolvedEvent.payload,
-    expectedEffectResolvedPayload(
-      { ...queuedEntry, presentation },
-      { type: "onPlay" },
-    ),
   );
 });
 

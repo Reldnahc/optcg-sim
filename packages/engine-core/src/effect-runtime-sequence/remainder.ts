@@ -1,5 +1,6 @@
 import type {
   Action,
+  ActiveEffectTextPresentation,
   Effect,
   EffectQueueEntry,
   EngineError,
@@ -12,10 +13,12 @@ import type {
 
 import {
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   toEngineResult,
   toStateSeq,
   type EngineResultOptions,
 } from "../action-results.js";
+import { activeSpanIdsForSearchRemaining } from "../runtime/effect-presentation.js";
 import {
   activeDeckCardsForOrder,
   createRemainingCardsOrderDecision,
@@ -39,6 +42,20 @@ type SegmentLedgers = {
 
 const placeSetRemainderOrderPrefix =
   "decision:orderCards:sequence-set-remainder:";
+
+const searchRemainingActiveEffectText = (
+  entry: EffectQueueEntry,
+): ActiveEffectTextPresentation | undefined => {
+  if (entry.presentation === undefined) {
+    return undefined;
+  }
+  const activeSpanIds = activeSpanIdsForSearchRemaining(
+    entry.presentation.activeSpanIds,
+  );
+  return activeSpanIds === undefined || activeSpanIds.length === 0
+    ? undefined
+    : { ...entry.presentation, activeSpanIds };
+};
 
 const isPlaceSetRemainderOrderDecision = (
   decision: NonNullable<GameState["pendingDecision"]>,
@@ -262,6 +279,15 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
   if (event !== undefined) {
     event.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: searchRemainingActiveEffectText(params.entry),
+    visibility: decision.visibility,
+  });
   return {
     events,
     ledgers: {
@@ -280,7 +306,7 @@ export const applyPlaceSetRemainderSequenceSegment = (params: {
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      pendingDecision: decision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };

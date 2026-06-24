@@ -8,7 +8,6 @@ import type {
   EffectId,
   EffectQueueEntry,
   EffectTextSpanId,
-  EngineEventId,
   InstanceId,
   QueueEntryId,
   StateSeq,
@@ -25,8 +24,6 @@ import {
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
-const toEngineEventId = (value: string): EngineEventId =>
-  value as EngineEventId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toInstanceId = (value: string): InstanceId => value as InstanceId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
@@ -170,72 +167,6 @@ test("player decision projection omits queued effect text without active spans",
 
   assert.equal(view.activeEffectText, undefined);
   assert.equal(view.pendingDecision?.presentation.activeEffectText, undefined);
-});
-
-test("player view projects resolved spotlight history from visible effect presentations", () => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "p1 state");
-  const sourceCard = must(p1State.hand.shift(), "source card");
-  sourceCard.instanceId = toInstanceId("history-source-instance");
-  sourceCard.zone = {
-    zone: "characterArea",
-    playerId: p1,
-    slot: "character",
-    index: 0,
-  };
-  p1State.characters.push(sourceCard);
-  state.cardManifest.cards[sourceCard.cardId] = resolvedCard({
-    cardId: sourceCard.cardId,
-    category: "character",
-  });
-  const source: CardRef = {
-    instanceId: sourceCard.instanceId,
-    cardId: sourceCard.cardId,
-    playerId: p1,
-    zone: sourceCard.zone,
-  };
-  const publicSource: CardRef = {
-    instanceId: source.instanceId,
-    cardId: source.cardId,
-    playerId: source.playerId,
-  };
-  state.eventJournal.push({
-    id: toEngineEventId("event:spotlight-history:resolved"),
-    seq: 99,
-    type: "effectResolved",
-    source,
-    payload: {
-      status: "resolved",
-      presentation: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:body:draw"],
-      },
-    },
-    visibility: { type: "public" },
-    createdAtStateSeq: state.seq,
-  });
-
-  const view = filterStateForPlayer(state, p1);
-
-  assert.deepEqual(view.effectSpotlightHistory, {
-    entries: [
-      {
-        id: "resolved:event:spotlight-history:resolved:span:body:draw",
-        key: "event:spotlight-history:resolved",
-        semanticKey: "p1|history-source-instance|p1-a|effect|span:body:draw",
-        mode: "resolved",
-        status: "resolved",
-        active: {
-          source: publicSource,
-          textKind: "effect",
-          activeSpanIds: ["span:body:draw"],
-        },
-        resolvedEventId: "event:spotlight-history:resolved",
-      },
-    ],
-    presentKey: "event:spotlight-history:resolved",
-  });
 });
 
 test("player decision projection narrows active effect text to the paused sequence segment", () => {
@@ -802,39 +733,4 @@ test("player decision projection does not expose privately revealed source text 
   assert.equal(opponentView.pendingDecision, undefined);
   assert.equal(opponentView.activeEffectText, undefined);
   assert.equal(opponentView.activeEffectSources, undefined);
-});
-
-test("player view does not project private opponent spotlight history", () => {
-  const state = createActiveState();
-  const p1State = must(state.players[p1], "p1 state");
-  const sourceCard = must(p1State.hand.shift(), "private source card");
-  sourceCard.instanceId = toInstanceId("private-history-source-instance");
-  const source: CardRef = {
-    instanceId: sourceCard.instanceId,
-    cardId: sourceCard.cardId,
-    playerId: p1,
-    zone: sourceCard.zone,
-  };
-  state.eventJournal.push({
-    id: toEngineEventId("event:spotlight-history:private"),
-    seq: 100,
-    type: "effectResolved",
-    source,
-    payload: {
-      status: "resolved",
-      presentation: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:body:private"],
-      },
-    },
-    visibility: { type: "private", playerId: p1 },
-    createdAtStateSeq: state.seq,
-  });
-
-  const ownerView = filterStateForPlayer(state, p1);
-  const opponentView = filterStateForPlayer(state, p2);
-
-  assert.equal(ownerView.effectSpotlightHistory?.entries.length, 1);
-  assert.equal(opponentView.effectSpotlightHistory, undefined);
 });

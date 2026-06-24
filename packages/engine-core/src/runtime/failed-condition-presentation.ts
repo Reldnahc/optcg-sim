@@ -45,13 +45,9 @@ export const appendFailedConditionSpotlightEvent = ({
     resolvedSourceCard,
     { status: "conditionFailed" },
   );
-  const failedConditionEvent = failedConditionEvents[0];
-  if (failedConditionEvent === undefined) {
-    return state;
-  }
-  events.push(failedConditionEvent);
+  events.push(...failedConditionEvents);
   return {
     ...state,
-    eventJournal: [...state.eventJournal, failedConditionEvent],
+    eventJournal: [...state.eventJournal, ...failedConditionEvents],
   };
 };

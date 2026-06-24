@@ -7,7 +7,13 @@ import type {
   TimingWindowId,
 } from "@optcg/types";
 
-import { appendEvent, rebaseEvents, toStateSeq } from "../../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  appendReplacementSpotlightEntryCreatedEvents,
+  rebaseEvents,
+  toStateSeq,
+} from "../../action-results.js";
 import { consumeOncePerTurnForQueueEntry } from "../../rules/once-per-turn.js";
 import { hashCanonicalStateValue } from "../../state/canonical-state.js";
 import type {
@@ -46,6 +52,47 @@ import type {
   PendingReplacementRestInsteadPayload,
   PendingReplacementTrashFromHandInsteadPayload,
 } from "./types.js";
+
+const appendReplacementDecisionCreated = <
+  TDecision extends NonNullable<GameState["pendingDecision"]>,
+>({
+  decision,
+  events,
+  presentation,
+  state,
+}: {
+  readonly state: GameState;
+  readonly events: EngineEvent[];
+  readonly decision: TDecision;
+  readonly presentation: Parameters<
+    typeof appendPendingSpotlightEntryCreatedEvents
+  >[0]["activeEffectText"];
+}): TDecision => {
+  appendEvent(
+    state,
+    events,
+    "decisionCreated",
+    {
+      decisionId: decision.id,
+      decisionType: decision.type,
+      playerId: decision.playerId,
+    },
+    decision.visibility,
+  );
+  const created = events[events.length - 1];
+  if (created !== undefined) {
+    created.causedBy = decision.causedBy;
+  }
+  return appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision: decision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: presentation,
+    visibility: decision.visibility,
+  }).pendingDecision;
+};
 
 export const executeAcceptedSelectedTargetKoReplacementProcess = (
   state: GameState,
@@ -159,21 +206,12 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
       };
     }
-    appendEvent(
-      prefixState,
+    const anchoredTrashFromHandDecision = appendReplacementDecisionCreated({
+      state: prefixState,
       events,
-      "decisionCreated",
-      {
-        decisionId: trashFromHandDecision.id,
-        decisionType: trashFromHandDecision.type,
-        playerId: trashFromHandDecision.playerId,
-      },
-      trashFromHandDecision.visibility,
-    );
-    const created = events[events.length - 1];
-    if (created !== undefined) {
-      created.causedBy = trashFromHandDecision.causedBy;
-    }
+      decision: trashFromHandDecision,
+      presentation,
+    });
     const oncePerTurn =
       candidate.oncePerTurn === true
         ? {
@@ -186,7 +224,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       state: {
         ...prefixState,
         seq: toStateSeq(prefixState.seq + 1),
-        pendingDecision: trashFromHandDecision,
+        pendingDecision: anchoredTrashFromHandDecision,
         replacementState: replacementStateWithProcess(
           prefixState,
           usedProcess,
@@ -195,7 +233,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
               ? process.payload
               : {}),
             pendingReplacementTrashFromHandInstead: {
-              decisionId: trashFromHandDecision.id,
+              decisionId: anchoredTrashFromHandDecision.id,
               effectBlockId: candidate.effectBlockId,
               replacementId: candidate.id,
               source: candidate.source,
@@ -205,7 +243,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
               coveredTargets: [...coveredTargets],
               causedBy: process.causedBy,
               controllerId: candidate.controllerId,
-              count: trashFromHandDecision.request.min,
+              count: anchoredTrashFromHandDecision.request.min,
               ...(presentation === undefined ? {} : { presentation }),
               ...(sequenceWithTrash.trashFromHand.filter === undefined
                 ? {}
@@ -225,32 +263,23 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     candidate,
   );
   if (ownerDeckBottomDecision !== undefined) {
-    appendEvent(
+    const anchoredOwnerDeckBottomDecision = appendReplacementDecisionCreated({
       state,
       events,
-      "decisionCreated",
-      {
-        decisionId: ownerDeckBottomDecision.id,
-        decisionType: ownerDeckBottomDecision.type,
-        playerId: ownerDeckBottomDecision.playerId,
-      },
-      ownerDeckBottomDecision.visibility,
-    );
-    const created = events[events.length - 1];
-    if (created !== undefined) {
-      created.causedBy = ownerDeckBottomDecision.causedBy;
-    }
+      decision: ownerDeckBottomDecision,
+      presentation,
+    });
     return {
       state: {
         ...state,
         seq: toStateSeq(state.seq + 1),
-        pendingDecision: ownerDeckBottomDecision,
+        pendingDecision: anchoredOwnerDeckBottomDecision,
         replacementState: replacementStateWithProcess(state, usedProcess, {
           ...(typeof process.payload === "object" && process.payload !== null
             ? process.payload
             : {}),
           pendingReplacementOwnerDeckBottomInstead: {
-            decisionId: ownerDeckBottomDecision.id,
+            decisionId: anchoredOwnerDeckBottomDecision.id,
             effectBlockId: candidate.effectBlockId,
             replacementId: candidate.id,
             source: candidate.source,
@@ -272,32 +301,23 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     candidate,
   );
   if (restDecision !== undefined) {
-    appendEvent(
+    const anchoredRestDecision = appendReplacementDecisionCreated({
       state,
       events,
-      "decisionCreated",
-      {
-        decisionId: restDecision.id,
-        decisionType: restDecision.type,
-        playerId: restDecision.playerId,
-      },
-      restDecision.visibility,
-    );
-    const created = events[events.length - 1];
-    if (created !== undefined) {
-      created.causedBy = restDecision.causedBy;
-    }
+      decision: restDecision,
+      presentation,
+    });
     return {
       state: {
         ...state,
         seq: toStateSeq(state.seq + 1),
-        pendingDecision: restDecision,
+        pendingDecision: anchoredRestDecision,
         replacementState: replacementStateWithProcess(state, usedProcess, {
           ...(typeof process.payload === "object" && process.payload !== null
             ? process.payload
             : {}),
           pendingReplacementRestInstead: {
-            decisionId: restDecision.id,
+            decisionId: anchoredRestDecision.id,
             effectBlockId: candidate.effectBlockId,
             replacementId: candidate.id,
             source: candidate.source,
@@ -325,21 +345,12 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
         error: acceptedReplacementError(effectId, "unsupported-effect-shape"),
       };
     }
-    appendEvent(
+    const anchoredTrashFromHandDecision = appendReplacementDecisionCreated({
       state,
       events,
-      "decisionCreated",
-      {
-        decisionId: trashFromHandDecision.id,
-        decisionType: trashFromHandDecision.type,
-        playerId: trashFromHandDecision.playerId,
-      },
-      trashFromHandDecision.visibility,
-    );
-    const created = events[events.length - 1];
-    if (created !== undefined) {
-      created.causedBy = trashFromHandDecision.causedBy;
-    }
+      decision: trashFromHandDecision,
+      presentation,
+    });
     const oncePerTurn =
       candidate.oncePerTurn === true
         ? {
@@ -352,13 +363,13 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
       state: {
         ...state,
         seq: toStateSeq(state.seq + 1),
-        pendingDecision: trashFromHandDecision,
+        pendingDecision: anchoredTrashFromHandDecision,
         replacementState: replacementStateWithProcess(state, usedProcess, {
           ...(typeof process.payload === "object" && process.payload !== null
             ? process.payload
             : {}),
           pendingReplacementTrashFromHandInstead: {
-            decisionId: trashFromHandDecision.id,
+            decisionId: anchoredTrashFromHandDecision.id,
             effectBlockId: candidate.effectBlockId,
             replacementId: candidate.id,
             source: candidate.source,
@@ -366,7 +377,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
             coveredTargets: [...coveredTargets],
             causedBy: process.causedBy,
             controllerId: candidate.controllerId,
-            count: trashFromHandDecision.request.min,
+            count: anchoredTrashFromHandDecision.request.min,
             ...(presentation === undefined ? {} : { presentation }),
             ...(trashInstead.filter === undefined
               ? {}
@@ -385,32 +396,23 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
     candidate,
   );
   if (payCostDecision !== undefined) {
-    appendEvent(
+    const anchoredPayCostDecision = appendReplacementDecisionCreated({
       state,
       events,
-      "decisionCreated",
-      {
-        decisionId: payCostDecision.id,
-        decisionType: payCostDecision.type,
-        playerId: payCostDecision.playerId,
-      },
-      payCostDecision.visibility,
-    );
-    const created = events[events.length - 1];
-    if (created !== undefined) {
-      created.causedBy = payCostDecision.causedBy;
-    }
+      decision: payCostDecision,
+      presentation,
+    });
     return {
       state: {
         ...state,
         seq: toStateSeq(state.seq + 1),
-        pendingDecision: payCostDecision,
+        pendingDecision: anchoredPayCostDecision,
         replacementState: replacementStateWithProcess(state, usedProcess, {
           ...(typeof process.payload === "object" && process.payload !== null
             ? process.payload
             : {}),
           pendingReplacementPayCostInstead: {
-            decisionId: payCostDecision.id,
+            decisionId: anchoredPayCostDecision.id,
             effectBlockId: candidate.effectBlockId,
             replacementId: candidate.id,
             source: candidate.source,
@@ -418,7 +420,7 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
             coveredTargets: [...coveredTargets],
             causedBy: process.causedBy,
             controllerId: candidate.controllerId,
-            cost: payCostDecision.cost,
+            cost: anchoredPayCostDecision.cost,
             ...(presentation === undefined ? {} : { presentation }),
           } satisfies PendingReplacementPayCostInsteadPayload,
         }),
@@ -444,6 +446,13 @@ export const executeAcceptedSelectedTargetKoReplacementProcess = (
   const applied = events[events.length - 1];
   if (applied !== undefined) {
     applied.causedBy = { type: "replacement", replacementId: candidate.id };
+    appendReplacementSpotlightEntryCreatedEvents({
+      state,
+      events,
+      replacementAppliedEvent: applied,
+      replacementId: candidate.id,
+      presentation,
+    });
   }
 
   const sourceSnapshot = toReplacementDrawSourceSnapshot(

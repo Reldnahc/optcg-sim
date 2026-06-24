@@ -29,6 +29,7 @@ import {
   queueDrawForP1,
   toSourceSnapshot,
 } from "../effect-runtime-queue/test-support.js";
+import { publicPendingDecisionIdForPendingDecision } from "../spotlight/public-pending-identity.js";
 import { filterStateForPlayer } from "./filter-state-for-player.js";
 
 const installDefinition = (
@@ -158,6 +159,10 @@ test("filterStateForPlayer keeps chooseOptionalActivation pending decision priva
     playerId: p1,
     prompt: "Activate optional effect?",
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    spotlightPendingId: publicPendingDecisionIdForPendingDecision({
+      pending: state.pendingDecision,
+      recipientPlayerId: p1,
+    }),
     presentation: {
       title: "Optional effect",
       instruction: "Activate optional effect?",

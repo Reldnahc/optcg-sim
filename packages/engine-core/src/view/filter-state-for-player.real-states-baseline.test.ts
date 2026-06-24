@@ -118,6 +118,7 @@ const assertPublicDecisionShape = (
     "playerId",
     "presentation",
     "prompt",
+    "spotlightPendingId",
     "type",
   ].sort();
   if ("timeoutMs" in pending) {

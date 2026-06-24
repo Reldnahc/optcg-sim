@@ -12,6 +12,7 @@ import type {
 } from "@optcg/types";
 
 import {
+  appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
   type EngineResultOptions,
   illegalAction,
@@ -290,6 +291,21 @@ export const applyBlockStepDecisionResponse = (
       },
       { type: "public" },
     );
+    const blockerActivated = events[events.length - 1];
+    if (blockerActivated !== undefined) {
+      appendCombatSpotlightEntryCreatedEvent({
+        state: eventState,
+        events,
+        anchorEvent: blockerActivated,
+        combat: {
+          eventKind: "blockerActivated",
+          attacker: battle.attacker,
+          defender: blockerRef,
+          ...(attackerPower === undefined ? {} : { attackerPower }),
+          ...(defenderPower === undefined ? {} : { defenderPower }),
+        },
+      });
+    }
     const retargetedBattle = retargetBattle(
       state,
       { ...battle, blocker: blockerRef },

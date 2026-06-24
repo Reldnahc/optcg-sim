@@ -16,6 +16,7 @@ import type {
 import {
   appendEffectResolvedEvent,
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   toDecisionId,
   toEngineResult,
   toStateSeq,
@@ -227,11 +228,20 @@ export const createTopDeckPlacementDecision = (
   if (event !== undefined) {
     event.causedBy = pendingDecision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: event,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility: pendingDecision.visibility,
+  });
   return toEngineResult(
     {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
     events,
@@ -381,7 +391,9 @@ export const applyTopDeckPlacementDecisionResponse = (
     appendEffectResolvedEvent(state, events, queuedEntry);
   }
   for (const event of events) {
-    event.causedBy = { type: "decision", decisionId: decision.id };
+    if (event.type === "decisionResolved") {
+      event.causedBy = { type: "decision", decisionId: decision.id };
+    }
   }
   let nextState: GameState = {
     ...state,

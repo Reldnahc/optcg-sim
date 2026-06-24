@@ -112,6 +112,7 @@ const assertPublicDecisionShape = (
     "playerId",
     "presentation",
     "prompt",
+    "spotlightPendingId",
     "type",
   ];
   const typeRequired =

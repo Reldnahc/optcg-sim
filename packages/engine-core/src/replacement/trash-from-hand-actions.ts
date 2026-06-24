@@ -16,6 +16,7 @@ import type {
 
 import {
   appendEvent,
+  appendReplacementSpotlightEntryCreatedEvents,
   type EngineResultOptions,
   toEngineResult,
   toStateSeq,
@@ -403,6 +404,13 @@ export const applyReplacementTrashFromHandDecisionResponse = (
       type: "replacement",
       replacementId: pending.payload.replacementId,
     };
+    appendReplacementSpotlightEntryCreatedEvents({
+      state: moved.state,
+      events,
+      replacementAppliedEvent: applied,
+      replacementId: pending.payload.replacementId,
+      presentation: pending.payload.presentation,
+    });
   }
   const completedPayload = replacementPayloadWithoutPendingKey({
     state,

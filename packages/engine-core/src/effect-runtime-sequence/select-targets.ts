@@ -1,4 +1,5 @@
 import type {
+  ActiveEffectTextPresentation,
   CardRef,
   Effect,
   EffectDefinition,
@@ -13,7 +14,12 @@ import type {
   Target,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../action-results.js";
 import { buildSelectedTargetsRestReplacementProcess } from "../replacement/field-removal-process.js";
 import { createContinuousRecordsForResolvedEffect } from "../runtime/continuous/continuous.js";
 import type { ContinuousTargetChoiceEffect } from "../runtime/continuous/targeting.js";
@@ -68,6 +74,27 @@ type SegmentLedgers = {
 };
 
 type TargetCandidate = SelectTargetsDecision["candidates"][number];
+
+const activeEffectTextForSegment = (
+  entry: EffectQueueEntry,
+  segment: SequenceEffect["effects"][number],
+): ActiveEffectTextPresentation | undefined => {
+  if (entry.presentation === undefined || segment.presentation === undefined) {
+    return undefined;
+  }
+  if (
+    entry.presentation.textKind !== undefined &&
+    segment.presentation.textKind !== entry.presentation.textKind
+  ) {
+    return undefined;
+  }
+  return segment.presentation.spanIds.length === 0
+    ? undefined
+    : {
+        ...entry.presentation,
+        activeSpanIds: segment.presentation.spanIds,
+      };
+};
 
 type SequenceFrameResumeResult =
   | {
@@ -332,10 +359,19 @@ export const applySelectTargetsSequenceSegment = (params: {
   if (created !== undefined) {
     created.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: nextState,
+    events: decisionEvents,
+    pendingDecision: decision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: activeEffectTextForSegment(entry, segment),
+    visibility: { type: "public" },
+  });
   const decisionState: GameState = {
     ...nextState,
     seq: toStateSeq(nextState.seq + 1),
-    pendingDecision: decision,
+    pendingDecision: anchored.pendingDecision,
     eventJournal: [...nextState.eventJournal, ...decisionEvents],
   };
   const frame = frameForPausedSequenceDecision({

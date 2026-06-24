@@ -24,6 +24,11 @@ import {
   resolvedCard,
 } from "../action-test-fixtures.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
+import {
+  replacementPresentation,
+  replacementSpotlightPayloads,
+  stateWithPendingReplacementPresentation,
+} from "./spotlight-test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -703,14 +708,24 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
     [replacementCostCard.instanceId, secondReplacementCostCard.instanceId],
   );
 
-  const resolved = applyAction(accepted.state, {
-    type: "respondToDecision",
-    decisionId: trashDecision.id,
-    response: {
-      type: "cards",
-      cards: [cardRef(replacementCostCard, p2)],
+  const resolved = applyAction(
+    stateWithPendingReplacementPresentation({
+      state: accepted.state,
+      pendingKey: "pendingReplacementTrashFromHandInstead",
+      presentation: replacementPresentation({
+        source: cardRef(targetCard, p2),
+        target: cardRef(replacementCostCard, p2),
+      }),
+    }),
+    {
+      type: "respondToDecision",
+      decisionId: trashDecision.id,
+      response: {
+        type: "cards",
+        cards: [cardRef(replacementCostCard, p2)],
+      },
     },
-  });
+  );
   const nextP2 = must(resolved.state.players[p2], "next p2");
 
   assert.equal(resolved.errors, undefined);
@@ -737,8 +752,23 @@ test("accepted K.O. replacement trashes filtered card from hand instead of KOing
   assert.equal(oncePerTurn.effectId, effectId);
   assert.deepEqual(
     resolved.events.map((event) => event.type),
-    ["decisionResolved", "cardMoved", "cardTrashed", "replacementApplied"],
+    [
+      "decisionResolved",
+      "cardMoved",
+      "cardTrashed",
+      "replacementApplied",
+      "spotlightEntryCreated",
+    ],
   );
+  const spotlightPayload = replacementSpotlightPayloads(resolved.events)[0];
+  assert.deepEqual(spotlightPayload?.disclosure?.targetLinks, [
+    {
+      spanId: "span:replacement",
+      relation: "affectedCard",
+      cardInstanceId: replacementCostCard.instanceId,
+      visibility: { type: "private", playerId: p2 },
+    },
+  ]);
 
   const secondEntry: EffectQueueEntry = {
     ...entry,
@@ -953,14 +983,24 @@ test("accepted opponent effect field-removal replacement rests selected own card
     [p2State.leader.instanceId, targetCard.instanceId, firstDon.instanceId],
   );
 
-  const resolved = applyAction(accepted.state, {
-    type: "respondToDecision",
-    decisionId: restDecision.id,
-    response: {
-      type: "targets",
-      targets: [cardRef(p2State.leader, p2), cardRef(firstDon, p2)],
+  const resolved = applyAction(
+    stateWithPendingReplacementPresentation({
+      state: accepted.state,
+      pendingKey: "pendingReplacementRestInstead",
+      presentation: replacementPresentation({
+        source: cardRef(targetCard, p2),
+        target: cardRef(p2State.leader, p2),
+      }),
+    }),
+    {
+      type: "respondToDecision",
+      decisionId: restDecision.id,
+      response: {
+        type: "targets",
+        targets: [cardRef(p2State.leader, p2), cardRef(firstDon, p2)],
+      },
     },
-  });
+  );
   const nextP2 = must(resolved.state.players[p2], "next p2");
 
   assert.equal(resolved.errors, undefined);
@@ -972,6 +1012,12 @@ test("accepted opponent effect field-removal replacement rests selected own card
   assert.equal(must(nextP2.costArea[0], "rested don").state, "rested");
   assert.deepEqual(
     resolved.events.map((event) => event.type),
-    ["decisionResolved", "cardRested", "replacementApplied"],
+    [
+      "decisionResolved",
+      "cardRested",
+      "replacementApplied",
+      "spotlightEntryCreated",
+    ],
   );
+  assert.equal(replacementSpotlightPayloads(resolved.events).length, 1);
 });

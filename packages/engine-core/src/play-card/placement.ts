@@ -27,6 +27,11 @@ import {
   shouldCardEnterPlayRested,
   type SupportedPlayMetadata,
 } from "./support.js";
+import {
+  appendNoEffectPlayedCardSpotlightIfAdmitted,
+  countQueuedEffectsForSource,
+  publicPlayedCardRef,
+} from "./no-effect-spotlight.js";
 
 type ResolvePlayCardEffectRuntime = (
   previousState: GameState,
@@ -185,6 +190,7 @@ export const placePlayedCardResult = (params: {
     enterRested: boolean;
     queueEntryId: EffectQueueEntry["id"];
   };
+  admitNoEffectPlayedCardSpotlight?: boolean;
   engineOptions?: EngineResultOptions;
   effectSourceCardId?: CardInstance["cardId"];
   resolveOnPlayRuntime?: boolean;
@@ -207,6 +213,7 @@ export const placePlayedCardResult = (params: {
     enterRested,
     runtimePlaySelectedEnterRested,
     runtimePlaySourceOverflow,
+    admitNoEffectPlayedCardSpotlight = false,
     engineOptions = {},
     effectSourceCardId,
     resolveOnPlayRuntime = true,
@@ -537,7 +544,26 @@ export const placePlayedCardResult = (params: {
   nextState.eventJournal = [...state.eventJournal, ...events];
   assertGameStateInvariantsIfEnabled(nextState, engineOptions);
   if (!resolveOnPlayRuntime) {
-    return toEngineResult(nextState, events, undefined, engineOptions);
+    if (admitNoEffectPlayedCardSpotlight) {
+      const source = publicPlayedCardRef(sourceCard, playerId);
+      appendNoEffectPlayedCardSpotlightIfAdmitted({
+        state,
+        events,
+        source,
+        category: supported.category,
+        outcome: {
+          queuedEffectCount: countQueuedEffectsForSource(events, source),
+          supportedEffectAttempted: false,
+          failedClosedEffectAttempted: false,
+        },
+      });
+    }
+    return toEngineResult(
+      { ...nextState, eventJournal: [...state.eventJournal, ...events] },
+      events,
+      undefined,
+      engineOptions,
+    );
   }
   if (resolvePlayCardEffectRuntime === undefined) {
     return illegalAction(

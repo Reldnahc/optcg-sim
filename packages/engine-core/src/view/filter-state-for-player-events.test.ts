@@ -315,7 +315,7 @@ test("preserves safe gameplay event details for player logs", () => {
   assert.equal(JSON.stringify(view.events).includes("card-1"), false);
 });
 
-test("preserves safe effectResolved presentation for effect text spotlight", () => {
+test("redacts effectResolved presentation from player event payloads", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");
   const instanceId = "resolved-effect-source" as InstanceId;
@@ -376,35 +376,13 @@ test("preserves safe effectResolved presentation for effect text spotlight", () 
 
   const view = filterStateForPlayer(state, p2);
 
-  assert.deepEqual(view.events[0]?.payload, {
-    status: "resolved",
-    presentation: {
-      source: {
-        instanceId,
-        cardId,
-        playerId: p1,
-      },
-      textKind: "effect",
-      activeSpanIds: ["span:body"],
-      targetLinks: [
-        {
-          spanId: "span:body",
-          relation: "selectedTarget",
-          cards: [
-            {
-              instanceId: "target-card-1",
-              cardId: toCardId("OP13-090"),
-              playerId: p2,
-            },
-          ],
-        },
-      ],
-    },
-  });
+  assert.deepEqual(view.events[0]?.payload, { status: "resolved" });
+  assert.equal(JSON.stringify(view.events).includes("presentation"), false);
+  assert.equal(JSON.stringify(view.events).includes("target-card-1"), false);
   assert.equal(JSON.stringify(view.events).includes("private"), false);
 });
 
-test("preserves safe replacementApplied presentation for effect text spotlight", () => {
+test("redacts replacementApplied presentation from player event payloads", () => {
   const state = createActiveState();
   const cardId = toCardId("OP13-089");
   const instanceId = "replacement-source" as InstanceId;
@@ -441,18 +419,8 @@ test("preserves safe replacementApplied presentation for effect text spotlight",
 
   const view = filterStateForPlayer(state, p2);
 
-  assert.deepEqual(view.events[0]?.payload, {
-    status: "applied",
-    presentation: {
-      source: {
-        instanceId,
-        cardId,
-        playerId: p1,
-      },
-      textKind: "effect",
-      activeSpanIds: ["span:replacement"],
-    },
-  });
+  assert.deepEqual(view.events[0]?.payload, { status: "applied" });
+  assert.equal(JSON.stringify(view.events).includes("presentation"), false);
   assert.equal(JSON.stringify(view.events).includes("private"), false);
   assert.equal(JSON.stringify(view.events).includes("hidden"), false);
 });
@@ -543,4 +511,62 @@ test("censors stale transient set reveal candidates instead of omitting the log 
   assert.equal(JSON.stringify(view.events).includes(String(cardId)), false);
   assert.equal(JSON.stringify(view.events).includes(String(instanceId)), false);
   assert.equal(JSON.stringify(view.events).includes("hiddenDeckIndex"), false);
+});
+
+test("malformed spotlight disclosure redacts unsafe spotlight payloads", () => {
+  const state = createActiveState();
+  const hiddenSource = {
+    instanceId: "hidden-spotlight-source" as InstanceId,
+    cardId: toCardId("OP13-099"),
+    playerId: p1,
+  };
+  state.eventJournal = [
+    {
+      id: toEngineEventId("event:malformed-spotlight"),
+      seq: 1,
+      type: "spotlightEntryCreated",
+      payload: {
+        disclosure: {
+          entryRefs: [
+            null,
+            {
+              role: "effectSource",
+              cardInstanceId: hiddenSource.instanceId,
+              visibility: null,
+            },
+          ],
+          targetLinks: [
+            null,
+            {
+              spanId: "span:body",
+              relation: "selectedTarget",
+              cardInstanceId: hiddenSource.instanceId,
+              visibility: null,
+            },
+          ],
+        },
+        entry: {
+          kind: "effectText",
+          id: "unsafe-authored-id",
+          key: "unsafe-authored-key",
+          semanticKey: "unsafe-authored-semantic",
+          mode: "resolved",
+          status: "resolved",
+          active: {
+            source: hiddenSource,
+            textKind: "effect",
+            activeSpanIds: ["span:body"],
+          },
+          resolvedEventId: toEngineEventId("event:hidden-anchor"),
+        },
+      },
+      visibility: { type: "public" },
+      createdAtStateSeq: toStateSeq(state.seq),
+    },
+  ];
+
+  const view = filterStateForPlayer(state, p2);
+
+  assert.deepEqual(view.events[0]?.payload, {});
+  assert.equal(view.effectSpotlightHistory, undefined);
 });

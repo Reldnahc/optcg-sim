@@ -25,6 +25,11 @@ import {
   resolvedCard,
 } from "../action-test-fixtures.js";
 import { executeSelectedTargetEffectPrimitive } from "../runtime/primitives/execute.js";
+import {
+  replacementPresentation,
+  replacementSpotlightPayloads,
+  stateWithPendingReplacementPresentation,
+} from "./spotlight-test-support.js";
 
 const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -331,11 +336,21 @@ test.each([
       assert.fail("expected owner deck-bottom replacement target decision");
     }
 
-    const resolved = applyAction(accepted.state, {
-      type: "respondToDecision",
-      decisionId: ownerDeckBottomDecision.id,
-      response: { type: "targets", targets: [cardRef(paymentCard, p2)] },
-    });
+    const resolved = applyAction(
+      stateWithPendingReplacementPresentation({
+        state: accepted.state,
+        pendingKey: "pendingReplacementOwnerDeckBottomInstead",
+        presentation: replacementPresentation({
+          source: cardRef(targetCard, p2),
+          target: cardRef(paymentCard, p2),
+        }),
+      }),
+      {
+        type: "respondToDecision",
+        decisionId: ownerDeckBottomDecision.id,
+        response: { type: "targets", targets: [cardRef(paymentCard, p2)] },
+      },
+    );
     const nextP2 = must(resolved.state.players[p2], "next p2");
 
     assert.equal(resolved.errors, undefined);
@@ -355,5 +370,6 @@ test.each([
       must(nextP2.deck.at(-1), "deck-bottom payment card").instanceId,
       paymentCard.instanceId,
     );
+    assert.equal(replacementSpotlightPayloads(resolved.events).length, 1);
   },
 );

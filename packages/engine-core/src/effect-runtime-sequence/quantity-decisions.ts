@@ -6,7 +6,12 @@ import type {
   GameState,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../action-results.js";
 import { chooseQuantityPromptForEffect } from "../effect-runtime-quantity-prompts.js";
 
 type SequenceDecisionResult = {
@@ -57,13 +62,22 @@ const createSequenceChooseQuantityDecision = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility,
+  });
   return {
     events,
     ok: true,
     state: {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
   };

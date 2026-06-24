@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, SelectionSetId } from "@optcg/types";
+import type {
+  EffectDefinition,
+  SelectionSetId,
+  SpotlightEntryCreatedPayload,
+} from "@optcg/types";
 
 import { applyAction } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
@@ -115,6 +119,7 @@ test("applyDeclareAttack enters block step and opens defender decline decision w
       state.eventJournal.length + 2,
       state.eventJournal.length + 3,
       state.eventJournal.length + 4,
+      state.eventJournal.length + 5,
     ],
   );
   const replay = applyDeclareAttack(structuredClone(state), {
@@ -477,6 +482,10 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
     setupOpenedBlockStepDecision();
   const originalTarget = cardRef(p2State.leader, p2);
   const blocker = cardRef(defenderBlocker, p2);
+  const attacker = cardRef(
+    must(opened.state.players[p1], "opened p1").leader,
+    p1,
+  );
   const beforeLife = p2State.life.length;
 
   const blocked = applyAction(opened.state, {
@@ -505,6 +514,7 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
     true,
   );
   const events = [...blocked.events, ...result.events];
+  const blockerActivated = must(blocked.events[1], "blockerActivated event");
   assert.deepEqual(
     events.map((event) => ({
       type: event.type,
@@ -520,15 +530,55 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
       {
         type: "blockerActivated",
         payload: {
-          attacker: cardRef(
-            must(opened.state.players[p1], "opened p1").leader,
-            p1,
-          ),
+          attacker,
           blocker,
           previousTarget: originalTarget,
           currentTarget: blocker,
           attackerPower: 5000,
           defenderPower: 3000,
+        },
+        visibility: { type: "public" },
+      },
+      {
+        type: "spotlightEntryCreated",
+        payload: {
+          entry: {
+            kind: "combat",
+            id: `spotlight:combat:${String(blockerActivated.id)}:blockerActivated`,
+            key: `spotlight:combat:${String(blockerActivated.id)}:blockerActivated`,
+            semanticKey: [
+              "combat",
+              "blockerActivated",
+              String(attacker.playerId),
+              String(attacker.instanceId),
+              String(blocker.playerId),
+              String(blocker.instanceId),
+            ].join("|"),
+            mode: "resolved",
+            status: "resolved",
+            combat: {
+              eventKind: "blockerActivated",
+              attacker,
+              defender: blocker,
+              attackerPower: 5000,
+              defenderPower: 3000,
+            },
+            resolvedEventId: blockerActivated.id,
+          },
+          disclosure: {
+            entryRefs: [
+              {
+                role: "combatAttacker",
+                cardInstanceId: attacker.instanceId,
+                visibility: { type: "public" },
+              },
+              {
+                role: "combatDefender",
+                cardInstanceId: blocker.instanceId,
+                visibility: { type: "public" },
+              },
+            ],
+          },
         },
         visibility: { type: "public" },
       },
@@ -821,6 +871,7 @@ test("supported blocked-battle resolution is deterministic", () => {
     [
       "decisionResolved",
       "blockerActivated",
+      "spotlightEntryCreated",
       "cardRested",
       "decisionCreated",
       "decisionResolved",
@@ -844,6 +895,7 @@ test("supported blocked-battle resolution is deterministic", () => {
       { type: "public" },
       { type: "public" },
       { type: "public" },
+      { type: "public" },
       { type: "replayOnly" },
       { type: "replayOnly" },
     ],
@@ -852,10 +904,36 @@ test("supported blocked-battle resolution is deterministic", () => {
     events.map((event) => event.seq),
     events.map((_, index) => opened.state.eventJournal.length + index + 1),
   );
+  const blockerActivatedIndex = events.findIndex(
+    (event) => event.type === "blockerActivated",
+  );
+  const blockerSpotlights = events.filter(
+    (event) => event.type === "spotlightEntryCreated",
+  );
+  assert.equal(blockerSpotlights.length, 1);
+  assert.equal(
+    events[blockerActivatedIndex + 1]?.type,
+    "spotlightEntryCreated",
+  );
+  const blockerActivated = must(
+    events[blockerActivatedIndex],
+    "blockerActivated event",
+  );
+  const spotlightPayload = must(blockerSpotlights[0], "blocker spotlight")
+    .payload as SpotlightEntryCreatedPayload;
+  assert.equal(spotlightPayload.entry.kind, "combat");
+  assert.deepEqual(spotlightPayload.entry.combat, {
+    eventKind: "blockerActivated",
+    attacker: must(opened.state.battle, "battle").attacker,
+    defender: blocker,
+    attackerPower: 5000,
+    defenderPower: 3000,
+  });
+  assert.equal(spotlightPayload.entry.resolvedEventId, blockerActivated.id);
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "8a1edb797489ac77dfbc82d31b7227447f5a02d8c8f05a6c2c5c5d08143a578d",
+    "f72029b0cdfc364057054ee9faecf8f25d7125e5869cafa3700ce8f5fd9aa8e1",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

@@ -1,9 +1,15 @@
 import type {
+  CardRef,
+  EffectTextTargetLink,
   EngineEvent,
   EventVisibility,
   GameState,
   PlayerId,
+  PublicPendingDecisionId,
+  SpotlightEntryDisclosure,
 } from "@optcg/types";
+
+import { isSpotlightCardRefVisibleToPlayer } from "./card-ref-visibility.js";
 
 export const isEventVisibleToPlayer = (
   event: EngineEvent,
@@ -79,9 +85,7 @@ const toAllowedRevealCard = (
 const countRevealCards = (value: unknown): number | undefined =>
   Array.isArray(value) ? value.length : undefined;
 
-const toAllowedCardRef = (
-  value: unknown,
-): Record<string, string> | undefined => {
+const toAllowedCardRef = (value: unknown): CardRef | undefined => {
   const ref = asRecord(value);
   if (ref === undefined) {
     return undefined;
@@ -96,24 +100,47 @@ const toAllowedCardRef = (
   ) {
     return undefined;
   }
-  return { instanceId, cardId, playerId };
+  return {
+    instanceId: instanceId as CardRef["instanceId"],
+    cardId: cardId as CardRef["cardId"],
+    playerId: playerId as PlayerId,
+  };
 };
 
-const allowedEffectTextTargetLinkRelations = new Set([
-  "candidateTarget",
-  "selectedTarget",
-  "affectedCard",
-]);
+type SafeEffectTextTargetLink = {
+  readonly spanId: `span:${string}`;
+  readonly relation: EffectTextTargetLink["relation"];
+  readonly cards: readonly CardRef[];
+};
+
+type SafeEffectTextPresentation = {
+  readonly source: CardRef;
+  readonly textKind?: "effect" | "trigger";
+  readonly activeSpanIds: readonly `span:${string}`[];
+  readonly targetLinks?: readonly SafeEffectTextTargetLink[];
+};
+
+type SafeCombatSpotlightPresentation = {
+  readonly eventKind: "attackDeclared" | "blockerActivated";
+  readonly attacker: CardRef;
+  readonly defender: CardRef;
+  readonly attackerPower?: number;
+  readonly defenderPower?: number;
+};
+
+const allowedEffectTextTargetLinkRelations = new Set<
+  EffectTextTargetLink["relation"]
+>(["candidateTarget", "selectedTarget", "affectedCard"]);
 
 const toAllowedEffectTextTargetLinks = (
   value: unknown,
   activeSpanIds: readonly string[],
-): Record<string, unknown>[] | undefined => {
+): SafeEffectTextTargetLink[] | undefined => {
   if (!Array.isArray(value)) {
     return undefined;
   }
   const activeSpanIdSet = new Set(activeSpanIds);
-  const links = value.flatMap((candidate): Record<string, unknown>[] => {
+  const links = value.flatMap((candidate): SafeEffectTextTargetLink[] => {
     const link = asRecord(candidate);
     if (link === undefined) {
       return [];
@@ -125,7 +152,9 @@ const toAllowedEffectTextTargetLinks = (
       typeof spanId !== "string" ||
       !activeSpanIdSet.has(spanId) ||
       typeof relation !== "string" ||
-      !allowedEffectTextTargetLinkRelations.has(relation) ||
+      !allowedEffectTextTargetLinkRelations.has(
+        relation as EffectTextTargetLink["relation"],
+      ) ||
       !Array.isArray(cards)
     ) {
       return [];
@@ -138,8 +167,8 @@ const toAllowedEffectTextTargetLinks = (
       ? []
       : [
           {
-            spanId,
-            relation,
+            spanId: spanId as `span:${string}`,
+            relation: relation as EffectTextTargetLink["relation"],
             cards: safeCards,
           },
         ];
@@ -149,7 +178,7 @@ const toAllowedEffectTextTargetLinks = (
 
 const toAllowedEffectTextPresentation = (
   value: unknown,
-): Record<string, unknown> | undefined => {
+): SafeEffectTextPresentation | undefined => {
   const presentation = asRecord(value);
   if (presentation === undefined) {
     return undefined;
@@ -177,6 +206,414 @@ const toAllowedEffectTextPresentation = (
     activeSpanIds: safeSpanIds,
     ...(targetLinks === undefined ? {} : { targetLinks }),
   };
+};
+
+const toRecipientSafeTargetLinks = (
+  state: GameState,
+  context: PlayerEventViewContext,
+  active: SafeEffectTextPresentation,
+  disclosure: SpotlightEntryDisclosure | undefined,
+): SafeEffectTextTargetLink[] | undefined => {
+  const links = active.targetLinks;
+  if (!Array.isArray(links)) {
+    return undefined;
+  }
+  const safeLinks = links.flatMap((candidate): SafeEffectTextTargetLink[] => {
+    const link = asRecord(candidate);
+    if (link === undefined) {
+      return [];
+    }
+    const spanId = link["spanId"];
+    const relation = link["relation"];
+    const cards = link["cards"];
+    if (
+      typeof spanId !== "string" ||
+      !spanId.startsWith("span:") ||
+      typeof relation !== "string" ||
+      !allowedEffectTextTargetLinkRelations.has(
+        relation as EffectTextTargetLink["relation"],
+      ) ||
+      !Array.isArray(cards)
+    ) {
+      return [];
+    }
+    const safeCards = cards.flatMap((card) => {
+      const safeCard = toAllowedCardRef(card);
+      return safeCard !== undefined &&
+        isSpotlightCardRefVisibleToPlayer(
+          state,
+          context.playerId,
+          safeCard,
+          {
+            type: "targetLink",
+            spanId: spanId as `span:${string}`,
+            relation: relation as EffectTextTargetLink["relation"],
+          },
+          disclosure,
+        )
+        ? [safeCard]
+        : [];
+    });
+    return safeCards.length === 0
+      ? []
+      : [
+          {
+            spanId: spanId as `span:${string}`,
+            relation: relation as EffectTextTargetLink["relation"],
+            cards: safeCards,
+          },
+        ];
+  });
+  return safeLinks.length === 0 ? undefined : safeLinks;
+};
+
+const toAllowedCombatSpotlightPresentation = (
+  value: unknown,
+): SafeCombatSpotlightPresentation | undefined => {
+  const combat = asRecord(value);
+  if (combat === undefined) {
+    return undefined;
+  }
+  const eventKind = combat["eventKind"];
+  const attacker = toAllowedCardRef(combat["attacker"]);
+  const defender = toAllowedCardRef(combat["defender"]);
+  if (
+    (eventKind !== "attackDeclared" && eventKind !== "blockerActivated") ||
+    attacker === undefined ||
+    defender === undefined
+  ) {
+    return undefined;
+  }
+  const attackerPower = combat["attackerPower"];
+  const defenderPower = combat["defenderPower"];
+  return {
+    eventKind,
+    attacker,
+    defender,
+    ...(typeof attackerPower === "number" ? { attackerPower } : {}),
+    ...(typeof defenderPower === "number" ? { defenderPower } : {}),
+  };
+};
+
+interface PlayerEventViewContext {
+  readonly playerId: PlayerId;
+  readonly visiblePublicPendingDecisionId?: PublicPendingDecisionId | undefined;
+}
+
+const visiblePendingSpotlightId = (
+  context: PlayerEventViewContext,
+  pendingDecisionId: string,
+): PublicPendingDecisionId | undefined =>
+  context.visiblePublicPendingDecisionId !== undefined &&
+  String(context.visiblePublicPendingDecisionId) === pendingDecisionId
+    ? context.visiblePublicPendingDecisionId
+    : undefined;
+
+const safeEntryId = (
+  prefix: "effectText" | "combat" | "playedCard",
+  anchor: string,
+  ordinal: number,
+): string => `spotlight:${prefix}:${anchor}:${String(ordinal)}`;
+
+const visibleAnchorEventId = (
+  state: GameState,
+  context: PlayerEventViewContext,
+  eventId: string,
+): EngineEvent["id"] | undefined => {
+  const anchor = state.eventJournal.find(
+    (candidate) => String(candidate.id) === eventId,
+  );
+  return anchor !== undefined &&
+    isEventVisibleToPlayer(anchor, context.playerId)
+    ? anchor.id
+    : undefined;
+};
+
+const spotlightEntryPrefix = (
+  entry: Record<string, unknown>,
+): "effectText" | "combat" | "playedCard" | undefined => {
+  if (entry["kind"] === "combat") {
+    return "combat";
+  }
+  if (entry["kind"] === "playedCard") {
+    return "playedCard";
+  }
+  return entry["kind"] === undefined || entry["kind"] === "effectText"
+    ? "effectText"
+    : undefined;
+};
+
+const rawAnchorForSpotlightEntry = (
+  entry: Record<string, unknown>,
+  fallbackEventId: EngineEvent["id"],
+): string => {
+  const pendingDecisionId = entry["pendingDecisionId"];
+  if (
+    entry["mode"] === "live" &&
+    entry["status"] === "pending" &&
+    typeof pendingDecisionId === "string"
+  ) {
+    return pendingDecisionId;
+  }
+  const resolvedEventId = entry["resolvedEventId"];
+  return typeof resolvedEventId === "string"
+    ? resolvedEventId
+    : String(fallbackEventId);
+};
+
+const spotlightOrdinalForAnchor = (
+  state: GameState,
+  event: EngineEvent,
+  prefix: "effectText" | "combat" | "playedCard",
+  rawAnchor: string,
+): number => {
+  let ordinal = 0;
+  for (const candidate of state.eventJournal) {
+    if (candidate.id === event.id) {
+      break;
+    }
+    if (
+      candidate.type !== "spotlightEntryCreated" ||
+      !isObjectRecord(candidate.payload)
+    ) {
+      continue;
+    }
+    const entry = asRecord(candidate.payload["entry"]);
+    if (
+      entry !== undefined &&
+      spotlightEntryPrefix(entry) === prefix &&
+      rawAnchorForSpotlightEntry(entry, candidate.id) === rawAnchor
+    ) {
+      ordinal += 1;
+    }
+  }
+  return ordinal;
+};
+
+const toAllowedSpotlightEntry = (
+  state: GameState,
+  event: EngineEvent,
+  context: PlayerEventViewContext,
+  value: unknown,
+  disclosure: SpotlightEntryDisclosure | undefined,
+): Record<string, unknown> | undefined => {
+  const entry = asRecord(value);
+  if (entry === undefined) {
+    return undefined;
+  }
+  const mode = entry["mode"];
+  const status = entry["status"];
+  if (
+    (mode !== "live" && mode !== "resolved") ||
+    (status !== "pending" && status !== "resolved")
+  ) {
+    return undefined;
+  }
+  if (entry["kind"] === "combat") {
+    const combat = toAllowedCombatSpotlightPresentation(entry["combat"]);
+    const resolvedEventId = entry["resolvedEventId"];
+    if (
+      combat === undefined ||
+      !isSpotlightCardRefVisibleToPlayer(
+        state,
+        context.playerId,
+        combat.attacker,
+        "combatAttacker",
+        disclosure,
+      ) ||
+      !isSpotlightCardRefVisibleToPlayer(
+        state,
+        context.playerId,
+        combat.defender,
+        "combatDefender",
+        disclosure,
+      ) ||
+      mode !== "resolved" ||
+      status !== "resolved" ||
+      typeof resolvedEventId !== "string"
+    ) {
+      return undefined;
+    }
+    const safeResolvedEventId = visibleAnchorEventId(
+      state,
+      context,
+      resolvedEventId,
+    );
+    const anchorId = safeResolvedEventId ?? event.id;
+    const ordinal = spotlightOrdinalForAnchor(
+      state,
+      event,
+      "combat",
+      safeResolvedEventId === undefined ? String(event.id) : resolvedEventId,
+    );
+    const id = safeEntryId("combat", String(anchorId), ordinal);
+    return {
+      kind: "combat",
+      id,
+      key: id,
+      semanticKey: [
+        "combat",
+        String(anchorId),
+        String(ordinal),
+        combat.eventKind,
+        combat.attackerPower === undefined ? "" : String(combat.attackerPower),
+        combat.defenderPower === undefined ? "" : String(combat.defenderPower),
+      ].join("|"),
+      mode,
+      status,
+      combat,
+      resolvedEventId: safeResolvedEventId ?? event.id,
+    };
+  }
+  if (entry["kind"] === "playedCard") {
+    const source = toAllowedCardRef(entry["source"]);
+    const resolvedEventId = entry["resolvedEventId"];
+    if (
+      source === undefined ||
+      !isSpotlightCardRefVisibleToPlayer(
+        state,
+        context.playerId,
+        source,
+        "playedCardSource",
+        disclosure,
+      ) ||
+      mode !== "resolved" ||
+      status !== "resolved" ||
+      typeof resolvedEventId !== "string"
+    ) {
+      return undefined;
+    }
+    const safeResolvedEventId = visibleAnchorEventId(
+      state,
+      context,
+      resolvedEventId,
+    );
+    const anchorId = safeResolvedEventId ?? event.id;
+    const ordinal = spotlightOrdinalForAnchor(
+      state,
+      event,
+      "playedCard",
+      safeResolvedEventId === undefined ? String(event.id) : resolvedEventId,
+    );
+    const id = safeEntryId("playedCard", String(anchorId), ordinal);
+    return {
+      kind: "playedCard",
+      id,
+      key: id,
+      semanticKey: ["playedCard", String(anchorId), String(ordinal)].join("|"),
+      mode,
+      status,
+      source,
+      resolvedEventId: safeResolvedEventId ?? event.id,
+    };
+  }
+  const active = toAllowedEffectTextPresentation(entry["active"]);
+  if (
+    active === undefined ||
+    !isSpotlightCardRefVisibleToPlayer(
+      state,
+      context.playerId,
+      active.source,
+      "effectSource",
+      disclosure,
+    )
+  ) {
+    return undefined;
+  }
+  const pendingDecisionId = entry["pendingDecisionId"];
+  const resolvedEventId = entry["resolvedEventId"];
+  if (entry["kind"] !== undefined && entry["kind"] !== "effectText") {
+    return undefined;
+  }
+  const safePendingDecisionId =
+    typeof pendingDecisionId === "string"
+      ? visiblePendingSpotlightId(context, pendingDecisionId)
+      : undefined;
+  const safeResolvedEventId =
+    typeof resolvedEventId === "string"
+      ? visibleAnchorEventId(state, context, resolvedEventId)
+      : undefined;
+  const anchorId =
+    mode === "live" &&
+    status === "pending" &&
+    safePendingDecisionId !== undefined
+      ? safePendingDecisionId
+      : (safeResolvedEventId ?? event.id);
+  const rawAnchor =
+    mode === "live" &&
+    status === "pending" &&
+    safePendingDecisionId !== undefined
+      ? String(safePendingDecisionId)
+      : safeResolvedEventId === undefined || typeof resolvedEventId !== "string"
+        ? String(event.id)
+        : resolvedEventId;
+  const ordinal = spotlightOrdinalForAnchor(
+    state,
+    event,
+    "effectText",
+    rawAnchor,
+  );
+  const id = safeEntryId("effectText", String(anchorId), ordinal);
+  const targetLinks = toRecipientSafeTargetLinks(
+    state,
+    context,
+    active,
+    disclosure,
+  );
+  const safeActive: SafeEffectTextPresentation = {
+    source: active.source,
+    ...(active.textKind === undefined ? {} : { textKind: active.textKind }),
+    activeSpanIds: active.activeSpanIds,
+    ...(targetLinks === undefined ? {} : { targetLinks }),
+  };
+  return {
+    ...(entry["kind"] === "effectText" ? { kind: "effectText" } : {}),
+    id,
+    key: id,
+    semanticKey: [
+      "effectText",
+      String(anchorId),
+      String(ordinal),
+      active.textKind ?? "effect",
+      active.activeSpanIds.join("+"),
+      mode,
+      status,
+    ].join("|"),
+    mode,
+    status,
+    active: safeActive,
+    ...(mode === "live" &&
+    status === "pending" &&
+    safePendingDecisionId !== undefined
+      ? { pendingDecisionId: safePendingDecisionId }
+      : {}),
+    ...(mode === "resolved" &&
+    status === "resolved" &&
+    typeof resolvedEventId === "string"
+      ? { resolvedEventId: safeResolvedEventId ?? event.id }
+      : {}),
+  };
+};
+
+const toAllowedSpotlightPayload = (
+  state: GameState,
+  event: EngineEvent,
+  context: PlayerEventViewContext,
+  payload: Record<string, unknown>,
+): Record<string, unknown> => {
+  const rawDisclosure = asRecord(payload["disclosure"]);
+  const disclosure =
+    rawDisclosure === undefined
+      ? undefined
+      : (rawDisclosure as unknown as SpotlightEntryDisclosure);
+  const entry = toAllowedSpotlightEntry(
+    state,
+    event,
+    context,
+    payload["entry"],
+    disclosure,
+  );
+  return entry === undefined ? {} : { entry };
 };
 
 const pickStringPayloadFields = (
@@ -277,7 +714,7 @@ const pickCostPaidPayload = (
 const pickCardRefPayloadFields = (
   payload: Record<string, unknown>,
   fields: readonly string[],
-): Record<string, Record<string, string>> =>
+): Record<string, CardRef> =>
   Object.fromEntries(
     fields.flatMap((field) => {
       const ref = toAllowedCardRef(payload[field]);
@@ -441,31 +878,15 @@ export const toPlayerEvent = (event: EngineEvent): EngineEvent => {
     return { ...base, payload: { status: "queued" } };
   }
   if (event.type === "effectResolved") {
-    const payload = asRecord(event.payload);
-    const presentation =
-      payload === undefined
-        ? undefined
-        : toAllowedEffectTextPresentation(payload["presentation"]);
     return {
       ...base,
-      payload: {
-        status: "resolved",
-        ...(presentation === undefined ? {} : { presentation }),
-      },
+      payload: { status: "resolved" },
     };
   }
   if (event.type === "replacementApplied") {
-    const payload = asRecord(event.payload);
-    const presentation =
-      payload === undefined
-        ? undefined
-        : toAllowedEffectTextPresentation(payload["presentation"]);
     return {
       ...base,
-      payload: {
-        status: "applied",
-        ...(presentation === undefined ? {} : { presentation }),
-      },
+      payload: { status: "applied" },
     };
   }
   return { ...base, payload: toAllowedPlayerEventPayload(event) };
@@ -511,7 +932,14 @@ const toCensoredSelectionSetRevealPayload = (
 export const toPlayerEventForView = (
   state: GameState,
   event: EngineEvent,
+  context: PlayerEventViewContext,
 ): EngineEvent => {
+  if (event.type === "spotlightEntryCreated" && isObjectRecord(event.payload)) {
+    return {
+      ...toPlayerEvent(event),
+      payload: toAllowedSpotlightPayload(state, event, context, event.payload),
+    };
+  }
   if (
     shouldCensorStaleSelectionSetRevealEvent(state, event) &&
     isObjectRecord(event.payload)

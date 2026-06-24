@@ -219,6 +219,7 @@ test("valid Character overflow response trashes selected Character and places ne
       "cardMoved",
       "cardPlayed",
       "ruleProcessingChecked",
+      "spotlightEntryCreated",
     ],
   );
   assert.equal(

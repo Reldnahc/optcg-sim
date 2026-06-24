@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- Selection regression coverage is intentionally broad. */
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -8,10 +7,8 @@ import type {
   CardInstance,
   CardRef,
   DecisionId,
-  DecisionResponse,
   EffectDefinition,
   EffectId,
-  EngineEvent,
   EngineResult,
   EffectQueueEntry,
   EngineError,
@@ -41,6 +38,12 @@ import {
   applyPlayCardDecisionResponse,
 } from "../play-card/core.js";
 import { setupMainPlayState } from "../play-card/test-fixtures.js";
+import { publicPendingDecisionIdForPendingDecision } from "../spotlight/public-pending-identity.js";
+import {
+  assertEventsAppendToJournal,
+  eventReplaySnapshot,
+  invalidResponseCases,
+} from "./actions-test-support.js";
 
 const toDecisionId = (value: string): DecisionId => value as DecisionId;
 const toEffectId = (value: string): EffectId => value as EffectId;
@@ -283,119 +286,6 @@ const payFirstTwoDon = (state: GameState): EngineResult => {
   });
 };
 
-const assertEventsAppendToJournal = (
-  result: EngineResult,
-  label: string,
-): void => {
-  const assertStrictlyIncreasing = (
-    events: readonly EngineEvent[],
-    eventLabel: string,
-  ): void => {
-    for (let index = 1; index < events.length; index += 1) {
-      const previous = must(events[index - 1], `${eventLabel} previous event`);
-      const current = must(events[index], `${eventLabel} current event`);
-      assert.ok(
-        current.seq > previous.seq,
-        `${eventLabel} seq must increase at index ${String(index)}`,
-      );
-    }
-  };
-
-  assertStrictlyIncreasing(result.events, `${label} result events`);
-  assertStrictlyIncreasing(result.state.eventJournal, `${label} journal`);
-  assert.deepEqual(
-    result.state.eventJournal
-      .slice(result.state.eventJournal.length - result.events.length)
-      .map((event) => event.id),
-    result.events.map((event) => event.id),
-    `${label} events must append to journal in order`,
-  );
-};
-
-const eventReplaySnapshot = (
-  result: EngineResult,
-  expectedTypes: readonly string[],
-  label: string,
-) => {
-  assert.deepEqual(
-    result.events.map((event) => event.type),
-    expectedTypes,
-  );
-  assertEventsAppendToJournal(result, label);
-  return {
-    eventSeq: result.events.map((event) => event.seq),
-    eventTypes: result.events.map((event) => event.type),
-    journalSeq: result.state.eventJournal.map((event) => event.seq),
-  };
-};
-
-const invalidResponseCases: Array<{
-  name: string;
-  response: (targets: readonly CardRef[]) => DecisionResponse;
-  reason: string;
-}> = [
-  {
-    name: "wrong response type",
-    response: (targets) => ({ type: "cards", cards: [must(targets[0], "t0")] }),
-    reason: "Response type must be targets for selectTargets.",
-  },
-  {
-    name: "malformed target element",
-    response: () => ({
-      type: "targets",
-      targets: [null as unknown as CardRef],
-    }),
-    reason: "Response targets must be CardRef values.",
-  },
-  {
-    name: "malformed target zone",
-    response: (targets) => ({
-      type: "targets",
-      targets: [
-        {
-          ...must(targets[0], "t0"),
-          zone: null,
-        } as unknown as CardRef,
-      ],
-    }),
-    reason: "Response targets must be CardRef values.",
-  },
-  {
-    name: "duplicate target",
-    response: (targets) => ({
-      type: "targets",
-      targets: [must(targets[0], "t0"), must(targets[0], "t0")],
-    }),
-    reason: "Selected targets must not contain duplicates.",
-  },
-  {
-    name: "non-candidate target",
-    response: (targets) => ({
-      type: "targets",
-      targets: [
-        {
-          ...must(targets[0], "t0"),
-          instanceId: toInstanceId("forged-target"),
-        },
-      ],
-    }),
-    reason: "Selected targets must be active target candidates.",
-  },
-  {
-    name: "too few targets",
-    response: () => ({ type: "targets", targets: [] }),
-    reason: "Selected target count is below the required minimum.",
-  },
-  {
-    name: "too many targets",
-    response: (targets) => ({
-      type: "targets",
-      targets: [must(targets[0], "t0"), must(targets[1], "t1")],
-    }),
-    reason: "Selected target count exceeds the allowed maximum.",
-  },
-];
-
 test("getLegalActions exposes one executable selectTargets response only to the decision player", () => {
   const { state, targets } = setupSelectTargetsDecision();
   const decision = must(state.pendingDecision, "pending decision");
@@ -459,6 +349,10 @@ test("PlayerView exposes public selectTargets candidates while hiding request in
       instruction: "Select targets",
     },
     causedBy: { type: "ruleProcess", name: "privateCausality" },
+    spotlightPendingId: publicPendingDecisionIdForPendingDecision({
+      pending: decision,
+      recipientPlayerId: p1,
+    }),
     min: 0,
     max: 1,
     candidates: decision.candidates.map((candidate) => ({
@@ -526,6 +420,7 @@ test("valid selectTargets response resolves queued KO with stable replay event o
         "cardKOd",
         "cardMoved",
         "effectResolved",
+        "spotlightEntryCreated",
         "ruleProcessingChecked",
       ],
     );

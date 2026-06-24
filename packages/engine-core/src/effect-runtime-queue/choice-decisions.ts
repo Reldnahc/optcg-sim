@@ -9,6 +9,7 @@ import type {
 
 import {
   appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
   type EngineResultOptions,
   toEngineResult,
   toStateSeq,
@@ -55,10 +56,19 @@ export const createChooseOptionalActivationDecision = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility: pendingDecision.visibility,
+  });
   const nextState: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
-    pendingDecision,
+    pendingDecision: anchored.pendingDecision,
     eventJournal: [...state.eventJournal, ...events],
   };
   return toEngineResult(nextState, events, undefined, options);
@@ -112,11 +122,20 @@ export const createChooseQuantityDecision = (
   if (created !== undefined) {
     created.causedBy = causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state,
+    events,
+    pendingDecision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: pendingDecision.playerId,
+    activeEffectText: entry.presentation,
+    visibility: pendingDecision.visibility,
+  });
   return toEngineResult(
     {
       ...state,
       seq: toStateSeq(state.seq + 1),
-      pendingDecision,
+      pendingDecision: anchored.pendingDecision,
       eventJournal: [...state.eventJournal, ...events],
     },
     events,

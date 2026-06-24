@@ -12,6 +12,7 @@ import type {
 
 import {
   appendEvent,
+  appendReplacementSpotlightEntryCreatedEvents,
   type EngineResultOptions,
   toEngineResult,
   toStateSeq,
@@ -443,6 +444,13 @@ export const applyReplacementPayCostDecisionResponse = (
       type: "replacement",
       replacementId: pending.payload.replacementId,
     };
+    appendReplacementSpotlightEntryCreatedEvents({
+      state,
+      events,
+      replacementAppliedEvent: applied,
+      replacementId: pending.payload.replacementId,
+      presentation: pending.payload.presentation,
+    });
   }
   const nextStateWithPayment: GameState = {
     ...state,

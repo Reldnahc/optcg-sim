@@ -6,6 +6,7 @@ import type {
   EffectDefinition,
   GameState,
   PlayerId,
+  SpotlightEntryCreatedPayload,
 } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
@@ -528,6 +529,41 @@ test("counter-step pass remains legal even when damage continuation would fail c
     target: cardRef(p2State.leader, p2),
     attackerPower: 5000,
     defenderPower: 5000,
+  });
+  const attackIndex = opened.events.findIndex(
+    (event) => event.type === "attackDeclared",
+  );
+  const attackSpotlights = opened.events.filter(
+    (event) => event.type === "spotlightEntryCreated",
+  );
+  assert.equal(attackSpotlights.length, 1);
+  assert.equal(opened.events[attackIndex + 1]?.type, "spotlightEntryCreated");
+  const attackerRef = cardRef(p1State.leader, p1);
+  const defenderRef = cardRef(p2State.leader, p2);
+  const spotlightPayload = must(attackSpotlights[0], "attack spotlight")
+    .payload as SpotlightEntryCreatedPayload;
+  assert.deepEqual(spotlightPayload.entry, {
+    kind: "combat",
+    id: `spotlight:combat:${String(attackDeclared.id)}:attackDeclared`,
+    key: `spotlight:combat:${String(attackDeclared.id)}:attackDeclared`,
+    semanticKey: [
+      "combat",
+      "attackDeclared",
+      String(attackerRef.playerId),
+      String(attackerRef.instanceId),
+      String(defenderRef.playerId),
+      String(defenderRef.instanceId),
+    ].join("|"),
+    mode: "resolved",
+    status: "resolved",
+    combat: {
+      eventKind: "attackDeclared",
+      attacker: attackerRef,
+      defender: defenderRef,
+      attackerPower: 5000,
+      defenderPower: 5000,
+    },
+    resolvedEventId: attackDeclared.id,
   });
   const decision = must(opened.state.pendingDecision, "counter decision");
   const actions = getLegalActions(opened.state, p2);

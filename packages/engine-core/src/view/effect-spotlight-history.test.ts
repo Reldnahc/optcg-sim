@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
-  EffectSpotlightHistoryEntry,
-  EffectTextSpotlightHistoryEntry,
-  EffectTextSpanId,
   EngineEvent,
   EngineEventId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
   StateSeq,
 } from "@optcg/types";
 
@@ -23,741 +21,275 @@ const source = {
 const attacker = {
   playerId: "p1" as PlayerId,
   instanceId: "attacker-1" as InstanceId,
-  cardId: "OP00-003" as CardId,
+  cardId: "OP00-002" as CardId,
 };
 
 const defender = {
   playerId: "p2" as PlayerId,
   instanceId: "defender-1" as InstanceId,
-  cardId: "OP00-004" as CardId,
+  cardId: "OP00-003" as CardId,
 };
 
-const playedSource = {
-  playerId: "p1" as PlayerId,
-  instanceId: "played-1" as InstanceId,
-  cardId: "OP00-002" as CardId,
-};
-
-const cardPlayedEvent = (id: string): EngineEvent => ({
-  id: id as EngineEventId,
-  seq: 1,
-  type: "cardPlayed",
-  payload: {
-    playerId: playedSource.playerId,
-    instanceId: playedSource.instanceId,
-    cardId: playedSource.cardId,
-    category: "character",
-  },
-  visibility: { type: "public" },
-  createdAtStateSeq: 1 as StateSeq,
-});
-
-const effectQueuedEvent = (id: string, eventSource = source): EngineEvent => ({
-  id: id as EngineEventId,
-  seq: 2,
-  type: "effectQueued",
-  source: eventSource,
-  payload: { status: "queued" },
-  visibility: { type: "public" },
-  createdAtStateSeq: 2 as StateSeq,
-});
-
-const expectEffectTextEntry = (
-  entry: EffectSpotlightHistoryEntry,
-): EffectTextSpotlightHistoryEntry => {
-  if (entry.kind !== "combat") {
-    return entry;
-  }
-  throw new Error("Expected effect text spotlight history entry.");
-};
-
-const resolvedSearchEvent = (
+const event = (
+  type: EngineEvent["type"],
+  payload: EngineEvent["payload"],
   id: string,
-  activeSpanIds: readonly EffectTextSpanId[],
-  eventSource = source,
 ): EngineEvent => ({
   id: id as EngineEventId,
   seq: 1,
-  type: "effectResolved",
-  source: eventSource,
-  payload: {
-    status: "resolved",
-    presentation: {
-      source: eventSource,
-      textKind: "effect",
-      activeSpanIds,
-    },
-  },
+  type,
+  payload,
   visibility: { type: "public" },
   createdAtStateSeq: 1 as StateSeq,
 });
 
+const spotlightEvent = (
+  entry: Record<string, unknown>,
+  id: string,
+): EngineEvent =>
+  event(
+    "spotlightEntryCreated",
+    {
+      disclosure: {
+        entryRefs: [
+          {
+            role: "effectSource",
+            cardInstanceId: source.instanceId,
+            visibility: { type: "public" },
+          },
+        ],
+      },
+      entry,
+    },
+    id,
+  );
+
+const effectTextEntry = (
+  id: string,
+  mode: "live" | "resolved" = "resolved",
+  status: "pending" | "resolved" = "resolved",
+): Record<string, unknown> => ({
+  kind: "effectText",
+  id,
+  key: id,
+  semanticKey: `effectText|${id}`,
+  mode,
+  status,
+  active: {
+    source,
+    textKind: "effect",
+    activeSpanIds: ["span:body"],
+  },
+  ...(mode === "resolved" && status === "resolved"
+    ? { resolvedEventId: `event:resolved:${id}` }
+    : {}),
+});
+
+const combatEntry = (id: string): Record<string, unknown> => ({
+  kind: "combat",
+  id,
+  key: id,
+  semanticKey: `combat|${id}`,
+  mode: "resolved",
+  status: "resolved",
+  combat: {
+    eventKind: "attackDeclared",
+    attacker,
+    defender,
+    attackerPower: 5000,
+    defenderPower: 6000,
+  },
+  resolvedEventId: `event:combat:${id}`,
+});
+
+const playedCardEntry = (id: string): Record<string, unknown> => ({
+  kind: "playedCard",
+  id,
+  key: id,
+  semanticKey: `playedCard|${id}`,
+  mode: "resolved",
+  status: "resolved",
+  source,
+  resolvedEventId: `event:played:${id}`,
+});
+
 describe("effectSpotlightHistoryFromPlayerViewState", () => {
-  it("creates a no-highlight played-card spotlight", () => {
+  it("projects a spotlight entry for every authored effect step", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
       events: [
-        {
-          id: "event:card-played" as EngineEventId,
-          seq: 1,
-          type: "cardPlayed",
-          payload: {
-            playerId: "p1",
-            instanceId: "played-1",
-            cardId: "OP00-002",
-            category: "character",
-          },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
+        spotlightEvent(playedCardEntry("spotlight:played"), "event:1"),
+        spotlightEvent(combatEntry("spotlight:combat"), "event:2"),
+        spotlightEvent(effectTextEntry("spotlight:effect"), "event:3"),
       ],
-      pendingDecisionId: undefined,
     });
 
-    expect(history).toEqual({
-      entries: [
-        {
-          id: "resolved:event:card-played:",
-          key: "event:card-played",
-          semanticKey: "p1|played-1|OP00-002|effect|",
-          mode: "resolved",
-          status: "resolved",
-          active: {
-            source: {
-              playerId: "p1",
-              instanceId: "played-1",
-              cardId: "OP00-002",
+    expect(history?.entries.map((entry) => entry.key)).toEqual([
+      "spotlight:played",
+      "spotlight:combat",
+      "spotlight:effect",
+    ]);
+    expect(history?.presentKey).toBe("spotlight:effect");
+  });
+
+  it("does not reconstruct spotlights from raw gameplay events", () => {
+    const history = effectSpotlightHistoryFromPlayerViewState({
+      events: [
+        event(
+          "effectResolved",
+          {
+            presentation: {
+              source,
+              textKind: "effect",
+              activeSpanIds: ["span:body"],
             },
-            textKind: "effect",
-            activeSpanIds: [],
           },
-          resolvedEventId: "event:card-played",
-        },
+          "event:effect-resolved",
+        ),
+        event(
+          "replacementApplied",
+          {
+            presentation: {
+              source,
+              textKind: "effect",
+              activeSpanIds: ["span:replacement"],
+            },
+          },
+          "event:replacement",
+        ),
+        event("cardPlayed", { ...source, category: "character" }, "event:play"),
+        event(
+          "attackDeclared",
+          { attacker, target: defender, attackerPower: 5000 },
+          "event:attack",
+        ),
+        event(
+          "blockerActivated",
+          { attacker, blocker: defender, defenderPower: 6000 },
+          "event:blocker",
+        ),
       ],
-      presentKey: "event:card-played",
-    });
-  });
-
-  it("suppresses played-card spotlight across neutral events before effect queueing", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        cardPlayedEvent("event:played"),
-        {
-          id: "event:rule-check" as EngineEventId,
-          seq: 2,
-          type: "ruleProcessingChecked",
-          payload: {},
-          visibility: { type: "public" },
-          createdAtStateSeq: 2 as StateSeq,
-        },
-        effectQueuedEvent("event:effect-queued", playedSource),
-      ],
-      pendingDecisionId: undefined,
     });
 
     expect(history).toBeUndefined();
   });
 
-  it("does not show a no-highlight played-card spotlight when that card resolves an effect spotlight", () => {
+  it("keeps live pending effect text only when it is authored in the event", () => {
+    const pendingDecisionId =
+      "pending:spotlight:public:1" as PublicPendingDecisionId;
     const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
       events: [
-        cardPlayedEvent("event:played"),
-        resolvedSearchEvent("event:effect", ["span:body"], playedSource),
+        spotlightEvent(
+          {
+            ...effectTextEntry("spotlight:pending", "live", "pending"),
+            pendingDecisionId,
+          },
+          "event:pending",
+        ),
       ],
-      pendingDecisionId: undefined,
     });
 
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:effect",
-    ]);
-    expect(
-      history?.entries.map(
-        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
-      ),
-    ).toEqual([["span:body"]]);
-  });
-
-  it("keeps a no-highlight played-card spotlight when a different card queues an effect", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        cardPlayedEvent("event:played"),
-        effectQueuedEvent("event:other-effect-queued", source),
-      ],
-      pendingDecisionId: undefined,
-    });
-
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:played",
-    ]);
-  });
-
-  it("does not show a no-highlight played-card spotlight while that card has a live effect spotlight", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source: playedSource,
-        textKind: "effect",
-        activeSpanIds: ["span:body"],
-      },
-      events: [cardPlayedEvent("event:played")],
-      pendingDecisionId: "decision:played-effect",
-    });
-
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "decision:decision:played-effect|played-1|effect|span:body",
-    ]);
-  });
-
-  it("ignores resolved presentations without active spans", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [resolvedSearchEvent("event:empty", [])],
-      pendingDecisionId: undefined,
-    });
-
-    expect(history).toBeUndefined();
-  });
-
-  it("projects structured resolved search timeline entries", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:remaining",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [event],
-      pendingDecisionId: undefined,
-    });
-
-    expect(
-      history?.entries.map((entry) => {
-        const effectTextEntry = expectEffectTextEntry(entry);
-        return {
-          id: entry.id,
-          key: entry.key,
-          semanticKey: entry.semanticKey,
-          status: entry.status,
-          mode: entry.mode,
-          activeSpanIds: effectTextEntry.active.activeSpanIds,
-          resolvedEventId: entry.resolvedEventId,
-        };
-      }),
-    ).toEqual([
+    expect(history?.entries).toEqual([
       {
-        id: "resolved:event:search:span:search:selection",
-        key: "event:search:span:search:selection",
-        semanticKey: "p1|source-1|OP00-001|effect|span:search:selection",
-        status: "resolved",
-        mode: "resolved",
-        activeSpanIds: ["span:search:selection"],
-        resolvedEventId: "event:search",
-      },
-      {
-        id: "resolved:event:search:span:search:remaining",
-        key: "event:search:span:search:remaining",
-        semanticKey: "p1|source-1|OP00-001|effect|span:search:remaining",
-        status: "resolved",
-        mode: "resolved",
-        activeSpanIds: ["span:search:remaining"],
-        resolvedEventId: "event:search",
-      },
-    ]);
-  });
-
-  it("does not project search connector spans as timeline entries", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:then",
-      "span:search:remaining",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [event],
-      pendingDecisionId: undefined,
-    });
-
-    expect(
-      history?.entries.map(
-        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
-      ),
-    ).toEqual([["span:search:selection"], ["span:search:remaining"]]);
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:search:span:search:selection",
-      "event:search:span:search:remaining",
-    ]);
-  });
-
-  it("orders resolved search selection before live search remainder without connector entries", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:then",
-      "span:search:remaining",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:search:remaining"],
-      },
-      events: [event],
-      pendingDecisionId: "decision:orderCards:search",
-    });
-
-    expect(
-      history?.entries.map((entry) => ({
-        key: entry.key,
-        status: entry.status,
-        activeSpanIds: expectEffectTextEntry(entry).active.activeSpanIds,
-      })),
-    ).toEqual([
-      {
-        key: "event:search:span:search:selection",
-        status: "resolved",
-        activeSpanIds: ["span:search:selection"],
-      },
-      {
-        key: "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
-        status: "pending",
-        activeSpanIds: ["span:search:remaining"],
-      },
-    ]);
-    expect(history?.presentKey).toBe(
-      "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
-    );
-  });
-
-  it("splits resolved choice option spans into separate timeline entries", () => {
-    const event = resolvedSearchEvent("event:choice", [
-      "span:choice",
-      "span:choice:0:body",
-      "span:choice:1:body",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [event],
-      pendingDecisionId: undefined,
-    });
-
-    expect(
-      history?.entries.map(
-        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
-      ),
-    ).toEqual([["span:choice:0:body"], ["span:choice:1:body"]]);
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:choice:span:choice:0:body",
-      "event:choice:span:choice:1:body",
-    ]);
-  });
-
-  it("splits resolved cost and body spans into separate timeline entries", () => {
-    const event = resolvedSearchEvent("event:cost-body", [
-      "span:cost:optional",
-      "span:body",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [event],
-      pendingDecisionId: undefined,
-    });
-
-    expect(
-      history?.entries.map(
-        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
-      ),
-    ).toEqual([["span:cost:optional"], ["span:body"]]);
-    expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:cost-body:span:cost:optional",
-      "event:cost-body:span:body",
-    ]);
-  });
-
-  it("replaces a resolved current pending span with the live pending entry", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:remaining",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:search:remaining"],
-      },
-      events: [event],
-      pendingDecisionId: "decision:orderCards:search",
-    });
-
-    expect(
-      history?.entries.map((entry) => {
-        const effectTextEntry = expectEffectTextEntry(entry);
-        return {
-          id: entry.id,
-          semanticKey: entry.semanticKey,
-          status: entry.status,
-          mode: entry.mode,
-          pendingDecisionId: effectTextEntry.pendingDecisionId,
-          activeSpanIds: effectTextEntry.active.activeSpanIds,
-        };
-      }),
-    ).toEqual([
-      {
-        id: "resolved:event:search:span:search:selection",
-        semanticKey: "p1|source-1|OP00-001|effect|span:search:selection",
-        status: "resolved",
-        mode: "resolved",
-        pendingDecisionId: undefined,
-        activeSpanIds: ["span:search:selection"],
-      },
-      {
-        id: "pending:decision:orderCards:search:p1|source-1|OP00-001|effect|span:search:remaining",
-        semanticKey: "p1|source-1|OP00-001|effect|span:search:remaining",
-        status: "pending",
+        kind: "effectText",
+        id: "spotlight:pending",
+        key: "spotlight:pending",
+        semanticKey: "effectText|spotlight:pending",
         mode: "live",
-        pendingDecisionId: "decision:orderCards:search",
-        activeSpanIds: ["span:search:remaining"],
+        status: "pending",
+        active: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:body"],
+        },
+        pendingDecisionId,
       },
     ]);
   });
 
-  it("projects current search remainder as the live present entry without duplicating it", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:remaining",
-    ]);
-
+  it("removes stale pending effect text once a later matching entry resolves", () => {
+    const pendingDecisionId =
+      "pending:spotlight:public:1" as PublicPendingDecisionId;
     const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:search:remaining"],
-      },
-      events: [event],
-      pendingDecisionId: "decision:orderCards:search",
-    });
-
-    expect(history).toEqual({
-      entries: [
-        {
-          id: "resolved:event:search:span:search:selection",
-          key: "event:search:span:search:selection",
-          semanticKey: "p1|source-1|OP00-001|effect|span:search:selection",
-          mode: "resolved",
-          status: "resolved",
-          active: {
-            source,
-            textKind: "effect",
-            activeSpanIds: ["span:search:selection"],
-          },
-          resolvedEventId: "event:search",
-        },
-        {
-          id: "pending:decision:orderCards:search:p1|source-1|OP00-001|effect|span:search:remaining",
-          key: "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
-          semanticKey: "p1|source-1|OP00-001|effect|span:search:remaining",
-          mode: "live",
-          status: "pending",
-          active: {
-            source,
-            textKind: "effect",
-            activeSpanIds: ["span:search:remaining"],
-          },
-          pendingDecisionId: "decision:orderCards:search",
-        },
-      ],
-      presentKey:
-        "decision:decision:orderCards:search|source-1|effect|span:search:remaining",
-    });
-  });
-
-  it("keeps older resolved history when the same source span is pending again", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:body"],
-      },
       events: [
-        resolvedSearchEvent("event:first-use", ["span:body"]),
-        effectQueuedEvent("event:second-use-queued"),
-      ],
-      pendingDecisionId: "decision:repeat-effect",
-    });
-
-    expect(
-      history?.entries.map((entry) => ({
-        key: entry.key,
-        mode: entry.mode,
-        activeSpanIds: expectEffectTextEntry(entry).active.activeSpanIds,
-      })),
-    ).toEqual([
-      {
-        key: "event:first-use",
-        mode: "resolved",
-        activeSpanIds: ["span:body"],
-      },
-      {
-        key: "decision:decision:repeat-effect|source-1|effect|span:body",
-        mode: "live",
-        activeSpanIds: ["span:body"],
-      },
-    ]);
-    expect(history?.presentKey).toBe(
-      "decision:decision:repeat-effect|source-1|effect|span:body",
-    );
-  });
-
-  it("projects search selection resolved plus search remainder pending in order", () => {
-    const event = resolvedSearchEvent("event:search", [
-      "span:search:selection",
-      "span:search:remaining",
-    ]);
-
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: {
-        source,
-        textKind: "effect",
-        activeSpanIds: ["span:search:remaining"],
-      },
-      events: [event],
-      pendingDecisionId: "decision:orderCards:search",
-    });
-
-    expect(
-      history?.entries.map(
-        (entry) => expectEffectTextEntry(entry).active.activeSpanIds,
-      ),
-    ).toEqual([["span:search:selection"], ["span:search:remaining"]]);
-    expect(history?.entries.map((entry) => entry.status)).toEqual([
-      "resolved",
-      "pending",
-    ]);
-    expect(history?.presentKey).toBe(history?.entries.at(-1)?.key);
-  });
-
-  it("projects attack declaration as a combat spotlight entry", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        {
-          id: "event:attack" as EngineEventId,
-          seq: 1,
-          type: "attackDeclared",
-          payload: {
-            attacker,
-            target: defender,
-            attackerPower: 7000,
-            defenderPower: 5000,
+        spotlightEvent(
+          {
+            ...effectTextEntry("spotlight:pending", "live", "pending"),
+            pendingDecisionId,
           },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
+          "event:pending",
+        ),
+        spotlightEvent(
+          effectTextEntry("spotlight:resolved", "resolved", "resolved"),
+          "event:resolved",
+        ),
       ],
-      pendingDecisionId: undefined,
-    });
-
-    expect(history).toEqual({
-      entries: [
-        {
-          kind: "combat",
-          id: "combat:event:attack",
-          key: "event:attack",
-          semanticKey:
-            "combat|attackDeclared|p1|attacker-1|OP00-003|p2|defender-1|OP00-004|7000|5000",
-          mode: "resolved",
-          status: "resolved",
-          combat: {
-            eventKind: "attackDeclared",
-            attacker,
-            defender,
-            attackerPower: 7000,
-            defenderPower: 5000,
-          },
-          resolvedEventId: "event:attack",
-        },
-      ],
-      presentKey: "event:attack",
-    });
-  });
-
-  it("orders played-card spotlight before following combat spotlight", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        {
-          id: "event:played" as EngineEventId,
-          seq: 1,
-          type: "cardPlayed",
-          payload: {
-            playerId: "p1",
-            instanceId: "played-1",
-            cardId: "OP00-002",
-            category: "character",
-          },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
-        {
-          id: "event:attack" as EngineEventId,
-          seq: 2,
-          type: "attackDeclared",
-          payload: {
-            attacker,
-            target: defender,
-            attackerPower: 7000,
-            defenderPower: 5000,
-          },
-          visibility: { type: "public" },
-          createdAtStateSeq: 2 as StateSeq,
-        },
-      ],
-      pendingDecisionId: undefined,
     });
 
     expect(history?.entries.map((entry) => entry.key)).toEqual([
-      "event:played",
-      "event:attack",
+      "spotlight:resolved",
     ]);
-    expect(history?.presentKey).toBe("event:attack");
+    expect(history?.presentKey).toBe("spotlight:resolved");
   });
 
-  it("projects blocker activation as attacker versus blocker", () => {
-    const blocker = {
-      playerId: "p2" as PlayerId,
-      instanceId: "blocker-1" as InstanceId,
-      cardId: "OP00-005" as CardId,
-    };
+  it("skips malformed spotlight payloads", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
       events: [
-        {
-          id: "event:blocker" as EngineEventId,
-          seq: 1,
-          type: "blockerActivated",
-          payload: {
-            attacker,
-            blocker,
-            previousTarget: defender,
-            currentTarget: blocker,
-            attackerPower: 7000,
-            defenderPower: 3000,
+        spotlightEvent(
+          {
+            ...effectTextEntry("spotlight:invalid"),
+            key: undefined,
           },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
-      ],
-      pendingDecisionId: undefined,
-    });
-
-    expect(history?.entries[0]).toMatchObject({
-      kind: "combat",
-      key: "event:blocker",
-      combat: {
-        eventKind: "blockerActivated",
-        attacker,
-        defender: blocker,
-        attackerPower: 7000,
-        defenderPower: 3000,
-      },
-    });
-  });
-
-  it("projects counter usage as counter card versus defended target", () => {
-    const counterCard = {
-      playerId: "p2" as PlayerId,
-      instanceId: "counter-1" as InstanceId,
-      cardId: "OP00-006" as CardId,
-    };
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        {
-          id: "event:counter" as EngineEventId,
-          seq: 1,
-          type: "counterUsed",
-          payload: {
-            playerId: counterCard.playerId,
-            instanceId: counterCard.instanceId,
-            cardId: counterCard.cardId,
-            target: defender,
-            value: 2000,
-            targetPower: 5000,
+          "event:invalid-missing-key",
+        ),
+        spotlightEvent(
+          {
+            ...effectTextEntry("spotlight:invalid-span"),
+            active: {
+              source,
+              textKind: "effect",
+              activeSpanIds: ["body"],
+            },
           },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
+          "event:invalid-span",
+        ),
       ],
-      pendingDecisionId: undefined,
-    });
-
-    expect(history).toEqual({
-      entries: [
-        {
-          kind: "combat",
-          id: "combat:event:counter",
-          key: "event:counter",
-          semanticKey:
-            "combat|counterUsed|p2|counter-1|OP00-006|p2|defender-1|OP00-004|2000|5000",
-          mode: "resolved",
-          status: "resolved",
-          combat: {
-            eventKind: "counterUsed",
-            attacker: counterCard,
-            defender,
-            attackerPower: 2000,
-            defenderPower: 5000,
-          },
-          resolvedEventId: "event:counter",
-        },
-      ],
-      presentKey: "event:counter",
-    });
-  });
-
-  it("skips malformed combat spotlight payloads", () => {
-    const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
-      events: [
-        {
-          id: "event:bad-attack" as EngineEventId,
-          seq: 1,
-          type: "attackDeclared",
-          payload: { attacker },
-          visibility: { type: "public" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
-      ],
-      pendingDecisionId: undefined,
     });
 
     expect(history).toBeUndefined();
   });
 
-  it("skips non-public combat spotlight events", () => {
+  it("ignores spotlightEntryCreated events without a safe entry", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
-      activeEffectText: undefined,
       events: [
-        {
-          id: "event:hidden-attack" as EngineEventId,
-          seq: 1,
-          type: "attackDeclared",
-          payload: {
-            attacker,
-            target: defender,
-            attackerPower: 7000,
-            defenderPower: 5000,
+        spotlightEvent(
+          {
+            kind: "combat",
+            id: "spotlight:combat",
+            key: "spotlight:combat",
+            semanticKey: "combat",
+            mode: "live",
+            status: "pending",
+            combat: {
+              eventKind: "attackDeclared",
+              attacker,
+              defender,
+            },
           },
-          visibility: { type: "replayOnly" },
-          createdAtStateSeq: 1 as StateSeq,
-        },
+          "event:unsafe-combat",
+        ),
+        spotlightEvent(
+          {
+            kind: "playedCard",
+            id: "spotlight:played",
+            key: "spotlight:played",
+            semanticKey: "playedCard",
+            mode: "resolved",
+            status: "resolved",
+            source: { instanceId: source.instanceId },
+          },
+          "event:unsafe-played",
+        ),
       ],
-      pendingDecisionId: undefined,
     });
 
     expect(history).toBeUndefined();

@@ -9,6 +9,7 @@ import type {
   EngineResult,
   GameState,
   SelectionId,
+  SpotlightEntryCreatedPayload,
 } from "@optcg/types";
 
 import {
@@ -228,6 +229,15 @@ test("playSelected plays selected Character card from deck and continues to shuf
     "deckShuffled",
     "effectResolved",
   ]);
+  assert.equal(
+    resolved.events.some(
+      (event) =>
+        event.type === "spotlightEntryCreated" &&
+        (event.payload as SpotlightEntryCreatedPayload).entry.kind ===
+          "playedCard",
+    ),
+    false,
+  );
   assert.equal(resolved.state.pendingDecision, undefined);
   assert.equal(resolved.stateHash, hashCanonicalStateValue(resolved.state));
 });

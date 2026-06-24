@@ -4,12 +4,19 @@ import type {
   EngineEvent,
   GameState,
   MultiZoneTargetRequest,
+  ActiveEffectTextPresentation,
   SelectTargetsDecision,
   TargetRequest,
 } from "@optcg/types";
 
-import { appendEvent, toDecisionId, toStateSeq } from "../action-results.js";
+import {
+  appendEvent,
+  appendPendingSpotlightEntryCreatedEvents,
+  toDecisionId,
+  toStateSeq,
+} from "../action-results.js";
 import { resolvePlayerId } from "../runtime/primitives/execute.js";
+import { activeSpanIdsForSequenceIndex } from "../runtime/effect-presentation.js";
 import {
   continuousChooseTargetRequest,
   hasSavedFieldObjectContinuousTarget,
@@ -26,6 +33,22 @@ export {
   continuousChooseTargetRequest,
   hasSavedFieldObjectContinuousTarget,
   isContinuousEffectWithTarget,
+};
+
+const activeEffectTextForSequenceIndex = (
+  entry: EffectQueueEntry,
+  index: number,
+): ActiveEffectTextPresentation | undefined => {
+  if (entry.presentation === undefined) {
+    return undefined;
+  }
+  const activeSpanIds = activeSpanIdsForSequenceIndex(
+    entry.presentation.activeSpanIds,
+    index,
+  );
+  return activeSpanIds === undefined || activeSpanIds.length === 0
+    ? undefined
+    : { ...entry.presentation, activeSpanIds };
 };
 
 export const restChooseTargetRequest = (
@@ -98,10 +121,22 @@ export const createSequenceSelectTargetsPause = (params: {
   if (created !== undefined) {
     created.causedBy = decision.causedBy;
   }
+  const anchored = appendPendingSpotlightEntryCreatedEvents({
+    state: params.state,
+    events: decisionEvents,
+    pendingDecision: decision,
+    decisionCreatedEvent: created,
+    recipientPlayerId: decision.playerId,
+    activeEffectText: activeEffectTextForSequenceIndex(
+      params.entry,
+      params.index,
+    ),
+    visibility: { type: "public" },
+  });
   const decisionState: GameState = {
     ...params.state,
     seq: toStateSeq(params.state.seq + 1),
-    pendingDecision: decision,
+    pendingDecision: anchored.pendingDecision,
     eventJournal: [...params.state.eventJournal, ...decisionEvents],
   };
   const frame = frameForPausedSequenceDecision({
