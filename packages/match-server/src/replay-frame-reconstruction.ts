@@ -116,14 +116,14 @@ const replayFramesFromInitialState = (
   initialState: GameState,
   detail: Pick<CompletedMatchReplayDetail, "replay">,
   deterministicEntries: readonly unknown[],
+  checkpoints: readonly unknown[],
+  expectedFinalStateHash: string | undefined,
 ): ReplayFrameReconstructionResult | undefined => {
   const result = reconstructReplayArtifactStates({
     initialState,
     deterministicEntries,
-    // Live finalStateHash currently includes timer state; replay logs do not
-    // yet store deterministic timer inputs, so viewer reconstruction cannot
-    // use it as a frame gate.
-    expectedFinalStateHash: undefined,
+    checkpoints,
+    expectedFinalStateHash,
   });
   if (result.status === "failed") {
     return result;
@@ -152,6 +152,8 @@ const replayFramesFromInitialState = (
 const replayFramesFromEngineState = (
   detail: CompletedMatchReplayDetail,
   deterministicEntries: readonly unknown[],
+  checkpoints: readonly unknown[],
+  expectedFinalStateHash: string | undefined,
 ): ReplayFrameReconstructionResult | undefined => {
   const initialSnapshot = detail.replay["initialSnapshot"];
   if (!isRecord(initialSnapshot)) {
@@ -161,6 +163,8 @@ const replayFramesFromEngineState = (
     initialSnapshot as unknown as GameState,
     detail,
     deterministicEntries,
+    checkpoints,
+    expectedFinalStateHash,
   );
 };
 
@@ -250,9 +254,19 @@ export const reconstructReplayFrames = (
   )
     ? detail.replay["deterministicEntries"]
     : [];
-  const frames = savedSnapshotFrames(deterministicEntries);
-  if (frames.length > 0) {
-    return { status: "ready", frames };
+  const checkpoints = Array.isArray(detail.replay["checkpoints"])
+    ? detail.replay["checkpoints"]
+    : [];
+  const replayFormatVersion = stringValue(detail.replay["replayFormatVersion"]);
+  const expectedFinalStateHash =
+    replayFormatVersion === "dev-local-v2"
+      ? stringValue(detail.replay["finalStateHash"])
+      : undefined;
+  if (replayFormatVersion !== "dev-local-v2") {
+    const frames = savedSnapshotFrames(deterministicEntries);
+    if (frames.length > 0) {
+      return { status: "ready", frames };
+    }
   }
   const compactInitialState = initialStateFromCompactSource(detail);
   if (compactInitialState !== undefined) {
@@ -260,6 +274,8 @@ export const reconstructReplayFrames = (
       compactInitialState,
       detail,
       deterministicEntries,
+      checkpoints,
+      expectedFinalStateHash,
     );
     if (result !== undefined) {
       return result;
@@ -268,6 +284,8 @@ export const reconstructReplayFrames = (
   const engineFrames = replayFramesFromEngineState(
     detail,
     deterministicEntries,
+    checkpoints,
+    expectedFinalStateHash,
   );
   if (engineFrames !== undefined) {
     return engineFrames;

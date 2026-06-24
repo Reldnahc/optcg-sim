@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { hashReplayStateForScope } from "@optcg/engine-core";
+import type { GameState, MatchId, PlayerId, StateSeq } from "@optcg/types";
 import type {
   CompletedMatchReplayDetail,
   JsonObject,
@@ -49,6 +51,27 @@ const snapshot = {
     },
   },
 };
+
+const state = (
+  seq: number,
+  actionSeq: number,
+  turnPlayerId = "p1",
+): GameState =>
+  ({
+    matchId: "match-1" as MatchId,
+    seq: seq as StateSeq,
+    actionSeq,
+    status: { type: "active" },
+    players: {},
+    eventJournal: [],
+    timers: { players: {} },
+    turn: {
+      turnPlayerId: turnPlayerId as PlayerId,
+      phase: "main",
+      globalTurn: 1,
+      playerTurnCounts: {},
+    },
+  }) as unknown as GameState;
 
 describe("reconstructReplayFrames", () => {
   test("uses saved deterministic snapshots as compatibility frames", () => {
@@ -134,5 +157,94 @@ describe("reconstructReplayFrames", () => {
       reason:
         "Replay artifact does not contain saved frames or reconstructable engine state.",
     });
+  });
+
+  test("dev-local-v2 fails closed when deterministic entries are envelope-shaped", () => {
+    const result = reconstructReplayFrames(
+      detail({
+        replayFormatVersion: "dev-local-v2",
+        initialSnapshot: state(1, 0),
+        deterministicEntries: [
+          {
+            envelope: { request: { type: "submitAction" } },
+            result: { snapshot },
+          },
+        ],
+      }),
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.reason).toMatch(/deterministic/i);
+    }
+  });
+
+  test("dev-local-v2 verifies final replay hash", () => {
+    const result = reconstructReplayFrames(
+      detail({
+        replayFormatVersion: "dev-local-v2",
+        initialSnapshot: state(1, 0),
+        deterministicEntries: [],
+        finalStateHash: "wrong-final-hash",
+      }),
+    );
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.reason).toMatch(/final hash/i);
+    }
+  });
+
+  test("dev-local-v2 reconstructs rollback restore from replay checkpoints", () => {
+    const initialState = state(1, 0);
+    const restoredState = state(0, 0);
+    const finalState = state(2, 1);
+    const checkpoint = {
+      checkpointVersion: "deterministic-checkpoint-v1",
+      matchId: "match-1",
+      checkpointId: "rollback:0:0:event-1",
+      reason: "rollbackPoint",
+      stateSeq: 0,
+      actionSeq: 0,
+      stateHash: hashReplayStateForScope(restoredState, "gameplay-v1"),
+      hashScope: "gameplay-v1",
+      snapshot: restoredState,
+    };
+    const entry = {
+      formatVersion: "deterministic-entry-v1",
+      matchId: "match-1",
+      entrySeq: 0,
+      kind: "system",
+      operation: {
+        type: "restoreRollbackPoint",
+        rollbackPointId: checkpoint.checkpointId,
+        requestedBy: "p1",
+        approvedBy: "p2",
+        restoredStateHash: hashReplayStateForScope(finalState, "gameplay-v1"),
+        restoredStateSeq: 2,
+        restoredActionSeq: 1,
+      },
+      verification: {
+        stateSeqBefore: 1,
+        actionSeqBefore: 0,
+        stateHashBefore: hashReplayStateForScope(initialState, "gameplay-v1"),
+        stateSeqAfter: 2,
+        actionSeqAfter: 1,
+        stateHashAfter: hashReplayStateForScope(finalState, "gameplay-v1"),
+        hashScope: "gameplay-v1",
+      },
+    };
+
+    const result = reconstructReplayFrames(
+      detail({
+        replayFormatVersion: "dev-local-v2",
+        initialSnapshot: initialState,
+        deterministicEntries: [entry],
+        checkpoints: [checkpoint],
+        finalStateHash: hashReplayStateForScope(finalState, "gameplay-v1"),
+      }),
+    );
+
+    expect(result.status).toBe("ready");
   });
 });
