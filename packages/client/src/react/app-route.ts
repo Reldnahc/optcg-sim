@@ -2,6 +2,7 @@ export type AppRouteId =
   | "dashboard"
   | "lobbies"
   | "match"
+  | "replayList"
   | "replay"
   | "notFound";
 
@@ -20,6 +21,7 @@ export interface AppRouteState {
 export const appRoutes = [
   { id: "dashboard", path: "/", label: "Home" },
   { id: "match", path: "/match", label: "Match" },
+  { id: "replayList", path: "/replays", label: "Replays" },
 ] as const satisfies readonly AppRouteDefinition[];
 
 const routeByPath = new Map<string, AppRouteDefinition>(

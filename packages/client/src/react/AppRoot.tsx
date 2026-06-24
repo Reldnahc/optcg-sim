@@ -4,6 +4,7 @@ import { appRouteFromPath } from "./app-route.js";
 import { DashboardPage } from "./DashboardPage.js";
 import { MatchApp } from "./MatchApp.js";
 import { NotFoundPage } from "./NotFoundPage.js";
+import { ReplaySelectorPage } from "./ReplaySelectorPage.js";
 import { ReplayViewerPage } from "./ReplayViewerPage.js";
 import { simAuthSessionToken, useSimAuth } from "./use-sim-auth.js";
 
@@ -42,6 +43,8 @@ export const AppRootContent = ({
   const page =
     route.id === "dashboard" ? (
       <DashboardPage />
+    ) : route.id === "replayList" ? (
+      <ReplaySelectorPage />
     ) : (
       <NotFoundPage path={route.path} />
     );

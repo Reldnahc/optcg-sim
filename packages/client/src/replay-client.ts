@@ -33,8 +33,11 @@ export interface ReplayDetail {
   readonly replay: ReplayPayload;
 }
 
+export type ReplaySummary = Omit<ReplayDetail, "replay">;
+
 export interface ReplayClient {
   readonly getReplay: (matchId: MatchId | string) => Promise<ReplayDetail>;
+  readonly listReplays: () => Promise<readonly ReplaySummary[]>;
 }
 
 export interface CreateReplayClientOptions {
@@ -62,6 +65,13 @@ export const createReplayClient = ({
 }: CreateReplayClientOptions): ReplayClient => {
   const root = trimTrailingSlash(baseUrl);
   return {
+    async listReplays() {
+      const response = await fetchImpl(`${root}/api/replays`);
+      const body = await readJson<{ replays: readonly ReplaySummary[] }>(
+        response,
+      );
+      return body.replays;
+    },
     async getReplay(matchId) {
       const response = await fetchImpl(
         `${root}/api/replays/${encodeURIComponent(String(matchId))}`,

@@ -97,6 +97,16 @@ describe("client app root", () => {
     assert.doesNotMatch(html, /Make Lobby/u);
   });
 
+  test("renders replay selector routes inside the shell", () => {
+    const html = renderToStaticMarkup(
+      createElement(AppRootContent, { path: "/replays" }),
+    );
+
+    assert.match(html, /Replay Library/u);
+    assert.doesNotMatch(html, /Replay Viewer/u);
+    assert.doesNotMatch(html, /Make Lobby/u);
+  });
+
   test("gates the routed app while account session is unresolved", () => {
     const html = renderToStaticMarkup(createElement(AppRoot, { path: "/" }));
 

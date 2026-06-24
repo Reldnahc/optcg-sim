@@ -16,6 +16,7 @@ describe("client app routes", () => {
     assert.equal(appRouteFromPath("/decks").id, "notFound");
     assert.equal(appRouteFromPath("/profile").id, "notFound");
     assert.equal(appRouteFromPath("/match").id, "match");
+    assert.equal(appRouteFromPath("/replays").id, "replayList");
   });
 
   test("maps concrete lobby URLs to the lobbies route", () => {
@@ -61,6 +62,7 @@ describe("client app routes", () => {
   test("builds canonical app paths", () => {
     assert.equal(appRoutePath("dashboard"), "/");
     assert.equal(appRoutePath("match"), "/match");
+    assert.equal(appRoutePath("replayList"), "/replays");
   });
 
   test("separates shell routes from the match-board route", () => {
@@ -68,10 +70,11 @@ describe("client app routes", () => {
     assert.equal(isShellRoute("lobbies"), true);
     assert.equal(isShellRoute("notFound"), true);
     assert.equal(isShellRoute("match"), false);
+    assert.equal(isShellRoute("replayList"), true);
     assert.equal(isShellRoute("replay"), false);
     assert.deepEqual(
       appRoutes.map((route) => route.id),
-      ["dashboard", "match"],
+      ["dashboard", "match", "replayList"],
     );
   });
 });
