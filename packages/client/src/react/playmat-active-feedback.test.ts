@@ -88,9 +88,17 @@ describe("playmat active feedback", () => {
       markup,
       /class="playmat-field player-field is-active-player-side"/u,
     );
+    assert.match(
+      markup,
+      /class="playmat-row player-resource-row is-active-player-side"/u,
+    );
     assert.doesNotMatch(
       markup,
       /class="playmat-field opponent-field is-active-player-side"/u,
+    );
+    assert.doesNotMatch(
+      markup,
+      /class="playmat-row opponent-resource-row is-active-player-side"/u,
     );
     assert.equal(
       markup.includes("summary-panel player-summary is-turn-player"),
@@ -109,9 +117,17 @@ describe("playmat active feedback", () => {
       markup,
       /class="playmat-field opponent-field is-active-player-side"/u,
     );
+    assert.match(
+      markup,
+      /class="playmat-row opponent-resource-row is-active-player-side"/u,
+    );
     assert.doesNotMatch(
       markup,
       /class="playmat-field player-field is-active-player-side"/u,
+    );
+    assert.doesNotMatch(
+      markup,
+      /class="playmat-row player-resource-row is-active-player-side"/u,
     );
   });
 
@@ -132,7 +148,7 @@ describe("playmat active feedback", () => {
     );
     assert.match(
       playmatCss,
-      /\.playmat-field\.is-active-player-side\s*\{[^}]*rgba\(255,\s*227,\s*138,\s*0\.34\)[^}]*rgba\(255,\s*227,\s*138,\s*0\.38\);/u,
+      /:where\(\.playmat-field,\s*\.playmat-row\)\.is-active-player-side\s*\{[^}]*rgba\(255,\s*227,\s*138,\s*0\.34\)[^}]*rgba\(255,\s*227,\s*138,\s*0\.38\);/u,
     );
   });
 });

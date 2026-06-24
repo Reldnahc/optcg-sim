@@ -673,11 +673,27 @@ describe("playmat structure", () => {
 
     assert.match(
       boardLayout,
-      /const playerFieldClassName = \[[\s\S]*"player-field"[\s\S]*board\.selfIsTurnPlayer \|\| pendingChoiceInstanceIds\.length > 0[\s\S]*"is-active-player-side"/u,
+      /const playerSideIsActive =\s*board\.selfIsTurnPlayer \|\| pendingChoiceInstanceIds\.length > 0;/u,
     );
     assert.match(
       boardLayout,
-      /const opponentFieldClassName = \[[\s\S]*"opponent-field"[\s\S]*!board\.selfIsTurnPlayer[\s\S]*"is-active-player-side"/u,
+      /const opponentSideIsActive =\s*!board\.selfIsTurnPlayer && pendingChoiceInstanceIds\.length === 0;/u,
+    );
+    assert.match(
+      boardLayout,
+      /const playerFieldClassName = \[[\s\S]*"player-field"[\s\S]*playerSideIsActive \? "is-active-player-side"/u,
+    );
+    assert.match(
+      boardLayout,
+      /const opponentFieldClassName = \[[\s\S]*"opponent-field"[\s\S]*opponentSideIsActive \? "is-active-player-side"/u,
+    );
+    assert.match(
+      boardLayout,
+      /const playerResourceRowClassName = \[[\s\S]*"player-resource-row"[\s\S]*playerSideIsActive \? "is-active-player-side"/u,
+    );
+    assert.match(
+      boardLayout,
+      /const opponentResourceRowClassName = \[[\s\S]*"opponent-resource-row"[\s\S]*opponentSideIsActive \? "is-active-player-side"/u,
     );
     assert.doesNotMatch(boardLayout, /is-turn-player/u);
     assert.doesNotMatch(boardLayout, /is-choice-active/u);
@@ -685,7 +701,7 @@ describe("playmat structure", () => {
     assert.doesNotMatch(playmatStyles, /\.tabletop-board\.is-choice-active/u);
     assert.match(
       playmatStyles,
-      /\.playmat-field\.is-active-player-side\s*\{[^}]*border-color:\s*var\(--match-accent-strong\);[^}]*box-shadow:/u,
+      /:where\(\.playmat-field,\s*\.playmat-row\)\.is-active-player-side\s*\{[^}]*border-color:\s*var\(--match-accent-strong\);[^}]*box-shadow:/u,
     );
   });
 

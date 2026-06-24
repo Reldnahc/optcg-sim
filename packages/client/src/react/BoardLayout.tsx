@@ -271,21 +271,35 @@ export const BoardLayout = ({
   reduceDeckStackRendering = false,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
+  const playerSideIsActive =
+    board.selfIsTurnPlayer || pendingChoiceInstanceIds.length > 0;
+  const opponentSideIsActive =
+    !board.selfIsTurnPlayer && pendingChoiceInstanceIds.length === 0;
   const playerFieldClassName = [
     "playmat-field",
     "player-field",
-    board.selfIsTurnPlayer || pendingChoiceInstanceIds.length > 0
-      ? "is-active-player-side"
-      : "",
+    playerSideIsActive ? "is-active-player-side" : "",
   ]
     .filter(Boolean)
     .join(" ");
   const opponentFieldClassName = [
     "playmat-field",
     "opponent-field",
-    !board.selfIsTurnPlayer && pendingChoiceInstanceIds.length === 0
-      ? "is-active-player-side"
-      : "",
+    opponentSideIsActive ? "is-active-player-side" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const playerResourceRowClassName = [
+    "playmat-row",
+    "player-resource-row",
+    playerSideIsActive ? "is-active-player-side" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const opponentResourceRowClassName = [
+    "playmat-row",
+    "opponent-resource-row",
+    opponentSideIsActive ? "is-active-player-side" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -350,7 +364,7 @@ export const BoardLayout = ({
       <div className="tabletop-board">
         <TurnStatusBannerHost banner={board.statusBanner} />
         <BattleArrowOverlay battleArrow={board.battleArrow} />
-        <div className="playmat-row opponent-resource-row">
+        <div className={opponentResourceRowClassName}>
           <div className="playmat-zone opponent-cost">
             <Zone
               label="Cost Area"
@@ -626,7 +640,7 @@ export const BoardLayout = ({
             />
           </div>
         </div>
-        <div className="playmat-row player-resource-row">
+        <div className={playerResourceRowClassName}>
           <div className="playmat-zone player-don-deck">
             <Zone
               label="DON!! Deck"
