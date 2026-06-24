@@ -7,9 +7,10 @@ import { strict as assert } from "node:assert";
 const sourceDirectory = fileURLToPath(new URL(".", import.meta.url));
 
 describe("card-support public runtime boundary", () => {
-  test("does not export TypeScript-backed inventory tooling from the package index", async () => {
+  test("does not export TypeScript-backed tooling from the package index", async () => {
     const source = await readFile(join(sourceDirectory, "index.ts"), "utf8");
 
     assert.equal(source.includes("engine-primitive-inventory"), false);
+    assert.equal(source.includes("behavior-coverage-cli"), false);
   });
 });

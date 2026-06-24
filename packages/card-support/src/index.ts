@@ -21,7 +21,6 @@ export {
   type BehaviorCoverageReport,
   type BehaviorCoverageRequest,
 } from "./behavior-coverage.js";
-export { createBehaviorCoverageCliReport } from "./behavior-coverage-cli.js";
 export {
   createSpotlightProbeReport,
   type SpotlightProbeReport,
