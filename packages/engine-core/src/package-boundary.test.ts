@@ -28,6 +28,7 @@ import {
   hashCanonicalStateValue,
   initializeRng,
   processEffectRuntime,
+  reconstructReplayArtifactStates,
   reindexZoneCards,
   resolveSupportedVanillaBattle,
   enterMainPhase,
@@ -60,6 +61,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "hashCanonicalStateValue",
     "initializeRng",
     "processEffectRuntime",
+    "reconstructReplayArtifactStates",
     "reindexZoneCards",
     "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
@@ -74,6 +76,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
   assert.equal(engineCorePackage.advanceEndPhase, advanceEndPhase);
   assert.equal(engineCorePackage.initializeRng, initializeRng);
   assert.equal(engineCorePackage.processEffectRuntime, processEffectRuntime);
+  assert.equal(
+    engineCorePackage.reconstructReplayArtifactStates,
+    reconstructReplayArtifactStates,
+  );
   assert.equal(engineCorePackage.reindexZoneCards, reindexZoneCards);
   assert.equal(engineCorePackage.advanceRngUint32, advanceRngUint32);
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
