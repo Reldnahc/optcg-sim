@@ -75,7 +75,7 @@
   grid-template-areas: "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck";
   grid-template-columns:
     var(--card-zone-width) var(--playmat-wide-zone-width)
-    var(--playmat-restriction-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
     var(--card-zone-width) var(--card-zone-width)
     var(--card-zone-width);
 }
@@ -83,11 +83,11 @@
 .opponent-field {
   grid-area: opponent-field;
   grid-template-areas:
-    "opponent-deck opponent-summary opponent-restrictions opponent-leader opponent-stage . opponent-life"
+    "opponent-deck opponent-summary opponent-summary opponent-restrictions opponent-leader opponent-stage opponent-life"
     "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life";
   grid-template-columns:
     var(--card-zone-width) var(--playmat-wide-zone-width)
-    var(--playmat-restriction-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
     var(--card-zone-width) var(--card-zone-width)
     var(--card-zone-width);
   grid-template-rows: var(--playmat-row-height) var(--playmat-row-height);
@@ -97,11 +97,11 @@
   grid-area: player-field;
   grid-template-areas:
     "player-life player-characters player-characters player-characters player-characters player-characters player-characters"
-    "player-life . player-stage player-leader player-restrictions player-summary player-deck";
+    "player-life player-stage player-leader player-restrictions player-summary player-summary player-deck";
   grid-template-columns:
     var(--card-zone-width) var(--card-zone-width)
-    var(--card-zone-width) var(--card-zone-width)
-    var(--playmat-restriction-zone-width) var(--playmat-wide-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
+    var(--playmat-wide-zone-width) var(--card-zone-width)
     var(--card-zone-width);
   grid-template-rows: var(--playmat-row-height) var(--playmat-row-height);
 }
@@ -111,8 +111,8 @@
   grid-template-areas: "player-don-deck player-cost player-cost player-cost player-cost player-cost player-trash";
   grid-template-columns:
     var(--card-zone-width) var(--card-zone-width)
-    var(--card-zone-width) var(--card-zone-width)
-    var(--playmat-restriction-zone-width) var(--playmat-wide-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
+    var(--playmat-wide-zone-width) var(--card-zone-width)
     var(--card-zone-width);
 }
 

@@ -188,11 +188,11 @@ describe("playmat structure", () => {
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
       playmatStyles,
-      /\.opponent-field\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
+      /\.opponent-field\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
     );
     assert.match(
       playmatStyles,
-      /\.player-field\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/u,
+      /\.player-field\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
     );
   });
 
@@ -209,11 +209,11 @@ describe("playmat structure", () => {
     assert.equal(playmatStyles.includes("minmax(116px, 1fr)"), false);
     assert.match(
       playmatStyles,
-      /\.opponent-resource-row\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
+      /\.opponent-resource-row\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
     );
     assert.match(
       playmatStyles,
-      /\.player-resource-row\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/u,
+      /\.player-resource-row\s*\{[^}]*grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\);/u,
     );
   });
 
@@ -599,13 +599,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       playmatStyles.includes(
-        '"opponent-deck opponent-summary opponent-restrictions opponent-leader opponent-stage . opponent-life"',
+        '"opponent-deck opponent-summary opponent-summary opponent-restrictions opponent-leader opponent-stage opponent-life"',
       ),
       true,
     );
     assert.equal(
       playmatStyles.includes(
-        '"player-life . player-stage player-leader player-restrictions player-summary player-deck"',
+        '"player-life player-stage player-leader player-restrictions player-summary player-summary player-deck"',
       ),
       true,
     );
@@ -661,7 +661,7 @@ describe("playmat structure", () => {
     );
     assert.equal(
       styles.includes(
-        '"opponent-deck opponent-summary opponent-restrictions opponent-leader opponent-stage . opponent-life"',
+        '"opponent-deck opponent-summary opponent-summary opponent-restrictions opponent-leader opponent-stage opponent-life"',
       ),
       true,
     );
