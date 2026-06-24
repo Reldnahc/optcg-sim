@@ -38,21 +38,14 @@ const stableGameplayTimers = (timers: TimerState): TimerState => ({
     ? {}
     : {
         disconnects: Object.fromEntries(
-          Object.entries(timers.disconnects).map(([playerId, timer]) => {
-            const {
-              currentDisconnectElapsedMs: _elapsed,
-              disconnectStartedRemainingMs: _startedRemaining,
-              ...stableTimer
-            } = timer;
-            return [
-              playerId,
-              {
-                ...stableTimer,
-                remainingMs: 0,
-                isRunning: false,
-              },
-            ];
-          }),
+          Object.entries(timers.disconnects).map(([playerId, timer]) => [
+            playerId,
+            {
+              playerId: timer.playerId,
+              remainingMs: 0,
+              isRunning: false,
+            },
+          ]),
         ),
       }),
 });
@@ -141,7 +134,7 @@ const stableGameplayCardManifest = (
       Object.entries(clone.effectDefinitions).filter(([definitionId]) =>
         effectDefinitionIds.has(definitionId),
       ),
-    ) as NonNullable<GameState["cardManifest"]["effectDefinitions"]>;
+    );
   }
   return clone;
 };

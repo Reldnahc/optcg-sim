@@ -191,6 +191,8 @@ test("recovers from deterministic entries without re-resolving audit envelope ac
   });
 
   assert.equal(freezeReason, undefined);
-  assert.equal(recovered[0]?.status, "active");
-  assert.equal(recovered[0]?.match.state.seq, applied.stateSeq);
+  const recoveredSession = recovered[0];
+  assert.ok(recoveredSession !== undefined);
+  assert.equal(recoveredSession.status, "active");
+  assert.equal(recoveredSession.match.state.seq, applied.stateSeq);
 });

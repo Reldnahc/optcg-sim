@@ -226,22 +226,16 @@ export const applyDeterministicOperation = (
   if (entry.operation.type === "requestRollbackConsent") {
     return rollbackRequestResult(state, entry);
   }
-  if (entry.operation.type === "cancelRollbackConsent") {
-    const next = structuredClone(state);
-    next.seq = (Number(state.seq) + 1) as GameState["seq"];
-    delete next.pendingDecision;
-    return {
-      status: "applied",
-      result: {
-        state: next,
-        events: [],
-        stateHash: hashCanonicalStateValue(next),
-      },
-      label: "cancelRollbackConsent",
-    };
-  }
+  const next = structuredClone(state);
+  next.seq = (Number(state.seq) + 1) as GameState["seq"];
+  delete next.pendingDecision;
   return {
-    status: "failed",
-    reason: "Unsupported deterministic system operation.",
+    status: "applied",
+    result: {
+      state: next,
+      events: [],
+      stateHash: hashCanonicalStateValue(next),
+    },
+    label: "cancelRollbackConsent",
   };
 };

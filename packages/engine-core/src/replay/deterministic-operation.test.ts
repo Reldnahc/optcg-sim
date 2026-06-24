@@ -2,7 +2,6 @@ import { describe, expect, test } from "vitest";
 import type {
   DecisionId,
   DeterministicMatchEntry,
-  PlayerId,
   StateSeq,
 } from "@optcg/types";
 
@@ -156,7 +155,7 @@ describe("applyDeterministicOperation", () => {
       kind: "system",
       operation: {
         type: "cancelRollbackConsent",
-        playerId: p1 as PlayerId,
+        playerId: p1,
         rollbackPointId: "rollback:1",
         decisionId: initialState.pendingDecision.id,
       },

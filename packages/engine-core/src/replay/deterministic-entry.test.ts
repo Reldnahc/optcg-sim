@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { DeterministicMatchEntry, StateSeq } from "@optcg/types";
+import type { DeterministicMatchEntry } from "@optcg/types";
 
 import { makeMainPhaseLegalActionState } from "../action-dispatcher-test-support.js";
 import { p1, p2 } from "../action-test-fixtures.js";

@@ -128,6 +128,7 @@ test("approved rollback still restores from saved GameState checkpoint", async (
   });
 
   assert.equal(result.errors.length, 0);
+  assert.ok(result.rollbackRestore !== undefined);
   assert.deepEqual(
     {
       ...result.state,
@@ -137,11 +138,11 @@ test("approved rollback still restores from saved GameState checkpoint", async (
     beforeRestorePoint.state,
   );
   assert.equal(
-    result.rollbackRestore?.checkpoint.checkpointId,
+    result.rollbackRestore.checkpoint.checkpointId,
     beforeRestorePoint.rollbackPointId,
   );
   assert.equal(
-    result.rollbackRestore?.checkpoint.stateHash,
+    result.rollbackRestore.checkpoint.stateHash,
     beforeRestorePoint.checkpoint.stateHash,
   );
   assert.equal(Number(result.state.seq), Number(request.state.seq) + 1);

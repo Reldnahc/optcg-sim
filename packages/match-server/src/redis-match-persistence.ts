@@ -70,10 +70,10 @@ const serialize = (value: unknown): string => JSON.stringify(value);
 
 const parseJson = (value: string): unknown => JSON.parse(value) as unknown;
 
-const pushRecords = async <T>(
+const pushRecords = async (
   redis: RedisLike,
   key: string,
-  records: readonly T[],
+  records: readonly unknown[],
 ): Promise<void> => {
   if (records.length === 0) {
     return;
