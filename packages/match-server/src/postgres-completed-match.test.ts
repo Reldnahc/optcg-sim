@@ -309,6 +309,8 @@ describe("Postgres completed match replay repository", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.sql).not.toContain("viewer.user_id");
     expect(calls[0]?.sql).toContain("m.id = $1");
+    expect(calls[0]?.sql).toContain("LEFT JOIN LATERAL");
+    expect(calls[0]?.sql).not.toContain("GROUP BY m.id, replay.match_id");
     expect(calls[0]?.params).toEqual([matchId]);
     expect(detail?.matchId).toBe("match-1");
     expect(detail?.replay).toEqual({

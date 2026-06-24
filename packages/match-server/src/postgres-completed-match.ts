@@ -409,20 +409,7 @@ const replayDetailSql = (schema: string): string => `
     m.ended_at::text AS ended_at,
     m.turn_count,
     m.action_count,
-    COALESCE(
-      jsonb_agg(
-        jsonb_build_object(
-          'seatId', players.seat_id,
-          'userId', players.user_id,
-          'displayName', players.display_name,
-          'leaderCardNumber', players.leader_card_number,
-          'result', players.result,
-          'isWinner', players.is_winner
-        )
-        ORDER BY players.seat_id
-      ) FILTER (WHERE players.seat_id IS NOT NULL),
-      '[]'::jsonb
-    ) AS players,
+    players.players,
     jsonb_build_object(
       'replayFormatVersion', replay.replay_format_version,
       'engineVersion', replay.engine_version,
@@ -454,10 +441,25 @@ const replayDetailSql = (schema: string): string => `
   FROM ${qualify(schema, "matches")} m
   INNER JOIN ${qualify(schema, "match_replays")} replay
     ON replay.match_id = m.id
-  LEFT JOIN ${qualify(schema, "match_players")} players
-    ON players.match_id = m.id
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'seatId', players.seat_id,
+          'userId', players.user_id,
+          'displayName', players.display_name,
+          'leaderCardNumber', players.leader_card_number,
+          'result', players.result,
+          'isWinner', players.is_winner
+        )
+        ORDER BY players.seat_id
+      ),
+      '[]'::jsonb
+    ) AS players
+    FROM ${qualify(schema, "match_players")} players
+    WHERE players.match_id = m.id
+  ) players ON true
   WHERE m.id = $1
-  GROUP BY m.id, replay.match_id
 `;
 
 const createSaveMatchSql = (schema: string): string => `
