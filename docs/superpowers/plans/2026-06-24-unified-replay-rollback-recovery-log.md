@@ -1844,11 +1844,11 @@ export const replayDeterministicRecoveryEntries = (
       return undefined;
     }
   } else {
-    if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
-      return replayLegacyRecoveryRecords(match, snapshot);
-    }
     if (records !== undefined && records.length > 0) {
       return "deterministic recovery entries missing deterministic log version";
+    }
+    if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
+      return replayLegacyRecoveryRecords(match, snapshot);
     }
     return undefined;
   }
