@@ -205,8 +205,7 @@ const loadSnapshotFromKeys = async (
           deterministicLogVersion,
           deterministicEntriesSinceSnapshot:
             deterministicEntriesSinceSnapshot.map(
-              (record) =>
-                parseJson(record) as StoredDeterministicSessionRecord,
+              (record) => parseJson(record) as StoredDeterministicSessionRecord,
             ),
           deterministicCheckpoints: deterministicCheckpoints.map(
             (record) =>

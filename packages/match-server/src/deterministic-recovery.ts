@@ -93,9 +93,8 @@ export const replayDeterministicRecoveryEntries = (
   }
 
   const checkpoints = [
-    ...(snapshot.deterministicCheckpoints?.map(
-      (record) => record.checkpoint,
-    ) ?? []),
+    ...(snapshot.deterministicCheckpoints?.map((record) => record.checkpoint) ??
+      []),
     ...(snapshot.recoveryContext?.rollback.checkpoints ?? []),
   ];
   const checkpointResolver = checkpointResolverFromList(checkpoints);

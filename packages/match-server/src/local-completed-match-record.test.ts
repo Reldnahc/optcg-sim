@@ -340,9 +340,7 @@ describe("local completed match record mapping", () => {
       | undefined;
     expect(record?.replay.replayFormatVersion).toBe("dev-local-v2");
     expect(deterministicEntry?.["kind"]).toBe("action");
-    expect(
-      Object.hasOwn(deterministicEntry ?? {}, "envelope"),
-    ).toBe(false);
+    expect(Object.hasOwn(deterministicEntry ?? {}, "envelope")).toBe(false);
     expect(auditEntry?.["type"]).toBe("clientEnvelope");
   });
 });

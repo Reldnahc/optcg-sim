@@ -1,6 +1,4 @@
-import {
-  createRecoveredLocalDevMatch,
-} from "./local-match.js";
+import { createRecoveredLocalDevMatch } from "./local-match.js";
 import { replayDeterministicRecoveryEntries } from "./deterministic-recovery.js";
 import type { MatchSessionService } from "./session-service.js";
 import type {

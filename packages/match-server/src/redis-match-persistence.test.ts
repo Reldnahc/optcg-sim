@@ -184,20 +184,19 @@ const deterministicRecord = (
   };
 };
 
-const deterministicCheckpoint =
-  (): StoredDeterministicCheckpointRecord => ({
-    checkpoint: {
-      checkpointVersion: "deterministic-checkpoint-v1",
-      matchId,
-      checkpointId: "checkpoint-1",
-      reason: "recoverySnapshot",
-      stateSeq: 1 as StateSeq,
-      actionSeq: 0,
-      stateHash: "checkpoint-hash",
-      hashScope: "gameplay-v1",
-    } satisfies DeterministicCheckpoint,
-    recordedAt: "2026-05-30T00:00:00.000Z",
-  });
+const deterministicCheckpoint = (): StoredDeterministicCheckpointRecord => ({
+  checkpoint: {
+    checkpointVersion: "deterministic-checkpoint-v1",
+    matchId,
+    checkpointId: "checkpoint-1",
+    reason: "recoverySnapshot",
+    stateSeq: 1 as StateSeq,
+    actionSeq: 0,
+    stateHash: "checkpoint-hash",
+    hashScope: "gameplay-v1",
+  } satisfies DeterministicCheckpoint,
+  recordedAt: "2026-05-30T00:00:00.000Z",
+});
 
 describe("redis match persistence", () => {
   test("saves and loads state metadata manifest actions and decisions", async () => {

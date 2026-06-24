@@ -137,9 +137,7 @@ const compactManifestSnapshot = (
   });
 };
 
-const matchCardIdsForSetup = (
-  setup: DevMatchSetup,
-): ReadonlySet<string> =>
+const matchCardIdsForSetup = (setup: DevMatchSetup): ReadonlySet<string> =>
   new Set(
     setup.players.flatMap((player) => [
       String(player.leaderCardId),
@@ -371,9 +369,7 @@ export const buildLocalCompletedMatchRecord = (
         jsonObject(record.deterministicEntry),
       ),
       auditEntries: [
-        ...input.deterministicRecords.map((record) =>
-          jsonObject(record.audit),
-        ),
+        ...input.deterministicRecords.map((record) => jsonObject(record.audit)),
         ...input.match.state.audit.map((entry) => jsonObject(entry)),
       ],
       checkpoints: input.deterministicCheckpoints

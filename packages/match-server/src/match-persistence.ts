@@ -72,7 +72,9 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
           : { deterministicLogVersion: input.deterministicLogVersion }),
         ...(input.deterministicCheckpoints === undefined
           ? {}
-          : { deterministicCheckpoints: clone(input.deterministicCheckpoints) }),
+          : {
+              deterministicCheckpoints: clone(input.deterministicCheckpoints),
+            }),
         actions: [],
         decisions: [],
       });

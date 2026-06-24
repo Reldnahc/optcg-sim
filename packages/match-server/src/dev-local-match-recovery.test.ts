@@ -9,10 +9,7 @@ import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-sup
 import { recoverPersistedLocalDevMatchSessions } from "./dev-local-match-recovery.js";
 import { createLocalSeats } from "./dev-local-match-session-factory.js";
 import { devSessionMetadata } from "./dev-session-metadata.js";
-import {
-  applyLocalDevDecision,
-  createLocalDevMatch,
-} from "./local-match.js";
+import { applyLocalDevDecision, createLocalDevMatch } from "./local-match.js";
 import { createMatchSessionService } from "./session-service.js";
 import type {
   MatchPersistence,

@@ -1,6 +1,4 @@
-import {
-  hashReplayStateForScope,
-} from "@optcg/engine-core";
+import { hashReplayStateForScope } from "@optcg/engine-core";
 import {
   applyLocalDevAction,
   applyLocalDevDecision,

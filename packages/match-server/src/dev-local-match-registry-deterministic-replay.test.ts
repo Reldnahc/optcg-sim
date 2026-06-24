@@ -312,8 +312,7 @@ test("rollback restore recovery uses deterministic entries and checkpoints", asy
   const checkpoint = persistedSnapshot?.deterministicCheckpoints
     ?.map((record) => record.checkpoint)
     .find(
-      (candidate) =>
-        candidate.checkpointId === rollbackPoint.rollbackPointId,
+      (candidate) => candidate.checkpointId === rollbackPoint.rollbackPointId,
     );
 
   assert.ok(liveMatch !== undefined);
@@ -410,9 +409,7 @@ test("completed match replays reconstruct from compact deterministic entries", a
   assert.equal(
     savedRecord.replay.deterministicEntries.some(
       (entry) =>
-        typeof entry === "object" &&
-        entry !== null &&
-        "envelope" in entry,
+        typeof entry === "object" && entry !== null && "envelope" in entry,
     ),
     false,
   );

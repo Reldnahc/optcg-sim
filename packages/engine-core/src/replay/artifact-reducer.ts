@@ -103,7 +103,9 @@ const decodeVerification = (
 
 const decodeSystemOperation = (
   value: unknown,
-): DecodeResult<Extract<DeterministicMatchEntry, { kind: "system" }>["operation"]> => {
+): DecodeResult<
+  Extract<DeterministicMatchEntry, { kind: "system" }>["operation"]
+> => {
   if (!isRecord(value)) {
     return {
       status: "failed",
@@ -227,7 +229,10 @@ const decodeDeterministicEntry = (
     return verification;
   }
   if (value["kind"] === "action") {
-    if (!isRecord(value["action"]) || typeof value["action"]["type"] !== "string") {
+    if (
+      !isRecord(value["action"]) ||
+      typeof value["action"]["type"] !== "string"
+    ) {
       return {
         status: "failed",
         reason: "Deterministic action entry is incomplete.",
