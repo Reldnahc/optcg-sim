@@ -143,6 +143,20 @@ const isCheatLineLive = (
   botDonOnField(context) >= 10 &&
   hasCardInHand(context, profileCardIdsWithRole(profile, "cheat-target"));
 
+const wouldOverflowOnlyPreservedCharacters = (
+  { snapshot, botPlayerId }: BotActionContext,
+  profile: BotDeckProfileData,
+): boolean => {
+  const characters = snapshot.players[botPlayerId]?.view.self.characters ?? [];
+  if (characters.length < 5) {
+    return false;
+  }
+  const preserveCardIds = new Set(profile.preserveCards);
+  return characters.every((character) =>
+    preserveCardIds.has(String(character.cardId)),
+  );
+};
+
 const cardPower = (card: PublicCardView | undefined): number | undefined =>
   card?.currentPower ?? card?.printedPower;
 
@@ -414,6 +428,12 @@ export const createBotBehaviorProfile = (
         return undefined;
       }
       const cardId = String(card.cardId);
+      if (
+        profile.cardRoles[cardId]?.includes("cheat-enabler") === true &&
+        wouldOverflowOnlyPreservedCharacters(context, profile)
+      ) {
+        return false;
+      }
       if (
         profile.cardRoles[cardId]?.includes("cheat-enabler") === true &&
         isCheatLineLive(context, profile)

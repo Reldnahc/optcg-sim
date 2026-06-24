@@ -142,7 +142,8 @@ export const opponentRevealWindowsFromState = ({
       (record) =>
         isWindowRevealRecord(record) &&
         !isPrivateLookedSetRecord(record) &&
-        !activeDismissedRevealIds.has(record.id) &&
+        (!activeDismissedRevealIds.has(record.id) ||
+          record.origin === "lifeDamage") &&
         !eventRevealIds.has(record.id) &&
         record.cards.length > 0,
     )

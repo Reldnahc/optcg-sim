@@ -669,6 +669,7 @@ export type Effect =
       destination: "top" | "bottom" | "topOrBottom";
       order: "ownerChoice";
     }
+  | { type: "lookAtTop"; player: PlayerRef; count: number }
   | {
       type: "revealFromZone";
       player: PlayerRef;
@@ -773,6 +774,12 @@ export type Effect =
       order: "original";
     }
   | {
+      type: "putRemaining";
+      zone: Zone;
+      position: "top" | "bottom";
+      order: "ownerChoice" | "chooserChoice" | "random";
+    }
+  | {
       type: "placeSetRemainder";
       set: SelectionSetId;
       owner: PlayerRef;
@@ -790,9 +797,24 @@ export type Effect =
     }
   | { type: "trash"; target: Target }
   | { type: "ko"; target: Target }
+  | {
+      type: "play";
+      source: Zone;
+      player: PlayerRef;
+      filter: CardFilter;
+      costModifier?: number;
+    }
   | PlaySelectedEffect
   | ActivateSelectedEventEffect
   | PlaySourceEffect
+  | {
+      type: "returnUnselectedToDeck";
+      set: SelectionSetId;
+      player: PlayerRef;
+      position: "top" | "bottom";
+      order: "original" | "ownerChoice" | "random";
+      faceDown: boolean;
+    }
   | {
       type: "trashFromHand";
       player: PlayerRef;
@@ -869,6 +891,7 @@ export type Effect =
       protection: EffectDslProtection;
       duration: Duration;
     }
+  | { type: "addDon"; count: number; player: PlayerRef }
   | { type: "attachDon"; target: Target; count: number; player: PlayerRef }
   | {
       type: "redirectDonPhasePlacement";
@@ -886,6 +909,13 @@ export type Effect =
     }
   | { type: "returnDon"; count: number | DynamicNumberValue; player: PlayerRef }
   | { type: "winGame"; player: PlayerRef }
+  | {
+      type: "addLife";
+      count: number;
+      player: PlayerRef;
+      source: "deck" | "hand" | "trash";
+      faceUp?: boolean;
+    }
   | { type: "damage"; target: "leader"; player: PlayerRef; count: number }
   | { type: "invalidateEffects"; target: Target; duration: Duration }
   | {
@@ -936,6 +966,13 @@ export type Effect =
       duration: Duration;
     }
   | { type: "changeAttackTarget"; target: Target }
+  | { type: "cannotBeAttacked"; target: Target; duration: Duration }
+  | {
+      type: "cannotBeBlockedBy";
+      target: Target;
+      filter: CardFilter;
+      duration: Duration;
+    }
   | { type: "sequence"; effects: SequencedEffect[] }
   | {
       type: "choice";
@@ -946,11 +983,19 @@ export type Effect =
     }
   | { type: "conditional"; if: Condition; then: Effect; else?: Effect }
   | {
+      type: "forEachMatch";
+      zone: Zone;
+      player: PlayerRef;
+      filter: CardFilter;
+      effect: Effect;
+    }
+  | {
       type: "forEachSavedTarget";
       selection: string;
       saveCurrentAs: string;
       effect: Effect;
     }
+  | { type: "repeat"; count: number; effect: Effect }
   | { type: "activateReferencedEffect"; source: Target; trigger: Trigger }
   | { type: "replacement"; when: ReplacementTrigger; instead: Effect }
   | { type: "custom"; handler: string };

@@ -43,6 +43,8 @@ export const EXPORT_OWNERSHIP_MANIFEST = {
   CardColor: "TYP-001B",
   Attribute: "TYP-001B",
   Keyword: "TYP-001B",
+  CardIdentityTreatmentKind: "TYP-001B",
+  CardIdentityTreatment: "TYP-001B",
   Zone: "TYP-001A",
   Visibility: "TYP-001A",
   Comparator: "TYP-001A",

@@ -591,6 +591,8 @@ describe("red Shanks bot profile", () => {
     const snapshot = snapshotWithActions([]);
     viewForBot(snapshot).pendingDecision = {
       id: "decision:playCard:overflow:op16-benn:11" as DecisionId,
+      spotlightPendingId:
+        "spotlight:decision:playCard:overflow:op16-benn:11" as PublicPendingDecisionId,
       type: "selectCards",
       playerId: botId,
       prompt: "Choose a Character to trash.",

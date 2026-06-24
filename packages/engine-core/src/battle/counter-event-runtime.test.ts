@@ -135,6 +135,7 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
       "costPaid",
       "decisionResolved",
       "counterUsed",
+      "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
       "effectResolved",

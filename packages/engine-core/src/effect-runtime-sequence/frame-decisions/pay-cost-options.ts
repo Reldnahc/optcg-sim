@@ -623,6 +623,9 @@ export const getSequenceOptionalPayCostOptions = (
           from: route.from,
           to: route.to,
           ...(route.filter === undefined ? {} : { filter: route.filter }),
+          ...(route.destinationState === undefined
+            ? {}
+            : { destinationState: route.destinationState }),
           ...(route.sourceInstanceId === undefined
             ? {}
             : { sourceInstanceId: route.sourceInstanceId }),

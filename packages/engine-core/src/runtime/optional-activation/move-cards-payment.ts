@@ -12,10 +12,13 @@ export const selectedCountSatisfiesMoveCardsPayment = (
   option: MoveCardsPaymentOption,
 ): boolean => {
   if (option.maxCount === "available") {
-    return selectedCount >= Math.max(1, option.count);
+    return selectedCount >= option.count;
   }
   if (typeof option.maxCount === "number") {
     return selectedCount >= option.count && selectedCount <= option.maxCount;
+  }
+  if (option.count === 0) {
+    return selectedCount >= 0;
   }
   return selectedCount === option.count;
 };

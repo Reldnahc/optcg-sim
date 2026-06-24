@@ -25,6 +25,7 @@ import {
   toStateSeq,
 } from "../action-results.js";
 import { reifyCardRef } from "../actions/state.js";
+import { counterEventEffectCostSelectionCountIsAllowed } from "./counter-event-cost-selection.js";
 import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
 import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
 import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
@@ -564,7 +565,14 @@ export const applyCounterEventEffectCostDecisionResponse = (params: {
     return illegalAction(state, "Payment option mismatch.");
   }
   const selected = action.response.selectedCardInstanceIds;
-  if (selected === undefined || selected.length !== effectCost.count) {
+  if (
+    selected === undefined ||
+    !counterEventEffectCostSelectionCountIsAllowed(
+      effectCost,
+      selected.length,
+      defender.hand.length - 1,
+    )
+  ) {
     return illegalAction(state, "Payment card selection count mismatch.");
   }
   if (new Set(selected).size !== selected.length) {

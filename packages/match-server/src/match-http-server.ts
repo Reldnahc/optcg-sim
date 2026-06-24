@@ -87,6 +87,7 @@ import { createRedisMatchPersistence } from "./redis-match-persistence.js";
 import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 import type { MatchPersistence } from "./session-types.js";
+import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -589,26 +590,20 @@ const handleWebSocketUpgrade = async (
     resetConnectionIdleTimeout(connection, socketIdleTimeoutMs);
     registerConnectionLifecycle(connection, () => {
       lobbyConnections.delete(connection);
-      const cancelTimer = setTimeout(() => {
-        const reconnected = [...lobbyConnections].some(
-          (candidate) =>
-            candidate.lobbyId === lobbyId && candidate.playerId === playerId,
-        );
-        if (reconnected) {
-          return;
-        }
-        void lobbyRegistry.cancelRematchLobby(lobbyId).then((cancelled) => {
-          if (!cancelled) {
-            return;
-          }
+      cancelRematchLobbyAfterDisconnect({
+        lobbyConnections,
+        lobbyId,
+        lobbyRegistry,
+        playerId,
+        rematchLobbyDisconnectGraceMs,
+        onCancelled: () => {
           broadcastLobbyError(
             lobbyId,
             "Rematch canceled because a player disconnected from the lobby.",
             lobbyConnections,
           );
-        });
-      }, rematchLobbyDisconnectGraceMs);
-      cancelTimer.unref();
+        },
+      });
     });
     sendSocketJson(connection, {
       type: "lobbySync",

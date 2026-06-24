@@ -111,6 +111,7 @@ export type PaymentOption =
       };
       to: { player: PlayerRef; zone: Zone; position?: "top" | "bottom" };
       filter?: CardFilter;
+      destinationState?: "active" | "rested";
       sourceInstanceId?: InstanceId;
     }
   | {
