@@ -84,8 +84,8 @@ describe("reconstructReplayFrames", () => {
     const result = reconstructReplayFrames(
       detail({
         replayFormatVersion: "dev-local-v1",
-        initialSnapshot: match.state as unknown as JsonObject,
-        finalState: match.state as unknown as JsonObject,
+        initialSnapshot: match.state,
+        finalState: match.state,
         deterministicEntries: [],
       }),
     );

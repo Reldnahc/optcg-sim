@@ -117,10 +117,10 @@ import {
 Replace the replay state section in `buildLocalCompletedMatchRecord` with:
 
 ```ts
-  const initialMatch = createLocalDevMatch(input.setup);
-  const initialSnapshot = jsonObject(initialMatch.state);
-  const finalState = jsonObject(input.match.state);
-  const initialStateHash = hashCanonicalStateValue(initialMatch.state);
+const initialMatch = createLocalDevMatch(input.setup);
+const initialSnapshot = jsonObject(initialMatch.state);
+const finalState = jsonObject(input.match.state);
+const initialStateHash = hashCanonicalStateValue(initialMatch.state);
 ```
 
 Then set:
@@ -171,7 +171,9 @@ import { describe, expect, test } from "vitest";
 import type { CompletedMatchReplayDetail } from "./postgres-completed-match.js";
 import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
-const detail = (replay: Record<string, unknown>): CompletedMatchReplayDetail => ({
+const detail = (
+  replay: Record<string, unknown>,
+): CompletedMatchReplayDetail => ({
   matchId: "match-1",
   status: "completed",
   gameType: "dev",
@@ -263,7 +265,8 @@ describe("reconstructReplayFrames", () => {
 
     expect(result).toEqual({
       status: "failed",
-      reason: "Replay artifact does not contain saved frames or reconstructable engine state.",
+      reason:
+        "Replay artifact does not contain saved frames or reconstructable engine state.",
     });
   });
 });
@@ -326,7 +329,9 @@ const savedSnapshotForEntry = (entry: unknown): unknown | undefined => {
     return undefined;
   }
   const snapshot = entry["result"]["snapshot"];
-  return isRecord(snapshot) && isRecord(snapshot["players"]) ? snapshot : undefined;
+  return isRecord(snapshot) && isRecord(snapshot["players"])
+    ? snapshot
+    : undefined;
 };
 
 const savedSnapshotFrames = (
@@ -423,7 +428,10 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
             status: "main",
             activePlayerId: "p1",
             players: {
-              p1: { view: { self: {}, opponent: {}, timers: { players: {} } }, actions: [] },
+              p1: {
+                view: { self: {}, opponent: {}, timers: { players: {} } },
+                actions: [],
+              },
             },
           },
         },
@@ -658,37 +666,37 @@ readonly frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
 Before legacy deterministic entry extraction, add:
 
 ```ts
-  if (input.frameReconstruction?.status === "ready") {
-    return input.frameReconstruction.frames.flatMap((frame) => {
-      const snapshot = frame.snapshot;
-      if (!isRecord(snapshot) || !isRecord(snapshot["players"])) {
-        return [];
-      }
-      const playerId = Object.keys(snapshot.players)[0] as PlayerId | undefined;
-      if (playerId === undefined) {
-        return [];
-      }
-      const cards = replayCatalog(input.manifestSnapshot, [
-        ...Object.keys(snapshot.players).map((id) => id as PlayerId),
-      ]);
-      return [
-        {
-          index: frame.index,
-          label: frame.label,
-          clientState: {
+if (input.frameReconstruction?.status === "ready") {
+  return input.frameReconstruction.frames.flatMap((frame) => {
+    const snapshot = frame.snapshot;
+    if (!isRecord(snapshot) || !isRecord(snapshot["players"])) {
+      return [];
+    }
+    const playerId = Object.keys(snapshot.players)[0] as PlayerId | undefined;
+    if (playerId === undefined) {
+      return [];
+    }
+    const cards = replayCatalog(input.manifestSnapshot, [
+      ...Object.keys(snapshot.players).map((id) => id as PlayerId),
+    ]);
+    return [
+      {
+        index: frame.index,
+        label: frame.label,
+        clientState: {
+          matchId: input.matchId as MatchId,
+          seat: {
             matchId: input.matchId as MatchId,
-            seat: {
-              matchId: input.matchId as MatchId,
-              playerId,
-              sessionToken: "replay",
-            },
-            snapshot: snapshot as unknown as MatchSnapshot,
-            cards,
+            playerId,
+            sessionToken: "replay",
           },
+          snapshot: snapshot as unknown as MatchSnapshot,
+          cards,
         },
-      ];
-    });
-  }
+      },
+    ];
+  });
+}
 ```
 
 - [ ] **Step 4: Pass frame reconstruction from `ReplayViewerPage`**
@@ -700,7 +708,7 @@ replayFramesFromDetail({
   matchId: replay.matchId,
   manifestSnapshot: replay.replay.manifestSnapshot,
   deterministicEntries: replay.replay.deterministicEntries ?? [],
-})
+});
 ```
 
 to:
@@ -711,7 +719,7 @@ replayFramesFromDetail({
   manifestSnapshot: replay.replay.manifestSnapshot,
   frameReconstruction: replay.frameReconstruction,
   deterministicEntries: replay.replay.deterministicEntries ?? [],
-})
+});
 ```
 
 - [ ] **Step 5: Run adapter and viewer tests**
@@ -807,7 +815,11 @@ export const ReplayPlaybackControls = ({
     >
       Previous
     </button>
-    <button type="button" aria-label={playing ? "Pause replay" : "Play replay"} onClick={onTogglePlay}>
+    <button
+      type="button"
+      aria-label={playing ? "Pause replay" : "Play replay"}
+      onClick={onTogglePlay}
+    >
       {playing ? "Pause" : "Play"}
     </button>
     <button
@@ -1154,13 +1166,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const replayActionFromEntry = (
   entry: unknown,
-): { readonly status: "ready"; readonly action: Action; readonly label: string } | { readonly status: "failed"; readonly reason: string } => {
+):
+  | {
+      readonly status: "ready";
+      readonly action: Action;
+      readonly label: string;
+    }
+  | { readonly status: "failed"; readonly reason: string } => {
   if (!isRecord(entry) || !isRecord(entry["envelope"])) {
     return { status: "failed", reason: "Replay entry is missing an envelope." };
   }
   const request = entry["envelope"]["request"];
   if (!isRecord(request) || typeof request["type"] !== "string") {
-    return { status: "failed", reason: "Replay entry is missing a request type." };
+    return {
+      status: "failed",
+      reason: "Replay entry is missing a request type.",
+    };
   }
   const type = request["type"];
   if (type === "endMainPhase") {
@@ -1208,38 +1229,38 @@ const replayActionFromEntry = (
 Replace the skeleton body after the initial frame with:
 
 ```ts
-  const frames: ReplayArtifactStateFrame[] = [
-    {
-      index: 0,
-      actionIndex: null,
-      label: "Initial state",
-      state: structuredClone(initialState),
-      stateHash,
-    },
-  ];
-  let current = structuredClone(initialState);
-  for (const [actionIndex, entry] of deterministicEntries.entries()) {
-    const decoded = replayActionFromEntry(entry);
-    if (decoded.status === "failed") {
-      return { status: "failed", reason: decoded.reason, actionIndex };
-    }
-    const result = applyAction(current, decoded.action);
-    if (result.errors !== undefined) {
-      return {
-        status: "failed",
-        reason: result.errors.map((error) => error.reason).join("; "),
-        actionIndex,
-      };
-    }
-    current = result.state;
-    frames.push({
-      index: frames.length,
-      actionIndex,
-      label: decoded.label,
-      state: structuredClone(current),
-      stateHash: result.stateHash,
-    });
+const frames: ReplayArtifactStateFrame[] = [
+  {
+    index: 0,
+    actionIndex: null,
+    label: "Initial state",
+    state: structuredClone(initialState),
+    stateHash,
+  },
+];
+let current = structuredClone(initialState);
+for (const [actionIndex, entry] of deterministicEntries.entries()) {
+  const decoded = replayActionFromEntry(entry);
+  if (decoded.status === "failed") {
+    return { status: "failed", reason: decoded.reason, actionIndex };
   }
+  const result = applyAction(current, decoded.action);
+  if (result.errors !== undefined) {
+    return {
+      status: "failed",
+      reason: result.errors.map((error) => error.reason).join("; "),
+      actionIndex,
+    };
+  }
+  current = result.state;
+  frames.push({
+    index: frames.length,
+    actionIndex,
+    label: decoded.label,
+    state: structuredClone(current),
+    stateHash: result.stateHash,
+  });
+}
 ```
 
 - [ ] **Step 5: Wire server reconstruction to engine reducer**

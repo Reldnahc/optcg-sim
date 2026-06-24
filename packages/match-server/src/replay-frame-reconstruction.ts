@@ -45,7 +45,9 @@ const labelForEntry = (entry: unknown, index: number): string => {
     : `Action ${String(index + 1)}`;
 };
 
-const savedSnapshotForEntry = (entry: unknown): unknown | undefined => {
+const savedSnapshotForEntry = (
+  entry: unknown,
+): Record<string, unknown> | undefined => {
   if (!isRecord(entry) || !isRecord(entry["result"])) {
     return undefined;
   }
@@ -99,10 +101,7 @@ const replayFramesFromEngineState = (
   deterministicEntries: readonly unknown[],
 ): ReplayFrameReconstructionResult | undefined => {
   const initialSnapshot = detail.replay["initialSnapshot"];
-  if (
-    !isRecord(initialSnapshot) ||
-    !isRecord(detail.replay["finalState"])
-  ) {
+  if (!isRecord(initialSnapshot) || !isRecord(detail.replay["finalState"])) {
     return undefined;
   }
   const result = reconstructReplayArtifactStates({
@@ -146,7 +145,10 @@ export const reconstructReplayFrames = (
   if (frames.length > 0) {
     return { status: "ready", frames };
   }
-  const engineFrames = replayFramesFromEngineState(detail, deterministicEntries);
+  const engineFrames = replayFramesFromEngineState(
+    detail,
+    deterministicEntries,
+  );
   if (engineFrames !== undefined) {
     return engineFrames;
   }

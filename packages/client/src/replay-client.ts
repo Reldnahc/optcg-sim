@@ -49,9 +49,7 @@ export interface ReplayDetail {
   readonly actionCount: number;
   readonly players: readonly ReplayPlayerSummary[];
   readonly replay: ReplayPayload;
-  readonly frameReconstruction?:
-    | ReplayFrameReconstructionPayload
-    | undefined;
+  readonly frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
 }
 
 export type ReplaySummary = Omit<ReplayDetail, "replay">;

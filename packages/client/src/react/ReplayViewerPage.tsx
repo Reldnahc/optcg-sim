@@ -20,9 +20,7 @@ export interface ReplayViewerPageViewProps {
   readonly replay?: ReplayDetail | undefined;
   readonly error?: string | undefined;
   readonly frameCount?: number | undefined;
-  readonly frameReconstruction?:
-    | ReplayFrameReconstructionPayload
-    | undefined;
+  readonly frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
 }
 
 const formatDate = (value: string): string => {

@@ -63,9 +63,7 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
   },
 });
 
-const assertReplayDetailBody = async (
-  response: Response,
-): Promise<void> => {
+const assertReplayDetailBody = async (response: Response): Promise<void> => {
   const body = (await response.json()) as {
     replay?: CompletedMatchReplayDetail;
     frameReconstruction?: {
@@ -74,9 +72,29 @@ const assertReplayDetailBody = async (
     };
   };
   assert.equal(body.replay?.matchId, "match-1");
-  assert.equal(body.frameReconstruction?.status, "ready");
-  assert.equal(body.frameReconstruction?.frames?.length, 1);
-  assert.equal(body.frameReconstruction?.frames?.[0]?.label, "playCard");
+  assert.deepEqual(body.frameReconstruction, {
+    status: "ready",
+    frames: [
+      {
+        index: 0,
+        actionIndex: 0,
+        label: "playCard",
+        snapshot: {
+          stateSeq: 1,
+          actionSeq: 1,
+          stateHash: "hash-1",
+          status: "main",
+          activePlayerId: "p1",
+          players: {
+            p1: {
+              view: { self: {}, opponent: {}, timers: { players: {} } },
+              actions: [],
+            },
+          },
+        },
+      },
+    ],
+  });
 };
 
 interface FakeReplayRepository extends CompletedMatchReplayRepository {

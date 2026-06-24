@@ -35,7 +35,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const replayActionFromEntry = (
   entry: unknown,
 ):
-  | { readonly status: "ready"; readonly action: Action; readonly label: string }
+  | {
+      readonly status: "ready";
+      readonly action: Action;
+      readonly label: string;
+    }
   | { readonly status: "failed"; readonly reason: string } => {
   if (!isRecord(entry) || !isRecord(entry["envelope"])) {
     return { status: "failed", reason: "Replay entry is missing an envelope." };
@@ -119,9 +123,7 @@ export const reconstructReplayArtifactStates = ({
       return {
         status: "failed",
         reason: result.errors
-          .map((error) =>
-            "reason" in error ? String(error.reason) : String(error.type),
-          )
+          .map((error) => ("reason" in error ? error.reason : error.type))
           .join("; "),
         actionIndex,
       };
