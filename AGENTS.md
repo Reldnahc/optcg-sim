@@ -26,6 +26,8 @@ the smallest defensible change that preserves safety.
 - Keep changes scoped to the requested concern.
 - Do not silently absorb adjacent engine, card, server, client, UI, replay, or
   tooling work just because it is nearby.
+- Always commit work in logical chunks. Never leave a messy worktree.
+- Never change branches without asking first or being explicitly told to.
 - Preserve user changes already present in the worktree. Do not revert files you
   did not intentionally change.
 - Prefer repo patterns and shared helpers over new one-off abstractions.
