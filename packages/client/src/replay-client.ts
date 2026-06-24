@@ -9,6 +9,24 @@ export interface ReplayPlayerSummary {
   readonly isWinner: boolean;
 }
 
+export interface ReplayFramePayload {
+  readonly index: number;
+  readonly actionIndex: number;
+  readonly label: string;
+  readonly snapshot: unknown;
+}
+
+export type ReplayFrameReconstructionPayload =
+  | {
+      readonly status: "ready";
+      readonly frames: readonly ReplayFramePayload[];
+    }
+  | {
+      readonly status: "failed";
+      readonly reason: string;
+      readonly actionIndex?: number | undefined;
+    };
+
 export interface ReplayPayload {
   readonly replayFormatVersion?: string;
   readonly manifestSnapshot?: unknown;
@@ -31,6 +49,9 @@ export interface ReplayDetail {
   readonly actionCount: number;
   readonly players: readonly ReplayPlayerSummary[];
   readonly replay: ReplayPayload;
+  readonly frameReconstruction?:
+    | ReplayFrameReconstructionPayload
+    | undefined;
 }
 
 export type ReplaySummary = Omit<ReplayDetail, "replay">;
@@ -76,8 +97,16 @@ export const createReplayClient = ({
       const response = await fetchImpl(
         `${root}/api/replays/${encodeURIComponent(String(matchId))}`,
       );
-      const body = await readJson<{ replay: ReplayDetail }>(response);
-      return body.replay;
+      const body = await readJson<{
+        replay: ReplayDetail;
+        frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
+      }>(response);
+      return {
+        ...body.replay,
+        ...(body.frameReconstruction === undefined
+          ? {}
+          : { frameReconstruction: body.frameReconstruction }),
+      };
     },
   };
 };

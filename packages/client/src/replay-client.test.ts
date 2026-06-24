@@ -81,6 +81,20 @@ describe("replay client", () => {
                   auditEntries: [],
                 },
               },
+              frameReconstruction: {
+                status: "ready",
+                frames: [
+                  {
+                    index: 0,
+                    actionIndex: 0,
+                    label: "playCard",
+                    snapshot: {
+                      stateSeq: 1,
+                      players: { p1: { view: {}, actions: [] } },
+                    },
+                  },
+                ],
+              },
             }),
           ),
         );
@@ -94,5 +108,9 @@ describe("replay client", () => {
     assert.deepEqual(replay.replay.deterministicEntries, [
       { type: "submitAction" },
     ]);
+    assert.equal(replay.frameReconstruction?.status, "ready");
+    if (replay.frameReconstruction?.status === "ready") {
+      assert.equal(replay.frameReconstruction.frames[0]?.label, "playCard");
+    }
   });
 });
