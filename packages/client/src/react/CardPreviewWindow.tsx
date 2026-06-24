@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type PointerEvent,
 } from "react";
 
 import type { ClientCardModel } from "../view-model.js";
@@ -42,6 +43,8 @@ const maxPreviewZoom = 1.8;
 const previewZoomStep = 0.1;
 const previewRenderedScale = 1.5;
 const defaultPreviewTextPanelHeight = 42;
+const minPreviewTextPanelHeight = 22;
+const maxPreviewTextPanelHeight = 100;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, value));
@@ -70,19 +73,30 @@ const cardPreviewMetadataRows = (
     : [{ label: "Counter", value: `+${String(card.counter)}` }]),
 ];
 
+interface TextPanelDragState {
+  readonly pointerId: number;
+  readonly startY: number;
+  readonly startHeight: number;
+}
+
 export const CardPreviewContent = ({
   card,
 }: CardPreviewContentProps): React.JSX.Element => {
   const [zoom, setZoom] = useState(1);
   const [textVisible, setTextVisible] = useState(false);
+  const [textPanelHeight, setTextPanelHeight] = useState(
+    defaultPreviewTextPanelHeight,
+  );
   const previewRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const textPanelDrag = useRef<TextPanelDragState | undefined>(undefined);
   const previewStyle = {
     "--card-preview-zoom": String(
       Number((zoom * previewRenderedScale).toFixed(2)),
     ),
-    "--card-preview-rules-height": `${String(defaultPreviewTextPanelHeight)}%`,
+    "--card-preview-rules-height": `${String(textPanelHeight)}%`,
     "--card-preview-image-bottom-reserve": textVisible
-      ? `calc(${String(defaultPreviewTextPanelHeight)}% + 24px)`
+      ? `calc(${String(textPanelHeight)}% + 24px)`
       : "0px",
   } as CSSProperties;
   const metadataRows = card === undefined ? [] : cardPreviewMetadataRows(card);
@@ -114,6 +128,29 @@ export const CardPreviewContent = ({
     };
   }, [zoomBy]);
 
+  const moveTextPanelResize = (
+    event: PointerEvent<HTMLButtonElement>,
+  ): void => {
+    const drag = textPanelDrag.current;
+    const stageHeight = stageRef.current?.getBoundingClientRect().height;
+    if (
+      drag === undefined ||
+      drag.pointerId !== event.pointerId ||
+      stageHeight === undefined ||
+      stageHeight <= 0
+    ) {
+      return;
+    }
+    const deltaPercent = ((drag.startY - event.clientY) / stageHeight) * 100;
+    setTextPanelHeight(
+      clamp(
+        drag.startHeight + deltaPercent,
+        minPreviewTextPanelHeight,
+        maxPreviewTextPanelHeight,
+      ),
+    );
+  };
+
   return (
     <article
       className="card-preview-content"
@@ -124,7 +161,7 @@ export const CardPreviewContent = ({
         <div className="card-preview-empty">Hover a card to preview it</div>
       ) : (
         <>
-          <div className="card-preview-stage">
+          <div className="card-preview-stage" ref={stageRef}>
             <div className="card-preview-image-scroll">
               <div className="card-preview-image-frame">
                 {card.imageUrl === undefined ? (
@@ -140,6 +177,38 @@ export const CardPreviewContent = ({
             </div>
             {textVisible ? (
               <section className="card-preview-rules-panel">
+                <button
+                  className="card-preview-rules-resize-handle"
+                  type="button"
+                  aria-label="Resize card text"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    textPanelDrag.current = {
+                      pointerId: event.pointerId,
+                      startY: event.clientY,
+                      startHeight: textPanelHeight,
+                    };
+                  }}
+                  onPointerMove={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    moveTextPanelResize(event);
+                  }}
+                  onPointerUp={(event) => {
+                    event.stopPropagation();
+                    if (textPanelDrag.current?.pointerId === event.pointerId) {
+                      textPanelDrag.current = undefined;
+                    }
+                  }}
+                  onPointerCancel={(event) => {
+                    event.stopPropagation();
+                    if (textPanelDrag.current?.pointerId === event.pointerId) {
+                      textPanelDrag.current = undefined;
+                    }
+                  }}
+                />
                 <div className="card-preview-text">
                   <header className="card-preview-text-header">
                     <h2>{card.name}</h2>
