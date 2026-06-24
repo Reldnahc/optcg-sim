@@ -56,6 +56,24 @@ export interface LocalRollbackMutationResult {
   state: GameState;
   rollback: LocalRollbackState;
   errors: string[];
+  rollbackRequest?: {
+    readonly rollbackPointId: string;
+    readonly requestedBy: PlayerId;
+    readonly approvingPlayerId: PlayerId;
+    readonly decisionId: DecisionId;
+    readonly prompt: string;
+  };
+  rollbackRestore?: {
+    readonly rollbackPointId: string;
+    readonly requestedBy: PlayerId;
+    readonly approvedBy: PlayerId;
+    readonly checkpoint: DeterministicCheckpoint;
+  };
+  rollbackCancel?: {
+    readonly rollbackPointId: string;
+    readonly playerId: PlayerId;
+    readonly decisionId?: DecisionId;
+  };
 }
 
 export interface ApplyRollbackConsentInput {
@@ -244,6 +262,7 @@ export const requestRollbackConsent = (
   const decisionId = `decision:rollback:${input.rollbackPointId}:${String(
     state.seq,
   )}` as DecisionId;
+  const prompt = `Allow rollback to ${point.label}?`;
   return {
     state: bumpedState({
       ...state,
@@ -251,7 +270,7 @@ export const requestRollbackConsent = (
         id: decisionId,
         type: "rollbackConsent",
         playerId: approvingPlayerId,
-        prompt: `Allow rollback to ${point.label}?`,
+        prompt,
         causedBy: { type: "ruleProcess", name: "rollbackRequest" },
         visibility: { type: "private", playerId: approvingPlayerId },
         rollbackPointId: input.rollbackPointId,
@@ -266,6 +285,13 @@ export const requestRollbackConsent = (
       },
     },
     errors: [],
+    rollbackRequest: {
+      rollbackPointId: input.rollbackPointId,
+      requestedBy: input.playerId,
+      approvingPlayerId,
+      decisionId,
+      prompt,
+    },
   };
 };
 
@@ -294,6 +320,11 @@ export const resolveRollbackConsent = (
       state: clearRollbackConsent(state),
       rollback: withoutPendingRollbackRequest(rollback),
       errors: [],
+      rollbackCancel: {
+        rollbackPointId: request.rollbackPointId,
+        playerId: input.playerId,
+        decisionId: input.decisionId,
+      },
     };
   }
 
@@ -305,6 +336,16 @@ export const resolveRollbackConsent = (
       state,
       rollback,
       errors: ["Requested rollback point is no longer available."],
+    };
+  }
+  const checkpoint = rollback.checkpoints.find(
+    (candidate) => candidate.checkpointId === point.rollbackPointId,
+  );
+  if (checkpoint === undefined) {
+    return {
+      state,
+      rollback,
+      errors: ["Requested rollback checkpoint is no longer available."],
     };
   }
 
@@ -320,6 +361,12 @@ export const resolveRollbackConsent = (
       ),
     },
     errors: [],
+    rollbackRestore: {
+      rollbackPointId: point.rollbackPointId,
+      requestedBy: request.requestedBy,
+      approvedBy: input.playerId,
+      checkpoint,
+    },
   };
 };
 
@@ -343,6 +390,7 @@ export const cancelRollbackConsent = (
     };
   }
   const request = rollback.pendingRequest;
+  const decision = state.pendingDecision;
   if (request === undefined) {
     return {
       state,
@@ -361,5 +409,13 @@ export const cancelRollbackConsent = (
     state: clearRollbackConsent(state),
     rollback: withoutPendingRollbackRequest(rollback),
     errors: [],
+    rollbackCancel: {
+      rollbackPointId: request.rollbackPointId,
+      playerId: input.playerId,
+      ...(decision?.type === "rollbackConsent" &&
+      decision.rollbackPointId === request.rollbackPointId
+        ? { decisionId: decision.id }
+        : {}),
+    },
   };
 };

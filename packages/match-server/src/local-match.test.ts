@@ -65,6 +65,10 @@ const mustCard = (setup: DevMatchSetup, cardId: CardId) => {
   return card;
 };
 
+const deterministicOperation = (result: unknown): unknown =>
+  (result as { readonly deterministicOperation?: unknown })
+    .deterministicOperation;
+
 const completeSetupIfPresent = (
   match: ReturnType<typeof createLocalDevMatch>,
 ): ReturnType<typeof getLocalDevSnapshot> => {
@@ -818,6 +822,51 @@ describe("local dev match", () => {
     assert.equal(getLocalDevSnapshot(match).stateSeq, afterFirst.stateSeq);
   });
 
+  test("applyLocalDevAction returns the exact action accepted by the engine", () => {
+    const match = createTestMatch();
+    const before = keepBothPlayersAndAdvance(match);
+    const endMainIndex = actionIndexByLabel(
+      mustPlayerSnapshot(before, p1).actions,
+      "End turn",
+    );
+
+    const result = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endMainIndex,
+      includeSnapshot: false,
+    });
+
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(deterministicOperation(result), {
+      kind: "action",
+      action: { type: "endMainPhase" },
+    });
+  });
+
+  test("applyLocalDevDecision returns the exact decision response accepted by the engine", () => {
+    const match = createTestMatch();
+    completeSetupIfPresent(match);
+    const decision = match.state.pendingDecision;
+    if (decision === undefined) {
+      throw new Error("Expected pending mulligan decision.");
+    }
+    const response = { type: "mulligan" as const, keep: true };
+
+    const result = applyLocalDevDecision(match, {
+      playerId: decision.playerId,
+      decisionId: decision.id,
+      response,
+      includeSnapshot: false,
+    });
+
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(deterministicOperation(result), {
+      kind: "decision",
+      decisionId: decision.id,
+      response,
+    });
+  });
+
   test("records rollback points before accepted actions and asks the opponent for consent", () => {
     const match = createTestMatch();
     const before = keepBothPlayersAndAdvance(match);
@@ -844,11 +893,27 @@ describe("local dev match", () => {
     });
 
     assert.deepEqual(requested.errors, []);
+    const requestedOperation = deterministicOperation(requested);
+    assert.equal(
+      typeof requestedOperation === "object" && requestedOperation !== null,
+      true,
+    );
     const snapshot = getLocalDevSnapshot(match);
     const pendingRequest = snapshot.rollback?.pendingRequest;
     if (pendingRequest === undefined) {
       throw new Error("Expected pending rollback request.");
     }
+    assert.deepEqual(requestedOperation, {
+      kind: "system",
+      operation: {
+        type: "requestRollbackConsent",
+        playerId: p1,
+        rollbackPointId: rollbackPoint.rollbackPointId,
+        approvingPlayerId: p2,
+        decisionId: mustPlayerSnapshot(snapshot, p2).view.pendingDecision?.id,
+        prompt: mustPlayerSnapshot(snapshot, p2).view.pendingDecision?.prompt,
+      },
+    });
     assert.equal(pendingRequest.requestedBy, p1);
     assert.equal(pendingRequest.approvingPlayerId, p2);
     assert.equal(
@@ -899,6 +964,19 @@ describe("local dev match", () => {
     });
 
     assert.deepEqual(accepted.errors, []);
+    assert.deepEqual(deterministicOperation(accepted), {
+      kind: "system",
+      operation: {
+        type: "restoreRollbackPoint",
+        rollbackPointId: rollbackPoint.rollbackPointId,
+        requestedBy: p1,
+        approvedBy: p2,
+        restoredStateHash: (accepted as { readonly stateHash?: unknown })
+          .stateHash,
+        restoredStateSeq: accepted.stateSeq,
+        restoredActionSeq: accepted.actionSeq,
+      },
+    });
     const restored = getLocalDevSnapshot(match);
     assert.equal(restored.turn.turnPlayerId, before.turn.turnPlayerId);
     assert.equal(restored.turn.phase, before.turn.phase);
@@ -1005,6 +1083,15 @@ describe("local dev match", () => {
     });
 
     assert.deepEqual(denied.errors, []);
+    assert.deepEqual(deterministicOperation(denied), {
+      kind: "system",
+      operation: {
+        type: "cancelRollbackConsent",
+        playerId: p2,
+        rollbackPointId: rollbackPoint.rollbackPointId,
+        decisionId: decision.id,
+      },
+    });
     const current = getLocalDevSnapshot(match);
     assert.equal(current.turn.turnPlayerId, afterAction.turn.turnPlayerId);
     assert.equal(current.turn.phase, afterAction.turn.phase);
@@ -1035,10 +1122,21 @@ describe("local dev match", () => {
       rollbackPointId: rollbackPoint.rollbackPointId,
     });
     assert.deepEqual(requested.errors, []);
+    const decisionId = mustPlayerSnapshot(getLocalDevSnapshot(match), p2).view
+      .pendingDecision?.id;
 
     const cancelled = cancelLocalDevRollback(match, { playerId: p1 });
 
     assert.deepEqual(cancelled.errors, []);
+    assert.deepEqual(deterministicOperation(cancelled), {
+      kind: "system",
+      operation: {
+        type: "cancelRollbackConsent",
+        playerId: p1,
+        rollbackPointId: rollbackPoint.rollbackPointId,
+        decisionId,
+      },
+    });
     const current = getLocalDevSnapshot(match);
     assert.equal(current.turn.turnPlayerId, afterAction.turn.turnPlayerId);
     assert.equal(current.turn.phase, afterAction.turn.phase);

@@ -8,6 +8,7 @@ import {
   enterMainPhase,
   filterStateForPlayer,
   getLegalActions,
+  hashReplayStateForScope,
   respondToMulliganDecision,
   startMulliganFlow,
 } from "@optcg/engine-core";
@@ -15,6 +16,8 @@ import { createHash } from "node:crypto";
 import type { DevPoneglyphFetch } from "@optcg/card-support";
 import type {
   CardId,
+  Action,
+  DeterministicSystemOperation,
   EngineError,
   EngineResult,
   GameState,
@@ -118,11 +121,25 @@ export interface ApplyLocalDevDecisionInput {
   includeSnapshot?: boolean;
 }
 
+export type LocalDeterministicOperation =
+  | { readonly kind: "action"; readonly action: Action }
+  | {
+      readonly kind: "decision";
+      readonly decisionId: DecisionId;
+      readonly response: DecisionResponse;
+    }
+  | {
+      readonly kind: "system";
+      readonly operation: DeterministicSystemOperation;
+    };
+
 export interface ApplyLocalDevActionResult {
   stateSeq: number;
   actionSeq: number;
+  stateHash: string;
   snapshot?: DevMatchSnapshot;
   errors: string[];
+  deterministicOperation?: LocalDeterministicOperation;
 }
 
 type ExecutableDevAction = DevVisibleAction & {
@@ -132,6 +149,9 @@ type ExecutableDevAction = DevVisibleAction & {
   ) => EngineResult;
   decisionId?: DecisionId;
   response?: DecisionResponse;
+  deterministicAction?: (
+    input?: Pick<ApplyLocalDevActionInput, "selectedDonInstanceIds">,
+  ) => Action;
 };
 
 const timedStateHash = (name: string, value: unknown): string => {
@@ -153,9 +173,11 @@ const localActionResult = (
   match: LocalDevMatch,
   errors: string[],
   includeSnapshot = true,
+  deterministicOperation?: LocalDeterministicOperation,
 ): ApplyLocalDevActionResult => ({
   stateSeq: match.state.seq,
   actionSeq: match.state.actionSeq,
+  stateHash: hashReplayStateForScope(match.state, "gameplay-v1"),
   ...(includeSnapshot
     ? {
         snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
@@ -164,6 +186,7 @@ const localActionResult = (
       }
     : {}),
   errors,
+  ...(deterministicOperation === undefined ? {} : { deterministicOperation }),
 });
 
 const responseKeyForDecisionResponse = (
@@ -590,6 +613,13 @@ const mulliganActions = (
       type: "respondToDecision",
       label: "Keep hand",
       responseKey: "keep",
+      decisionId: decision.id,
+      response: { type: "mulligan", keep: true },
+      deterministicAction: () => ({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "mulligan", keep: true },
+      }),
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -602,6 +632,13 @@ const mulliganActions = (
       type: "respondToDecision",
       label: "Mulligan hand",
       responseKey: "mulligan",
+      decisionId: decision.id,
+      response: { type: "mulligan", keep: false },
+      deterministicAction: () => ({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "mulligan", keep: false },
+      }),
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -697,6 +734,13 @@ const setupStartOfGameActions = (
       index: 0,
       type: "respondToDecision",
       label: "Skip setup Stage",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [] },
+      deterministicAction: () => ({
+        type: "respondToDecision",
+        decisionId: decision.id,
+        response: { type: "cards", cards: [] },
+      }),
       apply: (currentState) =>
         applyAction(currentState, {
           type: "respondToDecision",
@@ -708,6 +752,13 @@ const setupStartOfGameActions = (
       index: 0,
       type: "respondToDecision" as const,
       label: `Play ${cardName(state, candidate.card.cardId)} during setup`,
+      decisionId: decision.id,
+      response: { type: "cards" as const, cards: [candidate.card] },
+      deterministicAction: () => ({
+        type: "respondToDecision" as const,
+        decisionId: decision.id,
+        response: { type: "cards" as const, cards: [candidate.card] },
+      }),
       apply: (currentState: GameState) =>
         applyAction(currentState, {
           type: "respondToDecision",
@@ -735,6 +786,18 @@ const executableActions = (
       legalActions.map(
         (action): Omit<ExecutableDevAction, "index"> => ({
           ...visibleAction(state, action),
+          ...(action.type === "respondToDecision"
+            ? { decisionId: action.decisionId, response: action.response }
+            : {}),
+          deterministicAction: (input) =>
+            action.type === "attachDon" &&
+            input?.selectedDonInstanceIds !== undefined &&
+            input.selectedDonInstanceIds.length > 0
+              ? {
+                  ...action,
+                  selectedDonInstanceIds: [...input.selectedDonInstanceIds],
+                }
+              : action,
           apply: (currentState, input) =>
             applyAction(
               currentState,
@@ -885,7 +948,7 @@ export const applyLocalDevAction = (
   if (
     action.type === "respondToDecision" &&
     action.decisionId !== undefined &&
-    action.response?.type === "rollbackConsent"
+    action.response !== undefined
   ) {
     return applyLocalDevDecision(match, {
       playerId: input.playerId,
@@ -897,6 +960,11 @@ export const applyLocalDevAction = (
     });
   }
 
+  const deterministicAction = action.deterministicAction?.({
+    ...(input.selectedDonInstanceIds === undefined
+      ? {}
+      : { selectedDonInstanceIds: input.selectedDonInstanceIds }),
+  });
   const previousState = recordActionTimingSpan("cloneGameState", () =>
     cloneGameState(match.state),
   );
@@ -921,7 +989,14 @@ export const applyLocalDevAction = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return localActionResult(match, errors, input.includeSnapshot);
+  return localActionResult(
+    match,
+    errors,
+    input.includeSnapshot,
+    errors.length === 0 && deterministicAction !== undefined
+      ? { kind: "action", action: deterministicAction }
+      : undefined,
+  );
 };
 
 export const applyLocalDevDecision = (
@@ -970,7 +1045,44 @@ export const applyLocalDevDecision = (
     );
     match.state = result.state;
     match.rollback = result.rollback;
-    return localActionResult(match, result.errors, input.includeSnapshot);
+    if (result.errors.length > 0) {
+      return localActionResult(match, result.errors, input.includeSnapshot);
+    }
+    const operation: DeterministicSystemOperation | undefined =
+      input.response.allow && result.rollbackRestore !== undefined
+        ? {
+            type: "restoreRollbackPoint",
+            rollbackPointId: result.rollbackRestore.rollbackPointId,
+            requestedBy: result.rollbackRestore.requestedBy,
+            approvedBy: input.playerId,
+            restoredStateHash: hashReplayStateForScope(
+              result.state,
+              "gameplay-v1",
+            ),
+            restoredStateSeq: result.state.seq,
+            restoredActionSeq: result.state.actionSeq,
+          }
+        : result.rollbackCancel === undefined
+          ? undefined
+          : {
+              type: "cancelRollbackConsent",
+              playerId: result.rollbackCancel.playerId,
+              rollbackPointId: result.rollbackCancel.rollbackPointId,
+              ...(result.rollbackCancel.decisionId === undefined
+                ? {}
+                : { decisionId: result.rollbackCancel.decisionId }),
+            };
+    if (operation === undefined) {
+      return localActionResult(
+        match,
+        ["Rollback consent resolved without deterministic rollback metadata."],
+        input.includeSnapshot,
+      );
+    }
+    return localActionResult(match, result.errors, input.includeSnapshot, {
+      kind: "system",
+      operation,
+    });
   }
 
   const action = {
@@ -1000,7 +1112,18 @@ export const applyLocalDevDecision = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return localActionResult(match, errors, input.includeSnapshot);
+  return localActionResult(
+    match,
+    errors,
+    input.includeSnapshot,
+    errors.length === 0
+      ? {
+          kind: "decision",
+          decisionId: input.decisionId,
+          response: input.response,
+        }
+      : undefined,
+  );
 };
 
 export const requestLocalDevRollback = (
@@ -1010,7 +1133,25 @@ export const requestLocalDevRollback = (
   const result = requestRollbackConsent(match.state, match.rollback, input);
   match.state = result.state;
   match.rollback = result.rollback;
-  return localActionResult(match, result.errors);
+  if (result.errors.length > 0) {
+    return localActionResult(match, result.errors);
+  }
+  if (result.rollbackRequest === undefined) {
+    return localActionResult(match, [
+      "Rollback request accepted without deterministic rollback metadata.",
+    ]);
+  }
+  return localActionResult(match, result.errors, true, {
+    kind: "system",
+    operation: {
+      type: "requestRollbackConsent",
+      playerId: input.playerId,
+      rollbackPointId: result.rollbackRequest.rollbackPointId,
+      approvingPlayerId: result.rollbackRequest.approvingPlayerId,
+      decisionId: result.rollbackRequest.decisionId,
+      prompt: result.rollbackRequest.prompt,
+    },
+  });
 };
 
 export const cancelLocalDevRollback = (
@@ -1020,7 +1161,25 @@ export const cancelLocalDevRollback = (
   const result = cancelRollbackConsent(match.state, match.rollback, input);
   match.state = result.state;
   match.rollback = result.rollback;
-  return localActionResult(match, result.errors);
+  if (result.errors.length > 0) {
+    return localActionResult(match, result.errors);
+  }
+  if (result.rollbackCancel === undefined) {
+    return localActionResult(match, [
+      "Rollback cancellation accepted without deterministic rollback metadata.",
+    ]);
+  }
+  return localActionResult(match, result.errors, true, {
+    kind: "system",
+    operation: {
+      type: "cancelRollbackConsent",
+      playerId: result.rollbackCancel.playerId,
+      rollbackPointId: result.rollbackCancel.rollbackPointId,
+      ...(result.rollbackCancel.decisionId === undefined
+        ? {}
+        : { decisionId: result.rollbackCancel.decisionId }),
+    },
+  });
 };
 
 export const getLocalDevCardCatalog = (
