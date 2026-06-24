@@ -3,7 +3,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
-import { ReplayViewerPageView } from "./ReplayViewerPage.js";
+import {
+  ReplayPlaybackControls,
+  ReplayViewerPageView,
+} from "./ReplayViewerPage.js";
 import type { ReplayDetail } from "../replay-client.js";
 
 const replayDetail = (): ReplayDetail => ({
@@ -56,12 +59,61 @@ describe("ReplayViewerPage", () => {
       createElement(ReplayViewerPageView, {
         status: "ready",
         replay: replayDetail(),
+        frameCount: 0,
       }),
     );
 
     assert.match(html, /Previous action/u);
     assert.match(html, /Next action/u);
-    assert.match(html, /Action 1 \/ 1/u);
+    assert.match(html, /Board frames 0/u);
+    assert.match(html, /Board playback is not available/u);
     assert.match(html, /data-replay-match-surface/u);
+  });
+
+  test("renders labeled controls for frame-backed board playback", () => {
+    const html = renderToStaticMarkup(
+      createElement(ReplayPlaybackControls, {
+        frameLabel: "playCard",
+        selectedFrameIndex: 1,
+        frameCount: 3,
+        onPrevious: () => undefined,
+        onNext: () => undefined,
+      }),
+    );
+
+    assert.match(html, /Previous action/u);
+    assert.match(html, /Next action/u);
+    assert.match(html, /Frame 2 \/ 3/u);
+    assert.match(html, /playCard/u);
+  });
+
+  test("disables playback edges for the first and final frame", () => {
+    const firstFrameHtml = renderToStaticMarkup(
+      createElement(ReplayPlaybackControls, {
+        frameLabel: "start",
+        selectedFrameIndex: 0,
+        frameCount: 2,
+        onPrevious: () => undefined,
+        onNext: () => undefined,
+      }),
+    );
+    const finalFrameHtml = renderToStaticMarkup(
+      createElement(ReplayPlaybackControls, {
+        frameLabel: "end",
+        selectedFrameIndex: 1,
+        frameCount: 2,
+        onPrevious: () => undefined,
+        onNext: () => undefined,
+      }),
+    );
+
+    assert.match(
+      firstFrameHtml,
+      /<button type="button" disabled="">Previous action/u,
+    );
+    assert.match(
+      finalFrameHtml,
+      /<button type="button" disabled="">Next action/u,
+    );
   });
 });

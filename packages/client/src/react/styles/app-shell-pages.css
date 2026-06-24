@@ -343,6 +343,7 @@
 }
 
 .replay-controls-panel {
+  flex-wrap: wrap;
   grid-column: 1 / -1;
 }
 
@@ -383,6 +384,25 @@
   font-size: 13px;
   font-weight: 850;
   min-width: 92px;
+  text-align: center;
+}
+
+.replay-controls-panel strong,
+.replay-match-controls strong {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 850;
+  max-width: min(260px, 42vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-controls-panel p {
+  color: rgba(255, 255, 255, 0.64);
+  flex-basis: 100%;
+  font-size: 13px;
+  margin: 0;
   text-align: center;
 }
 

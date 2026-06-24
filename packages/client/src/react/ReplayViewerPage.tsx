@@ -18,6 +18,7 @@ export interface ReplayViewerPageViewProps {
   readonly status: ReplayViewerStatus;
   readonly replay?: ReplayDetail | undefined;
   readonly error?: string | undefined;
+  readonly frameCount?: number | undefined;
 }
 
 const formatDate = (value: string): string => {
@@ -50,12 +51,10 @@ export const ReplayViewerPageView = ({
   status,
   replay,
   error,
+  frameCount,
 }: ReplayViewerPageViewProps): React.JSX.Element => {
   const entries = replay === undefined ? [] : replayEntries(replay.replay);
-  const actionCount = Math.max(
-    1,
-    replay?.replay.deterministicEntries?.length ?? 0,
-  );
+  const boardFrameCount = frameCount ?? 0;
   return (
     <section className="replay-viewer-page">
       <header className="replay-viewer-header">
@@ -87,10 +86,15 @@ export const ReplayViewerPageView = ({
             <button type="button" disabled>
               Previous action
             </button>
-            <span>{`Action 1 / ${String(actionCount)}`}</span>
+            <span>{`Board frames ${String(boardFrameCount)}`}</span>
             <button type="button" disabled>
               Next action
             </button>
+            {boardFrameCount === 0 ? (
+              <p>
+                Board playback is not available for this replay artifact yet.
+              </p>
+            ) : null}
           </section>
           <section className="replay-viewer-panel">
             <h2>Match</h2>
@@ -161,6 +165,41 @@ export const ReplayViewerPageView = ({
   );
 };
 
+export interface ReplayPlaybackControlsProps {
+  readonly frameLabel: string;
+  readonly selectedFrameIndex: number;
+  readonly frameCount: number;
+  readonly onPrevious: () => void;
+  readonly onNext: () => void;
+}
+
+export const ReplayPlaybackControls = ({
+  frameLabel,
+  selectedFrameIndex,
+  frameCount,
+  onPrevious,
+  onNext,
+}: ReplayPlaybackControlsProps): React.JSX.Element => (
+  <>
+    <button
+      type="button"
+      disabled={selectedFrameIndex <= 0}
+      onClick={onPrevious}
+    >
+      Previous action
+    </button>
+    <span>{`Frame ${String(selectedFrameIndex + 1)} / ${String(frameCount)}`}</span>
+    <strong>{frameLabel}</strong>
+    <button
+      type="button"
+      disabled={selectedFrameIndex >= frameCount - 1}
+      onClick={onNext}
+    >
+      Next action
+    </button>
+  </>
+);
+
 const replayMatchIdFromPath = (path: string): string | undefined => {
   const match = /^\/replays\/(?<matchId>[^/]+)$/u.exec(
     new URL(path, "http://localhost").pathname,
@@ -225,6 +264,10 @@ export const ReplayViewerPage = ({
     };
   }, [client, matchId]);
 
+  useEffect(() => {
+    setFrameIndex(0);
+  }, [replay?.matchId]);
+
   const frames = useMemo(
     () =>
       replay === undefined
@@ -245,38 +288,31 @@ export const ReplayViewerPage = ({
   );
   const replayControls =
     replay === undefined ? undefined : (
-      <>
-        <button
-          type="button"
-          disabled={selectedFrameIndex <= 0}
-          onClick={() => {
-            setFrameIndex((current) => Math.max(0, current - 1));
-          }}
-        >
-          Previous action
-        </button>
-        <span>
-          {`Action ${String(selectedFrameIndex + 1)} / ${String(
-            Math.max(1, frames.length),
-          )}`}
-        </span>
-        <button
-          type="button"
-          disabled={selectedFrameIndex >= frames.length - 1}
-          onClick={() => {
-            setFrameIndex((current) =>
-              Math.min(Math.max(0, frames.length - 1), current + 1),
-            );
-          }}
-        >
-          Next action
-        </button>
-      </>
+      <ReplayPlaybackControls
+        frameLabel={selectedFrame?.label ?? "Replay frame"}
+        selectedFrameIndex={selectedFrameIndex}
+        frameCount={Math.max(1, frames.length)}
+        onPrevious={() => {
+          setFrameIndex((current) => Math.max(0, current - 1));
+        }}
+        onNext={() => {
+          setFrameIndex((current) =>
+            Math.min(Math.max(0, frames.length - 1), current + 1),
+          );
+        }}
+      />
     );
 
   if (status === "ready" && replay !== undefined && frames.length > 0) {
     return <MatchApp client={replayClient} replayControls={replayControls} />;
   }
 
-  return <ReplayViewerPageView status={status} replay={replay} error={error} />;
+  return (
+    <ReplayViewerPageView
+      status={status}
+      replay={replay}
+      error={error}
+      frameCount={frames.length}
+    />
+  );
 };
