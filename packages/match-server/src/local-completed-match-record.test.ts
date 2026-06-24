@@ -116,7 +116,12 @@ describe("local completed match record mapping", () => {
     });
     expect(record?.replay.initialStateHash).toBeTruthy();
     expect(record?.replay.finalStateHash).toBe(record?.finalStateHash);
-    expect(JSON.stringify(record?.replay.manifestSnapshot)).not.toContain(
+    expect(record?.replay.manifestSnapshot).toMatchObject({
+      customHandlerVersion: setup.cardManifest.customHandlerVersion,
+      banlistVersion: setup.cardManifest.banlistVersion,
+      effectDefinitions: setup.cardManifest.effectDefinitions,
+    });
+    expect(JSON.stringify(record?.replay.manifestSnapshot)).toContain(
       "generated-dev-support",
     );
   });

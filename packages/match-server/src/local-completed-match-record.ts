@@ -66,19 +66,7 @@ const compactCardSnapshot = (card: unknown): JsonObject => {
   const variants = Array.isArray(card["variants"])
     ? card["variants"].slice(0, 1).map(compactVariantSnapshot)
     : [];
-  return jsonObject({
-    cardId: card["cardId"],
-    name: card["name"],
-    category: card["category"],
-    cost: card["cost"],
-    power: card["power"],
-    counter: card["counter"],
-    attributes: card["attributes"],
-    types: card["types"],
-    effectText: card["effectText"],
-    triggerText: card["triggerText"],
-    variants,
-  });
+  return jsonObject({ ...card, variants });
 };
 
 const compactManifestSnapshot = (manifest: unknown): JsonObject => {
@@ -87,8 +75,13 @@ const compactManifestSnapshot = (manifest: unknown): JsonObject => {
   }
   return jsonObject({
     manifestHash: manifest["manifestHash"],
+    source: manifest["source"],
     cardDataVersion: manifest["cardDataVersion"],
     effectDefinitionsVersion: manifest["effectDefinitionsVersion"],
+    customHandlerVersion: manifest["customHandlerVersion"],
+    banlistVersion: manifest["banlistVersion"],
+    effectDefinitions: manifest["effectDefinitions"],
+    createdAt: manifest["createdAt"],
     cards: Object.fromEntries(
       Object.entries(manifest["cards"]).map(([cardId, card]) => [
         cardId,
