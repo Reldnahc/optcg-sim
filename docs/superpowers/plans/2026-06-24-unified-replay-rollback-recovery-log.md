@@ -1196,7 +1196,7 @@ Use existing setup helpers in match-server tests. Do not assert a printed label 
 In `packages/match-server/src/local-match.ts`, extend `ApplyLocalDevActionResult`:
 
 ```ts
-type LocalDeterministicOperation =
+export type LocalDeterministicOperation =
   | { readonly kind: "action"; readonly action: Action }
   | {
       readonly kind: "decision";
@@ -1775,6 +1775,7 @@ import type {
   MatchPersistenceSnapshot,
   StoredDeterministicSessionRecord,
 } from "./session-types.js";
+import { replayLegacyRecoveryRecords } from "./deterministic-entry-legacy.js";
 
 const applyDeterministicRecoveryEntry = (
   match: LocalDevMatch,
@@ -1833,15 +1834,16 @@ export const replayDeterministicRecoveryEntries = (
   snapshot: MatchPersistenceSnapshot,
 ): string | undefined => {
   const records = snapshot.deterministicEntriesSinceSnapshot;
-  if (
-    snapshot.deterministicLogVersion === "deterministic-entry-v1" &&
-    records === undefined
-  ) {
-    return "deterministic recovery tail entries missing";
-  }
-  if (records === undefined || records.length === 0) {
+  if (snapshot.deterministicLogVersion === "deterministic-entry-v1") {
+    if (records === undefined) {
+      return "deterministic recovery tail entries missing";
+    }
+    if (records.length === 0) {
+      return undefined;
+    }
+  } else if (records === undefined || records.length === 0) {
     if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
-      return "deterministic recovery entries missing for legacy action log";
+      return replayLegacyRecoveryRecords(match, snapshot);
     }
     return undefined;
   }
@@ -1884,7 +1886,7 @@ with:
 const replayError = replayDeterministicRecoveryEntries(match, snapshot);
 ```
 
-Keep the old `replayRecoveryRecords` function only inside `deterministic-entry-legacy.ts` and call it only when a snapshot is explicitly identified as legacy and no deterministic entries exist.
+Keep the old `replayRecoveryRecords` function only inside `deterministic-entry-legacy.ts`, export it as `replayLegacyRecoveryRecords`, and call it only for unversioned legacy snapshots with no deterministic entries.
 
 - [ ] **Step 3: Fail closed on missing deterministic entries for new snapshots**
 
