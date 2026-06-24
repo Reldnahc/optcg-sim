@@ -23,14 +23,6 @@ export {
 } from "./behavior-coverage.js";
 export { createBehaviorCoverageCliReport } from "./behavior-coverage-cli.js";
 export {
-  collectEffectBlockPrimitiveTypes,
-  createEnginePrimitiveInventoryReport,
-  extractEngineEffectPrimitiveTypes,
-  type CreateEnginePrimitiveInventoryReportRequest,
-  type EnginePrimitiveSourceFile,
-  type ExtractEngineEffectPrimitiveTypesRequest,
-} from "./engine-primitive-inventory.js";
-export {
   createSpotlightProbeReport,
   type SpotlightProbeReport,
   type SpotlightProbeRequest,
