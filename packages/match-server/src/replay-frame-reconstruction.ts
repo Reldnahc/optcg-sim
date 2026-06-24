@@ -120,7 +120,10 @@ const replayFramesFromInitialState = (
   const result = reconstructReplayArtifactStates({
     initialState,
     deterministicEntries,
-    expectedFinalStateHash: stringValue(detail.replay["finalStateHash"]),
+    // Live finalStateHash currently includes timer state; replay logs do not
+    // yet store deterministic timer inputs, so viewer reconstruction cannot
+    // use it as a frame gate.
+    expectedFinalStateHash: undefined,
   });
   if (result.status === "failed") {
     return result;

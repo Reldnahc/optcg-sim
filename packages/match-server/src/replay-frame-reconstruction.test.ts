@@ -87,6 +87,7 @@ describe("reconstructReplayFrames", () => {
         rngSeedRevealed: String(setup.rngSeed),
         manifestSnapshot: setup.cardManifest,
         initialStateHash: "",
+        finalStateHash: "stale-timer-inclusive-hash",
         initialSnapshot: null,
         finalState: null,
         initialDeckOrders: {
