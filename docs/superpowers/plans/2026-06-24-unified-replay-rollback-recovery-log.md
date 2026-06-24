@@ -272,16 +272,21 @@ export const hashReplayGameplayState = (state: GameState): string => {
       : {
           disconnects: Object.fromEntries(
             Object.entries(clone.timers.disconnects).map(
-              ([playerId, timer]) => [
-                playerId,
-                {
-                  ...timer,
-                  remainingMs: 0,
-                  isRunning: false,
-                  currentDisconnectElapsedMs: undefined,
-                  disconnectStartedRemainingMs: undefined,
-                },
-              ],
+              ([playerId, timer]) => {
+                const {
+                  currentDisconnectElapsedMs: _elapsed,
+                  disconnectStartedRemainingMs: _startedRemaining,
+                  ...stableTimer
+                } = timer;
+                return [
+                  playerId,
+                  {
+                    ...stableTimer,
+                    remainingMs: 0,
+                    isRunning: false,
+                  },
+                ];
+              },
             ),
           ),
         }),
@@ -294,6 +299,7 @@ This uses the current `TimerState` shape from `packages/types/src/runtime.ts`: `
 
 - `gameplay-v1` replay hashes must ignore wall-clock elapsed timer fields.
 - `gameplay-v1` may keep timer ownership/active-player identity, but must normalize all remaining elapsed milliseconds and running flags so local wall-clock drain cannot change replay verification.
+- Do not assign optional timer fields to `undefined`; `canonicalSerializeStateValue()` rejects enumerable `undefined`. Omit volatile optional disconnect fields by destructuring them out.
 - `operational-v1` hashes must include timer fields only after accepted timer operations are recorded as deterministic entries.
 - Every deterministic entry stores its hash scope.
 - Completed replay `finalStateHash` must use the same scope declared by entries/checkpoints.
@@ -619,6 +625,7 @@ import {
   startMulliganFlow,
 } from "../setup/mulligan.js";
 import type { PreMulliganSetupGameState } from "../setup/initial-state.js";
+import { hashCanonicalStateValue } from "../state/canonical-state.js";
 
 export type DeterministicCheckpointResolver = (
   checkpointId: string,
@@ -808,7 +815,7 @@ export const applyDeterministicOperation = (
       result: {
         state: next,
         events: [],
-        stateHash: "",
+        stateHash: hashCanonicalStateValue(next),
       },
       label: "requestRollbackConsent",
     };
@@ -822,7 +829,7 @@ export const applyDeterministicOperation = (
       result: {
         state: next,
         events: [],
-        stateHash: "",
+        stateHash: hashCanonicalStateValue(next),
       },
       label: "cancelRollbackConsent",
     };
@@ -849,19 +856,6 @@ export {
   type DeterministicCheckpointResolver,
 } from "./replay/deterministic-operation.js";
 ```
-
-Task 4 adds `hashReplayStateForScope`; when that helper exists, extend this same export block or add a second export:
-
-```ts
-export {
-  applyDeterministicEntry,
-  checkpointResolverFromList,
-  hashReplayStateForScope,
-  type DeterministicEntryApplyResult,
-} from "./replay/deterministic-entry.js";
-```
-
-Update `packages/engine-core/src/package-boundary.test.ts` so the package-root export is covered before match-server imports it.
 
 - [ ] **Step 4: Run tests**
 
@@ -976,16 +970,21 @@ export const hashReplayStateForScope = (
         : {
             disconnects: Object.fromEntries(
               Object.entries(clone.timers.disconnects).map(
-                ([playerId, timer]) => [
-                  playerId,
-                  {
-                    ...timer,
-                    remainingMs: 0,
-                    isRunning: false,
-                    currentDisconnectElapsedMs: undefined,
-                    disconnectStartedRemainingMs: undefined,
-                  },
-                ],
+                ([playerId, timer]) => {
+                  const {
+                    currentDisconnectElapsedMs: _elapsed,
+                    disconnectStartedRemainingMs: _startedRemaining,
+                    ...stableTimer
+                  } = timer;
+                  return [
+                    playerId,
+                    {
+                      ...stableTimer,
+                      remainingMs: 0,
+                      isRunning: false,
+                    },
+                  ];
+                },
               ),
             ),
           }),
@@ -1088,19 +1087,35 @@ export const applyDeterministicEntry = (
 
 Adjust timer field names to the real `TimerState` type. If `TimerState` cannot be normalized safely in this task, keep only `operational-v1` in the type guard and add a failing timer hash test before enabling `gameplay-v1`.
 
-- [ ] **Step 3: Run tests**
+- [ ] **Step 3: Export deterministic entry helpers**
+
+Modify `packages/engine-core/src/index.ts` before any match-server task imports `hashReplayStateForScope`:
+
+```ts
+export {
+  applyDeterministicEntry,
+  checkpointResolverFromList,
+  hashReplayStateForScope,
+  type DeterministicEntryApplyResult,
+} from "./replay/deterministic-entry.js";
+```
+
+Update `packages/engine-core/src/package-boundary.test.ts` so the package-root export is covered.
+
+- [ ] **Step 4: Run tests**
 
 ```bash
 corepack pnpm exec vitest run packages/engine-core/src/replay/deterministic-entry.test.ts
+corepack pnpm exec vitest run packages/engine-core/src/package-boundary.test.ts
 corepack pnpm exec tsc -p packages/engine-core/tsconfig.json --noEmit
 ```
 
 Expected result: new tests pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add packages/engine-core/src/replay/deterministic-entry.ts packages/engine-core/src/replay/deterministic-entry.test.ts
+git add packages/engine-core/src/replay/deterministic-entry.ts packages/engine-core/src/replay/deterministic-entry.test.ts packages/engine-core/src/index.ts packages/engine-core/src/package-boundary.test.ts
 git commit -m "feat: verify deterministic replay entries"
 ```
 
@@ -1378,7 +1393,10 @@ Only stage test files that actually changed.
 In `packages/match-server/src/session-types.ts`, add:
 
 ```ts
-import type { DeterministicMatchEntry } from "@optcg/types";
+import type {
+  DeterministicCheckpoint,
+  DeterministicMatchEntry,
+} from "@optcg/types";
 
 export interface StoredSessionAuditRecord {
   readonly type: "clientEnvelope";
@@ -1390,6 +1408,11 @@ export interface StoredSessionAuditRecord {
 export interface StoredDeterministicSessionRecord {
   readonly deterministicEntry: DeterministicMatchEntry;
   readonly audit: StoredSessionAuditRecord;
+}
+
+export interface StoredDeterministicCheckpointRecord {
+  readonly checkpoint: DeterministicCheckpoint;
+  readonly recordedAt: string;
 }
 ```
 
@@ -1403,12 +1426,15 @@ export interface MatchPersistenceSnapshot {
   readonly recoveryContext?: MatchRecoveryContext;
   readonly deterministicLogVersion?: "deterministic-entry-v1";
   readonly deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
+  readonly deterministicCheckpoints?: readonly StoredDeterministicCheckpointRecord[];
   readonly actions: readonly StoredSessionRecord[];
   readonly decisions: readonly StoredSessionRecord[];
 }
 ```
 
 Keep `actions` and `decisions` for legacy active snapshots until a cleanup migration removes them. Do not store the full deterministic match log in active Redis snapshots. A Redis snapshot generation is a base `state` plus a tail list of deterministic entries accepted after that exact state was saved. Completed replay persistence gets the full log from runtime memory, not from `MatchPersistenceSnapshot`.
+
+`deterministicCheckpoints` is different: it is an archive of checkpoint snapshots needed to apply restore entries in the tail and to build completed replay artifacts. It may include rollback checkpoints created before the current snapshot state because a later `restoreRollbackPoint` operation can reference them.
 
 - [ ] **Step 2: Add builder tests**
 
@@ -1565,15 +1591,16 @@ if (result.accepted && applied.deterministicOperation !== undefined) {
 
 Keep legacy `records`, `pendingActions`, and `pendingDecisions` during this task. They still support idempotency and legacy persistence until Redis is updated.
 
-- [ ] **Step 5: Expose deterministic records**
+- [ ] **Step 5: Expose deterministic records and checkpoints**
 
 Update `MatchSessionRuntime`:
 
 ```ts
 deterministicRecords: () => readonly StoredDeterministicSessionRecord[];
+deterministicCheckpoints: () => readonly StoredDeterministicCheckpointRecord[];
 ```
 
-Ensure idempotency returns the original result without appending a duplicate deterministic entry.
+Ensure idempotency returns the original result without appending a duplicate deterministic entry or checkpoint. Task 10 will populate checkpoint records from rollback point creation; this task should create the runtime storage and accessors even if the checkpoint list is initially empty.
 
 - [ ] **Step 6: Run tests**
 
@@ -1611,6 +1638,7 @@ test("persists deterministic session records for recovery", async () => {
   const snapshot = createPersistenceSnapshot({
     deterministicLogVersion: "deterministic-entry-v1",
     deterministicEntriesSinceSnapshot: [],
+    deterministicCheckpoints: [createStoredDeterministicCheckpoint()],
     actions: [],
     decisions: [],
   });
@@ -1629,6 +1657,10 @@ test("persists deterministic session records for recovery", async () => {
     ),
     [tailRecord.deterministicEntry],
   );
+  assert.deepEqual(
+    loaded?.deterministicCheckpoints?.map((record) => record.checkpoint),
+    snapshot.deterministicCheckpoints.map((record) => record.checkpoint),
+  );
 });
 ```
 
@@ -1641,7 +1673,7 @@ const snapshotKeys = matchKeys.snapshot(generation);
 snapshotKeys.deterministicEntriesSinceSnapshot;
 ```
 
-Write deterministic tail entries in `saveSnapshot` and append post-snapshot accepted entries in a new method:
+Write deterministic tail entries and deterministic checkpoints in `saveSnapshot`, and append post-snapshot accepted entries in a new method:
 
 ```ts
 appendDeterministicEntry(input: {
@@ -1674,11 +1706,12 @@ In `saveSnapshot()`, include:
 ```ts
 deterministicLogVersion: "deterministic-entry-v1",
 deterministicEntriesSinceSnapshot: [],
+deterministicCheckpoints: deterministicCheckpoints.map(compactStoredDeterministicCheckpointRecord),
 ```
 
 The snapshot `state` is already current, so replaying the full log from that same state would double-apply old entries. After a snapshot save succeeds, clear any pending deterministic append records whose mutations are already represented by the saved state. Future accepted requests append to the current generation's `deterministicEntriesSinceSnapshot` list. Keep a separate in-memory `deterministicRecords` array for completed replay persistence.
 
-The compact form for tail records must remove action snapshots from the audit result just like `compactStoredSessionRecord` does for legacy records.
+The compact form for tail records must remove action snapshots from the audit result just like `compactStoredSessionRecord` does for legacy records. Checkpoint snapshots may remain full `GameState` snapshots because rollback restore cannot reconstruct without them until object-storage checkpoint references exist.
 
 - [ ] **Step 5: Run Redis/session tests**
 
@@ -1716,7 +1749,62 @@ import {
   checkpointResolverFromList,
 } from "@optcg/engine-core";
 import type { LocalDevMatch } from "./local-match.js";
-import type { MatchPersistenceSnapshot } from "./session-types.js";
+import type {
+  MatchPersistenceSnapshot,
+  StoredDeterministicSessionRecord,
+} from "./session-types.js";
+
+const applyDeterministicRecoveryEntry = (
+  match: LocalDevMatch,
+  record: StoredDeterministicSessionRecord,
+  checkpointResolver: ReturnType<typeof checkpointResolverFromList>,
+): string | undefined => {
+  const entry = record.deterministicEntry;
+  if (entry.kind === "system") {
+    const operation = entry.operation;
+    if (operation.type === "requestRollbackConsent") {
+      match.rollback = {
+        ...match.rollback,
+        pendingRequest: {
+          rollbackPointId: operation.rollbackPointId,
+          requestedBy: operation.playerId,
+          approvingPlayerId: operation.approvingPlayerId,
+        },
+      };
+    }
+    if (operation.type === "cancelRollbackConsent") {
+      const { pendingRequest: _pendingRequest, ...withoutPending } =
+        match.rollback;
+      match.rollback = withoutPending;
+    }
+    if (operation.type === "restoreRollbackPoint") {
+      const checkpoint = checkpointResolver(operation.rollbackPointId);
+      if (checkpoint === undefined) {
+        return `rollback checkpoint ${operation.rollbackPointId} missing`;
+      }
+      const { pendingRequest: _pendingRequest, ...withoutPending } =
+        match.rollback;
+      match.rollback = {
+        ...withoutPending,
+        points: match.rollback.points.filter(
+          (point) => point.stateSeq <= checkpoint.stateSeq,
+        ),
+        checkpoints: match.rollback.checkpoints,
+      };
+    }
+  }
+
+  const result = applyDeterministicEntry(
+    match.state,
+    entry,
+    checkpointResolver,
+  );
+  if (result.status === "failed") {
+    return result.reason;
+  }
+  match.state = result.state;
+  return undefined;
+};
 
 export const replayDeterministicRecoveryEntries = (
   match: LocalDevMatch,
@@ -1730,31 +1818,29 @@ export const replayDeterministicRecoveryEntries = (
     return undefined;
   }
 
-  const checkpointResolver = checkpointResolverFromList(
-    snapshot.recoveryContext?.rollback.points.map(
-      (point) => point.checkpoint,
-    ) ?? [],
-  );
-  let current = match.state;
+  const checkpoints = [
+    ...(snapshot.deterministicCheckpoints?.map((record) => record.checkpoint) ??
+      []),
+    ...(snapshot.recoveryContext?.rollback.checkpoints ?? []),
+  ];
+  const checkpointResolver = checkpointResolverFromList(checkpoints);
   for (const record of records) {
-    const result = applyDeterministicEntry(
-      current,
-      record.deterministicEntry,
+    const error = applyDeterministicRecoveryEntry(
+      match,
+      record,
       checkpointResolver,
     );
-    if (result.status === "failed") {
+    if (error !== undefined) {
       return `deterministic replay failed at entry ${String(
         record.deterministicEntry.entrySeq,
-      )}: ${result.reason}`;
+      )}: ${error}`;
     }
-    current = result.state;
   }
-  match.state = current;
   return undefined;
 };
 ```
 
-This helper starts from `match.state`, which is the recovered base snapshot state. Therefore it must read only `deterministicEntriesSinceSnapshot`, never the completed-match full deterministic log. The checkpoint resolver line must match the actual rollback checkpoint shape after Task 10. Before that task, pass no checkpoint resolver and keep rollback restore entries out of recovery tests.
+This helper starts from `match.state`, which is the recovered base snapshot state. Therefore it must read only `deterministicEntriesSinceSnapshot`, never the completed-match full deterministic log. Rollback system entries must update both `match.state` and `match.rollback`; engine-core only owns `GameState` replay, while match-server owns rollback consent bookkeeping. The checkpoint resolver line must use `snapshot.deterministicCheckpoints` plus rollback context checkpoints after Task 10. Before that task, fail closed on rollback system tail entries instead of replaying only half of the state.
 
 - [ ] **Step 2: Replace envelope recovery replay**
 
@@ -1814,6 +1900,54 @@ test("recovery replays only entries accepted after the saved snapshot", async ()
 
 This test must fail if `snapshot.deterministicEntriesSinceSnapshot` is replaced with the full completed-match deterministic log.
 
+Also add rollback tail recovery tests:
+
+```ts
+test("recovery applies rollback request tail to state and rollback bookkeeping", async () => {
+  const fixture = createSnapshotBeforeRollbackRequest();
+  const recovered = await recoverOneSnapshot({
+    ...fixture.snapshot,
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [fixture.requestRollbackEntry],
+    deterministicCheckpoints: fixture.checkpoints,
+    actions: [],
+    decisions: [],
+  });
+
+  assert.equal(recovered.status, "active");
+  assert.equal(
+    recovered.match.state.pendingDecision?.id,
+    fixture.requestRollbackEntry.deterministicEntry.operation.decisionId,
+  );
+  assert.equal(
+    recovered.match.rollback.pendingRequest?.rollbackPointId,
+    fixture.rollbackPointId,
+  );
+});
+
+test("recovery applies approved rollback restore tail to state and rollback bookkeeping", async () => {
+  const fixture = createSnapshotBeforeRollbackRestore();
+  const recovered = await recoverOneSnapshot({
+    ...fixture.snapshot,
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [fixture.restoreRollbackEntry],
+    deterministicCheckpoints: fixture.checkpoints,
+    actions: [],
+    decisions: [],
+  });
+
+  assert.equal(recovered.status, "active");
+  assert.equal(recovered.match.state.seq, fixture.restoredStateSeq);
+  assert.equal(recovered.match.rollback.pendingRequest, undefined);
+  assert.equal(
+    recovered.match.rollback.points.some(
+      (point) => point.stateSeq > fixture.restoreCheckpoint.stateSeq,
+    ),
+    false,
+  );
+});
+```
+
 ```bash
 corepack pnpm exec vitest run packages/match-server/src/dev-local-match-recovery.test.ts packages/match-server/src/dev-local-match-registry.test.ts
 corepack pnpm exec tsc -p packages/match-server/tsconfig.json --noEmit
@@ -1857,9 +1991,13 @@ auditEntries: [
   ...input.deterministicRecords.map((record) => jsonObject(record.audit)),
   ...input.match.state.audit.map((entry) => jsonObject(entry)),
 ],
+checkpoints: input.deterministicCheckpoints.map((record) =>
+  jsonObject(record.checkpoint),
+),
 ```
 
 Update `BuildLocalCompletedMatchRecordInput` so callers pass `deterministicRecords`.
+Also add `deterministicCheckpoints` from `runtime.deterministicCheckpoints()` or the active match rollback checkpoint archive. Do not derive checkpoints from only `match.rollback.points`, because visible rollback points can be trimmed while old `restoreRollbackPoint` entries still need their checkpoint snapshots.
 
 - [ ] **Step 2: Bump replay format**
 
@@ -1939,6 +2077,14 @@ git commit -m "feat: store exact deterministic replay entries"
 In `local-rollback.ts`, keep the existing `state: GameState` field and add a checkpoint projection:
 
 ```ts
+export interface LocalRollbackState {
+  enabled: boolean;
+  maxPoints: number;
+  points: LocalRollbackPoint[];
+  checkpoints: DeterministicCheckpoint[];
+  pendingRequest?: LocalRollbackRequest;
+}
+
 interface LocalRollbackPoint {
   rollbackPointId: string;
   eventId?: string;
@@ -1968,7 +2114,7 @@ const checkpoint: DeterministicCheckpoint = {
 };
 ```
 
-The `state` field remains the source for live restore in this task.
+Append the checkpoint to both the visible rollback point and `rollback.checkpoints`. Visible `points` may still be trimmed by `maxPoints`; `checkpoints` is the match-duration archive used by recovery and completed replay reconstruction. The `state` field remains the source for live restore in this task.
 
 - [ ] **Step 2: Populate the metadata shape defined in Task 5**
 
@@ -2061,6 +2207,33 @@ git commit -m "feat: expose rollback checkpoints to deterministic log"
 
 Remove envelope parsing and action-index lookup from `artifact-reducer.ts`.
 
+Extend `reconstructReplayArtifactStates` input to accept decoded deterministic checkpoints:
+
+```ts
+export const reconstructReplayArtifactStates = ({
+  checkpoints,
+  deterministicEntries,
+  expectedFinalStateHash,
+  initialState,
+}: {
+  readonly initialState: GameState;
+  readonly deterministicEntries: readonly unknown[];
+  readonly checkpoints?: readonly unknown[];
+  readonly expectedFinalStateHash?: string | undefined;
+}): ReplayArtifactReconstructionResult => {
+  const decodedCheckpoints = decodeDeterministicCheckpoints(checkpoints ?? []);
+  if (decodedCheckpoints.status === "failed") {
+    return { status: "failed", reason: decodedCheckpoints.reason };
+  }
+  const checkpointResolver = checkpointResolverFromList(
+    decodedCheckpoints.checkpoints,
+  );
+  // reducer loop below
+};
+```
+
+`decodeDeterministicCheckpoints()` must validate `checkpointVersion`, `checkpointId`, `stateSeq`, `actionSeq`, `stateHash`, `hashScope`, and require `snapshot` for any checkpoint referenced by a `restoreRollbackPoint` operation. Checkpoint snapshots are allowed in completed replay artifacts because post-game replays are full-information artifacts.
+
 The reducer loop should become:
 
 ```ts
@@ -2138,11 +2311,12 @@ Expected result: envelope-shaped entries fail; deterministic smoke fixtures pass
 - [ ] **Step 6: Commit**
 
 ```bash
-git add packages/engine-core/src/replay/artifact-reducer.ts packages/engine-core/src/replay/artifact-reducer.test.ts packages/engine-core/src/replay/deterministic-entry.ts packages/engine-core/src/replay/smoke-test-support.ts packages/engine-core/src/replay/*.test.ts
+git add packages/engine-core/src/replay/artifact-reducer.ts packages/engine-core/src/replay/artifact-reducer.test.ts packages/engine-core/src/replay/deterministic-entry.ts packages/engine-core/src/replay/smoke-test-support.ts
+git add -p packages/engine-core/src/replay
 git commit -m "feat: reconstruct replays from deterministic entries"
 ```
 
-Review staged files before committing because wildcard staging can catch unrelated replay tests:
+Review staged files before committing because `git add -p packages/engine-core/src/replay` can include optional smoke test updates:
 
 ```bash
 git diff --cached --name-only
@@ -2163,6 +2337,7 @@ git diff --cached --name-only
 In `replay-frame-reconstruction.ts`, behavior must be:
 
 - `dev-local-v2`: reconstruct from `initialDeckOrders`/`initialSnapshot` plus deterministic entries. Fail closed if entries are invalid.
+- `dev-local-v2`: pass `replay.checkpoints ?? []` into `reconstructReplayArtifactStates` so rollback restore entries resolve from the checkpoint archive.
 - `dev-local-v1`: use legacy adapter or saved snapshots if available, with a visible compatibility status.
 
 - [ ] **Step 2: Add tests**
@@ -2189,6 +2364,23 @@ test("dev-local-v2 fails closed when deterministic entries are envelope-shaped",
 ```
 
 This intentionally uses the current legacy fallback shape, where saved frame data is embedded under `deterministicEntries[].result.snapshot`. For `dev-local-v2`, that legacy snapshot must not rescue an invalid deterministic entry.
+
+Add:
+
+```ts
+test("dev-local-v2 reconstructs rollback restore from replay checkpoints", () => {
+  const rollbackCheckpoint = validRollbackCheckpointWithSnapshot();
+  const result = reconstructReplayFrames(
+    replayDetail({
+      replayFormatVersion: "dev-local-v2",
+      deterministicEntries: restoreRollbackPointEntries(rollbackCheckpoint),
+      checkpoints: [rollbackCheckpoint],
+    }),
+  );
+
+  assert.equal(result.status, "ready");
+});
+```
 
 Add:
 
