@@ -141,6 +141,9 @@ CREATE TABLE match_replays (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK (game_type IN ('ranked', 'unranked', 'custom')),
   CHECK ((game_type = 'ranked' AND ladder_id IS NOT NULL) OR game_type <> 'ranked'),
+  CHECK (jsonb_typeof(deterministic_entries) = 'array'),
+  CHECK (jsonb_typeof(audit_entries) = 'array'),
+  CHECK (jsonb_typeof(checkpoints) = 'array'),
   CHECK (initial_snapshot IS NOT NULL OR (rng_seed_revealed IS NOT NULL AND initial_deck_orders IS NOT NULL))
 );
 
