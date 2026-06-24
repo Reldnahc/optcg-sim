@@ -40,9 +40,44 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
   ...replaySummary(),
   replay: {
     replayFormatVersion: "dev-local-v1",
-    deterministicEntries: [{ type: "submitAction" }],
+    deterministicEntries: [
+      {
+        envelope: { request: { type: "playCard" } },
+        result: {
+          snapshot: {
+            stateSeq: 1,
+            actionSeq: 1,
+            stateHash: "hash-1",
+            status: "main",
+            activePlayerId: "p1",
+            players: {
+              p1: {
+                view: { self: {}, opponent: {}, timers: { players: {} } },
+                actions: [],
+              },
+            },
+          },
+        },
+      },
+    ],
   },
 });
+
+const assertReplayDetailBody = async (
+  response: Response,
+): Promise<void> => {
+  const body = (await response.json()) as {
+    replay?: CompletedMatchReplayDetail;
+    frameReconstruction?: {
+      status?: string;
+      frames?: Array<{ label?: string }>;
+    };
+  };
+  assert.equal(body.replay?.matchId, "match-1");
+  assert.equal(body.frameReconstruction?.status, "ready");
+  assert.equal(body.frameReconstruction?.frames?.length, 1);
+  assert.equal(body.frameReconstruction?.frames?.[0]?.label, "playCard");
+};
 
 interface FakeReplayRepository extends CompletedMatchReplayRepository {
   readonly listCalls: number[];
@@ -121,7 +156,7 @@ describe("match HTTP server replay routes", () => {
       });
 
       assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), { replay: replayDetail() });
+      await assertReplayDetailBody(response);
       assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
@@ -141,7 +176,7 @@ describe("match HTTP server replay routes", () => {
       });
 
       assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), { replay: replayDetail() });
+      await assertReplayDetailBody(response);
       assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
@@ -167,7 +202,7 @@ describe("match HTTP server replay routes", () => {
       const response = await fetch(`${server.url()}/api/replays/match-1`);
 
       assert.equal(response.status, 200);
-      assert.deepEqual(await response.json(), { replay: replayDetail() });
+      await assertReplayDetailBody(response);
     } finally {
       await server.close();
       if (previousFixturePath === undefined) {

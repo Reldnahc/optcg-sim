@@ -3,6 +3,7 @@ import type { MatchId } from "@optcg/types";
 
 import { sendJson } from "./http-response.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
+import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
 export const handleReplayRequest = async ({
   request,
@@ -34,7 +35,10 @@ export const handleReplayRequest = async ({
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
     }
-    sendJson(response, 200, { replay });
+    sendJson(response, 200, {
+      replay,
+      frameReconstruction: reconstructReplayFrames(replay),
+    });
     return true;
   }
   return false;
