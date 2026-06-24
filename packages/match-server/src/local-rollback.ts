@@ -31,6 +31,7 @@ interface LocalRollbackPoint {
   actionSeq: number;
   label: string;
   state: GameState;
+  checkpoint: DeterministicCheckpoint;
 }
 
 interface LocalRollbackRequest {
@@ -146,21 +147,13 @@ export const recordRollbackPoint = (
   if (anchor === undefined) {
     return rollback;
   }
-  const point: LocalRollbackPoint = {
-    rollbackPointId: `rollback:${String(previousState.seq)}:${String(
-      previousState.actionSeq,
-    )}:${String(anchor.id)}`,
-    eventId: String(anchor.id),
-    eventSeq: anchor.seq,
-    stateSeq: previousState.seq,
-    actionSeq: previousState.actionSeq,
-    label: `Before event ${String(anchor.seq)}`,
-    state: cloneGameState(previousState),
-  };
+  const rollbackPointId = `rollback:${String(previousState.seq)}:${String(
+    previousState.actionSeq,
+  )}:${String(anchor.id)}`;
   const checkpoint: DeterministicCheckpoint = {
     checkpointVersion: "deterministic-checkpoint-v1",
     matchId: previousState.matchId,
-    checkpointId: point.rollbackPointId,
+    checkpointId: rollbackPointId,
     reason: "rollbackPoint",
     stateSeq: previousState.seq,
     actionSeq: previousState.actionSeq,
@@ -168,6 +161,16 @@ export const recordRollbackPoint = (
     hashScope: "gameplay-v1",
     eventId: anchor.id,
     snapshot: cloneGameState(previousState),
+  };
+  const point: LocalRollbackPoint = {
+    rollbackPointId,
+    eventId: String(anchor.id),
+    eventSeq: anchor.seq,
+    stateSeq: previousState.seq,
+    actionSeq: previousState.actionSeq,
+    label: `Before event ${String(anchor.seq)}`,
+    state: cloneGameState(previousState),
+    checkpoint,
   };
   return {
     ...rollback,

@@ -14,6 +14,8 @@ import { createLocalDevMatch } from "./local-match.js";
 import {
   createLocalRollbackState,
   recordRollbackPoint,
+  requestRollbackConsent,
+  resolveRollbackConsent,
 } from "./local-rollback.js";
 
 const publicEvent = (id: string, seq: number): EngineEvent =>
@@ -86,4 +88,62 @@ test("visible rollback point trimming does not trim archived checkpoints", async
     secondRollback.checkpoints.map((checkpoint) => checkpoint.stateSeq),
     [firstState.seq, secondState.seq],
   );
+});
+
+test("approved rollback still restores from saved GameState checkpoint", async () => {
+  const setup = await createFixtureDevMatchSetup(
+    "rollback-approved-restore-match" as MatchId,
+  );
+  const match = createLocalDevMatch(setup);
+  const previousState = structuredClone(match.state);
+  const rollback = recordRollbackPoint(
+    createLocalRollbackState({ enabled: true }),
+    previousState,
+    [publicEvent("event-1", 1)],
+  );
+  const beforeRestorePoint = rollback.points[0];
+  if (beforeRestorePoint === undefined) {
+    throw new Error("Expected rollback point.");
+  }
+  const currentState = structuredClone(previousState);
+  currentState.seq = (Number(previousState.seq) + 1) as StateSeq;
+  currentState.actionSeq = previousState.actionSeq + 1;
+  delete currentState.pendingDecision;
+  const requester = setup.playerOrder[0];
+  const approvingPlayerId = setup.playerOrder[1];
+  const request = requestRollbackConsent(currentState, rollback, {
+    playerId: requester,
+    rollbackPointId: beforeRestorePoint.rollbackPointId,
+    expectedStateSeq: currentState.seq,
+  });
+  const decisionId = request.rollbackRequest?.decisionId;
+  if (decisionId === undefined) {
+    throw new Error("Expected rollback consent decision.");
+  }
+
+  const result = resolveRollbackConsent(request.state, request.rollback, {
+    playerId: approvingPlayerId,
+    decisionId,
+    response: { type: "rollbackConsent", allow: true },
+  });
+
+  assert.equal(result.errors.length, 0);
+  assert.deepEqual(
+    {
+      ...result.state,
+      seq: beforeRestorePoint.state.seq,
+      actionSeq: beforeRestorePoint.state.actionSeq,
+    },
+    beforeRestorePoint.state,
+  );
+  assert.equal(
+    result.rollbackRestore?.checkpoint.checkpointId,
+    beforeRestorePoint.rollbackPointId,
+  );
+  assert.equal(
+    result.rollbackRestore?.checkpoint.stateHash,
+    beforeRestorePoint.checkpoint.stateHash,
+  );
+  assert.equal(Number(result.state.seq), Number(request.state.seq) + 1);
+  assert.equal(result.state.actionSeq, request.state.actionSeq + 1);
 });

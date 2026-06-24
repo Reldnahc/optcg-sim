@@ -186,9 +186,21 @@ export const createMatchSessionRuntime = ({
   ]);
   const deterministicRecords: StoredDeterministicSessionRecord[] = [];
   const deterministicCheckpoints: StoredDeterministicCheckpointRecord[] = [];
+  const deterministicCheckpointIds = new Set<string>();
   const pendingActions: StoredSessionRecord[] = [];
   const pendingDecisions: StoredSessionRecord[] = [];
   const pendingDeterministicRecords: StoredDeterministicSessionRecord[] = [];
+
+  const recordDeterministicCheckpoints = (recordedAt: string): void => {
+    for (const checkpoint of local.rollback.checkpoints) {
+      if (deterministicCheckpointIds.has(checkpoint.checkpointId)) {
+        continue;
+      }
+      deterministicCheckpointIds.add(checkpoint.checkpointId);
+      deterministicCheckpoints.push({ checkpoint, recordedAt });
+    }
+  };
+  recordDeterministicCheckpoints(now());
 
   for (const record of records) {
     idempotency.set(
@@ -317,6 +329,9 @@ export const createMatchSessionRuntime = ({
       const result = resultFromLocal(envelope, applied);
       const recordedAt = now();
       const storedResult = storeRecord(envelope, result, recordedAt);
+      if (result.accepted) {
+        recordDeterministicCheckpoints(recordedAt);
+      }
       if (result.accepted && applied.deterministicOperation !== undefined) {
         const deterministicRecord = buildStoredDeterministicSessionRecord({
           matchId: local.state.matchId,
