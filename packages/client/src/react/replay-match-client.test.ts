@@ -19,6 +19,36 @@ const snapshot = {
 };
 
 describe("replayFramesFromDetail", () => {
+  test("creates playback frames from server-provided frame snapshots", () => {
+    const frames = replayFramesFromDetail({
+      matchId: "match-1",
+      manifestSnapshot: {
+        cards: {
+          "OP01-001": {
+            cardId: "OP01-001",
+            name: "Leader",
+            category: "leader",
+          },
+        },
+      },
+      frameReconstruction: {
+        status: "ready",
+        frames: [
+          {
+            index: 0,
+            actionIndex: 0,
+            label: "Initial state",
+            snapshot,
+          },
+        ],
+      },
+      deterministicEntries: [],
+    });
+
+    assert.equal(frames.length, 1);
+    assert.equal(frames[0]?.label, "Initial state");
+  });
+
   test("creates frame-backed playback entries from saved snapshots", () => {
     const frames = replayFramesFromDetail({
       matchId: "match-1",

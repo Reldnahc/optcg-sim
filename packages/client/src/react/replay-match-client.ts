@@ -7,6 +7,7 @@ import type {
 } from "../transport.js";
 import { createBoardViewModel } from "../view-model.js";
 import type { MatchClientState } from "../controller.js";
+import type { ReplayFrameReconstructionPayload } from "../replay-client.js";
 import type { MatchClientUi } from "./useMatchClient-support.js";
 
 export interface ReplayFrame {
@@ -122,40 +123,79 @@ const frameLabel = (record: unknown, fallbackIndex: number): string => {
   return stringValue(request["type"]) ?? `Action ${String(fallbackIndex + 1)}`;
 };
 
+const replayFrameFromSnapshot = ({
+  frameIndex,
+  label,
+  manifestSnapshot,
+  matchId,
+  snapshot,
+}: {
+  readonly frameIndex: number;
+  readonly label: string;
+  readonly manifestSnapshot: unknown;
+  readonly matchId: string;
+  readonly snapshot: MatchSnapshot;
+}): ReplayFrame[] => {
+  const playerId = Object.keys(snapshot.players)[0] as PlayerId | undefined;
+  if (playerId === undefined) {
+    return [];
+  }
+  const cards = replayCatalog(manifestSnapshot, [
+    ...Object.keys(snapshot.players).map((id) => id as PlayerId),
+  ]);
+  return [
+    {
+      index: frameIndex,
+      label,
+      clientState: {
+        matchId: matchId as MatchId,
+        seat: {
+          matchId: matchId as MatchId,
+          playerId,
+          sessionToken: "replay",
+        },
+        snapshot,
+        cards,
+      },
+    },
+  ];
+};
+
 export const replayFramesFromDetail = (input: {
   readonly matchId: string;
   readonly manifestSnapshot: unknown;
+  readonly frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
   readonly deterministicEntries: readonly unknown[];
-}): readonly ReplayFrame[] =>
-  input.deterministicEntries.flatMap((record, index) => {
+}): readonly ReplayFrame[] => {
+  if (input.frameReconstruction?.status === "ready") {
+    return input.frameReconstruction.frames.flatMap((frame) => {
+      const snapshot = frame.snapshot;
+      if (!isRecord(snapshot) || !isRecord(snapshot["players"])) {
+        return [];
+      }
+      return replayFrameFromSnapshot({
+        frameIndex: frame.index,
+        label: frame.label,
+        manifestSnapshot: input.manifestSnapshot,
+        matchId: input.matchId,
+        snapshot: snapshot as unknown as MatchSnapshot,
+      });
+    });
+  }
+  return input.deterministicEntries.flatMap((record, index) => {
     const snapshot = snapshotFromRecord(record);
     if (snapshot === undefined) {
       return [];
     }
-    const playerId = Object.keys(snapshot.players)[0] as PlayerId | undefined;
-    if (playerId === undefined) {
-      return [];
-    }
-    const cards = replayCatalog(input.manifestSnapshot, [
-      ...Object.keys(snapshot.players).map((id) => id as PlayerId),
-    ]);
-    return [
-      {
-        index,
-        label: frameLabel(record, index),
-        clientState: {
-          matchId: input.matchId as MatchId,
-          seat: {
-            matchId: input.matchId as MatchId,
-            playerId,
-            sessionToken: "replay",
-          },
-          snapshot,
-          cards,
-        },
-      },
-    ];
+    return replayFrameFromSnapshot({
+      frameIndex: index,
+      label: frameLabel(record, index),
+      manifestSnapshot: input.manifestSnapshot,
+      matchId: input.matchId,
+      snapshot,
+    });
   });
+};
 
 const resolved = (): Promise<void> => Promise.resolve();
 

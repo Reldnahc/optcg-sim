@@ -275,6 +275,7 @@ export const ReplayViewerPage = ({
         : replayFramesFromDetail({
             matchId: replay.matchId,
             manifestSnapshot: replay.replay.manifestSnapshot,
+            frameReconstruction: replay.frameReconstruction,
             deterministicEntries: replay.replay.deterministicEntries ?? [],
           }),
     [replay],
