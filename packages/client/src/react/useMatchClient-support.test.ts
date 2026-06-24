@@ -119,6 +119,9 @@ const presentation = (prompt: string) => ({
 
 const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
   id: id as DecisionId,
+  spotlightPendingId: `spotlight:${id}` as NonNullable<
+    PlayerView["pendingDecision"]
+  >["spotlightPendingId"],
   type: "selectCards",
   playerId: "p1" as PlayerId,
   prompt: "Choose a card.",
@@ -132,6 +135,8 @@ const decision = (id: string): NonNullable<PlayerView["pendingDecision"]> => ({
 
 const selectCardsDecision = (id: string): PublicSelectCardsDecision => ({
   id: id as DecisionId,
+  spotlightPendingId:
+    `spotlight:${id}` as PublicSelectCardsDecision["spotlightPendingId"],
   type: "selectCards",
   playerId: "p1" as PlayerId,
   prompt: "Choose a card.",
@@ -170,6 +175,9 @@ const targetDecision = (
   id: string,
 ): NonNullable<PlayerView["pendingDecision"]> => ({
   id: id as DecisionId,
+  spotlightPendingId: `spotlight:${id}` as NonNullable<
+    PlayerView["pendingDecision"]
+  >["spotlightPendingId"],
   type: "selectTargets",
   playerId: "p1" as PlayerId,
   prompt: "Choose a target.",
@@ -184,6 +192,9 @@ const quantityDecision = (
   id: string,
 ): NonNullable<PlayerView["pendingDecision"]> => ({
   id: id as DecisionId,
+  spotlightPendingId: `spotlight:${id}` as NonNullable<
+    PlayerView["pendingDecision"]
+  >["spotlightPendingId"],
   type: "chooseQuantity",
   playerId: "p1" as PlayerId,
   prompt: "Choose a number.",
@@ -198,6 +209,9 @@ const payCostDecision = (
   id: string,
 ): NonNullable<PlayerView["pendingDecision"]> => ({
   id: id as DecisionId,
+  spotlightPendingId: `spotlight:${id}` as NonNullable<
+    PlayerView["pendingDecision"]
+  >["spotlightPendingId"],
   type: "payCost",
   playerId: "p1" as PlayerId,
   prompt: "Pay cost.",

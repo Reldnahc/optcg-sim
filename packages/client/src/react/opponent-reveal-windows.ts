@@ -3,7 +3,12 @@ import type { CardRef, PlayerId, PublicRevealRecord } from "@optcg/types";
 import type { ClientPlayerSnapshot } from "../transport.js";
 import type { BoardViewModel, ClientCardModel } from "../view-model.js";
 import type { RevealWindowModel } from "./RevealWindowHost.js";
-import { opponentRevealsFromEvents } from "./reveal-viewer.js";
+import {
+  isLifeRevealEvent,
+  isRevealFromHandCostEvent,
+  isSelectedRevealEvent,
+  opponentRevealsFromEvents,
+} from "./reveal-viewer.js";
 import type { RevealWindowState } from "./window-state-model.js";
 
 export interface OpponentRevealWindow {
@@ -53,9 +58,30 @@ const isPrivateLookedSetRecord = (record: PublicRevealRecord): boolean =>
   record.origin === "topOfDeck" &&
   record.cleanupPolicy === "returnToOrigin";
 
-const isActiveLifeTriggerReveal = (record: PublicRevealRecord): boolean =>
-  record.origin === "lifeDamage" &&
-  record.cleanupPolicy === "trashAfterResolution";
+const eventBackedRevealIds = (
+  events: ClientPlayerSnapshot["view"]["events"],
+): ReadonlySet<string> => {
+  const revealIds = new Set<string>();
+  for (const event of events) {
+    if (
+      event.type !== "cardRevealed" ||
+      !(
+        isSelectedRevealEvent(event) ||
+        isRevealFromHandCostEvent(event) ||
+        isLifeRevealEvent(event)
+      ) ||
+      typeof event.payload !== "object" ||
+      event.payload === null
+    ) {
+      continue;
+    }
+    const revealId = (event.payload as Record<string, unknown>)["revealId"];
+    if (typeof revealId === "string") {
+      revealIds.add(revealId);
+    }
+  }
+  return revealIds;
+};
 
 export const opponentRevealWindowsFromState = ({
   currentPlayerId,
@@ -110,14 +136,13 @@ export const opponentRevealWindowsFromState = ({
         cards: reveal.cards.map((card) => cardModel(card)),
       },
     }));
-  const eventRevealIds = new Set(eventWindows.map((window) => window.revealId));
+  const eventRevealIds = eventBackedRevealIds(playerSnapshot.view.events);
   const recordWindows = playerSnapshot.view.revealedCards
     .filter(
       (record) =>
         isWindowRevealRecord(record) &&
         !isPrivateLookedSetRecord(record) &&
-        (isActiveLifeTriggerReveal(record) ||
-          !activeDismissedRevealIds.has(record.id)) &&
+        !activeDismissedRevealIds.has(record.id) &&
         !eventRevealIds.has(record.id) &&
         record.cards.length > 0,
     )

@@ -1,17 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { ActiveEffectTextPresentation, DecisionId } from "@optcg/types";
+import type { PublicPendingDecisionId } from "@optcg/types";
 
 import {
-  activePresentationKey,
   advanceSpotlightPlayback,
   appendSpotlightPlaybackSources,
-  consumeResolvedSpotlightSourceKeys,
-  consumeSpotlightSourceSignatures,
   currentSpotlightPlaybackEntry,
   type EffectSpotlightActiveSourceInput,
   type EffectSpotlightPlaybackState,
-  type EffectSpotlightSourceKind,
 } from "./use-effect-spotlight-playback.js";
 import {
   effectSpotlightDisplayForEntry,
@@ -23,18 +19,13 @@ export type {
   EffectSpotlightPlaybackCommand,
   EffectSpotlightPlaybackEntry,
   EffectSpotlightPlaybackState,
-  EffectSpotlightSourceKind,
   EffectSpotlightSourceMode,
 } from "./use-effect-spotlight-playback.js";
 export {
-  activePresentationKey,
   advanceSpotlightPlayback,
   appendSpotlightPlaybackSources,
-  consumeResolvedSpotlightSourceKeys,
-  consumeSpotlightSourceSignatures,
   currentSpotlightPlaybackEntry,
   isCombatSpotlightSource,
-  queuedResolvedSpotlightSources,
 } from "./use-effect-spotlight-playback.js";
 export type {
   EffectSpotlightDisplayInput,
@@ -46,7 +37,6 @@ export {
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
   effectSpotlightTimerAnimationKey,
-  shouldDisplayLiveSpotlightSource,
 } from "./use-effect-spotlight-display.js";
 
 export interface EffectSpotlightControls {
@@ -120,34 +110,39 @@ export const resumeSpotlightModelAfterPause = ({
   };
 };
 
+export const effectSpotlightStateForModel = ({
+  controls,
+  controlsVisible,
+  model,
+}: {
+  readonly controls: EffectSpotlightControls;
+  readonly controlsVisible: boolean;
+  readonly model: EffectSpotlightState | undefined;
+}): UseEffectSpotlightState | undefined => {
+  if (model === undefined) {
+    return controlsVisible ? { controls } : undefined;
+  }
+  return {
+    ...model,
+    controls,
+  };
+};
+
 export interface UseEffectSpotlightInput {
-  readonly active: ActiveEffectTextPresentation | undefined;
-  readonly activeKey?: string | undefined;
-  readonly activeMode?: "live" | "resolved" | undefined;
   readonly activeSources?: readonly EffectSpotlightActiveSourceInput[];
-  readonly consumeInitialResolvedSources?: boolean | undefined;
   readonly initialCursorKey?: string | undefined;
-  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly pendingDecisionId: PublicPendingDecisionId | undefined;
   readonly minimumDwellMs?: number | undefined;
   readonly graceMs?: number | undefined;
-  readonly sourceKind?: EffectSpotlightSourceKind | undefined;
 }
 
 export const useEffectSpotlight = ({
-  active,
-  activeKey,
-  activeMode = "live",
   activeSources,
-  consumeInitialResolvedSources = true,
   graceMs = 800,
   initialCursorKey,
   minimumDwellMs = 2_000,
   pendingDecisionId,
-  sourceKind,
 }: UseEffectSpotlightInput): UseEffectSpotlightState | undefined => {
-  const consumedResolvedKeys = useRef(new Set<string>());
-  const suppressedResolvedSignatures = useRef(new Set<string>());
-  const initializedConsumedResolvedKeys = useRef(false);
   const initializedPlaybackSources = useRef(false);
   const playbackPausedAtMs = useRef<number | undefined>(undefined);
   const [controlsVisible, setControlsVisible] = useState(false);
@@ -158,22 +153,8 @@ export const useEffectSpotlight = ({
     fastForwarded: false,
   });
   const normalizedSources = useMemo(
-    (): readonly EffectSpotlightActiveSourceInput[] =>
-      activeSources ??
-      (active === undefined
-        ? []
-        : [
-            {
-              kind: "effectText" as const,
-              active,
-              key: activeKey ?? activePresentationKey(active),
-              mode: activeMode,
-              ...(activeMode === "live" && pendingDecisionId !== undefined
-                ? { pendingDecisionId }
-                : {}),
-            },
-          ]),
-    [active, activeKey, activeMode, activeSources, pendingDecisionId],
+    (): readonly EffectSpotlightActiveSourceInput[] => activeSources ?? [],
+    [activeSources],
   );
   const [model, setModel] = useState<EffectSpotlightState>();
   const cursorIndex = playback.cursorIndex;
@@ -194,46 +175,21 @@ export const useEffectSpotlight = ({
     if (normalizedSources.length > 0) {
       setControlsVisible(true);
     }
-    if (
-      consumeInitialResolvedSources &&
-      !initializedConsumedResolvedKeys.current &&
-      activeSources !== undefined
-    ) {
-      initializedConsumedResolvedKeys.current = true;
-      consumeResolvedSpotlightSourceKeys(
-        consumedResolvedKeys.current,
-        normalizedSources,
-      );
-    }
     const isInitialPlaybackBatch =
       !initializedPlaybackSources.current && normalizedSources.length > 0;
     setPlayback((previous) =>
       appendSpotlightPlaybackSources({
-        consumedKeys: consumedResolvedKeys.current,
         initialCursorKey: isInitialPlaybackBatch ? initialCursorKey : undefined,
-        suppressedResolvedSignatures: suppressedResolvedSignatures.current,
         previous,
         sources: normalizedSources,
-        sourceKind,
       }),
     );
     if (isInitialPlaybackBatch) {
       initializedPlaybackSources.current = true;
     }
-  }, [
-    activeSources,
-    consumeInitialResolvedSources,
-    initialCursorKey,
-    normalizedSources,
-    sourceKind,
-  ]);
+  }, [activeSources, initialCursorKey, normalizedSources]);
 
   useEffect(() => {
-    if (currentSource?.mode === "live") {
-      consumeSpotlightSourceSignatures(suppressedResolvedSignatures.current, [
-        currentSource,
-      ]);
-    }
     setModel((previous) =>
       effectSpotlightDisplayForEntry({
         nowMs: Date.now(),
@@ -267,11 +223,6 @@ export const useEffectSpotlight = ({
     }
     const delayMs = Math.max(0, model.visibleUntilMs - Date.now());
     const timeout = window.setTimeout(() => {
-      if (currentSource.mode === "resolved") {
-        consumeResolvedSpotlightSourceKeys(consumedResolvedKeys.current, [
-          currentSource,
-        ]);
-      }
       setPlayback((previous) =>
         advanceSpotlightPlayback({
           command: "autoAdvance",
@@ -344,11 +295,9 @@ export const useEffectSpotlight = ({
     },
   };
 
-  if (model === undefined) {
-    return controlsVisible ? { controls } : undefined;
-  }
-  return {
-    ...model,
+  return effectSpotlightStateForModel({
     controls,
-  };
+    controlsVisible,
+    model,
+  });
 };

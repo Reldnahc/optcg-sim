@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
-  DecisionId,
   EffectTextSpanId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import { shouldAutoAdvanceSpotlightPlayback } from "./use-effect-spotlight.js";
@@ -30,6 +30,9 @@ const source = (
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
 
+const publicPendingId = (value: string): PublicPendingDecisionId =>
+  value as PublicPendingDecisionId;
+
 describe("effect spotlight auto advance", () => {
   it("does not advance a pending current source using a stale resolved display", () => {
     expect(
@@ -40,7 +43,7 @@ describe("effect spotlight auto advance", () => {
             "span:search:remaining",
             "live",
           ),
-          pendingDecisionId: "decision:order" as DecisionId,
+          pendingDecisionId: publicPendingId("spotlight:pending:order"),
         },
         model: {
           active: source(

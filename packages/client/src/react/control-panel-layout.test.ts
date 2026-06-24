@@ -5,11 +5,9 @@ import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 
 import {
-  controlDockHeightFromDrag,
   controlDockSlotRect,
   controlRailWidthFromDrag,
   defaultControlDockHeightForViewport,
-  defaultControlDockHeight,
   defaultControlRailWidthForViewport,
   defaultControlRailWidth,
   desktopCardHeightForViewport,
@@ -88,16 +86,14 @@ describe("control panel layout", () => {
       normalizeControlPanelLayoutForViewport({
         layout: {
           controlRailWidth: 900,
-          controlDockHeight: 900,
         },
         viewportWidth: 1180,
         viewportHeight: 720,
         playmatRight: 920,
-        controlPanelHeight: 520,
       }),
       {
         controlRailWidth: 244,
-        controlDockHeight: 360,
+        controlDockHeight: 260,
       },
     );
 
@@ -105,16 +101,14 @@ describe("control panel layout", () => {
       normalizeControlPanelLayoutForViewport({
         layout: {
           controlRailWidth: 120,
-          controlDockHeight: 80,
         },
         viewportWidth: 1180,
         viewportHeight: 720,
         playmatRight: 920,
-        controlPanelHeight: 520,
       }),
       {
         controlRailWidth: 220,
-        controlDockHeight: 180,
+        controlDockHeight: 260,
       },
     );
   });
@@ -129,61 +123,6 @@ describe("control panel layout", () => {
         playmatRight: 980,
       }),
       220,
-    );
-  });
-
-  test("resizes the dock slot vertically inside the control panel", () => {
-    assert.equal(
-      controlDockHeightFromDrag({
-        startHeight: defaultControlDockHeight,
-        startClientY: 620,
-        currentClientY: 540,
-        controlPanelHeight: 680,
-      }),
-      400,
-    );
-
-    assert.equal(
-      controlDockHeightFromDrag({
-        startHeight: defaultControlDockHeight,
-        startClientY: 620,
-        currentClientY: 260,
-        controlPanelHeight: 680,
-      }),
-      520,
-    );
-
-    assert.equal(
-      controlDockHeightFromDrag({
-        startHeight: defaultControlDockHeight,
-        startClientY: 620,
-        currentClientY: 900,
-        controlPanelHeight: 680,
-      }),
-      180,
-    );
-  });
-
-  test("uses the rendered bottom dock reserve when clamping dock height", () => {
-    assert.equal(
-      controlDockHeightFromDrag({
-        startHeight: defaultControlDockHeight,
-        startClientY: 620,
-        currentClientY: 260,
-        controlPanelHeight: 680,
-        controlDockBottomReservedSpace: 40,
-      }),
-      480,
-    );
-    assert.equal(
-      controlDockHeightFromDrag({
-        startHeight: defaultControlDockHeight,
-        startClientY: 620,
-        currentClientY: 260,
-        controlPanelHeight: 680,
-        controlDockBottomReservedSpace: 88,
-      }),
-      432,
     );
   });
 

@@ -26,7 +26,6 @@
     460px
   );
   --control-resize-hit-area: calc(var(--control-rail-gap) * 1.45);
-  --control-dock-resize-hit-area: calc(var(--control-rail-gap) * 1.7);
   --control-grab-nub-width: calc(var(--control-dock-tab-height) * 0.58);
   --control-grab-dot-width: var(--card-outline-thin);
   --control-grab-dot-height: calc(var(--control-dock-tab-height) * 0.5);
@@ -716,27 +715,6 @@
 
 .control-window-dock.has-docked-window {
   pointer-events: auto;
-}
-
-.control-window-dock-resize-handle {
-  position: absolute;
-  top: calc(var(--control-dock-resize-hit-area) / -2);
-  right: 0;
-  left: 0;
-  z-index: 2;
-  height: var(--control-dock-resize-hit-area);
-  border: 0;
-  background: transparent;
-  cursor: ns-resize;
-}
-
-.control-window-dock-resize-handle:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(89, 255, 143, 0),
-    rgba(89, 255, 143, 0.32),
-    rgba(89, 255, 143, 0)
-  );
 }
 
 .control-window-dock span {

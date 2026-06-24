@@ -30,6 +30,8 @@ import type { ClientActionModel } from "../view-model.js";
 
 const payCostDecision = {
   id: "decision:payCost:sequence:queue-1:0" as DecisionId,
+  spotlightPendingId:
+    "spotlight:decision:payCost:sequence:queue-1:0" as PublicPendingDecision["spotlightPendingId"],
   type: "payCost",
   playerId: "p1" as PlayerId,
   prompt: "Choose whether to pay this optional cost.",

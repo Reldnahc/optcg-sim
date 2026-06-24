@@ -1,16 +1,33 @@
 import { strict as assert } from "node:assert";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, test } from "vitest";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
+const clientSourceRoot = dirname(sourceDirectory);
 const playmatStylesPath = join(sourceDirectory, "styles", "playmat.css");
 const appShellStylesPath = join(sourceDirectory, "styles", "app-shell.css");
 const cardStylesPath = join(sourceDirectory, "styles", "card.css");
 const controlsStylesPath = join(sourceDirectory, "styles", "controls.css");
 const modalStylesPath = join(sourceDirectory, "styles", "modal-frame.css");
 const zoneStylesPath = join(sourceDirectory, "styles", "zone.css");
+
+const sourceFilesUnder = async (
+  directory: string,
+): Promise<readonly string[]> => {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry): Promise<readonly string[]> => {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        return sourceFilesUnder(path);
+      }
+      return /\.(?:ts|tsx)$/u.test(entry.name) ? [path] : [];
+    }),
+  );
+  return files.flat();
+};
 
 describe("playmat structure", () => {
   test("board layout uses one physical table grid instead of mirrored player mats", async () => {
@@ -259,18 +276,22 @@ describe("playmat structure", () => {
       matchApp,
       /const effectSpotlightHistory = playerSnapshot\?\.view\.effectSpotlightHistory;/u,
     );
-    assert.match(
-      matchApp,
-      /consumeInitialResolvedSources: effectSpotlightHistory === undefined/u,
-    );
+    assert.match(matchApp, /activeSources:\s*effectSpotlightHistory\.entries/u);
     assert.match(
       matchApp,
       /initialCursorKey: effectSpotlightHistory\?\.presentKey/u,
     );
     assert.match(
       matchApp,
-      /sourceKind:\s+effectSpotlightHistory === undefined\s+\? "legacyFallback"\s+:\s+"serverTimeline"/u,
+      /pendingDecisionId:\s*playerSnapshot\?\.view\.pendingDecision\?\.spotlightPendingId/u,
     );
+    assert.doesNotMatch(
+      matchApp,
+      /pendingDecisionId:\s*playerSnapshot\?\.view\.pendingDecision\?\.id/u,
+    );
+    assert.doesNotMatch(matchApp, /effect-spotlight-source/u);
+    assert.doesNotMatch(matchApp, /activeEffectTextSourcesForSpotlight/u);
+    assert.doesNotMatch(matchApp, /legacyFallback/u);
     assert.match(
       matchApp,
       /effectSpotlightPresentation=\{effectSpotlightPresentation\}/u,
@@ -510,6 +531,28 @@ describe("playmat structure", () => {
       /\.effect-spotlight \.effect-rules-span--active \.card-rules-tag\s*\{[^}]*box-shadow:/u,
     );
     assert.equal(effectSpotlightStyles.includes("position: fixed;"), false);
+  });
+
+  test("effect spotlight uses only authored history entries as active sources", async () => {
+    const clientSourcePaths = (await sourceFilesUnder(clientSourceRoot)).filter(
+      (path) => !/\.test\.(?:ts|tsx)$/u.test(path),
+    );
+    const [matchApp, ...clientSources] = await Promise.all([
+      readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
+      ...clientSourcePaths.map((path) => readFile(path, "utf8")),
+    ]);
+    const joinedClientSources = clientSources.join("\n");
+
+    assert.doesNotMatch(matchApp, /from "\.\/effect-spotlight-source\.js"/u);
+    assert.match(
+      matchApp,
+      /useEffectSpotlight\(\{[\s\S]*activeSources:\s*effectSpotlightHistory\.entries[\s\S]*initialCursorKey:\s*effectSpotlightHistory\?\.presentKey[\s\S]*pendingDecisionId:\s*playerSnapshot\?\.view\.pendingDecision\?\.spotlightPendingId/u,
+    );
+    assert.doesNotMatch(
+      joinedClientSources,
+      /activeEffectTextSourcesForSpotlight/u,
+    );
+    assert.doesNotMatch(joinedClientSources, /effect-spotlight-source/u);
   });
 
   test("control dock is tall and flush inside the panel", async () => {

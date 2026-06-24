@@ -3,11 +3,12 @@ import { describe, expect, it } from "vitest";
 import type {
   CardId,
   CardRef,
-  DecisionId,
+  EffectTextSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEventId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import {
@@ -20,7 +21,7 @@ const source = (
   key: string,
   spanId: EffectTextSpanId,
   mode: "live" | "resolved" = "resolved",
-) => ({
+): EffectTextSpotlightHistoryEntry => ({
   active: {
     source: {
       instanceId: "source-1" as InstanceId,
@@ -35,6 +36,9 @@ const source = (
   mode,
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
+
+const publicPendingId = (value: string): PublicPendingDecisionId =>
+  value as PublicPendingDecisionId;
 
 const target: CardRef = {
   playerId: "p2" as PlayerId,
@@ -134,10 +138,10 @@ describe("effect spotlight display", () => {
       graceMs: 800,
       entry: {
         ...source("not-a-decision-prefix", "span:pending", "live"),
-        pendingDecisionId: "decision-1" as DecisionId,
+        pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
         status: "pending",
       },
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
       cursorVersion: 1,
       previousCursorVersion: undefined,
     });
@@ -145,9 +149,32 @@ describe("effect spotlight display", () => {
     expect(display?.pinned).toBe(true);
   });
 
-  it("keeps dwell when a completed-frame projection becomes its final event", () => {
-    const completed = source(
-      "completed-frame:queue:effect:decision:span:search:selection",
+  it("does not pin live entries from key text without a structured pending decision id", () => {
+    const display = effectSpotlightDisplayForEntry({
+      nowMs: 1_000,
+      previous: undefined,
+      minimumDwellMs: 2_000,
+      graceMs: 800,
+      entry: source(
+        "decision:decision-1|source-1||span:pending",
+        "span:pending",
+        "live",
+      ),
+      // @ts-expect-error raw decision ids must not be accepted as spotlight pinning ids.
+      pendingDecisionId: "decision-1",
+      cursorVersion: 1,
+      previousCursorVersion: undefined,
+    });
+
+    expect(display?.activeKey).toBe(
+      "decision:decision-1|source-1||span:pending",
+    );
+    expect(display?.pinned).toBe(false);
+  });
+
+  it("starts fresh dwell when the authored cursor entry changes", () => {
+    const previousEntry = source(
+      "event:search:pending",
       "span:search:selection",
     );
     const finalEvent = source(
@@ -155,9 +182,9 @@ describe("effect spotlight display", () => {
       "span:search:selection",
     );
     const previous: EffectSpotlightState = {
-      entry: completed,
-      active: completed.active,
-      activeKey: completed.key,
+      entry: previousEntry,
+      active: previousEntry.active,
+      activeKey: previousEntry.key,
       activeMode: "resolved",
       sourceInstanceId: "source-1",
       activeSpanIds: ["span:search:selection"],
@@ -178,13 +205,13 @@ describe("effect spotlight display", () => {
     });
 
     expect(display?.activeKey).toBe("event:search:selection");
-    expect(display?.shownAtMs).toBe(1_000);
-    expect(display?.visibleUntilMs).toBe(3_000);
+    expect(display?.shownAtMs).toBe(1_500);
+    expect(display?.visibleUntilMs).toBe(3_500);
   });
 
-  it("keeps dwell when a live pending entry becomes its final event", () => {
+  it("starts fresh dwell when a live pending entry advances to a resolved entry", () => {
     const live = source(
-      "decision:search-select|source-1|effect|span:search:selection",
+      "spotlight:pending:search-select:0",
       "span:search:selection",
       "live",
     );
@@ -217,55 +244,38 @@ describe("effect spotlight display", () => {
 
     expect(display?.activeKey).toBe("event:search:selection");
     expect(display?.activeMode).toBe("resolved");
-    expect(display?.shownAtMs).toBe(1_000);
-    expect(display?.visibleUntilMs).toBe(3_000);
+    expect(display?.shownAtMs).toBe(1_500);
+    expect(display?.visibleUntilMs).toBe(3_500);
     expect(display?.pinned).toBe(false);
   });
 
-  it("keeps the timer identity stable when a live search entry becomes completed and final", () => {
-    const live = source(
-      "decision:search-select|source-1|effect|span:search:selection",
-      "span:search:selection",
-      "live",
-    );
-    const completed = source(
-      "completed-frame:queue:effect:decision:span:search:selection",
-      "span:search:selection",
-    );
-    const finalEvent = source(
-      "event:search:selection",
-      "span:search:selection",
-    );
-    const liveDisplay = effectSpotlightDisplayForEntry({
+  it("ignores semanticKey changes for timer identity and dwell", () => {
+    const first = source("event:search:selection", "span:search:selection");
+    const changedSemantic = {
+      ...first,
+      semanticKey: "changed-diagnostic-semantic-key",
+    };
+    const firstDisplay = effectSpotlightDisplayForEntry({
       nowMs: 1_000,
       previous: undefined,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      entry: live,
-      pendingDecisionId: "decision:search-select",
-      cursorVersion: 1,
-    });
-    const completedDisplay = effectSpotlightDisplayForEntry({
-      nowMs: 1_500,
-      previous: liveDisplay,
-      minimumDwellMs: 2_000,
-      graceMs: 800,
-      entry: completed,
+      entry: first,
       pendingDecisionId: undefined,
       cursorVersion: 1,
     });
-    const finalDisplay = effectSpotlightDisplayForEntry({
-      nowMs: 1_800,
-      previous: completedDisplay,
+    const changedDisplay = effectSpotlightDisplayForEntry({
+      nowMs: 1_500,
+      previous: firstDisplay,
       minimumDwellMs: 2_000,
       graceMs: 800,
-      entry: finalEvent,
+      entry: changedSemantic,
       pendingDecisionId: undefined,
       cursorVersion: 1,
     });
     const remainderDisplay = effectSpotlightDisplayForEntry({
       nowMs: 3_000,
-      previous: finalDisplay,
+      previous: changedDisplay,
       minimumDwellMs: 2_000,
       graceMs: 800,
       entry: source("event:search:remaining", "span:search:remaining"),
@@ -274,22 +284,19 @@ describe("effect spotlight display", () => {
       previousCursorVersion: 1,
     });
 
-    const liveState = requireDisplay(liveDisplay);
-    const completedState = requireDisplay(completedDisplay);
-    const finalState = requireDisplay(finalDisplay);
+    const firstState = requireDisplay(firstDisplay);
+    const changedState = requireDisplay(changedDisplay);
     const remainderState = requireDisplay(remainderDisplay);
-    expect(effectSpotlightTimerAnimationKey(liveState)).toBe(
-      effectSpotlightTimerAnimationKey(completedState),
-    );
-    expect(effectSpotlightTimerAnimationKey(completedState)).toBe(
-      effectSpotlightTimerAnimationKey(finalState),
+    expect(changedState.shownAtMs).toBe(1_000);
+    expect(effectSpotlightTimerAnimationKey(firstState)).toBe(
+      effectSpotlightTimerAnimationKey(changedState),
     );
     expect(effectSpotlightTimerAnimationKey(remainderState)).not.toBe(
-      effectSpotlightTimerAnimationKey(finalState),
+      effectSpotlightTimerAnimationKey(changedState),
     );
   });
 
-  it("starts fresh dwell when target links are added to the current entry", () => {
+  it("keeps dwell when target links change for the same authored entry", () => {
     const untargeted = source("event:targeting", "span:body");
     const targeted = {
       ...untargeted,
@@ -327,8 +334,8 @@ describe("effect spotlight display", () => {
       cursorVersion: 1,
     });
 
-    expect(display?.shownAtMs).toBe(1_500);
-    expect(display?.visibleUntilMs).toBe(3_500);
+    expect(display?.shownAtMs).toBe(1_000);
+    expect(display?.visibleUntilMs).toBe(3_000);
     expect(display?.active?.targetLinks).toEqual(targeted.active.targetLinks);
   });
 });

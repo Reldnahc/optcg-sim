@@ -60,6 +60,7 @@ const eventLabels: Record<EngineEvent["type"], string> = {
   effectQueued: "Effect queued",
   effectResolved: "Effect resolved",
   replacementApplied: "Replacement applied",
+  spotlightEntryCreated: "Spotlight updated",
   decisionCreated: "Decision created",
   decisionResolved: "Decision resolved",
   ruleProcessingChecked: "Rules checked",

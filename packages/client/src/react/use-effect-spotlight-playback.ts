@@ -1,38 +1,19 @@
 import type {
-  ActiveEffectTextPresentation,
-  CombatSpotlightPresentation,
-  DecisionId,
-  EffectTextSpanId,
+  CombatSpotlightHistoryEntry,
+  EffectSpotlightHistoryEntry,
+  EffectTextSpotlightHistoryEntry,
+  PlayedCardSpotlightHistoryEntry,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 export type EffectSpotlightSourceMode = "live" | "resolved";
-export type EffectSpotlightSourceKind = "serverTimeline" | "legacyFallback";
 
-export interface EffectTextSpotlightActiveSourceInput {
-  readonly kind?: "effectText";
-  readonly active: ActiveEffectTextPresentation;
-  readonly id?: string;
-  readonly key: string;
-  readonly semanticKey?: string;
-  readonly mode: EffectSpotlightSourceMode;
-  readonly status?: "pending" | "resolved";
-  readonly pendingDecisionId?: DecisionId | string;
-}
-
-export interface CombatSpotlightActiveSourceInput {
-  readonly kind: "combat";
-  readonly combat: CombatSpotlightPresentation;
-  readonly id?: string;
-  readonly key: string;
-  readonly semanticKey?: string;
-  readonly mode: EffectSpotlightSourceMode;
-  readonly status?: "pending" | "resolved";
-  readonly pendingDecisionId?: DecisionId | string;
-}
-
-export type EffectSpotlightActiveSourceInput =
-  | EffectTextSpotlightActiveSourceInput
-  | CombatSpotlightActiveSourceInput;
+export type EffectSpotlightActiveSourceInput = EffectSpotlightHistoryEntry;
+export type EffectTextSpotlightActiveSourceInput =
+  EffectTextSpotlightHistoryEntry;
+export type CombatSpotlightActiveSourceInput = CombatSpotlightHistoryEntry;
+export type PlayedCardSpotlightActiveSourceInput =
+  PlayedCardSpotlightHistoryEntry;
 
 export type EffectSpotlightPlaybackEntry = EffectSpotlightActiveSourceInput;
 
@@ -41,6 +22,7 @@ export interface EffectSpotlightPlaybackState {
   readonly cursorIndex: number | undefined;
   readonly paused: boolean;
   readonly fastForwarded?: boolean;
+  readonly consumedEntrySignatures?: readonly string[];
 }
 
 export type EffectSpotlightPlaybackCommand =
@@ -51,192 +33,33 @@ export type EffectSpotlightPlaybackCommand =
   | "rewind"
   | "stepForward";
 
-const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
-  spanIds.join("\n");
-
-export const activePresentationKey = (
-  active: ActiveEffectTextPresentation,
-): string =>
-  [
-    String(active.source.instanceId),
-    active.textKind ?? "",
-    spanKey(active.activeSpanIds),
-  ].join("|");
-
 export const isCombatSpotlightSource = (
   source: EffectSpotlightActiveSourceInput,
-): source is CombatSpotlightActiveSourceInput => source.kind === "combat";
+): source is Extract<EffectSpotlightHistoryEntry, { kind: "combat" }> =>
+  source.kind === "combat";
 
-const spotlightSourceSignatureBase = (
-  source: EffectTextSpotlightActiveSourceInput,
-): readonly string[] => [
-  String(source.active.source.playerId),
-  String(source.active.source.instanceId),
-  String(source.active.source.cardId),
-  source.active.textKind ?? "",
-];
-
-const combatSpotlightSourceSignature = (
-  source: CombatSpotlightActiveSourceInput,
-): string =>
-  [
-    "combat",
-    source.combat.eventKind,
-    String(source.combat.attacker.playerId),
-    String(source.combat.attacker.instanceId),
-    String(source.combat.attacker.cardId),
-    String(source.combat.defender.playerId),
-    String(source.combat.defender.instanceId),
-    String(source.combat.defender.cardId),
-    source.combat.attackerPower === undefined
-      ? ""
-      : String(source.combat.attackerPower),
-    source.combat.defenderPower === undefined
-      ? ""
-      : String(source.combat.defenderPower),
-  ].join("|");
-
-const spotlightSourceSignatures = (
+export const isPlayedCardSpotlightSource = (
   source: EffectSpotlightActiveSourceInput,
-): readonly string[] => {
-  if (isCombatSpotlightSource(source)) {
-    return [combatSpotlightSourceSignature(source)];
-  }
-  const spanIds =
-    source.active.activeSpanIds.length === 0
-      ? [""]
-      : source.active.activeSpanIds;
-  return spanIds.map((spanId) =>
-    [...spotlightSourceSignatureBase(source), spanId].join("|"),
-  );
-};
-
-const sourceSignaturesConsumed = (
-  consumedSignatures: ReadonlySet<string>,
-  source: EffectSpotlightActiveSourceInput,
-): boolean => {
-  return spotlightSourceSignatures(source).every((signature) =>
-    consumedSignatures.has(signature),
-  );
-};
-
-export const consumeSpotlightSourceSignatures = (
-  consumedSignatures: Set<string>,
-  sources: readonly EffectSpotlightActiveSourceInput[],
-): void => {
-  for (const source of sources) {
-    for (const signature of spotlightSourceSignatures(source)) {
-      consumedSignatures.add(signature);
-    }
-  }
-};
-
-const releaseSpotlightSourceExactSignatures = (
-  consumedSignatures: Set<string>,
-  source: EffectSpotlightActiveSourceInput,
-): void => {
-  for (const signature of spotlightSourceSignatures(source)) {
-    consumedSignatures.delete(signature);
-  }
-};
-
-const targetLinkSignature = (
-  source: EffectSpotlightActiveSourceInput,
-): string => {
-  if (isCombatSpotlightSource(source)) {
-    return "";
-  }
-  const activeSpanIds = new Set(source.active.activeSpanIds);
-  return (source.active.targetLinks ?? [])
-    .filter((link) => activeSpanIds.has(link.spanId) && link.cards.length > 0)
-    .map((link) =>
-      [
-        link.spanId,
-        link.relation,
-        ...link.cards.map((card) =>
-          [
-            String(card.playerId),
-            String(card.instanceId),
-            String(card.cardId),
-          ].join("|"),
-        ),
-      ].join(">"),
-    )
-    .join("\n");
-};
-
-const shouldReplayServerTimelineReplacement = (
-  previous: EffectSpotlightPlaybackEntry,
-  next: EffectSpotlightActiveSourceInput,
-): boolean => {
-  const previousTargetSignature = targetLinkSignature(previous);
-  const nextTargetSignature = targetLinkSignature(next);
-  return (
-    nextTargetSignature !== "" &&
-    previousTargetSignature !== nextTargetSignature
-  );
-};
-
-const isCompletedFrameProjection = (
-  source: EffectSpotlightActiveSourceInput,
-): boolean => source.key.startsWith("completed-frame:");
-
-const shouldReplaceServerTimelineEntry = (
-  previous: EffectSpotlightPlaybackEntry,
-  next: EffectSpotlightActiveSourceInput,
-): boolean => {
-  if (
-    previous.semanticKey === undefined ||
-    previous.semanticKey !== next.semanticKey
-  ) {
-    return false;
-  }
-  if (previous.mode === "live") {
-    return true;
-  }
-  return next.mode === "resolved" && isCompletedFrameProjection(previous);
-};
+): source is Extract<EffectSpotlightHistoryEntry, { kind: "playedCard" }> =>
+  source.kind === "playedCard";
 
 const serverTimelineSourceKeys = (
   sources: readonly EffectSpotlightActiveSourceInput[],
 ): ReadonlySet<string> => new Set(sources.map((source) => source.key));
 
-const serverTimelineSourceSemanticKeys = (
+const serverTimelineSourceIds = (
   sources: readonly EffectSpotlightActiveSourceInput[],
-): ReadonlySet<string> =>
-  new Set(
-    sources.flatMap((source) =>
-      source.semanticKey === undefined ? [] : [source.semanticKey],
-    ),
-  );
-
-const releaseConsumedKeysOutsideServerTimeline = (
-  consumedKeys: Set<string>,
-  sourceKeys: ReadonlySet<string>,
-): void => {
-  for (const key of consumedKeys) {
-    if (!sourceKeys.has(key)) {
-      consumedKeys.delete(key);
-    }
-  }
-};
+): ReadonlySet<string> => new Set(sources.map((source) => source.id));
 
 const serverTimelineKeepsEntry = ({
   entry,
+  sourceIds,
   sourceKeys,
-  sourceSemanticKeys,
 }: {
   readonly entry: EffectSpotlightPlaybackEntry;
+  readonly sourceIds: ReadonlySet<string>;
   readonly sourceKeys: ReadonlySet<string>;
-  readonly sourceSemanticKeys: ReadonlySet<string>;
-}): boolean =>
-  sourceKeys.has(entry.key) ||
-  (isCompletedFrameProjection(entry) &&
-    entry.semanticKey !== undefined &&
-    sourceSemanticKeys.has(entry.semanticKey)) ||
-  (entry.mode === "live" &&
-    entry.semanticKey !== undefined &&
-    sourceSemanticKeys.has(entry.semanticKey));
+}): boolean => sourceKeys.has(entry.key) || sourceIds.has(entry.id);
 
 const serverTimelineCursorIndex = ({
   entries,
@@ -254,41 +77,32 @@ const serverTimelineCursorIndex = ({
   if (keyIndex >= 0) {
     return keyIndex;
   }
-  if (
-    previousCursorEntry.mode !== "live" ||
-    previousCursorEntry.semanticKey === undefined
-  ) {
-    return undefined;
-  }
-  const semanticIndex = entries.findIndex(
-    (entry) => entry.semanticKey === previousCursorEntry.semanticKey,
+  const idIndex = entries.findIndex(
+    (entry) => entry.id === previousCursorEntry.id,
   );
-  return semanticIndex >= 0 ? semanticIndex : undefined;
+  return idIndex >= 0 ? idIndex : undefined;
 };
 
 const reconcileServerTimelinePlayback = ({
-  consumedKeys,
   previous,
   sources,
 }: {
-  readonly consumedKeys: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
   const sourceKeys = serverTimelineSourceKeys(sources);
-  releaseConsumedKeysOutsideServerTimeline(consumedKeys, sourceKeys);
 
   if (previous.entries.length === 0) {
     return previous;
   }
 
-  const sourceSemanticKeys = serverTimelineSourceSemanticKeys(sources);
+  const sourceIds = serverTimelineSourceIds(sources);
   const previousCursorEntry =
     previous.cursorIndex === undefined
       ? undefined
       : previous.entries[previous.cursorIndex];
   const entries = previous.entries.filter((entry) =>
-    serverTimelineKeepsEntry({ entry, sourceKeys, sourceSemanticKeys }),
+    serverTimelineKeepsEntry({ entry, sourceIds, sourceKeys }),
   );
   if (entries.length === previous.entries.length) {
     return previous;
@@ -301,91 +115,135 @@ const reconcileServerTimelinePlayback = ({
   };
 };
 
+const cardRefSignature = (
+  card: Readonly<{
+    readonly playerId: unknown;
+    readonly instanceId: unknown;
+    readonly cardId: unknown;
+  }>,
+): string =>
+  [String(card.playerId), String(card.instanceId), String(card.cardId)].join(
+    ":",
+  );
+
+const playbackEntryConsumptionSignature = (
+  entry: EffectSpotlightPlaybackEntry,
+): string => {
+  if (isCombatSpotlightSource(entry)) {
+    return [
+      "combat",
+      entry.key,
+      entry.id,
+      entry.combat.eventKind,
+      cardRefSignature(entry.combat.attacker),
+      cardRefSignature(entry.combat.defender),
+      entry.combat.attackerPower === undefined
+        ? ""
+        : String(entry.combat.attackerPower),
+      entry.combat.defenderPower === undefined
+        ? ""
+        : String(entry.combat.defenderPower),
+    ].join("|");
+  }
+  if (isPlayedCardSpotlightSource(entry)) {
+    return [
+      "playedCard",
+      entry.key,
+      entry.id,
+      cardRefSignature(entry.source),
+    ].join("|");
+  }
+  return [
+    "effectText",
+    entry.key,
+    entry.id,
+    entry.active.textKind ?? "effect",
+    cardRefSignature(entry.active.source),
+    entry.active.activeSpanIds.join("+"),
+  ].join("|");
+};
+
+const consumedPlaybackEntrySignatures = (
+  state: EffectSpotlightPlaybackState,
+): ReadonlySet<string> => new Set(state.consumedEntrySignatures ?? []);
+
+const withConsumedPlaybackEntries = (
+  state: EffectSpotlightPlaybackState,
+  entries: readonly EffectSpotlightPlaybackEntry[],
+): EffectSpotlightPlaybackState => {
+  if (entries.length === 0) {
+    return state;
+  }
+  const consumedSignatures = new Set(state.consumedEntrySignatures ?? []);
+  const previousSize = consumedSignatures.size;
+  for (const entry of entries) {
+    consumedSignatures.add(playbackEntryConsumptionSignature(entry));
+  }
+  if (consumedSignatures.size === previousSize) {
+    return state;
+  }
+  return {
+    ...state,
+    consumedEntrySignatures: [...consumedSignatures],
+  };
+};
+
 export const appendSpotlightPlaybackSources = ({
-  consumedKeys,
   initialCursorKey,
-  suppressedResolvedSignatures,
   previous,
-  sourceKind = "legacyFallback",
   sources,
 }: {
-  readonly consumedKeys: Set<string>;
   readonly initialCursorKey?: string | undefined;
-  readonly suppressedResolvedSignatures?: Set<string>;
   readonly previous: EffectSpotlightPlaybackState;
-  readonly sourceKind?: EffectSpotlightSourceKind | undefined;
   readonly sources: readonly EffectSpotlightActiveSourceInput[];
 }): EffectSpotlightPlaybackState => {
-  const reconciledPrevious =
-    sourceKind === "serverTimeline"
-      ? reconcileServerTimelinePlayback({ consumedKeys, previous, sources })
-      : previous;
+  const reconciledPrevious = reconcileServerTimelinePlayback({
+    previous,
+    sources,
+  });
   const queuedKeys = new Set(
     reconciledPrevious.entries.map((source) => source.key),
   );
+  const queuedIds = new Set(
+    reconciledPrevious.entries.map((source) => source.id),
+  );
+  const consumedSignatures =
+    consumedPlaybackEntrySignatures(reconciledPrevious);
   let entries: EffectSpotlightPlaybackEntry[] | undefined;
-  let firstAppendedIndex: number | undefined;
-  let replacementReplayIndex: number | undefined;
+  let firstUnconsumedAppendedIndex: number | undefined;
   for (const source of sources) {
-    if (sourceKind === "serverTimeline" && source.semanticKey !== undefined) {
-      const semanticIndex = reconciledPrevious.entries.findIndex((entry) =>
-        shouldReplaceServerTimelineEntry(entry, source),
-      );
-      if (semanticIndex >= 0) {
-        const previousEntry = reconciledPrevious.entries[semanticIndex];
+    const sourceConsumptionSignature =
+      playbackEntryConsumptionSignature(source);
+    const existingIndex = reconciledPrevious.entries.findIndex(
+      (entry) => entry.key === source.key || entry.id === source.id,
+    );
+    if (existingIndex >= 0) {
+      const existing = reconciledPrevious.entries[existingIndex];
+      if (
+        existing !== undefined &&
+        playbackEntryConsumptionSignature(existing) !==
+          sourceConsumptionSignature
+      ) {
         entries ??= [...reconciledPrevious.entries];
-        entries[semanticIndex] = source;
-        queuedKeys.add(source.key);
-        if (
-          previousEntry !== undefined &&
-          reconciledPrevious.cursorIndex === undefined &&
-          reconciledPrevious.fastForwarded !== true &&
-          shouldReplayServerTimelineReplacement(previousEntry, source)
-        ) {
-          replacementReplayIndex ??= semanticIndex;
+        entries[existingIndex] = source;
+        if (!consumedSignatures.has(sourceConsumptionSignature)) {
+          firstUnconsumedAppendedIndex ??= existingIndex;
         }
-        continue;
       }
-    }
-    if (sourceKind === "serverTimeline") {
-      const keyIndex = reconciledPrevious.entries.findIndex(
-        (entry) => entry.key === source.key,
-      );
-      if (keyIndex >= 0) {
-        const previousEntry = reconciledPrevious.entries[keyIndex];
-        entries ??= [...reconciledPrevious.entries];
-        entries[keyIndex] = source;
-        queuedKeys.add(source.key);
-        if (
-          previousEntry !== undefined &&
-          reconciledPrevious.cursorIndex === undefined &&
-          reconciledPrevious.fastForwarded !== true &&
-          shouldReplayServerTimelineReplacement(previousEntry, source)
-        ) {
-          replacementReplayIndex ??= keyIndex;
-        }
-        continue;
-      }
-    }
-    if (consumedKeys.has(source.key) || queuedKeys.has(source.key)) {
+      queuedKeys.add(source.key);
+      queuedIds.add(source.id);
       continue;
     }
-    if (
-      sourceKind !== "serverTimeline" &&
-      source.mode === "resolved" &&
-      suppressedResolvedSignatures !== undefined &&
-      sourceSignaturesConsumed(suppressedResolvedSignatures, source)
-    ) {
-      releaseSpotlightSourceExactSignatures(
-        suppressedResolvedSignatures,
-        source,
-      );
+    if (queuedKeys.has(source.key) || queuedIds.has(source.id)) {
       continue;
     }
     entries ??= [...reconciledPrevious.entries];
-    firstAppendedIndex ??= entries.length;
+    if (!consumedSignatures.has(sourceConsumptionSignature)) {
+      firstUnconsumedAppendedIndex ??= entries.length;
+    }
     entries.push(source);
     queuedKeys.add(source.key);
+    queuedIds.add(source.id);
   }
   if (entries === undefined) {
     return reconciledPrevious;
@@ -397,21 +255,22 @@ export const appendSpotlightPlaybackSources = ({
   const initialCursorEntry =
     initialCursorIndex >= 0 ? entries[initialCursorIndex] : undefined;
   const usableInitialCursorIndex =
-    initialCursorIndex >= 0 &&
-    (initialCursorEntry?.pendingDecisionId === undefined ||
-      initialCursorIndex === 0)
-      ? initialCursorIndex
-      : -1;
+    initialCursorEntry === undefined ? -1 : initialCursorIndex;
   return {
     entries,
     cursorIndex:
       reconciledPrevious.cursorIndex === undefined
         ? usableInitialCursorIndex >= 0
           ? usableInitialCursorIndex
-          : (replacementReplayIndex ?? firstAppendedIndex)
+          : firstUnconsumedAppendedIndex
         : reconciledPrevious.cursorIndex,
     paused: reconciledPrevious.paused,
     fastForwarded: reconciledPrevious.fastForwarded ?? false,
+    ...(reconciledPrevious.consumedEntrySignatures === undefined
+      ? {}
+      : {
+          consumedEntrySignatures: reconciledPrevious.consumedEntrySignatures,
+        }),
   };
 };
 
@@ -429,7 +288,7 @@ const currentPendingDecisionIndex = ({
   pendingDecisionId,
   state,
 }: {
-  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly pendingDecisionId: PublicPendingDecisionId | undefined;
   readonly state: EffectSpotlightPlaybackState;
 }): number => {
   if (pendingDecisionId === undefined) {
@@ -439,6 +298,8 @@ const currentPendingDecisionIndex = ({
   return state.entries.findLastIndex(
     (entry) =>
       entry.mode === "live" &&
+      entry.kind !== "combat" &&
+      entry.kind !== "playedCard" &&
       entry.pendingDecisionId !== undefined &&
       String(entry.pendingDecisionId) === currentDecisionId,
   );
@@ -450,7 +311,7 @@ export const advanceSpotlightPlayback = ({
   state,
 }: {
   readonly command: EffectSpotlightPlaybackCommand;
-  readonly pendingDecisionId?: DecisionId | string | undefined;
+  readonly pendingDecisionId?: PublicPendingDecisionId | undefined;
   readonly state: EffectSpotlightPlaybackState;
 }): EffectSpotlightPlaybackState => {
   if (command === "catchUp") {
@@ -458,8 +319,12 @@ export const advanceSpotlightPlayback = ({
       pendingDecisionId,
       state,
     });
+    const consumedState = withConsumedPlaybackEntries(
+      state,
+      pendingIndex >= 0 ? state.entries.slice(0, pendingIndex) : state.entries,
+    );
     return {
-      ...state,
+      ...consumedState,
       cursorIndex: pendingIndex >= 0 ? pendingIndex : undefined,
       paused: false,
       fastForwarded: true,
@@ -489,59 +354,26 @@ export const advanceSpotlightPlayback = ({
     return state;
   }
   if (command === "stepForward") {
-    return {
-      ...state,
-      cursorIndex: Math.min(presentIndex, cursorIndex + 1),
-      fastForwarded: false,
-    };
+    return withConsumedPlaybackEntries(
+      {
+        ...state,
+        cursorIndex: Math.min(presentIndex, cursorIndex + 1),
+        fastForwarded: false,
+      },
+      state.entries.slice(cursorIndex, cursorIndex + 1),
+    );
   }
   if (state.paused) {
     return state;
   }
   if (cursorIndex < presentIndex) {
-    return { ...state, cursorIndex: cursorIndex + 1, fastForwarded: false };
+    return withConsumedPlaybackEntries(
+      { ...state, cursorIndex: cursorIndex + 1, fastForwarded: false },
+      state.entries.slice(cursorIndex, cursorIndex + 1),
+    );
   }
-  return { ...state, cursorIndex: undefined, fastForwarded: false };
-};
-
-export const queuedResolvedSpotlightSources = ({
-  consumedKeys,
-  consumedSignatures = new Set<string>(),
-  currentKey,
-  previousQueue,
-  sources,
-}: {
-  readonly consumedKeys: ReadonlySet<string>;
-  readonly consumedSignatures?: ReadonlySet<string>;
-  readonly currentKey: string | undefined;
-  readonly previousQueue: readonly EffectSpotlightActiveSourceInput[];
-  readonly sources: readonly EffectSpotlightActiveSourceInput[];
-}): readonly EffectSpotlightActiveSourceInput[] => {
-  const queuedKeys = new Set(previousQueue.map((source) => source.key));
-  let next: EffectSpotlightActiveSourceInput[] | undefined;
-  for (const source of sources) {
-    if (
-      source.mode === "resolved" &&
-      source.key !== currentKey &&
-      !consumedKeys.has(source.key) &&
-      !sourceSignaturesConsumed(consumedSignatures, source) &&
-      !queuedKeys.has(source.key)
-    ) {
-      next ??= [...previousQueue];
-      next.push(source);
-      queuedKeys.add(source.key);
-    }
-  }
-  return next ?? previousQueue;
-};
-
-export const consumeResolvedSpotlightSourceKeys = (
-  consumedKeys: Set<string>,
-  sources: readonly EffectSpotlightActiveSourceInput[],
-): void => {
-  for (const source of sources) {
-    if (source.mode === "resolved") {
-      consumedKeys.add(source.key);
-    }
-  }
+  return withConsumedPlaybackEntries(
+    { ...state, cursorIndex: undefined, fastForwarded: false },
+    state.entries.slice(cursorIndex, cursorIndex + 1),
+  );
 };

@@ -25,7 +25,6 @@ export interface InfoWindowConfig {
 
 export interface ControlPanelLayoutConfig {
   controlRailWidth?: number | undefined;
-  controlDockHeight?: number | undefined;
 }
 
 const keyPrefix = "optcg:client:reveal-window-state";
@@ -35,7 +34,7 @@ const dockedWindowsKeyPrefix = "optcg:client:docked-floating-windows";
 const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
 const controlPanelLayoutKeyPrefix = "optcg:client:control-panel-layout";
 const defaultOpenWindowIds = ["card-preview", "action-log", "settings"];
-const defaultDockedWindowIds = ["action-log", "settings"];
+const defaultDockedWindowIds = ["card-preview", "action-log", "settings"];
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
   activeTabId: "preview",
@@ -214,15 +213,11 @@ const parseControlPanelLayout = (
     const controlRailWidth = optionalPositiveNumber(
       candidate["controlRailWidth"],
     );
-    const controlDockHeight = optionalPositiveNumber(
-      candidate["controlDockHeight"],
-    );
-    if (controlRailWidth === false || controlDockHeight === false) {
+    if (controlRailWidth === false) {
       return {};
     }
     return {
       ...(controlRailWidth === undefined ? {} : { controlRailWidth }),
-      ...(controlDockHeight === undefined ? {} : { controlDockHeight }),
     };
   } catch {
     return {};

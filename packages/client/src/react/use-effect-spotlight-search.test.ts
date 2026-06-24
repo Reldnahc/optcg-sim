@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
-  DecisionId,
   EffectTextSpanId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import {
@@ -34,6 +34,9 @@ const source = (
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
 });
 
+const publicPendingId = (value: string): PublicPendingDecisionId =>
+  value as PublicPendingDecisionId;
+
 describe("effect spotlight search lifecycle", () => {
   it("keeps search selection for dwell, then advances to pending remainder", () => {
     const liveSelection = {
@@ -44,7 +47,7 @@ describe("effect spotlight search lifecycle", () => {
       ),
       id: "pending:decision:select:p1|source-1|OP00-001|effect|span:search:selection",
       semanticKey: "p1|source-1|OP00-001|effect|span:search:selection",
-      pendingDecisionId: "decision:select" as DecisionId,
+      pendingDecisionId: publicPendingId("spotlight:pending:select"),
     };
     const resolvedSelection = {
       ...source("event:search:span:search:selection", "span:search:selection"),
@@ -59,11 +62,10 @@ describe("effect spotlight search lifecycle", () => {
       ),
       id: "pending:decision:order:p1|source-1|OP00-001|effect|span:search:remaining",
       semanticKey: "p1|source-1|OP00-001|effect|span:search:remaining",
-      pendingDecisionId: "decision:order" as DecisionId,
+      pendingDecisionId: publicPendingId("spotlight:pending:order"),
     };
 
     const playback = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: {
         entries: [liveSelection],
         cursorIndex: 0,
@@ -71,7 +73,6 @@ describe("effect spotlight search lifecycle", () => {
         fastForwarded: false,
       },
       sources: [resolvedSelection, liveRemainder],
-      sourceKind: "serverTimeline",
     });
     const selectionDisplay = effectSpotlightModelForPlayback({
       nowMs: 1_000,
@@ -80,7 +81,7 @@ describe("effect spotlight search lifecycle", () => {
       graceMs: 800,
       playback,
       fallbackMode: "live",
-      pendingDecisionId: "decision:order",
+      pendingDecisionId: publicPendingId("spotlight:pending:order"),
     });
     const advancedPlayback = advanceSpotlightPlayback({
       command: "autoAdvance",
@@ -93,7 +94,7 @@ describe("effect spotlight search lifecycle", () => {
       graceMs: 800,
       playback: advancedPlayback,
       fallbackMode: "live",
-      pendingDecisionId: "decision:order",
+      pendingDecisionId: publicPendingId("spotlight:pending:order"),
     });
 
     expect(playback.entries.map((entry) => entry.key)).toEqual([

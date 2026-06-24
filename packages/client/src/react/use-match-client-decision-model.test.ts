@@ -38,6 +38,9 @@ const card = (
 
 const payCostDecision = {
   id: "decision:quick-pay" as DecisionId,
+  spotlightPendingId: "spotlight:decision:quick-pay" as NonNullable<
+    PlayerView["pendingDecision"]
+  >["spotlightPendingId"],
   type: "payCost",
   playerId: p1,
   prompt: "Pay cost.",
@@ -264,6 +267,10 @@ describe("match client decision model", () => {
     snapshot.view.opponent.characters = [opponentCharacter];
     snapshot.view.pendingDecision = {
       id: "decision:selectTargets:rested-reaction" as DecisionId,
+      spotlightPendingId:
+        "spotlight:decision:selectTargets:rested-reaction" as NonNullable<
+          PlayerView["pendingDecision"]
+        >["spotlightPendingId"],
       type: "selectTargets",
       playerId: p1,
       prompt: "Choose target.",
@@ -316,6 +323,10 @@ describe("match client decision model", () => {
     const source = snapshot.view.self.leader;
     snapshot.view.pendingDecision = {
       id: "decision:chooseOptionalActivation:test" as DecisionId,
+      spotlightPendingId:
+        "spotlight:decision:chooseOptionalActivation:test" as NonNullable<
+          PlayerView["pendingDecision"]
+        >["spotlightPendingId"],
       type: "chooseOptionalActivation",
       playerId: p1,
       prompt: "Choose whether to activate this effect.",

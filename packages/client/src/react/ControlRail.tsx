@@ -45,9 +45,6 @@ export interface ControlRailProps {
   onHome: () => void;
   onRematch?: (() => Promise<void> | void) | undefined;
   onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
-  onDockResizePointerDown?:
-    | ((event: React.PointerEvent<HTMLButtonElement>) => void)
-    | undefined;
   onDockTabChange?: ((tabId: string) => void) | undefined;
   onDockTabClose?: ((tabId: string) => void) | undefined;
   onDockTabDragOut?:
@@ -100,7 +97,6 @@ export const ControlRail = ({
   onHome,
   onRematch,
   onResizePointerDown,
-  onDockResizePointerDown,
   onDockTabChange,
   onDockTabClose,
   onDockTabDragOut,
@@ -279,13 +275,6 @@ export const ControlRail = ({
             .join(" ")}
           aria-label="Window dock"
         >
-          <button
-            className="control-window-dock-resize-handle"
-            type="button"
-            aria-label="Resize dock"
-            title="Resize dock"
-            onPointerDown={onDockResizePointerDown}
-          />
           {activeDockTab === undefined ? (
             <span>Drop windows here</span>
           ) : (

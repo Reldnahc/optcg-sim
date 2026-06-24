@@ -60,7 +60,6 @@ describe("control rail window dock", () => {
       dockHeight: 420,
       onAction: () => undefined,
       onHome: () => undefined,
-      onDockResizePointerDown: () => undefined,
       dockTabs: [
         {
           id: "action-log",
@@ -99,7 +98,7 @@ describe("control rail window dock", () => {
 
     assert.match(markup, /control-window-dock has-docked-window/u);
     assert.match(markup, /--control-window-dock-height:420px/u);
-    assert.match(markup, /aria-label="Resize dock"/u);
+    assert.doesNotMatch(markup, /aria-label="Resize dock"/u);
     assert.match(markup, /role="tablist"/u);
     assert.match(markup, /aria-label="Pop out docked window group"/u);
     assert.match(markup, /control-dock-window-grab-nub/u);
@@ -113,7 +112,7 @@ describe("control rail window dock", () => {
     );
     assert.match(styles, /\.control-dock-window\s*\{[^}]*width:\s*100%;/u);
     assert.match(styles, /\.control-dock-window\s*\{[^}]*height:\s*100%;/u);
-    assert.match(styles, /\.control-window-dock-resize-handle\s*\{/u);
+    assert.doesNotMatch(styles, /\.control-window-dock-resize-handle\s*\{/u);
     assert.match(styles, /\.control-dock-window-grab-nub\s*\{/u);
   });
 

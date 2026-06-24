@@ -90,7 +90,7 @@ describe("reveal window state store", () => {
     );
   });
 
-  test("defaults unsaved windows to preview open and log settings docked", () => {
+  test("defaults unsaved windows to preview open and docked first", () => {
     const storage = createMemoryClientStorage();
     const store = createRevealWindowStateStore({
       storage,
@@ -103,7 +103,7 @@ describe("reveal window state store", () => {
     );
     assert.deepEqual(
       [...store.loadDockedWindowIds()],
-      ["action-log", "settings"],
+      ["card-preview", "action-log", "settings"],
     );
   });
 
@@ -121,7 +121,7 @@ describe("reveal window state store", () => {
     assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
-  test("persists control panel width and dock height by match", () => {
+  test("persists control panel width by match", () => {
     const storage = createMemoryClientStorage();
     const matchOne = createRevealWindowStateStore({
       storage,
@@ -134,21 +134,35 @@ describe("reveal window state store", () => {
 
     matchOne.saveControlPanelLayout({
       controlRailWidth: 340,
-      controlDockHeight: 420,
     });
 
     assert.deepEqual(matchOne.loadControlPanelLayout(), {
       controlRailWidth: 340,
-      controlDockHeight: 420,
     });
     assert.deepEqual(matchTwo.loadControlPanelLayout(), {});
+  });
+
+  test("ignores legacy saved dock height in the control panel layout", () => {
+    const storage = createMemoryClientStorage();
+    storage.setItem(
+      "optcg:client:control-panel-layout:match-1",
+      JSON.stringify({ controlRailWidth: 340, controlDockHeight: 420 }),
+    );
+    const store = createRevealWindowStateStore({
+      storage,
+      matchId: "match-1",
+    });
+
+    assert.deepEqual(store.loadControlPanelLayout(), {
+      controlRailWidth: 340,
+    });
   });
 
   test("fails closed to empty control panel layout for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
       "optcg:client:control-panel-layout:match-1",
-      JSON.stringify({ controlRailWidth: "340", controlDockHeight: 420 }),
+      JSON.stringify({ controlRailWidth: "340" }),
     );
     const store = createRevealWindowStateStore({
       storage,

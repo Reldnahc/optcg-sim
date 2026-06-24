@@ -2,34 +2,48 @@ import { describe, expect, it } from "vitest";
 
 import type {
   CardId,
+  EffectTextSpotlightHistoryEntry,
   EffectTextSpanId,
   EngineEventId,
   InstanceId,
   PlayerId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import {
   advanceSpotlightPlayback,
   appendSpotlightPlaybackSources,
-  consumeResolvedSpotlightSourceKeys,
-  consumeSpotlightSourceSignatures,
   currentSpotlightPlaybackEntry,
   effectSpotlightDisplayForEntry,
   effectSpotlightModel,
   effectSpotlightModelForPlayback,
-  queuedResolvedSpotlightSources,
-  shouldDisplayLiveSpotlightSource,
+  effectSpotlightStateForModel,
   type EffectSpotlightState,
+  type EffectSpotlightControls,
   type UseEffectSpotlightState as HookState,
 } from "./use-effect-spotlight.js";
 
 type ControlsOnly = Extract<HookState, { active?: undefined }>;
 
+const publicPendingId = (value: string): PublicPendingDecisionId =>
+  value as PublicPendingDecisionId;
+
+const controls: EffectSpotlightControls = {
+  paused: false,
+  canRewind: true,
+  canStepForward: false,
+  rewind: () => undefined,
+  togglePaused: () => undefined,
+  stepForward: () => undefined,
+  catchUp: () => undefined,
+};
+
 const source = (
   key: string,
   spanId: EffectTextSpanId,
   mode: "live" | "resolved" = "resolved",
-) => ({
+  pendingDecisionId?: PublicPendingDecisionId,
+): EffectTextSpotlightHistoryEntry => ({
   active: {
     source: {
       instanceId: "source-1" as InstanceId,
@@ -43,9 +57,7 @@ const source = (
   semanticKey: `p1|source-1|OP00-001|effect|${spanId}`,
   mode,
   status: mode === "live" ? ("pending" as const) : ("resolved" as const),
-  ...(mode === "live" && key.startsWith("decision:") && key.includes("|")
-    ? { pendingDecisionId: key.slice("decision:".length, key.indexOf("|")) }
-    : {}),
+  ...(pendingDecisionId === undefined ? {} : { pendingDecisionId }),
 });
 
 const combatSource = {
@@ -83,7 +95,7 @@ describe("effect spotlight model", () => {
       minimumDwellMs: 2_000,
       graceMs: 800,
       entry,
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
     });
 
     expect(model?.pinned).toBe(true);
@@ -98,7 +110,6 @@ describe("effect spotlight model", () => {
     };
 
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous,
       sources: [
         source("event:first", "span:first"),
@@ -118,7 +129,6 @@ describe("effect spotlight model", () => {
 
   it("starts server-projected history at the present source on initial load", () => {
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       initialCursorKey: "event:second",
       previous: {
         entries: [],
@@ -141,7 +151,6 @@ describe("effect spotlight model", () => {
 
   it("keeps combat sources in the same rewindable playback queue", () => {
     const state = appendSpotlightPlaybackSources({
-      consumedKeys: new Set(),
       previous: {
         entries: [],
         cursorIndex: undefined,
@@ -149,7 +158,6 @@ describe("effect spotlight model", () => {
         fastForwarded: false,
       },
       sources: [combatSource],
-      sourceKind: "serverTimeline",
     });
 
     expect(currentSpotlightPlaybackEntry(state)).toBe(combatSource);
@@ -166,14 +174,15 @@ describe("effect spotlight model", () => {
   });
 
   it("appends repeated effects when a new event key reuses a card span signature", () => {
+    const first = source("event:first", "span:first");
+    const second = source("event:second", "span:first");
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: {
-        entries: [source("event:first", "span:first")],
+        entries: [first],
         cursorIndex: 0,
         paused: false,
       },
-      sources: [source("event:second", "span:first")],
+      sources: [first, second],
     });
 
     expect(next.entries.map((entry) => entry.key)).toEqual([
@@ -182,80 +191,17 @@ describe("effect spotlight model", () => {
     ]);
   });
 
-  it("suppresses only the first resolved source already shown live", () => {
-    const suppressedResolvedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
-      source("decision:first", "span:first", "live"),
-    ]);
-
-    const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
-      suppressedResolvedSignatures,
-      previous: {
-        entries: [source("decision:first", "span:first", "live")],
-        cursorIndex: 0,
-        paused: false,
-      },
-      sources: [
-        source("event:resolved-duplicate", "span:first"),
-        source("event:later-repeat", "span:first"),
-      ],
-    });
-
-    expect(next.entries.map((entry) => entry.key)).toEqual([
-      "decision:first",
-      "event:later-repeat",
-    ]);
-    expect([...suppressedResolvedSignatures]).toEqual([]);
-  });
-
-  it("queues unresolved search follow-up spans after the search selection was shown live", () => {
-    const suppressedResolvedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
-      source("decision:search-selection", "span:search:selection", "live"),
-    ]);
-
-    const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
-      suppressedResolvedSignatures,
-      previous: {
-        entries: [
-          source("decision:search-selection", "span:search:selection", "live"),
-        ],
-        cursorIndex: 0,
-        paused: false,
-      },
-      sources: [
-        source(
-          "event:resolved-search:span:search:selection",
-          "span:search:selection",
-        ),
-        source(
-          "event:resolved-search:span:search:remaining",
-          "span:search:remaining",
-        ),
-      ],
-    });
-
-    expect(next.entries.map((entry) => entry.key)).toEqual([
-      "decision:search-selection",
-      "event:resolved-search:span:search:remaining",
-    ]);
-    expect([...suppressedResolvedSignatures]).toEqual([]);
-  });
-
   it("keeps the cursor on a reviewed past entry when new sources arrive", () => {
+    const first = source("event:first", "span:first");
+    const second = source("event:second", "span:second");
+    const third = source("event:third", "span:third");
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: {
-        entries: [
-          source("event:first", "span:first"),
-          source("event:second", "span:second"),
-        ],
+        entries: [first, second],
         cursorIndex: 0,
         paused: true,
       },
-      sources: [source("event:third", "span:third")],
+      sources: [first, second, third],
     });
 
     expect(next.entries.map((entry) => entry.key)).toEqual([
@@ -340,7 +286,7 @@ describe("effect spotlight model", () => {
   it("fast-forwards to the latest pending decision entry", () => {
     const next = advanceSpotlightPlayback({
       command: "catchUp",
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
       state: {
         entries: [
           source("event:first", "span:first"),
@@ -348,6 +294,7 @@ describe("effect spotlight model", () => {
             "decision:decision-1|source-1||span:pending",
             "span:pending",
             "live",
+            publicPendingId("spotlight:pending:decision-1"),
           ),
         ],
         cursorIndex: 0,
@@ -368,13 +315,11 @@ describe("effect spotlight model", () => {
     const second = source("event:second", "span:body");
 
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: {
         entries: [first],
         cursorIndex: 0,
         paused: false,
       },
-      sourceKind: "serverTimeline",
       sources: [first, second],
     });
 
@@ -386,23 +331,21 @@ describe("effect spotlight model", () => {
   });
 
   it("does not interrupt past review when a live pending decision is appended", () => {
+    const first = source("event:first", "span:first");
+    const second = source("event:second", "span:second");
+    const pending = source("decision:pending", "span:pending", "live");
     const initial = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: {
         entries: [],
         cursorIndex: undefined,
         paused: false,
       },
-      sources: [
-        source("event:first", "span:first"),
-        source("event:second", "span:second"),
-      ],
+      sources: [first, second],
     });
 
     const next = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
       previous: { ...initial, cursorIndex: 0, paused: true },
-      sources: [source("decision:pending", "span:pending", "live")],
+      sources: [first, second, pending],
     });
 
     expect(next.entries.map((entry) => entry.key)).toEqual([
@@ -526,8 +469,9 @@ describe("effect spotlight model", () => {
         "decision:decision-1|source-1||span:pending",
         "span:pending",
         "live",
+        publicPendingId("spotlight:pending:decision-1"),
       ),
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
     });
 
     expect(display?.activeKey).toBe(
@@ -547,8 +491,9 @@ describe("effect spotlight model", () => {
         "decision:decision:selectCards:search|source-1||span:search:selection",
         "span:search:selection",
         "live",
+        publicPendingId("spotlight:pending:selectCards:search"),
       ),
-      pendingDecisionId: "decision:orderCards:search",
+      pendingDecisionId: publicPendingId("spotlight:pending:orderCards:search"),
     });
 
     expect(display?.activeKey).toBe(
@@ -564,30 +509,25 @@ describe("effect spotlight model", () => {
       "decision:decision:selectCards:search|source-1||span:search:selection",
       "span:search:selection",
       "live",
+      publicPendingId("spotlight:pending:selectCards:search"),
     );
-    const suppressedResolvedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(suppressedResolvedSignatures, [
-      liveSelection,
-    ]);
+    const resolvedSelection = source(
+      "event:resolved-search:span:search:selection",
+      "span:search:selection",
+    );
+    const liveRemainder = source(
+      "decision:decision:orderCards:search|source-1||span:search:remaining",
+      "span:search:remaining",
+      "live",
+      publicPendingId("spotlight:pending:orderCards:search"),
+    );
     const playback = appendSpotlightPlaybackSources({
-      consumedKeys: new Set<string>(),
-      suppressedResolvedSignatures,
       previous: {
         entries: [liveSelection],
         cursorIndex: 0,
         paused: false,
       },
-      sources: [
-        source(
-          "event:resolved-search:span:search:selection",
-          "span:search:selection",
-        ),
-        source(
-          "decision:decision:orderCards:search|source-1||span:search:remaining",
-          "span:search:remaining",
-          "live",
-        ),
-      ],
+      sources: [resolvedSelection, liveRemainder],
     });
     const staleDisplay = effectSpotlightModelForPlayback({
       nowMs: 1_000,
@@ -596,7 +536,7 @@ describe("effect spotlight model", () => {
       graceMs: 800,
       playback,
       fallbackMode: "live",
-      pendingDecisionId: "decision:orderCards:search",
+      pendingDecisionId: publicPendingId("spotlight:pending:orderCards:search"),
     });
     const advancedPlayback = advanceSpotlightPlayback({
       command: "autoAdvance",
@@ -609,11 +549,11 @@ describe("effect spotlight model", () => {
       graceMs: 800,
       playback: advancedPlayback,
       fallbackMode: "live",
-      pendingDecisionId: "decision:orderCards:search",
+      pendingDecisionId: publicPendingId("spotlight:pending:orderCards:search"),
     });
 
     expect(playback.entries.map((entry) => entry.key)).toEqual([
-      "decision:decision:selectCards:search|source-1||span:search:selection",
+      "event:resolved-search:span:search:selection",
       "decision:decision:orderCards:search|source-1||span:search:remaining",
     ]);
     expect(staleDisplay?.pinned).toBe(false);
@@ -631,7 +571,7 @@ describe("effect spotlight model", () => {
       minimumDwellMs: 2_000,
       graceMs: 800,
       entry: source("event:resolved", "span:resolved"),
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
     });
 
     expect(display?.activeKey).toBe("event:resolved");
@@ -643,7 +583,7 @@ describe("effect spotlight model", () => {
   it("fast-forward displays the latest pending decision spotlight", () => {
     const playback = advanceSpotlightPlayback({
       command: "catchUp",
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
       state: {
         entries: [
           source("event:first", "span:first"),
@@ -651,6 +591,7 @@ describe("effect spotlight model", () => {
             "decision:decision-1|source-1||span:pending",
             "span:pending",
             "live",
+            publicPendingId("spotlight:pending:decision-1"),
           ),
         ],
         cursorIndex: 0,
@@ -665,7 +606,7 @@ describe("effect spotlight model", () => {
       graceMs: 800,
       playback,
       fallbackMode: "live",
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
     });
 
     expect(display?.activeKey).toBe(
@@ -673,6 +614,60 @@ describe("effect spotlight model", () => {
     );
     expect(display?.activeMode).toBe("live");
     expect(display?.pinned).toBe(true);
+  });
+
+  it("restores reconnect history at present key and catches up by public pending id", () => {
+    const first = source("event:first", "span:first");
+    const present = source("event:present", "span:present");
+    const pending = source(
+      "spotlight:pending:public-decision:0",
+      "span:pending",
+      "live",
+      publicPendingId("spotlight:pending:public-decision"),
+    );
+    const restored = appendSpotlightPlaybackSources({
+      initialCursorKey: present.key,
+      previous: {
+        entries: [],
+        cursorIndex: undefined,
+        paused: false,
+        fastForwarded: false,
+      },
+      sources: [first, present],
+    });
+    const rewound = advanceSpotlightPlayback({
+      command: "rewind",
+      state: restored,
+    });
+    const hidden = advanceSpotlightPlayback({
+      command: "catchUp",
+      state: rewound,
+    });
+    const controlsOnly = effectSpotlightStateForModel({
+      controls,
+      controlsVisible: hidden.entries.length > 0,
+      model: undefined,
+    });
+    const withPending = appendSpotlightPlaybackSources({
+      previous: hidden,
+      sources: [first, present, pending],
+    });
+    const caughtUp = advanceSpotlightPlayback({
+      command: "catchUp",
+      pendingDecisionId: publicPendingId("spotlight:pending:public-decision"),
+      state: withPending,
+    });
+
+    expect(restored.cursorIndex).toBe(1);
+    expect(rewound.cursorIndex).toBe(0);
+    expect(hidden.cursorIndex).toBeUndefined();
+    expect(controlsOnly).toEqual({ controls });
+    expect(withPending.entries.map((entry) => entry.key)).toEqual([
+      "event:first",
+      "event:present",
+      "spotlight:pending:public-decision:0",
+    ]);
+    expect(caughtUp.cursorIndex).toBe(2);
   });
 
   it("keeps a newer pending decision from interrupting past review display", () => {
@@ -690,7 +685,7 @@ describe("effect spotlight model", () => {
         paused: true,
       },
       fallbackMode: "live",
-      pendingDecisionId: "decision-1",
+      pendingDecisionId: publicPendingId("spotlight:pending:decision-1"),
     });
 
     expect(display?.activeKey).toBe("event:first");
@@ -812,236 +807,5 @@ describe("effect spotlight model", () => {
     expect(model?.activeMode).toBe("resolved");
     expect(model?.pinned).toBe(false);
     expect(model?.visibleUntilMs).toBe(3_200);
-  });
-
-  it("queues unseen resolved spotlights without replaying current or consumed events", () => {
-    const baseSource = {
-      instanceId: "source-1" as InstanceId,
-      cardId: "OP00-001" as CardId,
-      playerId: "p1" as PlayerId,
-    };
-    const queued = queuedResolvedSpotlightSources({
-      consumedKeys: new Set(["event:consumed"]),
-      currentKey: "event:current",
-      previousQueue: [
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:queued"],
-          },
-          key: "event:queued",
-          mode: "resolved",
-        },
-      ],
-      sources: [
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:current"],
-          },
-          key: "event:current",
-          mode: "resolved",
-        },
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:consumed"],
-          },
-          key: "event:consumed",
-          mode: "resolved",
-        },
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:next"],
-          },
-          key: "event:next",
-          mode: "resolved",
-        },
-      ],
-    });
-
-    expect(queued.map((source) => source.key)).toEqual([
-      "event:queued",
-      "event:next",
-    ]);
-  });
-
-  it("queues unresolved search follow-up spans after the search selection was displayed live", () => {
-    const baseSource = {
-      instanceId: "source-1" as InstanceId,
-      cardId: "OP00-001" as CardId,
-      playerId: "p1" as PlayerId,
-    };
-    const consumedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(consumedSignatures, [
-      {
-        active: {
-          source: baseSource,
-          activeSpanIds: ["span:search:selection"],
-        },
-        key: "decision:search-selection",
-        mode: "live",
-      },
-    ]);
-
-    const queued = queuedResolvedSpotlightSources({
-      consumedKeys: new Set(),
-      consumedSignatures,
-      currentKey: undefined,
-      previousQueue: [],
-      sources: [
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:search:selection"],
-          },
-          key: "event:resolved-search:span:search:selection",
-          mode: "resolved",
-        },
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:search:remaining"],
-          },
-          key: "event:resolved-search:span:search:remaining",
-          mode: "resolved",
-        },
-      ],
-    });
-
-    expect(queued.map((source) => source.key)).toEqual([
-      "event:resolved-search:span:search:remaining",
-    ]);
-  });
-
-  it("keeps resolved multi-span sources when only part of the source was displayed live", () => {
-    const baseSource = {
-      instanceId: "source-1" as InstanceId,
-      cardId: "OP00-001" as CardId,
-      playerId: "p1" as PlayerId,
-    };
-    const consumedSignatures = new Set<string>();
-    consumeSpotlightSourceSignatures(consumedSignatures, [
-      {
-        active: {
-          source: baseSource,
-          activeSpanIds: ["span:cost"],
-        },
-        key: "decision:cost",
-        mode: "live",
-      },
-    ]);
-
-    const queued = queuedResolvedSpotlightSources({
-      consumedKeys: new Set(),
-      consumedSignatures,
-      currentKey: undefined,
-      previousQueue: [],
-      sources: [
-        {
-          active: {
-            source: baseSource,
-            activeSpanIds: ["span:cost", "span:body"],
-          },
-          key: "event:resolved-body",
-          mode: "resolved",
-        },
-      ],
-    });
-
-    expect(queued.map((source) => source.key)).toEqual(["event:resolved-body"]);
-  });
-
-  it("holds live pending-decision spotlight sources behind active resolved queue work", () => {
-    const entry = source(
-      "event:resolved:already-queued",
-      "span:already-queued",
-    );
-    const resolvedModel = effectSpotlightModel({
-      nowMs: 1_000,
-      previous: undefined,
-      minimumDwellMs: 2_000,
-      graceMs: 800,
-      entry,
-      pendingDecisionId: undefined,
-    });
-
-    expect(
-      shouldDisplayLiveSpotlightSource({
-        liveSourceExists: true,
-        model: resolvedModel,
-        pendingResolvedSourceCount: 0,
-        resolvedQueueLength: 0,
-      }),
-    ).toBe(false);
-    expect(
-      shouldDisplayLiveSpotlightSource({
-        liveSourceExists: true,
-        model: undefined,
-        pendingResolvedSourceCount: 0,
-        resolvedQueueLength: 1,
-      }),
-    ).toBe(false);
-    expect(
-      shouldDisplayLiveSpotlightSource({
-        liveSourceExists: true,
-        model: undefined,
-        pendingResolvedSourceCount: 0,
-        resolvedQueueLength: 0,
-      }),
-    ).toBe(true);
-    expect(
-      shouldDisplayLiveSpotlightSource({
-        liveSourceExists: true,
-        model: undefined,
-        pendingResolvedSourceCount: 1,
-        resolvedQueueLength: 0,
-      }),
-    ).toBe(false);
-  });
-
-  it("can seed initial resolved sources as consumed without blocking later sources", () => {
-    const baseSource = {
-      instanceId: "source-1" as InstanceId,
-      cardId: "OP00-001" as CardId,
-      playerId: "p1" as PlayerId,
-    };
-    const historical = {
-      active: {
-        source: baseSource,
-        activeSpanIds: ["span:historical" as EffectTextSpanId],
-      },
-      key: "event:historical",
-      mode: "resolved" as const,
-    };
-    const next = {
-      active: {
-        source: baseSource,
-        activeSpanIds: ["span:next" as EffectTextSpanId],
-      },
-      key: "event:next",
-      mode: "resolved" as const,
-    };
-    const consumedKeys = new Set<string>();
-
-    consumeResolvedSpotlightSourceKeys(consumedKeys, [historical]);
-
-    expect(
-      queuedResolvedSpotlightSources({
-        consumedKeys,
-        currentKey: undefined,
-        previousQueue: [],
-        sources: [historical],
-      }),
-    ).toEqual([]);
-    expect(
-      queuedResolvedSpotlightSources({
-        consumedKeys,
-        currentKey: undefined,
-        previousQueue: [],
-        sources: [historical, next],
-      }).map((source) => source.key),
-    ).toEqual(["event:next"]);
   });
 });

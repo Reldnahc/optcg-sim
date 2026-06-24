@@ -56,7 +56,7 @@ const revealIdFromEvent = (event: EngineEvent): string => {
   return String(event.id);
 };
 
-const isOpponentSelectedRevealEvent = (event: EngineEvent): boolean => {
+export const isSelectedRevealEvent = (event: EngineEvent): boolean => {
   if (!isRecord(event.payload)) {
     return false;
   }
@@ -67,7 +67,7 @@ const isOpponentSelectedRevealEvent = (event: EngineEvent): boolean => {
   );
 };
 
-const isRevealFromHandCostEvent = (event: EngineEvent): boolean => {
+export const isRevealFromHandCostEvent = (event: EngineEvent): boolean => {
   if (!isRecord(event.payload)) {
     return false;
   }
@@ -82,7 +82,7 @@ const isRevealFromHandCostEvent = (event: EngineEvent): boolean => {
   );
 };
 
-const isLifeRevealEvent = (event: EngineEvent): boolean => {
+export const isLifeRevealEvent = (event: EngineEvent): boolean => {
   if (!isRecord(event.payload)) {
     return false;
   }
@@ -126,7 +126,7 @@ export const opponentRevealsFromEvents = (
     const showToBothPlayers = isLifeRevealEvent(event);
     if (
       !showToBothPlayers &&
-      !isOpponentSelectedRevealEvent(event) &&
+      !isSelectedRevealEvent(event) &&
       !isRevealFromHandCostEvent(event)
     ) {
       continue;

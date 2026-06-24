@@ -13,6 +13,8 @@ const p1 = "p1" as PlayerId;
 
 const basePayCostDecision = {
   id: "decision-quick-pay" as DecisionId,
+  spotlightPendingId:
+    "spotlight:decision-quick-pay" as PublicPendingDecision["spotlightPendingId"],
   type: "payCost",
   playerId: p1,
   prompt: "Pay cost",

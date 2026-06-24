@@ -33,7 +33,6 @@ import {
   useEffectSpotlight,
 } from "./use-effect-spotlight.js";
 import { buildEffectSpotlightPresentation } from "./effect-spotlight-presentation.js";
-import { activeEffectTextSourcesForSpotlight } from "./effect-spotlight-source.js";
 import { useControlPanelLayout } from "./use-control-panel-layout.js";
 import { useFloatingWindowState } from "./use-floating-window-state.js";
 import { useInfoWindowConfig } from "./use-info-window-config.js";
@@ -159,7 +158,6 @@ export const MatchApp = ({
     controlDockHeight,
     controlDockActive,
     startControlRailResize,
-    startControlDockResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,
@@ -327,27 +325,12 @@ export const MatchApp = ({
   const showActionLogWindow = actionLogOpen;
   const showSettingsWindow = settingsOpen;
   const effectSpotlightHistory = playerSnapshot?.view.effectSpotlightHistory;
-  const activeEffectTextSources =
-    effectSpotlightHistory?.entries ??
-    (playerSnapshot === undefined
-      ? undefined
-      : activeEffectTextSourcesForSpotlight({
-          activeEffectText: playerSnapshot.view.activeEffectText,
-          pendingDecision: playerSnapshot.view.pendingDecision,
-          events: playerSnapshot.view.events,
-        }));
   const effectSpotlight = useEffectSpotlight({
-    active: undefined,
-    ...(activeEffectTextSources === undefined
+    ...(effectSpotlightHistory === undefined
       ? {}
-      : { activeSources: activeEffectTextSources }),
-    consumeInitialResolvedSources: effectSpotlightHistory === undefined,
+      : { activeSources: effectSpotlightHistory.entries }),
     initialCursorKey: effectSpotlightHistory?.presentKey,
-    pendingDecisionId: playerSnapshot?.view.pendingDecision?.id,
-    sourceKind:
-      effectSpotlightHistory === undefined
-        ? "legacyFallback"
-        : "serverTimeline",
+    pendingDecisionId: playerSnapshot?.view.pendingDecision?.spotlightPendingId,
   });
   const effectSpotlightEntry = effectSpotlight?.entry;
   const effectSpotlightPresentation = buildEffectSpotlightPresentation({
@@ -627,7 +610,6 @@ export const MatchApp = ({
           dockTabs={controlDockTabs}
           activeDockTabId={controlDockActiveTabId}
           onResizePointerDown={startControlRailResize}
-          onDockResizePointerDown={startControlDockResize}
           onDockTabChange={setControlDockActiveTabId}
           onDockTabClose={closeDockWindow}
           onDockTabDragOut={dragOutDockWindow}

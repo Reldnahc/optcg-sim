@@ -64,7 +64,7 @@ export const defaultMatchVisualSettingsValues: MatchVisualSettingsValues = {
   backgroundMode: "image",
   confirmAttachDon: true,
   confirmEndTurn: false,
-  quickPayActivateMainCosts: false,
+  quickPayActivateMainCosts: true,
   reduceDeckStackRendering: false,
   reducedMotion: false,
   soundVolume: 70,

@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import type { CardId, CardRef, InstanceId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  CardRef,
+  EngineEventId,
+  InstanceId,
+  PlayerId,
+} from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import { buildEffectSpotlightPresentation } from "./effect-spotlight-presentation.js";
 import type {
   CombatSpotlightActiveSourceInput,
   EffectTextSpotlightActiveSourceInput,
+  PlayedCardSpotlightActiveSourceInput,
 } from "./use-effect-spotlight-playback.js";
 
 const ref = (
@@ -33,10 +40,12 @@ const effectEntry = (
   overrides: Partial<EffectTextSpotlightActiveSourceInput> = {},
 ): EffectTextSpotlightActiveSourceInput => ({
   kind: "effectText",
+  id: "spotlight:effect:event:target:0",
   key: "event:target",
   semanticKey: "effect|target",
   mode: "resolved",
   status: "resolved",
+  resolvedEventId: "event:target" as EngineEventId,
   active: {
     source: ref("source-1", "OP00-001"),
     activeSpanIds: ["span:body:ko"],
@@ -46,10 +55,12 @@ const effectEntry = (
 
 const combatEntry = (): CombatSpotlightActiveSourceInput => ({
   kind: "combat",
+  id: "spotlight:combat:event:combat:0",
   key: "event:combat",
   semanticKey: "combat|attack",
   mode: "resolved",
   status: "resolved",
+  resolvedEventId: "event:combat" as EngineEventId,
   combat: {
     eventKind: "attackDeclared",
     attacker: ref("attacker-1", "OP00-010", "p1"),
@@ -59,19 +70,15 @@ const combatEntry = (): CombatSpotlightActiveSourceInput => ({
   },
 });
 
-const counterEntry = (): CombatSpotlightActiveSourceInput => ({
-  kind: "combat",
-  key: "event:counter",
-  semanticKey: "combat|counter",
+const playedCardEntry = (): PlayedCardSpotlightActiveSourceInput => ({
+  kind: "playedCard",
+  id: "spotlight:played:event:played:0",
+  key: "event:played",
+  semanticKey: "playedCard|event:played",
   mode: "resolved",
   status: "resolved",
-  combat: {
-    eventKind: "counterUsed",
-    attacker: ref("counter-1", "OP00-030", "p2"),
-    defender: ref("defender-1", "OP00-020", "p2"),
-    attackerPower: 2000,
-    defenderPower: 5000,
-  },
+  resolvedEventId: "event:played" as EngineEventId,
+  source: ref("played-1", "OP00-030", "p1"),
 });
 
 describe("effect spotlight presentation", () => {
@@ -92,25 +99,6 @@ describe("effect spotlight presentation", () => {
     expect(combatPresentation.relationLabel).toBe("attacks");
     expect(combatPresentation.sourcePower).toBe(7000);
     expect(combatPresentation.relatedPowers).toEqual([5000]);
-  });
-
-  it("labels counter spotlights as counters instead of attacks", () => {
-    const presentation = buildEffectSpotlightPresentation({
-      cardModel,
-      entry: counterEntry(),
-    });
-
-    expect(presentation?.kind).toBe("cardLink");
-    if (presentation?.kind !== "cardLink") {
-      return;
-    }
-    expect(presentation.sourceCard.name).toBe("Card counter-1");
-    expect(presentation.relatedCards.map((card) => card.instanceId)).toEqual([
-      "defender-1",
-    ]);
-    expect(presentation.relationLabel).toBe("counters");
-    expect(presentation.sourcePower).toBe(2000);
-    expect(presentation.relatedPowers).toEqual([5000]);
   });
 
   it("builds targeting presentation from current active span target links", () => {
@@ -158,5 +146,51 @@ describe("effect spotlight presentation", () => {
     });
 
     expect(presentation?.kind).toBe("effectText");
+  });
+
+  it("builds targeting presentation when current target links point at the source", () => {
+    const sourceCard = ref("source-1", "OP00-001");
+    const presentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: effectEntry({
+        active: {
+          source: sourceCard,
+          activeSpanIds: ["span:body:ko"],
+          targetLinks: [
+            {
+              spanId: "span:body:ko",
+              relation: "selectedTarget",
+              cards: [sourceCard],
+            },
+          ],
+        },
+      }),
+    });
+
+    expect(presentation?.kind).toBe("cardLink");
+    if (presentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(presentation.sourceCard.name).toBe("Card source-1");
+    expect(presentation.relatedCards.map((card) => card.instanceId)).toEqual([
+      "source-1",
+    ]);
+    expect(presentation.relationLabel).toBe("targets");
+  });
+
+  it("builds a card-play fallback from structured played-card entries", () => {
+    const presentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: playedCardEntry(),
+    });
+
+    expect(presentation?.kind).toBe("cardLink");
+    if (presentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(presentation.active).toBeUndefined();
+    expect(presentation.sourceCard.name).toBe("Card played-1");
+    expect(presentation.relatedCards).toEqual([]);
+    expect(presentation.relationLabel).toBe("played");
   });
 });

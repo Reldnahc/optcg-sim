@@ -42,6 +42,8 @@ const cardRef = (id: string): CardRef => ({
 
 const baseDecision = {
   id: "decision-1" as DecisionId,
+  spotlightPendingId:
+    "spotlight:decision-1" as PublicPendingDecision["spotlightPendingId"],
   playerId: p1,
   prompt: "Choose cards",
   causedBy: { type: "playerAction", actionId: "action-1" },

@@ -4,6 +4,12 @@
   min-width: 0;
 }
 
+.settings-window-actions {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .settings-field {
   display: grid;
   gap: calc(var(--floating-window-body-padding) * 0.55);

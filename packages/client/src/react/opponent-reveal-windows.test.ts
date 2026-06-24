@@ -117,6 +117,37 @@ describe("opponent reveal windows", () => {
     assert.equal(activeWindows[0]?.revealId, revealId);
   });
 
+  test("does not reopen a selected search reveal record for the player who chose it", () => {
+    const ownerWindows = opponentRevealWindowsFromState({
+      currentPlayerId: p1,
+      playerSnapshot: snapshotWithActiveReveal(true),
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+    const opponentWindows = opponentRevealWindowsFromState({
+      currentPlayerId: p2,
+      playerSnapshot: snapshotWithActiveReveal(true),
+      matchScope,
+      revealWindowState: {
+        scope: matchScope,
+        dismissed: new Set(),
+        minimized: new Set(),
+      },
+      activeDismissedRevealIds: new Set(),
+      cardModel,
+    });
+
+    assert.deepEqual(ownerWindows, []);
+    assert.equal(opponentWindows.length, 1);
+    assert.equal(opponentWindows[0]?.revealId, revealId);
+  });
+
   test("opens reveal-from-hand cost events for the opponent only", () => {
     const opponentWindows = opponentRevealWindowsFromState({
       currentPlayerId: p2,

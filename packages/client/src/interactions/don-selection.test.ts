@@ -176,6 +176,8 @@ describe("DON selection interaction", () => {
     const model = board();
     const decision: PublicSelectTargetsDecision = {
       id: "decision:select-owner-don" as DecisionId,
+      spotlightPendingId:
+        "spotlight:decision:select-owner-don" as PublicSelectTargetsDecision["spotlightPendingId"],
       type: "selectTargets",
       playerId: "p1" as PublicSelectTargetsDecision["playerId"],
       prompt: "Select DON!!.",
@@ -236,6 +238,8 @@ describe("DON selection interaction", () => {
     const model = board();
     const decision: PublicSelectTargetsDecision = {
       id: "decision:select-owner-don" as DecisionId,
+      spotlightPendingId:
+        "spotlight:decision:select-owner-don" as PublicSelectTargetsDecision["spotlightPendingId"],
       type: "selectTargets",
       playerId: "p1" as PublicSelectTargetsDecision["playerId"],
       prompt: "Select DON!!.",

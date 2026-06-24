@@ -1,13 +1,14 @@
 import type {
   ActiveEffectTextPresentation,
   CombatSpotlightPresentation,
-  DecisionId,
   EffectTextSpanId,
+  PublicPendingDecisionId,
 } from "@optcg/types";
 
 import {
   currentSpotlightPlaybackEntry,
   isCombatSpotlightSource,
+  isPlayedCardSpotlightSource,
   type EffectSpotlightPlaybackEntry,
   type EffectSpotlightPlaybackState,
 } from "./use-effect-spotlight-playback.js";
@@ -33,7 +34,7 @@ export interface EffectSpotlightModelInput {
   readonly graceMs: number;
   readonly entry: EffectSpotlightPlaybackEntry | undefined;
   readonly cursorVersion?: number | undefined;
-  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly pendingDecisionId: PublicPendingDecisionId | undefined;
 }
 
 export interface EffectSpotlightDisplayInput {
@@ -44,92 +45,44 @@ export interface EffectSpotlightDisplayInput {
   readonly entry: EffectSpotlightPlaybackEntry | undefined;
   readonly cursorVersion?: number | undefined;
   readonly previousCursorVersion?: number | undefined;
-  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly pendingDecisionId: PublicPendingDecisionId | undefined;
 }
 
 export const effectSpotlightTimerAnimationKey = (
   state: Pick<EffectSpotlightState, "activeKey" | "entry" | "shownAtMs">,
-): string =>
-  `${state.entry.semanticKey ?? state.activeKey}:${String(state.shownAtMs)}`;
+): string => `${state.activeKey}:${String(state.shownAtMs)}`;
 
 const liveEntryMatchesPendingDecision = (
   entry: EffectSpotlightPlaybackEntry,
-  pendingDecisionId: DecisionId | string | undefined,
+  pendingDecisionId: PublicPendingDecisionId | undefined,
 ): boolean =>
   pendingDecisionId !== undefined &&
   entry.mode === "live" &&
+  !isCombatSpotlightSource(entry) &&
+  !isPlayedCardSpotlightSource(entry) &&
   entry.pendingDecisionId !== undefined &&
   String(entry.pendingDecisionId) === String(pendingDecisionId);
-
-const spanKey = (spanIds: readonly EffectTextSpanId[]): string =>
-  spanIds.join("\n");
 
 const entrySourceInstanceId = (entry: EffectSpotlightPlaybackEntry): string =>
   isCombatSpotlightSource(entry)
     ? String(entry.combat.attacker.instanceId)
-    : String(entry.active.source.instanceId);
+    : isPlayedCardSpotlightSource(entry)
+      ? String(entry.source.instanceId)
+      : String(entry.active.source.instanceId);
 
 const entrySpanIds = (
   entry: EffectSpotlightPlaybackEntry,
 ): readonly EffectTextSpanId[] =>
-  isCombatSpotlightSource(entry) ? [] : entry.active.activeSpanIds;
-
-const sameSpotlightIdentity = (
-  previous: EffectSpotlightState,
-  entry: EffectSpotlightPlaybackEntry,
-  activeKey: string,
-): boolean =>
-  previous.activeKey === activeKey ||
-  (previous.entry.semanticKey !== undefined &&
-    previous.entry.semanticKey === entry.semanticKey);
-
-const entryDetailSignature = (entry: EffectSpotlightPlaybackEntry): string => {
-  if (isCombatSpotlightSource(entry)) {
-    return [
-      entry.combat.eventKind,
-      String(entry.combat.attacker.playerId),
-      String(entry.combat.attacker.instanceId),
-      String(entry.combat.attacker.cardId),
-      String(entry.combat.defender.playerId),
-      String(entry.combat.defender.instanceId),
-      String(entry.combat.defender.cardId),
-      entry.combat.attackerPower === undefined
-        ? ""
-        : String(entry.combat.attackerPower),
-      entry.combat.defenderPower === undefined
-        ? ""
-        : String(entry.combat.defenderPower),
-    ].join("|");
-  }
-  const activeSpanIds = new Set(entry.active.activeSpanIds);
-  return (entry.active.targetLinks ?? [])
-    .filter((link) => activeSpanIds.has(link.spanId) && link.cards.length > 0)
-    .map((link) =>
-      [
-        link.spanId,
-        link.relation,
-        ...link.cards.map((card) =>
-          [
-            String(card.playerId),
-            String(card.instanceId),
-            String(card.cardId),
-          ].join("|"),
-        ),
-      ].join(">"),
-    )
-    .join("\n");
-};
+  isCombatSpotlightSource(entry) || isPlayedCardSpotlightSource(entry)
+    ? []
+    : entry.active.activeSpanIds;
 
 const sameSpotlightEntry = (
   previous: EffectSpotlightState,
   entry: EffectSpotlightPlaybackEntry,
   activeKey: string,
 ): boolean =>
-  sameSpotlightIdentity(previous, entry, activeKey) &&
-  previous.entry.kind === entry.kind &&
-  previous.sourceInstanceId === entrySourceInstanceId(entry) &&
-  spanKey(previous.activeSpanIds) === spanKey(entrySpanIds(entry)) &&
-  entryDetailSignature(previous.entry) === entryDetailSignature(entry);
+  previous.activeKey === activeKey && previous.entry.id === entry.id;
 
 export const effectSpotlightModel = ({
   cursorVersion,
@@ -152,7 +105,9 @@ export const effectSpotlightModel = ({
         entry,
         ...(isCombatSpotlightSource(entry)
           ? { combat: entry.combat }
-          : { active: entry.active }),
+          : isPlayedCardSpotlightSource(entry)
+            ? {}
+            : { active: entry.active }),
         activeKey: nextActiveKey,
         activeMode,
         sourceInstanceId: entrySourceInstanceId(entry),
@@ -165,7 +120,9 @@ export const effectSpotlightModel = ({
       entry,
       ...(isCombatSpotlightSource(entry)
         ? { combat: entry.combat }
-        : { active: entry.active }),
+        : isPlayedCardSpotlightSource(entry)
+          ? {}
+          : { active: entry.active }),
       activeKey: nextActiveKey,
       activeMode,
       sourceInstanceId: entrySourceInstanceId(entry),
@@ -236,7 +193,7 @@ export const effectSpotlightModelForPlayback = ({
   readonly graceMs: number;
   readonly playback: EffectSpotlightPlaybackState;
   readonly fallbackMode: "live" | "resolved";
-  readonly pendingDecisionId: DecisionId | string | undefined;
+  readonly pendingDecisionId: PublicPendingDecisionId | undefined;
 }): EffectSpotlightState | undefined =>
   effectSpotlightDisplayForEntry({
     nowMs,
@@ -246,19 +203,3 @@ export const effectSpotlightModelForPlayback = ({
     entry: currentSpotlightPlaybackEntry(playback),
     pendingDecisionId,
   });
-
-export const shouldDisplayLiveSpotlightSource = ({
-  liveSourceExists,
-  model,
-  pendingResolvedSourceCount,
-  resolvedQueueLength,
-}: {
-  readonly liveSourceExists: boolean;
-  readonly model: EffectSpotlightState | undefined;
-  readonly pendingResolvedSourceCount: number;
-  readonly resolvedQueueLength: number;
-}): boolean =>
-  liveSourceExists &&
-  pendingResolvedSourceCount === 0 &&
-  resolvedQueueLength === 0 &&
-  (model === undefined || model.activeMode === "live");

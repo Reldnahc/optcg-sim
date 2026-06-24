@@ -6,14 +6,27 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
-import { SettingsWindow } from "./SettingsWindow.js";
+import {
+  SettingsWindow,
+  completeHexColorFromDraft,
+  resetMatchVisualSettings,
+} from "./SettingsWindow.js";
 import { MatchVisualSettingsProvider } from "./match-visual-settings-context.js";
-import { noopMatchVisualSettings } from "./match-visual-settings.js";
+import {
+  defaultMatchVisualSettingsValues,
+  noopMatchVisualSettings,
+  type MatchVisualSettings,
+  type MatchVisualSettingsValues,
+} from "./match-visual-settings.js";
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import { ControlRail } from "./ControlRail.js";
 import { SettingsButton } from "./SettingsButton.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
+
+type CapturedSettings = {
+  -readonly [K in keyof MatchVisualSettingsValues]?: MatchVisualSettingsValues[K];
+};
 
 describe("settings window", () => {
   test("renders as a real closable floating window", () => {
@@ -37,6 +50,7 @@ describe("settings window", () => {
     );
 
     assert.match(markup, /Background image/u);
+    assert.match(markup, /Revert to defaults/u);
     assert.match(markup, /Background color/u);
     assert.doesNotMatch(markup, /Background type/u);
     assert.doesNotMatch(markup, /Image fit/u);
@@ -57,7 +71,8 @@ describe("settings window", () => {
     assert.match(markup, /<span>Window opacity<\/span><input[^>]*min="50"/u);
     assert.match(markup, /<span>Playmat opacity<\/span><input[^>]*min="50"/u);
     assert.match(markup, /class="[^"]*settings-color-swatch/u);
-    assert.match(markup, /pattern="#\[0-9a-fA-F\]\{6\}"/u);
+    assert.match(markup, /pattern="#\?\[0-9a-fA-F\]\{6\}"/u);
+    assert.match(markup, /maxLength="7"/u);
     assert.match(markup, /Sound volume/u);
     assert.match(markup, /Reduce deck stack rendering/u);
     assert.match(markup, /Reduced motion/u);
@@ -68,6 +83,83 @@ describe("settings window", () => {
     assert.match(markup, /Confirm attach DON/u);
     assert.match(markup, /Confirm end turn/u);
     assert.match(markup, /type="checkbox"/u);
+  });
+
+  test("color text fields allow partial drafts and normalize complete codes", () => {
+    assert.equal(completeHexColorFromDraft("#"), undefined);
+    assert.equal(completeHexColorFromDraft("#12"), undefined);
+    assert.equal(completeHexColorFromDraft("#12345g"), undefined);
+    assert.equal(completeHexColorFromDraft("#AABBCC"), "#aabbcc");
+    assert.equal(completeHexColorFromDraft("AABBCC"), "#aabbcc");
+    assert.equal(completeHexColorFromDraft("  112233  "), "#112233");
+  });
+
+  test("revert to defaults applies every default visual setting", () => {
+    const captured: CapturedSettings = {};
+    const settings: MatchVisualSettings = {
+      ...noopMatchVisualSettings,
+      setBackgroundColor: (value) => {
+        captured.backgroundColor = value;
+      },
+      setBackgroundImageUrl: (value) => {
+        captured.backgroundImageUrl = value;
+      },
+      setBackgroundImageFit: (value) => {
+        captured.backgroundImageFit = value;
+      },
+      setBackgroundImageCropZoom: (value) => {
+        captured.backgroundImageCropZoom = value;
+      },
+      setBackgroundImagePositionX: (value) => {
+        captured.backgroundImagePositionX = value;
+      },
+      setBackgroundImagePositionY: (value) => {
+        captured.backgroundImagePositionY = value;
+      },
+      setBackgroundMode: (value) => {
+        captured.backgroundMode = value;
+      },
+      setConfirmAttachDon: (value) => {
+        captured.confirmAttachDon = value;
+      },
+      setConfirmEndTurn: (value) => {
+        captured.confirmEndTurn = value;
+      },
+      setQuickPayActivateMainCosts: (value) => {
+        captured.quickPayActivateMainCosts = value;
+      },
+      setReduceDeckStackRendering: (value) => {
+        captured.reduceDeckStackRendering = value;
+      },
+      setReducedMotion: (value) => {
+        captured.reducedMotion = value;
+      },
+      setSoundVolume: (value) => {
+        captured.soundVolume = value;
+      },
+      setWindowColor: (value) => {
+        captured.windowColor = value;
+      },
+      setWindowOpacity: (value) => {
+        captured.windowOpacity = value;
+      },
+      setPlaymatColor: (value) => {
+        captured.playmatColor = value;
+      },
+      setPlaymatOpacity: (value) => {
+        captured.playmatOpacity = value;
+      },
+      setZoneBackgroundVisibility: (value) => {
+        captured.zoneBackgroundVisibility = value;
+      },
+      setZoneGuideVisibility: (value) => {
+        captured.zoneGuideVisibility = value;
+      },
+    };
+
+    resetMatchVisualSettings(settings);
+
+    assert.deepEqual(captured, defaultMatchVisualSettingsValues);
   });
 
   test("background controls switch between color and image settings", () => {
@@ -278,7 +370,7 @@ describe("settings window", () => {
     assert.match(settingsWindow, /setBackgroundImageCropZoom/u);
     assert.match(settingsWindow, /setBackgroundImagePositionX/u);
     assert.match(settingsWindow, /setBackgroundImagePositionY/u);
-    assert.doesNotMatch(settingsWindow, /setBackgroundMode/u);
+    assert.match(settingsWindow, /setBackgroundMode/u);
     assert.match(settingsWindow, /onPointerDown/u);
     assert.match(settingsWindow, /onPointerMove/u);
     assert.match(settingsWindow, /setPointerCapture/u);

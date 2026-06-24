@@ -3,7 +3,6 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
 import {
-  controlDockHeightFromDrag,
   controlDockSlotRect,
   defaultControlDockHeightForViewport,
   defaultControlRailWidthForViewport,
@@ -20,7 +19,6 @@ export interface ControlPanelLayoutController {
   controlDockHeight: number;
   controlDockActive: boolean;
   startControlRailResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
-  startControlDockResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
   completeControlDockDrop: (rect: WindowRect) => WindowRect | undefined;
   currentControlDockSlotRect: () => WindowRect | undefined;
@@ -76,30 +74,6 @@ const defaultControlDockHeightForCurrentViewport = (): number =>
         viewportHeight: window.innerHeight,
       });
 
-const controlPanelHeightForCurrentViewport = (): number => {
-  const controlsPanelRect = elementRect(".controls-panel");
-  if (controlsPanelRect !== undefined) {
-    return controlsPanelRect.height;
-  }
-  return typeof window === "undefined"
-    ? defaultControlDockHeight
-    : Math.max(defaultControlDockHeight, window.innerHeight - 16);
-};
-
-const controlDockBottomReservedSpaceForCurrentLayout = (): number => {
-  const controlsPanelRect = elementRect(".controls-panel");
-  const dockRect = elementRect(".control-window-dock");
-  if (controlsPanelRect === undefined || dockRect === undefined) {
-    return 0;
-  }
-  return Math.max(
-    0,
-    controlsPanelRect.y +
-      controlsPanelRect.height -
-      (dockRect.y + dockRect.height),
-  );
-};
-
 export const useControlPanelLayout = ({
   layoutStore,
 }: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
@@ -115,9 +89,7 @@ export const useControlPanelLayout = ({
     const layout = layoutStore?.loadControlPanelLayout();
     if (typeof window === "undefined") {
       setControlRailWidth(layout?.controlRailWidth ?? defaultControlRailWidth);
-      setControlDockHeight(
-        layout?.controlDockHeight ?? defaultControlDockHeight,
-      );
+      setControlDockHeight(defaultControlDockHeight);
       return;
     }
     const normalizedLayout = normalizeControlPanelLayoutForViewport({
@@ -127,20 +99,17 @@ export const useControlPanelLayout = ({
       playmatRight: playmatRightEdge(
         layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
       ),
-      controlPanelHeight: controlPanelHeightForCurrentViewport(),
-      controlDockBottomReservedSpace:
-        controlDockBottomReservedSpaceForCurrentLayout(),
     });
     setControlRailWidth(normalizedLayout.controlRailWidth);
     setControlDockHeight(normalizedLayout.controlDockHeight);
     if (
       layout !== undefined &&
-      (layout.controlRailWidth !== undefined ||
-        layout.controlDockHeight !== undefined) &&
-      (layout.controlRailWidth !== normalizedLayout.controlRailWidth ||
-        layout.controlDockHeight !== normalizedLayout.controlDockHeight)
+      layout.controlRailWidth !== undefined &&
+      layout.controlRailWidth !== normalizedLayout.controlRailWidth
     ) {
-      layoutStore?.saveControlPanelLayout(normalizedLayout);
+      layoutStore?.saveControlPanelLayout({
+        controlRailWidth: normalizedLayout.controlRailWidth,
+      });
     }
   }, [layoutStore]);
 
@@ -195,7 +164,6 @@ export const useControlPanelLayout = ({
         setControlRailWidth(nextWidth);
         layoutStore?.saveControlPanelLayout({
           controlRailWidth: nextWidth,
-          controlDockHeight,
         });
       };
       const stop = (): void => {
@@ -207,47 +175,7 @@ export const useControlPanelLayout = ({
       document.addEventListener("pointerup", stop, true);
       document.addEventListener("pointercancel", stop, true);
     },
-    [controlDockHeight, controlRailWidth, layoutStore],
-  );
-
-  const startControlDockResize = useCallback(
-    (event: ReactPointerEvent<HTMLButtonElement>): void => {
-      if (typeof document === "undefined") {
-        return;
-      }
-      event.preventDefault();
-      const controlsPanelRect = elementRect(".controls-panel");
-      if (controlsPanelRect === undefined) {
-        return;
-      }
-      const controlDockBottomReservedSpace =
-        controlDockBottomReservedSpaceForCurrentLayout();
-      const startHeight = controlDockHeight;
-      const startClientY = event.clientY;
-      const move = (moveEvent: PointerEvent): void => {
-        const nextHeight = controlDockHeightFromDrag({
-          startHeight,
-          startClientY,
-          currentClientY: moveEvent.clientY,
-          controlPanelHeight: controlsPanelRect.height,
-          controlDockBottomReservedSpace,
-        });
-        setControlDockHeight(nextHeight);
-        layoutStore?.saveControlPanelLayout({
-          controlRailWidth,
-          controlDockHeight: nextHeight,
-        });
-      };
-      const stop = (): void => {
-        document.removeEventListener("pointermove", move, true);
-        document.removeEventListener("pointerup", stop, true);
-        document.removeEventListener("pointercancel", stop, true);
-      };
-      document.addEventListener("pointermove", move, true);
-      document.addEventListener("pointerup", stop, true);
-      document.addEventListener("pointercancel", stop, true);
-    },
-    [controlDockHeight, controlRailWidth, layoutStore],
+    [controlRailWidth, layoutStore],
   );
 
   return {
@@ -255,7 +183,6 @@ export const useControlPanelLayout = ({
     controlDockHeight,
     controlDockActive,
     startControlRailResize,
-    startControlDockResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,

@@ -4,6 +4,7 @@ import type { ClientCardModel } from "../view-model.js";
 import type { EffectSpotlightPresentation } from "./EffectSpotlight.js";
 import {
   isCombatSpotlightSource,
+  isPlayedCardSpotlightSource,
   type EffectSpotlightPlaybackEntry,
 } from "./use-effect-spotlight-playback.js";
 
@@ -20,7 +21,7 @@ const cardKey = (card: CardRef): string =>
 const targetCardsForEntry = (
   entry: EffectSpotlightPlaybackEntry,
 ): readonly CardRef[] => {
-  if (isCombatSpotlightSource(entry)) {
+  if (isCombatSpotlightSource(entry) || isPlayedCardSpotlightSource(entry)) {
     return [];
   }
   const activeSpanIds = new Set(entry.active.activeSpanIds);
@@ -65,6 +66,15 @@ export const buildEffectSpotlightPresentation = ({
       tone: "combat",
       sourcePower: entry.combat.attackerPower,
       relatedPowers: [entry.combat.defenderPower],
+    };
+  }
+  if (isPlayedCardSpotlightSource(entry)) {
+    return {
+      kind: "cardLink",
+      sourceCard: cardModel(entry.source),
+      relatedCards: [],
+      relationLabel: "played",
+      tone: "targeting",
     };
   }
   const targetCards = targetCardsForEntry(entry);

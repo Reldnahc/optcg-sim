@@ -1,7 +1,11 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
-import type { MatchBackgroundImageFit } from "./match-visual-settings.js";
+import {
+  defaultMatchVisualSettingsValues,
+  type MatchBackgroundImageFit,
+  type MatchVisualSettings,
+} from "./match-visual-settings.js";
 import { useMatchVisualSettings } from "./match-visual-settings-context.js";
 
 export interface SettingsWindowProps {
@@ -39,6 +43,62 @@ const backgroundImageFitOptions = [
   ["fit", "Fit"],
   ["tile", "Tile"],
 ] as const satisfies readonly (readonly [MatchBackgroundImageFit, string])[];
+
+const fullHexColorPattern = /^#?[0-9a-fA-F]{6}$/u;
+
+export const completeHexColorFromDraft = (
+  draft: string,
+): string | undefined => {
+  const trimmed = draft.trim();
+  if (!fullHexColorPattern.test(trimmed)) {
+    return undefined;
+  }
+  return (trimmed.startsWith("#") ? trimmed : `#${trimmed}`).toLowerCase();
+};
+
+export const resetMatchVisualSettings = (
+  settings: MatchVisualSettings,
+): void => {
+  settings.setBackgroundColor(defaultMatchVisualSettingsValues.backgroundColor);
+  settings.setBackgroundImageUrl(
+    defaultMatchVisualSettingsValues.backgroundImageUrl,
+  );
+  settings.setBackgroundImageFit(
+    defaultMatchVisualSettingsValues.backgroundImageFit,
+  );
+  settings.setBackgroundImageCropZoom(
+    defaultMatchVisualSettingsValues.backgroundImageCropZoom,
+  );
+  settings.setBackgroundImagePositionX(
+    defaultMatchVisualSettingsValues.backgroundImagePositionX,
+  );
+  settings.setBackgroundImagePositionY(
+    defaultMatchVisualSettingsValues.backgroundImagePositionY,
+  );
+  settings.setBackgroundMode(defaultMatchVisualSettingsValues.backgroundMode);
+  settings.setConfirmAttachDon(
+    defaultMatchVisualSettingsValues.confirmAttachDon,
+  );
+  settings.setConfirmEndTurn(defaultMatchVisualSettingsValues.confirmEndTurn);
+  settings.setQuickPayActivateMainCosts(
+    defaultMatchVisualSettingsValues.quickPayActivateMainCosts,
+  );
+  settings.setReduceDeckStackRendering(
+    defaultMatchVisualSettingsValues.reduceDeckStackRendering,
+  );
+  settings.setReducedMotion(defaultMatchVisualSettingsValues.reducedMotion);
+  settings.setSoundVolume(defaultMatchVisualSettingsValues.soundVolume);
+  settings.setWindowColor(defaultMatchVisualSettingsValues.windowColor);
+  settings.setWindowOpacity(defaultMatchVisualSettingsValues.windowOpacity);
+  settings.setPlaymatColor(defaultMatchVisualSettingsValues.playmatColor);
+  settings.setPlaymatOpacity(defaultMatchVisualSettingsValues.playmatOpacity);
+  settings.setZoneBackgroundVisibility(
+    defaultMatchVisualSettingsValues.zoneBackgroundVisibility,
+  );
+  settings.setZoneGuideVisibility(
+    defaultMatchVisualSettingsValues.zoneGuideVisibility,
+  );
+};
 
 const SegmentedControl = <T extends string>({
   label,
@@ -79,43 +139,66 @@ const ColorSelector = ({
   readonly label: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
-}): React.JSX.Element => (
-  <div className="settings-color-field">
-    <span>{label}</span>
-    <div className="settings-color-selector">
-      <div className="settings-color-swatches" aria-label={`${label} presets`}>
-        {colorSwatches.map((color) => (
-          <button
-            key={color}
-            type="button"
-            className={[
-              "settings-color-swatch",
-              value.toLowerCase() === color ? "is-selected" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            style={{ backgroundColor: color }}
-            aria-label={`${label} ${color}`}
-            aria-pressed={value.toLowerCase() === color}
-            onClick={() => {
-              onChange(color);
-            }}
-          />
-        ))}
+}): React.JSX.Element => {
+  const [draftValue, setDraftValue] = useState(value);
+
+  useEffect(() => {
+    setDraftValue(value);
+  }, [value]);
+
+  return (
+    <div className="settings-color-field">
+      <span>{label}</span>
+      <div className="settings-color-selector">
+        <div
+          className="settings-color-swatches"
+          aria-label={`${label} presets`}
+        >
+          {colorSwatches.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={[
+                "settings-color-swatch",
+                value.toLowerCase() === color ? "is-selected" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              style={{ backgroundColor: color }}
+              aria-label={`${label} ${color}`}
+              aria-pressed={value.toLowerCase() === color}
+              onClick={() => {
+                setDraftValue(color);
+                onChange(color);
+              }}
+            />
+          ))}
+        </div>
+        <input
+          type="text"
+          inputMode="text"
+          pattern="#?[0-9a-fA-F]{6}"
+          maxLength={7}
+          spellCheck={false}
+          autoCapitalize="off"
+          value={draftValue}
+          aria-label={label}
+          onChange={(event) => {
+            const nextDraft = event.currentTarget.value;
+            setDraftValue(nextDraft);
+            const completeColor = completeHexColorFromDraft(nextDraft);
+            if (completeColor !== undefined) {
+              onChange(completeColor);
+            }
+          }}
+          onBlur={() => {
+            setDraftValue(value);
+          }}
+        />
       </div>
-      <input
-        type="text"
-        inputMode="text"
-        pattern="#[0-9a-fA-F]{6}"
-        value={value}
-        aria-label={label}
-        onChange={(event) => {
-          onChange(event.currentTarget.value);
-        }}
-      />
     </div>
-  </div>
-);
+  );
+};
 
 const SettingsSection = ({
   title,
@@ -141,6 +224,7 @@ const cropFrameSize = (zoom: number): number => {
 };
 
 export const SettingsContent = (): React.JSX.Element => {
+  const visualSettings = useMatchVisualSettings();
   const {
     backgroundColor,
     backgroundImageUrl,
@@ -178,7 +262,7 @@ export const SettingsContent = (): React.JSX.Element => {
     setPlaymatOpacity,
     setZoneBackgroundVisibility,
     setZoneGuideVisibility,
-  } = useMatchVisualSettings();
+  } = visualSettings;
   const cropDragPointerIdRef = useRef<number | undefined>(undefined);
   const hasBackgroundImage = backgroundImageUrl.length > 0;
 
@@ -226,6 +310,17 @@ export const SettingsContent = (): React.JSX.Element => {
 
   return (
     <div className="settings-window-content">
+      <div className="settings-window-actions">
+        <button
+          className="settings-secondary-button settings-reset-button"
+          type="button"
+          onClick={() => {
+            resetMatchVisualSettings(visualSettings);
+          }}
+        >
+          Revert to defaults
+        </button>
+      </div>
       <SettingsSection title="Gameplay">
         <label className="settings-checkbox-field">
           <input
