@@ -137,20 +137,6 @@
   backdrop-filter: blur(5px);
 }
 
-.card-preview-rules-resize-handle {
-  height: clamp(13px, calc(var(--card-height) / 12), 18px);
-  border: 0;
-  border-bottom: 1px solid var(--match-border-soft);
-  background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(216, 183, 121, 0.4),
-      transparent
-    )
-    center / 46px 2px no-repeat;
-  cursor: ns-resize;
-}
-
 .card-preview-text {
   display: grid;
   align-content: start;
