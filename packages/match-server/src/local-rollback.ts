@@ -1,9 +1,11 @@
 import type {
+  DeterministicCheckpoint,
   DecisionId,
   EngineEvent,
   GameState,
   PlayerId,
 } from "@optcg/types";
+import { hashReplayStateForScope } from "@optcg/engine-core";
 
 import type {
   DevRollbackPointView,
@@ -41,6 +43,7 @@ export interface LocalRollbackState {
   enabled: boolean;
   maxPoints: number;
   points: LocalRollbackPoint[];
+  checkpoints: DeterministicCheckpoint[];
   pendingRequest?: LocalRollbackRequest;
 }
 
@@ -67,6 +70,7 @@ export const createLocalRollbackState = (
   enabled: config?.enabled ?? true,
   maxPoints: config?.maxPoints ?? 40,
   points: [],
+  checkpoints: [],
 });
 
 export const cloneGameState = (state: GameState): GameState =>
@@ -135,9 +139,22 @@ export const recordRollbackPoint = (
     label: `Before event ${String(anchor.seq)}`,
     state: cloneGameState(previousState),
   };
+  const checkpoint: DeterministicCheckpoint = {
+    checkpointVersion: "deterministic-checkpoint-v1",
+    matchId: previousState.matchId,
+    checkpointId: point.rollbackPointId,
+    reason: "rollbackPoint",
+    stateSeq: previousState.seq,
+    actionSeq: previousState.actionSeq,
+    stateHash: hashReplayStateForScope(previousState, "gameplay-v1"),
+    hashScope: "gameplay-v1",
+    eventId: anchor.id,
+    snapshot: cloneGameState(previousState),
+  };
   return {
     ...rollback,
     points: [...rollback.points, point].slice(-rollback.maxPoints),
+    checkpoints: [...rollback.checkpoints, checkpoint],
   };
 };
 
@@ -162,6 +179,7 @@ const withoutPendingRollbackRequest = (
   enabled: rollback.enabled,
   maxPoints: rollback.maxPoints,
   points: rollback.points,
+  checkpoints: rollback.checkpoints,
 });
 
 export const requestRollbackConsent = (
