@@ -1,13 +1,11 @@
 import {
   createRecoveredLocalDevMatch,
-  type LocalDevMatch,
 } from "./local-match.js";
-import { createMatchSessionRuntime } from "./match-session.js";
+import { replayDeterministicRecoveryEntries } from "./deterministic-recovery.js";
 import type { MatchSessionService } from "./session-service.js";
 import type {
   MatchPersistence,
   MatchPersistenceSnapshot,
-  StoredSessionRecord,
 } from "./session-types.js";
 import {
   activeMatchRecoveryContext,
@@ -21,49 +19,6 @@ export interface RecoverPersistedLocalDevMatchSessionsInput {
   readonly recoveryLockTtlMs: number;
   readonly includeActionSnapshots?: boolean;
 }
-
-const sortedRecoveryRecords = (
-  snapshot: MatchPersistenceSnapshot,
-): StoredSessionRecord[] =>
-  [...snapshot.actions, ...snapshot.decisions].sort((left, right) => {
-    const stateDelta = left.result.stateSeq - right.result.stateSeq;
-    if (stateDelta !== 0) {
-      return stateDelta;
-    }
-    const recordedAtDelta =
-      Date.parse(left.recordedAt) - Date.parse(right.recordedAt);
-    if (recordedAtDelta !== 0) {
-      return recordedAtDelta;
-    }
-    return left.envelope.clientActionId.localeCompare(
-      right.envelope.clientActionId,
-    );
-  });
-
-const replayRecoveryRecords = (
-  match: LocalDevMatch,
-  snapshot: MatchPersistenceSnapshot,
-): string | undefined => {
-  const runtime = createMatchSessionRuntime({
-    local: match,
-    includeActionSnapshots: false,
-  });
-  for (const record of sortedRecoveryRecords(snapshot)) {
-    const result = runtime.applyEnvelope(record.envelope);
-    if (!result.accepted) {
-      return `replay rejected ${record.envelope.clientActionId}: ${result.errors.join(
-        "; ",
-      )}`;
-    }
-    if (
-      result.stateSeq !== record.result.stateSeq ||
-      result.actionSeq !== record.result.actionSeq
-    ) {
-      return `replay diverged at ${record.envelope.clientActionId}`;
-    }
-  }
-  return undefined;
-};
 
 const recoverActiveSession = ({
   includeActionSnapshots,
@@ -85,7 +40,7 @@ const recoverActiveSession = ({
     rollback: context.rollback,
     cardVariantOverrides: context.cardVariantOverrides,
   });
-  const replayError = replayRecoveryRecords(match, snapshot);
+  const replayError = replayDeterministicRecoveryEntries(match, snapshot);
   if (replayError !== undefined) {
     return replayError;
   }
