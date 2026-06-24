@@ -1,10 +1,7 @@
 import { useRef, type ReactNode } from "react";
 
 import type { PublicTurnState } from "@optcg/types";
-import type {
-  ClientActionModel,
-  PlayerSummaryTimerModel,
-} from "../view-model.js";
+import type { ClientActionModel } from "../view-model.js";
 import { ActionMenu } from "./ActionMenu.js";
 import type { TabDragOutPoint } from "./TabbedFloatingWindow.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
@@ -25,13 +22,6 @@ export interface ControlRailProps {
   errors: readonly string[];
   globalActions: readonly ClientActionModel[];
   disabled: boolean;
-  selfLabel?: string | undefined;
-  opponentLabel?: string | undefined;
-  selfTimer?: PlayerSummaryTimerModel | undefined;
-  opponentTimer?: PlayerSummaryTimerModel | undefined;
-  selfIsTurnPlayer?: boolean | undefined;
-  opponentIsTurnPlayer?: boolean | undefined;
-  selfConnectionStatus?: "connected" | "disconnected" | undefined;
   opponentConnectionStatus?: "connected" | "disconnected" | undefined;
   turnState?: PublicTurnState | undefined;
   matchStatus?: string | undefined;
@@ -76,13 +66,6 @@ export const ControlRail = ({
   errors,
   globalActions,
   disabled,
-  selfLabel = "Player",
-  opponentLabel = "Opponent",
-  selfTimer,
-  opponentTimer,
-  selfIsTurnPlayer = false,
-  opponentIsTurnPlayer = false,
-  selfConnectionStatus,
   opponentConnectionStatus,
   turnState,
   matchStatus,
@@ -157,21 +140,6 @@ export const ControlRail = ({
         title="Resize controls"
         onPointerDown={onResizePointerDown}
       />
-      <section
-        className={[
-          "summary-panel",
-          "opponent-summary",
-          opponentIsTurnPlayer ? "is-turn-player" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <PlayerSummaryLabel
-          label={opponentLabel}
-          status={opponentConnectionStatus}
-          timer={opponentTimer}
-        />
-      </section>
       <section className="controls-panel">
         <div className="control-action-stack">
           {turnState === undefined ? null : (
@@ -479,21 +447,6 @@ export const ControlRail = ({
           </button>
         </div>
       </section>
-      <section
-        className={[
-          "summary-panel",
-          "player-summary",
-          selfIsTurnPlayer ? "is-turn-player" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <PlayerSummaryLabel
-          label={selfLabel}
-          status={selfConnectionStatus}
-          timer={selfTimer}
-        />
-      </section>
     </aside>
   );
 };
@@ -518,43 +471,3 @@ const turnStatusLabel = (turnState: PublicTurnState): string =>
   turnState.step === undefined
     ? phaseLabels[turnState.phase]
     : stepLabels[turnState.step];
-
-const PlayerSummaryLabel = ({
-  label,
-  status,
-  timer,
-}: {
-  label: string;
-  status?: "connected" | "disconnected" | undefined;
-  timer?: PlayerSummaryTimerModel | undefined;
-}): React.JSX.Element => (
-  <div className="player-summary-label">
-    <h2>
-      <span className="player-name">{label}</span>
-      {status === undefined ? null : (
-        <span
-          className={`connection-status is-${status}`}
-          aria-label={`${label} ${status}`}
-          title={status === "connected" ? "Connected" : "Disconnected"}
-        />
-      )}
-    </h2>
-    {timer === undefined ? null : (
-      <div className="player-timers" aria-label={`${label} timers`}>
-        <span
-          className={["game-timer", timer.isRunning ? "is-running" : ""]
-            .filter(Boolean)
-            .join(" ")}
-          title="Game timer"
-        >
-          {timer.game}
-        </span>
-        {timer.disconnect === undefined ? null : (
-          <span className="disconnect-timer" title="Reconnect timer">
-            {timer.disconnect}
-          </span>
-        )}
-      </div>
-    )}
-  </div>
-);

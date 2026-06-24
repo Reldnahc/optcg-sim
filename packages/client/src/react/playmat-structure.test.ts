@@ -134,7 +134,7 @@ describe("playmat structure", () => {
     assert.match(playmatStyles, /background:\s*var\(--match-surface-board\);/u);
     assert.match(playmatStyles, /padding:\s*var\(--playmat-board-padding\);/);
     assert.equal(
-      playmatStyles.includes('". . center-spacer center-spacer . ."'),
+      playmatStyles.includes('". . . center-spacer center-spacer . . ."'),
       true,
     );
     assert.equal(
@@ -185,7 +185,7 @@ describe("playmat structure", () => {
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
       playmatStyles,
-      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-summary-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-summary-zone-width\)\s+var\(--card-zone-width\);/,
     );
   });
 
@@ -202,7 +202,7 @@ describe("playmat structure", () => {
     assert.equal(playmatStyles.includes("minmax(116px, 1fr)"), false);
     assert.match(
       playmatStyles,
-      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-wide-zone-width\)\s+var\(--card-zone-width\);/,
+      /grid-template-columns:\s*var\(--card-zone-width\)\s+var\(--playmat-summary-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--card-zone-width\)\s+var\(--card-zone-width\)\s+var\(--playmat-restriction-zone-width\)\s+var\(--playmat-summary-zone-width\)\s+var\(--card-zone-width\);/,
     );
   });
 
@@ -580,20 +580,31 @@ describe("playmat structure", () => {
     );
   });
 
-  test("leader and stage zones are centered and mirrored", async () => {
-    const styles = await readFile(playmatStylesPath, "utf8");
+  test("leader and stage zones keep card width while summaries fill the deck-stage gaps", async () => {
+    const [appShellStyles, playmatStyles] = await Promise.all([
+      readFile(appShellStylesPath, "utf8"),
+      readFile(playmatStylesPath, "utf8"),
+    ]);
 
     assert.equal(
-      styles.includes(
-        '"opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"',
+      playmatStyles.includes(
+        '"opponent-deck opponent-summary opponent-summary opponent-stage opponent-leader opponent-restrictions . opponent-life"',
       ),
       true,
     );
     assert.equal(
-      styles.includes(
-        '"player-life player-restrictions player-leader player-stage . player-deck"',
+      playmatStyles.includes(
+        '"player-life . player-restrictions player-leader player-stage player-summary player-summary player-deck"',
       ),
       true,
+    );
+    assert.match(
+      appShellStyles,
+      /--playmat-restriction-zone-width:\s*var\(--card-zone-width\);/,
+    );
+    assert.match(
+      appShellStyles,
+      /--playmat-summary-zone-width:\s*var\(--playmat-wide-zone-width\);/,
     );
   });
 
@@ -602,13 +613,13 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '"opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"',
+        '"opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '"player-life player-characters player-characters player-characters player-characters player-characters"',
+        '"player-life player-characters player-characters player-characters player-characters player-characters player-characters player-characters"',
       ),
       true,
     );
@@ -619,19 +630,19 @@ describe("playmat structure", () => {
 
     assert.equal(
       styles.includes(
-        '"player-don-deck player-cost player-cost player-cost player-cost player-trash"',
+        '"player-don-deck player-cost player-cost player-cost player-cost player-cost player-cost player-trash"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '"opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"',
+        '"opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"',
       ),
       true,
     );
     assert.equal(
       styles.includes(
-        '"opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"',
+        '"opponent-deck opponent-summary opponent-summary opponent-stage opponent-leader opponent-restrictions . opponent-life"',
       ),
       true,
     );

@@ -70,27 +70,25 @@ const board = (): BoardViewModel => ({
 });
 
 describe("card action menu", () => {
-  test("renders active-turn feedback on the matching player summary", () => {
+  test("renders active-turn feedback on the full playmat", () => {
+    const layout = board();
+    layout.selfIsTurnPlayer = true;
+    layout.opponentIsTurnPlayer = false;
+
     const markup = renderToStaticMarkup(
-      createElement(ControlRail, {
-        errors: [],
-        globalActions: [],
-        disabled: false,
-        selfLabel: "Player",
-        opponentLabel: "Opponent",
-        selfIsTurnPlayer: true,
-        opponentIsTurnPlayer: false,
-        onAction: () => undefined,
-        onHome: () => undefined,
+      createElement(BoardLayout, {
+        board: layout,
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
       }),
     );
 
+    assert.equal(markup.includes("tabletop-board is-turn-player"), true);
     assert.equal(
       markup.includes("summary-panel player-summary is-turn-player"),
-      true,
-    );
-    assert.equal(
-      markup.includes("summary-panel opponent-summary is-turn-player"),
       false,
     );
   });
@@ -153,24 +151,24 @@ describe("card action menu", () => {
     assert.equal(controlRailSource.includes("PlayerRestrictionBadges"), false);
   });
 
-  test("active-turn player summary uses outline feedback without a dot indicator", async () => {
-    const controlsCss = await readFile(
-      join(sourceDirectory, "styles", "controls.css"),
+  test("active-turn playmat uses outline feedback without a dot indicator", async () => {
+    const playmatCss = await readFile(
+      join(sourceDirectory, "styles", "playmat.css"),
       "utf8",
     );
 
     assert.equal(
-      controlsCss.includes(".summary-panel.is-turn-player::after"),
+      playmatCss.includes(".tabletop-board.is-turn-player::after"),
       false,
     );
-    assert.equal(controlsCss.includes(".summary-panel.is-turn-player"), true);
+    assert.equal(playmatCss.includes(".tabletop-board.is-turn-player"), true);
     assert.equal(
-      controlsCss.includes("border-color: var(--match-accent-strong)"),
+      playmatCss.includes("border-color: var(--match-accent-strong)"),
       true,
     );
     assert.match(
-      controlsCss,
-      /\.summary-panel\.is-turn-player\s*\{[^}]*rgba\(255,\s*227,\s*138,\s*0\.34\)[^}]*rgba\(255,\s*227,\s*138,\s*0\.38\);/u,
+      playmatCss,
+      /\.tabletop-board\.is-turn-player,\s*\.tabletop-board\.is-choice-active\s*\{[^}]*rgba\(255,\s*227,\s*138,\s*0\.34\)[^}]*rgba\(255,\s*227,\s*138,\s*0\.38\);/u,
     );
   });
 

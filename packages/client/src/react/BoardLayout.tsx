@@ -16,6 +16,7 @@ import type { ReorderPlacement } from "./drag-reorder.js";
 import { HandRow } from "./HandRow.js";
 import { CardMovementOverlay } from "./presentation-effects/CardMovementOverlay.js";
 import { PlayerRestrictionBadges } from "./PlayerRestrictionBadges.js";
+import { PlayerSummaryLabel } from "./PlayerSummaryLabel.js";
 import { usePresentationEffects } from "./presentation-effects/use-presentation-effects.js";
 import { Zone } from "./Zone.js";
 
@@ -270,6 +271,13 @@ export const BoardLayout = ({
   reduceDeckStackRendering = false,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
+  const tabletopClassName = [
+    "tabletop-board",
+    board.selfIsTurnPlayer ? "is-turn-player" : "",
+    pendingChoiceInstanceIds.length > 0 ? "is-choice-active" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   const boardShellRef = useRef<HTMLElement | null>(null);
   const presentationEffects = usePresentationEffects({
     rootRef: boardShellRef,
@@ -328,7 +336,7 @@ export const BoardLayout = ({
           onMoveCard={onMoveHandCard}
         />
       </div>
-      <div className="tabletop-board">
+      <div className={tabletopClassName}>
         <TurnStatusBannerHost banner={board.statusBanner} />
         <BattleArrowOverlay battleArrow={board.battleArrow} />
         <div className="playmat-zone opponent-cost">
@@ -388,6 +396,13 @@ export const BoardLayout = ({
             onCardPreview={onPreviewCard}
           />
         </div>
+        <section className="playmat-summary opponent-summary">
+          <PlayerSummaryLabel
+            label={board.opponentLabel}
+            status={board.opponentConnectionStatus}
+            timer={board.opponentTimer}
+          />
+        </section>
         <div className="playmat-zone opponent-don-deck">
           <Zone
             label="DON!! Deck"
@@ -527,6 +542,13 @@ export const BoardLayout = ({
             onCardClick={onCardClick}
           />
         </div>
+        <section className="playmat-summary player-summary">
+          <PlayerSummaryLabel
+            label={board.selfLabel}
+            status={board.selfConnectionStatus}
+            timer={board.selfTimer}
+          />
+        </section>
         <div className="playmat-zone player-leader">
           <Zone
             label="Leader"

@@ -6,26 +6,73 @@ import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
+
+import type { BoardViewModel, ClientCardModel } from "../view-model.js";
+import { BoardLayout } from "./BoardLayout.js";
 import { ControlRail } from "./ControlRail.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
+const card = (instanceId: string): ClientCardModel => ({
+  instanceId: instanceId as InstanceId,
+  cardId: `${instanceId}-card` as CardId,
+  name: instanceId,
+  category: "Character",
+  attachedDonCount: 0,
+  attachedDonCards: [],
+});
+
+const board = (): BoardViewModel => ({
+  playerId: "p1" as PlayerId,
+  selfLabel: "Alice",
+  opponentLabel: "Bob",
+  selfIsTurnPlayer: true,
+  opponentIsTurnPlayer: false,
+  selfConnectionStatus: "connected",
+  opponentConnectionStatus: "disconnected",
+  selfTimer: { game: "12:34", isRunning: true },
+  opponentTimer: { game: "10:00", isRunning: false, disconnect: "0:30" },
+  self: {
+    leader: card("self-leader"),
+    hand: [],
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+    lifeCards: [],
+  },
+  opponent: {
+    leader: card("opponent-leader"),
+    handCount: 5,
+    characters: [],
+    costArea: [],
+    trash: [],
+    deckCount: 40,
+    donDeckCount: 10,
+    lifeCount: 5,
+    lifeCards: [],
+  },
+  actionsByCardInstanceId: {},
+});
+
 describe("control rail window dock", () => {
-  test("renders connection status directly beside player names", () => {
+  test("playmat summaries render connection status directly beside player names", () => {
     const markup = renderToStaticMarkup(
-      createElement(ControlRail, {
-        errors: [],
-        globalActions: [],
-        disabled: false,
-        selfLabel: "Alice",
-        opponentLabel: "Bob",
-        selfConnectionStatus: "connected",
-        opponentConnectionStatus: "disconnected",
-        onAction: () => undefined,
-        onHome: () => undefined,
+      createElement(BoardLayout, {
+        board: board(),
+        cardActions: () => [],
+        onCardClick: () => undefined,
+        onCardAction: () => undefined,
+        onViewCollection: () => undefined,
+        onBackgroundClick: () => undefined,
       }),
     );
 
+    assert.match(markup, /playmat-summary opponent-summary/u);
+    assert.match(markup, /playmat-summary player-summary/u);
     assert.match(
       markup,
       /<h2><span class="player-name">Bob<\/span><span class="connection-status is-disconnected"/u,
@@ -34,6 +81,18 @@ describe("control rail window dock", () => {
       markup,
       /<h2><span class="player-name">Alice<\/span><span class="connection-status is-connected"/u,
     );
+    assert.match(markup, /12:34/u);
+    assert.match(markup, /0:30/u);
+  });
+
+  test("control rail no longer owns player summary panels", async () => {
+    const controlRailSource = await readFile(
+      join(sourceDirectory, "ControlRail.tsx"),
+      "utf8",
+    );
+
+    assert.equal(controlRailSource.includes("summary-panel"), false);
+    assert.equal(controlRailSource.includes("PlayerSummaryLabel"), false);
   });
 
   test("connection indicator uses a dedicated connected color", async () => {

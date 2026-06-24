@@ -3,17 +3,19 @@
   display: grid;
   height: calc(100vh - (var(--match-app-padding) * 2));
   grid-template-areas:
-    "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
-    "opponent-deck . opponent-stage opponent-leader opponent-restrictions opponent-life"
-    "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
-    ". . center-spacer center-spacer . ."
-    "player-life player-characters player-characters player-characters player-characters player-characters"
-    "player-life player-restrictions player-leader player-stage . player-deck"
-    "player-don-deck player-cost player-cost player-cost player-cost player-trash";
+    "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
+    "opponent-deck opponent-summary opponent-summary opponent-stage opponent-leader opponent-restrictions . opponent-life"
+    "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
+    ". . . center-spacer center-spacer . . ."
+    "player-life player-characters player-characters player-characters player-characters player-characters player-characters player-characters"
+    "player-life . player-restrictions player-leader player-stage player-summary player-summary player-deck"
+    "player-don-deck player-cost player-cost player-cost player-cost player-cost player-cost player-trash";
   grid-template-columns:
-    var(--card-zone-width) var(--playmat-wide-zone-width)
-    var(--card-zone-width) var(--card-zone-width)
-    var(--playmat-wide-zone-width) var(--card-zone-width);
+    var(--card-zone-width) var(--playmat-summary-zone-width)
+    var(--playmat-restriction-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
+    var(--playmat-summary-zone-width)
+    var(--card-zone-width);
   grid-template-rows:
     var(--playmat-row-height) var(--playmat-row-height)
     var(--playmat-row-height) minmax(0, 1fr)
@@ -27,6 +29,15 @@
     inset 0 0 0 var(--card-outline-thin) rgba(246, 232, 209, 0.08),
     inset 0 0 calc(var(--card-height) / 3) rgba(0, 0, 0, 0.18);
   padding: var(--playmat-board-padding);
+}
+
+.tabletop-board.is-turn-player,
+.tabletop-board.is-choice-active {
+  border-color: var(--match-accent-strong);
+  box-shadow:
+    inset 0 0 0 var(--card-outline-thin) rgba(0, 0, 0, 0.35),
+    0 0 0 var(--card-outline-medium) rgba(255, 227, 138, 0.34),
+    0 0 var(--card-glow-size) rgba(255, 227, 138, 0.38);
 }
 
 .playmat-zone {
@@ -249,6 +260,10 @@
   z-index: 2;
 }
 
+.opponent-summary {
+  grid-area: opponent-summary;
+}
+
 .opponent-don-deck {
   grid-area: opponent-don-deck;
 }
@@ -296,6 +311,10 @@
   grid-area: player-life;
 }
 
+.player-summary {
+  grid-area: player-summary;
+}
+
 .player-leader {
   grid-area: player-leader;
 }
@@ -337,6 +356,27 @@
 
 .player-restriction-area {
   justify-content: flex-end;
+}
+
+.playmat-summary {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  min-height: 0;
+  border: var(--card-outline-thin) solid var(--match-border);
+  border-radius: calc(var(--card-corner-radius) * 0.85);
+  background: var(--match-surface-panel);
+  padding: clamp(6px, calc(var(--card-height) / 22), 10px);
+}
+
+.playmat-summary h2 {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, calc(var(--card-height) / 20), 10px);
+  margin: 0;
+  color: var(--match-text);
+  font-size: clamp(16px, calc(var(--card-height) / 7), 24px);
+  font-weight: 500;
 }
 
 .player-restriction-badges {
