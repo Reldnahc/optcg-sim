@@ -2,26 +2,20 @@ import type {
   Action,
   DecisionId,
   DecisionResponse,
-  EngineResult,
+  DeterministicCheckpoint,
+  DeterministicMatchEntry,
+  EngineEventId,
   GameState,
-  InstanceId,
-  LegalAction,
+  MatchId,
   PlayerId,
+  StateSeq,
 } from "@optcg/types";
 
-import { applyAction, getLegalActions } from "../actions.js";
 import {
-  advanceDonPhase,
-  advanceDrawPhase,
-  advanceRefreshPhase,
-  enterMainPhase,
-} from "../turn/phases.js";
-import {
-  respondToMulliganDecision,
-  startMulliganFlow,
-} from "../setup/mulligan.js";
-import type { PreMulliganSetupGameState } from "../setup/initial-state.js";
-import { hashCanonicalStateValue } from "../state/canonical-state.js";
+  applyDeterministicEntry,
+  checkpointResolverFromList,
+  hashReplayStateForScope,
+} from "./deterministic-entry.js";
 
 export interface ReplayArtifactStateFrame {
   readonly index: number;
@@ -42,272 +36,343 @@ export type ReplayArtifactReconstructionResult =
       readonly actionIndex?: number | undefined;
     };
 
+type DecodeResult<T> =
+  | { readonly status: "ready"; readonly value: T }
+  | { readonly status: "failed"; readonly reason: string };
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const hasErrors = (
-  result: EngineResult,
-): result is EngineResult & {
-  readonly errors: NonNullable<EngineResult["errors"]>;
-} => result.errors !== undefined && result.errors.length > 0;
+const stringField = (
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined =>
+  typeof record[key] === "string" ? record[key] : undefined;
 
-const combinedEngineResult = (
-  result: EngineResult,
-  events: EngineResult["events"],
-): EngineResult => ({
-  ...result,
-  events,
-});
+const numberField = (
+  record: Record<string, unknown>,
+  key: string,
+): number | undefined =>
+  typeof record[key] === "number" && Number.isFinite(record[key])
+    ? record[key]
+    : undefined;
 
-const advanceToMainPhase = (state: GameState): EngineResult => {
-  const events: EngineResult["events"] = [];
-  let current = state;
-  let currentHash = "";
-  for (let stepCount = 0; stepCount < 4; stepCount += 1) {
-    if (
-      current.turn.phase === "main" ||
-      current.status.type !== "active" ||
-      current.pendingDecision !== undefined ||
-      current.battle !== undefined
-    ) {
-      return combinedEngineResult(
-        { state: current, events, stateHash: currentHash },
-        events,
-      );
-    }
-    if (current.turn.phase === "refresh") {
-      const result = advanceRefreshPhase(current);
-      events.push(...result.events);
-      if (hasErrors(result)) {
-        return combinedEngineResult(result, events);
-      }
-      current = result.state;
-      currentHash = result.stateHash;
-      continue;
-    }
-    if (current.turn.phase === "draw") {
-      const result = advanceDrawPhase(current);
-      events.push(...result.events);
-      if (hasErrors(result)) {
-        return combinedEngineResult(result, events);
-      }
-      current = result.state;
-      currentHash = result.stateHash;
-      continue;
-    }
-    if (current.turn.phase === "don") {
-      const donResult = advanceDonPhase(current);
-      events.push(...donResult.events);
-      if (hasErrors(donResult)) {
-        return combinedEngineResult(donResult, events);
-      }
-      current = donResult.state;
-      currentHash = donResult.stateHash;
-      if (current.pendingDecision !== undefined) {
-        continue;
-      }
-      const mainResult = enterMainPhase(current);
-      events.push(...mainResult.events);
-      if (hasErrors(mainResult)) {
-        return combinedEngineResult(mainResult, events);
-      }
-      current = mainResult.state;
-      currentHash = mainResult.stateHash;
-      continue;
-    }
-    return combinedEngineResult(
-      { state: current, events, stateHash: currentHash },
-      events,
-    );
-  }
-  return combinedEngineResult(
-    { state: current, events, stateHash: currentHash },
-    events,
-  );
-};
-
-const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
-  if (
-    hasErrors(result) ||
-    result.state.status.type !== "setup" ||
-    result.state.pendingDecision !== undefined
-  ) {
-    return result;
-  }
-  const started = startMulliganFlow(result.state as PreMulliganSetupGameState);
-  return combinedEngineResult(started, [...result.events, ...started.events]);
-};
-
-const autoAdvanceMandatoryTurnFlow = (result: EngineResult): EngineResult => {
-  if (hasErrors(result)) {
-    return result;
-  }
-  const advanced = advanceToMainPhase(result.state);
-  return combinedEngineResult(advanced, [...result.events, ...advanced.events]);
-};
-
-const finalizeReplayResult = (result: EngineResult): EngineResult =>
-  autoAdvanceMandatoryTurnFlow(startMulliganAfterSetupIfReady(result));
-
-const actionWithSelectedDon = (
-  action: LegalAction,
-  selectedDonInstanceIds: readonly InstanceId[] | undefined,
-): Action =>
-  action.type === "attachDon" &&
-  selectedDonInstanceIds !== undefined &&
-  selectedDonInstanceIds.length > 0
-    ? { ...action, selectedDonInstanceIds: [...selectedDonInstanceIds] }
-    : action;
-
-const replayActionFromEntry = (
-  state: GameState,
-  entry: unknown,
-):
-  | {
-      readonly status: "ready";
-      readonly result: EngineResult;
-      readonly label: string;
-    }
-  | { readonly status: "failed"; readonly reason: string } => {
-  if (!isRecord(entry) || !isRecord(entry["envelope"])) {
-    return { status: "failed", reason: "Replay entry is missing an envelope." };
-  }
-  const request = entry["envelope"]["request"];
-  if (!isRecord(request) || typeof request["type"] !== "string") {
+const decodeVerification = (
+  value: unknown,
+): DecodeResult<DeterministicMatchEntry["verification"]> => {
+  if (!isRecord(value)) {
     return {
       status: "failed",
-      reason: "Replay entry is missing a request type.",
+      reason: "Deterministic entry verification is missing.",
     };
   }
-  const type = request["type"];
+  const stateSeqBefore = numberField(value, "stateSeqBefore");
+  const actionSeqBefore = numberField(value, "actionSeqBefore");
+  const stateHashBefore = stringField(value, "stateHashBefore");
+  const stateSeqAfter = numberField(value, "stateSeqAfter");
+  const actionSeqAfter = numberField(value, "actionSeqAfter");
+  const stateHashAfter = stringField(value, "stateHashAfter");
+  const hashScope = value["hashScope"];
   if (
-    type === "submitAction" &&
-    typeof request["playerId"] === "string" &&
-    typeof request["actionIndex"] === "number"
+    stateSeqBefore === undefined ||
+    actionSeqBefore === undefined ||
+    stateHashBefore === undefined ||
+    stateSeqAfter === undefined ||
+    actionSeqAfter === undefined ||
+    stateHashAfter === undefined ||
+    (hashScope !== "gameplay-v1" && hashScope !== "operational-v1")
   ) {
-    const playerId = request["playerId"] as PlayerId;
+    return {
+      status: "failed",
+      reason: "Deterministic entry verification is incomplete.",
+    };
+  }
+  return {
+    status: "ready",
+    value: {
+      stateSeqBefore: stateSeqBefore as StateSeq,
+      actionSeqBefore,
+      stateHashBefore,
+      stateSeqAfter: stateSeqAfter as StateSeq,
+      actionSeqAfter,
+      stateHashAfter,
+      hashScope,
+    },
+  };
+};
+
+const decodeSystemOperation = (
+  value: unknown,
+): DecodeResult<Extract<DeterministicMatchEntry, { kind: "system" }>["operation"]> => {
+  if (!isRecord(value)) {
+    return {
+      status: "failed",
+      reason: "Deterministic system operation is missing.",
+    };
+  }
+  const type = value["type"];
+  if (type === "requestRollbackConsent") {
+    const playerId = stringField(value, "playerId");
+    const rollbackPointId = stringField(value, "rollbackPointId");
+    const approvingPlayerId = stringField(value, "approvingPlayerId");
+    const decisionId = stringField(value, "decisionId");
+    const prompt = stringField(value, "prompt");
     if (
-      state.pendingDecision?.type === "mulligan" &&
-      state.pendingDecision.playerId === playerId &&
-      (request["actionIndex"] === 0 || request["actionIndex"] === 1)
+      playerId === undefined ||
+      rollbackPointId === undefined ||
+      approvingPlayerId === undefined ||
+      decisionId === undefined ||
+      prompt === undefined
     ) {
-      const keep = request["actionIndex"] === 0;
-      return {
-        status: "ready",
-        result: finalizeReplayResult(
-          respondToMulliganDecision(state, {
-            type: "respondToDecision",
-            decisionId: state.pendingDecision.id,
-            response: { type: "mulligan", keep },
-          }),
-        ),
-        label: keep ? "keepMulliganHand" : "takeMulligan",
-      };
-    }
-    if (
-      state.status.type === "active" &&
-      state.pendingDecision === undefined &&
-      state.battle === undefined &&
-      state.turn.turnPlayerId === playerId &&
-      state.turn.phase !== "main" &&
-      request["actionIndex"] === 0
-    ) {
-      return {
-        status: "ready",
-        result: finalizeReplayResult(advanceToMainPhase(state)),
-        label: "advanceToMainPhase",
-      };
-    }
-    const legalActions = getLegalActions(state, playerId);
-    const action = legalActions[request["actionIndex"]];
-    if (action === undefined) {
       return {
         status: "failed",
-        reason: `Replay submitAction index ${String(request["actionIndex"])} is not legal.`,
+        reason: "Rollback request operation is incomplete.",
       };
     }
-    const selectedDonInstanceIds = Array.isArray(
-      request["selectedDonInstanceIds"],
-    )
-      ? request["selectedDonInstanceIds"].flatMap((entry) =>
-          typeof entry === "string" ? [entry as InstanceId] : [],
-        )
-      : undefined;
     return {
       status: "ready",
-      result: finalizeReplayResult(
-        applyAction(
-          state,
-          actionWithSelectedDon(action, selectedDonInstanceIds),
-        ),
-      ),
-      label: action.type,
+      value: {
+        type,
+        playerId: playerId as PlayerId,
+        rollbackPointId,
+        approvingPlayerId: approvingPlayerId as PlayerId,
+        decisionId: decisionId as DecisionId,
+        prompt,
+      },
     };
   }
-  if (type === "endMainPhase") {
+  if (type === "cancelRollbackConsent") {
+    const playerId = stringField(value, "playerId");
+    const rollbackPointId = stringField(value, "rollbackPointId");
+    const decisionId = stringField(value, "decisionId");
+    if (playerId === undefined || rollbackPointId === undefined) {
+      return {
+        status: "failed",
+        reason: "Rollback cancel operation is incomplete.",
+      };
+    }
     return {
       status: "ready",
-      result: finalizeReplayResult(applyAction(state, { type })),
-      label: type,
+      value: {
+        type,
+        playerId: playerId as PlayerId,
+        rollbackPointId,
+        ...(decisionId === undefined
+          ? {}
+          : { decisionId: decisionId as DecisionId }),
+      },
     };
   }
-  if (type === "playCard" && typeof request["cardInstanceId"] === "string") {
+  if (type === "restoreRollbackPoint") {
+    const rollbackPointId = stringField(value, "rollbackPointId");
+    const requestedBy = stringField(value, "requestedBy");
+    const approvedBy = stringField(value, "approvedBy");
+    const restoredStateHash = stringField(value, "restoredStateHash");
+    const restoredStateSeq = numberField(value, "restoredStateSeq");
+    const restoredActionSeq = numberField(value, "restoredActionSeq");
+    if (
+      rollbackPointId === undefined ||
+      requestedBy === undefined ||
+      approvedBy === undefined ||
+      restoredStateHash === undefined ||
+      restoredStateSeq === undefined ||
+      restoredActionSeq === undefined
+    ) {
+      return {
+        status: "failed",
+        reason: "Rollback restore operation is incomplete.",
+      };
+    }
     return {
       status: "ready",
-      result: finalizeReplayResult(
-        applyAction(state, {
-          type,
-          cardInstanceId: request["cardInstanceId"] as InstanceId,
-        }),
-      ),
-      label: type,
+      value: {
+        type,
+        rollbackPointId,
+        requestedBy: requestedBy as PlayerId,
+        approvedBy: approvedBy as PlayerId,
+        restoredStateHash,
+        restoredStateSeq: restoredStateSeq as StateSeq,
+        restoredActionSeq,
+      },
     };
   }
-  if (type === "concede" && typeof request["playerId"] === "string") {
+  return {
+    status: "failed",
+    reason: "Unsupported deterministic system operation.",
+  };
+};
+
+const decodeDeterministicEntry = (
+  value: unknown,
+): DecodeResult<DeterministicMatchEntry> => {
+  if (!isRecord(value)) {
+    return { status: "failed", reason: "Replay entry is not an object." };
+  }
+  if ("envelope" in value) {
+    return {
+      status: "failed",
+      reason: "Replay entry is not a deterministic entry.",
+    };
+  }
+  if (value["formatVersion"] !== "deterministic-entry-v1") {
+    return {
+      status: "failed",
+      reason: "Replay entry has unsupported deterministic format.",
+    };
+  }
+  const matchId = stringField(value, "matchId");
+  const entrySeq = numberField(value, "entrySeq");
+  const verification = decodeVerification(value["verification"]);
+  if (matchId === undefined || entrySeq === undefined) {
+    return {
+      status: "failed",
+      reason: "Deterministic entry identity is incomplete.",
+    };
+  }
+  if (verification.status === "failed") {
+    return verification;
+  }
+  if (value["kind"] === "action") {
+    if (!isRecord(value["action"]) || typeof value["action"]["type"] !== "string") {
+      return {
+        status: "failed",
+        reason: "Deterministic action entry is incomplete.",
+      };
+    }
     return {
       status: "ready",
-      result: finalizeReplayResult(
-        applyAction(state, {
-          type,
-          playerId: request["playerId"] as PlayerId,
-        }),
-      ),
-      label: type,
+      value: {
+        formatVersion: "deterministic-entry-v1",
+        matchId: matchId as MatchId,
+        entrySeq,
+        kind: "action",
+        playerId: stringField(value, "playerId") as PlayerId,
+        action: value["action"] as Action,
+        verification: verification.value,
+      },
     };
   }
-  if (
-    type === "respondToDecision" &&
-    typeof request["decisionId"] === "string" &&
-    isRecord(request["response"])
-  ) {
-    const action: Extract<Action, { type: "respondToDecision" }> = {
-      type,
-      decisionId: request["decisionId"] as DecisionId,
-      response: request["response"] as unknown as DecisionResponse,
-    };
-    const result =
-      action.response.type === "mulligan"
-        ? respondToMulliganDecision(state, action)
-        : applyAction(state, action);
+  if (value["kind"] === "decision") {
+    if (
+      stringField(value, "playerId") === undefined ||
+      stringField(value, "decisionId") === undefined ||
+      !isRecord(value["response"]) ||
+      typeof value["response"]["type"] !== "string"
+    ) {
+      return {
+        status: "failed",
+        reason: "Deterministic decision entry is incomplete.",
+      };
+    }
     return {
       status: "ready",
-      result: finalizeReplayResult(result),
-      label: type,
+      value: {
+        formatVersion: "deterministic-entry-v1",
+        matchId: matchId as MatchId,
+        entrySeq,
+        kind: "decision",
+        playerId: stringField(value, "playerId") as PlayerId,
+        decisionId: stringField(value, "decisionId") as DecisionId,
+        response: value["response"] as unknown as DecisionResponse,
+        verification: verification.value,
+      },
     };
   }
-  return { status: "failed", reason: `Unsupported replay action ${type}.` };
+  if (value["kind"] === "system") {
+    const operation = decodeSystemOperation(value["operation"]);
+    if (operation.status === "failed") {
+      return operation;
+    }
+    return {
+      status: "ready",
+      value: {
+        formatVersion: "deterministic-entry-v1",
+        matchId: matchId as MatchId,
+        entrySeq,
+        kind: "system",
+        operation: operation.value,
+        verification: verification.value,
+      },
+    };
+  }
+  return { status: "failed", reason: "Unknown deterministic entry kind." };
+};
+
+const decodeDeterministicCheckpoints = (
+  values: readonly unknown[],
+): DecodeResult<readonly DeterministicCheckpoint[]> => {
+  const checkpoints: DeterministicCheckpoint[] = [];
+  for (const [index, value] of values.entries()) {
+    if (!isRecord(value)) {
+      return {
+        status: "failed",
+        reason: `Deterministic checkpoint ${String(index)} is not an object.`,
+      };
+    }
+    const matchId = stringField(value, "matchId");
+    const checkpointId = stringField(value, "checkpointId");
+    const reason = value["reason"];
+    const stateSeq = numberField(value, "stateSeq");
+    const actionSeq = numberField(value, "actionSeq");
+    const stateHash = stringField(value, "stateHash");
+    const hashScope = value["hashScope"];
+    if (
+      value["checkpointVersion"] !== "deterministic-checkpoint-v1" ||
+      matchId === undefined ||
+      checkpointId === undefined ||
+      typeof reason !== "string" ||
+      stateSeq === undefined ||
+      actionSeq === undefined ||
+      stateHash === undefined ||
+      (hashScope !== "gameplay-v1" && hashScope !== "operational-v1")
+    ) {
+      return {
+        status: "failed",
+        reason: `Deterministic checkpoint ${String(index)} is incomplete.`,
+      };
+    }
+    checkpoints.push({
+      checkpointVersion: "deterministic-checkpoint-v1",
+      matchId: matchId as MatchId,
+      checkpointId,
+      reason: reason as DeterministicCheckpoint["reason"],
+      stateSeq: stateSeq as StateSeq,
+      actionSeq,
+      stateHash,
+      hashScope,
+      ...(typeof value["eventId"] === "string"
+        ? { eventId: value["eventId"] as EngineEventId }
+        : {}),
+      ...(isRecord(value["snapshot"])
+        ? { snapshot: value["snapshot"] as unknown as GameState }
+        : {}),
+      ...(typeof value["snapshotRef"] === "string"
+        ? { snapshotRef: value["snapshotRef"] }
+        : {}),
+    });
+  }
+  return { status: "ready", value: checkpoints };
 };
 
 export const reconstructReplayArtifactStates = ({
+  checkpoints,
   deterministicEntries,
   expectedFinalStateHash,
   initialState,
 }: {
   readonly initialState: GameState;
   readonly deterministicEntries: readonly unknown[];
+  readonly checkpoints?: readonly unknown[] | undefined;
   readonly expectedFinalStateHash?: string | undefined;
 }): ReplayArtifactReconstructionResult => {
-  const stateHash = hashCanonicalStateValue(initialState);
+  const decodedCheckpoints = decodeDeterministicCheckpoints(checkpoints ?? []);
+  if (decodedCheckpoints.status === "failed") {
+    return { status: "failed", reason: decodedCheckpoints.reason };
+  }
+  const checkpointResolver = checkpointResolverFromList(
+    decodedCheckpoints.value,
+  );
+  const stateHash = hashReplayStateForScope(initialState, "gameplay-v1");
   const frames: ReplayArtifactStateFrame[] = [
     {
       index: 0,
@@ -319,25 +384,36 @@ export const reconstructReplayArtifactStates = ({
   ];
   let current = structuredClone(initialState);
   for (const [actionIndex, entry] of deterministicEntries.entries()) {
-    const decoded = replayActionFromEntry(current, entry);
+    const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
       return { status: "failed", reason: decoded.reason, actionIndex };
     }
-    const result = decoded.result;
-    if (result.errors !== undefined) {
-      return {
-        status: "failed",
-        reason: result.errors
-          .map((error) => ("reason" in error ? error.reason : error.type))
-          .join("; "),
-        actionIndex,
-      };
+    if (decoded.value.kind === "system") {
+      const operation = decoded.value.operation;
+      if (operation.type === "restoreRollbackPoint") {
+        const checkpoint = checkpointResolver(operation.rollbackPointId);
+        if (checkpoint?.snapshot === undefined) {
+          return {
+            status: "failed",
+            reason: `Rollback checkpoint ${operation.rollbackPointId} is not available.`,
+            actionIndex,
+          };
+        }
+      }
+    }
+    const result = applyDeterministicEntry(
+      current,
+      decoded.value,
+      checkpointResolver,
+    );
+    if (result.status === "failed") {
+      return { status: "failed", reason: result.reason, actionIndex };
     }
     current = result.state;
     frames.push({
       index: frames.length,
       actionIndex,
-      label: decoded.label,
+      label: result.label,
       state: structuredClone(current),
       stateHash: result.stateHash,
     });

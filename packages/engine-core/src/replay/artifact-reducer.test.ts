@@ -3,16 +3,20 @@ import type { GameState } from "@optcg/types";
 
 import { reconstructReplayArtifactStates } from "./artifact-reducer.js";
 
+const minimalState = (): GameState =>
+  ({
+    matchId: "match-1",
+    seq: 1,
+    actionSeq: 0,
+    status: { type: "completed", winner: "p1" },
+    players: {},
+    eventJournal: [],
+    timers: { players: {} },
+  }) as unknown as GameState;
+
 describe("reconstructReplayArtifactStates", () => {
   test("returns the initial state as the first frame for an artifact with no actions", () => {
-    const initialState = {
-      matchId: "match-1",
-      seq: 1,
-      actionSeq: 0,
-      status: { type: "completed", winner: "p1" },
-      players: {},
-      eventJournal: [],
-    } as unknown as GameState;
+    const initialState = minimalState();
     const result = reconstructReplayArtifactStates({
       initialState,
       deterministicEntries: [],
@@ -28,14 +32,7 @@ describe("reconstructReplayArtifactStates", () => {
   });
 
   test("fails closed for persisted entries without a replayable request", () => {
-    const initialState = {
-      matchId: "match-1",
-      seq: 1,
-      actionSeq: 0,
-      status: { type: "main" },
-      players: {},
-      eventJournal: [],
-    } as unknown as GameState;
+    const initialState = minimalState();
     const result = reconstructReplayArtifactStates({
       initialState,
       deterministicEntries: [{ envelope: { request: { type: "unknown" } } }],
@@ -44,8 +41,32 @@ describe("reconstructReplayArtifactStates", () => {
 
     expect(result).toEqual({
       status: "failed",
-      reason: "Unsupported replay action unknown.",
+      reason: "Replay entry is not a deterministic entry.",
       actionIndex: 0,
     });
+  });
+
+  test("rejects envelope-shaped entries as deterministic replay authority", () => {
+    const initialState = minimalState();
+    const result = reconstructReplayArtifactStates({
+      initialState,
+      deterministicEntries: [
+        {
+          envelope: {
+            request: {
+              type: "submitAction",
+              playerId: "player-1",
+              actionIndex: 0,
+            },
+          },
+        },
+      ],
+      expectedFinalStateHash: undefined,
+    });
+
+    expect(result.status).toBe("failed");
+    if (result.status === "failed") {
+      expect(result.reason).toMatch(/deterministic entry/i);
+    }
   });
 });
