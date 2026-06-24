@@ -52,3 +52,9 @@ export {
   type ApplyDeterministicOperationResult,
   type DeterministicCheckpointResolver,
 } from "./replay/deterministic-operation.js";
+export {
+  applyDeterministicEntry,
+  checkpointResolverFromList,
+  hashReplayStateForScope,
+  type DeterministicEntryApplyResult,
+} from "./replay/deterministic-entry.js";
