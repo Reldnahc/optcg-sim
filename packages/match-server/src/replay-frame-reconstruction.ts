@@ -126,14 +126,20 @@ const replayFramesFromInitialState = (
     expectedFinalStateHash,
   });
   if (result.status === "failed") {
-    return result;
+    return {
+      status: "failed",
+      reason: result.reason,
+      ...(result.entryIndex === undefined
+        ? {}
+        : { actionIndex: result.entryIndex }),
+    };
   }
   try {
     return {
       status: "ready",
       frames: result.frames.map((frame) => ({
         index: frame.index,
-        actionIndex: frame.actionIndex ?? -1,
+        actionIndex: frame.entryIndex ?? -1,
         label: frame.label,
         snapshot: snapshotForFrame(frame),
       })),

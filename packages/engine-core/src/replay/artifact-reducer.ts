@@ -19,7 +19,7 @@ import {
 
 export interface ReplayArtifactStateFrame {
   readonly index: number;
-  readonly actionIndex: number | null;
+  readonly entryIndex: number | null;
   readonly label: string;
   readonly state: GameState;
   readonly stateHash: string;
@@ -33,7 +33,7 @@ export type ReplayArtifactReconstructionResult =
   | {
       readonly status: "failed";
       readonly reason: string;
-      readonly actionIndex?: number | undefined;
+      readonly entryIndex?: number | undefined;
     };
 
 type DecodeResult<T> =
@@ -208,12 +208,6 @@ const decodeDeterministicEntry = (
   if (!isRecord(value)) {
     return { status: "failed", reason: "Replay entry is not an object." };
   }
-  if ("envelope" in value) {
-    return {
-      status: "failed",
-      reason: "Replay entry is not a deterministic entry.",
-    };
-  }
   if (value["formatVersion"] !== "deterministic-entry-v1") {
     return {
       status: "failed",
@@ -376,17 +370,17 @@ export const reconstructReplayArtifactStates = ({
   const frames: ReplayArtifactStateFrame[] = [
     {
       index: 0,
-      actionIndex: null,
+      entryIndex: null,
       label: "Initial state",
       state: structuredClone(initialState),
       stateHash,
     },
   ];
   let current = structuredClone(initialState);
-  for (const [actionIndex, entry] of deterministicEntries.entries()) {
+  for (const [entryIndex, entry] of deterministicEntries.entries()) {
     const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
-      return { status: "failed", reason: decoded.reason, actionIndex };
+      return { status: "failed", reason: decoded.reason, entryIndex };
     }
     if (decoded.value.kind === "system") {
       const operation = decoded.value.operation;
@@ -396,7 +390,7 @@ export const reconstructReplayArtifactStates = ({
           return {
             status: "failed",
             reason: `Rollback checkpoint ${operation.rollbackPointId} is not available.`,
-            actionIndex,
+            entryIndex,
           };
         }
       }
@@ -407,12 +401,12 @@ export const reconstructReplayArtifactStates = ({
       checkpointResolver,
     );
     if (result.status === "failed") {
-      return { status: "failed", reason: result.reason, actionIndex };
+      return { status: "failed", reason: result.reason, entryIndex };
     }
     current = result.state;
     frames.push({
       index: frames.length,
-      actionIndex,
+      entryIndex,
       label: result.label,
       state: structuredClone(current),
       stateHash: result.stateHash,

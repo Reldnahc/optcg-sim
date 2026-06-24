@@ -41,8 +41,8 @@ describe("reconstructReplayArtifactStates", () => {
 
     expect(result).toEqual({
       status: "failed",
-      reason: "Replay entry is not a deterministic entry.",
-      actionIndex: 0,
+      reason: "Replay entry has unsupported deterministic format.",
+      entryIndex: 0,
     });
   });
 
@@ -66,7 +66,9 @@ describe("reconstructReplayArtifactStates", () => {
 
     expect(result.status).toBe("failed");
     if (result.status === "failed") {
-      expect(result.reason).toMatch(/deterministic entry/i);
+      expect(result.reason).toBe(
+        "Replay entry has unsupported deterministic format.",
+      );
     }
   });
 });
