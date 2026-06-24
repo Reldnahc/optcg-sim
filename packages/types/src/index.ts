@@ -9,5 +9,6 @@ export type * from "./effect-continuous.js";
 export type * from "./effect-costs.js";
 export type * from "./decisions.js";
 export type * from "./runtime.js";
+export type * from "./replay.js";
 export type * from "./effect-presentation.js";
 export type * from "./support-certification.js";
