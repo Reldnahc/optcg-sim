@@ -74,16 +74,23 @@ describe("ReplayViewerPage", () => {
     const html = renderToStaticMarkup(
       createElement(ReplayPlaybackControls, {
         frameLabel: "playCard",
-        selectedFrameIndex: 1,
+        selectedFrameIndex: 0,
         frameCount: 3,
+        playing: false,
+        speedMs: 700,
         onPrevious: () => undefined,
         onNext: () => undefined,
+        onTogglePlay: () => undefined,
+        onSelectFrame: () => undefined,
+        onSelectSpeedMs: () => undefined,
       }),
     );
 
-    assert.match(html, /Previous action/u);
-    assert.match(html, /Next action/u);
-    assert.match(html, /Frame 2 \/ 3/u);
+    assert.match(html, /aria-label="Previous replay frame"/u);
+    assert.match(html, /aria-label="Next replay frame"/u);
+    assert.match(html, /aria-label="Play replay"/u);
+    assert.match(html, /type="range"/u);
+    assert.match(html, /Frame 1 \/ 3/u);
     assert.match(html, /playCard/u);
   });
 
@@ -93,8 +100,13 @@ describe("ReplayViewerPage", () => {
         frameLabel: "start",
         selectedFrameIndex: 0,
         frameCount: 2,
+        playing: false,
+        speedMs: 700,
         onPrevious: () => undefined,
         onNext: () => undefined,
+        onTogglePlay: () => undefined,
+        onSelectFrame: () => undefined,
+        onSelectSpeedMs: () => undefined,
       }),
     );
     const finalFrameHtml = renderToStaticMarkup(
@@ -102,18 +114,23 @@ describe("ReplayViewerPage", () => {
         frameLabel: "end",
         selectedFrameIndex: 1,
         frameCount: 2,
+        playing: false,
+        speedMs: 700,
         onPrevious: () => undefined,
         onNext: () => undefined,
+        onTogglePlay: () => undefined,
+        onSelectFrame: () => undefined,
+        onSelectSpeedMs: () => undefined,
       }),
     );
 
     assert.match(
       firstFrameHtml,
-      /<button type="button" disabled="">Previous action/u,
+      /<button type="button" aria-label="Previous replay frame" disabled="">Previous/u,
     );
     assert.match(
       finalFrameHtml,
-      /<button type="button" disabled="">Next action/u,
+      /<button type="button" aria-label="Next replay frame" disabled="">Next/u,
     );
   });
 });

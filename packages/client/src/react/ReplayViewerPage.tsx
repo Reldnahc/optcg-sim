@@ -169,35 +169,75 @@ export interface ReplayPlaybackControlsProps {
   readonly frameLabel: string;
   readonly selectedFrameIndex: number;
   readonly frameCount: number;
+  readonly playing: boolean;
+  readonly speedMs: number;
   readonly onPrevious: () => void;
   readonly onNext: () => void;
+  readonly onTogglePlay: () => void;
+  readonly onSelectFrame: (index: number) => void;
+  readonly onSelectSpeedMs: (speedMs: number) => void;
 }
 
 export const ReplayPlaybackControls = ({
   frameLabel,
   selectedFrameIndex,
   frameCount,
+  playing,
+  speedMs,
   onPrevious,
   onNext,
+  onTogglePlay,
+  onSelectFrame,
+  onSelectSpeedMs,
 }: ReplayPlaybackControlsProps): React.JSX.Element => (
-  <>
+  <div className="replay-transport" aria-label="Replay transport">
     <button
       type="button"
+      aria-label="Previous replay frame"
       disabled={selectedFrameIndex <= 0}
       onClick={onPrevious}
     >
-      Previous action
+      Previous
     </button>
-    <span>{`Frame ${String(selectedFrameIndex + 1)} / ${String(frameCount)}`}</span>
-    <strong>{frameLabel}</strong>
     <button
       type="button"
+      aria-label={playing ? "Pause replay" : "Play replay"}
+      onClick={onTogglePlay}
+    >
+      {playing ? "Pause" : "Play"}
+    </button>
+    <button
+      type="button"
+      aria-label="Next replay frame"
       disabled={selectedFrameIndex >= frameCount - 1}
       onClick={onNext}
     >
-      Next action
+      Next
     </button>
-  </>
+    <input
+      aria-label="Replay frame"
+      type="range"
+      min={0}
+      max={Math.max(0, frameCount - 1)}
+      value={selectedFrameIndex}
+      onChange={(event) => {
+        onSelectFrame(Number(event.currentTarget.value));
+      }}
+    />
+    <select
+      aria-label="Replay speed"
+      value={speedMs}
+      onChange={(event) => {
+        onSelectSpeedMs(Number(event.currentTarget.value));
+      }}
+    >
+      <option value={1200}>0.5x</option>
+      <option value={700}>1x</option>
+      <option value={350}>2x</option>
+    </select>
+    <span>{`Frame ${String(selectedFrameIndex + 1)} / ${String(frameCount)}`}</span>
+    <strong>{frameLabel}</strong>
+  </div>
 );
 
 const replayMatchIdFromPath = (path: string): string | undefined => {
@@ -221,6 +261,8 @@ export const ReplayViewerPage = ({
   const [status, setStatus] = useState<ReplayViewerStatus>("loading");
   const [replay, setReplay] = useState<ReplayDetail>();
   const [frameIndex, setFrameIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speedMs, setSpeedMs] = useState(700);
   const [error, setError] = useState<string>();
   const client = useMemo(
     () =>
@@ -266,6 +308,7 @@ export const ReplayViewerPage = ({
 
   useEffect(() => {
     setFrameIndex(0);
+    setPlaying(false);
   }, [replay?.matchId]);
 
   const frames = useMemo(
@@ -287,12 +330,31 @@ export const ReplayViewerPage = ({
     () => createReplayMatchClient(selectedFrame),
     [selectedFrame],
   );
+  useEffect(() => {
+    if (!playing || frames.length <= 1) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setFrameIndex((current) => {
+        const next = Math.min(frames.length - 1, current + 1);
+        if (next >= frames.length - 1) {
+          setPlaying(false);
+        }
+        return next;
+      });
+    }, speedMs);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [frames.length, playing, selectedFrameIndex, speedMs]);
   const replayControls =
     replay === undefined ? undefined : (
       <ReplayPlaybackControls
         frameLabel={selectedFrame?.label ?? "Replay frame"}
         selectedFrameIndex={selectedFrameIndex}
         frameCount={Math.max(1, frames.length)}
+        playing={playing}
+        speedMs={speedMs}
         onPrevious={() => {
           setFrameIndex((current) => Math.max(0, current - 1));
         }}
@@ -301,6 +363,13 @@ export const ReplayViewerPage = ({
             Math.min(Math.max(0, frames.length - 1), current + 1),
           );
         }}
+        onTogglePlay={() => {
+          setPlaying((current) => !current);
+        }}
+        onSelectFrame={(index) => {
+          setFrameIndex(Math.max(0, Math.min(frames.length - 1, index)));
+        }}
+        onSelectSpeedMs={setSpeedMs}
       />
     );
 
