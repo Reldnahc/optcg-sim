@@ -19,7 +19,6 @@
   --card-zone-width: calc(var(--card-width) + 14px);
   --playmat-wide-zone-width: calc(var(--card-width) * 1.6);
   --playmat-restriction-zone-width: var(--card-zone-width);
-  --playmat-summary-zone-width: var(--playmat-wide-zone-width);
   --card-corner-radius: calc(var(--card-height) / 28);
   --card-glow-size: calc(var(--card-height) / 7);
   --card-outline-heavy: calc(var(--card-height) / 28);

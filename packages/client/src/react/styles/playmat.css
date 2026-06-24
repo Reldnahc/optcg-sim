@@ -3,25 +3,20 @@
   display: grid;
   height: calc(100vh - (var(--match-app-padding) * 2));
   grid-template-areas:
-    "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck"
-    "opponent-deck opponent-summary opponent-summary opponent-stage opponent-leader opponent-restrictions . opponent-life"
-    "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life"
-    ". . . center-spacer center-spacer . . ."
-    "player-life player-characters player-characters player-characters player-characters player-characters player-characters player-characters"
-    "player-life . player-restrictions player-leader player-stage player-summary player-summary player-deck"
-    "player-don-deck player-cost player-cost player-cost player-cost player-cost player-cost player-trash";
-  grid-template-columns:
-    var(--card-zone-width) var(--playmat-summary-zone-width)
-    var(--playmat-restriction-zone-width) var(--card-zone-width)
-    var(--card-zone-width) var(--playmat-restriction-zone-width)
-    var(--playmat-summary-zone-width)
-    var(--card-zone-width);
+    "opponent-resource"
+    "opponent-field"
+    "center-spacer"
+    "player-field"
+    "player-resource";
+  grid-template-columns: max-content;
   grid-template-rows:
-    var(--playmat-row-height) var(--playmat-row-height)
-    var(--playmat-row-height) minmax(0, 1fr)
-    var(--playmat-row-height) var(--playmat-row-height)
+    var(--playmat-row-height)
+    calc((var(--playmat-row-height) * 2) + var(--playmat-grid-gap))
+    minmax(0, 1fr)
+    calc((var(--playmat-row-height) * 2) + var(--playmat-grid-gap))
     var(--playmat-row-height);
   gap: var(--playmat-grid-gap);
+  justify-content: center;
   min-height: 0;
   border: var(--playmat-border-width) solid var(--match-border);
   background: var(--match-surface-board);
@@ -44,6 +39,56 @@
   position: relative;
   min-height: 0;
   min-width: 0;
+}
+
+.playmat-row,
+.playmat-field {
+  display: grid;
+  gap: var(--playmat-grid-gap);
+  min-width: 0;
+  min-height: 0;
+}
+
+.opponent-resource-row {
+  grid-area: opponent-resource;
+  grid-template-areas: "opponent-trash opponent-cost opponent-cost opponent-cost opponent-cost opponent-don-deck";
+  grid-template-columns:
+    var(--card-zone-width) var(--playmat-wide-zone-width)
+    var(--playmat-restriction-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--card-zone-width);
+}
+
+.opponent-field {
+  grid-area: opponent-field;
+  grid-template-areas:
+    "opponent-deck opponent-summary opponent-restrictions opponent-stage opponent-leader opponent-life"
+    "opponent-characters opponent-characters opponent-characters opponent-characters opponent-characters opponent-life";
+  grid-template-columns:
+    var(--card-zone-width) var(--playmat-wide-zone-width)
+    var(--playmat-restriction-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--card-zone-width);
+  grid-template-rows: var(--playmat-row-height) var(--playmat-row-height);
+}
+
+.player-field {
+  grid-area: player-field;
+  grid-template-areas:
+    "player-life player-characters player-characters player-characters player-characters player-characters"
+    "player-life player-leader player-stage player-restrictions player-summary player-deck";
+  grid-template-columns:
+    var(--card-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
+    var(--playmat-wide-zone-width) var(--card-zone-width);
+  grid-template-rows: var(--playmat-row-height) var(--playmat-row-height);
+}
+
+.player-resource-row {
+  grid-area: player-resource;
+  grid-template-areas: "player-don-deck player-cost player-cost player-cost player-cost player-trash";
+  grid-template-columns:
+    var(--card-zone-width) var(--card-zone-width)
+    var(--card-zone-width) var(--playmat-restriction-zone-width)
+    var(--playmat-wide-zone-width) var(--card-zone-width);
 }
 
 .zone-count {
@@ -297,6 +342,7 @@
   grid-area: center-spacer;
   display: grid;
   grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  width: 100%;
 }
 
 .opponent-center-spacer {
