@@ -60,8 +60,66 @@ const stableGameplayTimers = (timers: TimerState): TimerState => ({
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const stableGameplayCard = (card: unknown): unknown => {
+  if (!isRecord(card)) {
+    return card;
+  }
+  return {
+    cardId: card["cardId"],
+    language: card["language"],
+    name: card["name"],
+    ...(card["nameAliases"] === undefined
+      ? {}
+      : { nameAliases: card["nameAliases"] }),
+    ...(card["identityTreatment"] === undefined
+      ? {}
+      : { identityTreatment: card["identityTreatment"] }),
+    category: card["category"],
+    colors: card["colors"],
+    ...(card["cost"] === undefined ? {} : { cost: card["cost"] }),
+    ...(card["power"] === undefined ? {} : { power: card["power"] }),
+    ...(card["counter"] === undefined ? {} : { counter: card["counter"] }),
+    ...(card["life"] === undefined ? {} : { life: card["life"] }),
+    attributes: card["attributes"],
+    types: card["types"],
+    ...(card["effectText"] === undefined
+      ? {}
+      : { effectText: card["effectText"] }),
+    ...(card["triggerText"] === undefined
+      ? {}
+      : { triggerText: card["triggerText"] }),
+    printedKeywords: card["printedKeywords"],
+    sourceTextHash: card["sourceTextHash"],
+    behaviorHash: card["behaviorHash"],
+    support: card["support"],
+  };
+};
+
+const collectEffectDefinitionIds = (
+  value: unknown,
+  output: Set<string>,
+): void => {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectEffectDefinitionIds(entry, output);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "effectDefinitionId" && typeof entry === "string") {
+      output.add(entry);
+      continue;
+    }
+    collectEffectDefinitionIds(entry, output);
+  }
+};
+
 const stableGameplayCardManifest = (
   manifest: GameState["cardManifest"],
+  cardIds: ReadonlySet<string>,
 ): GameState["cardManifest"] => {
   const clone = structuredClone(manifest);
   if (!isRecord(clone)) {
@@ -70,16 +128,47 @@ const stableGameplayCardManifest = (
   if (!isRecord(clone.cards)) {
     return clone;
   }
-  clone.cards = Object.fromEntries(
-    Object.entries(clone.cards).map(([cardId, card]) => {
-      if (!isRecord(card)) {
-        return [cardId, card];
-      }
-      const { variants: _variants, ...stableCard } = card;
-      return [cardId, stableCard];
-    }),
+  const cards = Object.fromEntries(
+    Object.entries(clone.cards)
+      .filter(([cardId]) => cardIds.has(cardId))
+      .map(([cardId, card]) => [cardId, stableGameplayCard(card)]),
   ) as GameState["cardManifest"]["cards"];
+  const effectDefinitionIds = new Set<string>();
+  collectEffectDefinitionIds(cards, effectDefinitionIds);
+  clone.cards = cards;
+  if (isRecord(clone.effectDefinitions)) {
+    clone.effectDefinitions = Object.fromEntries(
+      Object.entries(clone.effectDefinitions).filter(([definitionId]) =>
+        effectDefinitionIds.has(definitionId),
+      ),
+    ) as NonNullable<GameState["cardManifest"]["effectDefinitions"]>;
+  }
   return clone;
+};
+
+const collectReferencedCardIds = (
+  value: unknown,
+  output: Set<string>,
+): void => {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectReferencedCardIds(entry, output);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "cardManifest") {
+      continue;
+    }
+    if (key === "cardId" && typeof entry === "string") {
+      output.add(entry);
+      continue;
+    }
+    collectReferencedCardIds(entry, output);
+  }
 };
 
 export const hashReplayStateForScope = (
@@ -89,7 +178,12 @@ export const hashReplayStateForScope = (
   if (hashScope === "gameplay-v1") {
     const clone = structuredClone(state);
     clone.timers = stableGameplayTimers(clone.timers);
-    clone.cardManifest = stableGameplayCardManifest(clone.cardManifest);
+    const referencedCardIds = new Set<string>();
+    collectReferencedCardIds(clone, referencedCardIds);
+    clone.cardManifest = stableGameplayCardManifest(
+      clone.cardManifest,
+      referencedCardIds,
+    );
     return hashCanonicalStateValue(clone);
   }
   return hashCanonicalStateValue(state);

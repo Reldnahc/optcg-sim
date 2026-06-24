@@ -54,30 +54,76 @@ const jsonObject = (value: unknown): JsonObject => {
 const isJsonRecord = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const compactVariantSnapshot = (variant: unknown): JsonObject => {
-  if (!isJsonRecord(variant)) {
-    return {};
-  }
-  return jsonObject({
-    stockImageFull: variant["stockImageFull"],
-    scanImageDisplay: variant["scanImageDisplay"],
-  });
-};
-
 const compactCardSnapshot = (card: unknown): JsonObject => {
   if (!isJsonRecord(card)) {
     return {};
   }
-  const variants = Array.isArray(card["variants"])
-    ? card["variants"].slice(0, 1).map(compactVariantSnapshot)
-    : [];
-  return jsonObject({ ...card, variants });
+  return jsonObject({
+    cardId: card["cardId"],
+    language: card["language"],
+    name: card["name"],
+    nameAliases: card["nameAliases"],
+    identityTreatment: card["identityTreatment"],
+    category: card["category"],
+    colors: card["colors"],
+    cost: card["cost"],
+    power: card["power"],
+    counter: card["counter"],
+    life: card["life"],
+    attributes: card["attributes"],
+    types: card["types"],
+    effectText: card["effectText"],
+    triggerText: card["triggerText"],
+    printedKeywords: card["printedKeywords"],
+    sourceTextHash: card["sourceTextHash"],
+    behaviorHash: card["behaviorHash"],
+    support: card["support"],
+  });
 };
 
-const compactManifestSnapshot = (manifest: unknown): JsonObject => {
+const collectEffectDefinitionIds = (
+  value: unknown,
+  output: Set<string>,
+): void => {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectEffectDefinitionIds(entry, output);
+    }
+    return;
+  }
+  if (!isJsonRecord(value)) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "effectDefinitionId" && typeof entry === "string") {
+      output.add(entry);
+      continue;
+    }
+    collectEffectDefinitionIds(entry, output);
+  }
+};
+
+const compactManifestSnapshot = (
+  manifest: unknown,
+  cardIds?: ReadonlySet<string>,
+): JsonObject => {
   if (!isJsonRecord(manifest) || !isJsonRecord(manifest["cards"])) {
     return {};
   }
+  const cards = Object.fromEntries(
+    Object.entries(manifest["cards"])
+      .filter(([cardId]) => cardIds === undefined || cardIds.has(cardId))
+      .map(([cardId, card]) => [cardId, compactCardSnapshot(card)]),
+  );
+  const effectDefinitionIds = new Set<string>();
+  collectEffectDefinitionIds(cards, effectDefinitionIds);
+  const effectDefinitions = isJsonRecord(manifest["effectDefinitions"])
+    ? Object.fromEntries(
+        Object.entries(manifest["effectDefinitions"]).filter(([definitionId]) =>
+          effectDefinitionIds.has(definitionId),
+        ),
+      )
+    : undefined;
   return jsonObject({
     manifestHash: manifest["manifestHash"],
     source: manifest["source"],
@@ -85,16 +131,22 @@ const compactManifestSnapshot = (manifest: unknown): JsonObject => {
     effectDefinitionsVersion: manifest["effectDefinitionsVersion"],
     customHandlerVersion: manifest["customHandlerVersion"],
     banlistVersion: manifest["banlistVersion"],
-    effectDefinitions: manifest["effectDefinitions"],
+    effectDefinitions,
     createdAt: manifest["createdAt"],
-    cards: Object.fromEntries(
-      Object.entries(manifest["cards"]).map(([cardId, card]) => [
-        cardId,
-        compactCardSnapshot(card),
-      ]),
-    ),
+    cards,
   });
 };
+
+const matchCardIdsForSetup = (
+  setup: DevMatchSetup,
+): ReadonlySet<string> =>
+  new Set(
+    setup.players.flatMap((player) => [
+      String(player.leaderCardId),
+      ...player.deckCardIds.map(String),
+      ...player.donDeckCardIds.map(String),
+    ]),
+  );
 
 const hashJson = (value: unknown): string =>
   createHash("sha256")
@@ -222,6 +274,7 @@ export const buildLocalCompletedMatchRecord = (
     return undefined;
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
+  const matchCardIds = matchCardIdsForSetup(input.setup);
   const replayFinalStateHash = hashReplayStateForScope(
     input.match.state,
     "gameplay-v1",
@@ -251,6 +304,15 @@ export const buildLocalCompletedMatchRecord = (
       ]),
     ),
   });
+  const replayCheckpointIds = new Set(
+    input.deterministicRecords.flatMap((record) => {
+      const entry = record.deterministicEntry;
+      return entry.kind === "system" &&
+        entry.operation.type === "restoreRollbackPoint"
+        ? [entry.operation.rollbackPointId]
+        : [];
+    }),
+  );
   return {
     matchId: input.match.state.matchId,
     status: status.winner === "draw" ? "draw" : "completed",
@@ -267,6 +329,7 @@ export const buildLocalCompletedMatchRecord = (
     cardManifestHash: hashJson(input.match.state.cardManifest),
     cardManifestSnapshot: compactManifestSnapshot(
       input.match.state.cardManifest,
+      matchCardIds,
     ),
     firstPlayerSeatId: input.setup.firstPlayerId,
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
@@ -296,7 +359,10 @@ export const buildLocalCompletedMatchRecord = (
       rngSeedCommitment: hashJson(input.setup.rngSeed),
       rngSeedRevealed: seedText(input.setup.rngSeed),
       manifestHash: hashJson(input.match.state.cardManifest),
-      manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
+      manifestSnapshot: compactManifestSnapshot(
+        input.match.state.cardManifest,
+        matchCardIds,
+      ),
       initialStateHash,
       finalStateHash: replayFinalStateHash,
       initialSnapshot: null,
@@ -310,9 +376,11 @@ export const buildLocalCompletedMatchRecord = (
         ),
         ...input.match.state.audit.map((entry) => jsonObject(entry)),
       ],
-      checkpoints: input.deterministicCheckpoints.map((record) =>
-        jsonObject(record.checkpoint),
-      ),
+      checkpoints: input.deterministicCheckpoints
+        .filter((record) =>
+          replayCheckpointIds.has(record.checkpoint.checkpointId),
+        )
+        .map((record) => jsonObject(record.checkpoint)),
       finalState: null,
       compressed: false,
       artifactStorage: null,

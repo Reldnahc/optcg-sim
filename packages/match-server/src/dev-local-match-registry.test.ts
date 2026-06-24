@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { Buffer } from "node:buffer";
 import { afterEach, beforeAll, test, vi } from "vitest";
 
 import { hashReplayStateForScope } from "@optcg/engine-core";
@@ -1035,6 +1036,45 @@ test("completed-match save does not block the terminal action response", async (
       savedRecord.replay.deterministicEntries.length + 1,
     );
   }
+  const completedMatch = registry.getMatch(matchId);
+  if (completedMatch === undefined) {
+    throw new Error("Expected completed match for replay size check.");
+  }
+  const compactBytes = Buffer.byteLength(
+    JSON.stringify(savedRecord.replay),
+    "utf8",
+  );
+  const fullSnapshotBytes = Buffer.byteLength(
+    JSON.stringify({
+      ...savedRecord.replay,
+      initialSnapshot: completedMatch.state,
+      finalState: completedMatch.state,
+      deterministicEntries: savedRecord.replay.deterministicEntries.map(
+        (entry) =>
+          typeof entry === "object" && entry !== null
+            ? {
+                ...entry,
+                result: { snapshot: completedMatch.state },
+              }
+            : { entry, result: { snapshot: completedMatch.state } },
+      ),
+    }),
+    "utf8",
+  );
+  assert.ok(
+    compactBytes < fullSnapshotBytes * 0.25,
+    `expected compact replay ${String(compactBytes)} bytes to stay below 25% of full snapshot replay ${String(fullSnapshotBytes)} bytes; manifest=${String(
+      Buffer.byteLength(JSON.stringify(savedRecord.replay.manifestSnapshot)),
+    )}; deterministic=${String(
+      Buffer.byteLength(
+        JSON.stringify(savedRecord.replay.deterministicEntries),
+      ),
+    )}; audit=${String(
+      Buffer.byteLength(JSON.stringify(savedRecord.replay.auditEntries)),
+    )}; deckOrders=${String(
+      Buffer.byteLength(JSON.stringify(savedRecord.replay.initialDeckOrders)),
+    )}`,
+  );
 });
 
 test("registry can omit action result snapshots for live socket traffic", async () => {
