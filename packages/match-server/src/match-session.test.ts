@@ -195,6 +195,14 @@ describe("match session runtime", () => {
     const loadedAfterFlush = await persistence.loadSnapshot(matchId);
     expect(loadedAfterFlush?.actions).toHaveLength(1);
     expect(loadedAfterFlush?.actions[0]?.result.snapshot).toBeUndefined();
+    expect(loadedAfterFlush?.deterministicLogVersion).toBe(
+      "deterministic-entry-v1",
+    );
+    expect(loadedAfterFlush?.deterministicEntriesSinceSnapshot).toHaveLength(1);
+    expect(
+      loadedAfterFlush?.deterministicEntriesSinceSnapshot?.[0]?.audit.result
+        .snapshot,
+    ).toBeUndefined();
     expect(loadedAfterFlush?.decisions).toHaveLength(0);
     expect(loadedAfterFlush?.state.matchId).toBe(matchId);
     expect(loadedAfterFlush?.manifest.manifestHash).toBe(
@@ -206,6 +214,9 @@ describe("match session runtime", () => {
     const loadedAfterCheckpoint = await persistence.loadSnapshot(matchId);
     expect(loadedAfterCheckpoint?.actions).toHaveLength(0);
     expect(loadedAfterCheckpoint?.state.seq).toBe(accepted.stateSeq);
+    expect(
+      loadedAfterCheckpoint?.deterministicEntriesSinceSnapshot,
+    ).toHaveLength(0);
   });
 
   test("keeps accepted records pending when persistence append fails", async () => {

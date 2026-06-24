@@ -4,6 +4,7 @@ import type {
   MatchPersistence,
   MatchPersistenceSnapshot,
   RecoveryLock,
+  StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -20,6 +21,7 @@ export interface InMemoryMatchPersistence extends MatchPersistence {
 interface StoredSnapshot extends MatchPersistenceSnapshot {
   actions: readonly StoredSessionRecord[];
   decisions: readonly StoredSessionRecord[];
+  deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
 }
 
 const clone = <T>(value: T): T => structuredClone(value);
@@ -31,6 +33,10 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
   const snapshots = new Map<MatchId, StoredSnapshot>();
   const actions = new Map<MatchId, StoredSessionRecord[]>();
   const decisions = new Map<MatchId, StoredSessionRecord[]>();
+  const deterministicEntries = new Map<
+    MatchId,
+    StoredDeterministicSessionRecord[]
+  >();
   const locks = new Map<MatchId, RecoveryLock>();
   const freezes: FreezeRecord[] = [];
 
@@ -56,11 +62,27 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
         ...(input.recoveryContext === undefined
           ? {}
           : { recoveryContext: clone(input.recoveryContext) }),
+        ...(input.deterministicLogVersion === undefined
+          ? {}
+          : { deterministicLogVersion: input.deterministicLogVersion }),
+        ...(input.deterministicCheckpoints === undefined
+          ? {}
+          : { deterministicCheckpoints: clone(input.deterministicCheckpoints) }),
         actions: [],
         decisions: [],
       });
       actions.set(input.metadata.matchId, clone([...input.actions]));
       decisions.set(input.metadata.matchId, clone([...input.decisions]));
+      deterministicEntries.set(
+        input.metadata.matchId,
+        clone([...(input.deterministicEntriesSinceSnapshot ?? [])]),
+      );
+      return Promise.resolve();
+    },
+    appendDeterministicEntry({ matchId, record }) {
+      const existing = deterministicEntries.get(matchId) ?? [];
+      existing.push(clone(record));
+      deterministicEntries.set(matchId, existing);
       return Promise.resolve();
     },
     appendAction({ matchId, record }) {
@@ -81,6 +103,8 @@ export const createInMemoryMatchPersistence = (): InMemoryMatchPersistence => {
           ...snapshot,
           actions: actions.get(matchId) ?? [],
           decisions: decisions.get(matchId) ?? [],
+          deterministicEntriesSinceSnapshot:
+            deterministicEntries.get(matchId) ?? [],
         }),
       );
     },

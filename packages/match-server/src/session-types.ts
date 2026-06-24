@@ -209,6 +209,10 @@ export interface RecoveryLock {
 
 export interface MatchPersistence {
   saveSnapshot(input: MatchPersistenceSnapshot): Promise<void>;
+  appendDeterministicEntry(input: {
+    readonly matchId: MatchId;
+    readonly record: StoredDeterministicSessionRecord;
+  }): Promise<void>;
   appendAction(input: {
     readonly matchId: MatchId;
     readonly record: StoredSessionRecord;

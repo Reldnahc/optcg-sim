@@ -129,6 +129,25 @@ const compactStoredSessionRecord = (
   recordedAt: record.recordedAt,
 });
 
+const compactStoredDeterministicSessionRecord = (
+  record: StoredDeterministicSessionRecord,
+): StoredDeterministicSessionRecord => ({
+  deterministicEntry: record.deterministicEntry,
+  audit: {
+    type: record.audit.type,
+    envelope: record.audit.envelope,
+    result: compactSessionResult(record.audit.result),
+    recordedAt: record.audit.recordedAt,
+  },
+});
+
+const compactStoredDeterministicCheckpointRecord = (
+  record: StoredDeterministicCheckpointRecord,
+): StoredDeterministicCheckpointRecord => ({
+  checkpoint: record.checkpoint,
+  recordedAt: record.recordedAt,
+});
+
 const sortedStoredRecords = (
   records: readonly StoredSessionRecord[],
 ): StoredSessionRecord[] =>
@@ -325,6 +344,17 @@ export const createMatchSessionRuntime = ({
         pendingDeterministicRecords.length = 0;
         return;
       }
+      while (pendingDeterministicRecords.length > 0) {
+        const record = pendingDeterministicRecords[0];
+        if (record === undefined) {
+          break;
+        }
+        await persistence.appendDeterministicEntry({
+          matchId: local.state.matchId,
+          record: compactStoredDeterministicSessionRecord(record),
+        });
+        pendingDeterministicRecords.shift();
+      }
       while (pendingActions.length > 0) {
         const record = pendingActions[0];
         if (record === undefined) {
@@ -360,6 +390,11 @@ export const createMatchSessionRuntime = ({
         ...(context === undefined ? {} : { recoveryContext: context }),
         actions: [],
         decisions: [],
+        deterministicLogVersion: "deterministic-entry-v1",
+        deterministicEntriesSinceSnapshot: [],
+        deterministicCheckpoints: deterministicCheckpoints.map(
+          compactStoredDeterministicCheckpointRecord,
+        ),
       });
       pendingActions.length = 0;
       pendingDecisions.length = 0;
