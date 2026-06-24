@@ -48,11 +48,13 @@ describe("playmat structure", () => {
       "opponent-don-deck",
       "opponent-trash",
       "opponent-life",
+      "opponent-side",
       "opponent-resource-row",
       "opponent-field",
       "center-spacer",
       "opponent-center-spacer",
       "player-center-spacer",
+      "player-side",
       "player-field",
       "player-resource-row",
       "player-characters",
@@ -124,7 +126,7 @@ describe("playmat structure", () => {
     assert.match(appShellStyles, /padding:\s*var\(--match-app-padding\);/);
     assert.match(
       playmatStyles,
-      /grid-template-rows:\s*var\(--playmat-row-height\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\)\s+minmax\(\s*0,\s*1fr\s*\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\)\s+var\(--playmat-row-height\);/,
+      /grid-template-rows:\s*calc\(\(var\(--playmat-row-height\)\s*\*\s*3\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*2\)\)\s+minmax\(\s*0,\s*1fr\s*\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*3\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*2\)\);/,
     );
     assert.match(
       playmatStyles,
@@ -681,27 +683,21 @@ describe("playmat structure", () => {
     );
     assert.match(
       boardLayout,
-      /const playerFieldClassName = \[[\s\S]*"player-field"[\s\S]*playerSideIsActive \? "is-active-player-side"/u,
+      /const playerSideClassName = \[[\s\S]*"player-side"[\s\S]*playerSideIsActive \? "is-active-player-side"/u,
     );
     assert.match(
       boardLayout,
-      /const opponentFieldClassName = \[[\s\S]*"opponent-field"[\s\S]*opponentSideIsActive \? "is-active-player-side"/u,
+      /const opponentSideClassName = \[[\s\S]*"opponent-side"[\s\S]*opponentSideIsActive \? "is-active-player-side"/u,
     );
-    assert.match(
-      boardLayout,
-      /const playerResourceRowClassName = \[[\s\S]*"player-resource-row"[\s\S]*playerSideIsActive \? "is-active-player-side"/u,
-    );
-    assert.match(
-      boardLayout,
-      /const opponentResourceRowClassName = \[[\s\S]*"opponent-resource-row"[\s\S]*opponentSideIsActive \? "is-active-player-side"/u,
-    );
+    assert.doesNotMatch(boardLayout, /FieldClassName/u);
+    assert.doesNotMatch(boardLayout, /ResourceRowClassName/u);
     assert.doesNotMatch(boardLayout, /is-turn-player/u);
     assert.doesNotMatch(boardLayout, /is-choice-active/u);
     assert.doesNotMatch(playmatStyles, /\.tabletop-board\.is-turn-player/u);
     assert.doesNotMatch(playmatStyles, /\.tabletop-board\.is-choice-active/u);
     assert.match(
       playmatStyles,
-      /:where\(\.playmat-field,\s*\.playmat-row\)\.is-active-player-side\s*\{[^}]*border-color:\s*var\(--match-accent-strong\);[^}]*box-shadow:/u,
+      /\.playmat-side\.is-active-player-side\s*\{[^}]*border-color:\s*var\(--match-accent-strong\);[^}]*box-shadow:/u,
     );
   });
 
@@ -787,7 +783,15 @@ describe("playmat structure", () => {
 
     assert.match(
       styles,
-      /grid-template-rows:\s*var\(--playmat-row-height\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\)\s+minmax\(\s*0,\s*1fr\s*\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\)\s+var\(--playmat-row-height\);/,
+      /grid-template-rows:\s*calc\(\(var\(--playmat-row-height\)\s*\*\s*3\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*2\)\)\s+minmax\(\s*0,\s*1fr\s*\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*3\)\s*\+\s*\(var\(--playmat-grid-gap\)\s*\*\s*2\)\);/,
+    );
+    assert.match(
+      styles,
+      /\.opponent-side\s*\{[^}]*grid-template-rows:\s*var\(--playmat-row-height\)\s+calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\);/u,
+    );
+    assert.match(
+      styles,
+      /\.player-side\s*\{[^}]*grid-template-rows:\s*calc\(\(var\(--playmat-row-height\)\s*\*\s*2\)\s*\+\s*var\(--playmat-grid-gap\)\)\s+var\(--playmat-row-height\);/u,
     );
     assert.match(
       styles,
