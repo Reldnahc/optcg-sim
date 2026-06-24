@@ -132,6 +132,7 @@ async function makeFixtureRepo() {
     "effect-protection.ts",
     "effect-triggers.ts",
     "decisions.ts",
+    "replay.ts",
     "effect-presentation.ts",
     "support-certification.ts",
   ]) {

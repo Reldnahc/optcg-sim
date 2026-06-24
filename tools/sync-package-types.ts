@@ -28,6 +28,7 @@ const CANONICAL_PROJECTION_FILE_NAMES = [
   "effect-triggers.ts",
   "decisions.ts",
   "runtime.ts",
+  "replay.ts",
   "effect-presentation.ts",
   "support-certification.ts",
 ] as const;

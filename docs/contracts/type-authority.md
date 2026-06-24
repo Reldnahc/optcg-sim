@@ -48,6 +48,7 @@ Canonical module to package module mapping is one-to-one by filename:
 - `contracts/types/effect-triggers.ts` -> `packages/types/src/effect-triggers.ts`
 - `contracts/types/decisions.ts` -> `packages/types/src/decisions.ts`
 - `contracts/types/runtime.ts` -> `packages/types/src/runtime.ts`
+- `contracts/types/replay.ts` -> `packages/types/src/replay.ts`
 - `contracts/types/effect-presentation.ts` -> `packages/types/src/effect-presentation.ts`
 - `contracts/types/support-certification.ts` -> `packages/types/src/support-certification.ts`
 - `contracts/canonical-types.ts` -> `packages/types/src/index.ts` export surface alignment
@@ -71,6 +72,7 @@ Canonical module to package module mapping is one-to-one by filename:
   - `packages/types/src/effect-triggers.ts`
   - `packages/types/src/decisions.ts`
   - `packages/types/src/runtime.ts`
+  - `packages/types/src/replay.ts`
   - `packages/types/src/effect-presentation.ts`
   - `packages/types/src/support-certification.ts`
 - Tests, manifests, and support files under `packages/types/src` are not generated canonical projections unless a later explicit change includes them (for example `*.test.ts` and `export-ownership.manifest.ts`).
