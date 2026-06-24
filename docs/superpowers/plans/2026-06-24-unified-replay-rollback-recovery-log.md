@@ -148,12 +148,6 @@ import type {
 
 export type ReplayHashScope = "gameplay-v1" | "operational-v1";
 
-export interface DeterministicEntryAuditRef {
-  readonly clientActionId?: string;
-  readonly requestHash?: string;
-  readonly protocolVersion?: string;
-}
-
 export interface DeterministicEntryVerification {
   readonly stateSeqBefore: StateSeq;
   readonly actionSeqBefore: number;
@@ -198,7 +192,6 @@ export type DeterministicMatchEntry =
       readonly playerId: PlayerId;
       readonly action: Action;
       readonly verification: DeterministicEntryVerification;
-      readonly auditRef?: DeterministicEntryAuditRef;
     }
   | {
       readonly formatVersion: "deterministic-entry-v1";
@@ -209,7 +202,6 @@ export type DeterministicMatchEntry =
       readonly decisionId: DecisionId;
       readonly response: DecisionResponse;
       readonly verification: DeterministicEntryVerification;
-      readonly auditRef?: DeterministicEntryAuditRef;
     }
   | {
       readonly formatVersion: "deterministic-entry-v1";
@@ -218,7 +210,6 @@ export type DeterministicMatchEntry =
       readonly kind: "system";
       readonly operation: DeterministicSystemOperation;
       readonly verification: DeterministicEntryVerification;
-      readonly auditRef?: DeterministicEntryAuditRef;
     };
 
 export interface DeterministicCheckpoint {
@@ -1119,6 +1110,41 @@ git add packages/engine-core/src/replay/deterministic-entry.ts packages/engine-c
 git commit -m "feat: verify deterministic replay entries"
 ```
 
+## Prerequisite Task: Establish Rollback Checkpoint Ownership
+
+**Files:**
+
+- Modify: `packages/match-server/src/local-rollback.ts`
+- Modify: `packages/match-server/src/local-rollback.test.ts`
+
+Do this before Task 5. Later tasks return rollback metadata containing `DeterministicCheckpoint`, persist `deterministicCheckpoints`, and recover rollback system entries from `match.rollback.checkpoints`; those tasks are not implementable until checkpoint ownership exists.
+
+- [ ] **Step 1: Add checkpoint archive to rollback state**
+
+Add `checkpoints: DeterministicCheckpoint[]` to `LocalRollbackState`, initialize it in `createLocalRollbackState`, and preserve it through request/cancel/resolve helpers.
+
+- [ ] **Step 2: Archive checkpoint snapshots when rollback points are recorded**
+
+When `recordRollbackPoint` creates a visible rollback point, also create the `DeterministicCheckpoint` for the same cloned `previousState` and append it to `rollback.checkpoints`. Visible rollback `points` may still be trimmed by `maxPoints`; checkpoint archive entries must remain for the match duration because completed replay restore entries may reference older checkpoints.
+
+- [ ] **Step 3: Add checkpoint ownership tests**
+
+Add tests proving:
+
+- recording a rollback point appends both a visible point and an archived checkpoint
+- trimming visible rollback points does not remove archived checkpoints
+- checkpoint `stateHash` matches `hashReplayStateForScope(previousState, "gameplay-v1")`
+- checkpoint `snapshot` is a cloned `GameState`, not the mutable live object
+
+- [ ] **Step 4: Run and commit**
+
+```bash
+corepack pnpm exec vitest run packages/match-server/src/local-rollback.test.ts
+corepack pnpm exec tsc -p packages/match-server/tsconfig.json --noEmit
+git add packages/match-server/src/local-rollback.ts packages/match-server/src/local-rollback.test.ts
+git commit -m "feat: archive rollback checkpoints"
+```
+
 ## Task 5: Refactor Match-Server Action Resolution
 
 **Files:**
@@ -1416,6 +1442,8 @@ export interface StoredDeterministicCheckpointRecord {
 }
 ```
 
+`StoredDeterministicSessionRecord.audit` is the only place the accepted client envelope, request hash, protocol version, timestamps, and client action id belong. Do not copy those transport fields into `DeterministicMatchEntry`.
+
 Then update persistence snapshots:
 
 ```ts
@@ -1512,17 +1540,11 @@ export const buildStoredDeterministicSessionRecord = (
     stateHashAfter: input.stateHashAfter,
     hashScope: "gameplay-v1" as const,
   };
-  const auditRef = {
-    clientActionId: input.envelope.clientActionId,
-    requestHash: input.envelope.requestHash,
-    protocolVersion: input.envelope.protocolVersion,
-  };
   const base = {
     formatVersion: "deterministic-entry-v1" as const,
     matchId: input.matchId,
     entrySeq: input.entrySeq,
     verification,
-    auditRef,
   };
   const deterministicEntry: DeterministicMatchEntry =
     input.deterministicOperation.kind === "action"
@@ -1811,6 +1833,12 @@ export const replayDeterministicRecoveryEntries = (
   snapshot: MatchPersistenceSnapshot,
 ): string | undefined => {
   const records = snapshot.deterministicEntriesSinceSnapshot;
+  if (
+    snapshot.deterministicLogVersion === "deterministic-entry-v1" &&
+    records === undefined
+  ) {
+    return "deterministic recovery tail entries missing";
+  }
   if (records === undefined || records.length === 0) {
     if (snapshot.actions.length > 0 || snapshot.decisions.length > 0) {
       return "deterministic recovery entries missing for legacy action log";
@@ -1840,7 +1868,7 @@ export const replayDeterministicRecoveryEntries = (
 };
 ```
 
-This helper starts from `match.state`, which is the recovered base snapshot state. Therefore it must read only `deterministicEntriesSinceSnapshot`, never the completed-match full deterministic log. Rollback system entries must update both `match.state` and `match.rollback`; engine-core only owns `GameState` replay, while match-server owns rollback consent bookkeeping. The checkpoint resolver line must use `snapshot.deterministicCheckpoints` plus rollback context checkpoints after Task 10. Before that task, fail closed on rollback system tail entries instead of replaying only half of the state.
+This helper starts from `match.state`, which is the recovered base snapshot state. Therefore it must read only `deterministicEntriesSinceSnapshot`, never the completed-match full deterministic log. Rollback system entries must update both `match.state` and `match.rollback`; engine-core only owns `GameState` replay, while match-server owns rollback consent bookkeeping. The checkpoint resolver line must use `snapshot.deterministicCheckpoints` plus rollback context checkpoints established by the prerequisite checkpoint-ownership task. If those checkpoint archives are unavailable, fail closed on rollback system tail entries instead of replaying only half of the state.
 
 - [ ] **Step 2: Replace envelope recovery replay**
 
@@ -1893,7 +1921,7 @@ test("recovery replays only entries accepted after the saved snapshot", async ()
   assert.equal(recovered.status, "active");
   assert.equal(
     recovered.match.state.seq,
-    fixture.secondEntry.verification.stateSeqAfter,
+    fixture.secondEntry.deterministicEntry.verification.stateSeqAfter,
   );
 });
 ```
@@ -1913,11 +1941,18 @@ test("recovery applies rollback request tail to state and rollback bookkeeping",
     actions: [],
     decisions: [],
   });
+  const requestEntry = fixture.requestRollbackEntry.deterministicEntry;
+  if (
+    requestEntry.kind !== "system" ||
+    requestEntry.operation.type !== "requestRollbackConsent"
+  ) {
+    throw new Error("fixture did not create a rollback request system entry");
+  }
 
   assert.equal(recovered.status, "active");
   assert.equal(
     recovered.match.state.pendingDecision?.id,
-    fixture.requestRollbackEntry.deterministicEntry.operation.decisionId,
+    requestEntry.operation.decisionId,
   );
   assert.equal(
     recovered.match.rollback.pendingRequest?.rollbackPointId,
@@ -2063,7 +2098,7 @@ git add packages/match-server/src/local-completed-match-record.ts packages/match
 git commit -m "feat: store exact deterministic replay entries"
 ```
 
-## Task 10: Make Rollback Checkpoints First-Class Without Changing Restore Semantics
+## Task 10: Thread Rollback Checkpoints Through Restore Entries
 
 **Files:**
 
@@ -2072,9 +2107,9 @@ git commit -m "feat: store exact deterministic replay entries"
 - Modify: `packages/match-server/src/session-types.ts`
 - Modify: `packages/match-server/src/deterministic-entry-builder.ts`
 
-- [ ] **Step 1: Extend rollback point type**
+- [ ] **Step 1: Verify rollback checkpoint archive shape**
 
-In `local-rollback.ts`, keep the existing `state: GameState` field and add a checkpoint projection:
+The prerequisite task already added `LocalRollbackState.checkpoints` and `LocalRollbackPoint.checkpoint`. Confirm the shape is still:
 
 ```ts
 export interface LocalRollbackState {
@@ -2097,7 +2132,7 @@ interface LocalRollbackPoint {
 }
 ```
 
-When creating a point:
+When creating a point, the checkpoint must still be:
 
 ```ts
 const checkpoint: DeterministicCheckpoint = {
@@ -2114,7 +2149,7 @@ const checkpoint: DeterministicCheckpoint = {
 };
 ```
 
-Append the checkpoint to both the visible rollback point and `rollback.checkpoints`. Visible `points` may still be trimmed by `maxPoints`; `checkpoints` is the match-duration archive used by recovery and completed replay reconstruction. The `state` field remains the source for live restore in this task.
+Do not move live restore away from `point.state`. The checkpoint archive is for deterministic recovery and completed replay reconstruction; the `state` field remains the source for live restore in this task.
 
 - [ ] **Step 2: Populate the metadata shape defined in Task 5**
 
@@ -2312,11 +2347,11 @@ Expected result: envelope-shaped entries fail; deterministic smoke fixtures pass
 
 ```bash
 git add packages/engine-core/src/replay/artifact-reducer.ts packages/engine-core/src/replay/artifact-reducer.test.ts packages/engine-core/src/replay/deterministic-entry.ts packages/engine-core/src/replay/smoke-test-support.ts
-git add -p packages/engine-core/src/replay
+git add packages/engine-core/src/replay/smoke-drift.test.ts packages/engine-core/src/replay/smoke-vanilla-combat.test.ts packages/engine-core/src/replay/smoke-play-card.test.ts packages/engine-core/src/replay/smoke-terminal.test.ts
 git commit -m "feat: reconstruct replays from deterministic entries"
 ```
 
-Review staged files before committing because `git add -p packages/engine-core/src/replay` can include optional smoke test updates:
+If different smoke tests changed, list those exact files instead of staging the whole `packages/engine-core/src/replay` directory. Review staged files before committing:
 
 ```bash
 git diff --cached --name-only
@@ -2494,7 +2529,8 @@ Expected result: contract tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/database-schema-v6.sql tools/validate-database-schema.ts tests/contracts
+git diff --name-only
+git add contracts/database-schema-v6.sql tools/validate-database-schema.ts tests/contracts/database-schema-v6.test.mjs
 git commit -m "test: guard replay reconstruction schema"
 ```
 
@@ -2558,7 +2594,8 @@ Expected result: source scan passes.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add tests/lint packages/match-server/src/match-session.ts packages/match-server/src/session-types.ts packages/match-server/src/redis-match-persistence.ts
+git diff --name-only
+git add tests/lint/replay-envelope-authority.test.mjs packages/match-server/src/match-session.ts packages/match-server/src/session-types.ts packages/match-server/src/redis-match-persistence.ts
 git commit -m "test: prevent replay envelope authority regression"
 ```
 
