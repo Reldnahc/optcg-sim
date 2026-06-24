@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createReplayClient,
   type ReplayDetail,
+  type ReplayFrameReconstructionPayload,
   type ReplayPayload,
 } from "../replay-client.js";
 import { appRoutePath } from "./app-route.js";
@@ -19,6 +20,9 @@ export interface ReplayViewerPageViewProps {
   readonly replay?: ReplayDetail | undefined;
   readonly error?: string | undefined;
   readonly frameCount?: number | undefined;
+  readonly frameReconstruction?:
+    | ReplayFrameReconstructionPayload
+    | undefined;
 }
 
 const formatDate = (value: string): string => {
@@ -52,9 +56,14 @@ export const ReplayViewerPageView = ({
   replay,
   error,
   frameCount,
+  frameReconstruction,
 }: ReplayViewerPageViewProps): React.JSX.Element => {
   const entries = replay === undefined ? [] : replayEntries(replay.replay);
   const boardFrameCount = frameCount ?? 0;
+  const reconstructionFailure =
+    frameReconstruction?.status === "failed"
+      ? frameReconstruction.reason
+      : "Replay reconstruction did not produce any frames.";
   return (
     <section className="replay-viewer-page">
       <header className="replay-viewer-header">
@@ -91,9 +100,7 @@ export const ReplayViewerPageView = ({
               Next action
             </button>
             {boardFrameCount === 0 ? (
-              <p>
-                Board playback is not available for this replay artifact yet.
-              </p>
+              <p>{`Replay reconstruction failed: ${reconstructionFailure}`}</p>
             ) : null}
           </section>
           <section className="replay-viewer-panel">
@@ -383,6 +390,7 @@ export const ReplayViewerPage = ({
       replay={replay}
       error={error}
       frameCount={frames.length}
+      frameReconstruction={replay?.frameReconstruction}
     />
   );
 };

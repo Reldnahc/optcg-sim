@@ -60,13 +60,19 @@ describe("ReplayViewerPage", () => {
         status: "ready",
         replay: replayDetail(),
         frameCount: 0,
+        frameReconstruction: {
+          status: "failed",
+          reason: "checkpoint hash mismatch",
+          actionIndex: 17,
+        },
       }),
     );
 
     assert.match(html, /Previous action/u);
     assert.match(html, /Next action/u);
     assert.match(html, /Board frames 0/u);
-    assert.match(html, /Board playback is not available/u);
+    assert.match(html, /Replay reconstruction failed/u);
+    assert.match(html, /checkpoint hash mismatch/u);
     assert.match(html, /data-replay-match-surface/u);
   });
 
