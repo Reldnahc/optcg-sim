@@ -11,6 +11,10 @@ describe("card-support public runtime boundary", () => {
     const source = await readFile(join(sourceDirectory, "index.ts"), "utf8");
 
     assert.equal(source.includes("engine-primitive-inventory"), false);
+    assert.equal(source.includes("behavior-probe"), false);
+    assert.equal(source.includes("behavior-coverage"), false);
     assert.equal(source.includes("behavior-coverage-cli"), false);
+    assert.equal(source.includes("support-probe"), false);
+    assert.equal(source.includes("spotlight-probe"), false);
   });
 });
