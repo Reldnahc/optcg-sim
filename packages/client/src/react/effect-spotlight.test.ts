@@ -320,7 +320,7 @@ describe("EffectSpotlight", () => {
     expect(html).not.toContain("--effect-spotlight-timer-duration");
   });
 
-  it("freezes the spotlight timer while playback is paused or pinned", () => {
+  it("freezes the spotlight timer only while playback is paused", () => {
     const pausedHtml = renderToStaticMarkup(
       createElement(EffectSpotlight, {
         presentation: effectTextPresentation(card()),
@@ -335,7 +335,8 @@ describe("EffectSpotlight", () => {
     );
 
     expect(pausedHtml).toContain("effect-spotlight-card__timer is-paused");
-    expect(pinnedHtml).toContain("effect-spotlight-card__timer is-paused");
+    expect(pinnedHtml).not.toContain("effect-spotlight-card__timer is-paused");
+    expect(pinnedHtml).toContain("effect-spotlight-card__timer");
   });
 
   it("keeps playback controls visible without an active spotlight card", () => {

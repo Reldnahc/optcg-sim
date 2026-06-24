@@ -34,6 +34,25 @@ const publicPendingId = (value: string): PublicPendingDecisionId =>
   value as PublicPendingDecisionId;
 
 describe("effect spotlight auto advance", () => {
+  it("does not advance while a modal-pinned spotlight is past its timer", () => {
+    expect(
+      shouldAutoAdvanceSpotlightPlayback({
+        currentSource: source("decision:pinned", "span:body", "live"),
+        model: {
+          active: source("decision:pinned", "span:body", "live").active,
+          activeKey: "decision:pinned",
+          activeMode: "live",
+          sourceInstanceId: "source-1",
+          activeSpanIds: ["span:body"],
+          shownAtMs: 1_000,
+          visibleUntilMs: 3_000,
+          pinned: true,
+        },
+        paused: false,
+      }),
+    ).toBe(false);
+  });
+
   it("does not advance a pending current source using a stale resolved display", () => {
     expect(
       shouldAutoAdvanceSpotlightPlayback({

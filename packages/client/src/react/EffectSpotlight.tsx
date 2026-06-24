@@ -189,7 +189,6 @@ const useSpotlightTimerNowMs = (
   const [nowMs, setNowMs] = useState(() => Date.now());
   const animationKey = timer?.animationKey;
   const paused = timer?.paused ?? false;
-  const pinned = timer?.pinned ?? false;
   const shownAtMs = timer?.shownAtMs;
   const visibleUntilMs = timer?.visibleUntilMs;
 
@@ -211,7 +210,7 @@ const useSpotlightTimerNowMs = (
     };
     update();
 
-    if (paused || pinned) {
+    if (paused) {
       return;
     }
 
@@ -221,7 +220,7 @@ const useSpotlightTimerNowMs = (
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [animationKey, paused, pinned, shownAtMs, visibleUntilMs]);
+  }, [animationKey, paused, shownAtMs, visibleUntilMs]);
 
   return nowMs;
 };
@@ -237,7 +236,7 @@ const SpotlightCardTimer = ({
     <div
       key={timer.animationKey}
       className={`effect-spotlight-card__timer${
-        timer.paused || timer.pinned ? " is-paused" : ""
+        timer.paused ? " is-paused" : ""
       }`}
       data-effect-spotlight-timer={timer.animationKey}
       aria-hidden="true"
