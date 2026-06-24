@@ -7,6 +7,7 @@ import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  PrimitiveEvidence,
   SegmentParser,
 } from "../types.js";
 import { parseConditionFromSet } from "../conditions/index.js";
@@ -35,6 +36,9 @@ export function instructionExpressionSegmentParser(options: {
         ? {}
         : { saveResultAs: result.saveResultAs }),
       evidence: result.evidence,
+      ...(result.presentationSpans === undefined
+        ? {}
+        : { presentationSpans: result.presentationSpans }),
     };
   };
 }
@@ -104,8 +108,12 @@ export function delayedStartOfNextMainPhaseSegmentParser(options: {
       return undefined;
     }
 
+    const bodySource = sourceForMatchedText(input.source, input.text, bodyText);
     const body = parseExpression(
-      { text: bodyText },
+      {
+        text: bodyText,
+        ...(bodySource === undefined ? {} : { source: bodySource }),
+      },
       {
         connectors: options.connectors,
         segments: [
@@ -118,6 +126,17 @@ export function delayedStartOfNextMainPhaseSegmentParser(options: {
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "duration:startOfNextMainPhase",
+      "composition:delayed",
+      ...body.evidence,
+    ];
+    const presentationSpans =
+      body.presentationSpans ??
+      (bodySource === undefined
+        ? []
+        : [sourceSpan("span:body", "body", bodySource, evidence)]);
+
     return {
       effect: {
         type: "delayed",
@@ -128,11 +147,8 @@ export function delayedStartOfNextMainPhaseSegmentParser(options: {
         },
         effect: body.effect,
       },
-      evidence: [
-        "duration:startOfNextMainPhase",
-        "composition:delayed",
-        ...body.evidence,
-      ],
+      evidence,
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }
@@ -213,8 +229,12 @@ export function eventTimedDelayedSegmentParser(options: {
       return undefined;
     }
 
+    const bodySource = sourceForMatchedText(input.source, input.text, bodyText);
     const body = parseExpression(
-      { text: bodyText },
+      {
+        text: bodyText,
+        ...(bodySource === undefined ? {} : { source: bodySource }),
+      },
       {
         connectors: options.connectors,
         segments: [
@@ -226,6 +246,18 @@ export function eventTimedDelayedSegmentParser(options: {
     if (body === undefined || body.rest.length > 0) {
       return undefined;
     }
+
+    const evidence: readonly PrimitiveEvidence[] = [
+      "trigger:attackDeclared",
+      "duration:thisTurn",
+      "composition:delayed",
+      ...body.evidence,
+    ];
+    const presentationSpans =
+      body.presentationSpans ??
+      (bodySource === undefined
+        ? []
+        : [sourceSpan("span:body", "body", bodySource, evidence)]);
 
     return {
       effect: {
@@ -248,12 +280,8 @@ export function eventTimedDelayedSegmentParser(options: {
         },
         effect: body.effect,
       },
-      evidence: [
-        "trigger:attackDeclared",
-        "duration:thisTurn",
-        "composition:delayed",
-        ...body.evidence,
-      ],
+      evidence,
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }
@@ -548,7 +576,13 @@ export function conditionalBlockExpressionParser(options: {
             if (parsed === undefined || parsed.rest.length > 0) {
               return undefined;
             }
-            return { effect: parsed.effect, evidence: parsed.evidence };
+            return {
+              effect: parsed.effect,
+              evidence: parsed.evidence,
+              ...(parsed.presentationSpans === undefined
+                ? {}
+                : { presentationSpans: parsed.presentationSpans }),
+            };
           },
       );
       const then = parseExpression(
@@ -1000,4 +1034,24 @@ function splitTrailingConditionSource(
         cleanConditionText.length,
     }),
   };
+}
+
+function sourceForMatchedText(
+  source: SourceSlice | undefined,
+  fullText: string,
+  matchedText: string,
+): SourceSlice | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+  const start = fullText.indexOf(matchedText);
+  if (start < 0) {
+    return undefined;
+  }
+  return trimSource({
+    text: matchedText,
+    rawText: matchedText,
+    start: source.start + start,
+    end: source.start + start + matchedText.length,
+  });
 }

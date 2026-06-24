@@ -1,10 +1,15 @@
-import type { Effect, SelectionId, Target } from "@optcg/types";
+import type { Effect, EffectTextSpan, SelectionId, Target } from "@optcg/types";
 
 import {
   parseDurationFromSet,
   refreshRestrictionDurationParsers,
 } from "../durations/index.js";
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 
 const selectedRefreshLockLeaderTarget =
   "selected:refresh-lock-leader-target" as SelectionId;
@@ -34,6 +39,21 @@ export function selectedRefreshLockExpressionParser(
   ) {
     return undefined;
   }
+
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    "instruction:selectTargets",
+    "instruction:preventActivation",
+    "target:opponentLeader",
+    "target:opponentCharacters",
+    "player:opponent",
+    "zone:leaderArea",
+    "zone:characterArea",
+    "filter:category:leader",
+    "filter:category:character",
+    "filter:state:rested",
+    ...duration.evidence,
+  ];
 
   return {
     effect: {
@@ -65,20 +85,8 @@ export function selectedRefreshLockExpressionParser(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      "instruction:selectTargets",
-      "instruction:preventActivation",
-      "target:opponentLeader",
-      "target:opponentCharacters",
-      "player:opponent",
-      "zone:leaderArea",
-      "zone:characterArea",
-      "filter:category:leader",
-      "filter:category:character",
-      "filter:state:rested",
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -163,4 +171,17 @@ function cannotBecomeActiveForSavedTarget(
     target,
     duration,
   };
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

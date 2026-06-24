@@ -1,8 +1,13 @@
-import type { SelectionId } from "@optcg/types";
+import type { EffectTextSpan, SelectionId } from "@optcg/types";
 
 import { parseCardFilterPredicates } from "../filters/index.js";
 import { parseTrashFromDeckTopInstruction } from "../instructions/index.js";
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 
 const trashedTopDeckSelection = "selected:trashed-top-deck" as SelectionId;
 
@@ -58,6 +63,15 @@ function parseTrashTopDeckConditional(
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "expression:sequence",
+    ...trash.evidence,
+    "condition:cardMatches",
+    ...predicates.evidence,
+    "connector:ifPreviousSucceeded",
+    ...body.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -86,14 +100,8 @@ function parseTrashTopDeckConditional(
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      ...trash.evidence,
-      "condition:cardMatches",
-      ...predicates.evidence,
-      "connector:ifPreviousSucceeded",
-      ...body.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -116,4 +124,17 @@ function parseConditionalBody(
 
 function normalizeTrashedCardPredicate(predicate: string): string {
   return `card with ${predicate.replace(/^has\s+/iu, "").trim()}`;
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

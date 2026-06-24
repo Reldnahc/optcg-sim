@@ -1,8 +1,15 @@
+import type { EffectTextSpan } from "@optcg/types";
+
 import {
   opponentNextEndOnlyDurationParsers,
   parseDurationFromSet,
 } from "../../durations/index.js";
-import type { ExpressionParseResult, ParseInput } from "../../types.js";
+import { sourceSpan } from "../../source-slices.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../../types.js";
 
 const attackCostTargetsSelectionId = "selected:attack-cost-targets";
 
@@ -54,6 +61,16 @@ export const selectedOpponentCharactersAttackCostExpressionParser = (
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "instruction:selectAllTargets",
+    "target:opponentCharacters",
+    "filter:category:character",
+    "instruction:attackCost",
+    "cost:trashFromHand",
+    ...duration.evidence,
+    "composition:selectThenApply",
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -84,15 +101,21 @@ export const selectedOpponentCharactersAttackCostExpressionParser = (
         },
       ],
     },
-    evidence: [
-      "instruction:selectAllTargets",
-      "target:opponentCharacters",
-      "filter:category:character",
-      "instruction:attackCost",
-      "cost:trashFromHand",
-      ...duration.evidence,
-      "composition:selectThenApply",
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 };
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
+}

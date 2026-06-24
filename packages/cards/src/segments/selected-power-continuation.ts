@@ -1,5 +1,6 @@
 import type {
   Effect,
+  EffectTextSpan,
   MultiZoneTargetRequest,
   SavedFieldObjectZone,
   SelectedTargetsRequest,
@@ -28,6 +29,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
 import {
   parseConditionExpression,
   parseLeadingConditionalExpression,
@@ -182,6 +184,15 @@ function parseSelectedPowerContinuation(
       ? []
       : ["expression:conditional", ...additionalCondition.evidence];
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...first.evidence,
+    "target:selectedCharacter",
+    "modifier:positivePower",
+    ...additionalConditionEvidence,
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -204,14 +215,8 @@ function parseSelectedPowerContinuation(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...first.evidence,
-      "target:selectedCharacter",
-      "modifier:positivePower",
-      ...additionalConditionEvidence,
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -277,6 +282,15 @@ function parseSelectedDistributedPower(
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...selection.evidence,
+    "instruction:modifyPower",
+    ...firstModifier.evidence,
+    ...secondModifier.evidence,
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -309,14 +323,8 @@ function parseSelectedDistributedPower(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...selection.evidence,
-      "instruction:modifyPower",
-      ...firstModifier.evidence,
-      ...secondModifier.evidence,
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -373,6 +381,14 @@ function parseSelectedFieldActivationPowerContinuation(
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    ...first.evidence,
+    "instruction:modifyPower",
+    "target:selectedCharacter",
+    ...modifier.evidence,
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -390,13 +406,8 @@ function parseSelectedFieldActivationPowerContinuation(
         },
       ],
     },
-    evidence: [
-      ...first.evidence,
-      "instruction:modifyPower",
-      "target:selectedCharacter",
-      ...modifier.evidence,
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -466,6 +477,13 @@ function parseExplicitSelectKeywordContinuation(
       ? []
       : ["expression:conditional", ...additionalCondition.evidence];
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...first.evidence,
+    ...keyword.evidence,
+    ...additionalConditionEvidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -483,12 +501,8 @@ function parseExplicitSelectKeywordContinuation(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...first.evidence,
-      ...keyword.evidence,
-      ...additionalConditionEvidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -539,6 +553,14 @@ function parseSelectedPowerRefreshLockContinuation(
     target: savedTarget,
   };
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...first.evidence,
+    "target:selectedCharacter",
+    "instruction:preventActivation",
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -565,13 +587,8 @@ function parseSelectedPowerRefreshLockContinuation(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...first.evidence,
-      "target:selectedCharacter",
-      "instruction:preventActivation",
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -622,6 +639,18 @@ function parseSelectedPowerKoProtectionContinuation(
     target: savedTarget,
   };
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...first.evidence,
+    "target:selectedCharacter",
+    "composition:savedTargetCondition",
+    "condition:cardMatches",
+    "filter:category:character",
+    "instruction:giveProtection",
+    "protectionProcess:ko",
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -656,17 +685,8 @@ function parseSelectedPowerKoProtectionContinuation(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...first.evidence,
-      "target:selectedCharacter",
-      "composition:savedTargetCondition",
-      "condition:cardMatches",
-      "filter:category:character",
-      "instruction:giveProtection",
-      "protectionProcess:ko",
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -742,6 +762,13 @@ function parseSelectedPowerKeywordContinuation(
       ? []
       : ["expression:conditional", ...additionalCondition.evidence];
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...first.evidence,
+    ...keyword.evidence,
+    ...additionalConditionEvidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -764,12 +791,8 @@ function parseSelectedPowerKeywordContinuation(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...first.evidence,
-      ...keyword.evidence,
-      ...additionalConditionEvidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 }
@@ -951,4 +974,17 @@ function isSavedFieldObjectZone(zone: string): zone is SavedFieldObjectZone {
     zone === "stageArea" ||
     zone === "costArea"
   );
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

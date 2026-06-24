@@ -1,8 +1,14 @@
-import type { Condition, Effect, SequencedEffect } from "@optcg/types";
+import type {
+  Condition,
+  Effect,
+  EffectTextSpan,
+  SequencedEffect,
+} from "@optcg/types";
 
 import { parseConditionFromSet } from "../conditions/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type { ContinuousInstructionParser } from "../instructions/continuous-field-effects.js";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ConditionParseResult,
   ConditionParser,
@@ -59,6 +65,7 @@ export function applyEachContinuousExpressionParser(options: {
     return {
       effect: { type: "sequence", effects },
       evidence,
+      ...bodyPresentation(input, evidence),
       rest: "",
       blockPatch: { category: "permanent" },
     };
@@ -254,4 +261,17 @@ function continuousInstructionSegmentParser(options: {
 
     return undefined;
   };
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

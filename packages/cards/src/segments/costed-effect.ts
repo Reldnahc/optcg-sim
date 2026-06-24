@@ -2,13 +2,15 @@ import {
   mandatoryActivationCostParsers,
   parseCostFromSet,
 } from "../costs/index.js";
+import type { EffectTextSpan } from "@optcg/types";
 import { parseExpression } from "../expression-parser.js";
 import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  PrimitiveEvidence,
 } from "../types.js";
-import type { SourceSlice } from "../source-slices.js";
+import { sourceSpan, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function costedEffectExpressionParser(options: {
@@ -36,10 +38,19 @@ export function costedEffectExpressionParser(options: {
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "composition:costedEffect",
+      ...cost.evidence,
+      ...body.evidence,
+    ];
     const presentationSpans = [
       ...(costPresentationSpans ?? []),
       ...(body.presentationSpans ?? []),
     ];
+    const resolvedPresentationSpans =
+      presentationSpans.length === 0
+        ? fallbackBodySpans(input, evidence)
+        : presentationSpans;
     return {
       effect: {
         type: "sequence",
@@ -59,16 +70,23 @@ export function costedEffectExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        "composition:costedEffect",
-        ...cost.evidence,
-        ...body.evidence,
-      ],
+      evidence,
       rest: "",
       ...(body.blockPatch === undefined ? {} : { blockPatch: body.blockPatch }),
-      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
+      ...(resolvedPresentationSpans.length === 0
+        ? {}
+        : { presentationSpans: resolvedPresentationSpans }),
     };
   };
+}
+
+function fallbackBodySpans(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): readonly EffectTextSpan[] {
+  return input.source === undefined
+    ? []
+    : [sourceSpan("span:body", "body", input.source, evidence)];
 }
 
 function parseCostedBody(

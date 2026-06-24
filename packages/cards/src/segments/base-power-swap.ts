@@ -1,5 +1,6 @@
 import type {
   Duration,
+  EffectTextSpan,
   MultiZoneTargetRequest,
   SavedFieldObjectZone,
   SavedFieldObjectTarget,
@@ -17,6 +18,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
 
 const basePowerSwapSelection = "selected:base-power-swap";
 const basePowerSwapLeftSelection = "selected:base-power-swap:left";
@@ -159,6 +161,16 @@ const parseSelectedCharacterBasePowerSwap = (
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "expression:sequence",
+    "composition:selectThenApply",
+    "instruction:selectTargets",
+    "instruction:swapBasePower",
+    "value:basePower:snapshotBasePower",
+    ...selection.evidence,
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -184,15 +196,8 @@ const parseSelectedCharacterBasePowerSwap = (
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "composition:selectThenApply",
-      "instruction:selectTargets",
-      "instruction:swapBasePower",
-      "value:basePower:snapshotBasePower",
-      ...selection.evidence,
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 };
@@ -245,6 +250,20 @@ const parseLeaderAndCharacterBasePowerSwap = (
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "expression:sequence",
+    "composition:selectThenApply",
+    "instruction:selectTargets",
+    "instruction:swapBasePower",
+    "target:yourLeader",
+    "target:yourCharacters",
+    "player:self",
+    "filter:category:leader",
+    "filter:category:character",
+    "value:basePower:snapshotBasePower",
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -273,19 +292,8 @@ const parseLeaderAndCharacterBasePowerSwap = (
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "composition:selectThenApply",
-      "instruction:selectTargets",
-      "instruction:swapBasePower",
-      "target:yourLeader",
-      "target:yourCharacters",
-      "player:self",
-      "filter:category:leader",
-      "filter:category:character",
-      "value:basePower:snapshotBasePower",
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
 };
@@ -295,3 +303,16 @@ export const basePowerSwapExpressionParser = (
 ): ExpressionParseResult | undefined =>
   parseSelectedCharacterBasePowerSwap(input) ??
   parseLeaderAndCharacterBasePowerSwap(input);
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
+}

@@ -1,7 +1,8 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectTextSpan } from "@optcg/types";
 
 import { parseConditionExpression } from "./composed-expression.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ConditionParser,
   ExpressionParseResult,
@@ -58,6 +59,14 @@ export const conditionalAlternateSelectionExpressionParser =
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "expression:conditional",
+      "composition:chooseOne",
+      ...condition.evidence,
+      ...defaultEffect.evidence,
+      ...alternateEffect.evidence,
+    ];
+
     return {
       effect: {
         type: "conditional",
@@ -82,13 +91,8 @@ export const conditionalAlternateSelectionExpressionParser =
         },
         else: defaultEffect.effect,
       },
-      evidence: [
-        "expression:conditional",
-        "composition:chooseOne",
-        ...condition.evidence,
-        ...defaultEffect.evidence,
-        ...alternateEffect.evidence,
-      ],
+      evidence,
+      ...bodyPresentation(input, evidence),
       rest: "",
     };
   };
@@ -207,3 +211,16 @@ const alternateKoInstructionText = (
     ? undefined
     : `K.O. up to ${count} of ${alternateTargetText.trim()}.`;
 };
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
+}

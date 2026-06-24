@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import {
+  parseCardEffectLine,
+  parseCardEffectLineDetailed,
+} from "./card-effect-line-parser.js";
 
 describe("OP12 delayed battle parser support", () => {
   it("parses a DON-gated Activate Main into an event-timed delayed sequence", () => {
-    const result = parseCardEffectLine(
-      "[DON!! x3] [Activate: Main] [Once Per Turn] If this Leader battles your opponent's Character during this turn, set this Leader as active. Then, this Leader cannot attack your opponent's Characters with a base cost of 7 or less during this turn.",
-    );
+    const text =
+      "[DON!! x3] [Activate: Main] [Once Per Turn] If this Leader battles your opponent's Character during this turn, set this Leader as active. Then, this Leader cannot attack your opponent's Characters with a base cost of 7 or less during this turn.";
+    const result = parseCardEffectLine(text);
 
     expect(result).toMatchObject({
       block: {
@@ -71,6 +74,25 @@ describe("OP12 delayed battle parser support", () => {
         "instruction:cannotAttackTarget",
         "filter:cost",
         "duration:thisTurn",
+      ]),
+    );
+
+    const detailed = parseCardEffectLineDetailed(text);
+    if (!detailed.ok || detailed.value.kind === "metadata") {
+      throw new Error("Expected delayed battle text to parse as an effect.");
+    }
+    expect(detailed.value.sourceMap?.spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:sequence:0:body",
+          role: "body",
+          text: "set this Leader as active.",
+        }),
+        expect.objectContaining({
+          id: "span:sequence:1:body",
+          role: "body",
+          text: "this Leader cannot attack your opponent's Characters with a base cost of 7 or less during this turn.",
+        }),
       ]),
     );
   });

@@ -1,11 +1,13 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectTextSpan } from "@optcg/types";
 
 import { parseKeyword } from "../keywords/index.js";
 import { parseExpression } from "../expression-parser.js";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  PrimitiveEvidence,
 } from "../types.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
@@ -44,6 +46,16 @@ export function playedObjectKeywordGrantExpressionParser(options: {
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "expression:sequence",
+      ...play.evidence,
+      "instruction:giveKeyword",
+      "target:selectedCharacter",
+      ...keyword.evidence,
+      "duration:thisTurn",
+      "composition:selectThenApply",
+    ];
+
     return {
       effect: {
         type: "sequence",
@@ -71,15 +83,8 @@ export function playedObjectKeywordGrantExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        "expression:sequence",
-        ...play.evidence,
-        "instruction:giveKeyword",
-        "target:selectedCharacter",
-        ...keyword.evidence,
-        "duration:thisTurn",
-        "composition:selectThenApply",
-      ],
+      evidence,
+      ...bodyPresentation(input, evidence),
       rest: "",
     };
   };
@@ -112,6 +117,18 @@ export function playedObjectDelayedDeckBottomExpressionParser(options: {
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "expression:sequence",
+      ...play.evidence,
+      "instruction:bounce",
+      "reference:thatCharacter",
+      "destination:deck",
+      "position:bottom",
+      "duration:endOfTurn",
+      "composition:delayed",
+      "composition:selectThenMove",
+    ];
+
     return {
       effect: {
         type: "sequence",
@@ -142,17 +159,8 @@ export function playedObjectDelayedDeckBottomExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        "expression:sequence",
-        ...play.evidence,
-        "instruction:bounce",
-        "reference:thatCharacter",
-        "destination:deck",
-        "position:bottom",
-        "duration:endOfTurn",
-        "composition:delayed",
-        "composition:selectThenMove",
-      ],
+      evidence,
+      ...bodyPresentation(input, evidence),
       rest: "",
     };
   };
@@ -227,4 +235,17 @@ function withSavedPlayResult(
     }
   }
   return foundPlaySelected ? { ...effect, effects } : undefined;
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

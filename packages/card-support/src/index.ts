@@ -30,6 +30,11 @@ export {
   type EnginePrimitiveSourceFile,
   type ExtractEngineEffectPrimitiveTypesRequest,
 } from "./engine-primitive-inventory.js";
+export {
+  createSpotlightProbeReport,
+  type SpotlightProbeReport,
+  type SpotlightProbeRequest,
+} from "./spotlight-probe-report.js";
 export type {
   BuildDevMatchCardManifestFromPoneglyphIdsRequest,
   DevPoneglyphFetch,

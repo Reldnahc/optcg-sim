@@ -1,9 +1,16 @@
-import type { CardFilter, Condition, Effect, SelectionId } from "@optcg/types";
+import type {
+  CardFilter,
+  Condition,
+  Effect,
+  EffectTextSpan,
+  SelectionId,
+} from "@optcg/types";
 
 import { parseExactCardinality } from "../cardinality/index.js";
 import { parseThenConnector } from "../connectors/index.js";
 import { parseExpression } from "../expression-parser.js";
 import { parseCardFilterPredicates } from "../filters/index.js";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ExpressionParseResult,
   InstructionParser,
@@ -29,9 +36,11 @@ export function opponentHandRevealExpressionParser(options: {
 
     const selectedReveal = createOpponentHandRevealSequence(parsed.count);
     if (parsed.rest.length === 0) {
+      const evidence = selectedReveal.evidence;
       return {
         effect: selectedReveal.effect,
-        evidence: selectedReveal.evidence,
+        evidence,
+        ...bodyPresentation(input, evidence),
         rest: "",
       };
     }
@@ -40,6 +49,12 @@ export function opponentHandRevealExpressionParser(options: {
     if (conditional === undefined) {
       return undefined;
     }
+
+    const evidence: readonly PrimitiveEvidence[] = [
+      ...selectedReveal.evidence,
+      "condition:cardMatches",
+      ...conditional.evidence,
+    ];
 
     return {
       effect: {
@@ -52,11 +67,8 @@ export function opponentHandRevealExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        ...selectedReveal.evidence,
-        "condition:cardMatches",
-        ...conditional.evidence,
-      ],
+      evidence,
+      ...bodyPresentation(input, evidence),
       rest: "",
     };
   };
@@ -216,4 +228,17 @@ function normalizeRevealedCardPredicate(predicate: string): string {
     .replace(/\bcard\b/giu, "")
     .replace(/\s+/gu, " ")
     .trim();
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }

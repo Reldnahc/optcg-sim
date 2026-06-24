@@ -5,8 +5,13 @@ import {
   parseDurationFromSet,
   thisTurnOnlyDurationParsers,
 } from "../durations/index.js";
+import { sourceSpan } from "../source-slices.js";
 import { parseOpponentFieldTarget } from "../targets/index.js";
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 
 const selectedCharacterPowerSnapshot =
   "selected:base-power-source" as SelectionId;
@@ -47,6 +52,19 @@ export function selectedBasePowerSnapshotExpressionParser(
   ) {
     return undefined;
   }
+
+  const evidence: readonly PrimitiveEvidence[] = [
+    "expression:sequence",
+    "composition:selectThenApply",
+    ...cardinality.evidence,
+    "chooser:self:upTo",
+    ...target.evidence,
+    "instruction:setBasePower",
+    "target:thisCharacter",
+    "target:selectedCharacter",
+    "value:basePower:snapshotCurrentPower",
+    ...duration.evidence,
+  ];
 
   return {
     effect: {
@@ -97,18 +115,14 @@ export function selectedBasePowerSnapshotExpressionParser(
         },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      "composition:selectThenApply",
-      ...cardinality.evidence,
-      "chooser:self:upTo",
-      ...target.evidence,
-      "instruction:setBasePower",
-      "target:thisCharacter",
-      "target:selectedCharacter",
-      "value:basePower:snapshotCurrentPower",
-      ...duration.evidence,
-    ],
+    evidence,
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, evidence),
+          ],
+        }),
     rest: "",
   };
 }

@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectTextSpan } from "@optcg/types";
 
 import {
   optionalActivationCostParsers,
@@ -10,9 +10,10 @@ import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  PrimitiveEvidence,
   SegmentParser,
 } from "../types.js";
-import type { SourceSlice } from "../source-slices.js";
+import { sourceSpan, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 export function optionalCostedEffectExpressionParser(options: {
@@ -41,10 +42,19 @@ export function optionalCostedEffectExpressionParser(options: {
       return undefined;
     }
     const bodyPaidCostReference = findPaidCostReference(body.effect);
+    const evidence: readonly PrimitiveEvidence[] = [
+      "composition:optionalCostedEffect",
+      ...cost.evidence,
+      ...body.evidence,
+    ];
     const presentationSpans = [
       ...(costPresentationSpans ?? []),
       ...(body.presentationSpans ?? []),
     ];
+    const resolvedPresentationSpans =
+      presentationSpans.length === 0
+        ? fallbackBodySpans(input, evidence)
+        : presentationSpans;
 
     return {
       effect: {
@@ -67,14 +77,12 @@ export function optionalCostedEffectExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        "composition:optionalCostedEffect",
-        ...cost.evidence,
-        ...body.evidence,
-      ],
+      evidence,
       rest: "",
       ...(body.blockPatch === undefined ? {} : { blockPatch: body.blockPatch }),
-      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
+      ...(resolvedPresentationSpans.length === 0
+        ? {}
+        : { presentationSpans: resolvedPresentationSpans }),
     };
   };
 }
@@ -161,6 +169,15 @@ function usesGenericPaidCostReference(value: unknown): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function fallbackBodySpans(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): readonly EffectTextSpan[] {
+  return input.source === undefined
+    ? []
+    : [sourceSpan("span:body", "body", input.source, evidence)];
 }
 
 function parseOptionalCostedBody(

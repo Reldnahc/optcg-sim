@@ -1,9 +1,13 @@
+import type { EffectTextSpan } from "@optcg/types";
+
 import { parseExpression } from "../expression-parser.js";
 import { parsePlayFromHandInstruction } from "../instructions/index.js";
+import { sourceSpan } from "../source-slices.js";
 import type {
   ExpressionParseResult,
   InstructionParser,
   ParseInput,
+  PrimitiveEvidence,
   SegmentParser,
 } from "../types.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
@@ -32,6 +36,14 @@ export function optionalPlayCostedEffectExpressionParser(options: {
       return undefined;
     }
 
+    const evidence: readonly PrimitiveEvidence[] = [
+      "composition:optionalCostedEffect",
+      ...play.evidence,
+      ...body.evidence,
+    ];
+    const presentationSpans =
+      body.presentationSpans ?? fallbackBodySpans(input, evidence);
+
     return {
       effect: {
         type: "sequence",
@@ -49,16 +61,10 @@ export function optionalPlayCostedEffectExpressionParser(options: {
           },
         ],
       },
-      evidence: [
-        "composition:optionalCostedEffect",
-        ...play.evidence,
-        ...body.evidence,
-      ],
+      evidence,
       rest: "",
       ...(body.blockPatch === undefined ? {} : { blockPatch: body.blockPatch }),
-      ...(body.presentationSpans === undefined
-        ? {}
-        : { presentationSpans: body.presentationSpans }),
+      ...(presentationSpans.length === 0 ? {} : { presentationSpans }),
     };
   };
 }
@@ -118,6 +124,15 @@ function capitalizeFirst(text: string): string {
     return text;
   }
   return `${first.toUpperCase()}${text.slice(1)}`;
+}
+
+function fallbackBodySpans(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): readonly EffectTextSpan[] {
+  return input.source === undefined
+    ? []
+    : [sourceSpan("span:body", "body", input.source, evidence)];
 }
 
 function parseOptionalPlayCostedBody(

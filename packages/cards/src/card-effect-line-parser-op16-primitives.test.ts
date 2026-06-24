@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { parseCardEffectLine } from "./card-effect-line-parser.js";
+import {
+  parseCardEffectLine,
+  parseCardEffectLineDetailed,
+} from "./card-effect-line-parser.js";
 
 describe("OP16 reusable primitive parsing", () => {
   it("parses field-trash optional costs independently from K.O. bodies", () => {
@@ -212,6 +215,69 @@ describe("OP16 reusable primitive parsing", () => {
     expect(result?.evidence).toEqual(
       expect.arrayContaining([
         "instruction:setBasePower",
+        "value:basePower:snapshotCurrentPower",
+      ]),
+    );
+  });
+
+  it("emits presentation spans for selected base-power snapshots", () => {
+    const result = parseCardEffectLineDetailed(
+      "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        block: {
+          category: "auto",
+          trigger: { type: "whenAttacking" },
+          effect: {
+            type: "sequence",
+            effects: [
+              {
+                effect: {
+                  type: "selectTargets",
+                  request: {
+                    player: "opponent",
+                    zone: "characterArea",
+                    filter: { categories: ["character"] },
+                  },
+                },
+              },
+              {
+                effect: {
+                  type: "setBasePower",
+                  target: { type: "self" },
+                  value: {
+                    type: "snapshotCardStat",
+                    stat: "currentPower",
+                  },
+                  duration: { type: "thisTurn" },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    if (!result.ok) {
+      throw new Error("expected selected base-power snapshot to parse");
+    }
+    if (result.value.kind === "metadata") {
+      throw new Error("expected selected base-power snapshot to be an effect");
+    }
+    expect(result.value.sourceMap?.spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:body",
+          role: "body",
+        }),
+      ]),
+    );
+    expect(result.value.evidence).toEqual(
+      expect.arrayContaining([
+        "composition:selectThenApply",
+        "target:selectedCharacter",
         "value:basePower:snapshotCurrentPower",
       ]),
     );

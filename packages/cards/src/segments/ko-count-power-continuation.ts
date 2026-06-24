@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectTextSpan } from "@optcg/types";
 
 import {
   fieldEffectDurationParsers,
@@ -9,7 +9,12 @@ import {
   parseKoInstruction,
   parseModifyPowerInstruction,
 } from "../instructions/index.js";
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 
 export function koCountPowerContinuationExpressionParser(
   input: ParseInput,
@@ -62,6 +67,15 @@ export function koCountPowerContinuationExpressionParser(
     duration: duration.duration,
   };
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "expression:sequence",
+    ...first.evidence,
+    ...ko.evidence,
+    ...duration.evidence,
+    "value:dynamic:selectedCardCount",
+    "count:selectedCardCount",
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -71,14 +85,21 @@ export function koCountPowerContinuationExpressionParser(
         { connector: "then", effect: additionalPower },
       ],
     },
-    evidence: [
-      "expression:sequence",
-      ...first.evidence,
-      ...ko.evidence,
-      ...duration.evidence,
-      "value:dynamic:selectedCardCount",
-      "count:selectedCardCount",
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }
