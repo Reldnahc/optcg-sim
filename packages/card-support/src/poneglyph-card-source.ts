@@ -356,6 +356,36 @@ export const fetchPoneglyphSetCardIds = async (
   return { ok: true, cardIds: [...new Set(cardIds)] };
 };
 
+export const fetchPoneglyphSetCodes = async (options: {
+  readonly baseUrl: string;
+  readonly fetchPoneglyph: PoneglyphFetch;
+}): Promise<
+  | { readonly ok: true; readonly setCodes: readonly string[] }
+  | { readonly ok: false; readonly error: string }
+> => {
+  const setCodes = new Set<string>();
+  let page = 1;
+  let hasMore = true;
+  while (hasMore) {
+    const response = await fetchPoneglyphCardCatalogPage(page, options, {
+      errorPrefix: "Poneglyph set catalog fetch failed",
+    });
+    if (!response.ok) {
+      return response;
+    }
+    for (const cardId of response.catalog.cardIds) {
+      const setCode = setCodeFromCardId(cardId);
+      if (setCode !== undefined) {
+        setCodes.add(setCode);
+      }
+    }
+    hasMore = response.catalog.hasMore;
+    page += 1;
+  }
+
+  return { ok: true, setCodes: [...setCodes].sort(compareSetCodes) };
+};
+
 export const fetchPoneglyphCard: PoneglyphFetch = async (url, init) =>
   fetch(url, init);
 
@@ -540,6 +570,100 @@ const chunks = <T>(values: readonly T[], size: number): T[][] => {
   }
   return chunked;
 };
+
+const fetchPoneglyphCardCatalogPage = async (
+  page: number,
+  options: {
+    readonly baseUrl: string;
+    readonly fetchPoneglyph: PoneglyphFetch;
+  },
+  labels: { readonly errorPrefix: string },
+): Promise<
+  | {
+      readonly ok: true;
+      readonly catalog: {
+        readonly cardIds: readonly CardId[];
+        readonly hasMore: boolean;
+      };
+    }
+  | { readonly ok: false; readonly error: string }
+> => {
+  const url = new URL(`${options.baseUrl.replace(/\/+$/u, "")}/v1/search`);
+  url.searchParams.set("page", String(page));
+  url.searchParams.set("limit", "500");
+  url.searchParams.set("sort", "card_number");
+  url.searchParams.set("order", "asc");
+  url.searchParams.set("collapse", "card");
+  const response = await safeFetchPoneglyph(
+    options.fetchPoneglyph,
+    url,
+    undefined,
+    labels.errorPrefix,
+  );
+  if (!response.ok) {
+    return response;
+  }
+  if (!response.response.ok) {
+    return {
+      ok: false,
+      error: `${labels.errorPrefix}: HTTP ${String(response.response.status)}`,
+    };
+  }
+  const payload = await safeJson(response.response, labels.errorPrefix);
+  if (!payload.ok) {
+    return payload;
+  }
+  const catalog = toPoneglyphCardCatalogPayload(payload.value);
+  if (catalog === undefined) {
+    return {
+      ok: false,
+      error: `${labels.errorPrefix}: invalid response payload`,
+    };
+  }
+  return { ok: true, catalog };
+};
+
+const setCodeFromCardId = (cardId: string): string | undefined => {
+  const prefix = cardId.trim().toUpperCase().split("-")[0];
+  if (prefix === undefined || !/^[A-Z]+[0-9]*$/u.test(prefix)) {
+    return undefined;
+  }
+  return prefix;
+};
+
+const compareSetCodes = (left: string, right: string): number => {
+  const leftParts = setCodeSortParts(left);
+  const rightParts = setCodeSortParts(right);
+  const familyDelta = leftParts.familyRank - rightParts.familyRank;
+  if (familyDelta !== 0) {
+    return familyDelta;
+  }
+  const prefixDelta = leftParts.prefix.localeCompare(rightParts.prefix);
+  if (prefixDelta !== 0) {
+    return prefixDelta;
+  }
+  return leftParts.number - rightParts.number || left.localeCompare(right);
+};
+
+const setCodeSortParts = (
+  setCode: string,
+): {
+  readonly familyRank: number;
+  readonly prefix: string;
+  readonly number: number;
+} => {
+  const match = /^([A-Z]+)(\d*)$/u.exec(setCode);
+  const prefix = match?.[1] ?? setCode;
+  const numberText = match?.[2] ?? "";
+  const familyIndex = setFamilyOrder.indexOf(prefix);
+  return {
+    familyRank: familyIndex < 0 ? setFamilyOrder.length : familyIndex,
+    prefix,
+    number: numberText.length === 0 ? 0 : Number.parseInt(numberText, 10),
+  };
+};
+
+const setFamilyOrder = ["OP", "PRB", "EB", "ST", "P"];
 
 const toPoneglyphCardCatalogPayload = (
   value: unknown,

@@ -4,6 +4,7 @@ import {
   createPoneglyphCoverageEntriesFromCardIds,
   createPoneglyphCoverageEntriesFromDeckHash,
   createPoneglyphCoverageEntriesFromSet,
+  fetchPoneglyphSetCodes,
   type DeckHashCodecPort,
   type PoneglyphFetch,
 } from "./poneglyph-card-source.js";
@@ -15,6 +16,51 @@ const jsonResponse = (payload: unknown) => ({
 });
 
 describe("poneglyph card source", () => {
+  it("discovers sorted set codes from the Poneglyph card catalog", async () => {
+    const seenUrls: string[] = [];
+    const fetchPoneglyph: PoneglyphFetch = (url) => {
+      seenUrls.push(String(url));
+      if (String(url).includes("page=1")) {
+        return Promise.resolve(
+          jsonResponse({
+            data: [
+              { card_number: "ST02-001" },
+              { card_number: "OP01-001" },
+              { card_number: "P-001" },
+            ],
+            pagination: { has_more: true },
+          }),
+        );
+      }
+      return Promise.resolve(
+        jsonResponse({
+          data: [
+            { card_number: "PRB01-001" },
+            { card_number: "EB01-001" },
+            { card_number: "OP10-001" },
+            { card_number: "ST01-001" },
+            { card_number: "OP01-002" },
+          ],
+          pagination: { has_more: false },
+        }),
+      );
+    };
+
+    const result = await fetchPoneglyphSetCodes({
+      baseUrl: "https://example.test",
+      fetchPoneglyph,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      setCodes: ["OP01", "OP10", "PRB01", "EB01", "ST01", "ST02", "P"],
+    });
+    expect(seenUrls).toEqual([
+      "https://example.test/v1/search?page=1&limit=500&sort=card_number&order=asc&collapse=card",
+      "https://example.test/v1/search?page=2&limit=500&sort=card_number&order=asc&collapse=card",
+    ]);
+  });
+
   it("loads gameplay text entries for card ids", async () => {
     const fetchPoneglyph: PoneglyphFetch = () =>
       Promise.resolve(

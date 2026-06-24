@@ -19,6 +19,7 @@
     "behavior:probe": "corepack pnpm --filter @optcg/card-support behavior:probe",
     "behavior:coverage": "corepack pnpm --filter @optcg/card-support behavior:coverage",
     "spotlight:probe": "corepack pnpm --filter @optcg/card-support spotlight:probe",
+    "master:probe": "corepack pnpm --filter @optcg/card-support master:probe",
     "bot:probe": "tsx packages/match-server/src/bot-probe.ts",
     "build:match-server": "corepack pnpm exec tsc -p packages/types/tsconfig.json && corepack pnpm exec tsc -p packages/engine-core/tsconfig.json && corepack pnpm exec tsc -p packages/cards/tsconfig.json && corepack pnpm exec tsc -p packages/card-support/tsconfig.json && corepack pnpm exec tsc -p packages/match-server/tsconfig.json",
     "format": "corepack pnpm exec prettier --write .",

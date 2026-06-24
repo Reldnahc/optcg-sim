@@ -15,6 +15,7 @@
     "behavior:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/behavior-probe-cli.ts",
     "behavior:coverage": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/behavior-coverage-cli.ts",
     "spotlight:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/spotlight-probe.ts",
+    "master:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/master-probe-cli.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
     "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src"
   },
