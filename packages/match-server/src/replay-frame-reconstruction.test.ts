@@ -4,6 +4,11 @@ import type {
   CompletedMatchReplayDetail,
   JsonObject,
 } from "./postgres-completed-match.js";
+import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import {
+  createLocalDevMatch,
+  createPremadeDevMatchSetup,
+} from "./local-match.js";
 import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
 const detail = (replay: JsonObject): CompletedMatchReplayDetail => ({
@@ -71,21 +76,29 @@ describe("reconstructReplayFrames", () => {
     ]);
   });
 
-  test("uses initial snapshot and final state as reconstructable artifact evidence", () => {
+  test("reconstructs frames from initial engine state when saved snapshots are absent", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
     const result = reconstructReplayFrames(
       detail({
         replayFormatVersion: "dev-local-v1",
-        initialSnapshot: { matchId: "match-1", status: { type: "mulligan" } },
-        finalState: { matchId: "match-1", status: { type: "completed" } },
+        initialSnapshot: match.state as unknown as JsonObject,
+        finalState: match.state as unknown as JsonObject,
         deterministicEntries: [],
       }),
     );
 
-    expect(result.status).toBe("failed");
-    if (result.status !== "failed") {
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
       return;
     }
-    expect(result.reason).toContain("engine replay reducer is not available");
+    expect(result.frames[0]?.label).toBe("Initial state");
+    expect(result.frames[0]?.snapshot).toMatchObject({
+      stateSeq: match.state.seq,
+      actionSeq: match.state.actionSeq,
+    });
   });
 
   test("fails closed when no frame or reconstruction data exists", () => {

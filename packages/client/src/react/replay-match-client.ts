@@ -152,7 +152,6 @@ const replayFrameFromSnapshot = ({
         seat: {
           matchId: matchId as MatchId,
           playerId,
-          sessionToken: "replay",
         },
         snapshot,
         cards,

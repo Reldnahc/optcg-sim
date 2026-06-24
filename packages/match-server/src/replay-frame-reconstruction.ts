@@ -1,3 +1,10 @@
+import {
+  filterStateForPlayer,
+  reconstructReplayArtifactStates,
+  type ReplayArtifactStateFrame,
+} from "@optcg/engine-core";
+import type { GameState, PlayerId } from "@optcg/types";
+
 import type { CompletedMatchReplayDetail } from "./postgres-completed-match.js";
 
 export interface ReplayApiFrame {
@@ -20,6 +27,9 @@ export type ReplayFrameReconstructionResult =
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stringValue = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
 
 const labelForEntry = (entry: unknown, index: number): string => {
   if (!isRecord(entry) || !isRecord(entry["envelope"])) {
@@ -63,6 +73,67 @@ const savedSnapshotFrames = (
     ];
   });
 
+const snapshotForFrame = (frame: ReplayArtifactStateFrame): unknown => ({
+  stateSeq: frame.state.seq,
+  actionSeq: frame.state.actionSeq,
+  stateHash: frame.stateHash,
+  status: frame.state.status.type,
+  turn: frame.state.turn,
+  activePlayerId:
+    frame.state.pendingDecision?.playerId ?? frame.state.turn.turnPlayerId,
+  players: Object.fromEntries(
+    Object.keys(frame.state.players).map((playerId) => [
+      playerId,
+      {
+        view: filterStateForPlayer(frame.state, playerId as PlayerId, {
+          includeLegalActions: false,
+        }),
+        actions: [],
+      },
+    ]),
+  ),
+});
+
+const replayFramesFromEngineState = (
+  detail: CompletedMatchReplayDetail,
+  deterministicEntries: readonly unknown[],
+): ReplayFrameReconstructionResult | undefined => {
+  const initialSnapshot = detail.replay["initialSnapshot"];
+  if (
+    !isRecord(initialSnapshot) ||
+    !isRecord(detail.replay["finalState"])
+  ) {
+    return undefined;
+  }
+  const result = reconstructReplayArtifactStates({
+    initialState: initialSnapshot as unknown as GameState,
+    deterministicEntries,
+    expectedFinalStateHash: stringValue(detail.replay["finalStateHash"]),
+  });
+  if (result.status === "failed") {
+    return result;
+  }
+  try {
+    return {
+      status: "ready",
+      frames: result.frames.map((frame) => ({
+        index: frame.index,
+        actionIndex: frame.actionIndex ?? -1,
+        label: frame.label,
+        snapshot: snapshotForFrame(frame),
+      })),
+    };
+  } catch (caught) {
+    return {
+      status: "failed",
+      reason:
+        caught instanceof Error
+          ? `Replay frame projection failed: ${caught.message}`
+          : "Replay frame projection failed.",
+    };
+  }
+};
+
 export const reconstructReplayFrames = (
   detail: CompletedMatchReplayDetail,
 ): ReplayFrameReconstructionResult => {
@@ -75,15 +146,9 @@ export const reconstructReplayFrames = (
   if (frames.length > 0) {
     return { status: "ready", frames };
   }
-  if (
-    isRecord(detail.replay["initialSnapshot"]) &&
-    isRecord(detail.replay["finalState"])
-  ) {
-    return {
-      status: "failed",
-      reason:
-        "Replay artifact is reconstructable, but the engine replay reducer is not available yet.",
-    };
+  const engineFrames = replayFramesFromEngineState(detail, deterministicEntries);
+  if (engineFrames !== undefined) {
+    return engineFrames;
   }
   return {
     status: "failed",
