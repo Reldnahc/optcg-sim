@@ -21,7 +21,7 @@ export interface ReplayFrameCache {
   readonly getFrameChunk: (
     detail: CompletedMatchReplayDetail,
     window: ReplayFrameWindow,
-  ) => ReplayFrameChunkResult;
+  ) => Promise<ReplayFrameChunkResult>;
 }
 
 export interface ReplayFrameWindow {
@@ -34,7 +34,9 @@ export interface CreateReplayFrameCacheOptions {
   readonly reconstruct?: (
     detail: CompletedMatchReplayDetail,
     window?: ReplayFrameWindow,
-  ) => ReplayFrameReconstructionResult;
+  ) =>
+    | Promise<ReplayFrameReconstructionResult>
+    | ReplayFrameReconstructionResult;
 }
 
 const defaultMaxEntries = 50;
@@ -66,7 +68,7 @@ const replayFrameWindowCacheKey = (window: ReplayFrameWindow): string =>
   `${String(window.start)}:${String(window.limit)}`;
 
 const trimCache = (
-  cache: Map<string, ReplayFrameReconstructionResult>,
+  cache: Map<string, Promise<ReplayFrameReconstructionResult>>,
   maxEntries: number,
 ): void => {
   while (cache.size > maxEntries) {
@@ -113,22 +115,28 @@ export const createReplayFrameCache = ({
   maxEntries = defaultMaxEntries,
   reconstruct = reconstructReplayFrames,
 }: CreateReplayFrameCacheOptions = {}): ReplayFrameCache => {
-  const cache = new Map<string, ReplayFrameReconstructionResult>();
+  const cache = new Map<string, Promise<ReplayFrameReconstructionResult>>();
   return {
-    getFrameChunk(detail, window) {
+    async getFrameChunk(detail, window) {
       const key = `${replayCacheKey(detail)}:${replayFrameWindowCacheKey(
         window,
       )}`;
       const cached = cache.get(key);
-      const reconstructed =
+      const reconstructionPromise =
         cached === undefined
-          ? reconstruct(detail, window)
+          ? Promise.resolve(reconstruct(detail, window)).catch(
+              (error: unknown) => {
+                cache.delete(key);
+                throw error;
+              },
+            )
           : (() => {
               cache.delete(key);
               return cached;
             })();
-      cache.set(key, reconstructed);
+      cache.set(key, reconstructionPromise);
       trimCache(cache, maxEntries);
+      const reconstructed = await reconstructionPromise;
       if (reconstructed.status === "failed") {
         return reconstructed;
       }

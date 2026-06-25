@@ -9,8 +9,11 @@ import {
   replayFrameWindowFromSearchParams,
   type ReplayFrameCache,
 } from "./replay-frame-cache.js";
+import { reconstructReplayFramesOffThread } from "./replay-frame-worker-dispatch.js";
 
-const defaultReplayFrameCache = createReplayFrameCache();
+const defaultReplayFrameCache = createReplayFrameCache({
+  reconstruct: reconstructReplayFramesOffThread,
+});
 
 export const handleReplayRequest = async ({
   request,
@@ -54,11 +57,12 @@ export const handleReplayRequest = async ({
       return true;
     }
     const url = new URL(request.url ?? "/", "http://localhost");
+    const frameReconstruction = await replayFrameCache.getFrameChunk(
+      replay,
+      replayFrameWindowFromSearchParams(url.searchParams),
+    );
     sendJson(response, 200, {
-      frameReconstruction: replayFrameCache.getFrameChunk(
-        replay,
-        replayFrameWindowFromSearchParams(url.searchParams),
-      ),
+      frameReconstruction,
     });
     return true;
   }

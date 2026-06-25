@@ -24,16 +24,16 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
 });
 
 describe("replay frame cache", () => {
-  test("caches reconstructed replay frame windows independently", () => {
+  test("caches reconstructed replay frame windows independently", async () => {
     let reconstructCalls = 0;
     const cache = createReplayFrameCache({
-      reconstruct: (_detail, window) => {
+      reconstruct(_detail, window) {
         reconstructCalls += 1;
         assert.deepEqual(window, {
           start: reconstructCalls === 1 ? 0 : 2,
           limit: 2,
         });
-        return {
+        return Promise.resolve({
           status: "ready",
           frameCount: 3,
           frames: [
@@ -41,16 +41,15 @@ describe("replay frame cache", () => {
               ? { index: 0, actionIndex: -1, label: "start", snapshot: {} }
               : { index: 2, actionIndex: 1, label: "end", snapshot: {} },
           ],
-        };
+        });
       },
     });
 
-    const first = cache.getFrameChunk(replayDetail(), { start: 0, limit: 2 });
-    const repeated = cache.getFrameChunk(replayDetail(), {
-      start: 0,
-      limit: 2,
-    });
-    const second = cache.getFrameChunk(replayDetail(), { start: 2, limit: 2 });
+    const [first, repeated, second] = await Promise.all([
+      cache.getFrameChunk(replayDetail(), { start: 0, limit: 2 }),
+      cache.getFrameChunk(replayDetail(), { start: 0, limit: 2 }),
+      cache.getFrameChunk(replayDetail(), { start: 2, limit: 2 }),
+    ]);
 
     assert.equal(reconstructCalls, 2);
     assert.deepEqual(first, {
