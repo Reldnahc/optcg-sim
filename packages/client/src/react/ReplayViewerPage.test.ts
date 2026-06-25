@@ -84,7 +84,7 @@ describe("ReplayViewerPage", () => {
     );
   });
 
-  test("does not advance playback while the selected frame is still loading", () => {
+  test("does not advance playback without a selected frame", () => {
     const source = replayViewerPageSource();
     const playbackTimerEffect =
       /useEffect\(\(\) => \{[\s\S]*?window\.setTimeout[\s\S]*?\}, \[(?<dependencies>[^\]]*)\]\);/u.exec(
@@ -98,10 +98,29 @@ describe("ReplayViewerPage", () => {
       playbackTimerEffect.groups["dependencies"] ?? "",
       /selectedFrame/u,
     );
+  });
+
+  test("valid display-v1 replay details use local frames instead of frame chunks", () => {
+    const source = replayViewerPageSource();
+
     assert.match(
-      playbackTimerEffect.groups["dependencies"] ?? "",
-      /framesRequestLoading/u,
+      source,
+      /isReplayDisplayArtifactPayload\(replayDisplayArtifact\)/u,
     );
+    assert.match(source, /replayFramesFromDisplayArtifact/u);
+    assert.match(
+      source,
+      /enabled:\s*replay !== undefined && displayArtifact === undefined/u,
+    );
+  });
+
+  test("legacy frame chunks are isolated behind the legacy loader", () => {
+    const source = replayViewerPageSource();
+    const legacyLoader =
+      /const useLegacyReplayFrameLoader = \([\s\S]*?\n\};/u.exec(source);
+
+    assert.ok(legacyLoader !== null);
+    assert.match(legacyLoader[0], /getReplayFrames/u);
   });
 
   test("does not derive frame loading from an absent selected frame", () => {
