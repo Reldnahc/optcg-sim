@@ -21,7 +21,6 @@ import {
   type CompletedMatchReplayRepository,
 } from "./postgres-completed-match.js";
 import { createLocalReplayFixtureRepository } from "./local-replay-fixture-repository.js";
-import type { LegacyReplayFrameCache } from "./replay-frame-cache.js";
 import type { SimHandoffVerifier } from "./sim-handoff.js";
 import type { MatchPersistence } from "./session-types.js";
 
@@ -39,7 +38,6 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly completedMatchRepository?: CompletedMatchRepository;
   readonly matchPersistence?: MatchPersistence;
   readonly replayRepository?: CompletedMatchReplayRepository;
-  readonly legacyReplayFrameCache?: LegacyReplayFrameCache;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;
   readonly rematchLobbyDisconnectGraceMs?: number;

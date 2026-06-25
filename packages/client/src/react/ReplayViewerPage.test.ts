@@ -1,7 +1,4 @@
 import { strict as assert } from "node:assert";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
@@ -9,15 +6,8 @@ import { describe, test } from "vitest";
 import {
   ReplayPlaybackControls,
   ReplayViewerPageView,
-  replayFrameWindowForIndex,
 } from "./ReplayViewerPage.js";
 import type { ReplayDetail } from "../replay-client.js";
-
-const replayViewerPageSource = (): string =>
-  readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), "ReplayViewerPage.tsx"),
-    "utf8",
-  );
 
 const replayDetail = (): ReplayDetail => ({
   matchId: "match-1",
@@ -49,99 +39,6 @@ const replayDetail = (): ReplayDetail => ({
 });
 
 describe("ReplayViewerPage", () => {
-  test("does not key the frame chunk request effect by its loading marker", () => {
-    const source = replayViewerPageSource();
-    const frameLoadingEffect =
-      /useEffect\(\(\) => \{[\s\S]*?getReplayFrames[\s\S]*?\}, \[(?<dependencies>[^\]]*)\]\);/u.exec(
-        source,
-      );
-
-    assert.ok(frameLoadingEffect?.groups !== undefined);
-    assert.doesNotMatch(
-      frameLoadingEffect.groups["dependencies"] ?? "",
-      /loadingFrameWindow/u,
-    );
-  });
-
-  test("loads one replay frame per request so the first board frame can render quickly", () => {
-    const source = replayViewerPageSource();
-
-    assert.match(source, /const initialReplayFrameChunkLimit = 1;/u);
-  });
-
-  test("loads playback frames in chunks after the initial board frame", () => {
-    assert.deepEqual(
-      replayFrameWindowForIndex({ frameIndex: 0, loadedFrameCount: 0 }),
-      { start: 0, limit: 1 },
-    );
-    assert.deepEqual(
-      replayFrameWindowForIndex({ frameIndex: 1, loadedFrameCount: 1 }),
-      { start: 0, limit: 10 },
-    );
-    assert.deepEqual(
-      replayFrameWindowForIndex({ frameIndex: 12, loadedFrameCount: 10 }),
-      { start: 10, limit: 10 },
-    );
-  });
-
-  test("does not advance playback without a selected frame", () => {
-    const source = replayViewerPageSource();
-    const playbackTimerEffect =
-      /useEffect\(\(\) => \{[\s\S]*?window\.setTimeout[\s\S]*?\}, \[(?<dependencies>[^\]]*)\]\);/u.exec(
-        source,
-      );
-
-    assert.ok(playbackTimerEffect?.groups !== undefined);
-    assert.match(playbackTimerEffect[0], /selectedFrame === undefined/u);
-    assert.match(playbackTimerEffect[0], /framesRequestLoading/u);
-    assert.match(
-      playbackTimerEffect.groups["dependencies"] ?? "",
-      /selectedFrame/u,
-    );
-  });
-
-  test("valid display-v1 replay details use local frames instead of frame chunks", () => {
-    const source = replayViewerPageSource();
-
-    assert.match(
-      source,
-      /isReplayDisplayArtifactPayload\(replayDisplayArtifact\)/u,
-    );
-    assert.match(source, /replayFramesFromDisplayArtifact/u);
-    assert.match(
-      source,
-      /enabled:\s*replay !== undefined && displayArtifact === undefined/u,
-    );
-  });
-
-  test("memoizes display artifact validation across replay page renders", () => {
-    const source = replayViewerPageSource();
-
-    assert.match(
-      source,
-      /const displayArtifact = useMemo\(\s*\(\) =>[\s\S]*isReplayDisplayArtifactPayload\(replayDisplayArtifact\)/u,
-    );
-  });
-
-  test("legacy frame chunks are isolated behind the legacy loader", () => {
-    const source = replayViewerPageSource();
-    const legacyLoader =
-      /const useLegacyReplayFrameLoader = \([\s\S]*?\n\};/u.exec(source);
-
-    assert.ok(legacyLoader !== null);
-    assert.match(legacyLoader[0], /getReplayFrames/u);
-  });
-
-  test("does not derive frame loading from an absent selected frame", () => {
-    const source = replayViewerPageSource();
-
-    assert.match(source, /framesRequestLoading/u);
-    assert.doesNotMatch(
-      source,
-      /selectedFrame\s*===\s*undefined\s*&&\s*frameError\s*===\s*undefined/u,
-    );
-  });
-
   test("renders replay metadata and saved entries", () => {
     const html = renderToStaticMarkup(
       createElement(ReplayViewerPageView, {
@@ -177,25 +74,6 @@ describe("ReplayViewerPage", () => {
     assert.match(html, /Replay reconstruction failed/u);
     assert.match(html, /checkpoint hash mismatch/u);
     assert.match(html, /data-replay-match-surface/u);
-  });
-
-  test("renders reconstruction failure even when a stale frame count is present", () => {
-    const html = renderToStaticMarkup(
-      createElement(ReplayViewerPageView, {
-        status: "ready",
-        replay: replayDetail(),
-        frameCount: 12,
-        frameReconstruction: {
-          status: "failed",
-          reason: "State hash after deterministic entry does not match.",
-          actionIndex: 2,
-        },
-      }),
-    );
-
-    assert.match(html, /Replay reconstruction failed/u);
-    assert.match(html, /State hash after deterministic entry does not match/u);
-    assert.doesNotMatch(html, /Loading board frames/u);
   });
 
   test("renders labeled controls for frame-backed board playback", () => {

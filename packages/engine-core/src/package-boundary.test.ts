@@ -15,12 +15,9 @@ import {
   advanceRngFloat01,
   advanceRngUint32,
   applyAction,
-  applyDeterministicEntry,
-  applyDeterministicOperation,
   applyEndMainPhase,
   assertGameStateInvariants,
   canonicalSerializeStateValue,
-  checkpointResolverFromList,
   collectGameStateInvariantViolations,
   computeView,
   createInitialState,
@@ -29,13 +26,10 @@ import {
   GameStateInvariantError,
   getLegalActions,
   hashCanonicalStateValue,
-  hashReplayStateForScope,
   initializeRng,
   processEffectRuntime,
   reconstructReplayArtifactStates,
   reindexZoneCards,
-  replayEntryAfterCheckpointId,
-  replayInitialCheckpointId,
   resolveSupportedVanillaBattle,
   enterMainPhase,
   respondToMulliganDecision,
@@ -54,12 +48,9 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "advanceRngFloat01",
     "advanceRngUint32",
     "applyAction",
-    "applyDeterministicEntry",
-    "applyDeterministicOperation",
     "applyEndMainPhase",
     "assertGameStateInvariants",
     "canonicalSerializeStateValue",
-    "checkpointResolverFromList",
     "collectGameStateInvariantViolations",
     "computeView",
     "createInitialState",
@@ -68,13 +59,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "filterStateForPlayer",
     "getLegalActions",
     "hashCanonicalStateValue",
-    "hashReplayStateForScope",
     "initializeRng",
     "processEffectRuntime",
     "reconstructReplayArtifactStates",
     "reindexZoneCards",
-    "replayEntryAfterCheckpointId",
-    "replayInitialCheckpointId",
     "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
     "splitEffectTextSpotlightPresentation",
@@ -93,26 +81,10 @@ test("package runtime boundary exposes engine-core helpers", () => {
     reconstructReplayArtifactStates,
   );
   assert.equal(engineCorePackage.reindexZoneCards, reindexZoneCards);
-  assert.equal(
-    engineCorePackage.replayEntryAfterCheckpointId,
-    replayEntryAfterCheckpointId,
-  );
-  assert.equal(
-    engineCorePackage.replayInitialCheckpointId,
-    replayInitialCheckpointId,
-  );
   assert.equal(engineCorePackage.advanceRngUint32, advanceRngUint32);
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
   assert.equal(engineCorePackage.getLegalActions, getLegalActions);
   assert.equal(engineCorePackage.applyAction, applyAction);
-  assert.equal(
-    engineCorePackage.applyDeterministicEntry,
-    applyDeterministicEntry,
-  );
-  assert.equal(
-    engineCorePackage.applyDeterministicOperation,
-    applyDeterministicOperation,
-  );
   assert.equal(engineCorePackage.applyEndMainPhase, applyEndMainPhase);
   assert.equal(
     engineCorePackage.resolveSupportedVanillaBattle,
@@ -123,16 +95,8 @@ test("package runtime boundary exposes engine-core helpers", () => {
     canonicalSerializeStateValue,
   );
   assert.equal(
-    engineCorePackage.checkpointResolverFromList,
-    checkpointResolverFromList,
-  );
-  assert.equal(
     engineCorePackage.hashCanonicalStateValue,
     hashCanonicalStateValue,
-  );
-  assert.equal(
-    engineCorePackage.hashReplayStateForScope,
-    hashReplayStateForScope,
   );
   assert.equal(
     engineCorePackage.collectGameStateInvariantViolations,

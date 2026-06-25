@@ -20,8 +20,7 @@ For every valid replay artifact, frame generation should start from replay data:
 - `initialDeckOrders`
 - `deterministicEntries`
 - `checkpoints`
-- optional `finalState` only for debug export, legacy compatibility, or external
-  artifact storage
+- `finalState`
 - replay hashes and version metadata
 
 If frame reconstruction fails, that is an invalid, corrupt, unsupported, or
@@ -104,12 +103,10 @@ prominent so this is not confused with successful playback.
 
 ## Data Contract
 
-New replay rows must reconstruct from the deterministic log and reconstruction
-source. Saved frames and final snapshots are not normal replay authority.
-
-Saved `deterministicEntries[].result.snapshot` values may only be used for
-legacy compatibility rows. The durable contract for valid replay playback is
-deterministic reconstruction from the artifact plus drift verification.
+Saved `deterministicEntries[].result.snapshot` values may be used as existing
+frame data while reconstruction is being built, but they are transitional. The
+durable contract for valid replay playback is deterministic reconstruction from
+the artifact plus drift verification.
 
 The frame generator must fail closed when required data is absent or inconsistent
 instead of silently skipping actions.

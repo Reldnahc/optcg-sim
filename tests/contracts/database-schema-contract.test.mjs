@@ -133,25 +133,6 @@ test("database schema includes v6 DDL correction contracts", async () => {
     schemaSql,
     /CHECK\s*\(\s*initial_snapshot\s+IS\s+NOT\s+NULL\s+OR\s*\(\s*rng_seed_revealed\s+IS\s+NOT\s+NULL\s+AND\s+initial_deck_orders\s+IS\s+NOT\s+NULL\s*\)\s*\)/i,
   );
-  assert.match(schemaSql, /deterministic_entries\s+JSONB\s+NOT\s+NULL/i);
-  assert.match(
-    schemaSql,
-    /audit_entries\s+JSONB\s+NOT\s+NULL\s+DEFAULT\s+'\[\]'::jsonb/i,
-  );
-  assert.match(
-    schemaSql,
-    /CHECK\s*\(\s*jsonb_typeof\s*\(\s*deterministic_entries\s*\)\s*=\s*'array'\s*\)/i,
-  );
-  assert.match(
-    schemaSql,
-    /CHECK\s*\(\s*jsonb_typeof\s*\(\s*audit_entries\s*\)\s*=\s*'array'\s*\)/i,
-  );
-  assert.match(
-    schemaSql,
-    /CHECK\s*\(\s*jsonb_typeof\s*\(\s*checkpoints\s*\)\s*=\s*'array'\s*\)/i,
-  );
-  assert.doesNotMatch(schemaSql, /replay_display_artifact/i);
-  assert.doesNotMatch(schemaSql, /final_state\s+JSONB\s+NOT\s+NULL/i);
   assert.doesNotMatch(schemaSql, /WHERE\s+expires_at\s*>\s*now\(\)/i);
 });
 

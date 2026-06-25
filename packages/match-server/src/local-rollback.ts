@@ -1,11 +1,9 @@
 import type {
-  DeterministicCheckpoint,
   DecisionId,
   EngineEvent,
   GameState,
   PlayerId,
 } from "@optcg/types";
-import { hashReplayStateForScope } from "@optcg/engine-core";
 
 import type {
   DevRollbackPointView,
@@ -31,7 +29,6 @@ interface LocalRollbackPoint {
   actionSeq: number;
   label: string;
   state: GameState;
-  checkpoint: DeterministicCheckpoint;
 }
 
 interface LocalRollbackRequest {
@@ -40,23 +37,10 @@ interface LocalRollbackRequest {
   approvingPlayerId: PlayerId;
 }
 
-type PersistedLocalRollbackPoint = Omit<LocalRollbackPoint, "checkpoint"> & {
-  readonly checkpoint?: DeterministicCheckpoint;
-};
-
-type PersistedLocalRollbackState = Omit<
-  LocalRollbackState,
-  "checkpoints" | "points"
-> & {
-  readonly checkpoints?: readonly DeterministicCheckpoint[];
-  readonly points: readonly PersistedLocalRollbackPoint[];
-};
-
 export interface LocalRollbackState {
   enabled: boolean;
   maxPoints: number;
   points: LocalRollbackPoint[];
-  checkpoints: DeterministicCheckpoint[];
   pendingRequest?: LocalRollbackRequest;
 }
 
@@ -69,24 +53,6 @@ export interface LocalRollbackMutationResult {
   state: GameState;
   rollback: LocalRollbackState;
   errors: string[];
-  rollbackRequest?: {
-    readonly rollbackPointId: string;
-    readonly requestedBy: PlayerId;
-    readonly approvingPlayerId: PlayerId;
-    readonly decisionId: DecisionId;
-    readonly prompt: string;
-  };
-  rollbackRestore?: {
-    readonly rollbackPointId: string;
-    readonly requestedBy: PlayerId;
-    readonly approvedBy: PlayerId;
-    readonly checkpoint: DeterministicCheckpoint;
-  };
-  rollbackCancel?: {
-    readonly rollbackPointId: string;
-    readonly playerId: PlayerId;
-    readonly decisionId?: DecisionId;
-  };
 }
 
 export interface ApplyRollbackConsentInput {
@@ -101,66 +67,10 @@ export const createLocalRollbackState = (
   enabled: config?.enabled ?? true,
   maxPoints: config?.maxPoints ?? 40,
   points: [],
-  checkpoints: [],
 });
 
 export const cloneGameState = (state: GameState): GameState =>
   structuredClone(state);
-
-const rollbackCheckpointFromPoint = (
-  point: PersistedLocalRollbackPoint,
-): DeterministicCheckpoint => ({
-  checkpointVersion: "deterministic-checkpoint-v1",
-  matchId: point.state.matchId,
-  checkpointId: point.rollbackPointId,
-  reason: "rollbackPoint",
-  stateSeq: point.state.seq,
-  actionSeq: point.state.actionSeq,
-  stateHash: hashReplayStateForScope(point.state, "gameplay-v1"),
-  hashScope: "gameplay-v1",
-  snapshot: cloneGameState(point.state),
-});
-
-const normalizeLocalRollbackPoint = (
-  point: PersistedLocalRollbackPoint,
-): LocalRollbackPoint => ({
-  ...structuredClone(point),
-  checkpoint: point.checkpoint ?? rollbackCheckpointFromPoint(point),
-});
-
-const uniqueRollbackCheckpoints = (
-  checkpoints: readonly DeterministicCheckpoint[],
-  points: readonly LocalRollbackPoint[],
-): DeterministicCheckpoint[] => {
-  const byId = new Map<string, DeterministicCheckpoint>();
-  for (const checkpoint of checkpoints) {
-    byId.set(checkpoint.checkpointId, structuredClone(checkpoint));
-  }
-  for (const point of points) {
-    if (!byId.has(point.checkpoint.checkpointId)) {
-      byId.set(
-        point.checkpoint.checkpointId,
-        structuredClone(point.checkpoint),
-      );
-    }
-  }
-  return [...byId.values()];
-};
-
-export const normalizeLocalRollbackState = (
-  rollback: PersistedLocalRollbackState,
-): LocalRollbackState => {
-  const points = rollback.points.map(normalizeLocalRollbackPoint);
-  return {
-    enabled: rollback.enabled,
-    maxPoints: rollback.maxPoints,
-    points,
-    checkpoints: uniqueRollbackCheckpoints(rollback.checkpoints ?? [], points),
-    ...(rollback.pendingRequest === undefined
-      ? {}
-      : { pendingRequest: structuredClone(rollback.pendingRequest) }),
-  };
-};
 
 const nextStateSeq = (state: GameState): GameState["seq"] =>
   (Number(state.seq) + 1) as GameState["seq"];
@@ -214,35 +124,20 @@ export const recordRollbackPoint = (
   if (anchor === undefined) {
     return rollback;
   }
-  const rollbackPointId = `rollback:${String(previousState.seq)}:${String(
-    previousState.actionSeq,
-  )}:${String(anchor.id)}`;
-  const checkpoint: DeterministicCheckpoint = {
-    checkpointVersion: "deterministic-checkpoint-v1",
-    matchId: previousState.matchId,
-    checkpointId: rollbackPointId,
-    reason: "rollbackPoint",
-    stateSeq: previousState.seq,
-    actionSeq: previousState.actionSeq,
-    stateHash: hashReplayStateForScope(previousState, "gameplay-v1"),
-    hashScope: "gameplay-v1",
-    eventId: anchor.id,
-    snapshot: cloneGameState(previousState),
-  };
   const point: LocalRollbackPoint = {
-    rollbackPointId,
+    rollbackPointId: `rollback:${String(previousState.seq)}:${String(
+      previousState.actionSeq,
+    )}:${String(anchor.id)}`,
     eventId: String(anchor.id),
     eventSeq: anchor.seq,
     stateSeq: previousState.seq,
     actionSeq: previousState.actionSeq,
     label: `Before event ${String(anchor.seq)}`,
     state: cloneGameState(previousState),
-    checkpoint,
   };
   return {
     ...rollback,
     points: [...rollback.points, point].slice(-rollback.maxPoints),
-    checkpoints: [...rollback.checkpoints, checkpoint],
   };
 };
 
@@ -267,7 +162,6 @@ const withoutPendingRollbackRequest = (
   enabled: rollback.enabled,
   maxPoints: rollback.maxPoints,
   points: rollback.points,
-  checkpoints: rollback.checkpoints,
 });
 
 export const requestRollbackConsent = (
@@ -332,7 +226,6 @@ export const requestRollbackConsent = (
   const decisionId = `decision:rollback:${input.rollbackPointId}:${String(
     state.seq,
   )}` as DecisionId;
-  const prompt = `Allow rollback to ${point.label}?`;
   return {
     state: bumpedState({
       ...state,
@@ -340,7 +233,7 @@ export const requestRollbackConsent = (
         id: decisionId,
         type: "rollbackConsent",
         playerId: approvingPlayerId,
-        prompt,
+        prompt: `Allow rollback to ${point.label}?`,
         causedBy: { type: "ruleProcess", name: "rollbackRequest" },
         visibility: { type: "private", playerId: approvingPlayerId },
         rollbackPointId: input.rollbackPointId,
@@ -355,13 +248,6 @@ export const requestRollbackConsent = (
       },
     },
     errors: [],
-    rollbackRequest: {
-      rollbackPointId: input.rollbackPointId,
-      requestedBy: input.playerId,
-      approvingPlayerId,
-      decisionId,
-      prompt,
-    },
   };
 };
 
@@ -390,11 +276,6 @@ export const resolveRollbackConsent = (
       state: clearRollbackConsent(state),
       rollback: withoutPendingRollbackRequest(rollback),
       errors: [],
-      rollbackCancel: {
-        rollbackPointId: request.rollbackPointId,
-        playerId: input.playerId,
-        decisionId: input.decisionId,
-      },
     };
   }
 
@@ -406,16 +287,6 @@ export const resolveRollbackConsent = (
       state,
       rollback,
       errors: ["Requested rollback point is no longer available."],
-    };
-  }
-  const checkpoint = rollback.checkpoints.find(
-    (candidate) => candidate.checkpointId === point.rollbackPointId,
-  );
-  if (checkpoint === undefined) {
-    return {
-      state,
-      rollback,
-      errors: ["Requested rollback checkpoint is no longer available."],
     };
   }
 
@@ -431,12 +302,6 @@ export const resolveRollbackConsent = (
       ),
     },
     errors: [],
-    rollbackRestore: {
-      rollbackPointId: point.rollbackPointId,
-      requestedBy: request.requestedBy,
-      approvedBy: input.playerId,
-      checkpoint,
-    },
   };
 };
 
@@ -460,7 +325,6 @@ export const cancelRollbackConsent = (
     };
   }
   const request = rollback.pendingRequest;
-  const decision = state.pendingDecision;
   if (request === undefined) {
     return {
       state,
@@ -479,13 +343,5 @@ export const cancelRollbackConsent = (
     state: clearRollbackConsent(state),
     rollback: withoutPendingRollbackRequest(rollback),
     errors: [],
-    rollbackCancel: {
-      rollbackPointId: request.rollbackPointId,
-      playerId: input.playerId,
-      ...(decision?.type === "rollbackConsent" &&
-      decision.rollbackPointId === request.rollbackPointId
-        ? { decisionId: decision.id }
-        : {}),
-    },
   };
 };

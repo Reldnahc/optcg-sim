@@ -1,9 +1,6 @@
 import { createHash } from "node:crypto";
 
-import {
-  hashCanonicalStateValue,
-  hashReplayStateForScope,
-} from "@optcg/engine-core";
+import { hashCanonicalStateValue } from "@optcg/engine-core";
 import type { PlayerId } from "@optcg/types";
 
 import { canonicalJson } from "./canonical-json.js";
@@ -22,13 +19,8 @@ import type {
 import type {
   FirstPlayerChoiceState,
   MatchCreationSource,
-  StoredDeterministicCheckpointRecord,
-  StoredDeterministicSessionRecord,
+  StoredSessionRecord,
 } from "./session-types.js";
-import {
-  createReplayDisplayArtifact,
-  type ReplayDisplayFrameV1,
-} from "./replay-display-artifact.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export interface CompletedMatchSeatContext {
@@ -43,9 +35,7 @@ export interface BuildLocalCompletedMatchRecordInput {
   readonly setup: DevMatchSetup;
   readonly seats: Record<string, CompletedMatchSeatContext>;
   readonly firstPlayerChoice: FirstPlayerChoiceState;
-  readonly deterministicRecords: readonly StoredDeterministicSessionRecord[];
-  readonly deterministicCheckpoints: readonly StoredDeterministicCheckpointRecord[];
-  readonly replayDisplayFrames: readonly ReplayDisplayFrameV1[];
+  readonly records: readonly StoredSessionRecord[];
   readonly endedAt: string;
 }
 
@@ -59,96 +49,30 @@ const jsonObject = (value: unknown): JsonObject => {
 const isJsonRecord = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const compactCardImageUrl = (card: JsonObject): string | undefined => {
-  const variants = card["variants"];
-  if (!Array.isArray(variants)) {
-    return undefined;
+const compactVariantSnapshot = (variant: unknown): JsonObject => {
+  if (!isJsonRecord(variant)) {
+    return {};
   }
-  const firstVariant = variants.find(isJsonRecord);
-  if (firstVariant === undefined) {
-    return undefined;
-  }
-  const stockImageFull = firstVariant["stockImageFull"];
-  if (typeof stockImageFull === "string" && stockImageFull.length > 0) {
-    return stockImageFull;
-  }
-  const scanImageDisplay = firstVariant["scanImageDisplay"];
-  return typeof scanImageDisplay === "string" && scanImageDisplay.length > 0
-    ? scanImageDisplay
-    : undefined;
+  return jsonObject({
+    stockImageFull: variant["stockImageFull"],
+    scanImageDisplay: variant["scanImageDisplay"],
+  });
 };
 
 const compactCardSnapshot = (card: unknown): JsonObject => {
   if (!isJsonRecord(card)) {
     return {};
   }
-  return jsonObject({
-    cardId: card["cardId"],
-    language: card["language"],
-    name: card["name"],
-    nameAliases: card["nameAliases"],
-    identityTreatment: card["identityTreatment"],
-    category: card["category"],
-    colors: card["colors"],
-    cost: card["cost"],
-    power: card["power"],
-    counter: card["counter"],
-    life: card["life"],
-    attributes: card["attributes"],
-    types: card["types"],
-    effectText: card["effectText"],
-    triggerText: card["triggerText"],
-    printedKeywords: card["printedKeywords"],
-    imageUrl: compactCardImageUrl(card),
-    sourceTextHash: card["sourceTextHash"],
-    behaviorHash: card["behaviorHash"],
-    support: card["support"],
-  });
+  const variants = Array.isArray(card["variants"])
+    ? card["variants"].slice(0, 1).map(compactVariantSnapshot)
+    : [];
+  return jsonObject({ ...card, variants });
 };
 
-const collectEffectDefinitionIds = (
-  value: unknown,
-  output: Set<string>,
-): void => {
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      collectEffectDefinitionIds(entry, output);
-    }
-    return;
-  }
-  if (!isJsonRecord(value)) {
-    return;
-  }
-  for (const [key, entry] of Object.entries(value)) {
-    if (key === "effectDefinitionId" && typeof entry === "string") {
-      output.add(entry);
-      continue;
-    }
-    collectEffectDefinitionIds(entry, output);
-  }
-};
-
-const compactManifestSnapshot = (
-  manifest: unknown,
-  cardIds?: ReadonlySet<string>,
-): JsonObject => {
+const compactManifestSnapshot = (manifest: unknown): JsonObject => {
   if (!isJsonRecord(manifest) || !isJsonRecord(manifest["cards"])) {
     return {};
   }
-  const cards = Object.fromEntries(
-    Object.entries(manifest["cards"])
-      .filter(([cardId]) => cardIds === undefined || cardIds.has(cardId))
-      .map(([cardId, card]) => [cardId, compactCardSnapshot(card)]),
-  );
-  const effectDefinitionIds = new Set<string>();
-  collectEffectDefinitionIds(cards, effectDefinitionIds);
-  const effectDefinitions = isJsonRecord(manifest["effectDefinitions"])
-    ? Object.fromEntries(
-        Object.entries(manifest["effectDefinitions"]).filter(([definitionId]) =>
-          effectDefinitionIds.has(definitionId),
-        ),
-      )
-    : undefined;
   return jsonObject({
     manifestHash: manifest["manifestHash"],
     source: manifest["source"],
@@ -156,20 +80,16 @@ const compactManifestSnapshot = (
     effectDefinitionsVersion: manifest["effectDefinitionsVersion"],
     customHandlerVersion: manifest["customHandlerVersion"],
     banlistVersion: manifest["banlistVersion"],
-    effectDefinitions,
+    effectDefinitions: manifest["effectDefinitions"],
     createdAt: manifest["createdAt"],
-    cards,
+    cards: Object.fromEntries(
+      Object.entries(manifest["cards"]).map(([cardId, card]) => [
+        cardId,
+        compactCardSnapshot(card),
+      ]),
+    ),
   });
 };
-
-const matchCardIdsForSetup = (setup: DevMatchSetup): ReadonlySet<string> =>
-  new Set(
-    setup.players.flatMap((player) => [
-      String(player.leaderCardId),
-      ...player.deckCardIds.map(String),
-      ...player.donDeckCardIds.map(String),
-    ]),
-  );
 
 const hashJson = (value: unknown): string =>
   createHash("sha256")
@@ -297,28 +217,12 @@ export const buildLocalCompletedMatchRecord = (
     return undefined;
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
-  const matchCardIds = matchCardIdsForSetup(input.setup);
-  const cardManifestHash = hashJson(input.match.state.cardManifest);
-  const cardManifestSnapshot = compactManifestSnapshot(
-    input.match.state.cardManifest,
-    matchCardIds,
-  );
-  const replayFinalStateHash = hashReplayStateForScope(
-    input.match.state,
-    "gameplay-v1",
-  );
-  const replayFirstPlayerId =
-    input.firstPlayerChoice.resolvedFirstPlayerId ?? input.setup.firstPlayerId;
-  const initialStateHash = hashReplayStateForScope(
-    createLocalDevMatch({
-      ...input.setup,
-      firstPlayerId: replayFirstPlayerId,
-    }).state,
-    "gameplay-v1",
+  const initialStateHash = hashCanonicalStateValue(
+    createLocalDevMatch(input.setup).state,
   );
   const initialDeckOrders = jsonObject({
     playerOrder: input.setup.playerOrder,
-    firstPlayerId: replayFirstPlayerId,
+    firstPlayerId: input.setup.firstPlayerId,
     shuffleDecks: input.setup.shuffleDecks ?? false,
     players: Object.fromEntries(
       input.setup.players.map((player) => [
@@ -332,25 +236,6 @@ export const buildLocalCompletedMatchRecord = (
       ]),
     ),
   });
-  const replayCheckpointIds = new Set(
-    input.deterministicRecords.flatMap((record) => {
-      const entry = record.deterministicEntry;
-      return entry.kind === "system" &&
-        entry.operation.type === "restoreRollbackPoint"
-        ? [entry.operation.rollbackPointId]
-        : [];
-    }),
-  );
-  const replayDisplayFrames = input.replayDisplayFrames;
-  const replayDisplayPerspectivePlayerId =
-    replayDisplayFrames[0]?.perspectivePlayerId;
-  const replayDisplayArtifact =
-    replayDisplayPerspectivePlayerId === undefined
-      ? null
-      : createReplayDisplayArtifact({
-          perspectivePlayerId: replayDisplayPerspectivePlayerId,
-          frames: replayDisplayFrames,
-        });
   return {
     matchId: input.match.state.matchId,
     status: status.winner === "draw" ? "draw" : "completed",
@@ -364,8 +249,10 @@ export const buildLocalCompletedMatchRecord = (
     disconnectPolicy: { mode: "dev-none" },
     rollbackPolicy: { mode: "mutual-consent" },
     runtimeVersions: jsonObject(input.match.state.version),
-    cardManifestHash,
-    cardManifestSnapshot,
+    cardManifestHash: hashJson(input.match.state.cardManifest),
+    cardManifestSnapshot: compactManifestSnapshot(
+      input.match.state.cardManifest,
+    ),
     firstPlayerSeatId: input.setup.firstPlayerId,
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
     winnerUserId: uuidOrNull(winnerSeat?.subject?.userId),
@@ -381,7 +268,7 @@ export const buildLocalCompletedMatchRecord = (
     errorPayload: null,
     players,
     replay: {
-      replayFormatVersion: "dev-local-v2",
+      replayFormatVersion: "dev-local-v1",
       engineVersion: input.match.state.version.engineVersion,
       rulesVersion: input.match.state.version.rulesVersion,
       cardDataVersion: input.match.state.version.cardDataVersion,
@@ -393,25 +280,15 @@ export const buildLocalCompletedMatchRecord = (
       rngAlgorithm: "test-fixed",
       rngSeedCommitment: hashJson(input.setup.rngSeed),
       rngSeedRevealed: seedText(input.setup.rngSeed),
-      manifestHash: cardManifestHash,
-      manifestSnapshot: jsonObject({ manifestHash: cardManifestHash }),
+      manifestHash: hashJson(input.match.state.cardManifest),
+      manifestSnapshot: compactManifestSnapshot(input.match.state.cardManifest),
       initialStateHash,
-      finalStateHash: replayFinalStateHash,
+      finalStateHash,
       initialSnapshot: null,
       initialDeckOrders,
-      deterministicEntries: input.deterministicRecords.map((record) =>
-        jsonObject(record.deterministicEntry),
-      ),
-      auditEntries: [],
-      checkpoints: input.deterministicCheckpoints
-        .filter((record) =>
-          replayCheckpointIds.has(record.checkpoint.checkpointId),
-        )
-        .map((record) => jsonObject(record.checkpoint)),
-      replayDisplayArtifact:
-        replayDisplayArtifact === null
-          ? null
-          : jsonObject(replayDisplayArtifact),
+      deterministicEntries: input.records.map((record) => jsonObject(record)),
+      auditEntries: input.match.state.audit.map((entry) => jsonObject(entry)),
+      checkpoints: [],
       finalState: null,
       compressed: false,
       artifactStorage: null,

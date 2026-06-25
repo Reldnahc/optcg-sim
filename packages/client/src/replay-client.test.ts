@@ -77,73 +77,19 @@ describe("replay client", () => {
                 actionCount: 2,
                 players: [],
                 replay: {
-                  replayFormatVersion: "dev-local-v1",
-                  manifestSnapshot: { cards: {} },
-                  replayDisplayArtifact: {
-                    replayDisplayVersion: "display-v1",
-                    perspectivePlayerId: "p1",
-                    frameCount: 1,
-                    frames: [
-                      {
-                        index: 0,
-                        actionIndex: null,
-                        label: "Initial state",
-                        perspectivePlayerId: "p1",
-                        stateSeq: 1,
-                        actionSeq: 0,
-                        status: "active",
-                        activePlayerId: "p1",
-                        snapshot: { players: { p1: { actions: [] } } },
-                      },
-                    ],
-                  },
+                  deterministicEntries: [{ type: "submitAction" }],
+                  auditEntries: [],
                 },
               },
-            }),
-          ),
-        );
-      },
-    });
-
-    const replay = await client.getReplay("match-1");
-
-    assert.deepEqual(requests, ["https://sim.example/api/replays/match-1"]);
-    assert.equal(replay.matchId, "match-1");
-    assert.deepEqual(replay.replay.manifestSnapshot, { cards: {} });
-    assert.equal(
-      replay.replay.replayDisplayArtifact?.replayDisplayVersion,
-      "display-v1",
-    );
-    assert.equal(replay.frameReconstruction, undefined);
-  });
-
-  test("loads replay frame chunks by match id", async () => {
-    const requests: string[] = [];
-    const client = createReplayClient({
-      baseUrl: "https://sim.example",
-      fetch: (input) => {
-        requests.push(
-          input instanceof Request
-            ? input.url
-            : input instanceof URL
-              ? input.toString()
-              : input,
-        );
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
               frameReconstruction: {
                 status: "ready",
-                frameCount: 5,
-                start: 2,
-                limit: 2,
                 frames: [
                   {
-                    index: 2,
-                    actionIndex: 1,
+                    index: 0,
+                    actionIndex: 0,
                     label: "playCard",
                     snapshot: {
-                      stateSeq: 3,
+                      stateSeq: 1,
                       players: { p1: { view: {}, actions: [] } },
                     },
                   },
@@ -155,26 +101,22 @@ describe("replay client", () => {
       },
     });
 
-    const chunk = await client.getReplayFrames("match-1", {
-      start: 2,
-      limit: 2,
-    });
+    const replay = await client.getReplay("match-1");
 
-    assert.deepEqual(requests, [
-      "https://sim.example/api/replays/match-1/frames?start=2&limit=2",
+    assert.deepEqual(requests, ["https://sim.example/api/replays/match-1"]);
+    assert.equal(replay.matchId, "match-1");
+    assert.deepEqual(replay.replay.deterministicEntries, [
+      { type: "submitAction" },
     ]);
-    assert.deepEqual(chunk, {
+    assert.deepEqual(replay.frameReconstruction, {
       status: "ready",
-      frameCount: 5,
-      start: 2,
-      limit: 2,
       frames: [
         {
-          index: 2,
-          actionIndex: 1,
+          index: 0,
+          actionIndex: 0,
           label: "playCard",
           snapshot: {
-            stateSeq: 3,
+            stateSeq: 1,
             players: { p1: { view: {}, actions: [] } },
           },
         },

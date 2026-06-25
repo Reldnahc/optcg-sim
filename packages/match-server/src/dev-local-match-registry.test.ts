@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { afterEach, beforeAll, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, test, vi } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
@@ -21,7 +21,7 @@ import type {
   MatchPersistenceSnapshot,
   SessionActionRequest,
 } from "./session-types.js";
-import type { CompletedMatchRecord } from "./postgres-completed-match.js";
+import type { CompletedMatchRepository } from "./postgres-completed-match.js";
 
 let premadeSetup: DevMatchSetup;
 
@@ -88,43 +88,6 @@ const authContext = (
     displayName,
   },
 });
-
-const visibleActionEnvelope = (
-  matchId: MatchId,
-  snapshot: ReturnType<typeof getLocalDevSnapshot>,
-  clientActionId: string,
-): ClientActionEnvelope => {
-  const actionOwner = Object.entries(snapshot.players).find(
-    ([, player]) => player.actions.length > 0,
-  );
-  const playerId = actionOwner?.[0] as PlayerId | undefined;
-  const actionIndex = actionOwner?.[1].actions[0]?.index;
-  if (playerId === undefined || actionIndex === undefined) {
-    throw new Error("Expected a player with a visible action.");
-  }
-  const request: SessionActionRequest = {
-    type: "submitAction",
-    playerId,
-    actionIndex,
-    expectedStateSeq: snapshot.stateSeq,
-  };
-  return {
-    protocolVersion: "dev",
-    matchId,
-    playerId,
-    clientActionId,
-    expectedStateSeq: snapshot.stateSeq,
-    requestHash: requestHash(request),
-    request,
-  };
-};
-
-const waitForCompletedPersistence = async (): Promise<void> => {
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, 0);
-  });
-  await Promise.resolve();
-};
 
 test("can create active matches without game timers", async () => {
   const registry = await createLocalDevMatchRegistry(
@@ -600,6 +563,124 @@ test("seat claims roll back when their active checkpoint fails", async () => {
   );
 });
 
+test("completed-match save does not block the terminal action response", async () => {
+  const saveStarted = deferredVoid();
+  const saveFinished = deferredVoid();
+  let saveCount = 0;
+  const completedMatchRepository: CompletedMatchRepository = {
+    async saveCompletedMatch() {
+      saveCount += 1;
+      saveStarted.resolve();
+      await saveFinished.promise;
+    },
+  };
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { completedMatchRepository, createDefaultMatch: false },
+  );
+  const matchId = "async-completed-match-save" as MatchId;
+  const created = await registry.createMatch({
+    ...structuredClone(premadeSetup),
+    matchId,
+  });
+  const ready = await registry.chooseFirstPlayer(
+    created.matchId,
+    created.firstPlayerChoice.chooserPlayerId,
+    "goFirst",
+  );
+  if (typeof ready === "string" || ready.snapshot === undefined) {
+    throw new Error(
+      `Unable to start match: ${
+        typeof ready === "string" ? ready : "missing snapshot"
+      }`,
+    );
+  }
+  let snapshot = ready.snapshot;
+  let playerId: PlayerId | undefined;
+  let actionIndex: number | undefined;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const concedeOwner = Object.entries(snapshot.players).find(([, player]) =>
+      player.actions.some((action) => action.type === "concede"),
+    );
+    playerId = concedeOwner?.[0] as PlayerId | undefined;
+    actionIndex = concedeOwner?.[1].actions.find(
+      (action) => action.type === "concede",
+    )?.index;
+    if (playerId !== undefined && actionIndex !== undefined) {
+      break;
+    }
+    const pendingPlayerId = Object.values(snapshot.players).find(
+      (player) => player.view.pendingDecision !== undefined,
+    )?.view.pendingDecision?.playerId;
+    if (pendingPlayerId === undefined) {
+      throw new Error("Expected pending setup before concede action.");
+    }
+    const setupAction = snapshot.players[pendingPlayerId]?.actions[0];
+    if (setupAction?.index === undefined) {
+      throw new Error("Expected visible setup action.");
+    }
+    const setupRequest: SessionActionRequest = {
+      type: "submitAction",
+      playerId: pendingPlayerId,
+      actionIndex: setupAction.index,
+      expectedStateSeq: snapshot.stateSeq,
+    };
+    const setupResult = await registry.applyEnvelope({
+      protocolVersion: "dev",
+      matchId,
+      playerId: pendingPlayerId,
+      clientActionId: `async-completed-match-setup-${String(attempt)}`,
+      expectedStateSeq: snapshot.stateSeq,
+      requestHash: requestHash(setupRequest),
+      request: setupRequest,
+    });
+    if (setupResult === "matchNotFound" || !setupResult.accepted) {
+      throw new Error("Expected setup action to be accepted.");
+    }
+    if (setupResult.snapshot === undefined) {
+      throw new Error("Expected setup action snapshot.");
+    }
+    snapshot = setupResult.snapshot;
+  }
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Timed out advancing setup to concession.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: snapshot.stateSeq,
+  };
+  const envelope: ClientActionEnvelope = {
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId: "async-completed-match-save-action",
+    expectedStateSeq: snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  };
+
+  const actionPromise = registry.applyEnvelope(envelope);
+  let actionReturnedBeforeSaveFinished = false;
+  void actionPromise.then(() => {
+    actionReturnedBeforeSaveFinished = true;
+  });
+  await saveStarted.promise;
+  await waitForBotMicrotasks();
+  saveFinished.resolve();
+  const result = await actionPromise;
+
+  assert.notEqual(result, "matchNotFound");
+  assert.equal(typeof result, "object");
+  if (typeof result === "object") {
+    assert.equal(result.accepted, true);
+  }
+  assert.equal(actionReturnedBeforeSaveFinished, true);
+  assert.equal(saveCount, 1);
+});
+
 test("registry can omit action result snapshots for live socket traffic", async () => {
   const registry = await createLocalDevMatchRegistry(
     () => Promise.resolve(structuredClone(premadeSetup)),
@@ -654,127 +735,6 @@ test("registry can omit action result snapshots for live socket traffic", async 
     assert.equal(result.accepted, true);
     assert.equal(result.snapshot, undefined);
   }
-});
-
-test("completed match persistence stores an initial display artifact without actions", async () => {
-  const savedRecords: CompletedMatchRecord[] = [];
-  const registry = await createLocalDevMatchRegistry(
-    () => Promise.resolve(structuredClone(premadeSetup)),
-    undefined,
-    {
-      completedMatchRepository: {
-        saveCompletedMatch(record) {
-          savedRecords.push(record);
-          return Promise.resolve();
-        },
-      },
-      createDefaultMatch: false,
-      matchTimerPolicy: { gameTimeMs: 1, disconnectGraceMs: 120_000 },
-    },
-  );
-  const matchId = "zero-action-completed-display-artifact" as MatchId;
-  const created = await registry.createMatch(
-    { ...structuredClone(premadeSetup), matchId },
-    {
-      firstPlayerChoice: {
-        source: "game-one-random-chooser",
-        chooserPlayerId: premadeSetup.playerOrder[0],
-        choice: "goFirst",
-        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
-      },
-      timersEnabled: true,
-    },
-  );
-  if (created.snapshot === undefined) {
-    throw new Error("Expected an active match snapshot.");
-  }
-
-  await registry.advanceTimers({
-    elapsedMs: 1,
-    connectedPlayerIds: () => new Set(premadeSetup.playerOrder),
-    matchIds: [matchId],
-  });
-  await waitForCompletedPersistence();
-
-  assert.equal(savedRecords.length, 1);
-  const savedRecord = savedRecords[0];
-  assert.ok(savedRecord !== undefined);
-  assert.deepEqual(savedRecord.replay.deterministicEntries, []);
-  const replayDisplayArtifact = savedRecord.replay.replayDisplayArtifact;
-  assert.ok(replayDisplayArtifact !== null);
-  assert.deepEqual(replayDisplayArtifact["replayDisplayVersion"], "display-v1");
-  expect(replayDisplayArtifact["frames"]).toEqual([
-    expect.objectContaining({
-      actionIndex: null,
-      label: "Initial state",
-    }),
-  ]);
-});
-
-test("production snapshot-compacted completed persistence stores action display frames", async () => {
-  const savedRecords: CompletedMatchRecord[] = [];
-  const registry = await createLocalDevMatchRegistry(
-    () => Promise.resolve(structuredClone(premadeSetup)),
-    undefined,
-    {
-      completedMatchRepository: {
-        saveCompletedMatch(record) {
-          savedRecords.push(record);
-          return Promise.resolve();
-        },
-      },
-      createDefaultMatch: false,
-      includeActionSnapshots: false,
-      matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 120_000 },
-    },
-  );
-  const matchId = "compacted-completed-display-artifact" as MatchId;
-  const created = await registry.createMatch(
-    { ...structuredClone(premadeSetup), matchId },
-    {
-      firstPlayerChoice: {
-        source: "game-one-random-chooser",
-        chooserPlayerId: premadeSetup.playerOrder[0],
-        choice: "goFirst",
-        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
-      },
-      timersEnabled: true,
-    },
-  );
-  if (created.snapshot === undefined) {
-    throw new Error("Expected an active match snapshot.");
-  }
-
-  const accepted = await registry.applyEnvelope(
-    visibleActionEnvelope(
-      matchId,
-      created.snapshot,
-      "compacted-display-artifact-action",
-    ),
-  );
-  await registry.advanceTimers({
-    elapsedMs: 1_000,
-    connectedPlayerIds: () => new Set(premadeSetup.playerOrder),
-    matchIds: [matchId],
-  });
-  await waitForCompletedPersistence();
-
-  assert.notEqual(accepted, "matchNotFound");
-  assert.equal(typeof accepted, "object");
-  if (typeof accepted === "object") {
-    assert.equal(accepted.accepted, true);
-    assert.equal(accepted.snapshot, undefined);
-  }
-  assert.equal(savedRecords.length, 1);
-  const savedRecord = savedRecords[0];
-  assert.ok(savedRecord !== undefined);
-  expect(savedRecord.replay.replayDisplayArtifact).toMatchObject({
-    replayDisplayVersion: "display-v1",
-    frames: [
-      { actionIndex: null, label: "Initial state" },
-      { actionIndex: 0, label: "submitAction" },
-    ],
-  });
 });
 
 test("first-player choice drains the chooser game timer before the engine starts", async () => {

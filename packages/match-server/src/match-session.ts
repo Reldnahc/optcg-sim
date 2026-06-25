@@ -1,14 +1,4 @@
 import {
-  hashReplayStateForScope,
-  replayEntryAfterCheckpointId,
-  replayInitialCheckpointId,
-} from "@optcg/engine-core";
-import type {
-  DeterministicCheckpoint,
-  GameState,
-  PlayerId,
-} from "@optcg/types";
-import {
   applyLocalDevAction,
   applyLocalDevDecision,
   cancelLocalDevRollback,
@@ -17,11 +7,6 @@ import {
   type LocalDevMatch,
 } from "./local-match.js";
 import { idempotencyKey, requestHash } from "./action-envelope.js";
-import { buildStoredDeterministicSessionRecord } from "./deterministic-entry-builder.js";
-import {
-  createReplayDisplayFrameFromSnapshot,
-  type ReplayDisplayFrameV1,
-} from "./replay-display-artifact.js";
 import type {
   ActionRejectionReason,
   ClientActionEnvelope,
@@ -30,8 +15,6 @@ import type {
   MatchSessionMetadata,
   SessionActionResult,
   SessionActionRequest,
-  StoredDeterministicCheckpointRecord,
-  StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -40,9 +23,6 @@ export interface MatchSessionRuntime {
   flushPersistence: () => Promise<void>;
   saveSnapshot: () => Promise<void>;
   records: () => readonly StoredSessionRecord[];
-  deterministicRecords: () => readonly StoredDeterministicSessionRecord[];
-  deterministicCheckpoints: () => readonly StoredDeterministicCheckpointRecord[];
-  replayDisplayFrames: () => readonly ReplayDisplayFrameV1[];
 }
 
 export interface CreateMatchSessionRuntimeOptions {
@@ -141,60 +121,6 @@ const compactStoredSessionRecord = (
   recordedAt: record.recordedAt,
 });
 
-const compactStoredDeterministicSessionRecord = (
-  record: StoredDeterministicSessionRecord,
-): StoredDeterministicSessionRecord => ({
-  deterministicEntry: record.deterministicEntry,
-  audit: {
-    type: record.audit.type,
-    envelope: record.audit.envelope,
-    result: compactSessionResult(record.audit.result),
-    recordedAt: record.audit.recordedAt,
-  },
-  ...(record.replayDisplayFrame === undefined
-    ? {}
-    : { replayDisplayFrame: record.replayDisplayFrame }),
-});
-
-const compactStoredDeterministicCheckpointRecord = (
-  record: StoredDeterministicCheckpointRecord,
-): StoredDeterministicCheckpointRecord => ({
-  checkpoint: record.checkpoint,
-  recordedAt: record.recordedAt,
-});
-
-const compactReplayCheckpointState = (state: GameState): GameState => {
-  const clone = structuredClone(state);
-  delete clone.cardManifest.effectDefinitions;
-  clone.cardManifest.cards = {};
-  return clone;
-};
-
-const replayCheckpointRecord = ({
-  checkpointId,
-  reason,
-  recordedAt,
-  state,
-}: {
-  readonly checkpointId: string;
-  readonly reason: DeterministicCheckpoint["reason"];
-  readonly recordedAt: string;
-  readonly state: GameState;
-}): StoredDeterministicCheckpointRecord => ({
-  checkpoint: {
-    checkpointVersion: "deterministic-checkpoint-v1",
-    matchId: state.matchId,
-    checkpointId,
-    reason,
-    stateSeq: state.seq,
-    actionSeq: state.actionSeq,
-    stateHash: hashReplayStateForScope(state, "gameplay-v1"),
-    hashScope: "gameplay-v1",
-    snapshot: compactReplayCheckpointState(state),
-  },
-  recordedAt,
-});
-
 const sortedStoredRecords = (
   records: readonly StoredSessionRecord[],
 ): StoredSessionRecord[] =>
@@ -231,102 +157,8 @@ export const createMatchSessionRuntime = ({
     ...initialActions,
     ...initialDecisions,
   ]);
-  const deterministicRecords: StoredDeterministicSessionRecord[] = [];
-  const deterministicCheckpoints: StoredDeterministicCheckpointRecord[] = [];
-  const deterministicCheckpointIds = new Set<string>();
-  const firstStatePlayerId = Object.keys(local.state.players)[0] as
-    | PlayerId
-    | undefined;
-  let replayDisplayFrameCount = 0;
-  let replayDisplayEventSeqByPlayer = new Map<PlayerId, number>();
-  let replayDisplayPerspectivePlayerId: PlayerId | undefined =
-    metadata?.playerIds[0] ?? firstStatePlayerId;
-  const replayDisplayFrames: ReplayDisplayFrameV1[] = [];
   const pendingActions: StoredSessionRecord[] = [];
   const pendingDecisions: StoredSessionRecord[] = [];
-  const pendingDeterministicRecords: StoredDeterministicSessionRecord[] = [];
-  const pendingDeterministicCheckpoints: StoredDeterministicCheckpointRecord[] =
-    [];
-
-  const recordDeterministicCheckpoint = (
-    record: StoredDeterministicCheckpointRecord,
-    persist: boolean,
-  ): void => {
-    if (deterministicCheckpointIds.has(record.checkpoint.checkpointId)) {
-      return;
-    }
-    deterministicCheckpointIds.add(record.checkpoint.checkpointId);
-    deterministicCheckpoints.push(record);
-    if (persist) {
-      pendingDeterministicCheckpoints.push(record);
-    }
-  };
-
-  const recordReplayCheckpoint = (
-    checkpointId: string,
-    reason: DeterministicCheckpoint["reason"],
-    state: GameState,
-    recordedAt: string,
-    persist: boolean,
-  ): void => {
-    recordDeterministicCheckpoint(
-      replayCheckpointRecord({ checkpointId, reason, recordedAt, state }),
-      persist,
-    );
-  };
-
-  const recordDeterministicCheckpoints = (
-    recordedAt: string,
-    persist: boolean,
-  ): void => {
-    for (const checkpoint of local.rollback.checkpoints) {
-      recordDeterministicCheckpoint({ checkpoint, recordedAt }, persist);
-    }
-  };
-
-  const captureReplayDisplayFrame = ({
-    actionIndex,
-    label,
-    perspectivePlayerId = replayDisplayPerspectivePlayerId,
-    snapshot = getLocalDevSnapshot(local),
-  }: {
-    readonly actionIndex: number | null;
-    readonly label: string;
-    readonly perspectivePlayerId?: PlayerId | undefined;
-    readonly snapshot?: ReturnType<typeof getLocalDevSnapshot>;
-  }): ReplayDisplayFrameV1 | undefined => {
-    if (perspectivePlayerId === undefined) {
-      return undefined;
-    }
-    const result = createReplayDisplayFrameFromSnapshot({
-      index: replayDisplayFrameCount,
-      actionIndex,
-      label,
-      snapshot,
-      perspectivePlayerId,
-      previousEventSeqByPlayer: replayDisplayEventSeqByPlayer,
-    });
-    if (result === undefined) {
-      return undefined;
-    }
-    replayDisplayFrames.push(result.frame);
-    replayDisplayFrameCount += 1;
-    replayDisplayEventSeqByPlayer = new Map(result.nextEventSeqByPlayer);
-    return result.frame;
-  };
-
-  recordReplayCheckpoint(
-    replayInitialCheckpointId(),
-    "initial",
-    local.state,
-    now(),
-    false,
-  );
-  recordDeterministicCheckpoints(now(), false);
-  captureReplayDisplayFrame({
-    actionIndex: null,
-    label: "Initial state",
-  });
 
   for (const record of records) {
     idempotency.set(
@@ -342,12 +174,11 @@ export const createMatchSessionRuntime = ({
   const storeRecord = (
     envelope: ClientActionEnvelope,
     result: SessionActionResult,
-    recordedAt: string,
   ): SessionActionResult => {
     const record: StoredSessionRecord = {
       envelope,
       result,
-      recordedAt,
+      recordedAt: now(),
     };
     const compactRecord = compactStoredSessionRecord(record);
     idempotency.set(
@@ -441,91 +272,17 @@ export const createMatchSessionRuntime = ({
         );
       }
 
-      const stateSeqBefore = local.state.seq;
-      const actionSeqBefore = local.state.actionSeq;
-      const stateHashBefore = hashReplayStateForScope(
-        local.state,
-        "gameplay-v1",
+      const result = resultFromLocal(
+        envelope,
+        applyRequest(local, envelope.request, includeActionSnapshots),
       );
-      const applied = applyRequest(
-        local,
-        envelope.request,
-        includeActionSnapshots,
-      );
-      const result = resultFromLocal(envelope, applied);
-      const recordedAt = now();
-      const storedResult = storeRecord(envelope, result, recordedAt);
-      if (result.accepted) {
-        recordDeterministicCheckpoints(recordedAt, true);
-      }
-      if (result.accepted && applied.deterministicOperation !== undefined) {
-        const entrySeq = deterministicRecords.length;
-        if (replayDisplayPerspectivePlayerId === undefined) {
-          replayDisplayPerspectivePlayerId = envelope.playerId;
-        }
-        const replayDisplayFrame = captureReplayDisplayFrame({
-          actionIndex: entrySeq,
-          label: envelope.request.type,
-          ...(result.snapshot === undefined
-            ? {}
-            : { snapshot: result.snapshot }),
-        });
-        const deterministicRecord = buildStoredDeterministicSessionRecord({
-          matchId: local.state.matchId,
-          entrySeq,
-          envelope,
-          result: compactSessionResult(result),
-          replayDisplayFrame,
-          deterministicOperation: applied.deterministicOperation,
-          stateSeqBefore,
-          actionSeqBefore,
-          stateHashBefore,
-          stateSeqAfter: local.state.seq,
-          actionSeqAfter: local.state.actionSeq,
-          stateHashAfter: hashReplayStateForScope(local.state, "gameplay-v1"),
-          recordedAt,
-        });
-        deterministicRecords.push(deterministicRecord);
-        pendingDeterministicRecords.push(deterministicRecord);
-        recordReplayCheckpoint(
-          replayEntryAfterCheckpointId(entrySeq),
-          "replayFrame",
-          local.state,
-          recordedAt,
-          true,
-        );
-      }
-      return storedResult;
+      return storeRecord(envelope, result);
     },
     async flushPersistence() {
       if (persistence === undefined) {
         pendingActions.length = 0;
         pendingDecisions.length = 0;
-        pendingDeterministicRecords.length = 0;
-        pendingDeterministicCheckpoints.length = 0;
         return;
-      }
-      while (pendingDeterministicCheckpoints.length > 0) {
-        const record = pendingDeterministicCheckpoints[0];
-        if (record === undefined) {
-          break;
-        }
-        await persistence.appendDeterministicCheckpoint({
-          matchId: local.state.matchId,
-          record: compactStoredDeterministicCheckpointRecord(record),
-        });
-        pendingDeterministicCheckpoints.shift();
-      }
-      while (pendingDeterministicRecords.length > 0) {
-        const record = pendingDeterministicRecords[0];
-        if (record === undefined) {
-          break;
-        }
-        await persistence.appendDeterministicEntry({
-          matchId: local.state.matchId,
-          record: compactStoredDeterministicSessionRecord(record),
-        });
-        pendingDeterministicRecords.shift();
       }
       while (pendingActions.length > 0) {
         const record = pendingActions[0];
@@ -562,21 +319,11 @@ export const createMatchSessionRuntime = ({
         ...(context === undefined ? {} : { recoveryContext: context }),
         actions: [],
         decisions: [],
-        deterministicLogVersion: "deterministic-entry-v1",
-        deterministicEntriesSinceSnapshot: [],
-        deterministicCheckpoints: deterministicCheckpoints.map(
-          compactStoredDeterministicCheckpointRecord,
-        ),
       });
       pendingActions.length = 0;
       pendingDecisions.length = 0;
-      pendingDeterministicRecords.length = 0;
-      pendingDeterministicCheckpoints.length = 0;
     },
     records: () => records,
-    deterministicRecords: () => deterministicRecords,
-    deterministicCheckpoints: () => deterministicCheckpoints,
-    replayDisplayFrames: () => replayDisplayFrames,
   };
 };
 

@@ -19,7 +19,6 @@ const canonicalModuleFiles = [
   "types/effects.ts",
   "types/decisions.ts",
   "types/runtime.ts",
-  "types/replay.ts",
   "types/effect-presentation.ts",
   "types/support-certification.ts",
 ];

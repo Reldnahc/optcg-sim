@@ -47,18 +47,3 @@ export type {
   ReplayArtifactReconstructionResult,
   ReplayArtifactStateFrame,
 } from "./replay/artifact-reducer.js";
-export {
-  applyDeterministicOperation,
-  type ApplyDeterministicOperationResult,
-  type DeterministicCheckpointResolver,
-} from "./replay/deterministic-operation.js";
-export {
-  applyDeterministicEntry,
-  checkpointResolverFromList,
-  hashReplayStateForScope,
-  type DeterministicEntryApplyResult,
-} from "./replay/deterministic-entry.js";
-export {
-  replayEntryAfterCheckpointId,
-  replayInitialCheckpointId,
-} from "./replay/deterministic-checkpoint-ids.js";

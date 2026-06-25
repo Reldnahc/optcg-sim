@@ -1,10 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type {
-  DeterministicCheckpoint,
-  MatchId,
-  PlayerId,
-  StateSeq,
-} from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import { requestHash } from "./action-envelope.js";
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
@@ -18,8 +13,6 @@ import type {
   ClientActionEnvelope,
   MatchSessionMetadata,
   SessionActionRequest,
-  StoredDeterministicCheckpointRecord,
-  StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -153,51 +146,6 @@ const record = (clientActionId: string): StoredSessionRecord => {
   };
 };
 
-const deterministicRecord = (
-  entrySeq = 0,
-): StoredDeterministicSessionRecord => {
-  const audit = record(`deterministic-${String(entrySeq)}`);
-  return {
-    deterministicEntry: {
-      formatVersion: "deterministic-entry-v1",
-      matchId,
-      entrySeq,
-      kind: "action",
-      playerId: p1,
-      action: { type: "endMainPhase" },
-      verification: {
-        stateSeqBefore: 1 as StateSeq,
-        actionSeqBefore: entrySeq,
-        stateHashBefore: `before-${String(entrySeq)}`,
-        stateSeqAfter: 2 as StateSeq,
-        actionSeqAfter: entrySeq + 1,
-        stateHashAfter: `after-${String(entrySeq)}`,
-        hashScope: "gameplay-v1",
-      },
-    },
-    audit: {
-      type: "clientEnvelope",
-      envelope: audit.envelope,
-      result: audit.result,
-      recordedAt: audit.recordedAt,
-    },
-  };
-};
-
-const deterministicCheckpoint = (): StoredDeterministicCheckpointRecord => ({
-  checkpoint: {
-    checkpointVersion: "deterministic-checkpoint-v1",
-    matchId,
-    checkpointId: "checkpoint-1",
-    reason: "recoverySnapshot",
-    stateSeq: 1 as StateSeq,
-    actionSeq: 0,
-    stateHash: "checkpoint-hash",
-    hashScope: "gameplay-v1",
-  } satisfies DeterministicCheckpoint,
-  recordedAt: "2026-05-30T00:00:00.000Z",
-});
-
 describe("redis match persistence", () => {
   test("saves and loads state metadata manifest actions and decisions", async () => {
     const redis = new FakeRedis();
@@ -232,41 +180,6 @@ describe("redis match persistence", () => {
     expect(
       loaded?.decisions.map((item) => item.envelope.clientActionId),
     ).toEqual(["decision-1", "decision-2"]);
-  });
-
-  test("persists deterministic session records for recovery", async () => {
-    const redis = new FakeRedis();
-    const persistence = createRedisMatchPersistence(redis);
-    const setup = await createFixtureDevMatchSetup(matchId);
-    const local = createLocalDevMatch(setup);
-    const checkpoint = deterministicCheckpoint();
-    const tailRecord = deterministicRecord();
-
-    await persistence.saveSnapshot({
-      metadata: metadata(),
-      state: local.state,
-      manifest: local.state.cardManifest,
-      actions: [],
-      decisions: [],
-      deterministicLogVersion: "deterministic-entry-v1",
-      deterministicEntriesSinceSnapshot: [],
-      deterministicCheckpoints: [checkpoint],
-    });
-    await persistence.appendDeterministicEntry({
-      matchId,
-      record: tailRecord,
-    });
-
-    const loaded = await persistence.loadSnapshot(matchId);
-
-    expect(
-      loaded?.deterministicEntriesSinceSnapshot?.map(
-        (stored) => stored.deterministicEntry,
-      ),
-    ).toEqual([tailRecord.deterministicEntry]);
-    expect(
-      loaded?.deterministicCheckpoints?.map((stored) => stored.checkpoint),
-    ).toEqual([checkpoint.checkpoint]);
   });
 
   test("ignores stale legacy logs after a newer snapshot is current", async () => {

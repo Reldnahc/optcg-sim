@@ -22,16 +22,10 @@ export interface ReplayApiFrame {
   readonly snapshot: unknown;
 }
 
-export interface ReplayFrameReconstructionWindow {
-  readonly start: number;
-  readonly limit: number;
-}
-
 export type ReplayFrameReconstructionResult =
   | {
       readonly status: "ready";
       readonly frames: readonly ReplayApiFrame[];
-      readonly frameCount?: number | undefined;
     }
   | {
       readonly status: "failed";
@@ -81,15 +75,8 @@ const savedSnapshotForEntry = (
 
 const savedSnapshotFrames = (
   entries: readonly unknown[],
-  window?: ReplayFrameReconstructionWindow,
 ): readonly ReplayApiFrame[] =>
   entries.flatMap((entry, actionIndex) => {
-    if (
-      window !== undefined &&
-      (actionIndex < window.start || actionIndex >= window.start + window.limit)
-    ) {
-      return [];
-    }
     const snapshot = savedSnapshotForEntry(entry);
     if (snapshot === undefined) {
       return [];
@@ -129,38 +116,27 @@ const replayFramesFromInitialState = (
   initialState: GameState,
   detail: Pick<CompletedMatchReplayDetail, "replay">,
   deterministicEntries: readonly unknown[],
-  checkpoints: readonly unknown[],
-  expectedFinalStateHash: string | undefined,
-  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult | undefined => {
   const result = reconstructReplayArtifactStates({
     initialState,
     deterministicEntries,
-    checkpoints,
-    expectedFinalStateHash,
-    ...(window === undefined ? {} : { frameWindow: window }),
+    // Live finalStateHash currently includes timer state; replay logs do not
+    // yet store deterministic timer inputs, so viewer reconstruction cannot
+    // use it as a frame gate.
+    expectedFinalStateHash: undefined,
   });
   if (result.status === "failed") {
-    return {
-      status: "failed",
-      reason: result.reason,
-      ...(result.entryIndex === undefined
-        ? {}
-        : { actionIndex: result.entryIndex }),
-    };
+    return result;
   }
   try {
     return {
       status: "ready",
       frames: result.frames.map((frame) => ({
         index: frame.index,
-        actionIndex: frame.entryIndex ?? -1,
+        actionIndex: frame.actionIndex ?? -1,
         label: frame.label,
         snapshot: snapshotForFrame(frame),
       })),
-      ...(result.frameCount === undefined
-        ? {}
-        : { frameCount: result.frameCount }),
     };
   } catch (caught) {
     return {
@@ -176,9 +152,6 @@ const replayFramesFromInitialState = (
 const replayFramesFromEngineState = (
   detail: CompletedMatchReplayDetail,
   deterministicEntries: readonly unknown[],
-  checkpoints: readonly unknown[],
-  expectedFinalStateHash: string | undefined,
-  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult | undefined => {
   const initialSnapshot = detail.replay["initialSnapshot"];
   if (!isRecord(initialSnapshot)) {
@@ -188,9 +161,6 @@ const replayFramesFromEngineState = (
     initialSnapshot as unknown as GameState,
     detail,
     deterministicEntries,
-    checkpoints,
-    expectedFinalStateHash,
-    window,
   );
 };
 
@@ -274,36 +244,15 @@ const initialStateFromCompactSource = (
 
 export const reconstructReplayFrames = (
   detail: CompletedMatchReplayDetail,
-  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult => {
   const deterministicEntries = Array.isArray(
     detail.replay["deterministicEntries"],
   )
     ? detail.replay["deterministicEntries"]
     : [];
-  const checkpoints = Array.isArray(detail.replay["checkpoints"])
-    ? detail.replay["checkpoints"]
-    : [];
-  const replayFormatVersion = stringValue(detail.replay["replayFormatVersion"]);
-  const expectedFinalStateHash =
-    replayFormatVersion === "dev-local-v2"
-      ? stringValue(detail.replay["finalStateHash"])
-      : undefined;
-  if (replayFormatVersion !== "dev-local-v2") {
-    const savedFrameCount =
-      window === undefined
-        ? undefined
-        : savedSnapshotFrames(deterministicEntries).length;
-    const frames = savedSnapshotFrames(deterministicEntries, window);
-    if (frames.length > 0 || (savedFrameCount ?? 0) > 0) {
-      return {
-        status: "ready",
-        frames,
-        ...(window === undefined
-          ? {}
-          : { frameCount: savedFrameCount ?? frames.length }),
-      };
-    }
+  const frames = savedSnapshotFrames(deterministicEntries);
+  if (frames.length > 0) {
+    return { status: "ready", frames };
   }
   const compactInitialState = initialStateFromCompactSource(detail);
   if (compactInitialState !== undefined) {
@@ -311,9 +260,6 @@ export const reconstructReplayFrames = (
       compactInitialState,
       detail,
       deterministicEntries,
-      checkpoints,
-      expectedFinalStateHash,
-      window,
     );
     if (result !== undefined) {
       return result;
@@ -322,9 +268,6 @@ export const reconstructReplayFrames = (
   const engineFrames = replayFramesFromEngineState(
     detail,
     deterministicEntries,
-    checkpoints,
-    expectedFinalStateHash,
-    window,
   );
   if (engineFrames !== undefined) {
     return engineFrames;

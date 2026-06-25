@@ -6,7 +6,6 @@ import type {
   CompletedMatchReplayRepository,
   CompletedMatchReplaySummary,
 } from "./postgres-completed-match.js";
-import { publicReplayDetail } from "./replay-frame-cache.js";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -164,12 +163,6 @@ export const createLocalReplayFixtureRepository = (
     async listReplays() {
       const replay = await loadReplay();
       return replay === undefined ? [] : [replaySummaryFromDetail(replay)];
-    },
-    async getPublicReplay(matchId) {
-      const replay = await loadReplay();
-      return replay?.matchId === matchId
-        ? publicReplayDetail(replay)
-        : undefined;
     },
     async getReplay(matchId) {
       const replay = await loadReplay();

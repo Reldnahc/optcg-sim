@@ -69,7 +69,7 @@ const detailSql = `
       'rngSeedCommitment', replay.rng_seed_commitment,
       'rngSeedRevealed', replay.rng_seed_revealed,
       'manifestHash', replay.manifest_hash,
-      'manifestSnapshot', m.card_manifest_snapshot,
+      'manifestSnapshot', replay.manifest_snapshot,
       'initialStateHash', replay.initial_state_hash,
       'finalStateHash', replay.final_state_hash,
       'initialSnapshot', replay.initial_snapshot,

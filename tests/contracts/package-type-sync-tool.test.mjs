@@ -277,11 +277,6 @@ async function makeFixtureRepo() {
   );
   await writeFixtureFile(
     tempRoot,
-    "contracts/types/replay.ts",
-    "export interface ReplayRow { entrySeq: number; }\n",
-  );
-  await writeFixtureFile(
-    tempRoot,
     "contracts/types/effect-presentation.ts",
     'export interface EffectPresentationRow { id: "span"; }\n',
   );

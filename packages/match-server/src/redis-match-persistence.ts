@@ -6,8 +6,6 @@ import type {
   MatchPersistence,
   MatchPersistenceSnapshot,
   RecoveryLock,
-  StoredDeterministicCheckpointRecord,
-  StoredDeterministicSessionRecord,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -42,9 +40,6 @@ const keys = (matchId: MatchId) => {
     manifest: `${prefix}:manifest`,
     actions: `${prefix}:actions`,
     decisions: `${prefix}:decisions`,
-    deterministicEntriesSinceSnapshot: `${prefix}:deterministic-entries`,
-    deterministicCheckpoints: `${prefix}:deterministic-checkpoints`,
-    deterministicLogVersion: `${prefix}:deterministic-log-version`,
     current: `${prefix}:current`,
     snapshotsPrefix: `${prefix}:snapshots:`,
     locks: `${prefix}:locks`,
@@ -58,9 +53,6 @@ const keys = (matchId: MatchId) => {
         manifest: `${snapshotPrefix}:manifest`,
         actions: `${snapshotPrefix}:actions`,
         decisions: `${snapshotPrefix}:decisions`,
-        deterministicEntriesSinceSnapshot: `${snapshotPrefix}:deterministic-entries`,
-        deterministicCheckpoints: `${snapshotPrefix}:deterministic-checkpoints`,
-        deterministicLogVersion: `${snapshotPrefix}:deterministic-log-version`,
       };
     },
   };
@@ -73,7 +65,7 @@ const parseJson = (value: string): unknown => JSON.parse(value) as unknown;
 const pushRecords = async (
   redis: RedisLike,
   key: string,
-  records: readonly unknown[],
+  records: readonly StoredSessionRecord[],
 ): Promise<void> => {
   if (records.length === 0) {
     return;
@@ -155,32 +147,17 @@ const loadSnapshotFromKeys = async (
     readonly context: string;
     readonly actions: string;
     readonly decisions: string;
-    readonly deterministicEntriesSinceSnapshot: string;
-    readonly deterministicCheckpoints: string;
-    readonly deterministicLogVersion: string;
   },
 ): Promise<MatchPersistenceSnapshot | undefined> => {
-  const [
-    metadata,
-    state,
-    manifest,
-    context,
-    actions,
-    decisions,
-    deterministicLogVersion,
-    deterministicEntriesSinceSnapshot,
-    deterministicCheckpoints,
-  ] = await Promise.all([
-    redis.get(snapshotKeys.metadata),
-    redis.get(snapshotKeys.state),
-    redis.get(snapshotKeys.manifest),
-    redis.get(snapshotKeys.context),
-    redis.lRange(snapshotKeys.actions, 0, -1),
-    redis.lRange(snapshotKeys.decisions, 0, -1),
-    redis.get(snapshotKeys.deterministicLogVersion),
-    redis.lRange(snapshotKeys.deterministicEntriesSinceSnapshot, 0, -1),
-    redis.lRange(snapshotKeys.deterministicCheckpoints, 0, -1),
-  ]);
+  const [metadata, state, manifest, context, actions, decisions] =
+    await Promise.all([
+      redis.get(snapshotKeys.metadata),
+      redis.get(snapshotKeys.state),
+      redis.get(snapshotKeys.manifest),
+      redis.get(snapshotKeys.context),
+      redis.lRange(snapshotKeys.actions, 0, -1),
+      redis.lRange(snapshotKeys.decisions, 0, -1),
+    ]);
   if (metadata === null || state === null || manifest === null) {
     return undefined;
   }
@@ -199,19 +176,6 @@ const loadSnapshotFromKeys = async (
     decisions: decisions.map(
       (record) => parseJson(record) as StoredSessionRecord,
     ),
-    ...(deterministicLogVersion !== "deterministic-entry-v1"
-      ? {}
-      : {
-          deterministicLogVersion,
-          deterministicEntriesSinceSnapshot:
-            deterministicEntriesSinceSnapshot.map(
-              (record) => parseJson(record) as StoredDeterministicSessionRecord,
-            ),
-          deterministicCheckpoints: deterministicCheckpoints.map(
-            (record) =>
-              parseJson(record) as StoredDeterministicCheckpointRecord,
-          ),
-        }),
   };
 };
 
@@ -232,51 +196,11 @@ export const createRedisMatchPersistence = (
     }
     await redis.del(snapshotKeys.actions);
     await redis.del(snapshotKeys.decisions);
-    await redis.del(snapshotKeys.deterministicEntriesSinceSnapshot);
-    await redis.del(snapshotKeys.deterministicCheckpoints);
     await pushRecords(redis, snapshotKeys.actions, input.actions);
     await pushRecords(redis, snapshotKeys.decisions, input.decisions);
-    if (input.deterministicLogVersion === undefined) {
-      await redis.del(snapshotKeys.deterministicLogVersion);
-    } else {
-      await redis.set(
-        snapshotKeys.deterministicLogVersion,
-        input.deterministicLogVersion,
-      );
-    }
-    await pushRecords(
-      redis,
-      snapshotKeys.deterministicEntriesSinceSnapshot,
-      input.deterministicEntriesSinceSnapshot ?? [],
-    );
-    await pushRecords(
-      redis,
-      snapshotKeys.deterministicCheckpoints,
-      input.deterministicCheckpoints ?? [],
-    );
     await redis.set(matchKeys.current, generation);
     await cleanupOldSnapshotGenerations(redis, matchKeys, generation).catch(
       () => undefined,
-    );
-  },
-  async appendDeterministicEntry({ matchId, record }) {
-    const matchKeys = keys(matchId);
-    const generation = await redis.get(matchKeys.current);
-    await redis.rPush(
-      generation === null
-        ? matchKeys.deterministicEntriesSinceSnapshot
-        : matchKeys.snapshot(generation).deterministicEntriesSinceSnapshot,
-      serialize(record),
-    );
-  },
-  async appendDeterministicCheckpoint({ matchId, record }) {
-    const matchKeys = keys(matchId);
-    const generation = await redis.get(matchKeys.current);
-    await redis.rPush(
-      generation === null
-        ? matchKeys.deterministicCheckpoints
-        : matchKeys.snapshot(generation).deterministicCheckpoints,
-      serialize(record),
     );
   },
   async appendAction({ matchId, record }) {
@@ -312,10 +236,6 @@ export const createRedisMatchPersistence = (
             context: matchKeys.context,
             actions: matchKeys.actions,
             decisions: matchKeys.decisions,
-            deterministicEntriesSinceSnapshot:
-              matchKeys.deterministicEntriesSinceSnapshot,
-            deterministicCheckpoints: matchKeys.deterministicCheckpoints,
-            deterministicLogVersion: matchKeys.deterministicLogVersion,
           }
         : matchKeys.snapshot(generation),
     );

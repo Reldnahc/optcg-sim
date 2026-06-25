@@ -205,7 +205,6 @@ export const createLocalDevMatchRegistry = async (
     readonly matchPersistence?: MatchPersistence;
     readonly recoveryLockTtlMs?: number;
     readonly recoveryOwnerInstanceId?: string;
-    readonly deferRecovery?: boolean;
     readonly matchTimerPolicy?: MatchTimerPolicy;
     readonly onBotActionAccepted?: (matchId: MatchId) => void;
     readonly botStrategy?: BotStrategy;
@@ -393,34 +392,24 @@ export const createLocalDevMatchRegistry = async (
     }
   };
   const defaultMatchId = "dev-local-match" as MatchId;
-  const initializeSessions = async (): Promise<void> => {
-    await recoverPersistedActiveMatches();
-    if (options.createDefaultMatch !== false && !sessions.has(defaultMatchId)) {
-      const defaultSetup = await createTemplateSetup(defaultMatchId);
-      sessions.set(
-        defaultSetup.matchId,
-        createActiveLocalDevMatchSession(
-          defaultSetup,
-          sessionService,
-          matchTimerPolicy,
-          {
-            ...activeSessionSnapshotOptions,
-            ...(matchPersistence === undefined
-              ? {}
-              : { persistence: matchPersistence }),
-          },
-        ),
-      );
-      await saveSessionCheckpoint(defaultSetup.matchId);
-    }
-  };
-  let readyPromise: Promise<void> | undefined;
-  const ready = (): Promise<void> => {
-    readyPromise ??= initializeSessions();
-    return readyPromise;
-  };
-  if (options.deferRecovery !== true) {
-    await ready();
+  await recoverPersistedActiveMatches();
+  if (options.createDefaultMatch !== false && !sessions.has(defaultMatchId)) {
+    const defaultSetup = await createTemplateSetup(defaultMatchId);
+    sessions.set(
+      defaultSetup.matchId,
+      createActiveLocalDevMatchSession(
+        defaultSetup,
+        sessionService,
+        matchTimerPolicy,
+        {
+          ...activeSessionSnapshotOptions,
+          ...(matchPersistence === undefined
+            ? {}
+            : { persistence: matchPersistence }),
+        },
+      ),
+    );
+    await saveSessionCheckpoint(defaultSetup.matchId);
   }
 
   const buildCreatedResponse = (
@@ -449,16 +438,15 @@ export const createLocalDevMatchRegistry = async (
     ) {
       return;
     }
-    const runtime = sessionService.getRuntime(session.match.state.matchId);
     const record = recordActionTimingSpan("completedMatchRecordBuild", () =>
       buildLocalCompletedMatchRecord({
         match: session.match,
         setup: session.setup,
         seats: session.seats,
         firstPlayerChoice: session.firstPlayerChoice,
-        deterministicRecords: runtime?.deterministicRecords() ?? [],
-        deterministicCheckpoints: runtime?.deterministicCheckpoints() ?? [],
-        replayDisplayFrames: runtime?.replayDisplayFrames() ?? [],
+        records:
+          sessionService.getRuntime(session.match.state.matchId)?.records() ??
+          [],
         endedAt: new Date().toISOString(),
       }),
     );
@@ -585,7 +573,6 @@ export const createLocalDevMatchRegistry = async (
 
   return {
     defaultMatchId,
-    ready,
     async createMatch(setup, options) {
       const actualSetup =
         setup ??
@@ -973,9 +960,6 @@ export const createLocalDevMatchRegistry = async (
               if (result.expiries.length > 0) {
                 applyLocalDevMatchTimerExpiries(session.match, result.expiries);
                 await saveActiveSessionCheckpoint(matchId, session);
-                if (session.status === "active") {
-                  scheduleCompletedMatchPersistence(session);
-                }
               }
               if (!result.changed && result.expiries.length === 0) {
                 return undefined;

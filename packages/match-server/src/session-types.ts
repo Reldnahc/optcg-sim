@@ -1,8 +1,6 @@
 import type {
   DecisionId,
   DecisionResponse,
-  DeterministicCheckpoint,
-  DeterministicMatchEntry,
   GameState,
   InstanceId,
   MatchCardManifest,
@@ -17,7 +15,6 @@ import type { ReadyDeckSubmission } from "./deck-submission.js";
 import type { DevDeckVerificationMode } from "./default-dev-manifest.js";
 import type { DevMatchSetup } from "./local-match.js";
 import type { LocalRollbackState } from "./local-rollback.js";
-import type { ReplayDisplayFrameV1 } from "./replay-display-artifact.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export type GameType = "ranked" | "unranked" | "custom" | "dev";
@@ -142,24 +139,6 @@ export interface StoredSessionRecord {
   readonly recordedAt: string;
 }
 
-export interface StoredSessionAuditRecord {
-  readonly type: "clientEnvelope";
-  readonly envelope: ClientActionEnvelope;
-  readonly result: SessionActionResult;
-  readonly recordedAt: string;
-}
-
-export interface StoredDeterministicSessionRecord {
-  readonly deterministicEntry: DeterministicMatchEntry;
-  readonly audit: StoredSessionAuditRecord;
-  readonly replayDisplayFrame?: ReplayDisplayFrameV1;
-}
-
-export interface StoredDeterministicCheckpointRecord {
-  readonly checkpoint: DeterministicCheckpoint;
-  readonly recordedAt: string;
-}
-
 export interface SessionObservation {
   readonly matchId: MatchId;
   readonly clientActionId: string;
@@ -197,9 +176,6 @@ export interface MatchPersistenceSnapshot {
   readonly recoveryContext?: MatchRecoveryContext;
   readonly actions: readonly StoredSessionRecord[];
   readonly decisions: readonly StoredSessionRecord[];
-  readonly deterministicLogVersion?: "deterministic-entry-v1";
-  readonly deterministicEntriesSinceSnapshot?: readonly StoredDeterministicSessionRecord[];
-  readonly deterministicCheckpoints?: readonly StoredDeterministicCheckpointRecord[];
 }
 
 export interface RecoveryLock {
@@ -211,14 +187,6 @@ export interface RecoveryLock {
 
 export interface MatchPersistence {
   saveSnapshot(input: MatchPersistenceSnapshot): Promise<void>;
-  appendDeterministicEntry(input: {
-    readonly matchId: MatchId;
-    readonly record: StoredDeterministicSessionRecord;
-  }): Promise<void>;
-  appendDeterministicCheckpoint(input: {
-    readonly matchId: MatchId;
-    readonly record: StoredDeterministicCheckpointRecord;
-  }): Promise<void>;
   appendAction(input: {
     readonly matchId: MatchId;
     readonly record: StoredSessionRecord;
