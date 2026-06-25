@@ -3,8 +3,6 @@ import { createHash } from "node:crypto";
 import {
   hashCanonicalStateValue,
   hashReplayStateForScope,
-  replayEntryAfterCheckpointId,
-  replayInitialCheckpointId,
 } from "@optcg/engine-core";
 import type { PlayerId } from "@optcg/types";
 
@@ -324,19 +322,15 @@ export const buildLocalCompletedMatchRecord = (
       ]),
     ),
   });
-  const replayCheckpointIds = new Set([
-    replayInitialCheckpointId(),
-    ...input.deterministicRecords.map((record) =>
-      replayEntryAfterCheckpointId(record.deterministicEntry.entrySeq),
-    ),
-    ...input.deterministicRecords.flatMap((record) => {
+  const replayCheckpointIds = new Set(
+    input.deterministicRecords.flatMap((record) => {
       const entry = record.deterministicEntry;
       return entry.kind === "system" &&
         entry.operation.type === "restoreRollbackPoint"
         ? [entry.operation.rollbackPointId]
         : [];
     }),
-  ]);
+  );
   return {
     matchId: input.match.state.matchId,
     status: status.winner === "draw" ? "draw" : "completed",
