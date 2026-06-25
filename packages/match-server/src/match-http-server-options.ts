@@ -37,6 +37,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
   readonly matchPersistence?: MatchPersistence;
+  readonly recoverActiveMatches?: boolean;
   readonly replayRepository?: CompletedMatchReplayRepository;
   readonly authBaseUrl?: string;
   readonly socketIdleTimeoutMs?: number;

@@ -81,13 +81,10 @@ import {
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
 } from "./match-http-server-options.js";
-import { createRedisClientForLobbyStore } from "./lobby-store.js";
-import { resolveRedisConfig } from "./redis-config.js";
-import { createRedisMatchPersistence } from "./redis-match-persistence.js";
 import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
-import type { MatchPersistence } from "./session-types.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
+import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -96,24 +93,6 @@ interface FirstPlayerChoiceRequest {
   playerId?: unknown;
   choice?: unknown;
 }
-
-const resolveActiveMatchPersistence = async (
-  options: CreateMatchHttpServerOptions,
-): Promise<MatchPersistence | undefined> => {
-  if (options.matchPersistence !== undefined) {
-    return options.matchPersistence;
-  }
-  const redisConfig = resolveRedisConfig({
-    redisUrl: options.redisUrl,
-    redisMode: options.redisMode,
-  });
-  if (redisConfig.redisUrl === undefined) {
-    return undefined;
-  }
-  return createRedisMatchPersistence(
-    await createRedisClientForLobbyStore(redisConfig.redisUrl),
-  );
-};
 
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
