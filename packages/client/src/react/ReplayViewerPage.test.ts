@@ -1,4 +1,7 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
@@ -8,6 +11,12 @@ import {
   ReplayViewerPageView,
 } from "./ReplayViewerPage.js";
 import type { ReplayDetail } from "../replay-client.js";
+
+const replayViewerPageSource = (): string =>
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "ReplayViewerPage.tsx"),
+    "utf8",
+  );
 
 const replayDetail = (): ReplayDetail => ({
   matchId: "match-1",
@@ -39,6 +48,20 @@ const replayDetail = (): ReplayDetail => ({
 });
 
 describe("ReplayViewerPage", () => {
+  test("does not key the frame chunk request effect by its loading marker", () => {
+    const source = replayViewerPageSource();
+    const frameLoadingEffect =
+      /useEffect\(\(\) => \{[\s\S]*?getReplayFrames[\s\S]*?\}, \[(?<dependencies>[^\]]*)\]\);/u.exec(
+        source,
+      );
+
+    assert.ok(frameLoadingEffect?.groups !== undefined);
+    assert.doesNotMatch(
+      frameLoadingEffect.groups["dependencies"] ?? "",
+      /loadingFrameWindow/u,
+    );
+  });
+
   test("renders replay metadata and saved entries", () => {
     const html = renderToStaticMarkup(
       createElement(ReplayViewerPageView, {

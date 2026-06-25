@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createReplayClient,
@@ -310,7 +310,7 @@ export const ReplayViewerPage = ({
     Readonly<Record<number, ReplayFrame>>
   >({});
   const [frameError, setFrameError] = useState<string>();
-  const [loadingFrameWindow, setLoadingFrameWindow] = useState<string>();
+  const loadingFrameWindowRef = useRef<string | undefined>(undefined);
   const [playing, setPlaying] = useState(false);
   const [speedMs, setSpeedMs] = useState(700);
   const [error, setError] = useState<string>();
@@ -362,6 +362,7 @@ export const ReplayViewerPage = ({
     setFrameCount(undefined);
     setFramesByIndex({});
     setFrameError(undefined);
+    loadingFrameWindowRef.current = undefined;
   }, [replay?.matchId]);
 
   useEffect(() => {
@@ -375,10 +376,15 @@ export const ReplayViewerPage = ({
     if (framesByIndex[frameIndex] !== undefined) {
       return;
     }
-    if (loadingFrameWindow === windowKey) {
+    if (loadingFrameWindowRef.current === windowKey) {
       return;
     }
-    setLoadingFrameWindow(windowKey);
+    loadingFrameWindowRef.current = windowKey;
+    const clearLoadingWindow = (): void => {
+      if (loadingFrameWindowRef.current === windowKey) {
+        loadingFrameWindowRef.current = undefined;
+      }
+    };
     void client
       .getReplayFrames(replay.matchId, {
         start,
@@ -388,7 +394,7 @@ export const ReplayViewerPage = ({
         if (cancelled) {
           return;
         }
-        setLoadingFrameWindow(undefined);
+        clearLoadingWindow();
         if (chunk.status === "failed") {
           setFrameCount(0);
           setFrameError(chunk.reason);
@@ -413,7 +419,7 @@ export const ReplayViewerPage = ({
         if (cancelled) {
           return;
         }
-        setLoadingFrameWindow(undefined);
+        clearLoadingWindow();
         setFrameCount(0);
         setFrameError(
           caught instanceof Error ? caught.message : String(caught),
@@ -424,7 +430,7 @@ export const ReplayViewerPage = ({
     return () => {
       cancelled = true;
     };
-  }, [client, frameIndex, framesByIndex, loadingFrameWindow, replay]);
+  }, [client, frameIndex, framesByIndex, replay]);
 
   const loadedFrameCount = Object.keys(framesByIndex).length;
   const boardFrameCount = frameCount ?? loadedFrameCount;
