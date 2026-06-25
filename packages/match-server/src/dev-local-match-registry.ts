@@ -205,6 +205,7 @@ export const createLocalDevMatchRegistry = async (
     readonly matchPersistence?: MatchPersistence;
     readonly recoveryLockTtlMs?: number;
     readonly recoveryOwnerInstanceId?: string;
+    readonly deferRecovery?: boolean;
     readonly matchTimerPolicy?: MatchTimerPolicy;
     readonly onBotActionAccepted?: (matchId: MatchId) => void;
     readonly botStrategy?: BotStrategy;
@@ -392,24 +393,32 @@ export const createLocalDevMatchRegistry = async (
     }
   };
   const defaultMatchId = "dev-local-match" as MatchId;
-  await recoverPersistedActiveMatches();
-  if (options.createDefaultMatch !== false && !sessions.has(defaultMatchId)) {
-    const defaultSetup = await createTemplateSetup(defaultMatchId);
-    sessions.set(
-      defaultSetup.matchId,
-      createActiveLocalDevMatchSession(
-        defaultSetup,
-        sessionService,
-        matchTimerPolicy,
-        {
-          ...activeSessionSnapshotOptions,
-          ...(matchPersistence === undefined
-            ? {}
-            : { persistence: matchPersistence }),
-        },
-      ),
-    );
-    await saveSessionCheckpoint(defaultSetup.matchId);
+  const initializeSessions = async (): Promise<void> => {
+    await recoverPersistedActiveMatches();
+    if (options.createDefaultMatch !== false && !sessions.has(defaultMatchId)) {
+      const defaultSetup = await createTemplateSetup(defaultMatchId);
+      sessions.set(
+        defaultSetup.matchId,
+        createActiveLocalDevMatchSession(
+          defaultSetup,
+          sessionService,
+          matchTimerPolicy,
+          {
+            ...activeSessionSnapshotOptions,
+            ...(matchPersistence === undefined
+              ? {}
+              : { persistence: matchPersistence }),
+          },
+        ),
+      );
+      await saveSessionCheckpoint(defaultSetup.matchId);
+    }
+  };
+  const readyPromise = initializeSessions();
+  if (options.deferRecovery === true) {
+    void readyPromise.catch(() => undefined);
+  } else {
+    await readyPromise;
   }
 
   const buildCreatedResponse = (
@@ -573,6 +582,7 @@ export const createLocalDevMatchRegistry = async (
 
   return {
     defaultMatchId,
+    ready: () => readyPromise,
     async createMatch(setup, options) {
       const actualSetup =
         setup ??

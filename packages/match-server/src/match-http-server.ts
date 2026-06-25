@@ -81,13 +81,10 @@ import {
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
 } from "./match-http-server-options.js";
-import { createRedisClientForLobbyStore } from "./lobby-store.js";
-import { resolveRedisConfig } from "./redis-config.js";
-import { createRedisMatchPersistence } from "./redis-match-persistence.js";
 import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
-import type { MatchPersistence } from "./session-types.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
+import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -96,24 +93,6 @@ interface FirstPlayerChoiceRequest {
   playerId?: unknown;
   choice?: unknown;
 }
-
-const resolveActiveMatchPersistence = async (
-  options: CreateMatchHttpServerOptions,
-): Promise<MatchPersistence | undefined> => {
-  if (options.matchPersistence !== undefined) {
-    return options.matchPersistence;
-  }
-  const redisConfig = resolveRedisConfig({
-    redisUrl: options.redisUrl,
-    redisMode: options.redisMode,
-  });
-  if (redisConfig.redisUrl === undefined) {
-    return undefined;
-  }
-  return createRedisMatchPersistence(
-    await createRedisClientForLobbyStore(redisConfig.redisUrl),
-  );
-};
 
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
@@ -819,6 +798,7 @@ export const createMatchHttpServer = async (
           : { completedMatchRepository };
       })(),
       ...(matchPersistence === undefined ? {} : { matchPersistence }),
+      deferRecovery: true,
       includeActionSnapshots: false,
       matchTimerPolicy: resolveMatchTimerPolicy(options),
       onBotActionAccepted(matchId) {
@@ -909,26 +889,30 @@ export const createMatchHttpServer = async (
       sendJson(response, 200, { data: { ok: true } });
       return;
     }
-    const operation = url.startsWith("/api/")
-      ? handleApiRequest(
-          request,
-          response,
-          registry,
-          lobbyRegistry,
-          socketConnections,
-          lobbySocketConnections,
-          authProvider,
-          simHandoffVerifier,
-          replayRepository,
-          allowTemplateMatches,
-          allowRawDeckHashSubmissions,
-        )
-      : serveStaticAssetsOrNotFound(
-          request,
-          response,
-          staticAssetsDirectory,
-          () => handleNotFoundRequest(response),
-        );
+    const operation = registry
+      .ready()
+      .then(() =>
+        url.startsWith("/api/")
+          ? handleApiRequest(
+              request,
+              response,
+              registry,
+              lobbyRegistry,
+              socketConnections,
+              lobbySocketConnections,
+              authProvider,
+              simHandoffVerifier,
+              replayRepository,
+              allowTemplateMatches,
+              allowRawDeckHashSubmissions,
+            )
+          : serveStaticAssetsOrNotFound(
+              request,
+              response,
+              staticAssetsDirectory,
+              () => handleNotFoundRequest(response),
+            ),
+      );
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
         errors: [error instanceof Error ? error.message : String(error)],
@@ -936,22 +920,27 @@ export const createMatchHttpServer = async (
     });
   });
   server.on("upgrade", (request, socket) => {
-    handleWebSocketUpgrade(
-      request,
-      socket,
-      registry,
-      lobbyRegistry,
-      authProvider,
-      socketConnections,
-      lobbySocketConnections,
-      socketIdleTimeoutMs,
-      rematchLobbyDisconnectGraceMs,
-      onMatchTimerError,
-      trackSocketOperation,
-      () => shuttingDown,
-    ).catch(() => {
-      socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
-    });
+    registry
+      .ready()
+      .then(() =>
+        handleWebSocketUpgrade(
+          request,
+          socket,
+          registry,
+          lobbyRegistry,
+          authProvider,
+          socketConnections,
+          lobbySocketConnections,
+          socketIdleTimeoutMs,
+          rematchLobbyDisconnectGraceMs,
+          onMatchTimerError,
+          trackSocketOperation,
+          () => shuttingDown,
+        ),
+      )
+      .catch(() => {
+        socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+      });
   });
 
   return {

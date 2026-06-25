@@ -9,6 +9,13 @@ import {
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
 import { createMatchHttpServer } from "./match-http-server.js";
+import { createInMemoryMatchPersistence } from "./match-persistence.js";
+import type { MatchHttpServer } from "./match-http-server.js";
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 describe("match HTTP server health", () => {
   test("serves health without creating a default dev match", async () => {
@@ -21,6 +28,58 @@ describe("match HTTP server health", () => {
       assert.deepEqual(await response.json(), { data: { ok: true } });
     } finally {
       await server.close();
+    }
+  });
+
+  test("serves health while active match recovery is still loading", async () => {
+    const basePersistence = createInMemoryMatchPersistence();
+    let listStartedResolve: () => void = () => undefined;
+    let releaseListResolve: () => void = () => undefined;
+    const listStarted = new Promise<void>((resolve) => {
+      listStartedResolve = resolve;
+    });
+    const releaseList = new Promise<void>((resolve) => {
+      releaseListResolve = resolve;
+    });
+    const serverPromise = createMatchHttpServer({
+      createDefaultMatch: false,
+      matchPersistence: {
+        ...basePersistence,
+        async listActiveMatchIds() {
+          listStartedResolve();
+          await releaseList;
+          return [];
+        },
+      },
+    });
+    let server: MatchHttpServer | undefined;
+    let listening = false;
+    try {
+      await listStarted;
+      const earlyResult = await Promise.race([
+        serverPromise.then((createdServer) => {
+          server = createdServer;
+          return "returned" as const;
+        }),
+        delay(25).then(() => "pending" as const),
+      ]);
+      assert.equal(earlyResult, "returned");
+      if (server === undefined) {
+        throw new Error("Server creation finished without a server.");
+      }
+
+      await server.listen(0, "127.0.0.1");
+      listening = true;
+      const response = await fetch(`${server.url()}/health`);
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { data: { ok: true } });
+    } finally {
+      releaseListResolve();
+      server ??= await serverPromise;
+      if (listening) {
+        await server.close();
+      }
     }
   });
 

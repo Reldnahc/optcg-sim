@@ -38,6 +38,7 @@ export interface TimerAdvanceBroadcast {
 }
 
 export interface LocalDevMatchRegistry {
+  ready: () => Promise<void>;
   createMatch: (
     setup?: LocalDevMatchSetup,
     options?: {
