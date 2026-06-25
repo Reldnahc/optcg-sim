@@ -38,6 +38,7 @@ import {
   cancelRollbackConsent,
   cloneGameState,
   createLocalRollbackState,
+  normalizeLocalRollbackState,
   recordRollbackPoint,
   requestRollbackConsent,
   resolveRollbackConsent,
@@ -237,7 +238,7 @@ export const createRecoveredLocalDevMatch = ({
   "cardVariantOverrides" | "rollback" | "state"
 >): LocalDevMatch => ({
   state: structuredClone(state),
-  rollback: structuredClone(rollback),
+  rollback: normalizeLocalRollbackState(rollback),
   cardVariantOverrides: structuredClone(cardVariantOverrides),
 });
 

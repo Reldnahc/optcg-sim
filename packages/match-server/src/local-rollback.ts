@@ -40,6 +40,18 @@ interface LocalRollbackRequest {
   approvingPlayerId: PlayerId;
 }
 
+type PersistedLocalRollbackPoint = Omit<LocalRollbackPoint, "checkpoint"> & {
+  readonly checkpoint?: DeterministicCheckpoint;
+};
+
+type PersistedLocalRollbackState = Omit<
+  LocalRollbackState,
+  "checkpoints" | "points"
+> & {
+  readonly checkpoints?: readonly DeterministicCheckpoint[];
+  readonly points: readonly PersistedLocalRollbackPoint[];
+};
+
 export interface LocalRollbackState {
   enabled: boolean;
   maxPoints: number;
@@ -94,6 +106,61 @@ export const createLocalRollbackState = (
 
 export const cloneGameState = (state: GameState): GameState =>
   structuredClone(state);
+
+const rollbackCheckpointFromPoint = (
+  point: PersistedLocalRollbackPoint,
+): DeterministicCheckpoint => ({
+  checkpointVersion: "deterministic-checkpoint-v1",
+  matchId: point.state.matchId,
+  checkpointId: point.rollbackPointId,
+  reason: "rollbackPoint",
+  stateSeq: point.state.seq,
+  actionSeq: point.state.actionSeq,
+  stateHash: hashReplayStateForScope(point.state, "gameplay-v1"),
+  hashScope: "gameplay-v1",
+  snapshot: cloneGameState(point.state),
+});
+
+const normalizeLocalRollbackPoint = (
+  point: PersistedLocalRollbackPoint,
+): LocalRollbackPoint => ({
+  ...structuredClone(point),
+  checkpoint: point.checkpoint ?? rollbackCheckpointFromPoint(point),
+});
+
+const uniqueRollbackCheckpoints = (
+  checkpoints: readonly DeterministicCheckpoint[],
+  points: readonly LocalRollbackPoint[],
+): DeterministicCheckpoint[] => {
+  const byId = new Map<string, DeterministicCheckpoint>();
+  for (const checkpoint of checkpoints) {
+    byId.set(checkpoint.checkpointId, structuredClone(checkpoint));
+  }
+  for (const point of points) {
+    if (!byId.has(point.checkpoint.checkpointId)) {
+      byId.set(
+        point.checkpoint.checkpointId,
+        structuredClone(point.checkpoint),
+      );
+    }
+  }
+  return [...byId.values()];
+};
+
+export const normalizeLocalRollbackState = (
+  rollback: PersistedLocalRollbackState,
+): LocalRollbackState => {
+  const points = rollback.points.map(normalizeLocalRollbackPoint);
+  return {
+    enabled: rollback.enabled,
+    maxPoints: rollback.maxPoints,
+    points,
+    checkpoints: uniqueRollbackCheckpoints(rollback.checkpoints ?? [], points),
+    ...(rollback.pendingRequest === undefined
+      ? {}
+      : { pendingRequest: structuredClone(rollback.pendingRequest) }),
+  };
+};
 
 const nextStateSeq = (state: GameState): GameState["seq"] =>
   (Number(state.seq) + 1) as GameState["seq"];

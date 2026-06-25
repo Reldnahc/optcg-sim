@@ -193,3 +193,121 @@ test("recovers from deterministic entries without re-resolving audit envelope ac
   assert.equal(recoveredSession.status, "active");
   assert.equal(recoveredSession.match.state.seq, applied.stateSeq);
 });
+
+test("recovers active sessions with legacy rollback state lacking checkpoint archives", async () => {
+  const matchId = "legacy-rollback-recovery-match" as MatchId;
+  const setup = await createFixtureDevMatchSetup(matchId);
+  const match = createLocalDevMatch(setup);
+  const decision = match.state.pendingDecision;
+  if (decision === undefined) {
+    throw new Error("Expected setup decision.");
+  }
+  const applied = applyLocalDevDecision(match, {
+    playerId: decision.playerId,
+    decisionId: decision.id,
+    response: { type: "cards", cards: [] },
+    includeSnapshot: false,
+  });
+  assert.deepEqual(applied.errors, []);
+  assert.equal(match.rollback.points.length, 1);
+  assert.equal(match.rollback.checkpoints.length, 1);
+
+  const legacyRollback = structuredClone(match.rollback) as Omit<
+    typeof match.rollback,
+    "checkpoints" | "points"
+  > & {
+    checkpoints?: typeof match.rollback.checkpoints;
+    points: Array<
+      Omit<(typeof match.rollback.points)[number], "checkpoint"> & {
+        checkpoint?: (typeof match.rollback.points)[number]["checkpoint"];
+      }
+    >;
+  };
+  delete legacyRollback.checkpoints;
+  for (const point of legacyRollback.points) {
+    delete point.checkpoint;
+  }
+
+  const snapshot: MatchPersistenceSnapshot = {
+    metadata: devSessionMetadata(setup, {
+      source: "game-one-random-chooser",
+      chooserPlayerId: setup.firstPlayerId,
+      choice: "goFirst",
+      resolvedFirstPlayerId: setup.firstPlayerId,
+    }),
+    state: structuredClone(match.state),
+    manifest: match.state.cardManifest,
+    recoveryContext: {
+      setup,
+      seats: createLocalSeats(setup),
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.firstPlayerId,
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.firstPlayerId,
+      },
+      timersEnabled: false,
+      botPlayerIds: [],
+      rollback: legacyRollback as typeof match.rollback,
+      cardVariantOverrides: {},
+    },
+    deterministicLogVersion: "deterministic-entry-v1",
+    deterministicEntriesSinceSnapshot: [],
+    actions: [],
+    decisions: [],
+  };
+  let freezeReason: string | undefined;
+  const persistence: MatchPersistence = {
+    saveSnapshot() {
+      return Promise.resolve();
+    },
+    appendDeterministicEntry() {
+      return Promise.resolve();
+    },
+    appendDeterministicCheckpoint() {
+      return Promise.resolve();
+    },
+    appendAction() {
+      return Promise.resolve();
+    },
+    appendDecision() {
+      return Promise.resolve();
+    },
+    loadSnapshot() {
+      return Promise.resolve(snapshot);
+    },
+    listActiveMatchIds() {
+      return Promise.resolve([matchId]);
+    },
+    tryAcquireRecoveryLock({ ownerInstanceId, now, ttlMs }) {
+      return Promise.resolve({
+        matchId,
+        ownerInstanceId,
+        acquiredAt: now,
+        expiresAt: new Date(Date.parse(now) + ttlMs).toISOString(),
+      });
+    },
+    releaseRecoveryLock() {
+      return Promise.resolve();
+    },
+    freezeMatch(input) {
+      freezeReason = input.reason;
+      return Promise.resolve();
+    },
+  };
+
+  const recovered = await recoverPersistedLocalDevMatchSessions({
+    matchPersistence: persistence,
+    sessionService: createMatchSessionService(),
+    recoveryOwnerInstanceId: "test-recovery",
+    recoveryLockTtlMs: 1_000,
+  });
+
+  assert.equal(freezeReason, undefined);
+  const recoveredSession = recovered[0];
+  assert.ok(recoveredSession !== undefined);
+  assert.equal(recoveredSession.status, "active");
+  assert.equal(recoveredSession.match.state.seq, applied.stateSeq);
+  assert.equal(recoveredSession.match.rollback.points.length, 1);
+  assert.equal(recoveredSession.match.rollback.checkpoints.length, 1);
+});
