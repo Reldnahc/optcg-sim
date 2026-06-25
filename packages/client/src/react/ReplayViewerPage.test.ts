@@ -62,6 +62,16 @@ describe("ReplayViewerPage", () => {
     );
   });
 
+  test("does not derive frame loading from an absent selected frame", () => {
+    const source = replayViewerPageSource();
+
+    assert.match(source, /framesRequestLoading/u);
+    assert.doesNotMatch(
+      source,
+      /selectedFrame\s*===\s*undefined\s*&&\s*frameError\s*===\s*undefined/u,
+    );
+  });
+
   test("renders replay metadata and saved entries", () => {
     const html = renderToStaticMarkup(
       createElement(ReplayViewerPageView, {
@@ -97,6 +107,25 @@ describe("ReplayViewerPage", () => {
     assert.match(html, /Replay reconstruction failed/u);
     assert.match(html, /checkpoint hash mismatch/u);
     assert.match(html, /data-replay-match-surface/u);
+  });
+
+  test("renders reconstruction failure even when a stale frame count is present", () => {
+    const html = renderToStaticMarkup(
+      createElement(ReplayViewerPageView, {
+        status: "ready",
+        replay: replayDetail(),
+        frameCount: 12,
+        frameReconstruction: {
+          status: "failed",
+          reason: "State hash after deterministic entry does not match.",
+          actionIndex: 2,
+        },
+      }),
+    );
+
+    assert.match(html, /Replay reconstruction failed/u);
+    assert.match(html, /State hash after deterministic entry does not match/u);
+    assert.doesNotMatch(html, /Loading board frames/u);
   });
 
   test("renders labeled controls for frame-backed board playback", () => {

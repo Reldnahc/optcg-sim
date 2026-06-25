@@ -94,10 +94,10 @@ export const ReplayViewerPageView = ({
 }: ReplayViewerPageViewProps): React.JSX.Element => {
   const entries = replay === undefined ? [] : replayEntries(replay.replay);
   const boardFrameCount = frameCount ?? 0;
-  const reconstructionFailure =
-    frameReconstruction?.status === "failed"
-      ? frameReconstruction.reason
-      : "Replay reconstruction did not produce any frames.";
+  const reconstructionFailed = frameReconstruction?.status === "failed";
+  const reconstructionFailure = reconstructionFailed
+    ? frameReconstruction.reason
+    : "Replay reconstruction did not produce any frames.";
   return (
     <section className="replay-viewer-page">
       <header className="replay-viewer-header">
@@ -133,10 +133,9 @@ export const ReplayViewerPageView = ({
             <button type="button" disabled>
               Next action
             </button>
-            {boardFrameCount === 0 && framesLoading ? (
-              <p>Loading board frames...</p>
-            ) : null}
-            {boardFrameCount === 0 && !framesLoading ? (
+            {framesLoading ? <p>Loading board frames...</p> : null}
+            {reconstructionFailed ||
+            (boardFrameCount === 0 && !framesLoading) ? (
               <p>{`Replay reconstruction failed: ${reconstructionFailure}`}</p>
             ) : null}
           </section>
@@ -310,6 +309,7 @@ export const ReplayViewerPage = ({
     Readonly<Record<number, ReplayFrame>>
   >({});
   const [frameError, setFrameError] = useState<string>();
+  const [framesRequestLoading, setFramesRequestLoading] = useState(false);
   const loadingFrameWindowRef = useRef<string | undefined>(undefined);
   const [playing, setPlaying] = useState(false);
   const [speedMs, setSpeedMs] = useState(700);
@@ -362,11 +362,12 @@ export const ReplayViewerPage = ({
     setFrameCount(undefined);
     setFramesByIndex({});
     setFrameError(undefined);
+    setFramesRequestLoading(replay?.matchId !== undefined);
     loadingFrameWindowRef.current = undefined;
   }, [replay?.matchId]);
 
   useEffect(() => {
-    if (replay === undefined) {
+    if (replay === undefined || frameError !== undefined) {
       return;
     }
     let cancelled = false;
@@ -380,6 +381,7 @@ export const ReplayViewerPage = ({
       return;
     }
     loadingFrameWindowRef.current = windowKey;
+    setFramesRequestLoading(true);
     const clearLoadingWindow = (): void => {
       if (loadingFrameWindowRef.current === windowKey) {
         loadingFrameWindowRef.current = undefined;
@@ -395,6 +397,7 @@ export const ReplayViewerPage = ({
           return;
         }
         clearLoadingWindow();
+        setFramesRequestLoading(false);
         if (chunk.status === "failed") {
           setFrameCount(0);
           setFrameError(chunk.reason);
@@ -402,24 +405,32 @@ export const ReplayViewerPage = ({
           setPlaying(false);
           return;
         }
+        const frames = frameChunkToReplayFrames({
+          chunk,
+          matchId: replay.matchId,
+          manifestSnapshot: replay.replay.manifestSnapshot,
+        });
+        if (frames.length === 0) {
+          setFrameCount(0);
+          setFrameError(
+            chunk.frameCount === 0
+              ? "Replay reconstruction did not produce any frames."
+              : "Replay frame payload did not contain board snapshots.",
+          );
+          setFramesByIndex({});
+          setPlaying(false);
+          return;
+        }
         setFrameCount(chunk.frameCount);
         setFrameError(undefined);
-        setFramesByIndex((current) =>
-          mergeReplayFrames(
-            current,
-            frameChunkToReplayFrames({
-              chunk,
-              matchId: replay.matchId,
-              manifestSnapshot: replay.replay.manifestSnapshot,
-            }),
-          ),
-        );
+        setFramesByIndex((current) => mergeReplayFrames(current, frames));
       })
       .catch((caught: unknown) => {
         if (cancelled) {
           return;
         }
         clearLoadingWindow();
+        setFramesRequestLoading(false);
         setFrameCount(0);
         setFrameError(
           caught instanceof Error ? caught.message : String(caught),
@@ -430,7 +441,7 @@ export const ReplayViewerPage = ({
     return () => {
       cancelled = true;
     };
-  }, [client, frameIndex, framesByIndex, replay]);
+  }, [client, frameError, frameIndex, framesByIndex, replay]);
 
   const loadedFrameCount = Object.keys(framesByIndex).length;
   const boardFrameCount = frameCount ?? loadedFrameCount;
@@ -504,10 +515,7 @@ export const ReplayViewerPage = ({
           : { status: "failed", reason: frameError }
       }
       framesLoading={
-        status === "ready" &&
-        replay !== undefined &&
-        selectedFrame === undefined &&
-        frameError === undefined
+        status === "ready" && replay !== undefined && framesRequestLoading
       }
     />
   );
