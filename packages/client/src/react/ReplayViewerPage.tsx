@@ -512,9 +512,13 @@ export const ReplayViewerPage = ({
   }, [replay?.matchId]);
 
   const replayDisplayArtifact = replay?.replay.replayDisplayArtifact;
-  const displayArtifact = isReplayDisplayArtifactPayload(replayDisplayArtifact)
-    ? replayDisplayArtifact
-    : undefined;
+  const displayArtifact = useMemo(
+    () =>
+      isReplayDisplayArtifactPayload(replayDisplayArtifact)
+        ? replayDisplayArtifact
+        : undefined,
+    [replayDisplayArtifact],
+  );
   const displayFrames = useMemo(
     () =>
       replay === undefined || displayArtifact === undefined

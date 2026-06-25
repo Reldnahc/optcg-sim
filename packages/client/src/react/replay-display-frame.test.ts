@@ -146,6 +146,59 @@ describe("replay display frame adapter", () => {
     expect(frames[0]?.clientState.seat.playerId).toBe("p1");
   });
 
+  test("builds the replay catalog once for multi-frame display artifacts", () => {
+    const artifact = displayArtifact();
+    const root = record(artifact);
+    const frames = root["frames"];
+    if (!Array.isArray(frames)) {
+      throw new Error("Expected frames.");
+    }
+    const template = record(frames[0]);
+    const multiFrameArtifact = {
+      ...root,
+      frameCount: 3,
+      frames: [0, 1, 2].map((index) => ({
+        ...structuredClone(template),
+        index,
+        actionIndex: index === 0 ? null : index - 1,
+        label: `Frame ${String(index)}`,
+        stateSeq: index + 1,
+        actionSeq: index,
+        snapshot: {
+          ...record(template["snapshot"]),
+          stateSeq: index + 1,
+          actionSeq: index,
+          stateHash: `hash-${String(index + 1)}`,
+        },
+      })),
+    };
+    expect(isReplayDisplayArtifactPayload(multiFrameArtifact)).toBe(true);
+    if (!isReplayDisplayArtifactPayload(multiFrameArtifact)) {
+      throw new Error("Expected valid display artifact.");
+    }
+    let cardsReadCount = 0;
+    const manifestSnapshot = {};
+    Object.defineProperty(manifestSnapshot, "cards", {
+      enumerable: true,
+      get() {
+        cardsReadCount += 1;
+        return {
+          L1: { cardId: "L1", name: "Leader", category: "leader" },
+          L2: { cardId: "L2", name: "Opponent Leader", category: "leader" },
+        };
+      },
+    });
+
+    const framesFromDisplay = replayFramesFromDisplayArtifact({
+      matchId: "match-1",
+      manifestSnapshot,
+      artifact: multiFrameArtifact,
+    });
+
+    expect(framesFromDisplay).toHaveLength(3);
+    expect(cardsReadCount).toBe(1);
+  });
+
   test("rejects malformed display-v1 artifacts before conversion", () => {
     const withLegalActions = displayArtifact();
     perspectiveView(withLegalActions)["legalActions"] = [{ type: "endTurn" }];

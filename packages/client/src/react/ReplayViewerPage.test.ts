@@ -114,6 +114,15 @@ describe("ReplayViewerPage", () => {
     );
   });
 
+  test("memoizes display artifact validation across replay page renders", () => {
+    const source = replayViewerPageSource();
+
+    assert.match(
+      source,
+      /const displayArtifact = useMemo\(\s*\(\) =>[\s\S]*isReplayDisplayArtifactPayload\(replayDisplayArtifact\)/u,
+    );
+  });
+
   test("legacy frame chunks are isolated behind the legacy loader", () => {
     const source = replayViewerPageSource();
     const legacyLoader =

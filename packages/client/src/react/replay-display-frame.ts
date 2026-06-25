@@ -31,10 +31,14 @@ const stringArray = (value: unknown): string[] =>
 const manifestCards = (
   manifest: unknown,
 ): readonly Record<string, unknown>[] => {
-  if (!isRecord(manifest) || !isRecord(manifest["cards"])) {
+  if (!isRecord(manifest)) {
     return [];
   }
-  return Object.values(manifest["cards"]).flatMap((card) =>
+  const cards = manifest["cards"];
+  if (!isRecord(cards)) {
+    return [];
+  }
+  return Object.values(cards).flatMap((card) =>
     isRecord(card) ? [card] : [],
   );
 };
@@ -112,6 +116,7 @@ const replayCatalog = (
 };
 
 export const replayFrameFromSnapshot = ({
+  cards: inputCards,
   frameIndex,
   label,
   manifestSnapshot,
@@ -121,6 +126,7 @@ export const replayFrameFromSnapshot = ({
   readonly frameIndex: number;
   readonly label: string;
   readonly manifestSnapshot: unknown;
+  readonly cards?: MatchCardCatalog | undefined;
   readonly matchId: string;
   readonly snapshot: MatchSnapshot;
 }): ReplayFrame[] => {
@@ -128,9 +134,11 @@ export const replayFrameFromSnapshot = ({
   if (playerId === undefined) {
     return [];
   }
-  const cards = replayCatalog(manifestSnapshot, [
-    ...Object.keys(snapshot.players).map((id) => id as PlayerId),
-  ]);
+  const cards =
+    inputCards ??
+    replayCatalog(manifestSnapshot, [
+      ...Object.keys(snapshot.players).map((id) => id as PlayerId),
+    ]);
   return [
     {
       index: frameIndex,
@@ -336,8 +344,11 @@ export const replayFramesFromDisplayArtifact = (input: {
   readonly matchId: string;
   readonly manifestSnapshot: unknown;
   readonly artifact: ReplayDisplayArtifactPayload;
-}): readonly ReplayFrame[] =>
-  input.artifact.frames.flatMap((frame) => {
+}): readonly ReplayFrame[] => {
+  const cards = replayCatalog(input.manifestSnapshot, [
+    input.artifact.perspectivePlayerId as PlayerId,
+  ]);
+  return input.artifact.frames.flatMap((frame) => {
     if (!isRecord(frame.snapshot) || !isRecord(frame.snapshot["players"])) {
       return [];
     }
@@ -345,7 +356,9 @@ export const replayFramesFromDisplayArtifact = (input: {
       frameIndex: frame.index,
       label: frame.label,
       manifestSnapshot: input.manifestSnapshot,
+      cards,
       matchId: input.matchId,
       snapshot: frame.snapshot as unknown as MatchSnapshot,
     });
   });
+};
