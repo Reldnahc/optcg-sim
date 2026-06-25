@@ -211,4 +211,59 @@ describe("reconstructReplayArtifactStates", () => {
     expect(result.frames.at(-1)?.state).toEqual(afterState);
     expect(result.frames.at(-1)?.stateHash).toBe(afterHash);
   });
+
+  test("uses timer-owner tolerant before-hash verification before after-entry checkpoints", () => {
+    const initialState = makeMainPhaseLegalActionState();
+    const stateBefore = {
+      ...initialState,
+      timers: {
+        ...initialState.timers,
+        drainingPlayerId: initialState.turn.turnPlayerId,
+      },
+    };
+    const afterState = {
+      ...stateBefore,
+      seq: (Number(stateBefore.seq) + 1) as StateSeq,
+      actionSeq: stateBefore.actionSeq + 1,
+    };
+    const afterHash = hashReplayStateForScope(afterState, "gameplay-v1");
+    const entry: DeterministicMatchEntry = {
+      formatVersion: "deterministic-entry-v1",
+      matchId: initialState.matchId,
+      entrySeq: 0,
+      kind: "action",
+      playerId: initialState.turn.turnPlayerId,
+      action: { type: "endMainPhase" },
+      verification: {
+        stateSeqBefore: initialState.seq,
+        actionSeqBefore: initialState.actionSeq,
+        stateHashBefore: hashReplayStateForScope(stateBefore, "gameplay-v1"),
+        stateSeqAfter: afterState.seq,
+        actionSeqAfter: afterState.actionSeq,
+        stateHashAfter: afterHash,
+        hashScope: "gameplay-v1",
+      },
+    };
+
+    const result = reconstructReplayArtifactStates({
+      initialState,
+      deterministicEntries: [entry],
+      checkpoints: [
+        {
+          checkpointVersion: "deterministic-checkpoint-v1",
+          matchId: initialState.matchId,
+          checkpointId: replayEntryAfterCheckpointId(entry.entrySeq),
+          reason: "replayFrame",
+          stateSeq: afterState.seq,
+          actionSeq: afterState.actionSeq,
+          stateHash: afterHash,
+          hashScope: "gameplay-v1",
+          snapshot: afterState,
+        },
+      ],
+      expectedFinalStateHash: afterHash,
+    });
+
+    expect(result.status).toBe("ready");
+  });
 });

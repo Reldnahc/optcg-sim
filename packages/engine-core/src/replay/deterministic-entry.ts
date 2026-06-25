@@ -227,7 +227,7 @@ const stateWithTimerOwner = (
   return { ...state, timers };
 };
 
-const replayStateForExpectedHash = (
+export const replayStateForExpectedHash = (
   state: GameState,
   hashScope: DeterministicMatchEntry["verification"]["hashScope"],
   expectedHash: string,

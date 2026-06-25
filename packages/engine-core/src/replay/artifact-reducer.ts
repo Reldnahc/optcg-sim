@@ -15,6 +15,7 @@ import {
   applyDeterministicEntry,
   checkpointResolverFromList,
   hashReplayStateForScope,
+  replayStateForExpectedHash,
 } from "./deterministic-entry.js";
 import {
   replayEntryAfterCheckpointId,
@@ -434,7 +435,14 @@ const verifyCurrentBeforeEntry = (
     current,
     entry.verification.hashScope,
   );
-  if (stateHash !== entry.verification.stateHashBefore) {
+  if (
+    stateHash !== entry.verification.stateHashBefore &&
+    replayStateForExpectedHash(
+      current,
+      entry.verification.hashScope,
+      entry.verification.stateHashBefore,
+    ) === undefined
+  ) {
     return "State hash before deterministic entry does not match.";
   }
   return undefined;
