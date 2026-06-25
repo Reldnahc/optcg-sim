@@ -11,11 +11,15 @@ import {
 import {
   createLocalDevMatch,
   createPremadeDevMatchSetup,
+  getLocalDevSnapshot,
+  type DevMatchSetup,
+  type LocalDevMatch,
 } from "./local-match.js";
 import type { CardId, MatchId, StateSeq } from "@optcg/types";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 import { requestHash } from "./action-envelope.js";
+import { createReplayDisplayFrameFromSnapshot } from "./replay-display-artifact.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 import type {
   StoredDeterministicCheckpointRecord,
@@ -67,6 +71,28 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
   },
 });
 
+const replayDisplayFrame = (
+  match: LocalDevMatch,
+  setup: DevMatchSetup,
+  input: {
+    readonly actionIndex: number | null;
+    readonly label: string;
+  },
+) => {
+  const result = createReplayDisplayFrameFromSnapshot({
+    actionIndex: input.actionIndex,
+    index: input.actionIndex === null ? 0 : input.actionIndex + 1,
+    label: input.label,
+    snapshot: getLocalDevSnapshot(match),
+    perspectivePlayerId: setup.playerOrder[0],
+    previousEventSeqByPlayer: new Map(),
+  });
+  if (result === undefined) {
+    throw new Error("Expected replay display frame.");
+  }
+  return result.frame;
+};
+
 describe("local completed match record mapping", () => {
   test("stores reconstructable replay state for completed matches", async () => {
     const setup = await createPremadeDevMatchSetup({
@@ -97,6 +123,7 @@ describe("local completed match record mapping", () => {
       },
       deterministicRecords: [],
       deterministicCheckpoints: [],
+      replayDisplayFrames: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -194,6 +221,7 @@ describe("local completed match record mapping", () => {
       },
       deterministicRecords: [],
       deterministicCheckpoints: [],
+      replayDisplayFrames: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -266,6 +294,7 @@ describe("local completed match record mapping", () => {
       },
       deterministicRecords: [],
       deterministicCheckpoints: [],
+      replayDisplayFrames: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -368,6 +397,7 @@ describe("local completed match record mapping", () => {
       },
       deterministicRecords: [storedRecord],
       deterministicCheckpoints: [replayCheckpoint],
+      replayDisplayFrames: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -380,6 +410,151 @@ describe("local completed match record mapping", () => {
     expect(Object.hasOwn(deterministicEntry ?? {}, "envelope")).toBe(false);
     expect(record?.replay.auditEntries).toEqual([]);
     expect(record?.replay.checkpoints).toEqual([]);
+  });
+
+  test("stores replay display artifacts from the explicit frame list", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "66666666-6666-6666-6666-666666666666" as MatchId,
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    match.state.status = { type: "completed", winner: setup.playerOrder[0] };
+    const frame = replayDisplayFrame(match, setup, {
+      actionIndex: 0,
+      label: "submitAction",
+    });
+    const request = {
+      type: "submitAction" as const,
+      playerId: setup.playerOrder[0],
+      actionIndex: 0,
+      expectedStateSeq: match.state.seq,
+    };
+    const storedRecord: StoredDeterministicSessionRecord = {
+      deterministicEntry: {
+        formatVersion: "deterministic-entry-v1",
+        matchId: setup.matchId,
+        entrySeq: 0,
+        kind: "action",
+        playerId: setup.playerOrder[0],
+        action: { type: "endMainPhase" },
+        verification: {
+          stateSeqBefore: match.state.seq,
+          actionSeqBefore: match.state.actionSeq,
+          stateHashBefore: hashReplayStateForScope(match.state, "gameplay-v1"),
+          stateSeqAfter: match.state.seq,
+          actionSeqAfter: match.state.actionSeq,
+          stateHashAfter: hashReplayStateForScope(match.state, "gameplay-v1"),
+          hashScope: "gameplay-v1",
+        },
+      },
+      audit: {
+        type: "clientEnvelope",
+        envelope: {
+          protocolVersion: "dev-http-v1",
+          matchId: setup.matchId,
+          playerId: setup.playerOrder[0],
+          clientActionId: "display-action-1",
+          expectedStateSeq: match.state.seq,
+          requestHash: requestHash(request),
+          request,
+        },
+        result: {
+          type: "actionResult",
+          matchId: setup.matchId,
+          clientActionId: "display-action-1",
+          accepted: true,
+          stateSeq: match.state.seq,
+          actionSeq: match.state.actionSeq,
+          errors: [],
+        },
+        recordedAt: "2026-06-08T00:00:01.000Z",
+      },
+      replayDisplayFrame: frame,
+    };
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          deckSubmission: readySubmission("first-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          deckSubmission: readySubmission("second-hash", "OP05-060"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.playerOrder[0],
+      },
+      deterministicRecords: [storedRecord],
+      deterministicCheckpoints: [],
+      replayDisplayFrames: [frame],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+
+    expect(record?.replay.replayDisplayArtifact).toMatchObject({
+      replayDisplayVersion: "display-v1",
+      perspectivePlayerId: expect.any(String),
+      frameCount: 1,
+      frames: [{ label: "submitAction" }],
+    });
+    expect(JSON.stringify(record?.replay.deterministicEntries)).not.toContain(
+      "replayDisplayFrame",
+    );
+    expect(JSON.stringify(record?.replay.deterministicEntries)).not.toContain(
+      "snapshot",
+    );
+  });
+
+  test("stores an initial replay display artifact for zero-action matches", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "77777777-7777-7777-7777-777777777777" as MatchId,
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    match.state.status = { type: "completed", winner: setup.playerOrder[0] };
+    const initialFrame = replayDisplayFrame(match, setup, {
+      actionIndex: null,
+      label: "Initial state",
+    });
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          deckSubmission: readySubmission("first-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          deckSubmission: readySubmission("second-hash", "OP05-060"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.playerOrder[0],
+      },
+      deterministicRecords: [],
+      deterministicCheckpoints: [],
+      replayDisplayFrames: [initialFrame],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+
+    expect(record?.replay.replayDisplayArtifact).toMatchObject({
+      replayDisplayVersion: "display-v1",
+      perspectivePlayerId: setup.playerOrder[0],
+      frameCount: 1,
+      frames: [{ actionIndex: null, label: "Initial state" }],
+    });
+    expect(record?.replay.deterministicEntries).toEqual([]);
   });
 
   test("stores rollback restore checkpoints required for replay reconstruction", async () => {
@@ -491,6 +666,7 @@ describe("local completed match record mapping", () => {
       },
       deterministicRecords: [storedRecord],
       deterministicCheckpoints: [rollbackCheckpoint, redundantFrameCheckpoint],
+      replayDisplayFrames: [],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 

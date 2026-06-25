@@ -54,6 +54,7 @@ export interface CompletedMatchReplayRecord {
   readonly deterministicEntries: readonly unknown[];
   readonly auditEntries: readonly unknown[];
   readonly checkpoints: readonly unknown[];
+  readonly replayDisplayArtifact: JsonObject | null;
   readonly finalState: JsonObject | null;
   readonly compressed: boolean;
   readonly artifactStorage: string | null;
@@ -262,6 +263,9 @@ const replayValues = (record: CompletedMatchRecord): readonly unknown[] => {
     jsonParam(replay.deterministicEntries),
     jsonParam(replay.auditEntries),
     jsonParam(replay.checkpoints),
+    replay.replayDisplayArtifact === null
+      ? null
+      : jsonParam(replay.replayDisplayArtifact),
     replay.finalState === null ? null : jsonParam(replay.finalState),
     replay.compressed,
     replay.artifactStorage,
@@ -444,6 +448,7 @@ const replayDetailSql = (schema: string): string => `
       'deterministicEntries', replay.deterministic_entries,
       'auditEntries', replay.audit_entries,
       'checkpoints', replay.checkpoints,
+      'replayDisplayArtifact', replay.replay_display_artifact,
       'finalState', replay.final_state,
       'compressed', replay.compressed,
       'artifactStorage', replay.artifact_storage,
@@ -494,6 +499,7 @@ const replayPublicDetailSql = (schema: string): string => `
       'replayFormatVersion', replay.replay_format_version,
       'manifestHash', replay.manifest_hash,
       'manifestSnapshot', m.card_manifest_snapshot,
+      'replayDisplayArtifact', replay.replay_display_artifact,
       'artifactSha256', replay.artifact_sha256,
       'artifactSizeBytes', replay.artifact_size_bytes
     ) AS replay
@@ -696,6 +702,7 @@ const createSaveReplaySql = (schema: string): string => `
     deterministic_entries,
     audit_entries,
     checkpoints,
+    replay_display_artifact,
     final_state,
     compressed,
     artifact_storage,
@@ -726,11 +733,12 @@ const createSaveReplaySql = (schema: string): string => `
     $20::jsonb,
     $21::jsonb,
     $22::jsonb,
-    $23,
+    $23::jsonb,
     $24,
     $25,
     $26,
-    $27
+    $27,
+    $28
   )
   ON CONFLICT (match_id) DO UPDATE SET
     replay_format_version = EXCLUDED.replay_format_version,
@@ -753,6 +761,7 @@ const createSaveReplaySql = (schema: string): string => `
     deterministic_entries = EXCLUDED.deterministic_entries,
     audit_entries = EXCLUDED.audit_entries,
     checkpoints = EXCLUDED.checkpoints,
+    replay_display_artifact = EXCLUDED.replay_display_artifact,
     final_state = EXCLUDED.final_state,
     compressed = EXCLUDED.compressed,
     artifact_storage = EXCLUDED.artifact_storage,

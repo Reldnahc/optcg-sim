@@ -11,6 +11,100 @@ const matchId = "match-1" as MatchId;
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 
+const replayDisplayArtifact = {
+  replayDisplayVersion: "display-v1",
+  perspectivePlayerId: "p1",
+  frameCount: 1,
+  frames: [
+    {
+      index: 0,
+      actionIndex: null,
+      label: "Initial state",
+      perspectivePlayerId: "p1",
+      stateSeq: 1,
+      actionSeq: 0,
+      status: "active",
+      activePlayerId: "p1",
+      snapshot: {
+        stateSeq: 1,
+        actionSeq: 0,
+        stateHash: "hash-1",
+        status: "active",
+        turn: {
+          turnPlayerId: "p1",
+          globalTurn: 1,
+          playerTurnCounts: { p1: 1, p2: 0 },
+          phase: "main",
+        },
+        activePlayerId: "p1",
+        players: {
+          p1: {
+            view: {
+              playerId: "p1",
+              matchId: "match-1",
+              stateSeq: 1,
+              actionSeq: 0,
+              turn: {
+                turnPlayerId: "p1",
+                globalTurn: 1,
+                playerTurnCounts: { p1: 1, p2: 0 },
+                phase: "main",
+              },
+              self: {
+                playerId: "p1",
+                deckCount: 40,
+                donDeckCount: 10,
+                hand: [],
+                trash: [],
+                leader: {
+                  instanceId: "leader-1",
+                  cardId: "L1",
+                  owner: "p1",
+                  controller: "p1",
+                  zone: { playerId: "p1", zone: "leader" },
+                  attachedDonCount: 0,
+                  attachedDonIds: [],
+                },
+                characters: [],
+                costArea: [],
+                life: { count: 5, faceUpCards: [] },
+                hasMulliganed: false,
+                turnCount: 1,
+              },
+              opponent: {
+                playerId: "p2",
+                deckCount: 40,
+                donDeckCount: 10,
+                handCount: 5,
+                trash: [],
+                leader: {
+                  instanceId: "leader-2",
+                  cardId: "L2",
+                  owner: "p2",
+                  controller: "p2",
+                  zone: { playerId: "p2", zone: "leader" },
+                  attachedDonCount: 0,
+                  attachedDonIds: [],
+                },
+                characters: [],
+                costArea: [],
+                life: { count: 5, faceUpCards: [] },
+                hasMulliganed: false,
+                turnCount: 1,
+              },
+              timers: { players: {} },
+              legalActions: [],
+              revealedCards: [],
+              events: [],
+            },
+            actions: [],
+          },
+        },
+      },
+    },
+  ],
+};
+
 const completedMatchRecord = (): CompletedMatchRecord => ({
   matchId,
   status: "completed",
@@ -106,6 +200,7 @@ const completedMatchRecord = (): CompletedMatchRecord => ({
     deterministicEntries: [{ type: "action" }],
     auditEntries: [],
     checkpoints: [],
+    replayDisplayArtifact: structuredClone(replayDisplayArtifact),
     finalState: { status: "completed" },
     compressed: false,
     artifactStorage: null,
@@ -142,12 +237,14 @@ describe("Postgres completed match repository", () => {
     expect(calls[1]?.sql).toContain("INSERT INTO sim.match_players");
     expect(calls[2]?.sql).toContain("INSERT INTO sim.match_players");
     expect(calls[3]?.sql).toContain("INSERT INTO sim.match_replays");
+    expect(calls[3]?.sql).toContain("replay_display_artifact");
     expect(calls[1]?.params[9]).toBe(
       JSON.stringify({ source: "winner deck snapshot" }),
     );
     expect(calls[1]?.params[10]).toBe(
       JSON.stringify({ source: "winner loadout snapshot" }),
     );
+    expect(calls[3]?.params[21]).toBe(JSON.stringify(replayDisplayArtifact));
   });
 
   test("propagates transaction failure without running later writes", async () => {
@@ -318,6 +415,9 @@ describe("Postgres completed match replay repository", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.sql).not.toContain("viewer.user_id");
+    expect(calls[0]?.sql).toContain(
+      "'replayDisplayArtifact', replay.replay_display_artifact",
+    );
     expect(calls[0]?.sql).toContain("m.id = $1");
     expect(calls[0]?.sql).toContain("LEFT JOIN LATERAL");
     expect(calls[0]?.sql).not.toContain("GROUP BY m.id, replay.match_id");
@@ -330,6 +430,62 @@ describe("Postgres completed match replay repository", () => {
         },
       },
       deterministicEntries: [{ type: "action" }],
+    });
+  });
+
+  test("returns public replay detail with display artifact projection", async () => {
+    const calls: Array<{
+      readonly sql: string;
+      readonly params: readonly unknown[];
+    }> = [];
+    const repository = createPostgresCompletedMatchReplayRepository({
+      schema: "sim_dev",
+      query(sql, params = []) {
+        calls.push({ sql, params });
+        return Promise.resolve({
+          rows: [
+            {
+              match_id: "match-1",
+              status: "completed",
+              game_type: "dev",
+              format_id: "dev",
+              lobby_id: "lobby-1",
+              winner_user_id: "user-1",
+              winner_seat_id: "p1",
+              started_at: "2026-06-13T00:00:00.000Z",
+              ended_at: "2026-06-13T00:10:00.000Z",
+              turn_count: 4,
+              action_count: 12,
+              players: [],
+              card_manifest_snapshot: {
+                cards: {
+                  "OP01-001": { cardId: "OP01-001", name: "Leader" },
+                },
+              },
+              replay: {
+                manifestSnapshot: { manifestHash: "stored-ref" },
+                replayDisplayArtifact,
+              },
+            },
+          ],
+        });
+      },
+    });
+
+    const detail = await repository.getPublicReplay(matchId);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.sql).toContain(
+      "'replayDisplayArtifact', replay.replay_display_artifact",
+    );
+    expect(calls[0]?.params).toEqual([matchId]);
+    expect(detail?.replay).toEqual({
+      manifestSnapshot: {
+        cards: {
+          "OP01-001": { cardId: "OP01-001", name: "Leader" },
+        },
+      },
+      replayDisplayArtifact,
     });
   });
 });

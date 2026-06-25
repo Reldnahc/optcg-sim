@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { afterEach, beforeAll, test, vi } from "vitest";
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
 
 import type { MatchId, PlayerId } from "@optcg/types";
 
@@ -21,6 +21,7 @@ import type {
   MatchPersistenceSnapshot,
   SessionActionRequest,
 } from "./session-types.js";
+import type { CompletedMatchRecord } from "./postgres-completed-match.js";
 
 let premadeSetup: DevMatchSetup;
 
@@ -87,6 +88,43 @@ const authContext = (
     displayName,
   },
 });
+
+const visibleActionEnvelope = (
+  matchId: MatchId,
+  snapshot: ReturnType<typeof getLocalDevSnapshot>,
+  clientActionId: string,
+): ClientActionEnvelope => {
+  const actionOwner = Object.entries(snapshot.players).find(
+    ([, player]) => player.actions.length > 0,
+  );
+  const playerId = actionOwner?.[0] as PlayerId | undefined;
+  const actionIndex = actionOwner?.[1].actions[0]?.index;
+  if (playerId === undefined || actionIndex === undefined) {
+    throw new Error("Expected a player with a visible action.");
+  }
+  const request: SessionActionRequest = {
+    type: "submitAction",
+    playerId,
+    actionIndex,
+    expectedStateSeq: snapshot.stateSeq,
+  };
+  return {
+    protocolVersion: "dev",
+    matchId,
+    playerId,
+    clientActionId,
+    expectedStateSeq: snapshot.stateSeq,
+    requestHash: requestHash(request),
+    request,
+  };
+};
+
+const waitForCompletedPersistence = async (): Promise<void> => {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
+  await Promise.resolve();
+};
 
 test("can create active matches without game timers", async () => {
   const registry = await createLocalDevMatchRegistry(
@@ -616,6 +654,121 @@ test("registry can omit action result snapshots for live socket traffic", async 
     assert.equal(result.accepted, true);
     assert.equal(result.snapshot, undefined);
   }
+});
+
+test("completed match persistence stores an initial display artifact without actions", async () => {
+  const savedRecords: CompletedMatchRecord[] = [];
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      completedMatchRepository: {
+        async saveCompletedMatch(record) {
+          savedRecords.push(record);
+        },
+      },
+      createDefaultMatch: false,
+      matchTimerPolicy: { gameTimeMs: 1, disconnectGraceMs: 120_000 },
+    },
+  );
+  const matchId = "zero-action-completed-display-artifact" as MatchId;
+  const created = await registry.createMatch(
+    { ...structuredClone(premadeSetup), matchId },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+      timersEnabled: true,
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+
+  await registry.advanceTimers({
+    elapsedMs: 1,
+    connectedPlayerIds: () => new Set(premadeSetup.playerOrder),
+    matchIds: [matchId],
+  });
+  await waitForCompletedPersistence();
+
+  assert.equal(savedRecords.length, 1);
+  assert.deepEqual(savedRecords[0]?.replay.deterministicEntries, []);
+  assert.deepEqual(
+    savedRecords[0]?.replay.replayDisplayArtifact?.replayDisplayVersion,
+    "display-v1",
+  );
+  expect(savedRecords[0]?.replay.replayDisplayArtifact?.frames).toEqual([
+    expect.objectContaining({
+      actionIndex: null,
+      label: "Initial state",
+    }),
+  ]);
+});
+
+test("production snapshot-compacted completed persistence stores action display frames", async () => {
+  const savedRecords: CompletedMatchRecord[] = [];
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      completedMatchRepository: {
+        async saveCompletedMatch(record) {
+          savedRecords.push(record);
+        },
+      },
+      createDefaultMatch: false,
+      includeActionSnapshots: false,
+      matchTimerPolicy: { gameTimeMs: 1_000, disconnectGraceMs: 120_000 },
+    },
+  );
+  const matchId = "compacted-completed-display-artifact" as MatchId;
+  const created = await registry.createMatch(
+    { ...structuredClone(premadeSetup), matchId },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+      timersEnabled: true,
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected an active match snapshot.");
+  }
+
+  const accepted = await registry.applyEnvelope(
+    visibleActionEnvelope(
+      matchId,
+      created.snapshot,
+      "compacted-display-artifact-action",
+    ),
+  );
+  await registry.advanceTimers({
+    elapsedMs: 1_000,
+    connectedPlayerIds: () => new Set(premadeSetup.playerOrder),
+    matchIds: [matchId],
+  });
+  await waitForCompletedPersistence();
+
+  assert.notEqual(accepted, "matchNotFound");
+  assert.equal(typeof accepted, "object");
+  if (typeof accepted === "object") {
+    assert.equal(accepted.accepted, true);
+    assert.equal(accepted.snapshot, undefined);
+  }
+  expect(savedRecords[0]?.replay.replayDisplayArtifact).toMatchObject({
+    replayDisplayVersion: "display-v1",
+    frames: [
+      { actionIndex: null, label: "Initial state" },
+      { actionIndex: 0, label: "submitAction" },
+    ],
+  });
 });
 
 test("first-player choice drains the chooser game timer before the engine starts", async () => {

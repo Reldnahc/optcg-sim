@@ -609,3 +609,11 @@ Section Ref: `08-replay-rollback-recovery.s036`
 Post-game replays are full-information artifacts. They may reveal deck order history, hands, private candidate sets, hidden-life identities, and other previously secret information needed to reconstruct the match exactly. This is intentional.
 
 Live spectating remains delayed by spectator policy; replay visibility is not restricted once the replay artifact is produced.
+
+## Replay display derivative
+
+<!-- SECTION_REF: 08-replay-rollback-recovery.s037 -->
+
+Section Ref: `08-replay-rollback-recovery.s037`
+
+The authoritative replay/audit artifact remains full-information under `08-replay-rollback-recovery.s036`. A replay display artifact such as `display-v1` is a compact client playback derivative, not the authoritative replay artifact. It may store perspective-filtered `PlayerView` frames for cheap UI playback, but it must not replace deterministic entries, checkpoints, full-information audit data, or moderation/report replay data. If a display derivative is missing or invalid, consumers may fall back to legacy reconstruction or authoritative replay tooling according to the route policy.

@@ -25,6 +25,10 @@ import type {
   StoredDeterministicCheckpointRecord,
   StoredDeterministicSessionRecord,
 } from "./session-types.js";
+import {
+  createReplayDisplayArtifact,
+  type ReplayDisplayFrameV1,
+} from "./replay-display-artifact.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export interface CompletedMatchSeatContext {
@@ -41,6 +45,7 @@ export interface BuildLocalCompletedMatchRecordInput {
   readonly firstPlayerChoice: FirstPlayerChoiceState;
   readonly deterministicRecords: readonly StoredDeterministicSessionRecord[];
   readonly deterministicCheckpoints: readonly StoredDeterministicCheckpointRecord[];
+  readonly replayDisplayFrames: readonly ReplayDisplayFrameV1[];
   readonly endedAt: string;
 }
 
@@ -336,6 +341,16 @@ export const buildLocalCompletedMatchRecord = (
         : [];
     }),
   );
+  const replayDisplayFrames = input.replayDisplayFrames;
+  const replayDisplayPerspectivePlayerId =
+    replayDisplayFrames[0]?.perspectivePlayerId;
+  const replayDisplayArtifact =
+    replayDisplayPerspectivePlayerId === undefined
+      ? null
+      : createReplayDisplayArtifact({
+          perspectivePlayerId: replayDisplayPerspectivePlayerId,
+          frames: replayDisplayFrames,
+        });
   return {
     matchId: input.match.state.matchId,
     status: status.winner === "draw" ? "draw" : "completed",
@@ -393,6 +408,10 @@ export const buildLocalCompletedMatchRecord = (
           replayCheckpointIds.has(record.checkpoint.checkpointId),
         )
         .map((record) => jsonObject(record.checkpoint)),
+      replayDisplayArtifact:
+        replayDisplayArtifact === null
+          ? null
+          : jsonObject(replayDisplayArtifact),
       finalState: null,
       compressed: false,
       artifactStorage: null,

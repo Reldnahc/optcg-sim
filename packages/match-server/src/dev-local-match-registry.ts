@@ -458,6 +458,7 @@ export const createLocalDevMatchRegistry = async (
         firstPlayerChoice: session.firstPlayerChoice,
         deterministicRecords: runtime?.deterministicRecords() ?? [],
         deterministicCheckpoints: runtime?.deterministicCheckpoints() ?? [],
+        replayDisplayFrames: runtime?.replayDisplayFrames() ?? [],
         endedAt: new Date().toISOString(),
       }),
     );
@@ -972,6 +973,7 @@ export const createLocalDevMatchRegistry = async (
               if (result.expiries.length > 0) {
                 applyLocalDevMatchTimerExpiries(session.match, result.expiries);
                 await saveActiveSessionCheckpoint(matchId, session);
+                scheduleCompletedMatchPersistence(session);
               }
               if (!result.changed && result.expiries.length === 0) {
                 return undefined;
