@@ -131,6 +131,22 @@ describe("local completed match record mapping", () => {
       banlistVersion: setup.cardManifest.banlistVersion,
       effectDefinitions: setup.cardManifest.effectDefinitions,
     });
+    const compactManifestCards = record?.replay.manifestSnapshot["cards"];
+    const leaderSnapshot =
+      typeof compactManifestCards === "object" &&
+      compactManifestCards !== null &&
+      !Array.isArray(compactManifestCards)
+        ? (compactManifestCards as Record<string, unknown>)[
+            String(firstSetupPlayer.leaderCardId)
+          ]
+        : undefined;
+    const leaderImageUrl =
+      typeof leaderSnapshot === "object" &&
+      leaderSnapshot !== null &&
+      !Array.isArray(leaderSnapshot)
+        ? (leaderSnapshot as Record<string, unknown>)["imageUrl"]
+        : undefined;
+    expect(leaderImageUrl).toMatch(/^https:\/\//u);
     expect(JSON.stringify(record?.replay.manifestSnapshot)).toContain(
       "generated-dev-support",
     );

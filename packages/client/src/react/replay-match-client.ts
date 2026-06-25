@@ -44,6 +44,10 @@ const manifestCards = (
 const imageUrlFromManifestCard = (
   card: Record<string, unknown>,
 ): string | undefined => {
+  const compactImageUrl = stringValue(card["imageUrl"]);
+  if (compactImageUrl !== undefined) {
+    return compactImageUrl;
+  }
   const variants = card["variants"];
   if (!Array.isArray(variants)) {
     return undefined;

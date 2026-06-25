@@ -56,6 +56,25 @@ const jsonObject = (value: unknown): JsonObject => {
 const isJsonRecord = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+const compactCardImageUrl = (card: JsonObject): string | undefined => {
+  const variants = card["variants"];
+  if (!Array.isArray(variants)) {
+    return undefined;
+  }
+  const firstVariant = variants.find(isJsonRecord);
+  if (firstVariant === undefined) {
+    return undefined;
+  }
+  const stockImageFull = firstVariant["stockImageFull"];
+  if (typeof stockImageFull === "string" && stockImageFull.length > 0) {
+    return stockImageFull;
+  }
+  const scanImageDisplay = firstVariant["scanImageDisplay"];
+  return typeof scanImageDisplay === "string" && scanImageDisplay.length > 0
+    ? scanImageDisplay
+    : undefined;
+};
+
 const compactCardSnapshot = (card: unknown): JsonObject => {
   if (!isJsonRecord(card)) {
     return {};
@@ -77,6 +96,7 @@ const compactCardSnapshot = (card: unknown): JsonObject => {
     effectText: card["effectText"],
     triggerText: card["triggerText"],
     printedKeywords: card["printedKeywords"],
+    imageUrl: compactCardImageUrl(card),
     sourceTextHash: card["sourceTextHash"],
     behaviorHash: card["behaviorHash"],
     support: card["support"],
