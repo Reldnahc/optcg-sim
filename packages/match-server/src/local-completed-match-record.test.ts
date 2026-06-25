@@ -126,12 +126,15 @@ describe("local completed match record mapping", () => {
     });
     expect(record?.replay.initialStateHash).toBeTruthy();
     expect(record?.replay.finalStateHash).toBeTruthy();
-    expect(record?.replay.manifestSnapshot).toMatchObject({
+    expect(record?.cardManifestSnapshot).toMatchObject({
       customHandlerVersion: setup.cardManifest.customHandlerVersion,
       banlistVersion: setup.cardManifest.banlistVersion,
       effectDefinitions: setup.cardManifest.effectDefinitions,
     });
-    const compactManifestCards = record?.replay.manifestSnapshot["cards"];
+    expect(record?.replay.manifestSnapshot).toEqual({
+      manifestHash: record?.replay.manifestHash,
+    });
+    const compactManifestCards = record?.cardManifestSnapshot["cards"];
     const leaderSnapshot =
       typeof compactManifestCards === "object" &&
       compactManifestCards !== null &&
@@ -147,7 +150,7 @@ describe("local completed match record mapping", () => {
         ? (leaderSnapshot as Record<string, unknown>)["imageUrl"]
         : undefined;
     expect(leaderImageUrl).toMatch(/^https:\/\//u);
-    expect(JSON.stringify(record?.replay.manifestSnapshot)).toContain(
+    expect(JSON.stringify(record?.cardManifestSnapshot)).toContain(
       "generated-dev-support",
     );
   });
@@ -372,13 +375,10 @@ describe("local completed match record mapping", () => {
     const deterministicEntry = record?.replay.deterministicEntries[0] as
       | Record<string, unknown>
       | undefined;
-    const auditEntry = record?.replay.auditEntries[0] as
-      | Record<string, unknown>
-      | undefined;
     expect(record?.replay.replayFormatVersion).toBe("dev-local-v2");
     expect(deterministicEntry?.["kind"]).toBe("action");
     expect(Object.hasOwn(deterministicEntry ?? {}, "envelope")).toBe(false);
-    expect(auditEntry?.["type"]).toBe("clientEnvelope");
+    expect(record?.replay.auditEntries).toEqual([]);
     expect(record?.replay.checkpoints).toEqual([]);
   });
 

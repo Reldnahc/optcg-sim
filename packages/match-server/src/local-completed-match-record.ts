@@ -293,6 +293,11 @@ export const buildLocalCompletedMatchRecord = (
   }
   const finalStateHash = hashCanonicalStateValue(input.match.state);
   const matchCardIds = matchCardIdsForSetup(input.setup);
+  const cardManifestHash = hashJson(input.match.state.cardManifest);
+  const cardManifestSnapshot = compactManifestSnapshot(
+    input.match.state.cardManifest,
+    matchCardIds,
+  );
   const replayFinalStateHash = hashReplayStateForScope(
     input.match.state,
     "gameplay-v1",
@@ -344,11 +349,8 @@ export const buildLocalCompletedMatchRecord = (
     disconnectPolicy: { mode: "dev-none" },
     rollbackPolicy: { mode: "mutual-consent" },
     runtimeVersions: jsonObject(input.match.state.version),
-    cardManifestHash: hashJson(input.match.state.cardManifest),
-    cardManifestSnapshot: compactManifestSnapshot(
-      input.match.state.cardManifest,
-      matchCardIds,
-    ),
+    cardManifestHash,
+    cardManifestSnapshot,
     firstPlayerSeatId: input.setup.firstPlayerId,
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
     winnerUserId: uuidOrNull(winnerSeat?.subject?.userId),
@@ -376,11 +378,8 @@ export const buildLocalCompletedMatchRecord = (
       rngAlgorithm: "test-fixed",
       rngSeedCommitment: hashJson(input.setup.rngSeed),
       rngSeedRevealed: seedText(input.setup.rngSeed),
-      manifestHash: hashJson(input.match.state.cardManifest),
-      manifestSnapshot: compactManifestSnapshot(
-        input.match.state.cardManifest,
-        matchCardIds,
-      ),
+      manifestHash: cardManifestHash,
+      manifestSnapshot: jsonObject({ manifestHash: cardManifestHash }),
       initialStateHash,
       finalStateHash: replayFinalStateHash,
       initialSnapshot: null,
@@ -388,10 +387,7 @@ export const buildLocalCompletedMatchRecord = (
       deterministicEntries: input.deterministicRecords.map((record) =>
         jsonObject(record.deterministicEntry),
       ),
-      auditEntries: [
-        ...input.deterministicRecords.map((record) => jsonObject(record.audit)),
-        ...input.match.state.audit.map((entry) => jsonObject(entry)),
-      ],
+      auditEntries: [],
       checkpoints: input.deterministicCheckpoints
         .filter((record) =>
           replayCheckpointIds.has(record.checkpoint.checkpointId),

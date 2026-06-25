@@ -433,10 +433,13 @@ test("completed match replays reconstruct from compact deterministic entries", a
       result: player.result,
       isWinner: player.isWinner,
     })),
-    replay: JSON.parse(JSON.stringify(savedRecord.replay)) as Record<
-      string,
-      unknown
-    >,
+    replay: {
+      ...(JSON.parse(JSON.stringify(savedRecord.replay)) as Record<
+        string,
+        unknown
+      >),
+      manifestSnapshot: savedRecord.cardManifestSnapshot,
+    },
   });
   if (frameReconstruction.status !== "ready") {
     throw new Error(frameReconstruction.reason);

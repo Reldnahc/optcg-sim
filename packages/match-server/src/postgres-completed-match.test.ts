@@ -299,7 +299,15 @@ describe("Postgres completed match replay repository", () => {
               turn_count: 4,
               action_count: 12,
               players: [],
-              replay: { deterministicEntries: [{ type: "action" }] },
+              card_manifest_snapshot: {
+                cards: {
+                  "OP01-001": { cardId: "OP01-001", name: "Leader" },
+                },
+              },
+              replay: {
+                manifestSnapshot: { manifestHash: "stored-ref" },
+                deterministicEntries: [{ type: "action" }],
+              },
             },
           ],
         });
@@ -316,6 +324,11 @@ describe("Postgres completed match replay repository", () => {
     expect(calls[0]?.params).toEqual([matchId]);
     expect(detail?.matchId).toBe("match-1");
     expect(detail?.replay).toEqual({
+      manifestSnapshot: {
+        cards: {
+          "OP01-001": { cardId: "OP01-001", name: "Leader" },
+        },
+      },
       deterministicEntries: [{ type: "action" }],
     });
   });

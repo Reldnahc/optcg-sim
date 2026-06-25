@@ -350,9 +350,16 @@ const replayDetailFromRow = (
   if (summary === undefined || !isRecord(row)) {
     return undefined;
   }
+  const replay = isRecord(row["replay"]) ? row["replay"] : {};
+  const matchManifestSnapshot = isRecord(row["card_manifest_snapshot"])
+    ? row["card_manifest_snapshot"]
+    : undefined;
   return {
     ...summary,
-    replay: isRecord(row["replay"]) ? row["replay"] : {},
+    replay:
+      matchManifestSnapshot === undefined
+        ? replay
+        : { ...replay, manifestSnapshot: matchManifestSnapshot },
   };
 };
 
@@ -411,6 +418,7 @@ const replayDetailSql = (schema: string): string => `
     m.ended_at::text AS ended_at,
     m.turn_count,
     m.action_count,
+    m.card_manifest_snapshot,
     players.players,
     jsonb_build_object(
       'replayFormatVersion', replay.replay_format_version,
@@ -425,7 +433,7 @@ const replayDetailSql = (schema: string): string => `
       'rngSeedCommitment', replay.rng_seed_commitment,
       'rngSeedRevealed', replay.rng_seed_revealed,
       'manifestHash', replay.manifest_hash,
-      'manifestSnapshot', replay.manifest_snapshot,
+      'manifestSnapshot', m.card_manifest_snapshot,
       'initialStateHash', replay.initial_state_hash,
       'finalStateHash', replay.final_state_hash,
       'initialSnapshot', replay.initial_snapshot,
