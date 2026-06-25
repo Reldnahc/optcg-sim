@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import type { CompletedMatchReplayDetail } from "./postgres-completed-match.js";
-import { createReplayFrameCache } from "./replay-frame-cache.js";
+import { createLegacyReplayFrameCache } from "./replay-frame-cache.js";
 
 const replayDetail = (): CompletedMatchReplayDetail => ({
   matchId: "match-1",
@@ -23,10 +23,10 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
   },
 });
 
-describe("replay frame cache", () => {
+describe("legacy replay frame cache", () => {
   test("caches reconstructed replay frame windows independently", async () => {
     let reconstructCalls = 0;
-    const cache = createReplayFrameCache({
+    const cache = createLegacyReplayFrameCache({
       reconstruct(_detail, window) {
         reconstructCalls += 1;
         assert.deepEqual(window, {

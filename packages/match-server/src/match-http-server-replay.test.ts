@@ -136,7 +136,9 @@ const replayDisplayArtifact = {
   ],
 };
 
-const replayDetail = (): CompletedMatchReplayDetail => ({
+const replayDetail = (
+  displayArtifact: unknown = replayDisplayArtifact,
+): CompletedMatchReplayDetail => ({
   ...replaySummary(),
   replay: {
     replayFormatVersion: "dev-local-v1",
@@ -179,7 +181,7 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
         },
       },
     ],
-    replayDisplayArtifact,
+    replayDisplayArtifact: displayArtifact,
   },
 });
 
@@ -256,10 +258,16 @@ interface FakeReplayRepository extends CompletedMatchReplayRepository {
   ) => Promise<CompletedMatchReplayDetail | undefined>;
 }
 
-const createFakeReplayRepository = (): FakeReplayRepository => {
+const createFakeReplayRepository = (
+  options: { readonly replayDisplayArtifact?: unknown } = {},
+): FakeReplayRepository => {
   const listCalls: number[] = [];
   const publicDetailCalls: MatchId[] = [];
   const detailCalls: MatchId[] = [];
+  const replayDisplayArtifactValue =
+    "replayDisplayArtifact" in options
+      ? options.replayDisplayArtifact
+      : replayDisplayArtifact;
   return {
     listCalls,
     publicDetailCalls,
@@ -287,7 +295,7 @@ const createFakeReplayRepository = (): FakeReplayRepository => {
               },
             },
           },
-          replayDisplayArtifact,
+          replayDisplayArtifact: replayDisplayArtifactValue,
         },
       });
     },
@@ -296,7 +304,7 @@ const createFakeReplayRepository = (): FakeReplayRepository => {
       if (matchId !== "match-1") {
         return Promise.resolve(undefined);
       }
-      return Promise.resolve(replayDetail());
+      return Promise.resolve(replayDetail(replayDisplayArtifactValue));
     },
   };
 };
@@ -401,8 +409,10 @@ describe("match HTTP server replay routes", () => {
     }
   });
 
-  test("returns replay frame chunks separately from replay detail", async () => {
-    const repository = createFakeReplayRepository();
+  test("returns legacy replay frame chunks separately from replay detail", async () => {
+    const repository = createFakeReplayRepository({
+      replayDisplayArtifact: null,
+    });
     const server = await createMatchHttpServer({
       createDefaultMatch: false,
       replayRepository: repository,
@@ -447,8 +457,92 @@ describe("match HTTP server replay routes", () => {
     }
   });
 
-  test("reuses replay artifact detail across frame chunk requests", async () => {
+  test("display-v1 replays do not use the legacy frame endpoint", async () => {
     const repository = createFakeReplayRepository();
+    const legacyFrameCacheCalls: MatchId[] = [];
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+      legacyReplayFrameCache: {
+        async getFrameChunk(replay) {
+          legacyFrameCacheCalls.push(replay.matchId as MatchId);
+          return {
+            status: "ready",
+            frameCount: 0,
+            start: 0,
+            limit: 1,
+            frames: [],
+          };
+        },
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(
+        `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
+      );
+      const body = (await response.json()) as { errors?: readonly string[] };
+
+      assert.equal(response.status, 410);
+      assert.match(body.errors?.[0] ?? "", /display artifact/i);
+      assert.deepEqual(legacyFrameCacheCalls, []);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("malformed display-v1 artifacts use the legacy frame endpoint", async () => {
+    const repository = createFakeReplayRepository({
+      replayDisplayArtifact: { replayDisplayVersion: "display-v1" },
+    });
+    const legacyFrameCacheCalls: MatchId[] = [];
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+      legacyReplayFrameCache: {
+        async getFrameChunk(replay, window) {
+          legacyFrameCacheCalls.push(replay.matchId as MatchId);
+          return {
+            status: "ready",
+            frameCount: 1,
+            start: window.start,
+            limit: window.limit,
+            frames: [
+              {
+                index: 0,
+                actionIndex: 0,
+                label: "legacy fallback",
+                snapshot: {},
+              },
+            ],
+          };
+        },
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(
+        `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
+      );
+      const body = (await response.json()) as {
+        frameReconstruction?: { frames?: Array<{ label?: string }> };
+      };
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(legacyFrameCacheCalls, ["match-1"]);
+      assert.equal(
+        body.frameReconstruction?.frames?.[0]?.label,
+        "legacy fallback",
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("reuses legacy replay artifact detail across frame chunk requests", async () => {
+    const repository = createFakeReplayRepository({
+      replayDisplayArtifact: null,
+    });
     const server = await createMatchHttpServer({
       createDefaultMatch: false,
       replayRepository: repository,

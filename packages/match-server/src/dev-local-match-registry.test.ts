@@ -698,10 +698,10 @@ test("completed match persistence stores an initial display artifact without act
   assert.equal(savedRecords.length, 1);
   assert.deepEqual(savedRecords[0]?.replay.deterministicEntries, []);
   assert.deepEqual(
-    savedRecords[0]?.replay.replayDisplayArtifact?.replayDisplayVersion,
+    savedRecords[0]?.replay.replayDisplayArtifact?.["replayDisplayVersion"],
     "display-v1",
   );
-  expect(savedRecords[0]?.replay.replayDisplayArtifact?.frames).toEqual([
+  expect(savedRecords[0]?.replay.replayDisplayArtifact?.["frames"]).toEqual([
     expect.objectContaining({
       actionIndex: null,
       label: "Initial state",

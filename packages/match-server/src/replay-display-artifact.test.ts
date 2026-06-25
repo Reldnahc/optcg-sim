@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { PlayerId } from "@optcg/types";
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import {
   createReplayDisplayArtifact,
@@ -13,13 +13,13 @@ const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
 
 const publicCard = (instanceId: string, cardId: string, playerId = p1) => ({
-  instanceId,
-  cardId,
+  instanceId: instanceId as InstanceId,
+  cardId: cardId as CardId,
   owner: playerId,
   controller: playerId,
-  zone: { playerId, zone: "leader" },
+  zone: { playerId, zone: "leaderArea" as const },
   attachedDonCount: 0,
-  attachedDonIds: [],
+  attachedDonIds: [] as InstanceId[],
 });
 
 const selfState = () => ({

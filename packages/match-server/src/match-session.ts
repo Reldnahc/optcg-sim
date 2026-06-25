@@ -466,7 +466,9 @@ export const createMatchSessionRuntime = ({
         const replayDisplayFrame = captureReplayDisplayFrame({
           actionIndex: entrySeq,
           label: envelope.request.type,
-          snapshot: result.snapshot,
+          ...(result.snapshot === undefined
+            ? {}
+            : { snapshot: result.snapshot }),
         });
         const deterministicRecord = buildStoredDeterministicSessionRecord({
           matchId: local.state.matchId,

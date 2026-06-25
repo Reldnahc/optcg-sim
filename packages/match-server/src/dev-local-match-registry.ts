@@ -973,7 +973,9 @@ export const createLocalDevMatchRegistry = async (
               if (result.expiries.length > 0) {
                 applyLocalDevMatchTimerExpiries(session.match, result.expiries);
                 await saveActiveSessionCheckpoint(matchId, session);
-                scheduleCompletedMatchPersistence(session);
+                if (session.status === "active") {
+                  scheduleCompletedMatchPersistence(session);
+                }
               }
               if (!result.changed && result.expiries.length === 0) {
                 return undefined;

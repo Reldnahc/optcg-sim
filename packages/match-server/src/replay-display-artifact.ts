@@ -202,6 +202,8 @@ const isReplayDisplayPlayerViewV1 = (
   const self = value["self"];
   const opponent = value["opponent"];
   return (
+    isRecord(self) &&
+    isRecord(opponent) &&
     typeof value["matchId"] === "string" &&
     value["playerId"] === perspectivePlayerId &&
     typeof value["stateSeq"] === "number" &&
@@ -381,9 +383,13 @@ export const isReplayDisplayArtifactV1 = (
   Array.isArray(value["frames"]) &&
   value["frameCount"] > 0 &&
   value["frames"].length === value["frameCount"] &&
-  value["frames"].every((frame) =>
-    isReplayDisplayFrameV1(frame, value["perspectivePlayerId"]),
-  );
+  value["frames"].every((frame) => {
+    const perspectivePlayerId = value["perspectivePlayerId"];
+    return (
+      typeof perspectivePlayerId === "string" &&
+      isReplayDisplayFrameV1(frame, perspectivePlayerId)
+    );
+  });
 
 export const replayDisplayArtifactByteSize = (
   artifact: ReplayDisplayArtifactV1,

@@ -684,6 +684,7 @@ export const createMatchHttpServer = async (
       request,
       response,
       pathname,
+      legacyReplayFrameCache: options.legacyReplayFrameCache,
       replayDetailCache,
       replayRepository,
       staticAssetsDirectory,

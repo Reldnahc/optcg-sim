@@ -5,14 +5,15 @@ import { sendJson } from "./http-response.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 import type { ReplayDetailCache } from "./replay-detail-cache.js";
 import {
-  createReplayFrameCache,
+  createLegacyReplayFrameCache,
   replayFrameWindowFromSearchParams,
-  type ReplayFrameCache,
+  type LegacyReplayFrameCache,
 } from "./replay-frame-cache.js";
-import { reconstructReplayFramesOffThread } from "./replay-frame-worker-dispatch.js";
+import { reconstructReplayFramesOffThread as legacyReplayFrameReconstruction } from "./replay-frame-worker-dispatch.js";
+import { isReplayDisplayArtifactV1 } from "./replay-display-artifact.js";
 
-const defaultReplayFrameCache = createReplayFrameCache({
-  reconstruct: reconstructReplayFramesOffThread,
+const defaultLegacyReplayFrameCache = createLegacyReplayFrameCache({
+  reconstruct: legacyReplayFrameReconstruction,
 });
 
 export const handleReplayRequest = async ({
@@ -21,14 +22,14 @@ export const handleReplayRequest = async ({
   pathname,
   replayRepository,
   replayDetailCache,
-  replayFrameCache = defaultReplayFrameCache,
+  legacyReplayFrameCache = defaultLegacyReplayFrameCache,
 }: {
   readonly request: IncomingMessage;
   readonly response: ServerResponse;
   readonly pathname: string;
   readonly replayRepository: CompletedMatchReplayRepository | undefined;
   readonly replayDetailCache?: ReplayDetailCache | undefined;
-  readonly replayFrameCache?: ReplayFrameCache | undefined;
+  readonly legacyReplayFrameCache?: LegacyReplayFrameCache | undefined;
 }): Promise<boolean> => {
   if (replayRepository === undefined) {
     return false;
@@ -56,8 +57,16 @@ export const handleReplayRequest = async ({
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
     }
+    if (isReplayDisplayArtifactV1(replay.replay["replayDisplayArtifact"])) {
+      sendJson(response, 410, {
+        errors: [
+          "Replay frames are served by the replay display artifact for display-v1 rows.",
+        ],
+      });
+      return true;
+    }
     const url = new URL(request.url ?? "/", "http://localhost");
-    const frameReconstruction = await replayFrameCache.getFrameChunk(
+    const frameReconstruction = await legacyReplayFrameCache.getFrameChunk(
       replay,
       replayFrameWindowFromSearchParams(url.searchParams),
     );

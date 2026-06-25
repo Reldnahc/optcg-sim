@@ -17,7 +17,7 @@ export type ReplayFrameChunkResult =
   | ReplayFrameChunkReady
   | Extract<ReplayFrameReconstructionResult, { readonly status: "failed" }>;
 
-export interface ReplayFrameCache {
+export interface LegacyReplayFrameCache {
   readonly getFrameChunk: (
     detail: CompletedMatchReplayDetail,
     window: ReplayFrameWindow,
@@ -29,7 +29,7 @@ export interface ReplayFrameWindow {
   readonly limit: number;
 }
 
-export interface CreateReplayFrameCacheOptions {
+export interface CreateLegacyReplayFrameCacheOptions {
   readonly maxEntries?: number;
   readonly reconstruct?: (
     detail: CompletedMatchReplayDetail,
@@ -112,10 +112,10 @@ export const publicReplayDetail = (
   ),
 });
 
-export const createReplayFrameCache = ({
+export const createLegacyReplayFrameCache = ({
   maxEntries = defaultMaxEntries,
   reconstruct = reconstructReplayFrames,
-}: CreateReplayFrameCacheOptions = {}): ReplayFrameCache => {
+}: CreateLegacyReplayFrameCacheOptions = {}): LegacyReplayFrameCache => {
   const cache = new Map<string, Promise<ReplayFrameReconstructionResult>>();
   return {
     async getFrameChunk(detail, window) {
