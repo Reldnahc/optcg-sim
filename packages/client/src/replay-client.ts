@@ -19,6 +19,9 @@ export interface ReplayFramePayload {
 export type ReplayFrameReconstructionPayload =
   | {
       readonly status: "ready";
+      readonly frameCount?: number;
+      readonly start?: number;
+      readonly limit?: number;
       readonly frames: readonly ReplayFramePayload[];
     }
   | {
@@ -30,9 +33,11 @@ export type ReplayFrameReconstructionPayload =
 export interface ReplayPayload {
   readonly replayFormatVersion?: string;
   readonly manifestSnapshot?: unknown;
+  readonly manifestHash?: string;
+  readonly artifactSha256?: string;
+  readonly artifactSizeBytes?: number;
   readonly deterministicEntries?: readonly unknown[];
   readonly auditEntries?: readonly unknown[];
-  readonly finalState?: unknown;
 }
 
 export interface ReplayDetail {
@@ -54,8 +59,31 @@ export interface ReplayDetail {
 
 export type ReplaySummary = Omit<ReplayDetail, "replay">;
 
+export interface ReplayFrameWindow {
+  readonly start: number;
+  readonly limit: number;
+}
+
+export type ReplayFrameChunkPayload =
+  | {
+      readonly status: "ready";
+      readonly frameCount: number;
+      readonly start: number;
+      readonly limit: number;
+      readonly frames: readonly ReplayFramePayload[];
+    }
+  | {
+      readonly status: "failed";
+      readonly reason: string;
+      readonly actionIndex?: number | undefined;
+    };
+
 export interface ReplayClient {
   readonly getReplay: (matchId: MatchId | string) => Promise<ReplayDetail>;
+  readonly getReplayFrames: (
+    matchId: MatchId | string,
+    window: ReplayFrameWindow,
+  ) => Promise<ReplayFrameChunkPayload>;
   readonly listReplays: () => Promise<readonly ReplaySummary[]>;
 }
 
@@ -105,6 +133,21 @@ export const createReplayClient = ({
           ? {}
           : { frameReconstruction: body.frameReconstruction }),
       };
+    },
+    async getReplayFrames(matchId, window) {
+      const searchParams = new URLSearchParams({
+        start: String(window.start),
+        limit: String(window.limit),
+      });
+      const response = await fetchImpl(
+        `${root}/api/replays/${encodeURIComponent(
+          String(matchId),
+        )}/frames?${searchParams.toString()}`,
+      );
+      const body = await readJson<{
+        frameReconstruction: ReplayFrameChunkPayload;
+      }>(response);
+      return body.frameReconstruction;
     },
   };
 };

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createReplayClient,
   type ReplayDetail,
+  type ReplayFrameChunkPayload,
   type ReplayFrameReconstructionPayload,
   type ReplayPayload,
 } from "../replay-client.js";
@@ -10,10 +11,13 @@ import { appRoutePath } from "./app-route.js";
 import { MatchApp } from "./MatchApp.js";
 import {
   createReplayMatchClient,
+  type ReplayFrame,
   replayFramesFromDetail,
 } from "./replay-match-client.js";
 
 type ReplayViewerStatus = "loading" | "ready" | "error";
+
+const replayFrameChunkLimit = 20;
 
 export interface ReplayViewerPageViewProps {
   readonly status: ReplayViewerStatus;
@@ -21,6 +25,7 @@ export interface ReplayViewerPageViewProps {
   readonly error?: string | undefined;
   readonly frameCount?: number | undefined;
   readonly frameReconstruction?: ReplayFrameReconstructionPayload | undefined;
+  readonly framesLoading?: boolean | undefined;
 }
 
 const formatDate = (value: string): string => {
@@ -49,12 +54,43 @@ const replayEntries = (
   })),
 ];
 
+const frameChunkToReplayFrames = ({
+  chunk,
+  matchId,
+  manifestSnapshot,
+}: {
+  readonly chunk: Extract<
+    ReplayFrameChunkPayload,
+    { readonly status: "ready" }
+  >;
+  readonly matchId: string;
+  readonly manifestSnapshot: unknown;
+}): readonly ReplayFrame[] =>
+  replayFramesFromDetail({
+    matchId,
+    manifestSnapshot,
+    frameReconstruction: {
+      status: "ready",
+      frames: chunk.frames,
+    },
+    deterministicEntries: [],
+  });
+
+const mergeReplayFrames = (
+  current: Readonly<Record<number, ReplayFrame>>,
+  frames: readonly ReplayFrame[],
+): Record<number, ReplayFrame> => ({
+  ...current,
+  ...Object.fromEntries(frames.map((frame) => [frame.index, frame])),
+});
+
 export const ReplayViewerPageView = ({
   status,
   replay,
   error,
   frameCount,
   frameReconstruction,
+  framesLoading = false,
 }: ReplayViewerPageViewProps): React.JSX.Element => {
   const entries = replay === undefined ? [] : replayEntries(replay.replay);
   const boardFrameCount = frameCount ?? 0;
@@ -97,7 +133,10 @@ export const ReplayViewerPageView = ({
             <button type="button" disabled>
               Next action
             </button>
-            {boardFrameCount === 0 ? (
+            {boardFrameCount === 0 && framesLoading ? (
+              <p>Loading board frames...</p>
+            ) : null}
+            {boardFrameCount === 0 && !framesLoading ? (
               <p>{`Replay reconstruction failed: ${reconstructionFailure}`}</p>
             ) : null}
           </section>
@@ -266,6 +305,12 @@ export const ReplayViewerPage = ({
   const [status, setStatus] = useState<ReplayViewerStatus>("loading");
   const [replay, setReplay] = useState<ReplayDetail>();
   const [frameIndex, setFrameIndex] = useState(0);
+  const [frameCount, setFrameCount] = useState<number>();
+  const [framesByIndex, setFramesByIndex] = useState<
+    Readonly<Record<number, ReplayFrame>>
+  >({});
+  const [frameError, setFrameError] = useState<string>();
+  const [loadingFrameWindow, setLoadingFrameWindow] = useState<string>();
   const [playing, setPlaying] = useState(false);
   const [speedMs, setSpeedMs] = useState(700);
   const [error, setError] = useState<string>();
@@ -314,35 +359,90 @@ export const ReplayViewerPage = ({
   useEffect(() => {
     setFrameIndex(0);
     setPlaying(false);
+    setFrameCount(undefined);
+    setFramesByIndex({});
+    setFrameError(undefined);
   }, [replay?.matchId]);
 
-  const frames = useMemo(
-    () =>
-      replay === undefined
-        ? []
-        : replayFramesFromDetail({
-            matchId: replay.matchId,
-            manifestSnapshot: replay.replay.manifestSnapshot,
-            frameReconstruction: replay.frameReconstruction,
-            deterministicEntries: replay.replay.deterministicEntries ?? [],
-          }),
-    [replay],
-  );
+  useEffect(() => {
+    if (replay === undefined) {
+      return;
+    }
+    let cancelled = false;
+    const loadStart = Math.floor(frameIndex / replayFrameChunkLimit);
+    const start = loadStart * replayFrameChunkLimit;
+    const windowKey = `${String(start)}:${String(replayFrameChunkLimit)}`;
+    if (framesByIndex[frameIndex] !== undefined) {
+      return;
+    }
+    if (loadingFrameWindow === windowKey) {
+      return;
+    }
+    setLoadingFrameWindow(windowKey);
+    void client
+      .getReplayFrames(replay.matchId, {
+        start,
+        limit: replayFrameChunkLimit,
+      })
+      .then((chunk) => {
+        if (cancelled) {
+          return;
+        }
+        setLoadingFrameWindow(undefined);
+        if (chunk.status === "failed") {
+          setFrameCount(0);
+          setFrameError(chunk.reason);
+          setFramesByIndex({});
+          setPlaying(false);
+          return;
+        }
+        setFrameCount(chunk.frameCount);
+        setFrameError(undefined);
+        setFramesByIndex((current) =>
+          mergeReplayFrames(
+            current,
+            frameChunkToReplayFrames({
+              chunk,
+              matchId: replay.matchId,
+              manifestSnapshot: replay.replay.manifestSnapshot,
+            }),
+          ),
+        );
+      })
+      .catch((caught: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setLoadingFrameWindow(undefined);
+        setFrameCount(0);
+        setFrameError(
+          caught instanceof Error ? caught.message : String(caught),
+        );
+        setFramesByIndex({});
+        setPlaying(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, frameIndex, framesByIndex, loadingFrameWindow, replay]);
+
+  const loadedFrameCount = Object.keys(framesByIndex).length;
+  const boardFrameCount = frameCount ?? loadedFrameCount;
   const selectedFrameIndex =
-    frames.length === 0 ? 0 : Math.min(frameIndex, frames.length - 1);
-  const selectedFrame = frames[selectedFrameIndex];
+    boardFrameCount === 0 ? 0 : Math.min(frameIndex, boardFrameCount - 1);
+  const selectedFrame = framesByIndex[selectedFrameIndex];
   const replayClient = useMemo(
     () => createReplayMatchClient(selectedFrame),
     [selectedFrame],
   );
   useEffect(() => {
-    if (!playing || frames.length <= 1) {
+    if (!playing || boardFrameCount <= 1) {
       return;
     }
     const timer = window.setTimeout(() => {
       setFrameIndex((current) => {
-        const next = Math.min(frames.length - 1, current + 1);
-        if (next >= frames.length - 1) {
+        const next = Math.min(boardFrameCount - 1, current + 1);
+        if (next >= boardFrameCount - 1) {
           setPlaying(false);
         }
         return next;
@@ -351,13 +451,13 @@ export const ReplayViewerPage = ({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [frames.length, playing, selectedFrameIndex, speedMs]);
+  }, [boardFrameCount, playing, selectedFrameIndex, speedMs]);
   const replayControls =
     replay === undefined ? undefined : (
       <ReplayPlaybackControls
         frameLabel={selectedFrame?.label ?? "Replay frame"}
         selectedFrameIndex={selectedFrameIndex}
-        frameCount={Math.max(1, frames.length)}
+        frameCount={Math.max(1, boardFrameCount)}
         playing={playing}
         speedMs={speedMs}
         onPrevious={() => {
@@ -365,20 +465,24 @@ export const ReplayViewerPage = ({
         }}
         onNext={() => {
           setFrameIndex((current) =>
-            Math.min(Math.max(0, frames.length - 1), current + 1),
+            Math.min(Math.max(0, boardFrameCount - 1), current + 1),
           );
         }}
         onTogglePlay={() => {
           setPlaying((current) => !current);
         }}
         onSelectFrame={(index) => {
-          setFrameIndex(Math.max(0, Math.min(frames.length - 1, index)));
+          setFrameIndex(Math.max(0, Math.min(boardFrameCount - 1, index)));
         }}
         onSelectSpeedMs={setSpeedMs}
       />
     );
 
-  if (status === "ready" && replay !== undefined && frames.length > 0) {
+  if (
+    status === "ready" &&
+    replay !== undefined &&
+    selectedFrame !== undefined
+  ) {
     return <MatchApp client={replayClient} replayControls={replayControls} />;
   }
 
@@ -387,8 +491,18 @@ export const ReplayViewerPage = ({
       status={status}
       replay={replay}
       error={error}
-      frameCount={frames.length}
-      frameReconstruction={replay?.frameReconstruction}
+      frameCount={boardFrameCount}
+      frameReconstruction={
+        frameError === undefined
+          ? replay?.frameReconstruction
+          : { status: "failed", reason: frameError }
+      }
+      framesLoading={
+        status === "ready" &&
+        replay !== undefined &&
+        selectedFrame === undefined &&
+        frameError === undefined
+      }
     />
   );
 };

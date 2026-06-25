@@ -46,6 +46,25 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
   ...replaySummary(),
   replay: {
     replayFormatVersion: "dev-local-v1",
+    manifestSnapshot: {
+      cards: {
+        "OP01-001": {
+          cardId: "OP01-001",
+          name: "Leader",
+          category: "leader",
+          imageUrl: "https://cdn.example/OP01-001.png",
+        },
+      },
+    },
+    checkpoints: [
+      {
+        stateHash: "hash-1",
+        state: { players: { p1: { hidden: "server-only" } } },
+      },
+    ],
+    initialDeckOrders: {
+      players: { p1: { deckCardIds: ["OP01-001"] } },
+    },
     deterministicEntries: [
       {
         envelope: { request: { type: "playCard" } },
@@ -71,15 +90,44 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
 
 const assertReplayDetailBody = async (response: Response): Promise<void> => {
   const body = (await response.json()) as {
-    replay?: CompletedMatchReplayDetail;
+    replay: CompletedMatchReplayDetail;
+    frameReconstruction?: unknown;
+  };
+  assert.equal(body.replay.matchId, "match-1");
+  const replay = body.replay;
+  assert.deepEqual(replay.replay, {
+    replayFormatVersion: "dev-local-v1",
+    manifestSnapshot: {
+      cards: {
+        "OP01-001": {
+          cardId: "OP01-001",
+          name: "Leader",
+          category: "leader",
+          imageUrl: "https://cdn.example/OP01-001.png",
+        },
+      },
+    },
+  });
+  assert.equal(body.frameReconstruction, undefined);
+};
+
+const assertReplayFrameChunkBody = async (
+  response: Response,
+): Promise<void> => {
+  const body = (await response.json()) as {
     frameReconstruction?: {
       status?: string;
+      frameCount?: number;
+      start?: number;
+      limit?: number;
       frames?: Array<{ label?: string }>;
     };
   };
-  assert.equal(body.replay?.matchId, "match-1");
   assert.deepEqual(body.frameReconstruction, {
     status: "ready",
+    frameCount: 1,
+    start: 0,
+    limit: 1,
     frames: [
       {
         index: 0,
@@ -221,6 +269,26 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       await assertReplayDetailBody(response);
+      assert.deepEqual(repository.detailCalls, ["match-1"]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("returns replay frame chunks separately from replay detail", async () => {
+    const repository = createFakeReplayRepository();
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(
+        `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
+      );
+
+      assert.equal(response.status, 200);
+      await assertReplayFrameChunkBody(response);
       assert.deepEqual(repository.detailCalls, ["match-1"]);
     } finally {
       await server.close();
