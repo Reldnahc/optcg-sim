@@ -62,6 +62,12 @@ describe("ReplayViewerPage", () => {
     );
   });
 
+  test("loads one replay frame per request so the first board frame can render quickly", () => {
+    const source = replayViewerPageSource();
+
+    assert.match(source, /const replayFrameChunkLimit = 1;/u);
+  });
+
   test("does not derive frame loading from an absent selected frame", () => {
     const source = replayViewerPageSource();
 

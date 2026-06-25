@@ -17,7 +17,7 @@ import {
 
 type ReplayViewerStatus = "loading" | "ready" | "error";
 
-const replayFrameChunkLimit = 20;
+const replayFrameChunkLimit = 1;
 
 export interface ReplayViewerPageViewProps {
   readonly status: ReplayViewerStatus;
