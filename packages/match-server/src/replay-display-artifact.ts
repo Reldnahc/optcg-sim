@@ -394,3 +394,10 @@ export const isReplayDisplayArtifactV1 = (
 export const replayDisplayArtifactByteSize = (
   artifact: ReplayDisplayArtifactV1,
 ): number => Buffer.byteLength(canonicalJson(artifact), "utf8");
+
+export const replayDisplayAverageFrameByteSize = (
+  artifact: ReplayDisplayArtifactV1,
+): number =>
+  artifact.frameCount === 0
+    ? 0
+    : Math.ceil(replayDisplayArtifactByteSize(artifact) / artifact.frameCount);

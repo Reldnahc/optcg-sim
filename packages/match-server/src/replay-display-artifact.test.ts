@@ -5,6 +5,7 @@ import {
   createReplayDisplayArtifact,
   createReplayDisplayFrameFromSnapshot,
   isReplayDisplayArtifactV1,
+  replayDisplayAverageFrameByteSize,
   replayDisplayArtifactByteSize,
 } from "./replay-display-artifact.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
@@ -355,5 +356,37 @@ describe("replay display artifact", () => {
     const artifact = oneFrameArtifact();
 
     expect(replayDisplayArtifactByteSize(artifact)).toBeGreaterThan(0);
+  });
+
+  test("synthetic compact frames stay below the replay display size budget", () => {
+    let previousEventSeqByPlayer = new Map<PlayerId, number>();
+    const frames = Array.from({ length: 10 }, (_, index) => {
+      const result = createReplayDisplayFrameFromSnapshot({
+        index,
+        actionIndex: index === 0 ? null : index - 1,
+        label: index === 0 ? "Initial state" : "submitAction",
+        snapshot: snapshot(
+          Array.from({ length: index + 1 }, (__, eventIndex) => eventIndex + 1),
+        ),
+        perspectivePlayerId: p1,
+        previousEventSeqByPlayer,
+      });
+      if (result === undefined) {
+        throw new Error("Expected display frame.");
+      }
+      previousEventSeqByPlayer = new Map(result.nextEventSeqByPlayer);
+      return result.frame;
+    });
+    const artifact = createReplayDisplayArtifact({
+      perspectivePlayerId: p1,
+      frames,
+    });
+
+    expect(frames[0]?.snapshot.players[p1]?.view.events).toHaveLength(1);
+    expect(frames[9]?.snapshot.players[p1]?.view.events).toEqual([
+      { id: "event-10", seq: 10 },
+    ]);
+    expect(replayDisplayArtifactByteSize(artifact)).toBeLessThan(25_000);
+    expect(replayDisplayAverageFrameByteSize(artifact)).toBeLessThan(2_500);
   });
 });

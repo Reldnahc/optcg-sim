@@ -71,6 +71,13 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
   },
 });
 
+const jsonRecord = (value: unknown): Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Expected JSON record.");
+  }
+  return value as Record<string, unknown>;
+};
+
 const replayDisplayFrame = (
   match: LocalDevMatch,
   setup: DevMatchSetup,
@@ -555,6 +562,51 @@ describe("local completed match record mapping", () => {
       frames: [{ actionIndex: null, label: "Initial state" }],
     });
     expect(record?.replay.deterministicEntries).toEqual([]);
+
+    const artifact = record?.replay.replayDisplayArtifact;
+    if (artifact === undefined || artifact === null) {
+      throw new Error("Expected replay display artifact.");
+    }
+    const byteSize = Buffer.byteLength(JSON.stringify(artifact), "utf8");
+    expect(
+      byteSize,
+      `display artifact bytes: ${String(byteSize)}`,
+    ).toBeLessThan(250_000);
+    const serialized = JSON.stringify(artifact);
+    const perspectivePlayerId = artifact["perspectivePlayerId"];
+    if (typeof perspectivePlayerId !== "string") {
+      throw new Error("Expected display perspective player id.");
+    }
+    const frames = artifact["frames"];
+    if (!Array.isArray(frames)) {
+      throw new Error("Expected display frames.");
+    }
+    for (const frameValue of frames) {
+      const frame = jsonRecord(frameValue);
+      expect(frame["perspectivePlayerId"]).toBe(perspectivePlayerId);
+      const snapshot = jsonRecord(frame["snapshot"]);
+      const players = jsonRecord(snapshot["players"]);
+      expect(Object.keys(players)).toEqual([perspectivePlayerId]);
+      const player = jsonRecord(players[perspectivePlayerId]);
+      const view = jsonRecord(player["view"]);
+      const self = jsonRecord(view["self"]);
+      const opponent = jsonRecord(view["opponent"]);
+      expect(self["deck"]).toBeUndefined();
+      expect(self["donDeck"]).toBeUndefined();
+      expect(opponent["hand"]).toBeUndefined();
+      expect(opponent["deck"]).toBeUndefined();
+      expect(opponent["donDeck"]).toBeUndefined();
+      if (frame["status"] === "completed" || frame["status"] === "gameOver") {
+        expect(jsonRecord(self["life"])["faceUpCards"]).toEqual([]);
+        expect(jsonRecord(opponent["life"])["faceUpCards"]).toEqual([]);
+      }
+    }
+    expect(serialized).not.toContain("rng");
+    expect(serialized).not.toContain("rngState");
+    expect(serialized).not.toContain("deckCardIds");
+    expect(serialized).not.toContain("donDeckCardIds");
+    expect(serialized).not.toContain("initialDeckOrders");
+    expect(serialized).not.toContain("rollback");
   });
 
   test("stores rollback restore checkpoints required for replay reconstruction", async () => {
