@@ -17,7 +17,24 @@ import {
 
 type ReplayViewerStatus = "loading" | "ready" | "error";
 
-const replayFrameChunkLimit = 1;
+const initialReplayFrameChunkLimit = 1;
+const playbackReplayFrameChunkLimit = 10;
+
+export const replayFrameWindowForIndex = ({
+  frameIndex,
+  loadedFrameCount,
+}: {
+  readonly frameIndex: number;
+  readonly loadedFrameCount: number;
+}): { readonly start: number; readonly limit: number } => {
+  if (frameIndex === 0 && loadedFrameCount === 0) {
+    return { start: 0, limit: initialReplayFrameChunkLimit };
+  }
+  const start =
+    Math.floor(frameIndex / playbackReplayFrameChunkLimit) *
+    playbackReplayFrameChunkLimit;
+  return { start, limit: playbackReplayFrameChunkLimit };
+};
 
 export interface ReplayViewerPageViewProps {
   readonly status: ReplayViewerStatus;
@@ -371,9 +388,13 @@ export const ReplayViewerPage = ({
       return;
     }
     let cancelled = false;
-    const loadStart = Math.floor(frameIndex / replayFrameChunkLimit);
-    const start = loadStart * replayFrameChunkLimit;
-    const windowKey = `${String(start)}:${String(replayFrameChunkLimit)}`;
+    const frameWindow = replayFrameWindowForIndex({
+      frameIndex,
+      loadedFrameCount: Object.keys(framesByIndex).length,
+    });
+    const windowKey = `${String(frameWindow.start)}:${String(
+      frameWindow.limit,
+    )}`;
     if (framesByIndex[frameIndex] !== undefined) {
       return;
     }
@@ -389,8 +410,8 @@ export const ReplayViewerPage = ({
     };
     void client
       .getReplayFrames(replay.matchId, {
-        start,
-        limit: replayFrameChunkLimit,
+        start: frameWindow.start,
+        limit: frameWindow.limit,
       })
       .then((chunk) => {
         if (cancelled) {

@@ -9,6 +9,7 @@ import { describe, test } from "vitest";
 import {
   ReplayPlaybackControls,
   ReplayViewerPageView,
+  replayFrameWindowForIndex,
 } from "./ReplayViewerPage.js";
 import type { ReplayDetail } from "../replay-client.js";
 
@@ -65,7 +66,22 @@ describe("ReplayViewerPage", () => {
   test("loads one replay frame per request so the first board frame can render quickly", () => {
     const source = replayViewerPageSource();
 
-    assert.match(source, /const replayFrameChunkLimit = 1;/u);
+    assert.match(source, /const initialReplayFrameChunkLimit = 1;/u);
+  });
+
+  test("loads playback frames in chunks after the initial board frame", () => {
+    assert.deepEqual(
+      replayFrameWindowForIndex({ frameIndex: 0, loadedFrameCount: 0 }),
+      { start: 0, limit: 1 },
+    );
+    assert.deepEqual(
+      replayFrameWindowForIndex({ frameIndex: 1, loadedFrameCount: 1 }),
+      { start: 0, limit: 10 },
+    );
+    assert.deepEqual(
+      replayFrameWindowForIndex({ frameIndex: 12, loadedFrameCount: 10 }),
+      { start: 10, limit: 10 },
+    );
   });
 
   test("does not advance playback while the selected frame is still loading", () => {
