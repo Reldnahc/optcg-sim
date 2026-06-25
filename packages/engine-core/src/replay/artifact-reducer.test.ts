@@ -229,6 +229,69 @@ describe("reconstructReplayArtifactStates", () => {
     expect(result.frames.at(-1)?.stateHash).toBe(afterHash);
   });
 
+  test("seeks later frame windows from verified after-entry checkpoints", () => {
+    const initialState = makeMainPhaseLegalActionState();
+    const afterState = {
+      ...initialState,
+      seq: (Number(initialState.seq) + 99) as StateSeq,
+      actionSeq: initialState.actionSeq + 1,
+      timers: {
+        ...initialState.timers,
+        drainingPlayerId: initialState.turn.turnPlayerId,
+      },
+    };
+    const afterHash = hashReplayStateForScope(afterState, "gameplay-v1");
+    const entry: DeterministicMatchEntry = {
+      formatVersion: "deterministic-entry-v1",
+      matchId: initialState.matchId,
+      entrySeq: 0,
+      kind: "action",
+      playerId: initialState.turn.turnPlayerId,
+      action: { type: "endMainPhase" },
+      verification: {
+        stateSeqBefore: initialState.seq,
+        actionSeqBefore: initialState.actionSeq,
+        stateHashBefore: hashReplayStateForScope(initialState, "gameplay-v1"),
+        stateSeqAfter: afterState.seq,
+        actionSeqAfter: afterState.actionSeq,
+        stateHashAfter: afterHash,
+        hashScope: "gameplay-v1",
+      },
+    };
+
+    const result = reconstructReplayArtifactStates({
+      initialState,
+      deterministicEntries: [
+        entry,
+        { envelope: { request: { type: "must-not-decode" } } },
+      ],
+      checkpoints: [
+        {
+          checkpointVersion: "deterministic-checkpoint-v1",
+          matchId: initialState.matchId,
+          checkpointId: replayEntryAfterCheckpointId(entry.entrySeq),
+          reason: "replayFrame",
+          stateSeq: afterState.seq,
+          actionSeq: afterState.actionSeq,
+          stateHash: afterHash,
+          hashScope: "gameplay-v1",
+          snapshot: afterState,
+        },
+      ],
+      frameWindow: { start: 1, limit: 1 },
+    });
+
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
+      return;
+    }
+    expect(result.frameCount).toBe(3);
+    expect(result.frames).toHaveLength(1);
+    expect(result.frames[0]?.index).toBe(1);
+    expect(result.frames[0]?.entryIndex).toBe(0);
+    expect(result.frames[0]?.stateHash).toBe(afterHash);
+  });
+
   test("uses timer-owner tolerant before-hash verification before after-entry checkpoints", () => {
     const initialState = makeMainPhaseLegalActionState();
     const stateBefore = {

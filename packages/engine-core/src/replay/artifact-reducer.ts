@@ -527,11 +527,65 @@ export const reconstructReplayArtifactStates = ({
   }
   let current = structuredClone(firstFrame.state);
   let toleratedHashMismatch = false;
-  for (const [entryIndex, entry] of deterministicEntries.entries()) {
-    const frameIndex = entryIndex + 1;
+  let startEntryIndex = 0;
+  if (frameWindow !== undefined && frameStart > 0) {
+    const previousEntryIndex = frameStart - 1;
+    const previousEntry = deterministicEntries[previousEntryIndex];
+    const decodedPrevious = decodeDeterministicEntry(previousEntry);
+    if (decodedPrevious.status === "failed") {
+      return {
+        status: "failed",
+        reason: decodedPrevious.reason,
+        entryIndex: previousEntryIndex,
+      };
+    }
+    const previousCheckpoint = checkpointResolver(
+      replayEntryAfterCheckpointId(decodedPrevious.value.entrySeq),
+    );
+    if (previousCheckpoint !== undefined) {
+      const checkpoint = verifiedCheckpointSnapshot(
+        previousCheckpoint,
+        firstFrame.state.cardManifest,
+        {
+          actionSeq: decodedPrevious.value.verification.actionSeqAfter,
+          hashScope: decodedPrevious.value.verification.hashScope,
+          stateHash: decodedPrevious.value.verification.stateHashAfter,
+          stateSeq: decodedPrevious.value.verification.stateSeqAfter,
+        },
+      );
+      if (checkpoint.status === "failed") {
+        return {
+          status: "failed",
+          reason: checkpoint.reason,
+          entryIndex: previousEntryIndex,
+        };
+      }
+      current = checkpoint.value.state;
+      frames.push({
+        index: frameStart,
+        entryIndex: previousEntryIndex,
+        label: deterministicEntryLabel(decodedPrevious.value),
+        state: structuredClone(current),
+        stateHash: checkpoint.value.stateHash,
+      });
+      startEntryIndex = frameStart;
+      if (frameEnd <= frameStart + 1) {
+        return ready(frames);
+      }
+    }
+  }
+  for (const [entryIndex, entry] of deterministicEntries
+    .slice(startEntryIndex)
+    .entries()) {
+    const absoluteEntryIndex = entryIndex + startEntryIndex;
+    const frameIndex = absoluteEntryIndex + 1;
     const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
-      return { status: "failed", reason: decoded.reason, entryIndex };
+      return {
+        status: "failed",
+        reason: decoded.reason,
+        entryIndex: absoluteEntryIndex,
+      };
     }
     const afterCheckpoint = checkpointResolver(
       replayEntryAfterCheckpointId(decoded.value.entrySeq),
@@ -539,7 +593,11 @@ export const reconstructReplayArtifactStates = ({
     if (afterCheckpoint !== undefined) {
       const beforeError = verifyCurrentBeforeEntry(current, decoded.value);
       if (beforeError !== undefined) {
-        return { status: "failed", reason: beforeError, entryIndex };
+        return {
+          status: "failed",
+          reason: beforeError,
+          entryIndex: absoluteEntryIndex,
+        };
       }
       const checkpoint = verifiedCheckpointSnapshot(
         afterCheckpoint,
@@ -555,14 +613,14 @@ export const reconstructReplayArtifactStates = ({
         return {
           status: "failed",
           reason: checkpoint.reason,
-          entryIndex,
+          entryIndex: absoluteEntryIndex,
         };
       }
       current = checkpoint.value.state;
       if (includeFrame(frameIndex)) {
         frames.push({
           index: frameIndex,
-          entryIndex,
+          entryIndex: absoluteEntryIndex,
           label: deterministicEntryLabel(decoded.value),
           state: structuredClone(current),
           stateHash: checkpoint.value.stateHash,
@@ -581,7 +639,7 @@ export const reconstructReplayArtifactStates = ({
           return {
             status: "failed",
             reason: `Rollback checkpoint ${operation.rollbackPointId} is not available.`,
-            entryIndex,
+            entryIndex: absoluteEntryIndex,
           };
         }
       }
@@ -596,7 +654,11 @@ export const reconstructReplayArtifactStates = ({
       },
     );
     if (result.status === "failed") {
-      return { status: "failed", reason: result.reason, entryIndex };
+      return {
+        status: "failed",
+        reason: result.reason,
+        entryIndex: absoluteEntryIndex,
+      };
     }
     toleratedHashMismatch =
       toleratedHashMismatch || result.toleratedHashMismatch === true;
@@ -604,7 +666,7 @@ export const reconstructReplayArtifactStates = ({
     if (includeFrame(frameIndex)) {
       frames.push({
         index: frameIndex,
-        entryIndex,
+        entryIndex: absoluteEntryIndex,
         label: result.label,
         state: structuredClone(current),
         stateHash: result.stateHash,
