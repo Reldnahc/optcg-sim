@@ -41,6 +41,9 @@ const manifestCards = (
   );
 };
 
+const stockCardImageUrl = (cardId: string): string =>
+  `https://cdn.poneglyph.one/images/${encodeURIComponent(cardId)}/en/stock/0/full.png`;
+
 const imageUrlFromManifestCard = (
   card: Record<string, unknown>,
 ): string | undefined => {
@@ -50,7 +53,11 @@ const imageUrlFromManifestCard = (
   }
   const variants = card["variants"];
   if (!Array.isArray(variants)) {
-    return undefined;
+    const cardId = stringValue(card["cardId"]);
+    const category = stringValue(card["category"]);
+    return cardId === undefined || category === "don"
+      ? undefined
+      : stockCardImageUrl(cardId);
   }
   const firstVariant = variants.find(isRecord);
   return firstVariant === undefined

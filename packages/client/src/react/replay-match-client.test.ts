@@ -85,6 +85,40 @@ describe("replayFramesFromDetail", () => {
     );
   });
 
+  test("falls back to stock card image urls for existing compact replay manifests", () => {
+    const frames = replayFramesFromDetail({
+      matchId: "match-1",
+      manifestSnapshot: {
+        cards: {
+          "OP01-001": {
+            cardId: "OP01-001",
+            name: "Leader",
+            category: "leader",
+          },
+        },
+      },
+      frameReconstruction: {
+        status: "ready",
+        frames: [
+          {
+            index: 0,
+            actionIndex: 0,
+            label: "Initial state",
+            snapshot,
+          },
+        ],
+      },
+      deterministicEntries: [],
+    });
+
+    assert.equal(
+      frames[0]?.clientState.cards.players["p1" as PlayerId]?.cards[
+        "OP01-001" as CardId
+      ]?.imageUrl,
+      "https://cdn.poneglyph.one/images/OP01-001/en/stock/0/full.png",
+    );
+  });
+
   test("creates frame-backed playback entries from saved snapshots", () => {
     const frames = replayFramesFromDetail({
       matchId: "match-1",
