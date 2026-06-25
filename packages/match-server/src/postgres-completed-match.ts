@@ -369,7 +369,12 @@ const replaySummarySelectSql = (schema: string): string => `
     m.ended_at::text AS ended_at,
     m.turn_count,
     m.action_count,
-    COALESCE(
+    players.players
+  FROM ${qualify(schema, "matches")} m
+  INNER JOIN ${qualify(schema, "match_replays")} replay
+    ON replay.match_id = m.id
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
       jsonb_agg(
         jsonb_build_object(
           'seatId', players.seat_id,
@@ -380,18 +385,15 @@ const replaySummarySelectSql = (schema: string): string => `
           'isWinner', players.is_winner
         )
         ORDER BY players.seat_id
-      ) FILTER (WHERE players.seat_id IS NOT NULL),
+      ),
       '[]'::jsonb
     ) AS players
-  FROM ${qualify(schema, "matches")} m
-  INNER JOIN ${qualify(schema, "match_replays")} replay
-    ON replay.match_id = m.id
-  LEFT JOIN ${qualify(schema, "match_players")} players
-    ON players.match_id = m.id
+    FROM ${qualify(schema, "match_players")} players
+    WHERE players.match_id = m.id
+  ) players ON true
 `;
 
 const replaySummaryGroupSql = `
-  GROUP BY m.id
   ORDER BY m.ended_at DESC
   LIMIT $1
 `;

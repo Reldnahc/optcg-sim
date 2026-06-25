@@ -244,6 +244,8 @@ describe("Postgres completed match replay repository", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.sql).toContain("FROM sim_dev.matches");
+    expect(calls[0]?.sql).toContain("LEFT JOIN LATERAL");
+    expect(calls[0]?.sql).not.toContain("GROUP BY m.id");
     expect(calls[0]?.sql).not.toContain("viewer.user_id");
     expect(calls[0]?.params).toEqual([25]);
     expect(summaries).toEqual([
