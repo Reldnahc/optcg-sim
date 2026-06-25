@@ -150,15 +150,7 @@ test("database schema includes v6 DDL correction contracts", async () => {
     schemaSql,
     /CHECK\s*\(\s*jsonb_typeof\s*\(\s*checkpoints\s*\)\s*=\s*'array'\s*\)/i,
   );
-  assert.match(schemaSql, /replay_display_artifact\s+JSONB/i);
-  assert.doesNotMatch(
-    schemaSql,
-    /replay_display_artifact\s+JSONB\s+NOT\s+NULL/i,
-  );
-  assert.match(
-    schemaSql,
-    /CHECK\s*\(\s*replay_display_artifact\s+IS\s+NULL\s+OR\s+jsonb_typeof\s*\(\s*replay_display_artifact\s*\)\s*=\s*'object'\s*\)/i,
-  );
+  assert.doesNotMatch(schemaSql, /replay_display_artifact/i);
   assert.doesNotMatch(schemaSql, /final_state\s+JSONB\s+NOT\s+NULL/i);
   assert.doesNotMatch(schemaSql, /WHERE\s+expires_at\s*>\s*now\(\)/i);
 });

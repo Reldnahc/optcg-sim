@@ -38,9 +38,7 @@ const manifestCards = (
   if (!isRecord(cards)) {
     return [];
   }
-  return Object.values(cards).flatMap((card) =>
-    isRecord(card) ? [card] : [],
-  );
+  return Object.values(cards).flatMap((card) => (isRecord(card) ? [card] : []));
 };
 
 const stockCardImageUrl = (cardId: string): string =>

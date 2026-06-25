@@ -204,7 +204,6 @@ const assertReplayDetailBody = async (response: Response): Promise<void> => {
         },
       },
     },
-    replayDisplayArtifact,
   });
   assert.equal(body.frameReconstruction, undefined);
 };
@@ -431,7 +430,7 @@ describe("match HTTP server replay routes", () => {
     }
   });
 
-  test("display-v1 replay detail does not require frame chunk reconstruction", async () => {
+  test("display-v1 replay detail omits display frame artifacts", async () => {
     const repository = createFakeReplayRepository();
     const server = await createMatchHttpServer({
       createDefaultMatch: false,
@@ -447,17 +446,14 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       assert.equal(body.frameReconstruction, undefined);
-      assert.equal(
-        body.replay?.replay["replayDisplayArtifact"] !== undefined,
-        true,
-      );
+      assert.equal(body.replay?.replay["replayDisplayArtifact"], undefined);
       assert.deepEqual(repository.detailCalls, []);
     } finally {
       await server.close();
     }
   });
 
-  test("display-v1 replays do not use the legacy frame endpoint", async () => {
+  test("display-v1 replays serve display frame chunks without legacy reconstruction", async () => {
     const repository = createFakeReplayRepository();
     const legacyFrameCacheCalls: MatchId[] = [];
     const server = await createMatchHttpServer({
@@ -481,10 +477,31 @@ describe("match HTTP server replay routes", () => {
       const response = await fetch(
         `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
       );
-      const body = (await response.json()) as { errors?: readonly string[] };
+      const body = (await response.json()) as {
+        frameReconstruction?: {
+          status?: string;
+          frameCount?: number;
+          start?: number;
+          limit?: number;
+          frames?: Array<{ label?: string; actionIndex?: number | null }>;
+        };
+      };
 
-      assert.equal(response.status, 410);
-      assert.match(body.errors?.[0] ?? "", /display artifact/i);
+      assert.equal(response.status, 200);
+      assert.deepEqual(body.frameReconstruction, {
+        status: "ready",
+        frameCount: 1,
+        start: 0,
+        limit: 1,
+        frames: [
+          {
+            index: 0,
+            actionIndex: null,
+            label: "Initial state",
+            snapshot: replayDisplayArtifact.frames[0]?.snapshot,
+          },
+        ],
+      });
       assert.deepEqual(legacyFrameCacheCalls, []);
     } finally {
       await server.close();

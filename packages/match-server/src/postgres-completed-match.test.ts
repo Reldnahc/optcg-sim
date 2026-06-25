@@ -237,14 +237,13 @@ describe("Postgres completed match repository", () => {
     expect(calls[1]?.sql).toContain("INSERT INTO sim.match_players");
     expect(calls[2]?.sql).toContain("INSERT INTO sim.match_players");
     expect(calls[3]?.sql).toContain("INSERT INTO sim.match_replays");
-    expect(calls[3]?.sql).toContain("replay_display_artifact");
+    expect(calls[3]?.sql).not.toContain("replay_display_artifact");
     expect(calls[1]?.params[9]).toBe(
       JSON.stringify({ source: "winner deck snapshot" }),
     );
     expect(calls[1]?.params[10]).toBe(
       JSON.stringify({ source: "winner loadout snapshot" }),
     );
-    expect(calls[3]?.params[21]).toBe(JSON.stringify(replayDisplayArtifact));
   });
 
   test("propagates transaction failure without running later writes", async () => {
@@ -415,9 +414,7 @@ describe("Postgres completed match replay repository", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.sql).not.toContain("viewer.user_id");
-    expect(calls[0]?.sql).toContain(
-      "'replayDisplayArtifact', replay.replay_display_artifact",
-    );
+    expect(calls[0]?.sql).not.toContain("replay.replay_display_artifact");
     expect(calls[0]?.sql).toContain("m.id = $1");
     expect(calls[0]?.sql).toContain("LEFT JOIN LATERAL");
     expect(calls[0]?.sql).not.toContain("GROUP BY m.id, replay.match_id");
@@ -433,7 +430,7 @@ describe("Postgres completed match replay repository", () => {
     });
   });
 
-  test("returns public replay detail with display artifact projection", async () => {
+  test("returns public replay detail without display frame artifact payloads", async () => {
     const calls: Array<{
       readonly sql: string;
       readonly params: readonly unknown[];
@@ -475,9 +472,10 @@ describe("Postgres completed match replay repository", () => {
     const detail = await repository.getPublicReplay(matchId);
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.sql).toContain(
+    expect(calls[0]?.sql).not.toContain(
       "'replayDisplayArtifact', replay.replay_display_artifact",
     );
+    expect(calls[0]?.sql).not.toContain("replay.replay_display_artifact");
     expect(calls[0]?.params).toEqual([matchId]);
     expect(detail?.replay).toEqual({
       manifestSnapshot: {
@@ -485,7 +483,6 @@ describe("Postgres completed match replay repository", () => {
           "OP01-001": { cardId: "OP01-001", name: "Leader" },
         },
       },
-      replayDisplayArtifact,
     });
   });
 });

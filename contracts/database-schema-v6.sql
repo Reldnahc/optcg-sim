@@ -136,7 +136,6 @@ CREATE TABLE match_replays (
   deterministic_entries JSONB NOT NULL,
   audit_entries JSONB NOT NULL DEFAULT '[]'::jsonb,
   checkpoints JSONB NOT NULL DEFAULT '[]'::jsonb,
-  replay_display_artifact JSONB,
   final_state JSONB,
   compressed BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -145,7 +144,6 @@ CREATE TABLE match_replays (
   CHECK (jsonb_typeof(deterministic_entries) = 'array'),
   CHECK (jsonb_typeof(audit_entries) = 'array'),
   CHECK (jsonb_typeof(checkpoints) = 'array'),
-  CHECK (replay_display_artifact IS NULL OR jsonb_typeof(replay_display_artifact) = 'object'),
   CHECK (initial_snapshot IS NOT NULL OR (rng_seed_revealed IS NOT NULL AND initial_deck_orders IS NOT NULL))
 );
 

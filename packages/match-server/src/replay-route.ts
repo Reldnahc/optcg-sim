@@ -6,15 +6,40 @@ import type { CompletedMatchReplayRepository } from "./postgres-completed-match.
 import type { ReplayDetailCache } from "./replay-detail-cache.js";
 import {
   createLegacyReplayFrameCache,
+  publicReplayDetail,
   replayFrameWindowFromSearchParams,
   type LegacyReplayFrameCache,
+  type ReplayFrameWindow,
 } from "./replay-frame-cache.js";
 import { reconstructReplayFramesOffThread as legacyReplayFrameReconstruction } from "./replay-frame-worker-dispatch.js";
 import { isReplayDisplayArtifactV1 } from "./replay-display-artifact.js";
+import type { ReplayDisplayArtifactV1 } from "./replay-display-artifact.js";
 
 const defaultLegacyReplayFrameCache = createLegacyReplayFrameCache({
   reconstruct: legacyReplayFrameReconstruction,
 });
+
+const displayArtifactFrameChunk = (
+  artifact: ReplayDisplayArtifactV1,
+  window: ReplayFrameWindow,
+) => {
+  const frameCount = artifact.frames.length;
+  const start = Math.min(window.start, frameCount);
+  return {
+    status: "ready" as const,
+    frameCount,
+    start,
+    limit: window.limit,
+    frames: artifact.frames
+      .slice(start, Math.min(frameCount, start + window.limit))
+      .map((frame) => ({
+        index: frame.index,
+        actionIndex: frame.actionIndex,
+        label: frame.label,
+        snapshot: frame.snapshot,
+      })),
+  };
+};
 
 export const handleReplayRequest = async ({
   request,
@@ -57,18 +82,21 @@ export const handleReplayRequest = async ({
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
     }
-    if (isReplayDisplayArtifactV1(replay.replay["replayDisplayArtifact"])) {
-      sendJson(response, 410, {
-        errors: [
-          "Replay frames are served by the replay display artifact for display-v1 rows.",
-        ],
+    const url = new URL(request.url ?? "/", "http://localhost");
+    const window = replayFrameWindowFromSearchParams(url.searchParams);
+    const replayDisplayArtifact = replay.replay["replayDisplayArtifact"];
+    if (isReplayDisplayArtifactV1(replayDisplayArtifact)) {
+      sendJson(response, 200, {
+        frameReconstruction: displayArtifactFrameChunk(
+          replayDisplayArtifact,
+          window,
+        ),
       });
       return true;
     }
-    const url = new URL(request.url ?? "/", "http://localhost");
     const frameReconstruction = await legacyReplayFrameCache.getFrameChunk(
       replay,
-      replayFrameWindowFromSearchParams(url.searchParams),
+      window,
     );
     sendJson(response, 200, {
       frameReconstruction,
@@ -85,7 +113,7 @@ export const handleReplayRequest = async ({
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
     }
-    sendJson(response, 200, { replay });
+    sendJson(response, 200, { replay: publicReplayDetail(replay) });
     return true;
   }
   return false;
