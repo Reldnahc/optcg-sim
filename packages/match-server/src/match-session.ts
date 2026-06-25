@@ -1,4 +1,9 @@
-import { hashReplayStateForScope } from "@optcg/engine-core";
+import {
+  hashReplayStateForScope,
+  replayEntryAfterCheckpointId,
+  replayInitialCheckpointId,
+} from "@optcg/engine-core";
+import type { DeterministicCheckpoint, GameState } from "@optcg/types";
 import {
   applyLocalDevAction,
   applyLocalDevDecision,
@@ -146,6 +151,38 @@ const compactStoredDeterministicCheckpointRecord = (
   recordedAt: record.recordedAt,
 });
 
+const compactReplayCheckpointState = (state: GameState): GameState => {
+  const clone = structuredClone(state);
+  delete clone.cardManifest.effectDefinitions;
+  clone.cardManifest.cards = {};
+  return clone;
+};
+
+const replayCheckpointRecord = ({
+  checkpointId,
+  reason,
+  recordedAt,
+  state,
+}: {
+  readonly checkpointId: string;
+  readonly reason: DeterministicCheckpoint["reason"];
+  readonly recordedAt: string;
+  readonly state: GameState;
+}): StoredDeterministicCheckpointRecord => ({
+  checkpoint: {
+    checkpointVersion: "deterministic-checkpoint-v1",
+    matchId: state.matchId,
+    checkpointId,
+    reason,
+    stateSeq: state.seq,
+    actionSeq: state.actionSeq,
+    stateHash: hashReplayStateForScope(state, "gameplay-v1"),
+    hashScope: "gameplay-v1",
+    snapshot: compactReplayCheckpointState(state),
+  },
+  recordedAt,
+});
+
 const sortedStoredRecords = (
   records: readonly StoredSessionRecord[],
 ): StoredSessionRecord[] =>
@@ -191,22 +228,48 @@ export const createMatchSessionRuntime = ({
   const pendingDeterministicCheckpoints: StoredDeterministicCheckpointRecord[] =
     [];
 
+  const recordDeterministicCheckpoint = (
+    record: StoredDeterministicCheckpointRecord,
+    persist: boolean,
+  ): void => {
+    if (deterministicCheckpointIds.has(record.checkpoint.checkpointId)) {
+      return;
+    }
+    deterministicCheckpointIds.add(record.checkpoint.checkpointId);
+    deterministicCheckpoints.push(record);
+    if (persist) {
+      pendingDeterministicCheckpoints.push(record);
+    }
+  };
+
+  const recordReplayCheckpoint = (
+    checkpointId: string,
+    reason: DeterministicCheckpoint["reason"],
+    state: GameState,
+    recordedAt: string,
+    persist: boolean,
+  ): void => {
+    recordDeterministicCheckpoint(
+      replayCheckpointRecord({ checkpointId, reason, recordedAt, state }),
+      persist,
+    );
+  };
+
   const recordDeterministicCheckpoints = (
     recordedAt: string,
     persist: boolean,
   ): void => {
     for (const checkpoint of local.rollback.checkpoints) {
-      if (deterministicCheckpointIds.has(checkpoint.checkpointId)) {
-        continue;
-      }
-      deterministicCheckpointIds.add(checkpoint.checkpointId);
-      const record = { checkpoint, recordedAt };
-      deterministicCheckpoints.push(record);
-      if (persist) {
-        pendingDeterministicCheckpoints.push(record);
-      }
+      recordDeterministicCheckpoint({ checkpoint, recordedAt }, persist);
     }
   };
+  recordReplayCheckpoint(
+    replayInitialCheckpointId(),
+    "initial",
+    local.state,
+    now(),
+    false,
+  );
   recordDeterministicCheckpoints(now(), false);
 
   for (const record of records) {
@@ -340,9 +403,10 @@ export const createMatchSessionRuntime = ({
         recordDeterministicCheckpoints(recordedAt, true);
       }
       if (result.accepted && applied.deterministicOperation !== undefined) {
+        const entrySeq = deterministicRecords.length;
         const deterministicRecord = buildStoredDeterministicSessionRecord({
           matchId: local.state.matchId,
-          entrySeq: deterministicRecords.length,
+          entrySeq,
           envelope,
           result: compactSessionResult(result),
           deterministicOperation: applied.deterministicOperation,
@@ -356,6 +420,13 @@ export const createMatchSessionRuntime = ({
         });
         deterministicRecords.push(deterministicRecord);
         pendingDeterministicRecords.push(deterministicRecord);
+        recordReplayCheckpoint(
+          replayEntryAfterCheckpointId(entrySeq),
+          "replayFrame",
+          local.state,
+          recordedAt,
+          true,
+        );
       }
       return storedResult;
     },

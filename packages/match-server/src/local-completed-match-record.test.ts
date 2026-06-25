@@ -1,4 +1,8 @@
 import { describe, expect, test } from "vitest";
+import {
+  hashReplayStateForScope,
+  replayEntryAfterCheckpointId,
+} from "@optcg/engine-core";
 
 import {
   buildLocalCompletedMatchRecord,
@@ -13,7 +17,10 @@ import type { ReadyDeckSubmission } from "./deck-submission.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
 import { requestHash } from "./action-envelope.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
-import type { StoredDeterministicSessionRecord } from "./session-types.js";
+import type {
+  StoredDeterministicCheckpointRecord,
+  StoredDeterministicSessionRecord,
+} from "./session-types.js";
 
 const readySubmission = (
   hash: string,
@@ -306,6 +313,20 @@ describe("local completed match record mapping", () => {
         recordedAt: "2026-06-08T00:00:01.000Z",
       },
     };
+    const replayCheckpoint: StoredDeterministicCheckpointRecord = {
+      checkpoint: {
+        checkpointVersion: "deterministic-checkpoint-v1",
+        matchId: setup.matchId,
+        checkpointId: replayEntryAfterCheckpointId(0),
+        reason: "replayFrame",
+        stateSeq: match.state.seq,
+        actionSeq: match.state.actionSeq,
+        stateHash: hashReplayStateForScope(match.state, "gameplay-v1"),
+        hashScope: "gameplay-v1",
+        snapshot: match.state,
+      },
+      recordedAt: "2026-06-08T00:00:01.000Z",
+    };
 
     const record = buildLocalCompletedMatchRecord({
       match,
@@ -327,7 +348,7 @@ describe("local completed match record mapping", () => {
         resolvedFirstPlayerId: setup.playerOrder[0],
       },
       deterministicRecords: [storedRecord],
-      deterministicCheckpoints: [],
+      deterministicCheckpoints: [replayCheckpoint],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -338,9 +359,16 @@ describe("local completed match record mapping", () => {
     const auditEntry = record?.replay.auditEntries[0] as
       | Record<string, unknown>
       | undefined;
+    const checkpointEntry = record?.replay.checkpoints[0] as
+      | Record<string, unknown>
+      | undefined;
     expect(record?.replay.replayFormatVersion).toBe("dev-local-v2");
     expect(deterministicEntry?.["kind"]).toBe("action");
     expect(Object.hasOwn(deterministicEntry ?? {}, "envelope")).toBe(false);
     expect(auditEntry?.["type"]).toBe("clientEnvelope");
+    expect(record?.replay.checkpoints).toHaveLength(1);
+    expect(checkpointEntry?.["checkpointId"]).toBe(
+      replayEntryAfterCheckpointId(0),
+    );
   });
 });

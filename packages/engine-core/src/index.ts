@@ -58,3 +58,7 @@ export {
   hashReplayStateForScope,
   type DeterministicEntryApplyResult,
 } from "./replay/deterministic-entry.js";
+export {
+  replayEntryAfterCheckpointId,
+  replayInitialCheckpointId,
+} from "./replay/deterministic-checkpoint-ids.js";

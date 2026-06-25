@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
 import type { MatchId, PlayerId } from "@optcg/types";
+import {
+  replayEntryAfterCheckpointId,
+  replayInitialCheckpointId,
+} from "@optcg/engine-core";
 
 import { requestHash } from "./action-envelope.js";
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
@@ -94,6 +98,41 @@ describe("match session runtime", () => {
     expect(deterministicRecord.audit.type).toBe("clientEnvelope");
     expect(deterministicRecord.audit.envelope.clientActionId).toBe(
       input.clientActionId,
+    );
+  });
+
+  test("records replay checkpoints for initial and after deterministic entries", async () => {
+    const { local, runtime } = await createRuntime();
+    const initialStateSeq = local.state.seq;
+    const input = envelope(submitRequest(local.state.seq), local.state.seq);
+
+    const accepted = runtime.applyEnvelope(input);
+    const deterministicRecord = runtime.deterministicRecords()[0];
+    const checkpoints = runtime.deterministicCheckpoints();
+    const initialCheckpoint = checkpoints.find(
+      (record) =>
+        record.checkpoint.checkpointId === replayInitialCheckpointId(),
+    );
+    const afterCheckpoint =
+      deterministicRecord === undefined
+        ? undefined
+        : checkpoints.find(
+            (record) =>
+              record.checkpoint.checkpointId ===
+              replayEntryAfterCheckpointId(
+                deterministicRecord.deterministicEntry.entrySeq,
+              ),
+          );
+
+    expect(accepted.accepted).toBe(true);
+    expect(initialCheckpoint?.checkpoint.reason).toBe("initial");
+    expect(initialCheckpoint?.checkpoint.snapshot?.seq).toBe(initialStateSeq);
+    expect(afterCheckpoint?.checkpoint.reason).toBe("replayFrame");
+    expect(afterCheckpoint?.checkpoint.stateSeq).toBe(accepted.stateSeq);
+    expect(afterCheckpoint?.checkpoint.actionSeq).toBe(accepted.actionSeq);
+    expect(afterCheckpoint?.checkpoint.snapshot?.seq).toBe(accepted.stateSeq);
+    expect(afterCheckpoint?.checkpoint.stateHash).toBe(
+      deterministicRecord?.deterministicEntry.verification.stateHashAfter,
     );
   });
 

@@ -34,6 +34,8 @@ import {
   processEffectRuntime,
   reconstructReplayArtifactStates,
   reindexZoneCards,
+  replayEntryAfterCheckpointId,
+  replayInitialCheckpointId,
   resolveSupportedVanillaBattle,
   enterMainPhase,
   respondToMulliganDecision,
@@ -71,6 +73,8 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "processEffectRuntime",
     "reconstructReplayArtifactStates",
     "reindexZoneCards",
+    "replayEntryAfterCheckpointId",
+    "replayInitialCheckpointId",
     "resolveSupportedVanillaBattle",
     "respondToMulliganDecision",
     "splitEffectTextSpotlightPresentation",
@@ -89,6 +93,14 @@ test("package runtime boundary exposes engine-core helpers", () => {
     reconstructReplayArtifactStates,
   );
   assert.equal(engineCorePackage.reindexZoneCards, reindexZoneCards);
+  assert.equal(
+    engineCorePackage.replayEntryAfterCheckpointId,
+    replayEntryAfterCheckpointId,
+  );
+  assert.equal(
+    engineCorePackage.replayInitialCheckpointId,
+    replayInitialCheckpointId,
+  );
   assert.equal(engineCorePackage.advanceRngUint32, advanceRngUint32);
   assert.equal(engineCorePackage.advanceRngFloat01, advanceRngFloat01);
   assert.equal(engineCorePackage.getLegalActions, getLegalActions);

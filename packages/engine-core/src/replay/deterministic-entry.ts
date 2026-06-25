@@ -3,6 +3,7 @@ import type {
   DeterministicMatchEntry,
   EngineResult,
   GameState,
+  PlayerId,
   TimerState,
 } from "@optcg/types";
 
@@ -198,14 +199,65 @@ const engineErrorsText = (
     .map((error) => ("reason" in error ? error.reason : error.type))
     .join("; ");
 
+const timerOwnerCandidates = (
+  state: GameState,
+): readonly (PlayerId | undefined)[] => {
+  const candidates: (PlayerId | undefined)[] = [
+    state.timers.drainingPlayerId,
+    undefined,
+    state.pendingDecision?.playerId,
+    state.turn.turnPlayerId,
+    ...(Object.keys(state.players) as PlayerId[]),
+  ];
+  return candidates.filter(
+    (candidate, index) => candidates.indexOf(candidate) === index,
+  );
+};
+
+const stateWithTimerOwner = (
+  state: GameState,
+  playerId: PlayerId | undefined,
+): GameState => {
+  const timers = { ...state.timers };
+  if (playerId === undefined) {
+    delete timers.drainingPlayerId;
+  } else {
+    timers.drainingPlayerId = playerId;
+  }
+  return { ...state, timers };
+};
+
+const replayStateForExpectedHash = (
+  state: GameState,
+  hashScope: DeterministicMatchEntry["verification"]["hashScope"],
+  expectedHash: string,
+): { readonly state: GameState; readonly hash: string } | undefined => {
+  const currentHash = hashReplayStateForScope(state, hashScope);
+  if (currentHash === expectedHash) {
+    return { state, hash: currentHash };
+  }
+  if (hashScope !== "gameplay-v1") {
+    return undefined;
+  }
+  for (const playerId of timerOwnerCandidates(state)) {
+    const candidate = stateWithTimerOwner(state, playerId);
+    const candidateHash = hashReplayStateForScope(candidate, hashScope);
+    if (candidateHash === expectedHash) {
+      return { state: candidate, hash: candidateHash };
+    }
+  }
+  return undefined;
+};
+
 export const applyDeterministicEntry = (
   state: GameState,
   entry: DeterministicMatchEntry,
   checkpoints?: DeterministicCheckpointResolver,
 ): DeterministicEntryApplyResult => {
-  const beforeHash = hashReplayStateForScope(
+  const before = replayStateForExpectedHash(
     state,
     entry.verification.hashScope,
+    entry.verification.stateHashBefore,
   );
   if (state.seq !== entry.verification.stateSeqBefore) {
     return {
@@ -223,14 +275,14 @@ export const applyDeterministicEntry = (
       )}, got ${String(state.actionSeq)}.`,
     };
   }
-  if (beforeHash !== entry.verification.stateHashBefore) {
+  if (before === undefined) {
     return {
       status: "failed",
       reason: "State hash before deterministic entry does not match.",
     };
   }
 
-  const applied = applyDeterministicOperation(state, entry, checkpoints);
+  const applied = applyDeterministicOperation(before.state, entry, checkpoints);
   if (applied.status === "failed") {
     return applied;
   }
@@ -241,28 +293,28 @@ export const applyDeterministicEntry = (
     };
   }
 
-  const after = applied.result.state;
-  const afterHash = hashReplayStateForScope(
-    after,
+  const after = replayStateForExpectedHash(
+    applied.result.state,
     entry.verification.hashScope,
+    entry.verification.stateHashAfter,
   );
-  if (after.seq !== entry.verification.stateSeqAfter) {
+  if (applied.result.state.seq !== entry.verification.stateSeqAfter) {
     return {
       status: "failed",
       reason: `State sequence after mismatch: expected ${String(
         entry.verification.stateSeqAfter,
-      )}, got ${String(after.seq)}.`,
+      )}, got ${String(applied.result.state.seq)}.`,
     };
   }
-  if (after.actionSeq !== entry.verification.actionSeqAfter) {
+  if (applied.result.state.actionSeq !== entry.verification.actionSeqAfter) {
     return {
       status: "failed",
       reason: `Action sequence after mismatch: expected ${String(
         entry.verification.actionSeqAfter,
-      )}, got ${String(after.actionSeq)}.`,
+      )}, got ${String(applied.result.state.actionSeq)}.`,
     };
   }
-  if (afterHash !== entry.verification.stateHashAfter) {
+  if (after === undefined) {
     return {
       status: "failed",
       reason: "State hash after deterministic entry does not match.",
@@ -271,8 +323,8 @@ export const applyDeterministicEntry = (
 
   return {
     status: "applied",
-    state: after,
-    stateHash: afterHash,
+    state: after.state,
+    stateHash: after.hash,
     label: applied.label,
   };
 };

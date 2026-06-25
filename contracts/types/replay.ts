@@ -80,6 +80,7 @@ export interface DeterministicCheckpoint {
   readonly checkpointId: string;
   readonly reason:
     | "initial"
+    | "replayFrame"
     | "turnStart"
     | "rollbackPoint"
     | "rollbackRestore"

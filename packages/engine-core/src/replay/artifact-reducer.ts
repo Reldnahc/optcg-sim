@@ -16,6 +16,10 @@ import {
   checkpointResolverFromList,
   hashReplayStateForScope,
 } from "./deterministic-entry.js";
+import {
+  replayEntryAfterCheckpointId,
+  replayInitialCheckpointId,
+} from "./deterministic-checkpoint-ids.js";
 
 export interface ReplayArtifactStateFrame {
   readonly index: number;
@@ -353,6 +357,89 @@ const decodeDeterministicCheckpoints = (
   return { status: "ready", value: checkpoints };
 };
 
+const deterministicEntryLabel = (entry: DeterministicMatchEntry): string => {
+  if (entry.kind === "action") {
+    return entry.action.type;
+  }
+  if (entry.kind === "decision") {
+    return "respondToDecision";
+  }
+  return entry.operation.type;
+};
+
+const verifiedCheckpointSnapshot = (
+  checkpoint: DeterministicCheckpoint,
+  manifest: GameState["cardManifest"],
+  expected?: {
+    readonly actionSeq: number;
+    readonly hashScope: DeterministicCheckpoint["hashScope"];
+    readonly stateHash: string;
+    readonly stateSeq: StateSeq;
+  },
+): DecodeResult<{ readonly state: GameState; readonly stateHash: string }> => {
+  if (checkpoint.snapshot === undefined) {
+    return {
+      status: "failed",
+      reason: `Replay checkpoint ${checkpoint.checkpointId} does not include a snapshot.`,
+    };
+  }
+  if (
+    expected !== undefined &&
+    (checkpoint.stateSeq !== expected.stateSeq ||
+      checkpoint.actionSeq !== expected.actionSeq ||
+      checkpoint.hashScope !== expected.hashScope ||
+      checkpoint.stateHash !== expected.stateHash)
+  ) {
+    return {
+      status: "failed",
+      reason: `Replay checkpoint ${checkpoint.checkpointId} does not match deterministic entry verification.`,
+    };
+  }
+  const snapshot =
+    checkpoint.snapshot.cardManifest.manifestHash === manifest.manifestHash &&
+    Object.keys(checkpoint.snapshot.cardManifest.cards).length === 0
+      ? { ...checkpoint.snapshot, cardManifest: structuredClone(manifest) }
+      : checkpoint.snapshot;
+  const stateHash = hashReplayStateForScope(snapshot, checkpoint.hashScope);
+  if (stateHash !== checkpoint.stateHash) {
+    return {
+      status: "failed",
+      reason: `Replay checkpoint ${checkpoint.checkpointId} snapshot hash does not match.`,
+    };
+  }
+  return {
+    status: "ready",
+    value: {
+      state: structuredClone(snapshot),
+      stateHash,
+    },
+  };
+};
+
+const verifyCurrentBeforeEntry = (
+  current: GameState,
+  entry: DeterministicMatchEntry,
+): string | undefined => {
+  if (current.seq !== entry.verification.stateSeqBefore) {
+    return `State sequence before mismatch: expected ${String(
+      entry.verification.stateSeqBefore,
+    )}, got ${String(current.seq)}.`;
+  }
+  if (current.actionSeq !== entry.verification.actionSeqBefore) {
+    return `Action sequence before mismatch: expected ${String(
+      entry.verification.actionSeqBefore,
+    )}, got ${String(current.actionSeq)}.`;
+  }
+  const stateHash = hashReplayStateForScope(
+    current,
+    entry.verification.hashScope,
+  );
+  if (stateHash !== entry.verification.stateHashBefore) {
+    return "State hash before deterministic entry does not match.";
+  }
+  return undefined;
+};
+
 export const reconstructReplayArtifactStates = ({
   checkpoints,
   deterministicEntries,
@@ -371,21 +458,71 @@ export const reconstructReplayArtifactStates = ({
   const checkpointResolver = checkpointResolverFromList(
     decodedCheckpoints.value,
   );
-  const stateHash = hashReplayStateForScope(initialState, "gameplay-v1");
+  const initialCheckpoint = checkpointResolver(replayInitialCheckpointId());
+  const initialFrame =
+    initialCheckpoint === undefined
+      ? {
+          state: structuredClone(initialState),
+          stateHash: hashReplayStateForScope(initialState, "gameplay-v1"),
+        }
+      : verifiedCheckpointSnapshot(
+          initialCheckpoint,
+          initialState.cardManifest,
+        );
+  if ("status" in initialFrame && initialFrame.status === "failed") {
+    return { status: "failed", reason: initialFrame.reason };
+  }
+  const firstFrame =
+    "status" in initialFrame ? initialFrame.value : initialFrame;
   const frames: ReplayArtifactStateFrame[] = [
     {
       index: 0,
       entryIndex: null,
       label: "Initial state",
-      state: structuredClone(initialState),
-      stateHash,
+      state: structuredClone(firstFrame.state),
+      stateHash: firstFrame.stateHash,
     },
   ];
-  let current = structuredClone(initialState);
+  let current = structuredClone(firstFrame.state);
   for (const [entryIndex, entry] of deterministicEntries.entries()) {
     const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
       return { status: "failed", reason: decoded.reason, entryIndex };
+    }
+    const afterCheckpoint = checkpointResolver(
+      replayEntryAfterCheckpointId(decoded.value.entrySeq),
+    );
+    if (afterCheckpoint !== undefined) {
+      const beforeError = verifyCurrentBeforeEntry(current, decoded.value);
+      if (beforeError !== undefined) {
+        return { status: "failed", reason: beforeError, entryIndex };
+      }
+      const checkpoint = verifiedCheckpointSnapshot(
+        afterCheckpoint,
+        firstFrame.state.cardManifest,
+        {
+          actionSeq: decoded.value.verification.actionSeqAfter,
+          hashScope: decoded.value.verification.hashScope,
+          stateHash: decoded.value.verification.stateHashAfter,
+          stateSeq: decoded.value.verification.stateSeqAfter,
+        },
+      );
+      if (checkpoint.status === "failed") {
+        return {
+          status: "failed",
+          reason: checkpoint.reason,
+          entryIndex,
+        };
+      }
+      current = checkpoint.value.state;
+      frames.push({
+        index: frames.length,
+        entryIndex,
+        label: deterministicEntryLabel(decoded.value),
+        state: structuredClone(current),
+        stateHash: checkpoint.value.stateHash,
+      });
+      continue;
     }
     if (decoded.value.kind === "system") {
       const operation = decoded.value.operation;
@@ -417,7 +554,7 @@ export const reconstructReplayArtifactStates = ({
       stateHash: result.stateHash,
     });
   }
-  const finalStateHash = frames.at(-1)?.stateHash ?? stateHash;
+  const finalStateHash = frames.at(-1)?.stateHash ?? firstFrame.stateHash;
   if (
     expectedFinalStateHash !== undefined &&
     expectedFinalStateHash !== finalStateHash
