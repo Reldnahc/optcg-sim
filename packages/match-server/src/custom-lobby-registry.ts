@@ -421,6 +421,7 @@ export const createCustomLobbyRegistry = async (
     if (first?.status !== "ready" || second?.status !== "ready") {
       return;
     }
+    await matchRegistry.ready();
     const matchId = randomUUID() as MatchId;
     const playerOrder = twoPlayerOrder(lobby.playerOrder);
     const created = await matchRegistry.createMatch(

@@ -11,11 +11,42 @@ import {
 import { createMatchHttpServer } from "./match-http-server.js";
 import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type { MatchHttpServer } from "./match-http-server.js";
+import type { MatchPersistence } from "./session-types.js";
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
+
+const createBlockedActiveMatchPersistence = (): {
+  readonly persistence: MatchPersistence;
+  readonly listStarted: Promise<void>;
+  readonly releaseList: () => void;
+} => {
+  const basePersistence = createInMemoryMatchPersistence();
+  let listStartedResolve: () => void = () => undefined;
+  let releaseListResolve: () => void = () => undefined;
+  const listStarted = new Promise<void>((resolve) => {
+    listStartedResolve = resolve;
+  });
+  const releaseList = new Promise<void>((resolve) => {
+    releaseListResolve = resolve;
+  });
+  return {
+    persistence: {
+      ...basePersistence,
+      async listActiveMatchIds() {
+        listStartedResolve();
+        await releaseList;
+        return [];
+      },
+    },
+    listStarted,
+    releaseList: () => {
+      releaseListResolve();
+    },
+  };
+};
 
 describe("match HTTP server health", () => {
   test("serves health without creating a default dev match", async () => {
@@ -32,25 +63,10 @@ describe("match HTTP server health", () => {
   });
 
   test("serves health while an API request waits for active match recovery", async () => {
-    const basePersistence = createInMemoryMatchPersistence();
-    let listStartedResolve: () => void = () => undefined;
-    let releaseListResolve: () => void = () => undefined;
-    const listStarted = new Promise<void>((resolve) => {
-      listStartedResolve = resolve;
-    });
-    const releaseList = new Promise<void>((resolve) => {
-      releaseListResolve = resolve;
-    });
+    const blockedPersistence = createBlockedActiveMatchPersistence();
     const serverPromise = createMatchHttpServer({
       createDefaultMatch: false,
-      matchPersistence: {
-        ...basePersistence,
-        async listActiveMatchIds() {
-          listStartedResolve();
-          await releaseList;
-          return [];
-        },
-      },
+      matchPersistence: blockedPersistence.persistence,
     });
     let server: MatchHttpServer | undefined;
     let listening = false;
@@ -71,7 +87,7 @@ describe("match HTTP server health", () => {
       await server.listen(0, "127.0.0.1");
       listening = true;
       const recoveryBeforeApi = await Promise.race([
-        listStarted.then(() => "started" as const),
+        blockedPersistence.listStarted.then(() => "started" as const),
         delay(25).then(() => "not-started" as const),
       ]);
       assert.equal(recoveryBeforeApi, "not-started");
@@ -81,18 +97,125 @@ describe("match HTTP server health", () => {
         headers: { "content-type": "application/json" },
         body: "{}",
       });
-      await listStarted;
+      await blockedPersistence.listStarted;
       const response = await fetch(`${server.url()}/health`);
 
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { data: { ok: true } });
     } finally {
-      releaseListResolve();
+      blockedPersistence.releaseList();
       await apiRequest;
       server ??= await serverPromise;
       if (listening) {
         await server.close();
       }
+    }
+  });
+
+  test("creates lobbies without waiting for active match recovery", async () => {
+    const blockedPersistence = createBlockedActiveMatchPersistence();
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      matchPersistence: blockedPersistence.persistence,
+    });
+    await server.listen(0, "127.0.0.1");
+    let lobbyRequest: Promise<Response> | undefined;
+    try {
+      lobbyRequest = fetch(`${server.url()}/api/lobbies`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      const response = await Promise.race([
+        lobbyRequest,
+        delay(25).then(() => "pending" as const),
+      ]);
+
+      assert.notEqual(response, "pending");
+      assert.equal((response as Response).status, 201);
+      const recoveryAfterLobby = await Promise.race([
+        blockedPersistence.listStarted.then(() => "started" as const),
+        delay(25).then(() => "not-started" as const),
+      ]);
+      assert.equal(recoveryAfterLobby, "not-started");
+    } finally {
+      blockedPersistence.releaseList();
+      await lobbyRequest?.catch(() => undefined);
+      await server.close();
+    }
+  });
+
+  test("opens lobby websockets without waiting for active match recovery", async () => {
+    const blockedPersistence = createBlockedActiveMatchPersistence();
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      matchPersistence: blockedPersistence.persistence,
+    });
+    await server.listen(0, "127.0.0.1");
+    let socket: WebSocket | undefined;
+    try {
+      const createdResponse = await fetch(`${server.url()}/api/lobbies`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      assert.equal(createdResponse.status, 201);
+      const createdBody = (await createdResponse.json()) as {
+        lobbyId?: unknown;
+      };
+      const lobbyId = createdBody.lobbyId;
+      assert.equal(typeof lobbyId, "string");
+      const joinedResponse = await fetch(
+        `${server.url()}/api/lobbies/${String(lobbyId)}/join`,
+        {
+          method: "POST",
+          headers: { "x-optcg-session-token": "user:user-1:session-1" },
+        },
+      );
+      assert.equal(joinedResponse.status, 200);
+
+      const socketUrl = new URL(
+        `/api/lobbies/${String(lobbyId)}/ws`,
+        server.url().replace(/^http/u, "ws"),
+      );
+      socketUrl.searchParams.set("playerId", "p1");
+      socketUrl.searchParams.set("sessionToken", "user:user-1:session-1");
+      socket = new WebSocket(socketUrl);
+
+      const opened = await Promise.race([
+        new Promise<"opened" | "failed">((resolve) => {
+          socket?.addEventListener(
+            "open",
+            () => {
+              resolve("opened");
+            },
+            {
+              once: true,
+            },
+          );
+          socket?.addEventListener(
+            "error",
+            () => {
+              resolve("failed");
+            },
+            {
+              once: true,
+            },
+          );
+        }),
+        delay(25).then(() => "pending" as const),
+      ]);
+
+      assert.equal(opened, "opened");
+      const recoveryAfterSocket = await Promise.race([
+        blockedPersistence.listStarted.then(() => "started" as const),
+        delay(25).then(() => "not-started" as const),
+      ]);
+      assert.equal(recoveryAfterSocket, "not-started");
+    } finally {
+      blockedPersistence.releaseList();
+      socket?.close();
+      await server.close();
     }
   });
 

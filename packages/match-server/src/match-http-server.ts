@@ -12,10 +12,7 @@ import {
 } from "./custom-lobby-registry.js";
 import type { AuthContext, AuthProvider } from "./dev-auth.js";
 import { createDevAuthProvider, parseDevSessionToken } from "./dev-auth.js";
-import {
-  createPoneglyphSimHandoffVerifier,
-  type SimHandoffVerifier,
-} from "./sim-handoff.js";
+import { createPoneglyphSimHandoffVerifier } from "./sim-handoff.js";
 import { isDevSocketEnvelope } from "./dev-socket-envelope.js";
 import { clientActionEnvelopeFromSocketPayload } from "./dev-socket-action-envelope.js";
 import {
@@ -49,12 +46,7 @@ import {
 import { createSocketActionTiming } from "./action-timing-log.js";
 import { sendJson, sendMatchNotFound } from "./http-response.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
-import {
-  handleCreateLobbyRequest,
-  handleGetLobbyRequest,
-} from "./lobby-basic-route.js";
-import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-route.js";
-import { handleLobbyJoinCodeRequest } from "./lobby-join-code-route.js";
+import { handleLobbySetupHttpRequest } from "./lobby-setup-route.js";
 import { handleRematchRequest } from "./match-rematch-route.js";
 import { handleResetRequest } from "./match-reset-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
@@ -80,7 +72,6 @@ import {
   type CreateMatchHttpServerOptions,
 } from "./match-http-server-options.js";
 import { broadcastServerShutdown } from "./server-shutdown-notice.js";
-import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
 import { handleRecoveryIndependentHttpRequest } from "./recovery-independent-http-route.js";
@@ -107,10 +98,7 @@ const handleApiRequest = async (
   matchConnections: Set<DevSocketConnection>,
   lobbyConnections: Set<DevLobbySocketConnection>,
   authProvider: AuthProvider,
-  simHandoffVerifier: SimHandoffVerifier,
-  replayRepository: CompletedMatchReplayRepository | undefined,
   allowTemplateMatches: boolean,
-  allowRawDeckHashSubmissions: boolean,
 ): Promise<void> => {
   const url = request.url ?? "/";
   const pathname = new URL(url, "http://localhost").pathname;
@@ -122,184 +110,6 @@ const handleApiRequest = async (
       registry.createMatch,
       allowTemplateMatches,
     );
-    return;
-  }
-  if (
-    await handleCreateLobbyRequest({
-      request,
-      response,
-      lobbyRegistry,
-    })
-  ) {
-    return;
-  }
-  if (
-    await handleLobbyJoinCodeRequest({
-      request,
-      response,
-      pathname,
-      lobbyRegistry,
-      authProvider,
-      onJoined: (lobby) => {
-        broadcastLobbyState(lobby, lobbyConnections);
-      },
-    })
-  ) {
-    return;
-  }
-  if (
-    await handleGetLobbyRequest({
-      request,
-      response,
-      pathname,
-      lobbyRegistry,
-    })
-  ) {
-    return;
-  }
-  const lobbyJoinRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/join$/u.exec(
-    pathname,
-  );
-  if (request.method === "POST" && lobbyJoinRoute !== null) {
-    const lobbyId = decodeURIComponent(
-      lobbyJoinRoute.groups?.["lobbyId"] ?? "",
-    );
-    const result = await lobbyRegistry.joinLobby(
-      lobbyId,
-      authProvider.authenticate(request),
-    );
-    if (result === "lobbyNotFound") {
-      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
-      return;
-    }
-    if (result === "unauthenticated") {
-      sendJson(response, 401, { errors: ["Account session is required."] });
-      return;
-    }
-    if (result === "full") {
-      sendJson(response, 409, { errors: ["Lobby is full."] });
-      return;
-    }
-    broadcastLobbyState(result, lobbyConnections);
-    sendJson(response, 200, result);
-    return;
-  }
-  const lobbyDeckRoute = /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/deck$/u.exec(
-    pathname,
-  );
-  if (request.method === "POST" && lobbyDeckRoute !== null) {
-    if (!allowRawDeckHashSubmissions) {
-      sendJson(response, 403, {
-        errors: ["Raw deck hash submissions are only available locally."],
-      });
-      return;
-    }
-    const lobbyId = decodeURIComponent(
-      lobbyDeckRoute.groups?.["lobbyId"] ?? "",
-    );
-    const body = await readRequestJson(request);
-    const deckHash = isRecord(body) ? body["deckHash"] : undefined;
-    const donDeckCount = isRecord(body) ? body["donDeckCount"] : undefined;
-    if (typeof deckHash !== "string" || deckHash.trim().length === 0) {
-      sendJson(response, 400, { errors: ["Deck hash is required."] });
-      return;
-    }
-    if (
-      typeof donDeckCount !== "number" ||
-      !Number.isInteger(donDeckCount) ||
-      donDeckCount < 1 ||
-      donDeckCount > 10
-    ) {
-      sendJson(response, 400, {
-        errors: ["DON deck count must be an integer from 1 to 10."],
-      });
-      return;
-    }
-    const result = await lobbyRegistry.submitDeck(
-      lobbyId,
-      authProvider.authenticate(request),
-      deckHash.trim(),
-      donDeckCount,
-    );
-    if (result === "lobbyNotFound") {
-      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
-      return;
-    }
-    if (result === "unauthenticated") {
-      sendJson(response, 401, { errors: ["Account session is required."] });
-      return;
-    }
-    if (result === "seatNotFound") {
-      sendJson(response, 403, {
-        errors: ["Session token is not authorized for this lobby."],
-      });
-      return;
-    }
-    if (result === "invalidDeck") {
-      sendJson(response, 400, { errors: ["Deck hash is invalid."] });
-      return;
-    }
-    broadcastLobbyState(result, lobbyConnections);
-    sendJson(response, 200, result);
-    return;
-  }
-  if (
-    await handleLobbyLoadoutValidationRequest({
-      request,
-      response,
-      pathname,
-      lobbyRegistry,
-      simHandoffVerifier,
-    })
-  ) {
-    return;
-  }
-  const lobbyLoadoutRoute =
-    /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/loadout$/u.exec(pathname);
-  if (request.method === "POST" && lobbyLoadoutRoute !== null) {
-    const lobbyId = decodeURIComponent(
-      lobbyLoadoutRoute.groups?.["lobbyId"] ?? "",
-    );
-    const body = await readRequestJson(request);
-    const handoffToken = isRecord(body) ? body["handoffToken"] : undefined;
-    if (typeof handoffToken !== "string" || handoffToken.trim().length === 0) {
-      sendJson(response, 400, { errors: ["Sim handoff token is required."] });
-      return;
-    }
-    let handoff;
-    try {
-      handoff = await simHandoffVerifier.verify(handoffToken.trim());
-    } catch (error: unknown) {
-      sendJson(response, 401, {
-        errors: [
-          error instanceof Error
-            ? error.message
-            : "Sim handoff verification failed.",
-        ],
-      });
-      return;
-    }
-    const result = await lobbyRegistry.submitVerifiedLoadout(lobbyId, handoff);
-    if (result === "lobbyNotFound") {
-      sendJson(response, 404, { errors: [`Lobby ${lobbyId} not found.`] });
-      return;
-    }
-    if (result === "seatNotFound") {
-      sendJson(response, 403, {
-        errors: ["Sim handoff token is not authorized for this lobby seat."],
-      });
-      return;
-    }
-    if (result === "full") {
-      sendJson(response, 409, { errors: ["Lobby is full."] });
-      return;
-    }
-    if (result === "invalidDeck") {
-      sendJson(response, 400, { errors: ["Resolved loadout is invalid."] });
-      return;
-    }
-    broadcastLobbyState(result, lobbyConnections);
-    sendJson(response, 200, result);
     return;
   }
   const seatClaimRoute =
@@ -877,23 +687,33 @@ export const createMatchHttpServer = async (
     }).then((handled) =>
       handled
         ? undefined
-        : registry
-            .ready()
-            .then(() =>
-              handleApiRequest(
-                request,
-                response,
-                registry,
-                lobbyRegistry,
-                socketConnections,
-                lobbySocketConnections,
-                authProvider,
-                simHandoffVerifier,
-                replayRepository,
-                allowTemplateMatches,
-                allowRawDeckHashSubmissions,
-              ),
-            ),
+        : handleLobbySetupHttpRequest({
+            request,
+            response,
+            pathname,
+            lobbyRegistry,
+            lobbyConnections: lobbySocketConnections,
+            authProvider,
+            simHandoffVerifier,
+            allowRawDeckHashSubmissions,
+          }).then((lobbyHandled) =>
+            lobbyHandled
+              ? undefined
+              : registry
+                  .ready()
+                  .then(() =>
+                    handleApiRequest(
+                      request,
+                      response,
+                      registry,
+                      lobbyRegistry,
+                      socketConnections,
+                      lobbySocketConnections,
+                      authProvider,
+                      allowTemplateMatches,
+                    ),
+                  ),
+          ),
     );
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
@@ -902,10 +722,11 @@ export const createMatchHttpServer = async (
     });
   });
   server.on("upgrade", (request, socket) => {
-    registry
-      .ready()
-      .then(() =>
-        handleWebSocketUpgrade(
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    const isLobbySocket =
+      /^\/api\/lobbies\/(?<lobbyId>[^/]+)\/ws$/u.exec(pathname) !== null;
+    const operation = isLobbySocket
+      ? handleWebSocketUpgrade(
           request,
           socket,
           registry,
@@ -918,11 +739,28 @@ export const createMatchHttpServer = async (
           onMatchTimerError,
           trackSocketOperation,
           () => shuttingDown,
-        ),
-      )
-      .catch(() => {
-        socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
-      });
+        )
+      : registry
+          .ready()
+          .then(() =>
+            handleWebSocketUpgrade(
+              request,
+              socket,
+              registry,
+              lobbyRegistry,
+              authProvider,
+              socketConnections,
+              lobbySocketConnections,
+              socketIdleTimeoutMs,
+              rematchLobbyDisconnectGraceMs,
+              onMatchTimerError,
+              trackSocketOperation,
+              () => shuttingDown,
+            ),
+          );
+    operation.catch(() => {
+      socket.end("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+    });
   });
 
   return {
