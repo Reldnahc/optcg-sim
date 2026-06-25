@@ -6,11 +6,17 @@ import { describe, test } from "vitest";
 import type { MatchId } from "@optcg/types";
 
 import { createMatchHttpServer } from "./match-http-server.js";
+import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type {
   CompletedMatchReplayDetail,
   CompletedMatchReplayRepository,
   CompletedMatchReplaySummary,
 } from "./postgres-completed-match.js";
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 const replaySummary = (): CompletedMatchReplaySummary => ({
   matchId: "match-1",
@@ -157,6 +163,46 @@ describe("match HTTP server replay routes", () => {
       assert.deepEqual(await response.json(), { replays: [replaySummary()] });
       assert.deepEqual(repository.listCalls, [25]);
     } finally {
+      await server.close();
+    }
+  });
+
+  test("lists replays without waiting for active match recovery", async () => {
+    const repository = createFakeReplayRepository();
+    const basePersistence = createInMemoryMatchPersistence();
+    let listStartedResolve: () => void = () => undefined;
+    let releaseListResolve: () => void = () => undefined;
+    const listStarted = new Promise<void>((resolve) => {
+      listStartedResolve = resolve;
+    });
+    const releaseList = new Promise<void>((resolve) => {
+      releaseListResolve = resolve;
+    });
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+      matchPersistence: {
+        ...basePersistence,
+        async listActiveMatchIds() {
+          listStartedResolve();
+          await releaseList;
+          return [];
+        },
+      },
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/replays`);
+      const recoveryStarted = await Promise.race([
+        listStarted.then(() => true),
+        delay(25).then(() => false),
+      ]);
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { replays: [replaySummary()] });
+      assert.equal(recoveryStarted, false);
+    } finally {
+      releaseListResolve();
       await server.close();
     }
   });

@@ -47,8 +47,7 @@ import {
   handleBrowserCorsPreflight,
 } from "./browser-cors.js";
 import { createSocketActionTiming } from "./action-timing-log.js";
-import { sendJson, sendMatchNotFound, sendText } from "./http-response.js";
-import { serveStaticAssetsOrNotFound } from "./static-assets.js";
+import { sendJson, sendMatchNotFound } from "./http-response.js";
 import { handleCreateMatchRequest } from "./match-create-route.js";
 import {
   handleCreateLobbyRequest,
@@ -58,7 +57,6 @@ import { handleLobbyLoadoutValidationRequest } from "./lobby-loadout-validation-
 import { handleLobbyJoinCodeRequest } from "./lobby-join-code-route.js";
 import { handleRematchRequest } from "./match-rematch-route.js";
 import { handleResetRequest } from "./match-reset-route.js";
-import { handleReplayRequest } from "./replay-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
 import { playerStatePayload } from "./match-state-payload.js";
 import {
@@ -85,6 +83,7 @@ import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
+import { handleRecoveryIndependentHttpRequest } from "./recovery-independent-http-route.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -117,16 +116,6 @@ const handleApiRequest = async (
   const pathname = new URL(url, "http://localhost").pathname;
   const matchRoute =
     /^\/api\/matches\/(?<matchId>[^/]+)\/(?<resource>[^/]+)$/u.exec(pathname);
-  if (
-    await handleReplayRequest({
-      request,
-      response,
-      pathname,
-      replayRepository,
-    })
-  ) {
-    return;
-  }
   if (request.method === "POST" && pathname === "/api/matches") {
     await handleCreateMatchRequest(
       response,
@@ -483,11 +472,6 @@ const handleApiRequest = async (
     return;
   }
   sendJson(response, 404, { errors: ["API route not found."] });
-};
-
-const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
-  sendText(response, 404, "text/plain; charset=utf-8", "Not found");
-  return Promise.resolve();
 };
 
 const playerSetupPayload = (
@@ -883,36 +867,34 @@ export const createMatchHttpServer = async (
     ) {
       return;
     }
-    const url = request.url ?? "/";
-    const pathname = new URL(url, "http://localhost").pathname;
-    if (request.method === "GET" && pathname === "/health") {
-      sendJson(response, 200, { data: { ok: true } });
-      return;
-    }
-    const operation = registry
-      .ready()
-      .then(() =>
-        url.startsWith("/api/")
-          ? handleApiRequest(
-              request,
-              response,
-              registry,
-              lobbyRegistry,
-              socketConnections,
-              lobbySocketConnections,
-              authProvider,
-              simHandoffVerifier,
-              replayRepository,
-              allowTemplateMatches,
-              allowRawDeckHashSubmissions,
-            )
-          : serveStaticAssetsOrNotFound(
-              request,
-              response,
-              staticAssetsDirectory,
-              () => handleNotFoundRequest(response),
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    const operation = handleRecoveryIndependentHttpRequest({
+      request,
+      response,
+      pathname,
+      replayRepository,
+      staticAssetsDirectory,
+    }).then((handled) =>
+      handled
+        ? undefined
+        : registry
+            .ready()
+            .then(() =>
+              handleApiRequest(
+                request,
+                response,
+                registry,
+                lobbyRegistry,
+                socketConnections,
+                lobbySocketConnections,
+                authProvider,
+                simHandoffVerifier,
+                replayRepository,
+                allowTemplateMatches,
+                allowRawDeckHashSubmissions,
+              ),
             ),
-      );
+    );
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
         errors: [error instanceof Error ? error.message : String(error)],

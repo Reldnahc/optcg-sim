@@ -31,7 +31,7 @@ describe("match HTTP server health", () => {
     }
   });
 
-  test("serves health while active match recovery is still loading", async () => {
+  test("serves health while an API request waits for active match recovery", async () => {
     const basePersistence = createInMemoryMatchPersistence();
     let listStartedResolve: () => void = () => undefined;
     let releaseListResolve: () => void = () => undefined;
@@ -54,8 +54,8 @@ describe("match HTTP server health", () => {
     });
     let server: MatchHttpServer | undefined;
     let listening = false;
+    let apiRequest: Promise<Response> | undefined;
     try {
-      await listStarted;
       const earlyResult = await Promise.race([
         serverPromise.then((createdServer) => {
           server = createdServer;
@@ -70,12 +70,25 @@ describe("match HTTP server health", () => {
 
       await server.listen(0, "127.0.0.1");
       listening = true;
+      const recoveryBeforeApi = await Promise.race([
+        listStarted.then(() => "started" as const),
+        delay(25).then(() => "not-started" as const),
+      ]);
+      assert.equal(recoveryBeforeApi, "not-started");
+
+      apiRequest = fetch(`${server.url()}/api/matches`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      await listStarted;
       const response = await fetch(`${server.url()}/health`);
 
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), { data: { ok: true } });
     } finally {
       releaseListResolve();
+      await apiRequest;
       server ??= await serverPromise;
       if (listening) {
         await server.close();

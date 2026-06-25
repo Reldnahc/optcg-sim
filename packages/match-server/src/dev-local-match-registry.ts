@@ -414,11 +414,13 @@ export const createLocalDevMatchRegistry = async (
       await saveSessionCheckpoint(defaultSetup.matchId);
     }
   };
-  const readyPromise = initializeSessions();
-  if (options.deferRecovery === true) {
-    void readyPromise.catch(() => undefined);
-  } else {
-    await readyPromise;
+  let readyPromise: Promise<void> | undefined;
+  const ready = (): Promise<void> => {
+    readyPromise ??= initializeSessions();
+    return readyPromise;
+  };
+  if (options.deferRecovery !== true) {
+    await ready();
   }
 
   const buildCreatedResponse = (
@@ -582,7 +584,7 @@ export const createLocalDevMatchRegistry = async (
 
   return {
     defaultMatchId,
-    ready: () => readyPromise,
+    ready,
     async createMatch(setup, options) {
       const actualSetup =
         setup ??
