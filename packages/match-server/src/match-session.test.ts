@@ -245,10 +245,10 @@ describe("match session runtime", () => {
       actionIndex: 0,
       label: "submitAction",
       perspectivePlayerId: "p1",
-      snapshot: {
-        players: expect.any(Object),
-      },
     });
+    expect(
+      deterministicRecord?.replayDisplayFrame?.snapshot.players,
+    ).toBeDefined();
     expect(JSON.stringify(deterministicRecord?.audit.result)).not.toContain(
       "snapshot",
     );

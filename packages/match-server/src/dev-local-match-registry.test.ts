@@ -663,8 +663,9 @@ test("completed match persistence stores an initial display artifact without act
     undefined,
     {
       completedMatchRepository: {
-        async saveCompletedMatch(record) {
+        saveCompletedMatch(record) {
           savedRecords.push(record);
+          return Promise.resolve();
         },
       },
       createDefaultMatch: false,
@@ -696,12 +697,13 @@ test("completed match persistence stores an initial display artifact without act
   await waitForCompletedPersistence();
 
   assert.equal(savedRecords.length, 1);
-  assert.deepEqual(savedRecords[0]?.replay.deterministicEntries, []);
-  assert.deepEqual(
-    savedRecords[0]?.replay.replayDisplayArtifact?.["replayDisplayVersion"],
-    "display-v1",
-  );
-  expect(savedRecords[0]?.replay.replayDisplayArtifact?.["frames"]).toEqual([
+  const savedRecord = savedRecords[0];
+  assert.ok(savedRecord !== undefined);
+  assert.deepEqual(savedRecord.replay.deterministicEntries, []);
+  const replayDisplayArtifact = savedRecord.replay.replayDisplayArtifact;
+  assert.ok(replayDisplayArtifact !== null);
+  assert.deepEqual(replayDisplayArtifact["replayDisplayVersion"], "display-v1");
+  expect(replayDisplayArtifact["frames"]).toEqual([
     expect.objectContaining({
       actionIndex: null,
       label: "Initial state",
@@ -716,8 +718,9 @@ test("production snapshot-compacted completed persistence stores action display 
     undefined,
     {
       completedMatchRepository: {
-        async saveCompletedMatch(record) {
+        saveCompletedMatch(record) {
           savedRecords.push(record);
+          return Promise.resolve();
         },
       },
       createDefaultMatch: false,
@@ -762,7 +765,10 @@ test("production snapshot-compacted completed persistence stores action display 
     assert.equal(accepted.accepted, true);
     assert.equal(accepted.snapshot, undefined);
   }
-  expect(savedRecords[0]?.replay.replayDisplayArtifact).toMatchObject({
+  assert.equal(savedRecords.length, 1);
+  const savedRecord = savedRecords[0];
+  assert.ok(savedRecord !== undefined);
+  expect(savedRecord.replay.replayDisplayArtifact).toMatchObject({
     replayDisplayVersion: "display-v1",
     frames: [
       { actionIndex: null, label: "Initial state" },

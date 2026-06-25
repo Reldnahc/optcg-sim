@@ -464,15 +464,15 @@ describe("match HTTP server replay routes", () => {
       createDefaultMatch: false,
       replayRepository: repository,
       legacyReplayFrameCache: {
-        async getFrameChunk(replay) {
+        getFrameChunk(replay) {
           legacyFrameCacheCalls.push(replay.matchId as MatchId);
-          return {
+          return Promise.resolve({
             status: "ready",
             frameCount: 0,
             start: 0,
             limit: 1,
             frames: [],
-          };
+          });
         },
       },
     });
@@ -500,9 +500,9 @@ describe("match HTTP server replay routes", () => {
       createDefaultMatch: false,
       replayRepository: repository,
       legacyReplayFrameCache: {
-        async getFrameChunk(replay, window) {
+        getFrameChunk(replay, window) {
           legacyFrameCacheCalls.push(replay.matchId as MatchId);
-          return {
+          return Promise.resolve({
             status: "ready",
             frameCount: 1,
             start: window.start,
@@ -515,7 +515,7 @@ describe("match HTTP server replay routes", () => {
                 snapshot: {},
               },
             ],
-          };
+          });
         },
       },
     });

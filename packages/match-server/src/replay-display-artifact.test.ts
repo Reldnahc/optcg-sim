@@ -79,7 +79,7 @@ const snapshot = (eventSeqs: readonly number[]): DevMatchSnapshot =>
           timers: { players: {} },
           legalActions: [{ type: "endTurn" }],
           revealedCards: [],
-          events: eventSeqs.map((seq) => ({ id: `event-${seq}`, seq })),
+          events: eventSeqs.map((seq) => ({ id: `event-${String(seq)}`, seq })),
         },
         actions: [{ index: 0, type: "endTurn", label: "End turn" }],
       },

@@ -506,7 +506,7 @@ describe("local completed match record mapping", () => {
 
     expect(record?.replay.replayDisplayArtifact).toMatchObject({
       replayDisplayVersion: "display-v1",
-      perspectivePlayerId: expect.any(String),
+      perspectivePlayerId: setup.playerOrder[0],
       frameCount: 1,
       frames: [{ label: "submitAction" }],
     });

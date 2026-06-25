@@ -90,17 +90,13 @@ const sanitizeDisplayView = ({
   readonly status: DevMatchSnapshot["status"];
   readonly previousMaxSeq: number;
 }): PlayerView => {
-  const {
-    deck: _selfDeck,
-    donDeck: _selfDonDeck,
-    ...selfWithoutPrivateDecks
-  } = view.self;
-  const {
-    deck: _opponentDeck,
-    donDeck: _opponentDonDeck,
-    hand: _opponentHand,
-    ...opponentWithoutPrivateZones
-  } = view.opponent;
+  const selfWithoutPrivateDecks = { ...view.self };
+  delete selfWithoutPrivateDecks.deck;
+  delete selfWithoutPrivateDecks.donDeck;
+  const opponentWithoutPrivateZones = { ...view.opponent };
+  delete opponentWithoutPrivateZones.deck;
+  delete opponentWithoutPrivateZones.donDeck;
+  delete opponentWithoutPrivateZones.hand;
   return {
     ...view,
     self: {
