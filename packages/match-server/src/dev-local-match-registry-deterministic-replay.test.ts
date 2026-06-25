@@ -12,7 +12,7 @@ import {
   type CreatedDevMatchResponse,
 } from "./dev-local-match-registry.js";
 import type { DevVisibleAction } from "./dev-snapshot-types.js";
-import type { DevMatchSetup } from "./local-match.js";
+import { getLocalDevSnapshot, type DevMatchSetup } from "./local-match.js";
 import { createInMemoryMatchPersistence } from "./match-persistence.js";
 import type {
   CompletedMatchRecord,
@@ -33,8 +33,12 @@ beforeAll(async () => {
 });
 
 const waitForBotMicrotasks = async (): Promise<void> => {
-  await Promise.resolve();
-  await Promise.resolve();
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    await Promise.resolve();
+  }
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 0);
+  });
 };
 
 const deferredVoid = (): {
@@ -111,6 +115,17 @@ const submitFirstVisibleAction = async (
     throw new Error("Expected accepted action snapshot.");
   }
   return result.snapshot;
+};
+
+const snapshotFromRegistry = (
+  registry: Awaited<ReturnType<typeof createLocalDevMatchRegistry>>,
+  matchId: MatchId,
+): CreatedSnapshot => {
+  const match = registry.getMatch(matchId);
+  if (match === undefined) {
+    throw new Error("Expected live match snapshot.");
+  }
+  return getLocalDevSnapshot(match);
 };
 
 test("active recovery ignores drifted audit envelope action indexes", async () => {
@@ -220,7 +235,7 @@ test("rollback restore recovery uses deterministic entries and checkpoints", asy
   if (created.snapshot === undefined) {
     throw new Error("Expected an active match snapshot.");
   }
-  let snapshot = created.snapshot;
+  let snapshot = snapshotFromRegistry(registry, matchId);
   for (let attempt = 0; attempt < 12; attempt += 1) {
     const endTurn = Object.values(snapshot.players).some((player) =>
       player.actions.some((action) => action.label === "End turn"),
@@ -476,5 +491,190 @@ test("completed match replays reconstruct from compact deterministic entries", a
   assert.ok(
     compactBytes < fullSnapshotBytes * 0.25,
     `expected compact replay ${String(compactBytes)} bytes to stay below 25% of full snapshot replay ${String(fullSnapshotBytes)} bytes`,
+  );
+});
+
+test("completed bot matches reconstruct from compact deterministic entries", async () => {
+  const saveStarted = deferredVoid();
+  const saveFinished = deferredVoid();
+  let savedRecord: CompletedMatchRecord | undefined;
+  const completedMatchRepository: CompletedMatchRepository = {
+    async saveCompletedMatch(record) {
+      savedRecord = record;
+      saveStarted.resolve();
+      await saveFinished.promise;
+    },
+  };
+  let botChoicesRemaining = 20;
+  const botPlayerId = premadeSetup.playerOrder[1];
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    {
+      botActionDelayMs: 0,
+      botStrategy: {
+        chooseAction({ snapshot, botPlayerId: activeBotPlayerId }) {
+          if (botChoicesRemaining <= 0) {
+            return undefined;
+          }
+          const botView = snapshot.players[activeBotPlayerId];
+          const endTurn = botView?.actions.find(
+            (action) => action.label === "End turn",
+          );
+          const action = endTurn ?? botView?.actions[0];
+          if (action === undefined) {
+            return undefined;
+          }
+          botChoicesRemaining -= 1;
+          return { type: "submitAction", actionIndex: action.index };
+        },
+      },
+      completedMatchRepository,
+      createDefaultMatch: false,
+    },
+  );
+  const matchId = "deterministic-completed-bot-replay" as MatchId;
+  const created = await registry.createMatch(
+    {
+      ...structuredClone(premadeSetup),
+      matchId,
+    },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+      botPlayerIds: [botPlayerId],
+    },
+  );
+  if (created.snapshot === undefined) {
+    throw new Error("Expected active bot match snapshot.");
+  }
+  await waitForBotMicrotasks();
+
+  let snapshot = snapshotFromRegistry(registry, matchId);
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const liveMatch = registry.getMatch(matchId);
+    if (liveMatch?.state.status.type === "completed") {
+      break;
+    }
+    const humanAction = Object.entries(snapshot.players)
+      .flatMap(([playerId, player]) =>
+        playerId === String(botPlayerId)
+          ? []
+          : player.actions.map((action) => ({
+              playerId: playerId as PlayerId,
+              action,
+            })),
+      )
+      .find((candidate) => candidate.action.type === "concede");
+    if (humanAction === undefined) {
+      const setupAction = Object.entries(snapshot.players)
+        .flatMap(([playerId, player]) =>
+          playerId === String(botPlayerId)
+            ? []
+            : player.actions.map((action) => ({
+                playerId: playerId as PlayerId,
+                action,
+              })),
+        )
+        .find((candidate) => candidate.action.type !== "concede");
+      if (setupAction === undefined) {
+        throw new Error("Expected a human setup action.");
+      }
+      const request: SessionActionRequest = {
+        type: "submitAction",
+        playerId: setupAction.playerId,
+        actionIndex: setupAction.action.index,
+        expectedStateSeq: snapshot.stateSeq,
+      };
+      const result = await registry.applyEnvelope(
+        envelopeForRequest(
+          matchId,
+          request,
+          snapshot.stateSeq,
+          `completed-bot-replay-setup-${String(attempt)}`,
+        ),
+      );
+      if (result === "matchNotFound" || !result.accepted) {
+        throw new Error("Expected human setup action to be accepted.");
+      }
+      await waitForBotMicrotasks();
+      snapshot = snapshotFromRegistry(registry, matchId);
+      continue;
+    }
+    const request: SessionActionRequest = {
+      type: "submitAction",
+      playerId: humanAction.playerId,
+      actionIndex: humanAction.action.index,
+      expectedStateSeq: snapshot.stateSeq,
+    };
+    const actionPromise = registry.applyEnvelope(
+      envelopeForRequest(
+        matchId,
+        request,
+        snapshot.stateSeq,
+        "completed-bot-replay",
+      ),
+    );
+    await saveStarted.promise;
+    await waitForBotMicrotasks();
+    saveFinished.resolve();
+    const result = await actionPromise;
+    assert.notEqual(result, "matchNotFound");
+    assert.equal(typeof result, "object");
+    if (typeof result === "object") {
+      assert.equal(result.accepted, true);
+    }
+    break;
+  }
+
+  assert.ok(savedRecord !== undefined);
+  assert.equal(
+    savedRecord.replay.deterministicEntries.some(
+      (entry) =>
+        typeof entry === "object" &&
+        entry !== null &&
+        "playerId" in entry &&
+        entry.playerId === botPlayerId,
+    ),
+    true,
+  );
+  const frameReconstruction = reconstructReplayFrames({
+    matchId: savedRecord.matchId,
+    status: savedRecord.status,
+    gameType: savedRecord.gameType,
+    formatId: savedRecord.formatId,
+    lobbyId: savedRecord.lobbyId,
+    winnerUserId: savedRecord.winnerUserId,
+    winnerSeatId: savedRecord.winnerSeatId,
+    startedAt: savedRecord.startedAt,
+    endedAt: savedRecord.endedAt,
+    turnCount: savedRecord.turnCount,
+    actionCount: savedRecord.actionCount,
+    players: savedRecord.players.map((player) => ({
+      seatId: player.seatId,
+      userId: player.userId,
+      displayName: player.displayName,
+      leaderCardNumber: player.leaderCardNumber,
+      result: player.result,
+      isWinner: player.isWinner,
+    })),
+    replay: {
+      ...(JSON.parse(JSON.stringify(savedRecord.replay)) as Record<
+        string,
+        unknown
+      >),
+      manifestSnapshot: savedRecord.cardManifestSnapshot,
+    },
+  });
+  if (frameReconstruction.status !== "ready") {
+    throw new Error(frameReconstruction.reason);
+  }
+  assert.equal(
+    frameReconstruction.frames.length,
+    savedRecord.replay.deterministicEntries.length + 1,
   );
 });

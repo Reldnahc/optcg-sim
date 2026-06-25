@@ -11,6 +11,7 @@ import {
   createLocalDevMatch,
   createPremadeDevMatchSetup,
 } from "./local-match.js";
+import { createLocalReplayFixtureRepository } from "./local-replay-fixture-repository.js";
 import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
 const detail = (replay: JsonObject): CompletedMatchReplayDetail => ({
@@ -253,5 +254,26 @@ describe("reconstructReplayFrames", () => {
     expect(result.frames.at(-1)?.snapshot).toMatchObject({
       stateHash: hashReplayStateForScope(finalState, "gameplay-v1"),
     });
+  });
+
+  test("dev-local-v2 reconstructs exported dev replay fixture", async () => {
+    const repository = createLocalReplayFixtureRepository(
+      "fixtures/replays/hash-drift-dev-replay.json",
+    );
+    const replay = await repository.getReplay(
+      "b9e6951f-9767-4c55-8a66-3c022b6d4e84" as MatchId,
+    );
+    expect(replay).not.toBeUndefined();
+    if (replay === undefined) {
+      return;
+    }
+
+    const result = reconstructReplayFrames(replay);
+
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
+      return;
+    }
+    expect(result.frames).toHaveLength(replay.actionCount + 2);
   });
 });

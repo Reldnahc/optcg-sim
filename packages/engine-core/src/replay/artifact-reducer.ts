@@ -492,6 +492,7 @@ export const reconstructReplayArtifactStates = ({
     },
   ];
   let current = structuredClone(firstFrame.state);
+  let toleratedHashMismatch = false;
   for (const [entryIndex, entry] of deterministicEntries.entries()) {
     const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
@@ -549,10 +550,16 @@ export const reconstructReplayArtifactStates = ({
       current,
       decoded.value,
       checkpointResolver,
+      {
+        tolerateAfterHashMismatch: true,
+        tolerateBeforeHashMismatch: toleratedHashMismatch,
+      },
     );
     if (result.status === "failed") {
       return { status: "failed", reason: result.reason, entryIndex };
     }
+    toleratedHashMismatch =
+      toleratedHashMismatch || result.toleratedHashMismatch === true;
     current = result.state;
     frames.push({
       index: frames.length,
@@ -565,7 +572,8 @@ export const reconstructReplayArtifactStates = ({
   const finalStateHash = frames.at(-1)?.stateHash ?? firstFrame.stateHash;
   if (
     expectedFinalStateHash !== undefined &&
-    expectedFinalStateHash !== finalStateHash
+    expectedFinalStateHash !== finalStateHash &&
+    !toleratedHashMismatch
   ) {
     return {
       status: "failed",

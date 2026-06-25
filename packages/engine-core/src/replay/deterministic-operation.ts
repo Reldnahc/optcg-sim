@@ -6,6 +6,7 @@ import type {
 } from "@optcg/types";
 
 import { applyAction } from "../actions.js";
+import type { ApplyActionOptions } from "../actions.js";
 import type { PreMulliganSetupGameState } from "../setup/initial-state.js";
 import {
   respondToMulliganDecision,
@@ -16,6 +17,7 @@ import {
   advanceDonPhase,
   advanceDrawPhase,
   advanceRefreshPhase,
+  type PhaseAdvanceOptions,
   enterMainPhase,
 } from "../turn/phases.js";
 
@@ -39,6 +41,11 @@ const hasErrors = (
 ): result is EngineResult & {
   readonly errors: NonNullable<EngineResult["errors"]>;
 } => result.errors !== undefined && result.errors.length > 0;
+
+const deterministicReplayEngineOptions = {
+  includeStateHash: false,
+  validateInvariants: false,
+} as const satisfies ApplyActionOptions & PhaseAdvanceOptions;
 
 const combinedEngineResult = (
   result: EngineResult,
@@ -65,7 +72,10 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       );
     }
     if (current.turn.phase === "refresh") {
-      const result = advanceRefreshPhase(current);
+      const result = advanceRefreshPhase(
+        current,
+        deterministicReplayEngineOptions,
+      );
       events.push(...result.events);
       if (hasErrors(result)) {
         return combinedEngineResult(result, events);
@@ -75,7 +85,10 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       continue;
     }
     if (current.turn.phase === "draw") {
-      const result = advanceDrawPhase(current);
+      const result = advanceDrawPhase(
+        current,
+        deterministicReplayEngineOptions,
+      );
       events.push(...result.events);
       if (hasErrors(result)) {
         return combinedEngineResult(result, events);
@@ -85,7 +98,10 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       continue;
     }
     if (current.turn.phase === "don") {
-      const donResult = advanceDonPhase(current);
+      const donResult = advanceDonPhase(
+        current,
+        deterministicReplayEngineOptions,
+      );
       events.push(...donResult.events);
       if (hasErrors(donResult)) {
         return combinedEngineResult(donResult, events);
@@ -95,7 +111,10 @@ const advanceToMainPhase = (state: GameState): EngineResult => {
       if (current.pendingDecision !== undefined) {
         continue;
       }
-      const mainResult = enterMainPhase(current);
+      const mainResult = enterMainPhase(
+        current,
+        deterministicReplayEngineOptions,
+      );
       events.push(...mainResult.events);
       if (hasErrors(mainResult)) {
         return combinedEngineResult(mainResult, events);
@@ -182,7 +201,9 @@ export const applyDeterministicOperation = (
   if (entry.kind === "action") {
     return {
       status: "applied",
-      result: finalizeDeterministicResult(applyAction(state, entry.action)),
+      result: finalizeDeterministicResult(
+        applyAction(state, entry.action, deterministicReplayEngineOptions),
+      ),
       label: entry.action.type,
     };
   }
@@ -195,7 +216,7 @@ export const applyDeterministicOperation = (
     const result =
       entry.response.type === "mulligan"
         ? respondToMulliganDecision(state, action)
-        : applyAction(state, action);
+        : applyAction(state, action, deterministicReplayEngineOptions);
     return {
       status: "applied",
       result: finalizeDeterministicResult(result),

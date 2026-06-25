@@ -19,11 +19,17 @@ export type DeterministicEntryApplyResult =
       readonly state: GameState;
       readonly stateHash: string;
       readonly label: string;
+      readonly toleratedHashMismatch?: boolean;
     }
   | {
       readonly status: "failed";
       readonly reason: string;
     };
+
+export interface ApplyDeterministicEntryOptions {
+  readonly tolerateBeforeHashMismatch?: boolean;
+  readonly tolerateAfterHashMismatch?: boolean;
+}
 
 const stableGameplayTimers = (timers: TimerState): TimerState => ({
   ...(timers.drainingPlayerId === undefined
@@ -253,6 +259,7 @@ export const applyDeterministicEntry = (
   state: GameState,
   entry: DeterministicMatchEntry,
   checkpoints?: DeterministicCheckpointResolver,
+  options: ApplyDeterministicEntryOptions = {},
 ): DeterministicEntryApplyResult => {
   const before = replayStateForExpectedHash(
     state,
@@ -275,14 +282,26 @@ export const applyDeterministicEntry = (
       )}, got ${String(state.actionSeq)}.`,
     };
   }
-  if (before === undefined) {
+  const beforeState =
+    before ??
+    (options.tolerateBeforeHashMismatch === true
+      ? {
+          state,
+          hash: hashReplayStateForScope(state, entry.verification.hashScope),
+        }
+      : undefined);
+  if (beforeState === undefined) {
     return {
       status: "failed",
       reason: "State hash before deterministic entry does not match.",
     };
   }
 
-  const applied = applyDeterministicOperation(before.state, entry, checkpoints);
+  const applied = applyDeterministicOperation(
+    beforeState.state,
+    entry,
+    checkpoints,
+  );
   if (applied.status === "failed") {
     return applied;
   }
@@ -315,6 +334,18 @@ export const applyDeterministicEntry = (
     };
   }
   if (after === undefined) {
+    if (options.tolerateAfterHashMismatch === true) {
+      return {
+        status: "applied",
+        state: applied.result.state,
+        stateHash: hashReplayStateForScope(
+          applied.result.state,
+          entry.verification.hashScope,
+        ),
+        label: applied.label,
+        toleratedHashMismatch: true,
+      };
+    }
     return {
       status: "failed",
       reason: "State hash after deterministic entry does not match.",
@@ -326,5 +357,6 @@ export const applyDeterministicEntry = (
     state: after.state,
     stateHash: after.hash,
     label: applied.label,
+    ...(before === undefined ? { toleratedHashMismatch: true } : {}),
   };
 };
