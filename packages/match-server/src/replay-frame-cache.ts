@@ -102,6 +102,7 @@ export const publicReplayDetail = (
       "replayFormatVersion",
       "manifestHash",
       "manifestSnapshot",
+      "replayDisplayArtifact",
       "artifactSha256",
       "artifactSizeBytes",
     ].flatMap((key) => {

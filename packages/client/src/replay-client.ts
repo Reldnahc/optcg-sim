@@ -30,6 +30,25 @@ export type ReplayFrameReconstructionPayload =
       readonly actionIndex?: number | undefined;
     };
 
+export interface ReplayDisplayFramePayload {
+  readonly index: number;
+  readonly actionIndex: number | null;
+  readonly label: string;
+  readonly perspectivePlayerId: string;
+  readonly stateSeq: number;
+  readonly actionSeq: number;
+  readonly status: string;
+  readonly activePlayerId: string;
+  readonly snapshot: unknown;
+}
+
+export interface ReplayDisplayArtifactPayload {
+  readonly replayDisplayVersion: "display-v1";
+  readonly perspectivePlayerId: string;
+  readonly frameCount: number;
+  readonly frames: readonly ReplayDisplayFramePayload[];
+}
+
 export interface ReplayPayload {
   readonly replayFormatVersion?: string;
   readonly manifestSnapshot?: unknown;
@@ -38,6 +57,10 @@ export interface ReplayPayload {
   readonly artifactSizeBytes?: number;
   readonly deterministicEntries?: readonly unknown[];
   readonly auditEntries?: readonly unknown[];
+  readonly replayDisplayArtifact?:
+    | ReplayDisplayArtifactPayload
+    | null
+    | undefined;
 }
 
 export interface ReplayDetail {

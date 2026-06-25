@@ -79,6 +79,24 @@ describe("replay client", () => {
                 replay: {
                   replayFormatVersion: "dev-local-v1",
                   manifestSnapshot: { cards: {} },
+                  replayDisplayArtifact: {
+                    replayDisplayVersion: "display-v1",
+                    perspectivePlayerId: "p1",
+                    frameCount: 1,
+                    frames: [
+                      {
+                        index: 0,
+                        actionIndex: null,
+                        label: "Initial state",
+                        perspectivePlayerId: "p1",
+                        stateSeq: 1,
+                        actionSeq: 0,
+                        status: "active",
+                        activePlayerId: "p1",
+                        snapshot: { players: { p1: { actions: [] } } },
+                      },
+                    ],
+                  },
                 },
               },
             }),
@@ -92,6 +110,10 @@ describe("replay client", () => {
     assert.deepEqual(requests, ["https://sim.example/api/replays/match-1"]);
     assert.equal(replay.matchId, "match-1");
     assert.deepEqual(replay.replay.manifestSnapshot, { cards: {} });
+    assert.equal(
+      replay.replay.replayDisplayArtifact?.replayDisplayVersion,
+      "display-v1",
+    );
     assert.equal(replay.frameReconstruction, undefined);
   });
 

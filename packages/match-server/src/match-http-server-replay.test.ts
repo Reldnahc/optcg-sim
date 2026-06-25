@@ -42,6 +42,100 @@ const replaySummary = (): CompletedMatchReplaySummary => ({
   ],
 });
 
+const replayDisplayArtifact = {
+  replayDisplayVersion: "display-v1",
+  perspectivePlayerId: "p1",
+  frameCount: 1,
+  frames: [
+    {
+      index: 0,
+      actionIndex: null,
+      label: "Initial state",
+      perspectivePlayerId: "p1",
+      stateSeq: 1,
+      actionSeq: 0,
+      status: "active",
+      activePlayerId: "p1",
+      snapshot: {
+        stateSeq: 1,
+        actionSeq: 0,
+        stateHash: "hash-1",
+        status: "active",
+        turn: {
+          turnPlayerId: "p1",
+          globalTurn: 1,
+          playerTurnCounts: { p1: 1, p2: 0 },
+          phase: "main",
+        },
+        activePlayerId: "p1",
+        players: {
+          p1: {
+            view: {
+              playerId: "p1",
+              matchId: "match-1",
+              stateSeq: 1,
+              actionSeq: 0,
+              turn: {
+                turnPlayerId: "p1",
+                globalTurn: 1,
+                playerTurnCounts: { p1: 1, p2: 0 },
+                phase: "main",
+              },
+              self: {
+                playerId: "p1",
+                deckCount: 40,
+                donDeckCount: 10,
+                hand: [],
+                trash: [],
+                leader: {
+                  instanceId: "leader-1",
+                  cardId: "L1",
+                  owner: "p1",
+                  controller: "p1",
+                  zone: { playerId: "p1", zone: "leader" },
+                  attachedDonCount: 0,
+                  attachedDonIds: [],
+                },
+                characters: [],
+                costArea: [],
+                life: { count: 5, faceUpCards: [] },
+                hasMulliganed: false,
+                turnCount: 1,
+              },
+              opponent: {
+                playerId: "p2",
+                deckCount: 40,
+                donDeckCount: 10,
+                handCount: 5,
+                trash: [],
+                leader: {
+                  instanceId: "leader-2",
+                  cardId: "L2",
+                  owner: "p2",
+                  controller: "p2",
+                  zone: { playerId: "p2", zone: "leader" },
+                  attachedDonCount: 0,
+                  attachedDonIds: [],
+                },
+                characters: [],
+                costArea: [],
+                life: { count: 5, faceUpCards: [] },
+                hasMulliganed: false,
+                turnCount: 1,
+              },
+              timers: { players: {} },
+              legalActions: [],
+              revealedCards: [],
+              events: [],
+            },
+            actions: [],
+          },
+        },
+      },
+    },
+  ],
+};
+
 const replayDetail = (): CompletedMatchReplayDetail => ({
   ...replaySummary(),
   replay: {
@@ -85,6 +179,7 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
         },
       },
     ],
+    replayDisplayArtifact,
   },
 });
 
@@ -107,6 +202,7 @@ const assertReplayDetailBody = async (response: Response): Promise<void> => {
         },
       },
     },
+    replayDisplayArtifact,
   });
   assert.equal(body.frameReconstruction, undefined);
 };
@@ -191,6 +287,7 @@ const createFakeReplayRepository = (): FakeReplayRepository => {
               },
             },
           },
+          replayDisplayArtifact,
         },
       });
     },
@@ -319,6 +416,32 @@ describe("match HTTP server replay routes", () => {
       assert.equal(response.status, 200);
       await assertReplayFrameChunkBody(response);
       assert.deepEqual(repository.detailCalls, ["match-1"]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("display-v1 replay detail does not require frame chunk reconstruction", async () => {
+    const repository = createFakeReplayRepository();
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const response = await fetch(`${server.url()}/api/replays/match-1`);
+      const body = (await response.json()) as {
+        replay?: CompletedMatchReplayDetail;
+        frameReconstruction?: unknown;
+      };
+
+      assert.equal(response.status, 200);
+      assert.equal(body.frameReconstruction, undefined);
+      assert.equal(
+        body.replay?.replay["replayDisplayArtifact"] !== undefined,
+        true,
+      );
+      assert.deepEqual(repository.detailCalls, []);
     } finally {
       await server.close();
     }
