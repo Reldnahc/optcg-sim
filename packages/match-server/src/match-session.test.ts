@@ -238,6 +238,37 @@ describe("match session runtime", () => {
       "deterministic-entry-v1",
     );
     expect(loadedAfterFlush?.deterministicEntriesSinceSnapshot).toHaveLength(1);
+    const deterministicRecord =
+      loadedAfterFlush?.deterministicEntriesSinceSnapshot?.[0];
+    expect(deterministicRecord?.replayDisplayFrame).toMatchObject({
+      index: 1,
+      actionIndex: 0,
+      label: "submitAction",
+      perspectivePlayerId: "p1",
+      snapshot: {
+        players: expect.any(Object),
+      },
+    });
+    expect(JSON.stringify(deterministicRecord?.audit.result)).not.toContain(
+      "snapshot",
+    );
+    expect(
+      JSON.stringify(deterministicRecord?.deterministicEntry),
+    ).not.toContain("snapshot");
+    const displayFrames = runtime.replayDisplayFrames();
+    expect(displayFrames).toHaveLength(2);
+    expect(displayFrames[0]).toMatchObject({
+      index: 0,
+      actionIndex: null,
+      label: "Initial state",
+      perspectivePlayerId: "p1",
+    });
+    expect(displayFrames[1]).toMatchObject({
+      index: 1,
+      actionIndex: 0,
+      label: "submitAction",
+      perspectivePlayerId: "p1",
+    });
     expect(
       loadedAfterFlush?.deterministicEntriesSinceSnapshot?.[0]?.audit.result
         .snapshot,
@@ -256,6 +287,42 @@ describe("match session runtime", () => {
     expect(
       loadedAfterCheckpoint?.deterministicEntriesSinceSnapshot,
     ).toHaveLength(0);
+  });
+
+  test("captures an initial replay display frame before any accepted action", async () => {
+    const { runtime } = await createRuntime();
+
+    expect(runtime.deterministicRecords()).toHaveLength(0);
+    expect(runtime.replayDisplayFrames()).toHaveLength(1);
+    expect(runtime.replayDisplayFrames()[0]).toMatchObject({
+      index: 0,
+      actionIndex: null,
+      label: "Initial state",
+      perspectivePlayerId: "p1",
+    });
+  });
+
+  test("captures replay display action frames when action snapshots are compacted", async () => {
+    const setup = await createFixtureDevMatchSetup(matchId);
+    const local = createLocalDevMatch(setup);
+    const runtime = createMatchSessionRuntime({
+      local,
+      includeActionSnapshots: false,
+    });
+
+    runtime.applyEnvelope(
+      envelope(submitRequest(local.state.seq), local.state.seq),
+    );
+
+    expect(runtime.replayDisplayFrames()).toHaveLength(2);
+    expect(runtime.replayDisplayFrames()[1]).toMatchObject({
+      actionIndex: 0,
+      label: "submitAction",
+    });
+    expect(runtime.records()[0]?.result.snapshot).toBeUndefined();
+    expect(
+      runtime.deterministicRecords()[0]?.audit.result.snapshot,
+    ).toBeUndefined();
   });
 
   test("keeps accepted records pending when persistence append fails", async () => {

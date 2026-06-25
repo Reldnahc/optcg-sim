@@ -17,6 +17,7 @@ import type { ReadyDeckSubmission } from "./deck-submission.js";
 import type { DevDeckVerificationMode } from "./default-dev-manifest.js";
 import type { DevMatchSetup } from "./local-match.js";
 import type { LocalRollbackState } from "./local-rollback.js";
+import type { ReplayDisplayFrameV1 } from "./replay-display-artifact.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 export type GameType = "ranked" | "unranked" | "custom" | "dev";
@@ -151,6 +152,7 @@ export interface StoredSessionAuditRecord {
 export interface StoredDeterministicSessionRecord {
   readonly deterministicEntry: DeterministicMatchEntry;
   readonly audit: StoredSessionAuditRecord;
+  readonly replayDisplayFrame?: ReplayDisplayFrameV1;
 }
 
 export interface StoredDeterministicCheckpointRecord {

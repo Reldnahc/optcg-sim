@@ -13,6 +13,7 @@ export interface BuildStoredDeterministicSessionRecordInput {
   readonly entrySeq: number;
   readonly envelope: ClientActionEnvelope;
   readonly result: SessionActionResult;
+  readonly replayDisplayFrame?: StoredDeterministicSessionRecord["replayDisplayFrame"];
   readonly deterministicOperation: LocalDeterministicOperation;
   readonly stateSeqBefore: StateSeq;
   readonly actionSeqBefore: number;
@@ -101,4 +102,7 @@ export const buildStoredDeterministicSessionRecord = (
 ): StoredDeterministicSessionRecord => ({
   deterministicEntry: deterministicEntry(input),
   audit: auditRecord(input),
+  ...(input.replayDisplayFrame === undefined
+    ? {}
+    : { replayDisplayFrame: input.replayDisplayFrame }),
 });
