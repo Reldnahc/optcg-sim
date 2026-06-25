@@ -101,6 +101,25 @@ describe("reconstructReplayFrames", () => {
     ]);
   });
 
+  test("returns empty compatibility frame windows past saved snapshots", () => {
+    const result = reconstructReplayFrames(
+      detail({
+        replayFormatVersion: "dev-local-v1",
+        manifestSnapshot: { cards: {} },
+        deterministicEntries: [
+          { envelope: { request: { type: "playCard" } }, result: { snapshot } },
+        ],
+      }),
+      { start: 1, limit: 1 },
+    );
+
+    expect(result).toEqual({
+      status: "ready",
+      frameCount: 1,
+      frames: [],
+    });
+  });
+
   test("reconstructs frames from compact seed and deck source when saved snapshots are absent", async () => {
     const setup = await createPremadeDevMatchSetup({
       fetchCard: createDefaultDevFixtureFetch(),

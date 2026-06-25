@@ -33,6 +33,7 @@ export interface CreateReplayFrameCacheOptions {
   readonly maxEntries?: number;
   readonly reconstruct?: (
     detail: CompletedMatchReplayDetail,
+    window?: ReplayFrameWindow,
   ) => ReplayFrameReconstructionResult;
 }
 
@@ -60,6 +61,9 @@ const replayCacheKey = (detail: CompletedMatchReplayDetail): string => {
       .join(":");
   return `${detail.matchId}:${artifactIdentity}`;
 };
+
+const replayFrameWindowCacheKey = (window: ReplayFrameWindow): string =>
+  `${String(window.start)}:${String(window.limit)}`;
 
 const trimCache = (
   cache: Map<string, ReplayFrameReconstructionResult>,
@@ -110,35 +114,39 @@ export const createReplayFrameCache = ({
   reconstruct = reconstructReplayFrames,
 }: CreateReplayFrameCacheOptions = {}): ReplayFrameCache => {
   const cache = new Map<string, ReplayFrameReconstructionResult>();
-  const readThrough = (
-    detail: CompletedMatchReplayDetail,
-  ): ReplayFrameReconstructionResult => {
-    const key = replayCacheKey(detail);
-    const cached = cache.get(key);
-    if (cached !== undefined) {
-      cache.delete(key);
-      cache.set(key, cached);
-      return cached;
-    }
-    const reconstructed = reconstruct(detail);
-    cache.set(key, reconstructed);
-    trimCache(cache, maxEntries);
-    return reconstructed;
-  };
   return {
     getFrameChunk(detail, window) {
-      const reconstructed = readThrough(detail);
+      const key = `${replayCacheKey(detail)}:${replayFrameWindowCacheKey(
+        window,
+      )}`;
+      const cached = cache.get(key);
+      const reconstructed =
+        cached === undefined
+          ? reconstruct(detail, window)
+          : (() => {
+              cache.delete(key);
+              return cached;
+            })();
+      cache.set(key, reconstructed);
+      trimCache(cache, maxEntries);
       if (reconstructed.status === "failed") {
         return reconstructed;
       }
-      const start = Math.min(window.start, reconstructed.frames.length);
-      const end = Math.min(reconstructed.frames.length, start + window.limit);
+      const frameCount =
+        reconstructed.frameCount ?? reconstructed.frames.length;
+      const start = Math.min(window.start, frameCount);
       return {
         status: "ready",
-        frameCount: reconstructed.frames.length,
+        frameCount,
         start,
         limit: window.limit,
-        frames: reconstructed.frames.slice(start, end),
+        frames:
+          reconstructed.frameCount === undefined
+            ? reconstructed.frames.slice(
+                start,
+                Math.min(reconstructed.frames.length, start + window.limit),
+              )
+            : reconstructed.frames,
       };
     },
   };

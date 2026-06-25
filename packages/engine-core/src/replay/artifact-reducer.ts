@@ -30,10 +30,16 @@ export interface ReplayArtifactStateFrame {
   readonly stateHash: string;
 }
 
+export interface ReplayArtifactFrameWindow {
+  readonly start: number;
+  readonly limit: number;
+}
+
 export type ReplayArtifactReconstructionResult =
   | {
       readonly status: "ready";
       readonly frames: readonly ReplayArtifactStateFrame[];
+      readonly frameCount?: number | undefined;
     }
   | {
       readonly status: "failed";
@@ -452,13 +458,37 @@ export const reconstructReplayArtifactStates = ({
   checkpoints,
   deterministicEntries,
   expectedFinalStateHash,
+  frameWindow,
   initialState,
 }: {
   readonly initialState: GameState;
   readonly deterministicEntries: readonly unknown[];
   readonly checkpoints?: readonly unknown[] | undefined;
   readonly expectedFinalStateHash?: string | undefined;
+  readonly frameWindow?: ReplayArtifactFrameWindow | undefined;
 }): ReplayArtifactReconstructionResult => {
+  const totalFrameCount = deterministicEntries.length + 1;
+  const frameStart =
+    frameWindow === undefined ? 0 : Math.max(0, Math.trunc(frameWindow.start));
+  const frameLimit =
+    frameWindow === undefined
+      ? Number.POSITIVE_INFINITY
+      : Math.max(1, Math.trunc(frameWindow.limit));
+  const frameEnd = Math.min(totalFrameCount, frameStart + frameLimit);
+  const includeFrame = (frameIndex: number): boolean =>
+    frameIndex >= frameStart && frameIndex < frameEnd;
+  const ready = (
+    frames: readonly ReplayArtifactStateFrame[],
+  ): ReplayArtifactReconstructionResult => ({
+    status: "ready",
+    frames,
+    ...(frameWindow === undefined ? {} : { frameCount: totalFrameCount }),
+  });
+
+  if (frameWindow !== undefined && frameStart >= totalFrameCount) {
+    return ready([]);
+  }
+
   const decodedCheckpoints = decodeDeterministicCheckpoints(checkpoints ?? []);
   if (decodedCheckpoints.status === "failed") {
     return { status: "failed", reason: decodedCheckpoints.reason };
@@ -482,18 +512,23 @@ export const reconstructReplayArtifactStates = ({
   }
   const firstFrame =
     "status" in initialFrame ? initialFrame.value : initialFrame;
-  const frames: ReplayArtifactStateFrame[] = [
-    {
-      index: 0,
-      entryIndex: null,
-      label: "Initial state",
-      state: structuredClone(firstFrame.state),
-      stateHash: firstFrame.stateHash,
-    },
-  ];
+  const firstReplayFrame: ReplayArtifactStateFrame = {
+    index: 0,
+    entryIndex: null,
+    label: "Initial state",
+    state: structuredClone(firstFrame.state),
+    stateHash: firstFrame.stateHash,
+  };
+  const frames: ReplayArtifactStateFrame[] = includeFrame(0)
+    ? [firstReplayFrame]
+    : [];
+  if (frameWindow !== undefined && frameEnd <= 1) {
+    return ready(frames);
+  }
   let current = structuredClone(firstFrame.state);
   let toleratedHashMismatch = false;
   for (const [entryIndex, entry] of deterministicEntries.entries()) {
+    const frameIndex = entryIndex + 1;
     const decoded = decodeDeterministicEntry(entry);
     if (decoded.status === "failed") {
       return { status: "failed", reason: decoded.reason, entryIndex };
@@ -524,13 +559,18 @@ export const reconstructReplayArtifactStates = ({
         };
       }
       current = checkpoint.value.state;
-      frames.push({
-        index: frames.length,
-        entryIndex,
-        label: deterministicEntryLabel(decoded.value),
-        state: structuredClone(current),
-        stateHash: checkpoint.value.stateHash,
-      });
+      if (includeFrame(frameIndex)) {
+        frames.push({
+          index: frameIndex,
+          entryIndex,
+          label: deterministicEntryLabel(decoded.value),
+          state: structuredClone(current),
+          stateHash: checkpoint.value.stateHash,
+        });
+      }
+      if (frameWindow !== undefined && frameIndex + 1 >= frameEnd) {
+        return ready(frames);
+      }
       continue;
     }
     if (decoded.value.kind === "system") {
@@ -561,13 +601,18 @@ export const reconstructReplayArtifactStates = ({
     toleratedHashMismatch =
       toleratedHashMismatch || result.toleratedHashMismatch === true;
     current = result.state;
-    frames.push({
-      index: frames.length,
-      entryIndex,
-      label: result.label,
-      state: structuredClone(current),
-      stateHash: result.stateHash,
-    });
+    if (includeFrame(frameIndex)) {
+      frames.push({
+        index: frameIndex,
+        entryIndex,
+        label: result.label,
+        state: structuredClone(current),
+        stateHash: result.stateHash,
+      });
+    }
+    if (frameWindow !== undefined && frameIndex + 1 >= frameEnd) {
+      return ready(frames);
+    }
   }
   const finalStateHash = frames.at(-1)?.stateHash ?? firstFrame.stateHash;
   if (
@@ -580,5 +625,5 @@ export const reconstructReplayArtifactStates = ({
       reason: "Replay reconstruction final hash mismatch.",
     };
   }
-  return { status: "ready", frames };
+  return ready(frames);
 };

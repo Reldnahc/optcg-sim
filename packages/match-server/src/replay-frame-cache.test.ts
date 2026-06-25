@@ -24,36 +24,43 @@ const replayDetail = (): CompletedMatchReplayDetail => ({
 });
 
 describe("replay frame cache", () => {
-  test("reconstructs a replay once and serves frame windows from cache", () => {
+  test("caches reconstructed replay frame windows independently", () => {
     let reconstructCalls = 0;
     const cache = createReplayFrameCache({
-      reconstruct: () => {
+      reconstruct: (_detail, window) => {
         reconstructCalls += 1;
+        assert.deepEqual(window, {
+          start: reconstructCalls === 1 ? 0 : 2,
+          limit: 2,
+        });
         return {
           status: "ready",
+          frameCount: 3,
           frames: [
-            { index: 0, actionIndex: -1, label: "start", snapshot: {} },
-            { index: 1, actionIndex: 0, label: "playCard", snapshot: {} },
-            { index: 2, actionIndex: 1, label: "end", snapshot: {} },
+            reconstructCalls === 1
+              ? { index: 0, actionIndex: -1, label: "start", snapshot: {} }
+              : { index: 2, actionIndex: 1, label: "end", snapshot: {} },
           ],
         };
       },
     });
 
     const first = cache.getFrameChunk(replayDetail(), { start: 0, limit: 2 });
+    const repeated = cache.getFrameChunk(replayDetail(), {
+      start: 0,
+      limit: 2,
+    });
     const second = cache.getFrameChunk(replayDetail(), { start: 2, limit: 2 });
 
-    assert.equal(reconstructCalls, 1);
+    assert.equal(reconstructCalls, 2);
     assert.deepEqual(first, {
       status: "ready",
       frameCount: 3,
       start: 0,
       limit: 2,
-      frames: [
-        { index: 0, actionIndex: -1, label: "start", snapshot: {} },
-        { index: 1, actionIndex: 0, label: "playCard", snapshot: {} },
-      ],
+      frames: [{ index: 0, actionIndex: -1, label: "start", snapshot: {} }],
     });
+    assert.deepEqual(repeated, first);
     assert.deepEqual(second, {
       status: "ready",
       frameCount: 3,

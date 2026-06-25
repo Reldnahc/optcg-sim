@@ -56,6 +56,23 @@ describe("reconstructReplayArtifactStates", () => {
     });
   });
 
+  test("returns an initial frame window without decoding later entries", () => {
+    const initialState = minimalState();
+    const result = reconstructReplayArtifactStates({
+      initialState,
+      deterministicEntries: [{ envelope: { request: { type: "unknown" } } }],
+      frameWindow: { start: 0, limit: 1 },
+    });
+
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
+      return;
+    }
+    expect(result.frameCount).toBe(2);
+    expect(result.frames).toHaveLength(1);
+    expect(result.frames[0]?.label).toBe("Initial state");
+  });
+
   test("rejects envelope-shaped entries as deterministic replay authority", () => {
     const initialState = minimalState();
     const result = reconstructReplayArtifactStates({

@@ -22,10 +22,16 @@ export interface ReplayApiFrame {
   readonly snapshot: unknown;
 }
 
+export interface ReplayFrameReconstructionWindow {
+  readonly start: number;
+  readonly limit: number;
+}
+
 export type ReplayFrameReconstructionResult =
   | {
       readonly status: "ready";
       readonly frames: readonly ReplayApiFrame[];
+      readonly frameCount?: number | undefined;
     }
   | {
       readonly status: "failed";
@@ -75,8 +81,15 @@ const savedSnapshotForEntry = (
 
 const savedSnapshotFrames = (
   entries: readonly unknown[],
+  window?: ReplayFrameReconstructionWindow,
 ): readonly ReplayApiFrame[] =>
   entries.flatMap((entry, actionIndex) => {
+    if (
+      window !== undefined &&
+      (actionIndex < window.start || actionIndex >= window.start + window.limit)
+    ) {
+      return [];
+    }
     const snapshot = savedSnapshotForEntry(entry);
     if (snapshot === undefined) {
       return [];
@@ -118,12 +131,14 @@ const replayFramesFromInitialState = (
   deterministicEntries: readonly unknown[],
   checkpoints: readonly unknown[],
   expectedFinalStateHash: string | undefined,
+  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult | undefined => {
   const result = reconstructReplayArtifactStates({
     initialState,
     deterministicEntries,
     checkpoints,
     expectedFinalStateHash,
+    ...(window === undefined ? {} : { frameWindow: window }),
   });
   if (result.status === "failed") {
     return {
@@ -143,6 +158,9 @@ const replayFramesFromInitialState = (
         label: frame.label,
         snapshot: snapshotForFrame(frame),
       })),
+      ...(result.frameCount === undefined
+        ? {}
+        : { frameCount: result.frameCount }),
     };
   } catch (caught) {
     return {
@@ -160,6 +178,7 @@ const replayFramesFromEngineState = (
   deterministicEntries: readonly unknown[],
   checkpoints: readonly unknown[],
   expectedFinalStateHash: string | undefined,
+  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult | undefined => {
   const initialSnapshot = detail.replay["initialSnapshot"];
   if (!isRecord(initialSnapshot)) {
@@ -171,6 +190,7 @@ const replayFramesFromEngineState = (
     deterministicEntries,
     checkpoints,
     expectedFinalStateHash,
+    window,
   );
 };
 
@@ -254,6 +274,7 @@ const initialStateFromCompactSource = (
 
 export const reconstructReplayFrames = (
   detail: CompletedMatchReplayDetail,
+  window?: ReplayFrameReconstructionWindow,
 ): ReplayFrameReconstructionResult => {
   const deterministicEntries = Array.isArray(
     detail.replay["deterministicEntries"],
@@ -269,9 +290,19 @@ export const reconstructReplayFrames = (
       ? stringValue(detail.replay["finalStateHash"])
       : undefined;
   if (replayFormatVersion !== "dev-local-v2") {
-    const frames = savedSnapshotFrames(deterministicEntries);
-    if (frames.length > 0) {
-      return { status: "ready", frames };
+    const savedFrameCount =
+      window === undefined
+        ? undefined
+        : savedSnapshotFrames(deterministicEntries).length;
+    const frames = savedSnapshotFrames(deterministicEntries, window);
+    if (frames.length > 0 || (savedFrameCount ?? 0) > 0) {
+      return {
+        status: "ready",
+        frames,
+        ...(window === undefined
+          ? {}
+          : { frameCount: savedFrameCount ?? frames.length }),
+      };
     }
   }
   const compactInitialState = initialStateFromCompactSource(detail);
@@ -282,6 +313,7 @@ export const reconstructReplayFrames = (
       deterministicEntries,
       checkpoints,
       expectedFinalStateHash,
+      window,
     );
     if (result !== undefined) {
       return result;
@@ -292,6 +324,7 @@ export const reconstructReplayFrames = (
     deterministicEntries,
     checkpoints,
     expectedFinalStateHash,
+    window,
   );
   if (engineFrames !== undefined) {
     return engineFrames;
