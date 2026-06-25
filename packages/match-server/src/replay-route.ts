@@ -3,9 +3,9 @@ import type { MatchId } from "@optcg/types";
 
 import { sendJson } from "./http-response.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
+import type { ReplayDetailCache } from "./replay-detail-cache.js";
 import {
   createReplayFrameCache,
-  publicReplayDetail,
   replayFrameWindowFromSearchParams,
   type ReplayFrameCache,
 } from "./replay-frame-cache.js";
@@ -17,12 +17,14 @@ export const handleReplayRequest = async ({
   response,
   pathname,
   replayRepository,
+  replayDetailCache,
   replayFrameCache = defaultReplayFrameCache,
 }: {
   readonly request: IncomingMessage;
   readonly response: ServerResponse;
   readonly pathname: string;
   readonly replayRepository: CompletedMatchReplayRepository | undefined;
+  readonly replayDetailCache?: ReplayDetailCache | undefined;
   readonly replayFrameCache?: ReplayFrameCache | undefined;
 }): Promise<boolean> => {
   if (replayRepository === undefined) {
@@ -41,7 +43,12 @@ export const handleReplayRequest = async ({
     const matchId = decodeURIComponent(
       frameRoute.groups?.["matchId"] ?? "",
     ) as MatchId;
-    const replay = await replayRepository.getReplay(matchId);
+    const replay =
+      replayDetailCache === undefined
+        ? await replayRepository.getReplay(matchId)
+        : await replayDetailCache.getReplay(matchId, () =>
+            replayRepository.getReplay(matchId),
+          );
     if (replay === undefined) {
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
@@ -60,14 +67,12 @@ export const handleReplayRequest = async ({
     const matchId = decodeURIComponent(
       detailRoute.groups?.["matchId"] ?? "",
     ) as MatchId;
-    const replay = await replayRepository.getReplay(matchId);
+    const replay = await replayRepository.getPublicReplay(matchId);
     if (replay === undefined) {
       sendJson(response, 404, { errors: [`Replay ${matchId} not found.`] });
       return true;
     }
-    sendJson(response, 200, {
-      replay: publicReplayDetail(replay),
-    });
+    sendJson(response, 200, { replay });
     return true;
   }
   return false;

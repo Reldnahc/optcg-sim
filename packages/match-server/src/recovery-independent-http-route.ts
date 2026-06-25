@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { sendJson, sendText } from "./http-response.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
+import type { ReplayDetailCache } from "./replay-detail-cache.js";
 import { handleReplayRequest } from "./replay-route.js";
 import { serveStaticAssetsOrNotFound } from "./static-assets.js";
 
@@ -12,6 +13,7 @@ const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
 
 export const handleRecoveryIndependentHttpRequest = async ({
   pathname,
+  replayDetailCache,
   replayRepository,
   request,
   response,
@@ -20,6 +22,7 @@ export const handleRecoveryIndependentHttpRequest = async ({
   readonly request: IncomingMessage;
   readonly response: ServerResponse;
   readonly pathname: string;
+  readonly replayDetailCache?: ReplayDetailCache | undefined;
   readonly replayRepository: CompletedMatchReplayRepository | undefined;
   readonly staticAssetsDirectory: string | undefined;
 }): Promise<boolean> => {
@@ -32,6 +35,7 @@ export const handleRecoveryIndependentHttpRequest = async ({
       request,
       response,
       pathname,
+      replayDetailCache,
       replayRepository,
     });
   }

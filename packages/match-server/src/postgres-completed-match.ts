@@ -139,6 +139,9 @@ export interface CompletedMatchReplayRepository {
   readonly listReplays: (
     limit?: number,
   ) => Promise<readonly CompletedMatchReplaySummary[]>;
+  readonly getPublicReplay: (
+    matchId: MatchId,
+  ) => Promise<CompletedMatchReplayDetail | undefined>;
   readonly getReplay: (
     matchId: MatchId,
   ) => Promise<CompletedMatchReplayDetail | undefined>;
@@ -472,6 +475,52 @@ const replayDetailSql = (schema: string): string => `
   WHERE m.id = $1
 `;
 
+const replayPublicDetailSql = (schema: string): string => `
+  SELECT
+    m.id AS match_id,
+    m.status,
+    m.game_type,
+    m.format_id,
+    m.lobby_id,
+    m.winner_user_id,
+    m.winner_seat_id,
+    m.started_at::text AS started_at,
+    m.ended_at::text AS ended_at,
+    m.turn_count,
+    m.action_count,
+    m.card_manifest_snapshot,
+    players.players,
+    jsonb_build_object(
+      'replayFormatVersion', replay.replay_format_version,
+      'manifestHash', replay.manifest_hash,
+      'manifestSnapshot', m.card_manifest_snapshot,
+      'artifactSha256', replay.artifact_sha256,
+      'artifactSizeBytes', replay.artifact_size_bytes
+    ) AS replay
+  FROM ${qualify(schema, "matches")} m
+  INNER JOIN ${qualify(schema, "match_replays")} replay
+    ON replay.match_id = m.id
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(
+      jsonb_agg(
+        jsonb_build_object(
+          'seatId', players.seat_id,
+          'userId', players.user_id,
+          'displayName', players.display_name,
+          'leaderCardNumber', players.leader_card_number,
+          'result', players.result,
+          'isWinner', players.is_winner
+        )
+        ORDER BY players.seat_id
+      ),
+      '[]'::jsonb
+    ) AS players
+    FROM ${qualify(schema, "match_players")} players
+    WHERE players.match_id = m.id
+  ) players ON true
+  WHERE m.id = $1
+`;
+
 const createSaveMatchSql = (schema: string): string => `
   INSERT INTO ${qualify(schema, "matches")} (
     id,
@@ -748,6 +797,7 @@ export const createPostgresCompletedMatchReplayRepository = ({
   const matchSchema = assertValidSchemaName(schema);
   const listSql = `${replaySummarySelectSql(matchSchema)}${replaySummaryGroupSql}`;
   const detailSql = replayDetailSql(matchSchema);
+  const publicDetailSql = replayPublicDetailSql(matchSchema);
   return {
     async listReplays(limit = 25) {
       const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
@@ -756,6 +806,10 @@ export const createPostgresCompletedMatchReplayRepository = ({
         const summary = replaySummaryFromRow(row);
         return summary === undefined ? [] : [summary];
       });
+    },
+    async getPublicReplay(requestedMatchId) {
+      const result = await query(publicDetailSql, [requestedMatchId]);
+      return replayDetailFromRow(result.rows?.[0]);
     },
     async getReplay(requestedMatchId) {
       const result = await query(detailSql, [requestedMatchId]);

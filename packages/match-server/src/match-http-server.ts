@@ -75,6 +75,7 @@ import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
 import { handleRecoveryIndependentHttpRequest } from "./recovery-independent-http-route.js";
+import { createReplayDetailCache } from "./replay-detail-cache.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -644,6 +645,7 @@ export const createMatchHttpServer = async (
         : { authBaseUrl: options.authBaseUrl }),
     });
   const replayRepository = resolveReplayRepository(options);
+  const replayDetailCache = createReplayDetailCache();
   const matchTimerScheduler = createSerializedMatchTimerAdvanceScheduler({
     advance: (elapsedMs) =>
       advanceMatchTimersAndBroadcast(
@@ -682,6 +684,7 @@ export const createMatchHttpServer = async (
       request,
       response,
       pathname,
+      replayDetailCache,
       replayRepository,
       staticAssetsDirectory,
     }).then((handled) =>

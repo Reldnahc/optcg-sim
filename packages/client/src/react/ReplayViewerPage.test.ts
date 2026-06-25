@@ -68,6 +68,26 @@ describe("ReplayViewerPage", () => {
     assert.match(source, /const replayFrameChunkLimit = 1;/u);
   });
 
+  test("does not advance playback while the selected frame is still loading", () => {
+    const source = replayViewerPageSource();
+    const playbackTimerEffect =
+      /useEffect\(\(\) => \{[\s\S]*?window\.setTimeout[\s\S]*?\}, \[(?<dependencies>[^\]]*)\]\);/u.exec(
+        source,
+      );
+
+    assert.ok(playbackTimerEffect?.groups !== undefined);
+    assert.match(playbackTimerEffect[0], /selectedFrame === undefined/u);
+    assert.match(playbackTimerEffect[0], /framesRequestLoading/u);
+    assert.match(
+      playbackTimerEffect.groups["dependencies"] ?? "",
+      /selectedFrame/u,
+    );
+    assert.match(
+      playbackTimerEffect.groups["dependencies"] ?? "",
+      /framesRequestLoading/u,
+    );
+  });
+
   test("does not derive frame loading from an absent selected frame", () => {
     const source = replayViewerPageSource();
 

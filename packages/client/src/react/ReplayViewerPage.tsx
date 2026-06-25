@@ -453,7 +453,12 @@ export const ReplayViewerPage = ({
     [selectedFrame],
   );
   useEffect(() => {
-    if (!playing || boardFrameCount <= 1) {
+    if (
+      !playing ||
+      boardFrameCount <= 1 ||
+      selectedFrame === undefined ||
+      framesRequestLoading
+    ) {
       return;
     }
     const timer = window.setTimeout(() => {
@@ -468,7 +473,14 @@ export const ReplayViewerPage = ({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [boardFrameCount, playing, selectedFrameIndex, speedMs]);
+  }, [
+    boardFrameCount,
+    framesRequestLoading,
+    playing,
+    selectedFrame,
+    selectedFrameIndex,
+    speedMs,
+  ]);
   const replayControls =
     replay === undefined ? undefined : (
       <ReplayPlaybackControls

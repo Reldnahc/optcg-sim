@@ -153,18 +153,46 @@ const assertReplayFrameChunkBody = async (
 
 interface FakeReplayRepository extends CompletedMatchReplayRepository {
   readonly listCalls: number[];
+  readonly publicDetailCalls: MatchId[];
   readonly detailCalls: MatchId[];
+  readonly getPublicReplay: (
+    matchId: MatchId,
+  ) => Promise<CompletedMatchReplayDetail | undefined>;
 }
 
 const createFakeReplayRepository = (): FakeReplayRepository => {
   const listCalls: number[] = [];
+  const publicDetailCalls: MatchId[] = [];
   const detailCalls: MatchId[] = [];
   return {
     listCalls,
+    publicDetailCalls,
     detailCalls,
     listReplays(limit = 25) {
       listCalls.push(limit);
       return Promise.resolve([replaySummary()]);
+    },
+    getPublicReplay(matchId) {
+      publicDetailCalls.push(matchId);
+      if (matchId !== "match-1") {
+        return Promise.resolve(undefined);
+      }
+      return Promise.resolve({
+        ...replaySummary(),
+        replay: {
+          replayFormatVersion: "dev-local-v1",
+          manifestSnapshot: {
+            cards: {
+              "OP01-001": {
+                cardId: "OP01-001",
+                name: "Leader",
+                category: "leader",
+                imageUrl: "https://cdn.example/OP01-001.png",
+              },
+            },
+          },
+        },
+      });
     },
     getReplay(matchId) {
       detailCalls.push(matchId);
@@ -269,7 +297,8 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       await assertReplayDetailBody(response);
-      assert.deepEqual(repository.detailCalls, ["match-1"]);
+      assert.deepEqual(repository.publicDetailCalls, ["match-1"]);
+      assert.deepEqual(repository.detailCalls, []);
     } finally {
       await server.close();
     }
@@ -295,6 +324,29 @@ describe("match HTTP server replay routes", () => {
     }
   });
 
+  test("reuses replay artifact detail across frame chunk requests", async () => {
+    const repository = createFakeReplayRepository();
+    const server = await createMatchHttpServer({
+      createDefaultMatch: false,
+      replayRepository: repository,
+    });
+    await server.listen(0, "127.0.0.1");
+    try {
+      const first = await fetch(
+        `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
+      );
+      const second = await fetch(
+        `${server.url()}/api/replays/match-1/frames?start=0&limit=1`,
+      );
+
+      assert.equal(first.status, 200);
+      assert.equal(second.status, 200);
+      assert.deepEqual(repository.detailCalls, ["match-1"]);
+    } finally {
+      await server.close();
+    }
+  });
+
   test("returns replay detail for a non-participant", async () => {
     const repository = createFakeReplayRepository();
     const server = await createMatchHttpServer({
@@ -309,7 +361,8 @@ describe("match HTTP server replay routes", () => {
 
       assert.equal(response.status, 200);
       await assertReplayDetailBody(response);
-      assert.deepEqual(repository.detailCalls, ["match-1"]);
+      assert.deepEqual(repository.publicDetailCalls, ["match-1"]);
+      assert.deepEqual(repository.detailCalls, []);
     } finally {
       await server.close();
     }
