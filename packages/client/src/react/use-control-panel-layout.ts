@@ -7,6 +7,7 @@ import {
   defaultControlRailWidthForViewport,
   controlRailWidthFromDrag,
   defaultControlRailWidth,
+  estimatedCenteredPlaymatRightEdgeForViewport,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
 } from "./control-panel-layout.js";
@@ -42,17 +43,17 @@ const elementRect = (selector: string): WindowRect | undefined => {
   };
 };
 
-const playmatRightEdge = (fallbackRailWidth: number): number => {
+const playmatRightEdge = (): number => {
   if (typeof document === "undefined" || typeof window === "undefined") {
     return 0;
   }
   const playmatRect = elementRect(".tabletop-board");
-  return (
-    (playmatRect === undefined
-      ? undefined
-      : playmatRect.x + playmatRect.width) ??
-    Math.max(0, window.innerWidth - fallbackRailWidth - 16)
-  );
+  return playmatRect === undefined
+    ? estimatedCenteredPlaymatRightEdgeForViewport({
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      })
+    : playmatRect.x + playmatRect.width;
 };
 
 const defaultControlRailWidthForCurrentViewport = (): number =>
@@ -81,9 +82,7 @@ export const useControlPanelLayout = ({
       layout: layout ?? {},
       viewportWidth: window.innerWidth,
       viewportHeight: window.innerHeight,
-      playmatRight: playmatRightEdge(
-        layout?.controlRailWidth ?? defaultControlRailWidthForCurrentViewport(),
-      ),
+      playmatRight: playmatRightEdge(),
     });
     setControlRailWidth(normalizedLayout.controlRailWidth);
     if (
@@ -143,7 +142,7 @@ export const useControlPanelLayout = ({
           startClientX,
           currentClientX: moveEvent.clientX,
           viewportWidth: window.innerWidth,
-          playmatRight: playmatRightEdge(startWidth),
+          playmatRight: playmatRightEdge(),
         });
         setControlRailWidth(nextWidth);
         layoutStore?.saveControlPanelLayout({

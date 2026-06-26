@@ -6,12 +6,20 @@ export const minControlRailWidth = 220;
 export const controlRailRightInset = 8;
 export const controlRailPlaymatGap = 8;
 
+const matchAppPadding = 8;
+const playmatBoardPadding = 8;
+const playmatBorderWidth = 2;
+const playmatGridGap = 6;
 const desktopCardMinHeight = 86;
 const desktopCardMaxHeight = 240;
 const desktopCardViewportHeightRatio = 0.135;
 const desktopCardViewportWidthRatio = 0.12;
 const controlRailDefaultMinWidth = 248;
 const controlRailDefaultMaxWidth = 380;
+const playmatColumnCardZoneCount = 6;
+const playmatWideZoneCardWidthMultiplier = 1.6;
+const cardZoneExtraWidth = 14;
+const cardAspectRatio = 1.4;
 
 const clampNumber = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
@@ -49,6 +57,39 @@ export const defaultControlRailWidthForViewport = ({
     ),
   );
 };
+
+export const estimatedPlaymatWidthForViewport = ({
+  viewportHeight,
+}: {
+  viewportHeight: number;
+}): number => {
+  const playmatVerticalChrome =
+    matchAppPadding * 2 +
+    playmatBoardPadding * 2 +
+    playmatBorderWidth * 2 +
+    playmatGridGap * 6;
+  const playmatRowHeight = (viewportHeight - playmatVerticalChrome) / 6;
+  const cardHeight = clampNumber(
+    playmatRowHeight - 14,
+    desktopCardMinHeight,
+    desktopCardMaxHeight,
+  );
+  const cardWidth = cardHeight / cardAspectRatio;
+  const playmatGridWidth =
+    playmatColumnCardZoneCount * (cardWidth + cardZoneExtraWidth) +
+    cardWidth * playmatWideZoneCardWidthMultiplier +
+    playmatGridGap * 6;
+  return playmatGridWidth + playmatBoardPadding * 2 + playmatBorderWidth * 2;
+};
+
+export const estimatedCenteredPlaymatRightEdgeForViewport = ({
+  viewportWidth,
+  viewportHeight,
+}: {
+  viewportWidth: number;
+  viewportHeight: number;
+}): number =>
+  (viewportWidth + estimatedPlaymatWidthForViewport({ viewportHeight })) / 2;
 
 export interface ControlRailWidthInput {
   requestedWidth: number;
