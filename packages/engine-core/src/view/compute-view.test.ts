@@ -676,7 +676,7 @@ test("legal target lists include opponent leader and rested opponent characters 
   );
 });
 
-test("fails closed when leader or character combat metadata is missing", () => {
+test("omits combat stats when leader or character combat metadata is missing", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1 state");
   state.turn.phase = "main";
@@ -696,11 +696,15 @@ test("fails closed when leader or character combat metadata is missing", () => {
   brokenManifest.cards[toCardId("leader-red")] = brokenLeader;
   state.cardManifest = brokenManifest;
 
-  assert.throws(() => computeView(state), /missing.*power/i);
+  const view = computeView(state);
+
+  assert.equal(view.cards[p1State.leader.instanceId]?.currentPower, undefined);
+  assert.equal(view.cards[p1State.leader.instanceId]?.canAttack, false);
 });
 
-test("fails closed when combat card support status is not vanilla-confirmed", () => {
+test("omits combat capability when combat card support status is unsupported", () => {
   const state = createState();
+  const p1State = must(state.players[p1], "p1 state");
   const brokenManifest = {
     ...state.cardManifest,
     cards: { ...state.cardManifest.cards },
@@ -715,7 +719,10 @@ test("fails closed when combat card support status is not vanilla-confirmed", ()
   };
   state.cardManifest = brokenManifest;
 
-  assert.throws(() => computeView(state), /unsupported.*status/i);
+  const view = computeView(state);
+
+  assert.equal(view.cards[p1State.leader.instanceId]?.currentPower, 5000);
+  assert.equal(view.cards[p1State.leader.instanceId]?.canAttack, false);
 });
 
 test("supports implemented-dsl combat body with supported keywords and no effect metadata", () => {

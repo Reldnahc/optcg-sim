@@ -779,7 +779,7 @@ test.each([
   },
 );
 
-test("computeView fails closed for malformed field-removal protection metadata", () => {
+test("computeView omits malformed field-removal protection metadata", () => {
   const { state, target } = setupFieldRemovalProtectionState();
   protectTargetFromOpponentEffectRemoval(
     state,
@@ -789,10 +789,7 @@ test("computeView fails closed for malformed field-removal protection metadata",
     }),
   );
 
-  assert.throws(() => computeView(state), {
-    name: "TypeError",
-    message: `Unsupported continuous effect for ${String(
-      target.instanceId,
-    )}: malformed-field-removal-protection.`,
-  });
+  const view = computeView(state);
+
+  assert.deepEqual(view.cards[target.instanceId]?.protectedFrom, []);
 });

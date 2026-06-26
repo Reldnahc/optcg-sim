@@ -340,25 +340,19 @@ const resolveCombatMetadata = (
   state: GameState,
   card: CardInstance,
   options: ComputeViewOptions = {},
-): ResolvedCard & { power: number } => {
+): (ResolvedCard & { power: number }) | undefined => {
   const resolved = state.cardManifest.cards[card.cardId];
   if (resolved === undefined) {
-    throw new TypeError(
-      `Missing card manifest metadata for combat card ${String(card.cardId)}.`,
-    );
+    return undefined;
   }
   if (resolved.category !== "leader" && resolved.category !== "character") {
-    throw new TypeError(
-      `Unsupported combat category ${resolved.category} for ${String(card.cardId)}.`,
-    );
+    return undefined;
   }
   if (resolved.power === undefined) {
-    throw new TypeError(
-      `Missing combat power metadata for ${String(card.cardId)}.`,
-    );
+    return undefined;
   }
   if (
-    options.supportStatusPolicy !== "ignore" &&
+    options.supportStatusPolicy === "throw" &&
     resolved.support.status !== "vanilla-confirmed" &&
     resolved.support.status !== "implemented-dsl"
   ) {
@@ -368,6 +362,10 @@ const resolveCombatMetadata = (
   }
   return resolved as ResolvedCard & { power: number };
 };
+
+const hasSupportedCombatStatus = (metadata: ResolvedCard): boolean =>
+  metadata.support.status === "vanilla-confirmed" ||
+  metadata.support.status === "implemented-dsl";
 
 const canAttackNow = (
   state: GameState,
@@ -430,6 +428,8 @@ const legalTargetsForAttacker = (
   options: ComputeViewOptions = {},
 ): InstanceId[] => {
   const metadata = resolveCombatMetadata(state, attacker, options);
+  if (metadata === undefined) return [];
+  if (!hasSupportedCombatStatus(metadata)) return [];
   const attackerKeywords = computedKeywordsForCard(state, attacker, metadata);
   if (!canAttackNow(state, attacker, attackerKeywords, options)) return [];
   const opponentId = (Object.keys(state.players) as PlayerId[]).find(
@@ -449,6 +449,7 @@ const legalTargetsForAttacker = (
 
   if (!rushCharacterOnly) {
     const targetMetadata = resolveCombatMetadata(state, opponent.leader);
+    if (targetMetadata === undefined) return targets;
     if (
       !attackTargetRestricted(
         state,
@@ -464,6 +465,7 @@ const legalTargetsForAttacker = (
 
   for (const character of opponent.characters) {
     const targetMetadata = resolveCombatMetadata(state, character);
+    if (targetMetadata === undefined) continue;
     if (
       (character.state === "rested" || canAttackActiveCharacters) &&
       !attackTargetRestricted(
@@ -499,6 +501,7 @@ const canBlockNow = (
     return false;
   }
   const attackerMetadata = resolveCombatMetadata(state, attacker);
+  if (attackerMetadata === undefined) return false;
   const attackerKeywords = computedKeywordsForCard(
     state,
     attacker,
@@ -515,6 +518,19 @@ const computeCardView = (
   options: ComputeViewOptions = {},
 ): ComputedCardView => {
   const metadata = resolveCombatMetadata(state, card, options);
+  if (metadata === undefined) {
+    return {
+      instanceId: card.instanceId,
+      cardId: card.cardId,
+      keywords: [],
+      restrictions: [],
+      effectsInvalidated: isCardEffectInvalidated(state, card),
+      canAttack: false,
+      canBlock: false,
+      cannotBeAttacked: false,
+      protectedFrom: [],
+    };
+  }
   const printedBasePower = metadata.power;
   const basePower = continuousBasePowerForCard(state, card) ?? printedBasePower;
   const printedBaseCost = metadata.cost;
@@ -542,13 +558,7 @@ const computeCardView = (
   );
   const restrictions = continuousRestrictionLabelsForCard(state, card);
   const fieldRemovalProtections = fieldRemovalProtectionsForCard(state, card);
-  if (!fieldRemovalProtections.ok) {
-    throw new TypeError(
-      `Unsupported continuous effect for ${String(
-        card.instanceId,
-      )}: ${fieldRemovalProtections.reason}.`,
-    );
-  }
+  const hasSupportedStatus = hasSupportedCombatStatus(metadata);
 
   return {
     instanceId: card.instanceId,
@@ -566,10 +576,13 @@ const computeCardView = (
     keywords,
     restrictions,
     effectsInvalidated,
-    canAttack: canAttackNow(state, card, keywords, options),
-    canBlock: canBlockNow(state, card, keywords),
+    canAttack:
+      hasSupportedStatus && canAttackNow(state, card, keywords, options),
+    canBlock: hasSupportedStatus && canBlockNow(state, card, keywords),
     cannotBeAttacked: false,
-    protectedFrom: fieldRemovalProtections.protections,
+    protectedFrom: fieldRemovalProtections.ok
+      ? fieldRemovalProtections.protections
+      : [],
   };
 };
 
