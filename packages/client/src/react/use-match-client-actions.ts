@@ -79,6 +79,30 @@ export const cardCostConfirmActionIndex = (
 ): number | undefined =>
   activeCardCostGroup === undefined ? undefined : selectedCardCostActionIndex;
 
+export const createAttackTargetInteractionState = ({
+  selectedCardInstanceId,
+  board,
+}: {
+  selectedCardInstanceId: string | undefined;
+  board: BoardViewModel | undefined;
+}):
+  | {
+      attackTargetChoice: AttackTargetChoice;
+      selectedCardInstanceId: undefined;
+    }
+  | undefined => {
+  if (selectedCardInstanceId === undefined) {
+    return undefined;
+  }
+  const attackTargetChoice = createAttackTargetChoice(
+    selectedCardInstanceId,
+    board?.actionsByCardInstanceId[selectedCardInstanceId] ?? [],
+  );
+  return attackTargetChoice === undefined
+    ? undefined
+    : { attackTargetChoice, selectedCardInstanceId: undefined };
+};
+
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
@@ -261,14 +285,15 @@ export const useMatchClientActions = ({
         actionIndex === ATTACK_TARGET_CHOICE_ACTION_INDEX &&
         selectedCardInstanceId !== undefined
       ) {
-        const choice = createAttackTargetChoice(
+        const interactionState = createAttackTargetInteractionState({
           selectedCardInstanceId,
-          board?.actionsByCardInstanceId[selectedCardInstanceId] ?? [],
-        );
-        if (choice !== undefined) {
-          setActiveAttackTargetChoice(choice);
+          board,
+        });
+        if (interactionState !== undefined) {
+          setActiveAttackTargetChoice(interactionState.attackTargetChoice);
           setActiveCounterTargetChoice(undefined);
           setDecisionDraft(undefined);
+          setSelectedCardInstanceId(interactionState.selectedCardInstanceId);
           setSelectedDonInstanceIds([]);
           setActiveCardCostSelectedInstanceIds([]);
         }
@@ -360,6 +385,7 @@ export const useMatchClientActions = ({
       setClientState,
       setDecisionDraft,
       setErrors,
+      setSelectedCardInstanceId,
       setSelectedDonInstanceIds,
       submitDecisionDraft,
     ],

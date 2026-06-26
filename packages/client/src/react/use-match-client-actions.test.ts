@@ -1,8 +1,12 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
-import type { PlayerId, Zone } from "@optcg/types";
+import type { InstanceId, PlayerId, Zone } from "@optcg/types";
 
-import { cardCostConfirmActionIndex } from "./use-match-client-actions.js";
+import {
+  cardCostConfirmActionIndex,
+  createAttackTargetInteractionState,
+} from "./use-match-client-actions.js";
+import type { BoardViewModel, ClientActionModel } from "../view-model.js";
 import type { OptionalCardCostGroup } from "../interactions/payment-decision.js";
 
 const variableTrashGroup: OptionalCardCostGroup = {
@@ -29,5 +33,37 @@ describe("match client action helpers", () => {
       undefined,
     );
     assert.equal(cardCostConfirmActionIndex(undefined, 2), undefined);
+  });
+
+  test("arming attack target choice clears the selected card menu", () => {
+    const attackAction: ClientActionModel = {
+      index: 7,
+      type: "declareAttack",
+      label: "Attack leader",
+      attack: {
+        attackerInstanceId: "attacker-1" as InstanceId,
+        targetInstanceId: "leader-2" as InstanceId,
+      },
+    };
+    const board = {
+      actionsByCardInstanceId: {
+        "attacker-1": [attackAction],
+      },
+    } as unknown as BoardViewModel;
+
+    assert.deepEqual(
+      createAttackTargetInteractionState({
+        selectedCardInstanceId: "attacker-1",
+        board,
+      }),
+      {
+        attackTargetChoice: {
+          attackerInstanceId: "attacker-1",
+          chooseActionIndex: -20,
+          targetActions: [{ targetInstanceId: "leader-2", actionIndex: 7 }],
+        },
+        selectedCardInstanceId: undefined,
+      },
+    );
   });
 });
