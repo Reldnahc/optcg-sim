@@ -220,6 +220,11 @@
   justify-content: center;
 }
 
+.board-shell.is-pregame-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .hand-rail {
   grid-area: hand-rail;
   position: relative;

@@ -7,11 +7,10 @@ import {
   defaultControlRailWidthForViewport,
   controlRailWidthFromDrag,
   defaultControlRailWidth,
-  estimatedCenteredPlaymatRightEdgeForViewport,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
 } from "./control-panel-layout.js";
-import type { RevealWindowStateStore } from "./window-state-store.js";
+import type { ControlPanelLayoutStore } from "./window-state-store.js";
 
 export interface ControlPanelLayoutController {
   controlRailWidth: number;
@@ -23,7 +22,7 @@ export interface ControlPanelLayoutController {
 }
 
 export interface UseControlPanelLayoutInput {
-  layoutStore?: RevealWindowStateStore | undefined;
+  layoutStore?: ControlPanelLayoutStore | undefined;
 }
 
 const elementRect = (selector: string): WindowRect | undefined => {
@@ -48,12 +47,7 @@ const playmatRightEdge = (): number => {
     return 0;
   }
   const playmatRect = elementRect(".tabletop-board");
-  return playmatRect === undefined
-    ? estimatedCenteredPlaymatRightEdgeForViewport({
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      })
-    : playmatRect.x + playmatRect.width;
+  return playmatRect === undefined ? 0 : playmatRect.x + playmatRect.width;
 };
 
 const defaultControlRailWidthForCurrentViewport = (): number =>

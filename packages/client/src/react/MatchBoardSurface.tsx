@@ -15,13 +15,19 @@ export interface MatchBoardSurfaceProps extends Omit<
   clientState: MatchClientSessionState | undefined;
 }
 
+const PregameBoardFootprint = (): React.JSX.Element => (
+  <section className="board-shell is-pregame-placeholder" aria-hidden="true">
+    <div className="tabletop-board" />
+  </section>
+);
+
 export const MatchBoardSurface = ({
   board,
   clientState,
   ...boardProps
 }: MatchBoardSurfaceProps): React.JSX.Element | null => {
   if (board === undefined && isLobbyClientState(clientState)) {
-    return null;
+    return <PregameBoardFootprint />;
   }
   if (board === undefined) {
     return <MatchLoadingPanel clientState={clientState} />;

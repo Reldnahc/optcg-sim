@@ -10,8 +10,6 @@ import {
   defaultControlRailWidthForViewport,
   defaultControlRailWidth,
   desktopCardHeightForViewport,
-  estimatedCenteredPlaymatRightEdgeForViewport,
-  estimatedPlaymatWidthForViewport,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
   resizeDockedWindowRects,
@@ -66,28 +64,6 @@ describe("control panel layout", () => {
       }),
       444,
     );
-  });
-
-  test("estimates the missing pregame playmat from the real centered board size", () => {
-    const playmatWidth = estimatedPlaymatWidthForViewport({
-      viewportHeight: 720,
-    });
-    const playmatRight = estimatedCenteredPlaymatRightEdgeForViewport({
-      viewportWidth: 1440,
-      viewportHeight: 720,
-    });
-    const resizedWidth = controlRailWidthFromDrag({
-      startWidth: defaultControlRailWidth,
-      startClientX: 1200,
-      currentClientX: 700,
-      viewportWidth: 1440,
-      playmatRight,
-    });
-
-    assert.equal(Number(playmatWidth.toFixed(3)), 650.286);
-    assert.equal(Number(playmatRight.toFixed(3)), 1045.143);
-    assert.equal(Number(resizedWidth.toFixed(3)), 378.857);
-    assert.equal(resizedWidth > defaultControlRailWidth, true);
   });
 
   test("normalizes stale saved control panel sizes for the current viewport", () => {
@@ -181,20 +157,19 @@ describe("control panel layout", () => {
     });
   });
 
-  test("control panel layout is loaded and saved through the match layout store", async () => {
+  test("control panel layout is loaded and saved through the app layout store", async () => {
     const [hookSource, appSource] = await Promise.all([
       readFile(join(sourceDirectory, "use-control-panel-layout.ts"), "utf8"),
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
     ]);
 
-    assert.match(hookSource, /layoutStore\?: RevealWindowStateStore/u);
+    assert.match(hookSource, /layoutStore\?: ControlPanelLayoutStore/u);
     assert.match(hookSource, /loadControlPanelLayout\(\)/u);
     assert.match(hookSource, /saveControlPanelLayout/u);
-    assert.match(hookSource, /estimatedCenteredPlaymatRightEdgeForViewport/u);
-    assert.doesNotMatch(hookSource, /fallbackRailWidth/u);
+    assert.doesNotMatch(hookSource, /estimatedCenteredPlaymatRightEdge/u);
     assert.match(
       appSource,
-      /useControlPanelLayout\(\{\s*layoutStore: revealWindowStateStore,?\s*\}\)/u,
+      /useControlPanelLayout\(\{\s*layoutStore: controlPanelLayoutStore,?\s*\}\)/u,
     );
   });
 });

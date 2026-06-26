@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
 import { appRoutePath } from "./app-route.js";
@@ -7,6 +7,7 @@ import { CardPreviewButton } from "./CardPreviewButton.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
 import { MatchControlPanel } from "./MatchControlPanel.js";
+import { createBrowserPersistentStorage } from "./browser-storage.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
@@ -45,6 +46,7 @@ import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-settings.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
+import { createControlPanelLayoutStore } from "./window-state-store.js";
 import type { MatchClientUi } from "./useMatchClient-support.js";
 export interface MatchAppProps {
   readonly accountSessionToken?: string | undefined;
@@ -153,6 +155,15 @@ export const MatchApp = ({
     enabled: matchScope !== undefined,
     matchId: matchScope,
   });
+  const controlPanelLayoutStore = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? undefined
+        : createControlPanelLayoutStore({
+            storage: createBrowserPersistentStorage(),
+          }),
+    [],
+  );
   const {
     controlRailWidth,
     controlDockActive,
@@ -160,7 +171,7 @@ export const MatchApp = ({
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,
-  } = useControlPanelLayout({ layoutStore: revealWindowStateStore });
+  } = useControlPanelLayout({ layoutStore: controlPanelLayoutStore });
   const {
     activeTabId: infoWindowActiveTab,
     groupedTabIds: configuredGroupedInfoWindowIds,

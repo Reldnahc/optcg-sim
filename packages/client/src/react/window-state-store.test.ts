@@ -2,7 +2,10 @@ import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
 import { createMemoryClientStorage } from "../session.js";
-import { createRevealWindowStateStore } from "./window-state-store.js";
+import {
+  createControlPanelLayoutStore,
+  createRevealWindowStateStore,
+} from "./window-state-store.js";
 
 describe("reveal window state store", () => {
   test("persists dismissed and minimized reveal ids by match", () => {
@@ -121,36 +124,36 @@ describe("reveal window state store", () => {
     assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
-  test("persists control panel width by match", () => {
+  test("persists control panel width globally across matches", () => {
     const storage = createMemoryClientStorage();
-    const matchOne = createRevealWindowStateStore({
+    const layoutStore = createControlPanelLayoutStore({
       storage,
-      matchId: "match-1",
     });
-    const matchTwo = createRevealWindowStateStore({
-      storage,
-      matchId: "match-2",
-    });
-
-    matchOne.saveControlPanelLayout({
+    layoutStore.saveControlPanelLayout({
       controlRailWidth: 340,
     });
 
-    assert.deepEqual(matchOne.loadControlPanelLayout(), {
+    assert.deepEqual(layoutStore.loadControlPanelLayout(), {
       controlRailWidth: 340,
     });
-    assert.deepEqual(matchTwo.loadControlPanelLayout(), {});
+    assert.equal(
+      storage.getItem("optcg:client:control-panel-layout"),
+      JSON.stringify({ controlRailWidth: 340 }),
+    );
+    assert.equal(
+      storage.getItem("optcg:client:control-panel-layout:match-1"),
+      null,
+    );
   });
 
   test("ignores legacy saved dock height in the control panel layout", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:control-panel-layout:match-1",
+      "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: 340, controlDockHeight: 420 }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createControlPanelLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadControlPanelLayout(), {
@@ -161,12 +164,11 @@ describe("reveal window state store", () => {
   test("fails closed to empty control panel layout for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:control-panel-layout:match-1",
+      "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: "340" }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createControlPanelLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadControlPanelLayout(), {});

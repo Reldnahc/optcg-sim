@@ -14,6 +14,9 @@ export interface RevealWindowStateStore {
   saveDockedWindowIds: (windowIds: ReadonlySet<string>) => void;
   loadInfoWindowConfig: () => InfoWindowConfig;
   saveInfoWindowConfig: (config: InfoWindowConfig) => void;
+}
+
+export interface ControlPanelLayoutStore {
   loadControlPanelLayout: () => ControlPanelLayoutConfig;
   saveControlPanelLayout: (layout: ControlPanelLayoutConfig) => void;
 }
@@ -63,8 +66,7 @@ const dockedWindowsKey = (matchId: string): string =>
 const infoWindowConfigKey = (matchId: string): string =>
   `${infoWindowConfigKeyPrefix}:${matchId}`;
 
-const controlPanelLayoutKey = (matchId: string): string =>
-  `${controlPanelLayoutKeyPrefix}:${matchId}`;
+const controlPanelLayoutKey = (): string => controlPanelLayoutKeyPrefix;
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -267,12 +269,17 @@ export const createRevealWindowStateStore = ({
   saveInfoWindowConfig(config) {
     storage.setItem(infoWindowConfigKey(matchId), JSON.stringify(config));
   },
+});
+
+export const createControlPanelLayoutStore = ({
+  storage,
+}: {
+  storage: ClientStorage;
+}): ControlPanelLayoutStore => ({
   loadControlPanelLayout() {
-    return parseControlPanelLayout(
-      storage.getItem(controlPanelLayoutKey(matchId)),
-    );
+    return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey()));
   },
   saveControlPanelLayout(layout) {
-    storage.setItem(controlPanelLayoutKey(matchId), JSON.stringify(layout));
+    storage.setItem(controlPanelLayoutKey(), JSON.stringify(layout));
   },
 });
