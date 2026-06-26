@@ -169,7 +169,8 @@ describe("control panel layout", () => {
     assert.doesNotMatch(hookSource, /estimatedCenteredPlaymatRightEdge/u);
     assert.match(
       appSource,
-      /useControlPanelLayout\(\{\s*layoutStore: windowLayoutStore,?\s*\}\)/u,
+      /useControlPanelLayout\(\{\s*layoutStore: controlPanelLayoutStore,?\s*\}\)/u,
     );
+    assert.match(appSource, /createControlPanelLayoutStore/u);
   });
 });

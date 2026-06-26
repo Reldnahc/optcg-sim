@@ -13,7 +13,7 @@ export interface ControlPanelLayoutStore {
   saveControlPanelLayout: (layout: ControlPanelLayoutConfig) => void;
 }
 
-export interface WindowLayoutStore extends ControlPanelLayoutStore {
+export interface WindowLayoutStore {
   loadWindowRects: () => Record<string, WindowRect>;
   saveWindowRects: (rects: Readonly<Record<string, WindowRect>>) => void;
   loadOpenWindowIds: () => Set<string>;
@@ -72,8 +72,7 @@ const dockedWindowsKey = (scope: string): string =>
 const infoWindowConfigKey = (scope: string): string =>
   scopedLayoutKey(infoWindowConfigKeyPrefix, scope);
 
-const controlPanelLayoutKey = (scope: string): string =>
-  scopedLayoutKey(controlPanelLayoutKeyPrefix, scope);
+const controlPanelLayoutKey = (): string => controlPanelLayoutKeyPrefix;
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -285,10 +284,17 @@ export const createWindowLayoutStore = ({
   saveInfoWindowConfig(config) {
     storage.setItem(infoWindowConfigKey(scope), JSON.stringify(config));
   },
+});
+
+export const createControlPanelLayoutStore = ({
+  storage,
+}: {
+  storage: ClientStorage;
+}): ControlPanelLayoutStore => ({
   loadControlPanelLayout() {
-    return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey(scope)));
+    return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey()));
   },
   saveControlPanelLayout(layout) {
-    storage.setItem(controlPanelLayoutKey(scope), JSON.stringify(layout));
+    storage.setItem(controlPanelLayoutKey(), JSON.stringify(layout));
   },
 });

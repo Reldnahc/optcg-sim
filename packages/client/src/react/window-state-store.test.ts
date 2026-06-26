@@ -3,6 +3,7 @@ import { describe, test } from "vitest";
 
 import { createMemoryClientStorage } from "../session.js";
 import {
+  createControlPanelLayoutStore,
   createRevealWindowStateStore,
   createWindowLayoutStore,
 } from "./window-state-store.js";
@@ -66,10 +67,7 @@ describe("reveal window state store", () => {
       "collection:Trash": { x: 30, y: 40, width: 500, height: 260 },
     });
     assert.deepEqual(flowTwo.loadWindowRects(), {});
-    assert.equal(
-      storage.getItem("optcg:client:floating-window-rects"),
-      null,
-    );
+    assert.equal(storage.getItem("optcg:client:floating-window-rects"), null);
   });
 
   test("persists open floating window ids by layout scope", () => {
@@ -95,10 +93,7 @@ describe("reveal window state store", () => {
       [...flowTwo.loadOpenWindowIds()],
       ["card-preview", "action-log", "settings"],
     );
-    assert.equal(
-      storage.getItem("optcg:client:open-floating-windows"),
-      null,
-    );
+    assert.equal(storage.getItem("optcg:client:open-floating-windows"), null);
   });
 
   test("defaults unsaved windows to preview open and docked first", () => {
@@ -132,54 +127,56 @@ describe("reveal window state store", () => {
     assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
-  test("persists control panel width by layout scope", () => {
+  test("persists control panel width globally across layout scopes", () => {
     const storage = createMemoryClientStorage();
-    const flowOne = createWindowLayoutStore({
+    const shellLayoutStore = createControlPanelLayoutStore({
+      storage,
+    });
+    const flowWindowStore = createWindowLayoutStore({
       storage,
       scope: "flow-1",
     });
-    const flowTwo = createWindowLayoutStore({
-      storage,
-      scope: "flow-2",
-    });
-    flowOne.saveControlPanelLayout({
+    shellLayoutStore.saveControlPanelLayout({
       controlRailWidth: 340,
     });
 
-    assert.deepEqual(flowOne.loadControlPanelLayout(), {
+    assert.deepEqual(shellLayoutStore.loadControlPanelLayout(), {
       controlRailWidth: 340,
     });
-    assert.deepEqual(flowTwo.loadControlPanelLayout(), {});
     assert.equal(
-      storage.getItem("optcg:client:control-panel-layout:flow-1"),
+      storage.getItem("optcg:client:control-panel-layout"),
       JSON.stringify({ controlRailWidth: 340 }),
     );
-    assert.equal(storage.getItem("optcg:client:control-panel-layout"), null);
+    assert.equal(
+      storage.getItem("optcg:client:control-panel-layout:flow-1"),
+      null,
+    );
+    assert.equal("loadControlPanelLayout" in flowWindowStore, false);
   });
 
-  test("ignores app-global control panel layout data", () => {
+  test("ignores legacy saved dock height in the control panel layout", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
       "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: 340, controlDockHeight: 420 }),
     );
-    const store = createWindowLayoutStore({
+    const store = createControlPanelLayoutStore({
       storage,
-      scope: "flow-1",
     });
 
-    assert.deepEqual(store.loadControlPanelLayout(), {});
+    assert.deepEqual(store.loadControlPanelLayout(), {
+      controlRailWidth: 340,
+    });
   });
 
   test("fails closed to empty control panel layout for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:control-panel-layout:flow-1",
+      "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: "340" }),
     );
-    const store = createWindowLayoutStore({
+    const store = createControlPanelLayoutStore({
       storage,
-      scope: "flow-1",
     });
 
     assert.deepEqual(store.loadControlPanelLayout(), {});
@@ -209,10 +206,7 @@ describe("reveal window state store", () => {
       activeTabId: "preview",
       groupedTabIds: [],
     });
-    assert.equal(
-      storage.getItem("optcg:client:info-window-config"),
-      null,
-    );
+    assert.equal(storage.getItem("optcg:client:info-window-config"), null);
   });
 
   test("loads legacy boolean info window grouping as all known tabs", () => {
