@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import { describe, test } from "vitest";
 import type { CardId, ResolvedCard, VariantKey } from "@optcg/types";
 
@@ -335,6 +336,19 @@ describe("deck validation", () => {
         type: "anyCopiesOfThisCard",
       },
     ]);
+  });
+
+  test("does not keep a local any-copy deck text support gate", () => {
+    const source = readFileSync(
+      new URL("./deck-validation.ts", import.meta.url),
+      "utf8",
+    );
+
+    assert.doesNotMatch(
+      source,
+      /any number of this card in your deck/u,
+      "deck validation must consume shared parser metadata instead of a local OP16-042 string gate",
+    );
   });
 
   test("rejects cards that are not playable by the simulator implementation", async () => {

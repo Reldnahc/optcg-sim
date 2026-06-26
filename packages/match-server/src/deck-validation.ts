@@ -1,4 +1,8 @@
 import { createHash } from "node:crypto";
+import {
+  parseCardEffectLinesDetailed,
+  type ParsedEffectLine,
+} from "@optcg/cards";
 import type { CardId, ResolvedCard } from "@optcg/types";
 
 import type { ReadyDeckSubmission } from "./deck-submission.js";
@@ -469,52 +473,72 @@ const extractDeckConstructionRules = (
   card: ResolvedCard,
 ): readonly AppliedDeckRule[] => {
   const text = card.effectText ?? "";
-  const lines = text
+  const parsed =
+    text.length === 0 ? undefined : parseCardEffectLinesDetailed(text);
+  const metadataRules =
+    parsed?.ok === true
+      ? parsed.value.flatMap((line) =>
+          extractDeckConstructionRulesFromParsedLine(card, line),
+        )
+      : [];
+  const startOfGameRules = text
     .split(/\r?\n/u)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  return lines.flatMap((line) =>
-    extractDeckConstructionRulesFromLine(card, line),
-  );
+    .filter((line) => line.length > 0)
+    .flatMap((line) => extractStartOfGameDeckRulesFromLine(card, line));
+  return [...metadataRules, ...startOfGameRules];
 };
 
-const extractDeckConstructionRulesFromLine = (
+const extractDeckConstructionRulesFromParsedLine = (
+  card: ResolvedCard,
+  line: ParsedEffectLine,
+): readonly AppliedDeckRule[] => {
+  if (line.kind !== "metadata") {
+    return [];
+  }
+
+  const entries =
+    line.metadata.type === "compound" ? line.metadata.entries : [line.metadata];
+  return entries.flatMap((entry): readonly AppliedDeckRule[] => {
+    if (entry.type !== "deckRestriction") {
+      return [];
+    }
+    switch (entry.restriction.type) {
+      case "donDeckSize":
+        return [
+          {
+            type: "donDeckSize",
+            sourceCardId: card.cardId,
+            count: entry.restriction.count,
+          },
+        ];
+      case "anyCopiesOfThisCard":
+        return [{ type: "anyCopiesOfThisCard", sourceCardId: card.cardId }];
+      case "cardCostLessThan":
+      case "typeIncludesOnly":
+        return [];
+    }
+  });
+};
+
+const extractStartOfGameDeckRulesFromLine = (
   card: ResolvedCard,
   line: string,
 ): readonly AppliedDeckRule[] => {
-  const donDeckSize =
-    /^Under the rules of this game, your DON!! deck consists of (?<count>\d+) cards\.$/u.exec(
-      line,
-    );
-  const donDeckSizeText = donDeckSize?.groups?.["count"];
-  if (donDeckSizeText !== undefined) {
-    const count = Number(donDeckSizeText);
-    if (Number.isSafeInteger(count) && count > 0) {
-      return [{ type: "donDeckSize", sourceCardId: card.cardId, count }];
-    }
-  }
-
   const eventCost =
     /^Under the rules of this game, you cannot include Events? with a cost of (?<cost>\d+) or more in your deck and at the start of the game,/iu.exec(
       line,
     );
   const costText = eventCost?.groups?.["cost"];
-  if (costText !== undefined) {
-    const cost = Number(costText);
-    if (Number.isSafeInteger(cost) && cost >= 0) {
-      return [{ type: "excludeEventCostGte", sourceCardId: card.cardId, cost }];
-    }
+  if (costText === undefined) {
+    return [];
   }
 
-  if (
-    /^Under the rules of this game, you may have any number of this card in your deck\.$/u.test(
-      line,
-    )
-  ) {
-    return [{ type: "anyCopiesOfThisCard", sourceCardId: card.cardId }];
+  const cost = Number(costText);
+  if (!Number.isSafeInteger(cost) || cost < 0) {
+    return [];
   }
-
-  return [];
+  return [{ type: "excludeEventCostGte", sourceCardId: card.cardId, cost }];
 };
 
 const isCachedDeckValidationResult = (
