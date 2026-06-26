@@ -153,7 +153,7 @@
   transform: translateZ(0);
 }
 
-.match-app > :where(.board-shell, .loading-panel) {
+.match-app > .board-shell {
   position: relative;
   z-index: 1;
 }
@@ -220,11 +220,6 @@
   justify-content: center;
 }
 
-.board-shell.is-pregame-placeholder {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .hand-rail {
   grid-area: hand-rail;
   position: relative;
@@ -237,6 +232,12 @@
 
 .tabletop-board {
   grid-area: playmat-board;
+}
+
+.tabletop-board > .loading-panel {
+  grid-area: center-spacer;
+  align-self: center;
+  justify-self: center;
 }
 
 .hand-row {

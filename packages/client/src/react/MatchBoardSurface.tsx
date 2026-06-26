@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 
 import type { MatchClientSessionState } from "../index.js";
 import { BoardLayout } from "./BoardLayout.js";
+import { MatchBoardFrame } from "./MatchBoardFrame.js";
 import { MatchLoadingPanel } from "./MatchLoadingPanel.js";
 import { isLobbyClientState } from "./useMatchClient-support.js";
 
@@ -15,22 +16,21 @@ export interface MatchBoardSurfaceProps extends Omit<
   clientState: MatchClientSessionState | undefined;
 }
 
-const PregameBoardFootprint = (): React.JSX.Element => (
-  <section className="board-shell is-pregame-placeholder" aria-hidden="true">
-    <div className="tabletop-board" />
-  </section>
-);
-
 export const MatchBoardSurface = ({
   board,
   clientState,
   ...boardProps
 }: MatchBoardSurfaceProps): React.JSX.Element | null => {
   if (board === undefined && isLobbyClientState(clientState)) {
-    return <PregameBoardFootprint />;
+    return <MatchBoardFrame onBackgroundClick={boardProps.onBackgroundClick} />;
   }
   if (board === undefined) {
-    return <MatchLoadingPanel clientState={clientState} />;
+    return (
+      <MatchBoardFrame
+        onBackgroundClick={boardProps.onBackgroundClick}
+        tabletop={<MatchLoadingPanel clientState={clientState} />}
+      />
+    );
   }
   return <BoardLayout board={board} {...boardProps} />;
 };

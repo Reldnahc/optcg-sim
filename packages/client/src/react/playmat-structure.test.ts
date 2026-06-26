@@ -257,20 +257,20 @@ describe("playmat structure", () => {
   test("effect spotlight is hosted in the empty hand rail lane", async () => {
     const [
       boardLayout,
+      boardFrame,
       matchApp,
       effectSpotlightComponent,
       effectSpotlightStyles,
     ] = await Promise.all([
       readFile(join(sourceDirectory, "BoardLayout.tsx"), "utf8"),
+      readFile(join(sourceDirectory, "MatchBoardFrame.tsx"), "utf8"),
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
       readFile(join(sourceDirectory, "EffectSpotlight.tsx"), "utf8"),
       readFile(join(sourceDirectory, "styles", "effect-spotlight.css"), "utf8"),
     ]);
 
-    assert.match(
-      boardLayout,
-      /<div className="hand-rail">[\s\S]*<EffectSpotlight/u,
-    );
+    assert.match(boardLayout, /handRail=\{[\s\S]*<EffectSpotlight/u);
+    assert.match(boardFrame, /<div className="hand-rail">\{handRail\}<\/div>/u);
     assert.match(
       matchApp,
       /const effectSpotlightEntry = effectSpotlight\?\.entry;/u,

@@ -463,7 +463,7 @@ describe("settings window", () => {
     );
     assert.match(
       appShellStyles,
-      /\.match-app\s*>\s*:where\(\.board-shell,\s*\.loading-panel\)\s*\{[^}]*z-index:\s*1;/u,
+      /\.match-app\s*>\s*\.board-shell\s*\{[^}]*z-index:\s*1;/u,
     );
     assert.match(controlsStyles, /\.control-rail\s*\{[^}]*z-index:\s*2;/u);
   });
