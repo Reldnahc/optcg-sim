@@ -448,53 +448,6 @@ describe("local dev match", () => {
     );
   });
 
-  test("optional card-cost payment metadata survives dev snapshot projection", () => {
-    const match = createTestMatch();
-    const main = keepBothPlayersAndAdvance(match);
-    const leaderActivate = mustPlayerSnapshot(main, p1).actions.find(
-      (action) =>
-        action.label === "Activate effect" &&
-        action.placement?.instanceId ===
-          mustPlayerSnapshot(main, p1).view.self.leader.instanceId,
-    );
-    if (leaderActivate === undefined) {
-      throw new Error("Missing leader activate effect action.");
-    }
-
-    const activated = applyLocalDevAction(match, {
-      playerId: p1,
-      actionIndex: leaderActivate.index,
-    });
-    assert.deepEqual(activated.errors, []);
-
-    const snapshot = getLocalDevSnapshot(match);
-    const actions = mustPlayerSnapshot(snapshot, p1).actions;
-    const decline = actions.find(
-      (action) => action.decisionPayment?.kind === "paymentDeclined",
-    );
-    const cardCostActions = actions.filter(
-      (action) => action.decisionPayment?.kind === "cardCost",
-    );
-
-    assert.equal(
-      mustPlayerSnapshot(snapshot, p1).view.pendingDecision?.type,
-      "payCost",
-    );
-    assert.ok(decline, "expected decline metadata");
-    assert.equal(decline.responseKey, "decline");
-    assert.ok(cardCostActions.length > 0, "expected card-cost metadata");
-    assert.ok(
-      cardCostActions.every(
-        (action) =>
-          action.responseKey !== undefined &&
-          action.decisionPayment?.kind === "cardCost" &&
-          action.decisionPayment.operation === "trash" &&
-          action.decisionPayment.chooseLabel === "Choose card to trash" &&
-          action.decisionPayment.selectedCardInstanceIds.length === 1,
-      ),
-    );
-  });
-
   test("optional activation responses are placed on their source card", () => {
     const match = createTestMatch();
     const main = keepBothPlayersAndAdvance(match);

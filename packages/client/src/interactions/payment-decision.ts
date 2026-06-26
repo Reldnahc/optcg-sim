@@ -1,4 +1,8 @@
-import type { DecisionId, PublicPendingDecision } from "@optcg/types";
+import type {
+  PayCostInteraction,
+  PayCostInteractionGroup,
+  PublicPendingDecision,
+} from "@optcg/types";
 
 import type { ClientActionModel } from "../view-model.js";
 
@@ -8,28 +12,11 @@ type CardCostPayment = Extract<
   NonNullable<ClientActionModel["decisionPayment"]>,
   { kind: "cardCost" }
 >;
-type OptionalCardCostOperation = CardCostPayment["operation"] | "attachDon";
+type OptionalCardCostOperation = PayCostInteractionGroup["operation"];
 
-export interface OptionalCardCostGroup {
-  chooseActionIndex: number;
-  operation: OptionalCardCostOperation;
-  chooseLabel: string;
-  minCount?: number | undefined;
-  requiredCount: number;
-  source?: CardCostPayment["source"] | undefined;
-  cardActions: Array<{
-    instanceIds: string[];
-    actionIndex: number;
-    targetInstanceId?: string | undefined;
-    selectedCards?: CardCostPayment["selectedCards"] | undefined;
-  }>;
-}
+export type OptionalCardCostGroup = PayCostInteractionGroup;
 
-export interface OptionalCardCostChoice {
-  decisionId: DecisionId;
-  declineActionIndex: number;
-  groups: OptionalCardCostGroup[];
-}
+export type OptionalCardCostChoice = PayCostInteraction;
 
 export const createOptionalCardCostChoice = (
   decision: PublicPendingDecision,
@@ -486,6 +473,10 @@ export const cardCostPaymentLabel = (
       return `Reveal ${countLabel(count, "card", "cards")}`;
     case "returnToHand":
       return `Return ${countLabel(count, "card", "cards")} to hand`;
+    case "rest":
+      return `Rest ${countLabel(count, "card", "cards")}`;
+    case "ko":
+      return `K.O. ${countLabel(count, "card", "cards")}`;
   }
 };
 
@@ -505,6 +496,10 @@ const chooseLabelForCardCostOperation = (
     case "reveal":
       return fallback;
     case "returnToHand":
+      return fallback;
+    case "rest":
+      return fallback;
+    case "ko":
       return fallback;
   }
 };

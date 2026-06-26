@@ -5,6 +5,7 @@ import type {
   EffectTextSourceMap,
   InstanceId,
   MatchId,
+  PayCostInteraction,
   PlayerId,
   PlayerView,
   Zone,
@@ -23,6 +24,8 @@ export interface ClientVisibleAction {
           | "trash"
           | "returnToHand"
           | "moveCards"
+          | "rest"
+          | "ko"
           | "restDon"
           | "returnDon"
           | "reveal";
@@ -57,6 +60,7 @@ export interface ClientVisibleAction {
 export interface ClientPlayerSnapshot {
   view: PlayerView;
   actions: ClientVisibleAction[];
+  payCostInteraction?: PayCostInteraction | undefined;
 }
 
 export interface MatchSnapshot {

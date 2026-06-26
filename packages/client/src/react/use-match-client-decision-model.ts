@@ -142,13 +142,19 @@ export const createMatchClientDecisionModel = ({
               ? {}
               : { attachment: action.attachment }),
           }));
+  const projectedPayCostInteraction =
+    pendingDecision?.type === "payCost" &&
+    playerSnapshot?.payCostInteraction?.decisionId === pendingDecision.id
+      ? playerSnapshot.payCostInteraction
+      : undefined;
   const optionalCardCostChoice =
-    pendingDecision === undefined
+    projectedPayCostInteraction ??
+    (pendingDecision === undefined
       ? undefined
       : createOptionalCardCostChoice(
           pendingDecision,
           pendingDecisionResponseActions,
-        );
+        ));
   const canonicalDonPaymentActions =
     pendingDecision?.type === "payCost" && optionalCardCostChoice === undefined
       ? createCanonicalDonPaymentActions(pendingDecisionResponseActions)

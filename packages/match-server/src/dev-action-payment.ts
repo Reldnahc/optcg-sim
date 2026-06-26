@@ -19,7 +19,9 @@ type CardCostPaymentOption = Extract<
   {
     type:
       | "trashFromHand"
+      | "restFromField"
       | "trashFromField"
+      | "koFromField"
       | "moveCards"
       | "moveFieldToLife"
       | "restDon"
@@ -108,17 +110,30 @@ const isDeterministicDeckTopMoveCost = (
 const cardCostOperation = (
   optionType:
     | "trashFromHand"
+    | "restFromField"
     | "trashFromField"
+    | "koFromField"
     | "moveCards"
     | "moveFieldToLife"
     | "restDon"
     | "returnDon"
     | "revealFromHand",
-): "trash" | "moveCards" | "restDon" | "returnDon" | "reveal" => {
+):
+  | "trash"
+  | "moveCards"
+  | "rest"
+  | "ko"
+  | "restDon"
+  | "returnDon"
+  | "reveal" => {
   switch (optionType) {
     case "moveCards":
     case "moveFieldToLife":
       return "moveCards";
+    case "restFromField":
+      return "rest";
+    case "koFromField":
+      return "ko";
     case "restDon":
       return "restDon";
     case "returnDon":
@@ -133,8 +148,12 @@ const cardCostOperation = (
 
 const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
   switch (option.type) {
+    case "restFromField":
+      return "Choose card to rest";
     case "trashFromField":
       return "Choose Character to trash";
+    case "koFromField":
+      return "Choose card to K.O.";
     case "moveCards":
       if (option.from.zone === "life") {
         return "Choose Life card";
@@ -160,7 +179,9 @@ const isCardCostPaymentOption = (
   option: PayCostDecision["paymentOptions"][number] | undefined,
 ): option is CardCostPaymentOption =>
   option?.type === "trashFromHand" ||
+  option?.type === "restFromField" ||
   option?.type === "trashFromField" ||
+  option?.type === "koFromField" ||
   option?.type === "moveCards" ||
   option?.type === "moveFieldToLife" ||
   option?.type === "restDon" ||

@@ -354,6 +354,62 @@ describe("match client decision model", () => {
     assert.equal(model.decisionPrompt, "Trash 2 cards from hand");
   });
 
+  test("server-projected pay-cost interactions drive hand-card selection without raw action metadata", () => {
+    const snapshot = playerSnapshot();
+    snapshot.view.self.hand = [
+      card("event-1", "OP00-EVENT", "hand", p1),
+      card("stage-1", "OP00-STAGE", "hand", p1),
+    ];
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        responseKey: "decline",
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Raw payment",
+        responseKey: "trashFromHand",
+      },
+    ];
+    snapshot.payCostInteraction = {
+      decisionId: payCostDecision.id,
+      declineActionIndex: 1,
+      groups: [
+        {
+          chooseActionIndex: -5,
+          operation: "trash",
+          chooseLabel: "Choose card to trash",
+          minCount: 1,
+          requiredCount: 2,
+          source: { zone: "hand", playerId: p1 },
+          cardActions: [
+            { instanceIds: ["event-1"], actionIndex: 2 },
+            { instanceIds: ["event-1", "stage-1"], actionIndex: 3 },
+          ],
+        },
+      ],
+    };
+
+    const model = createMatchClientDecisionModel({
+      clientState: matchClientState(snapshot),
+      playerSnapshot: snapshot,
+      pendingDecision: payCostDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: ["event-1"],
+      decisionDraft: undefined,
+    });
+
+    assert.equal(model.decisionModal, undefined);
+    assert.equal(model.activeCardCostGroup?.operation, "trash");
+    assert.deepEqual(model.pendingChoiceInstanceIds, ["event-1", "stage-1"]);
+    assert.equal(model.selectedCardCostActionIndex, 2);
+  });
+
   test("attach-DON pay costs highlight legal targets after selecting DON", () => {
     const snapshot = playerSnapshot();
     snapshot.view.opponent.costArea = [

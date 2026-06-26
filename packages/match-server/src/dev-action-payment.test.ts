@@ -49,6 +49,16 @@ const secondHandCard = (instanceId: string): CardInstance => ({
   zone: { zone: "hand", playerId: p1, slot: "hand", index: 1 },
 });
 
+const characterCard = (instanceId: string): CardInstance => ({
+  instanceId: instanceId as InstanceId,
+  cardId: "character-card" as CardId,
+  owner: p1,
+  controller: p1,
+  zone: { zone: "characterArea", playerId: p1, slot: "character", index: 0 },
+  state: "active",
+  attachedDon: [],
+});
+
 const deckCard = (instanceId: string, index: number): CardInstance => ({
   instanceId: instanceId as InstanceId,
   cardId: "deck-card" as CardId,
@@ -148,6 +158,118 @@ describe("dev action payment metadata", () => {
         { instanceId: "don-2", zone: "costArea", playerId: p1 },
       ],
       source: { zone: "costArea", playerId: p1 },
+    });
+  });
+
+  test("projects rest-from-field payment as selectable field cards", () => {
+    const selected = characterCard("character-1");
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:rest-from-field" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "restFromField",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "restFromField",
+          type: "restFromField",
+          count: 1,
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.characters = [selected];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:rest-from-field" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "restFromField",
+        selectedCardInstanceIds: [selected.instanceId],
+      },
+    };
+
+    assert.deepEqual(actionDecisionPayment(state, action), {
+      kind: "cardCost",
+      operation: "rest",
+      chooseLabel: "Choose card to rest",
+      selectedCardInstanceIds: [selected.instanceId],
+      selectedCards: [
+        {
+          instanceId: selected.instanceId,
+          zone: "characterArea",
+          playerId: p1,
+          index: 0,
+        },
+      ],
+      source: { zone: "characterArea", playerId: p1 },
+    });
+  });
+
+  test("projects K.O.-from-field payment as selectable field cards", () => {
+    const selected = characterCard("character-1");
+    const state = minimalState([]);
+    state.pendingDecision = {
+      id: "decision:ko-from-field" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: {
+        type: "koFromField",
+        count: 1,
+        chooser: "self",
+        optional: true,
+      },
+      paymentOptions: [
+        {
+          id: "koFromField",
+          type: "koFromField",
+          count: 1,
+        },
+      ],
+    };
+    const player = state.players[p1];
+    if (player === undefined) {
+      throw new Error("Expected p1 in minimal state.");
+    }
+    player.characters = [selected];
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:ko-from-field" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "koFromField",
+        selectedCardInstanceIds: [selected.instanceId],
+      },
+    };
+
+    assert.deepEqual(actionDecisionPayment(state, action), {
+      kind: "cardCost",
+      operation: "ko",
+      chooseLabel: "Choose card to K.O.",
+      selectedCardInstanceIds: [selected.instanceId],
+      selectedCards: [
+        {
+          instanceId: selected.instanceId,
+          zone: "characterArea",
+          playerId: p1,
+          index: 0,
+        },
+      ],
+      source: { zone: "characterArea", playerId: p1 },
     });
   });
 

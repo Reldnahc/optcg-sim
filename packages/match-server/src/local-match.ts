@@ -64,6 +64,7 @@ import {
   type ReplayOperationFactory,
 } from "./local-match-replay-operation.js";
 import { visibleAction } from "./local-match-visible-action.js";
+import { createPayCostInteraction } from "./pay-cost-interaction.js";
 
 export type {
   CancelLocalDevRollbackInput,
@@ -661,7 +662,18 @@ const devPlayerSnapshot = (
       }),
     ),
   );
-  return { view, actions };
+  const payCostInteraction =
+    view.pendingDecision?.type === "payCost"
+      ? createPayCostInteraction({
+          decisionId: view.pendingDecision.id,
+          actions,
+        })
+      : undefined;
+  return {
+    view,
+    actions,
+    ...(payCostInteraction === undefined ? {} : { payCostInteraction }),
+  };
 };
 
 const devPlayerSnapshots = (

@@ -4,6 +4,7 @@ import type {
   EffectTextSourceMap,
   GameState,
   InstanceId,
+  PayCostInteraction,
   PlayerId,
   PlayerView,
   Zone,
@@ -23,6 +24,8 @@ export interface DevVisibleAction {
           | "trash"
           | "returnToHand"
           | "moveCards"
+          | "rest"
+          | "ko"
           | "restDon"
           | "returnDon"
           | "reveal";
@@ -57,6 +60,7 @@ export interface DevVisibleAction {
 export interface DevPlayerSnapshot {
   view: PlayerView;
   actions: DevVisibleAction[];
+  payCostInteraction?: PayCostInteraction | undefined;
 }
 
 export interface DevRollbackPointView {
