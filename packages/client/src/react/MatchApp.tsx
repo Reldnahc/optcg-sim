@@ -573,20 +573,6 @@ export const MatchApp = ({
             {replayControls}
           </div>
         )}
-        {lobbyState === undefined ? null : (
-          <LobbyDeckPanel
-            disabled={client.state.actionInFlight}
-            lobbyState={lobbyState}
-            loadouts={client.state.accountLoadouts}
-            loadoutsStatus={client.state.accountLoadoutsStatus}
-            loadoutsError={client.state.accountLoadoutsError}
-            requirePlayableValidation={
-              client.state.accountLoadoutValidationRequired
-            }
-            onRefreshLoadouts={client.refreshAccountLoadouts}
-            onSubmitLoadout={client.submitLobbyLoadout}
-          />
-        )}
         <MatchControlPanel
           errors={client.state.errors}
           globalActions={controlGlobalActions}
@@ -634,6 +620,22 @@ export const MatchApp = ({
           onCancelRollback={() => {
             void client.cancelRollback();
           }}
+          pregameControl={
+            lobbyState === undefined ? undefined : (
+              <LobbyDeckPanel
+                disabled={client.state.actionInFlight}
+                lobbyState={lobbyState}
+                loadouts={client.state.accountLoadouts}
+                loadoutsStatus={client.state.accountLoadoutsStatus}
+                loadoutsError={client.state.accountLoadoutsError}
+                requirePlayableValidation={
+                  client.state.accountLoadoutValidationRequired
+                }
+                onRefreshLoadouts={client.refreshAccountLoadouts}
+                onSubmitLoadout={client.submitLobbyLoadout}
+              />
+            )
+          }
           previewControl={
             <CardPreviewButton
               open={previewOpen}

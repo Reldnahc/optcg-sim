@@ -93,7 +93,11 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(html, /modal-frame lobby-deck-modal/u);
+    assert.match(
+      html,
+      /<section class="lobby-deck-panel" aria-label="Deck selection">/u,
+    );
+    assert.doesNotMatch(html, /modal-frame/u);
     assert.doesNotMatch(html, /modal-frame-header/u);
     assert.doesNotMatch(html, />Close</u);
     assert.match(html, /deck-loadout-picker/u);
@@ -112,7 +116,7 @@ describe("lobby deck panel", () => {
     assert.match(html, /Luffy Life/u);
     assert.match(
       html,
-      /class="deck-loadout-submit-button modal-submit-button"/u,
+      /class="deck-loadout-submit-button action-button is-primary"/u,
     );
     assert.match(html, />Submit</u);
     assert.doesNotMatch(html, /deck-status-list/u);
@@ -220,7 +224,7 @@ describe("lobby deck panel", () => {
     );
     assert.doesNotMatch(
       html,
-      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
+      /<button class="deck-loadout-submit-button action-button is-primary" type="submit" disabled="">Submit/u,
     );
   });
 
@@ -248,7 +252,7 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(html, /Checking deck/u);
     assert.doesNotMatch(
       html,
-      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Submit/u,
+      /<button class="deck-loadout-submit-button action-button is-primary" type="submit" disabled="">Submit/u,
     );
   });
 
@@ -313,17 +317,14 @@ describe("lobby deck panel", () => {
     );
   });
 
-  test("custom deck loadout picker scrolls internally inside a taller modal", async () => {
+  test("custom deck loadout picker scrolls inside the control rail", async () => {
     const styles = await readFile(
       new URL("styles/controls.css", import.meta.url),
       "utf8",
     );
 
-    assert.match(
-      styles,
-      /\.lobby-deck-modal\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
-    );
-    assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
+    assert.doesNotMatch(styles, /\.lobby-deck-modal/u);
+    assert.match(styles, /\.control-pregame-slot\s*\{[^}]*min-width:\s*0;/u);
     assert.match(
       styles,
       /\.deck-loadout-menu\s*\{[^}]*grid-template-rows:\s*0fr;[^}]*transition:\s*grid-template-rows 130ms ease,\s*opacity 90ms ease;/u,
@@ -416,7 +417,7 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       html,
-      /<button class="deck-loadout-submit-button modal-submit-button" type="submit" disabled="">Waiting for opponent/u,
+      /<button class="deck-loadout-submit-button action-button is-primary" type="submit" disabled="">Waiting for opponent/u,
     );
   });
 

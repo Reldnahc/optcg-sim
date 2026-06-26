@@ -59,6 +59,27 @@ test("control rail orders dock, tools, turn status, then main controls", () => {
   assert.equal(statusPosition < actionPosition, true);
 });
 
+test("control rail hosts pregame controls before match actions", () => {
+  const markup = renderToStaticMarkup(
+    createElement(ControlRail, {
+      errors: [],
+      globalActions: [{ index: 12, type: "endMainPhase", label: "End turn" }],
+      disabled: false,
+      pregameControl: createElement("section", null, "Choose deck"),
+      onAction: () => undefined,
+      onHome: () => undefined,
+    }),
+  );
+
+  const pregamePosition = markup.indexOf("Choose deck");
+  const actionPosition = markup.indexOf("End turn");
+
+  assert.match(markup, /control-pregame-slot/u);
+  assert.equal(pregamePosition >= 0, true);
+  assert.equal(actionPosition >= 0, true);
+  assert.equal(pregamePosition < actionPosition, true);
+});
+
 test("control rail keeps home and rematch hidden during active matches", () => {
   const markup = renderToStaticMarkup(
     createElement(ControlRail, {
