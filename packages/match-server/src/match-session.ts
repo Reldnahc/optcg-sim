@@ -15,6 +15,7 @@ import type {
   MatchSessionMetadata,
   SessionActionResult,
   SessionActionRequest,
+  StoredReplayOperation,
   StoredSessionRecord,
 } from "./session-types.js";
 
@@ -41,15 +42,21 @@ export interface CreateMatchSessionRuntimeOptions {
 const resultFromLocal = (
   envelope: ClientActionEnvelope,
   applied: ReturnType<typeof applyLocalDevAction>,
-): SessionActionResult => ({
-  type: "actionResult",
-  matchId: envelope.matchId,
-  clientActionId: envelope.clientActionId,
-  accepted: applied.errors.length === 0,
-  stateSeq: applied.stateSeq,
-  actionSeq: applied.actionSeq,
-  ...(applied.snapshot === undefined ? {} : { snapshot: applied.snapshot }),
-  errors: applied.errors,
+): {
+  readonly result: SessionActionResult;
+  readonly replay?: StoredReplayOperation;
+} => ({
+  result: {
+    type: "actionResult",
+    matchId: envelope.matchId,
+    clientActionId: envelope.clientActionId,
+    accepted: applied.errors.length === 0,
+    stateSeq: applied.stateSeq,
+    actionSeq: applied.actionSeq,
+    ...(applied.snapshot === undefined ? {} : { snapshot: applied.snapshot }),
+    errors: applied.errors,
+  },
+  ...(applied.replay === undefined ? {} : { replay: applied.replay }),
 });
 
 const rejectedResult = (
@@ -174,10 +181,12 @@ export const createMatchSessionRuntime = ({
   const storeRecord = (
     envelope: ClientActionEnvelope,
     result: SessionActionResult,
+    replay: StoredReplayOperation | undefined,
   ): SessionActionResult => {
     const record: StoredSessionRecord = {
       envelope,
       result,
+      ...(result.accepted && replay !== undefined ? { replay } : {}),
       recordedAt: now(),
     };
     const compactRecord = compactStoredSessionRecord(record);
@@ -272,11 +281,11 @@ export const createMatchSessionRuntime = ({
         );
       }
 
-      const result = resultFromLocal(
+      const applied = resultFromLocal(
         envelope,
         applyRequest(local, envelope.request, includeActionSnapshots),
       );
-      return storeRecord(envelope, result);
+      return storeRecord(envelope, applied.result, applied.replay);
     },
     async flushPersistence() {
       if (persistence === undefined) {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { hashCanonicalStateValue } from "@optcg/engine-core";
 
 import type {
   CompletedMatchReplayDetail,
@@ -11,8 +12,11 @@ import {
 } from "./local-match.js";
 import { reconstructReplayFrames } from "./replay-frame-reconstruction.js";
 
-const detail = (replay: JsonObject): CompletedMatchReplayDetail => ({
-  matchId: "match-1",
+const detail = (
+  replay: JsonObject,
+  matchId = "match-1",
+): CompletedMatchReplayDetail => ({
+  matchId,
   status: "completed",
   gameType: "dev",
   formatId: "dev",
@@ -119,6 +123,76 @@ describe("reconstructReplayFrames", () => {
       stateSeq: match.state.seq,
       actionSeq: match.state.actionSeq,
     });
+  });
+
+  test("uses canonical replay action instead of persisted action index", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    const pendingDecisionId = match.state.pendingDecision?.id;
+    if (pendingDecisionId === undefined) {
+      throw new Error(
+        "Expected premade match to start with mulligan decision.",
+      );
+    }
+
+    const result = reconstructReplayFrames(
+      detail(
+        {
+          replayFormatVersion: "dev-local-v1",
+          rngSeedRevealed: String(setup.rngSeed),
+          manifestSnapshot: setup.cardManifest,
+          initialStateHash: "",
+          initialSnapshot: null,
+          finalState: null,
+          initialDeckOrders: {
+            playerOrder: setup.playerOrder,
+            firstPlayerId: setup.firstPlayerId,
+            shuffleDecks: setup.shuffleDecks ?? false,
+            players: Object.fromEntries(
+              setup.players.map((player) => [
+                player.playerId,
+                {
+                  leaderCardId: player.leaderCardId,
+                  leaderLifeCount: player.leaderLifeCount,
+                  deckCardIds: player.deckCardIds.map(String),
+                  donDeckCardIds: player.donDeckCardIds.map(String),
+                },
+              ]),
+            ),
+          },
+          deterministicEntries: [
+            {
+              envelope: {
+                request: {
+                  type: "submitAction",
+                  playerId: "p1",
+                  actionIndex: 99,
+                },
+              },
+              replay: {
+                kind: "action",
+                stateSeqBefore: match.state.seq,
+                stateHashBefore: hashCanonicalStateValue(match.state),
+                action: {
+                  type: "respondToDecision",
+                  decisionId: pendingDecisionId,
+                  response: { type: "cards", cards: [] },
+                },
+              },
+            },
+          ],
+        },
+        setup.matchId,
+      ),
+    );
+
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") {
+      return;
+    }
+    expect(result.frames[1]?.label).toBe("respondToDecision");
   });
 
   test("fails closed when no frame or reconstruction data exists", () => {

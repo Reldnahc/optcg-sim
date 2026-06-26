@@ -183,6 +183,30 @@ describe("match session runtime", () => {
     expect(loadedAfterCheckpoint?.state.seq).toBe(accepted.stateSeq);
   });
 
+  test("records canonical replay authority for accepted actions", async () => {
+    const { local, runtime } = await createRuntime();
+    const stateSeqBefore = local.state.seq;
+    const pendingDecisionId = local.state.pendingDecision?.id;
+    const input = envelope(submitRequest(stateSeqBefore), stateSeqBefore);
+
+    const accepted = runtime.applyEnvelope(input);
+
+    expect(accepted.accepted).toBe(true);
+    const record = runtime.records()[0];
+    expect(record?.replay).toMatchObject({
+      kind: "action",
+      stateSeqBefore,
+      stateSeqAfter: accepted.stateSeq,
+      action: {
+        type: "respondToDecision",
+        decisionId: pendingDecisionId,
+        response: { type: "cards", cards: [] },
+      },
+    });
+    expect(record?.replay?.stateHashBefore).toEqual(expect.any(String));
+    expect(record?.replay?.stateHashAfter).toEqual(expect.any(String));
+  });
+
   test("keeps accepted records pending when persistence append fails", async () => {
     const setup = await createFixtureDevMatchSetup(matchId);
     const local = createLocalDevMatch(setup);

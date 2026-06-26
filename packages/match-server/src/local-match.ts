@@ -18,11 +18,9 @@ import type {
   EngineError,
   EngineResult,
   GameState,
-  LegalAction,
   MatchCardManifest,
   MatchId,
   PlayerId,
-  CardInstance,
   DecisionId,
   DecisionResponse,
   InstanceId,
@@ -31,14 +29,12 @@ import type {
 import type { RedisMode } from "./redis-config.js";
 
 import { createDefaultDevMatchSetup } from "./default-dev-manifest.js";
-import { actionDecisionPayment } from "./dev-action-payment.js";
 import { recordActionTimingSpan } from "./action-timing-log.js";
 import { cardName } from "./dev-card-utils.js";
 import {
   buildLocalDevCardCatalog,
   buildLocalDevCardCatalogForPlayer,
 } from "./local-card-catalog.js";
-import { actionLabel } from "./local-dev-action-labels.js";
 import { cardVariantOverridesForSetup } from "./local-card-variants.js";
 import type {
   DevMatchSnapshot,
@@ -58,6 +54,16 @@ import {
   type CancelLocalDevRollbackInput,
   type RequestLocalDevRollbackInput,
 } from "./local-rollback.js";
+import {
+  completeReplayOperation,
+  replayAdvanceToMainPhaseOperation,
+  replayDecisionOperation,
+  replayLegalActionOperation,
+  selectedDonReplayInput,
+  type AppliedLocalDevReplayOperation,
+  type ReplayOperationFactory,
+} from "./local-match-replay-operation.js";
+import { visibleAction } from "./local-match-visible-action.js";
 
 export type {
   CancelLocalDevRollbackInput,
@@ -121,6 +127,7 @@ export interface ApplyLocalDevDecisionInput {
 export interface ApplyLocalDevActionResult {
   stateSeq: number;
   actionSeq: number;
+  replay?: AppliedLocalDevReplayOperation;
   snapshot?: DevMatchSnapshot;
   errors: string[];
 }
@@ -130,6 +137,7 @@ type ExecutableDevAction = DevVisibleAction & {
     state: GameState,
     input?: Pick<ApplyLocalDevActionInput, "selectedDonInstanceIds">,
   ) => EngineResult;
+  replayOperation?: ReplayOperationFactory;
   decisionId?: DecisionId;
   response?: DecisionResponse;
 };
@@ -153,9 +161,11 @@ const localActionResult = (
   match: LocalDevMatch,
   errors: string[],
   includeSnapshot = true,
+  replay?: AppliedLocalDevReplayOperation,
 ): ApplyLocalDevActionResult => ({
   stateSeq: match.state.seq,
   actionSeq: match.state.actionSeq,
+  ...(replay === undefined ? {} : { replay }),
   ...(includeSnapshot
     ? {
         snapshot: recordActionTimingSpan("getLocalDevSnapshot", () =>
@@ -165,72 +175,6 @@ const localActionResult = (
     : {}),
   errors,
 });
-
-const responseKeyForDecisionResponse = (
-  response: DecisionResponse | undefined,
-): string | undefined => {
-  if (response === undefined) {
-    return undefined;
-  }
-  switch (response.type) {
-    case "payment":
-      return response.optionId;
-    case "paymentDeclined":
-      return "decline";
-    case "optionalActivation":
-      return response.choice;
-    case "lifeTrigger":
-      return response.choice;
-    case "replacement":
-      return response.replacementId ?? "decline";
-    case "chooseQuantity":
-      return String(response.quantity);
-    case "effectOption":
-      return response.optionId;
-    case "effectOptionDeclined":
-      return "decline";
-    case "mulligan":
-      return response.keep ? "keep" : "mulligan";
-    case "loopCount":
-      return String(response.count);
-    case "rollbackConsent":
-      return response.allow ? "allow" : "deny";
-    case "cards":
-    case "targets":
-    case "orderedIds":
-    case "topBottomPlacement":
-      return undefined;
-  }
-};
-
-const visibleAction = (
-  state: GameState,
-  action: LegalAction,
-): Omit<ExecutableDevAction, "index" | "apply"> => {
-  const placement = actionPlacement(state, action);
-  const attachment = actionAttachment(action);
-  const attack = actionAttack(action);
-  const counter = actionCounter(state, action);
-  const decisionPayment = actionDecisionPayment(state, action);
-  return {
-    type: action.type,
-    label: actionLabel(state, action),
-    ...(() => {
-      const responseKey =
-        action.type === "respondToDecision"
-          ? responseKeyForDecisionResponse(action.response)
-          : undefined;
-      return responseKey === undefined ? {} : { responseKey };
-    })(),
-    ...(decisionPayment === undefined ? {} : { decisionPayment }),
-    ...(placement === undefined
-      ? {}
-      : { placement: { instanceId: placement } }),
-    ...(attachment === undefined ? {} : { attachment }),
-    ...(attack === undefined ? {} : { attack }),
-    ...(counter === undefined ? {} : { counter }),
-  };
-};
 
 const p1 = "p1" as PlayerId;
 const p2 = "p2" as PlayerId;
@@ -480,98 +424,6 @@ const startMulliganAfterSetupIfReady = (result: EngineResult): EngineResult => {
   return combinedEngineResult(started, [...result.events, ...started.events]);
 };
 
-const actionPlacement = (
-  state: GameState,
-  action: LegalAction,
-): CardInstance["instanceId"] | undefined => {
-  switch (action.type) {
-    case "playCard":
-    case "useCounter":
-      return action.cardInstanceId;
-    case "activateEffect":
-      return action.source.instanceId;
-    case "attachDon":
-      return action.target.instanceId;
-    case "declareAttack":
-      return action.attacker.instanceId;
-    case "activateBlocker":
-      return action.blocker.instanceId;
-    case "concede":
-    case "endMainPhase":
-      return undefined;
-    case "respondToDecision":
-      return action.response.type === "optionalActivation" &&
-        state.pendingDecision?.type === "chooseOptionalActivation" &&
-        state.pendingDecision.id === action.decisionId
-        ? state.pendingDecision.source.instanceId
-        : undefined;
-  }
-};
-
-const actionAttachment = (
-  action: LegalAction,
-): DevVisibleAction["attachment"] | undefined => {
-  if (action.type === "attachDon") {
-    if (action.donInstanceId === undefined) {
-      return undefined;
-    }
-    return {
-      donInstanceId: action.donInstanceId,
-      targetInstanceId: action.target.instanceId,
-    };
-  }
-  if (
-    action.type === "respondToDecision" &&
-    action.response.type === "payment" &&
-    action.response.selectedDonInstanceIds?.length === 1 &&
-    action.response.selectedCardInstanceIds?.length === 1
-  ) {
-    const donInstanceId = action.response.selectedDonInstanceIds[0];
-    const targetInstanceId = action.response.selectedCardInstanceIds[0];
-    if (donInstanceId === undefined || targetInstanceId === undefined) {
-      return undefined;
-    }
-    return {
-      donInstanceId,
-      targetInstanceId,
-    };
-  }
-  return undefined;
-};
-
-const actionAttack = (
-  action: LegalAction,
-): DevVisibleAction["attack"] | undefined => {
-  if (action.type !== "declareAttack") {
-    return undefined;
-  }
-  return {
-    attackerInstanceId: action.attacker.instanceId,
-    targetInstanceId: action.target.instanceId,
-  };
-};
-
-const actionCounter = (
-  state: GameState,
-  action: LegalAction,
-): DevVisibleAction["counter"] | undefined => {
-  if (action.type !== "useCounter") {
-    return undefined;
-  }
-  const counterCard = Object.values(state.players)
-    .flatMap((player) => player.hand)
-    .find((card) => card.instanceId === action.cardInstanceId);
-  const amount =
-    counterCard === undefined
-      ? undefined
-      : state.cardManifest.cards[counterCard.cardId]?.counter;
-  return {
-    cardInstanceId: action.cardInstanceId,
-    targetInstanceId: action.target.instanceId,
-    ...(amount === undefined ? {} : { amount }),
-  };
-};
-
 const mulliganActions = (
   state: GameState,
   playerId: PlayerId,
@@ -590,6 +442,8 @@ const mulliganActions = (
       type: "respondToDecision",
       label: "Keep hand",
       responseKey: "keep",
+      replayOperation: () =>
+        replayDecisionOperation(decision.id, { type: "mulligan", keep: true }),
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -602,6 +456,11 @@ const mulliganActions = (
       type: "respondToDecision",
       label: "Mulligan hand",
       responseKey: "mulligan",
+      replayOperation: () =>
+        replayDecisionOperation(decision.id, {
+          type: "mulligan",
+          keep: false,
+        }),
       apply: (currentState) =>
         respondToMulliganDecision(currentState, {
           type: "respondToDecision",
@@ -630,6 +489,7 @@ const phaseActions = (
       index: 0,
       type: "advanceToMainPhase",
       label: "Advance to main phase",
+      replayOperation: replayAdvanceToMainPhaseOperation,
       apply: advanceToMainPhase,
     },
   ];
@@ -697,6 +557,8 @@ const setupStartOfGameActions = (
       index: 0,
       type: "respondToDecision",
       label: "Skip setup Stage",
+      replayOperation: () =>
+        replayDecisionOperation(decision.id, { type: "cards", cards: [] }),
       apply: (currentState) =>
         applyAction(currentState, {
           type: "respondToDecision",
@@ -708,6 +570,11 @@ const setupStartOfGameActions = (
       index: 0,
       type: "respondToDecision" as const,
       label: `Play ${cardName(state, candidate.card.cardId)} during setup`,
+      replayOperation: () =>
+        replayDecisionOperation(decision.id, {
+          type: "cards",
+          cards: [candidate.card],
+        }),
       apply: (currentState: GameState) =>
         applyAction(currentState, {
           type: "respondToDecision",
@@ -735,6 +602,7 @@ const executableActions = (
       legalActions.map(
         (action): Omit<ExecutableDevAction, "index"> => ({
           ...visibleAction(state, action),
+          replayOperation: replayLegalActionOperation(action),
           apply: (currentState, input) =>
             applyAction(
               currentState,
@@ -900,6 +768,11 @@ export const applyLocalDevAction = (
   const previousState = recordActionTimingSpan("cloneGameState", () =>
     cloneGameState(match.state),
   );
+  const stateSeqBefore = match.state.seq;
+  const stateHashBefore = timedStateHash("replayBefore", match.state);
+  const replayOperation = action.replayOperation?.(
+    selectedDonReplayInput(input),
+  );
   const actionResult = recordActionTimingSpan("actionApply", () =>
     action.apply(match.state, {
       ...(input.selectedDonInstanceIds === undefined
@@ -921,7 +794,17 @@ export const applyLocalDevAction = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return localActionResult(match, errors, input.includeSnapshot);
+  const replay =
+    errors.length === 0
+      ? completeReplayOperation({
+          match,
+          operation: replayOperation,
+          stateSeqBefore,
+          stateHashBefore,
+          stateHash: timedStateHash,
+        })
+      : undefined;
+  return localActionResult(match, errors, input.includeSnapshot, replay);
 };
 
 export const applyLocalDevDecision = (
@@ -978,6 +861,8 @@ export const applyLocalDevDecision = (
     decisionId: input.decisionId,
     response: input.response,
   };
+  const stateSeqBefore = match.state.seq;
+  const stateHashBefore = timedStateHash("replayBefore", match.state);
   const previousState = recordActionTimingSpan("cloneGameState", () =>
     cloneGameState(match.state),
   );
@@ -1000,7 +885,17 @@ export const applyLocalDevDecision = (
       recordRollbackPoint(match.rollback, previousState, result.events),
     );
   }
-  return localActionResult(match, errors, input.includeSnapshot);
+  const replay =
+    errors.length === 0
+      ? completeReplayOperation({
+          match,
+          operation: { kind: "action", action },
+          stateSeqBefore,
+          stateHashBefore,
+          stateHash: timedStateHash,
+        })
+      : undefined;
+  return localActionResult(match, errors, input.includeSnapshot, replay);
 };
 
 export const requestLocalDevRollback = (

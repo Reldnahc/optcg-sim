@@ -1,4 +1,5 @@
 import type {
+  Action,
   DecisionId,
   DecisionResponse,
   GameState,
@@ -133,9 +134,28 @@ export interface SessionActionResult {
   readonly errors: readonly string[];
 }
 
+export type StoredReplayOperation =
+  | {
+      readonly kind: "action";
+      readonly action: Action;
+      readonly stateSeqBefore: number;
+      readonly stateSeqAfter: number;
+      readonly stateHashBefore: string;
+      readonly stateHashAfter: string;
+    }
+  | {
+      readonly kind: "system";
+      readonly systemAction: "advanceToMainPhase";
+      readonly stateSeqBefore: number;
+      readonly stateSeqAfter: number;
+      readonly stateHashBefore: string;
+      readonly stateHashAfter: string;
+    };
+
 export interface StoredSessionRecord {
   readonly envelope: ClientActionEnvelope;
   readonly result: SessionActionResult;
+  readonly replay?: StoredReplayOperation;
   readonly recordedAt: string;
 }
 
