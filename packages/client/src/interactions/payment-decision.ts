@@ -438,7 +438,7 @@ const countLabel = (count: number, singular: string, plural: string): string =>
 export const cardCostPaymentLabel = (
   group: Pick<
     OptionalCardCostGroup,
-    "operation" | "requiredCount" | "source" | "chooseLabel"
+    "operation" | "minCount" | "requiredCount" | "source" | "chooseLabel"
   >,
   selectedCount = group.requiredCount,
 ): string => {
@@ -446,6 +446,12 @@ export const cardCostPaymentLabel = (
   switch (group.operation) {
     case "trash":
       if (group.source?.zone === "hand") {
+        if (
+          group.minCount !== undefined &&
+          group.minCount !== group.requiredCount
+        ) {
+          return "Trash cards";
+        }
         return `Trash ${countLabel(count, "card", "cards")} from hand`;
       }
       if (group.source?.zone === "characterArea") {

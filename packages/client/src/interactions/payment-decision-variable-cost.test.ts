@@ -93,7 +93,7 @@ describe("variable card-cost interaction", () => {
       optionalCardCostActionForSelection(group, ["event-1", "stage-1"]),
       3,
     );
-    assert.equal(cardCostPaymentLabel(group, 1), "Trash 1 card from hand");
-    assert.equal(cardCostPaymentLabel(group, 2), "Trash 2 cards from hand");
+    assert.equal(cardCostPaymentLabel(group, 1), "Trash cards");
+    assert.equal(cardCostPaymentLabel(group, 2), "Trash cards");
   });
 });

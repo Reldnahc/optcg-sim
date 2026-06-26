@@ -349,9 +349,9 @@ describe("match client decision model", () => {
     const selection = model.activeCardCostSelection;
     assert.ok(selection);
     assert.equal(selection.canConfirm, true);
-    assert.equal(selection.confirmLabel, "Trash 1 card from hand");
+    assert.equal(selection.confirmLabel, "Trash cards");
     assert.equal(model.selectedCardCostActionIndex, 2);
-    assert.equal(model.decisionPrompt, "Trash 2 cards from hand");
+    assert.equal(model.decisionPrompt, "Trash cards");
   });
 
   test("server-projected pay-cost interactions drive hand-card selection without raw action metadata", () => {

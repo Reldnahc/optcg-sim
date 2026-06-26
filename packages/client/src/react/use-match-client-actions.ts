@@ -73,6 +73,12 @@ export interface MatchClientActions {
   submitDecisionDraft: (draft: DecisionDraft) => Promise<void>;
 }
 
+export const cardCostConfirmActionIndex = (
+  activeCardCostGroup: OptionalCardCostGroup | undefined,
+  selectedCardCostActionIndex: number | undefined,
+): number | undefined =>
+  activeCardCostGroup === undefined ? undefined : selectedCardCostActionIndex;
+
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
@@ -302,6 +308,14 @@ export const useMatchClientActions = ({
         return;
       }
       if (actionIndex === CONFIRM_DECISION_SELECTION_ACTION_INDEX) {
+        const cardCostActionIndex = cardCostConfirmActionIndex(
+          activeCardCostGroup,
+          selectedCardCostActionIndex,
+        );
+        if (cardCostActionIndex !== undefined) {
+          await submitAction(cardCostActionIndex);
+          return;
+        }
         if (activeDecisionDraft !== undefined) {
           await submitDecisionDraft(activeDecisionDraft);
         }
@@ -326,6 +340,7 @@ export const useMatchClientActions = ({
       }
     },
     [
+      activeCardCostGroup,
       activeDecisionDraft,
       attachSelectedDonToTarget,
       board,
@@ -336,6 +351,7 @@ export const useMatchClientActions = ({
       pendingDecision,
       resetInteractionState,
       selectedCardInstanceId,
+      selectedCardCostActionIndex,
       setActionInFlight,
       setActiveAttackTargetChoice,
       setActiveCardCostChoice,
@@ -350,13 +366,12 @@ export const useMatchClientActions = ({
   );
 
   const confirmDecision = useCallback(async (): Promise<void> => {
-    if (
-      activeCardCostGroup !== undefined &&
-      activeCardCostGroup.requiredCount > 1
-    ) {
-      if (selectedCardCostActionIndex !== undefined) {
-        await submitAction(selectedCardCostActionIndex);
-      }
+    const cardCostActionIndex = cardCostConfirmActionIndex(
+      activeCardCostGroup,
+      selectedCardCostActionIndex,
+    );
+    if (cardCostActionIndex !== undefined) {
+      await submitAction(cardCostActionIndex);
       return;
     }
     if (pendingDecision === undefined || activeDecisionDraft === undefined) {

@@ -102,6 +102,19 @@ const lifeMoveCardsGroup: OptionalCardCostGroup = {
   ],
 };
 
+const variableTrashFromHandGroup: OptionalCardCostGroup = {
+  chooseActionIndex: -5,
+  operation: "trash",
+  chooseLabel: "Choose card to trash",
+  minCount: 1,
+  requiredCount: 2,
+  source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+  cardActions: [
+    { instanceIds: ["event-1"], actionIndex: 2 },
+    { instanceIds: ["event-1", "stage-1"], actionIndex: 3 },
+  ],
+};
+
 const event = (
   overrides: Partial<EngineEvent> & Pick<EngineEvent, "type" | "seq">,
 ): EngineEvent => ({
@@ -372,6 +385,31 @@ describe("match client support helpers", () => {
         {
           index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
           label: "Place 2 cards from trash at bottom",
+          type: "confirmDecisionSelection",
+        },
+        {
+          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+          label: "Clear selection",
+          type: "clearDecisionSelection",
+        },
+      ],
+    );
+  });
+
+  test("variable hand-trash card costs use generic confirm copy", () => {
+    assert.deepEqual(
+      activeCardCostGlobalActions({
+        choice: optionalChoice,
+        group: variableTrashFromHandGroup,
+        explicitChoiceActive: false,
+        selectedInstanceCount: 1,
+        selectedActionIndex: 2,
+      }),
+      [
+        { index: 1, label: "Decline cost", type: "respondToDecision" },
+        {
+          index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+          label: "Trash cards",
           type: "confirmDecisionSelection",
         },
         {

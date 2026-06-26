@@ -475,6 +475,13 @@ export const prominentDecisionPrompt = ({
       return `Rest ${countLabel(count, "DON!!", "DON!!")}`;
     }
     if (activeCardCostGroup.operation === "trash") {
+      if (
+        activeCardCostGroup.source?.zone === "hand" &&
+        activeCardCostGroup.minCount !== undefined &&
+        activeCardCostGroup.minCount !== activeCardCostGroup.requiredCount
+      ) {
+        return "Trash cards";
+      }
       return `Trash ${countLabel(count, "card", "cards")} from hand`;
     }
     if (
