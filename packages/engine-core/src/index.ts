@@ -40,6 +40,15 @@ export { filterStateForPlayer } from "./view/filter-state-for-player.js";
 export { toPublicTimerState } from "./view/public-timers.js";
 export { evaluateEffectBlockRuntimeSupport } from "./effect-runtime-admission.js";
 export type { RuntimeSupportAdmissionResult } from "./effect-runtime-admission.js";
+export {
+  allTriggerQueueCapabilities,
+  triggerQueueCapabilityForType,
+} from "./runtime/trigger-queueing/capabilities/registry.js";
+export type {
+  BehaviorProbeScenarioDescriptor,
+  BehaviorProbeScenarioKind,
+  TriggerQueueCapability,
+} from "./runtime/trigger-queueing/capabilities/types.js";
 export { processEffectRuntime } from "./effect-runtime.js";
 export { splitEffectTextSpotlightPresentation } from "./spotlight/spotlight-entry.js";
 export { reconstructReplayArtifactStates } from "./replay/artifact-reducer.js";

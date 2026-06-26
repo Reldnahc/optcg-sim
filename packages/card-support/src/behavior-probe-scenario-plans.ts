@@ -1,3 +1,8 @@
+import {
+  allTriggerQueueCapabilities,
+  triggerQueueCapabilityForType,
+  type BehaviorProbeScenarioDescriptor,
+} from "@optcg/engine-core";
 import type { EffectBlock, Trigger } from "@optcg/types";
 
 import { collectEffectBlockPrimitiveTypes } from "./engine-primitive-inventory.js";
@@ -93,42 +98,18 @@ const groupEffectsByScenarioFamily = (
 };
 
 const scenarioFamilyKey = (effect: EffectBlock): string => {
-  if (effect.trigger.type === "onPlay") return "playCard:character";
-  if (effect.trigger.type === "main") return "playCard:event";
   if (
     effect.trigger.type === "activateMain" ||
-    effect.trigger.type === "counter" ||
-    effect.trigger.type === "whenAttacking" ||
-    effect.trigger.type === "onOpponentAttack" ||
-    effect.trigger.type === "onBlock" ||
-    effect.trigger.type === "trigger" ||
-    effect.trigger.type === "lifeRemoved" ||
-    effect.trigger.type === "onKO" ||
-    effect.trigger.type === "opponentActivated" ||
     effect.trigger.type === "permanent" ||
-    effect.trigger.type === "endOfYourTurn" ||
     effect.trigger.type === "replacement" ||
     effect.trigger.type === "startOfYourTurn"
   ) {
     return effect.trigger.type;
   }
-  if (effectHasTrigger(effect, "attackDeclared")) return "attackDeclared";
-  if (effectHasTrigger(effect, "cardDrawn")) return "cardDrawn";
-  if (effectHasTrigger(effect, "cardPlayed")) return "cardPlayed";
-  if (effectHasTrigger(effect, "cardRested")) return "cardRested";
-  if (effectHasTrigger(effect, "damageDealt")) return "damageDealt";
-  if (effectHasTrigger(effect, "donAttached")) return "donAttached";
-  if (effectHasTrigger(effect, "donReturned")) return "donReturned";
-  if (effectHasTrigger(effect, "endOfBattle")) return "endOfBattle";
-  if (effectHasTrigger(effect, "effectQueued")) return "effectQueued";
-  if (effectHasTrigger(effect, "fieldRemoved")) return "fieldRemoved";
-  if (effectHasTrigger(effect, "handTrashedByEffect")) {
-    return "handTrashedByEffect";
+  const scenario = scenarioDescriptorForEffect(effect);
+  if (scenario !== undefined) {
+    return scenarioDescriptorKey(scenario);
   }
-  if (effectHasTrigger(effect, "triggerActivated")) {
-    return "triggerActivated";
-  }
-  if (effectHasTrigger(effect, "trigger")) return "trigger";
   return `unsupported:${effect.trigger.type}`;
 };
 
@@ -139,82 +120,15 @@ const scenarioForDefinition = (
   if (firstTrigger === undefined) {
     return { kind: "skipped", reason: "no runtime effect blocks" };
   }
-  if (effects.every((effect) => effect.trigger.type === "onPlay")) {
-    return { kind: "playCard", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "main")) {
-    return { kind: "playCard", category: "event" };
+  const firstEffect = effects[0];
+  if (firstEffect === undefined) {
+    return { kind: "skipped", reason: "no runtime effect blocks" };
   }
   if (effects.every((effect) => effect.trigger.type === "activateMain")) {
     return { kind: "activateEffect", category: "character" };
   }
-  if (effects.every((effect) => effect.trigger.type === "counter")) {
-    return { kind: "counter", category: "event" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "attackDeclared"))) {
-    return { kind: "attackDeclared", category: "leader" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "cardDrawn"))) {
-    return { kind: "cardDrawn", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "cardPlayed"))) {
-    return { kind: "cardPlayed", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "cardRested"))) {
-    return { kind: "cardRested", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "damageDealt"))) {
-    return { kind: "damageDealt", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "donAttached"))) {
-    return { kind: "donAttached", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "donReturned"))) {
-    return { kind: "donReturned", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "endOfBattle"))) {
-    return { kind: "endOfBattle", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "whenAttacking")) {
-    return { kind: "declareAttack", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "endOfYourTurn")) {
-    return { kind: "endOfYourTurn", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "effectQueued"))) {
-    return { kind: "effectQueued", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "fieldRemoved"))) {
-    return { kind: "fieldRemoved", category: "character" };
-  }
-  if (
-    effects.every((effect) => effectHasTrigger(effect, "handTrashedByEffect"))
-  ) {
-    return { kind: "handTrashedByEffect", category: "character" };
-  }
-  if (effects.every((effect) => effectHasTrigger(effect, "triggerActivated"))) {
-    return { kind: "triggerActivated", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "onOpponentAttack")) {
-    return { kind: "opponentAttack", category: "leader" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "trigger")) {
-    return { kind: "lifeTrigger", category: "character" };
-  }
   if (effects.some((effect) => effect.trigger.type === "trigger")) {
     return { kind: "lifeTrigger", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "lifeRemoved")) {
-    return { kind: "lifeRemoved", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "onKO")) {
-    return { kind: "onKO", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "onBlock")) {
-    return { kind: "onBlock", category: "character" };
-  }
-  if (effects.every((effect) => effect.trigger.type === "opponentActivated")) {
-    return { kind: "opponentActivated", category: "character" };
   }
   if (effects.every((effect) => effect.trigger.type === "permanent")) {
     return { kind: "permanent", category: "character" };
@@ -225,10 +139,50 @@ const scenarioForDefinition = (
   if (effects.every((effect) => effect.trigger.type === "startOfYourTurn")) {
     return { kind: "startOfYourTurn", category: "character" };
   }
+  const firstScenario = scenarioDescriptorForEffect(firstEffect);
+  if (
+    firstScenario !== undefined &&
+    effects.every((effect) => {
+      const scenario = scenarioDescriptorForEffect(effect);
+      return (
+        scenario !== undefined &&
+        scenarioDescriptorKey(scenario) === scenarioDescriptorKey(firstScenario)
+      );
+    })
+  ) {
+    return firstScenario;
+  }
   return {
     kind: "skipped",
     reason: `no generated scenario for trigger ${firstTrigger}`,
   };
+};
+
+const scenarioDescriptorKey = (
+  scenario: BehaviorProbeScenarioDescriptor,
+): string => `${scenario.kind}:${scenario.category}`;
+
+const scenarioDescriptorForTriggerType = (
+  triggerType: Trigger["type"],
+): BehaviorProbeScenarioDescriptor | undefined =>
+  triggerQueueCapabilityForType(triggerType)?.behaviorProbeScenario;
+
+const scenarioDescriptorForEffect = (
+  effect: EffectBlock,
+): BehaviorProbeScenarioDescriptor | undefined => {
+  const direct = scenarioDescriptorForTriggerType(effect.trigger.type);
+  if (direct !== undefined) {
+    return direct;
+  }
+  for (const capability of allTriggerQueueCapabilities) {
+    if (
+      capability.behaviorProbeScenario !== undefined &&
+      effectHasTrigger(effect, capability.triggerType)
+    ) {
+      return capability.behaviorProbeScenario;
+    }
+  }
+  return undefined;
 };
 
 const effectHasTrigger = (
