@@ -420,7 +420,7 @@ describe("hand layout", () => {
 
     assert.match(
       styles,
-      /\.match-app\s*\{[^}]*--desktop-card-min-height:\s*86px;[^}]*--desktop-card-max-height:\s*240px;[^}]*--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\) - 14px\),\s*var\(--desktop-card-max-height\)\s*\);/u,
+      /\.match-app\s*\{[^}]*--playmat-card-clearance:\s*clamp\(10px,\s*0\.972vh,\s*28px\);[^}]*--desktop-card-min-height:\s*86px;[^}]*--desktop-card-max-height:\s*240px;[^}]*--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\) - var\(--playmat-card-clearance\)\),\s*var\(--desktop-card-max-height\)\s*\);/u,
     );
     assert.match(
       styles,

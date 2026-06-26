@@ -175,7 +175,11 @@ describe("playmat structure", () => {
 
     assert.match(
       appShellStyles,
-      /--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\)\s*-\s*14px\),\s*var\(--desktop-card-max-height\)\s*\);/,
+      /--playmat-card-clearance:\s*clamp\(10px,\s*0\.972vh,\s*28px\);/,
+    );
+    assert.match(
+      appShellStyles,
+      /--card-height:\s*clamp\(\s*var\(--desktop-card-min-height\),\s*calc\(var\(--playmat-row-height\)\s*-\s*var\(--playmat-card-clearance\)\),\s*var\(--desktop-card-max-height\)\s*\);/,
     );
     assert.match(
       appShellStyles,
@@ -183,7 +187,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       appShellStyles,
-      /--card-zone-width:\s*calc\(var\(--card-width\)\s*\+\s*14px\);/,
+      /--card-zone-width:\s*calc\(var\(--card-width\)\s*\+\s*var\(--playmat-card-clearance\)\);/,
     );
     assert.match(cardStyles, /height:\s*var\(--card-height\);/);
     assert.match(
