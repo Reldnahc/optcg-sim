@@ -60,6 +60,17 @@ export interface UseMatchClientCardSelectionInput {
   submitDecisionDraft: (draft: DecisionDraft) => Promise<void>;
 }
 
+export const shouldAutoSubmitCardCostSelection = ({
+  group,
+  complete,
+}: {
+  group: OptionalCardCostGroup;
+  complete: boolean;
+}): boolean =>
+  complete &&
+  group.operation !== "attachDon" &&
+  !cardCostGroupRequiresManualConfirm(group);
+
 export const useMatchClientCardSelection = ({
   activeAttackTargetChoice,
   activeCounterTargetChoice,
@@ -162,9 +173,10 @@ export const useMatchClientCardSelection = ({
         );
         setActiveCardCostSelectedInstanceIds(progress.selectedInstanceIds);
         if (
-          progress.complete &&
-          activeCardCostGroup.operation !== "attachDon" &&
-          !cardCostGroupRequiresManualConfirm(activeCardCostGroup)
+          shouldAutoSubmitCardCostSelection({
+            group: activeCardCostGroup,
+            complete: progress.complete,
+          })
         ) {
           const actionIndex = optionalCardCostActionForSelection(
             activeCardCostGroup,

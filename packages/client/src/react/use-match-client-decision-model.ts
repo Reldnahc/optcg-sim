@@ -5,6 +5,7 @@ import {
   autoOptionalCardCostGroup,
   autoPayCostActionIndex,
   cardCostPaymentLabel,
+  cardCostGroupRequiresManualConfirm,
   createBoardViewModel,
   createCanonicalDonPaymentActions,
   createDecisionDraft,
@@ -210,7 +211,9 @@ export const createMatchClientDecisionModel = ({
     activeCardCostSelectedInstanceIds,
   );
   const activeCardCostSelection =
-    activeCardCostGroup === undefined || activeCardCostGroup.requiredCount <= 1
+    activeCardCostGroup === undefined ||
+    (activeCardCostGroup.requiredCount <= 1 &&
+      !cardCostGroupRequiresManualConfirm(activeCardCostGroup))
       ? undefined
       : {
           title: activeCardCostGroup.chooseLabel,

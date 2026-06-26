@@ -578,18 +578,14 @@ export const activeCardCostGlobalActions = ({
       type: "clearDecisionSelection",
     });
   }
-  if (
-    manualConfirm &&
-    group.requiredCount > 1 &&
-    selectedActionIndex !== undefined
-  ) {
+  if (manualConfirm && selectedActionIndex !== undefined) {
     actions.push({
       index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
       label: cardCostPaymentLabel(group, selectedInstanceCount),
       type: "confirmDecisionSelection",
     });
   }
-  if (manualConfirm && group.requiredCount > 1 && selectedInstanceCount > 0) {
+  if (manualConfirm && selectedInstanceCount > 0) {
     actions.push({
       index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
       label: "Clear selection",

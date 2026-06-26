@@ -115,6 +115,15 @@ const variableTrashFromHandGroup: OptionalCardCostGroup = {
   ],
 };
 
+const fixedRevealFromHandGroup: OptionalCardCostGroup = {
+  chooseActionIndex: -5,
+  operation: "reveal",
+  chooseLabel: "Choose card to reveal",
+  requiredCount: 1,
+  source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+  cardActions: [{ instanceIds: ["event-1"], actionIndex: 2 }],
+};
+
 const event = (
   overrides: Partial<EngineEvent> & Pick<EngineEvent, "type" | "seq">,
 ): EngineEvent => ({
@@ -410,6 +419,31 @@ describe("match client support helpers", () => {
         {
           index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
           label: "Trash cards",
+          type: "confirmDecisionSelection",
+        },
+        {
+          index: CLEAR_DECISION_SELECTION_ACTION_INDEX,
+          label: "Clear selection",
+          type: "clearDecisionSelection",
+        },
+      ],
+    );
+  });
+
+  test("fixed hand card costs require explicit global confirmation", () => {
+    assert.deepEqual(
+      activeCardCostGlobalActions({
+        choice: optionalChoice,
+        group: fixedRevealFromHandGroup,
+        explicitChoiceActive: false,
+        selectedInstanceCount: 1,
+        selectedActionIndex: 2,
+      }),
+      [
+        { index: 1, label: "Decline cost", type: "respondToDecision" },
+        {
+          index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
+          label: "Reveal 1 card from hand",
           type: "confirmDecisionSelection",
         },
         {
