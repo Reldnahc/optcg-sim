@@ -14,6 +14,7 @@ import {
   advanceRefreshPhase,
   advanceRngFloat01,
   advanceRngUint32,
+  allTriggerQueueCapabilities,
   applyAction,
   applyEndMainPhase,
   assertGameStateInvariants,
@@ -36,6 +37,7 @@ import {
   splitEffectTextSpotlightPresentation,
   startMulliganFlow,
   toPublicTimerState,
+  triggerQueueCapabilityForType,
 } from "./index.js";
 
 test("package runtime boundary exposes engine-core helpers", () => {
@@ -47,6 +49,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "advanceRefreshPhase",
     "advanceRngFloat01",
     "advanceRngUint32",
+    "allTriggerQueueCapabilities",
     "applyAction",
     "applyEndMainPhase",
     "assertGameStateInvariants",
@@ -68,6 +71,7 @@ test("package runtime boundary exposes engine-core helpers", () => {
     "splitEffectTextSpotlightPresentation",
     "startMulliganFlow",
     "toPublicTimerState",
+    "triggerQueueCapabilityForType",
   ]);
   assert.equal(engineCorePackage.advanceRefreshPhase, advanceRefreshPhase);
   assert.equal(engineCorePackage.advanceDrawPhase, advanceDrawPhase);
@@ -122,6 +126,14 @@ test("package runtime boundary exposes engine-core helpers", () => {
     respondToMulliganDecision,
   );
   assert.equal(engineCorePackage.startMulliganFlow, startMulliganFlow);
+  assert.equal(
+    engineCorePackage.allTriggerQueueCapabilities,
+    allTriggerQueueCapabilities,
+  );
+  assert.equal(
+    engineCorePackage.triggerQueueCapabilityForType,
+    triggerQueueCapabilityForType,
+  );
   assert.equal(
     engineCorePackage.splitEffectTextSpotlightPresentation,
     splitEffectTextSpotlightPresentation,

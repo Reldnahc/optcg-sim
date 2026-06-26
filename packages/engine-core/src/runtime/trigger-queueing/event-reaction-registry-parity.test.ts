@@ -41,14 +41,10 @@ test("generic event reaction registry is derived from generic capabilities", () 
 });
 
 test("specialized trigger families stay out of generic event reaction registry", () => {
-  assert.equal(
-    autoEventReactionTriggerTypes.includes("handTrashedByEffect"),
-    false,
-  );
-  assert.equal(
-    autoEventReactionTriggerTypes.includes("onOpponentAttack"),
-    false,
-  );
+  const genericTriggerTypes =
+    autoEventReactionTriggerTypes as readonly string[];
+  assert.equal(genericTriggerTypes.includes("handTrashedByEffect"), false);
+  assert.equal(genericTriggerTypes.includes("onOpponentAttack"), false);
   assert.equal(
     triggerQueueCapabilityForType("handTrashedByEffect")?.router,
     "specializedHandTrash",

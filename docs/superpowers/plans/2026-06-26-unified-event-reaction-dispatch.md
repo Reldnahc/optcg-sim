@@ -36,6 +36,7 @@
 ## Task 1: Add The Capability Contract
 
 **Files:**
+
 - Create: `packages/engine-core/src/runtime/trigger-queueing/capabilities/types.ts`
 - Create: `packages/engine-core/src/runtime/trigger-queueing/capabilities/registry.ts`
 - Test: `packages/engine-core/src/runtime/trigger-queueing/capabilities/registry.test.ts`
@@ -86,7 +87,10 @@ test("registry exposes every currently supported queue trigger type once", () =>
     allTriggerQueueCapabilities.map((capability) => capability.triggerType),
     supportedTriggerTypes,
   );
-  assert.equal(new Set(supportedTriggerTypes).size, supportedTriggerTypes.length);
+  assert.equal(
+    new Set(supportedTriggerTypes).size,
+    supportedTriggerTypes.length,
+  );
 });
 
 test("registry lookup returns source policy and router ownership", () => {
@@ -163,10 +167,7 @@ export type BehaviorProbeScenarioKind =
   | "playCard"
   | "triggerActivated";
 
-export type BehaviorProbeScenarioCategory =
-  | "character"
-  | "event"
-  | "leader";
+export type BehaviorProbeScenarioCategory = "character" | "event" | "leader";
 
 export interface BehaviorProbeScenarioDescriptor {
   readonly kind: BehaviorProbeScenarioKind;
@@ -274,6 +275,7 @@ git commit -m "feat: add trigger queue capability registry"
 ## Task 2: Drive Existing Runtime Gates From The Registry
 
 **Files:**
+
 - Modify: `packages/engine-core/src/effect-runtime-entry-adapters.ts`
 - Modify: `packages/engine-core/src/runtime/trigger-queueing/event-reaction-events.ts`
 - Test: `packages/engine-core/src/runtime/trigger-queueing/event-reaction-registry-parity.test.ts`
@@ -302,7 +304,10 @@ test("auto runtime entry adapters are backed by trigger capabilities", () => {
       capability.triggerType,
     );
     assert.notEqual(adapter, undefined, capability.triggerType);
-    assert.deepEqual(adapter?.sourcePresencePolicies, capability.sourcePresencePolicies);
+    assert.deepEqual(
+      adapter?.sourcePresencePolicies,
+      capability.sourcePresencePolicies,
+    );
   }
 });
 
@@ -327,7 +332,10 @@ test("specialized trigger families stay out of generic event reaction registry",
     autoEventReactionTriggerTypes.includes("handTrashedByEffect"),
     false,
   );
-  assert.equal(autoEventReactionTriggerTypes.includes("onOpponentAttack"), false);
+  assert.equal(
+    autoEventReactionTriggerTypes.includes("onOpponentAttack"),
+    false,
+  );
   assert.equal(
     triggerQueueCapabilityForType("handTrashedByEffect")?.router,
     "specializedHandTrash",
@@ -371,9 +379,7 @@ import { triggerQueueCapabilityForType } from "./runtime/trigger-queueing/capabi
 In `packages/engine-core/src/runtime/trigger-queueing/event-reaction-events.ts`, replace the literal trigger/runtime event lists with registry-derived lists:
 
 ```ts
-import {
-  allTriggerQueueCapabilities,
-} from "./capabilities/registry.js";
+import { allTriggerQueueCapabilities } from "./capabilities/registry.js";
 
 const genericEventReactionCapabilities = allTriggerQueueCapabilities.filter(
   (capability) => capability.router === "genericEventReaction",
@@ -414,6 +420,7 @@ git commit -m "refactor: derive trigger runtime gates from registry"
 ## Task 3: Add Diagnostic Coverage For Router Drift
 
 **Files:**
+
 - Modify: `packages/engine-core/src/effect-runtime-admission.ts`
 - Test: `packages/engine-core/src/runtime/trigger-queueing/capabilities/registry.test.ts`
 
@@ -478,6 +485,7 @@ git commit -m "test: guard trigger queue router diagnostics"
 ## Task 4: Drive Behavior Probe Scenario Selection From The Registry
 
 **Files:**
+
 - Modify: `packages/card-support/src/behavior-probe-scenario-plans.ts`
 - Test: `packages/card-support/src/behavior-probe-trigger-registry-parity.test.ts`
 
@@ -557,6 +565,7 @@ git commit -m "refactor: derive behavior probe trigger scenarios from registry"
 ## Task 5: Add Live Queueing Drift Tests For Known Risk Families
 
 **Files:**
+
 - Test: `packages/engine-core/src/runtime/trigger-queueing/capabilities/live-router-parity.test.ts`
 
 - [ ] **Step 1: Write live-router parity tests**
@@ -625,6 +634,7 @@ git commit -m "test: guard trigger router drift"
 ## Task 6: Final Verification
 
 **Files:**
+
 - No source edits.
 
 - [ ] **Step 1: Run focused package tests**
