@@ -197,6 +197,26 @@ test("ignores unsupported continuous modifier shapes when deriving board stats",
   assert.equal(view.self.leader.currentPower, 5000);
 });
 
+test("ignores stale implemented-dsl derived continuous effects during player projection", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1 state");
+  const source = p1State.leader;
+  state.cardManifest.cards[source.cardId] = resolvedCard({
+    cardId: source.cardId,
+    category: "leader",
+    power: 5000,
+    effectText: "synthetic permanent effect text",
+    support: {
+      status: "implemented-dsl",
+    },
+  });
+
+  const view = filterStateForPlayer(state, p1);
+
+  assert.equal(view.self.leader.cardId, source.cardId);
+  assert.equal(view.self.restrictions, undefined);
+});
+
 test("includes printed counter value on visible hand cards", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1 state");

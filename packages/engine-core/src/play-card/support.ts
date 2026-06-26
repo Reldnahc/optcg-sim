@@ -10,8 +10,8 @@ import type {
 
 import {
   deriveImplementedDslHandContinuousEffects,
-  deriveImplementedDslPermanentContinuousEffects,
 } from "../runtime/continuous/continuous.js";
+import { allContinuousEffects } from "../runtime/continuous/active-effects.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
 import { resolveImplementedDslEffectDefinition } from "../effect-runtime.js";
@@ -26,6 +26,23 @@ import { playRelevantEffectBlocks } from "./effect-relevance.js";
 export type SupportedPlayMetadata = {
   category: "character" | "stage" | "event";
   printedCost: number;
+};
+
+const playProjectionContinuousEffects = (
+  state: GameState,
+): readonly ContinuousEffectRecord[] => {
+  const fieldEffects = allContinuousEffects(state);
+  try {
+    return [
+      ...fieldEffects,
+      ...deriveImplementedDslHandContinuousEffects(state),
+    ];
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return fieldEffects;
+    }
+    throw error;
+  }
 };
 
 const numericFilterMatches = (
@@ -460,17 +477,16 @@ export const getEffectivePlayCost = (
   card: CardInstance,
   supported: SupportedPlayMetadata,
 ): number => {
-  const costDelta = [
-    ...state.continuousEffects,
-    ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslHandContinuousEffects(state),
-  ].reduce((total, effect) => {
-    if (!costModifierAppliesToCard(state, playerId, card, effect)) {
-      return total;
-    }
-    const operation = effect.modifier.operation;
-    return operation.type === "addCost" ? total + operation.value : total;
-  }, 0);
+  const costDelta = playProjectionContinuousEffects(state).reduce(
+    (total, effect) => {
+      if (!costModifierAppliesToCard(state, playerId, card, effect)) {
+        return total;
+      }
+      const operation = effect.modifier.operation;
+      return operation.type === "addCost" ? total + operation.value : total;
+    },
+    0,
+  );
   return Math.max(0, supported.printedCost + costDelta);
 };
 
@@ -514,11 +530,7 @@ export const isPlayBlockedByRestriction = (
   playerId: PlayerId,
   card: CardInstance,
 ): boolean =>
-  [
-    ...state.continuousEffects,
-    ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslHandContinuousEffects(state),
-  ].some((effect) =>
+  playProjectionContinuousEffects(state).some((effect) =>
     playRestrictionAppliesToCard(state, playerId, card, effect),
   );
 
@@ -527,11 +539,7 @@ export const isEffectPlayBlockedByRestriction = (
   playerId: PlayerId,
   card: CardInstance,
 ): boolean =>
-  [
-    ...state.continuousEffects,
-    ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslHandContinuousEffects(state),
-  ].some((effect) =>
+  playProjectionContinuousEffects(state).some((effect) =>
     effectPlayRestrictionAppliesToCard(state, playerId, card, effect),
   );
 
@@ -542,11 +550,7 @@ export const shouldCardEnterPlayRested = (
   explicitEnterRested: boolean,
 ): boolean =>
   explicitEnterRested ||
-  [
-    ...state.continuousEffects,
-    ...deriveImplementedDslPermanentContinuousEffects(state),
-    ...deriveImplementedDslHandContinuousEffects(state),
-  ].some((effect) =>
+  playProjectionContinuousEffects(state).some((effect) =>
     playEntryStateAppliesToCard(state, playerId, card, effect),
   );
 

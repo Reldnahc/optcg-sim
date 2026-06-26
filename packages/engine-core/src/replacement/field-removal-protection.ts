@@ -16,7 +16,7 @@ import {
   evaluateQueuedEffectCondition,
   isSupportedQueuedEffectConditionShape,
 } from "../effect-runtime-conditions.js";
-import { deriveImplementedDslPermanentContinuousEffects } from "../runtime/continuous/continuous.js";
+import { allContinuousEffects } from "../runtime/continuous/active-effects.js";
 import {
   isFieldRemovalProtectionModifier,
   isProtectionModifier,
@@ -191,11 +191,7 @@ export const fieldRemovalProtectionsForCard = (
   | { ok: true; protections: Protection[] }
   | { ok: false; reason: FieldRemovalProtectionFailureReason } => {
   const protections: Protection[] = [];
-  const effects = [
-    ...state.continuousEffects,
-    ...deriveImplementedDslPermanentContinuousEffects(state),
-  ];
-  for (const effect of effects) {
+  for (const effect of allContinuousEffects(state)) {
     if (!isProtectionModifier(effect)) continue;
     if (!cardMatchesSelfProtection(card, effect)) continue;
     if (!isSupportedProtectionModifier(effect)) {

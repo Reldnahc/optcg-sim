@@ -161,9 +161,16 @@ export const durationIsActive = (
 
 export const allContinuousEffects = (
   state: GameState,
-): readonly ContinuousEffectRecord[] => [
-  ...state.continuousEffects.filter(
+): readonly ContinuousEffectRecord[] => {
+  const stored = state.continuousEffects.filter(
     (effect) => !sourceEffectsAreInvalidated(state, effect),
-  ),
-  ...deriveImplementedDslPermanentContinuousEffects(state),
-];
+  );
+  try {
+    return [...stored, ...deriveImplementedDslPermanentContinuousEffects(state)];
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return stored;
+    }
+    throw error;
+  }
+};
