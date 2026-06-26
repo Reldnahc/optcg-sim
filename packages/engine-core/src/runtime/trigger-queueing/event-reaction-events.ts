@@ -1,43 +1,22 @@
 import type { EngineEvent } from "@optcg/types";
 
 import type { EventReactionTriggerType } from "../event-hooks/matcher.js";
+import { genericEventReactionCapabilities } from "./capabilities/event-families.js";
 
-export const autoEventReactionTriggerTypes = [
-  "damageDealt",
-  "fieldRemoved",
-  "cardDrawn",
-  "cardPlayed",
-  "cardRested",
-  "donReturned",
-  "donAttached",
-  "attackDeclared",
-  "endOfBattle",
-  "onBlock",
-  "effectQueued",
-  "effectResolved",
-  "triggerActivated",
-  "lifeRemoved",
-] as const satisfies readonly EventReactionTriggerType[];
+export const autoEventReactionTriggerTypes =
+  genericEventReactionCapabilities.map(
+    (capability) => capability.triggerType,
+  ) as readonly EventReactionTriggerType[];
 
 const autoEventReactionTriggerTypeSet: ReadonlySet<EventReactionTriggerType> =
   new Set(autoEventReactionTriggerTypes);
 
 const autoEventReactionRuntimeEventTypes: ReadonlySet<EngineEvent["type"]> =
-  new Set([
-    "damageDealt",
-    "cardDrawn",
-    "cardMoved",
-    "cardPlayed",
-    "cardRested",
-    "donReturned",
-    "donAttached",
-    "attackDeclared",
-    "battleEnded",
-    "blockerActivated",
-    "effectQueued",
-    "effectResolved",
-    "triggerActivated",
-  ]);
+  new Set(
+    genericEventReactionCapabilities.flatMap(
+      (capability) => capability.runtimeEventTypes,
+    ),
+  );
 
 export const isSupportedAutoEventReactionTriggerType = (
   triggerType: EventReactionTriggerType,
