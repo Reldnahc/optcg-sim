@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { PersonalizationLoadout } from "../match-personalization-store.js";
 
@@ -59,27 +59,40 @@ export const ColorSelector = ({
   readonly onPresetChange: (index: number, value: string) => void;
 }): React.JSX.Element => {
   const [draftValue, setDraftValue] = useState(value);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState<
+    number | undefined
+  >(() => {
+    const matchingIndex = presets.findIndex(
+      (color) => color.toLowerCase() === value.toLowerCase(),
+    );
+    return matchingIndex === -1 ? undefined : matchingIndex;
+  });
+  const pickerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDraftValue(value);
-  }, [value]);
+    setSelectedPresetIndex((currentIndex) => {
+      const normalizedValue = value.toLowerCase();
+      if (currentIndex !== undefined) {
+        const currentPreset = presets[currentIndex];
+        if (
+          currentPreset !== undefined &&
+          currentPreset.toLowerCase() === normalizedValue
+        ) {
+          return currentIndex;
+        }
+      }
+      const matchingIndex = presets.findIndex(
+        (color) => color.toLowerCase() === normalizedValue,
+      );
+      return matchingIndex === -1 ? undefined : matchingIndex;
+    });
+  }, [presets, value]);
 
   return (
     <div className="settings-color-field">
       <div className="settings-color-header">
         <span>{label}</span>
-        <button
-          className="settings-color-picker-toggle"
-          type="button"
-          aria-label={`Open ${label} picker`}
-          aria-expanded={pickerOpen}
-          onClick={() => {
-            setPickerOpen((open) => !open);
-          }}
-        >
-          Pick
-        </button>
       </div>
       <div className="settings-color-selector">
         <div
@@ -92,20 +105,63 @@ export const ColorSelector = ({
               type="button"
               className={[
                 "settings-color-swatch",
-                value.toLowerCase() === color ? "is-selected" : "",
+                selectedPresetIndex === index ? "is-selected" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               style={{ backgroundColor: color }}
               aria-label={`${label} ${color}`}
-              aria-pressed={value.toLowerCase() === color}
+              aria-pressed={selectedPresetIndex === index}
               onClick={() => {
+                setSelectedPresetIndex(index);
                 setDraftValue(color);
                 onChange(color);
               }}
             />
           ))}
         </div>
+        <button
+          className="settings-color-picker-button"
+          type="button"
+          aria-label={`Open ${label} picker`}
+          title={`Open ${label} picker`}
+          onClick={() => {
+            pickerInputRef.current?.click();
+          }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M14.7 4.3 19.7 9.3 9.8 19.2 4.5 20.5 5.8 15.2z"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.9"
+            />
+            <path
+              d="M13.4 5.6 18.4 10.6"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="1.9"
+            />
+          </svg>
+        </button>
+        <input
+          ref={pickerInputRef}
+          className="settings-color-picker-input"
+          type="color"
+          value={value}
+          aria-label={`${label} color picker`}
+          onChange={(event) => {
+            const nextColor = event.currentTarget.value.toLowerCase();
+            setDraftValue(nextColor);
+            onChange(nextColor);
+            if (selectedPresetIndex !== undefined) {
+              onPresetChange(selectedPresetIndex, nextColor);
+            }
+          }}
+        />
         <input
           type="text"
           inputMode="text"
@@ -120,6 +176,7 @@ export const ColorSelector = ({
             setDraftValue(nextDraft);
             const completeColor = completeHexColorFromDraft(nextDraft);
             if (completeColor !== undefined) {
+              setSelectedPresetIndex(undefined);
               onChange(completeColor);
             }
           }}
@@ -128,47 +185,6 @@ export const ColorSelector = ({
           }}
         />
       </div>
-      {pickerOpen ? (
-        <div className="settings-color-picker-popover">
-          <label className="settings-field">
-            <span>Picker</span>
-            <input
-              type="color"
-              value={value}
-              aria-label={`${label} color picker`}
-              onChange={(event) => {
-                const nextColor = event.currentTarget.value.toLowerCase();
-                setDraftValue(nextColor);
-                onChange(nextColor);
-              }}
-            />
-          </label>
-          <div className="settings-color-preview-row">
-            <span
-              className="settings-color-preview"
-              style={{ backgroundColor: value }}
-              aria-label={`${label} preview`}
-            />
-            <span>{value}</span>
-          </div>
-          <div className="settings-color-preset-save">
-            <span>Save to preset</span>
-            <div className="settings-color-preset-save-grid">
-              {presets.map((color, index) => (
-                <button
-                  key={`${label}-save-${String(index)}`}
-                  type="button"
-                  style={{ backgroundColor: color }}
-                  aria-label={`Save ${label} to preset ${String(index + 1)}`}
-                  onClick={() => {
-                    onPresetChange(index, value);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 };

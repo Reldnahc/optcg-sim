@@ -21,6 +21,7 @@ import {
 import { InfoTabbedWindow } from "./InfoTabbedWindow.js";
 import { ControlRail } from "./ControlRail.js";
 import { SettingsButton } from "./SettingsButton.js";
+import { ColorSelector } from "./settings-window/settings-controls.js";
 
 const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
@@ -317,9 +318,30 @@ describe("settings window", () => {
     assert.match(settingsWindow, /savePersonalizationLoadouts/u);
     assert.match(settingsWindow, /applyPersonalizationValues/u);
     assert.match(settingsWindow, /saveColorPreset/u);
-    assert.match(settingsControls, /settings-color-picker-popover/u);
+    assert.doesNotMatch(settingsControls, /settings-color-picker-popover/u);
+    assert.match(settingsControls, /settings-color-picker-button/u);
+    assert.match(settingsControls, /settings-color-picker-input/u);
     assert.match(settingsControls, /type="color"/u);
-    assert.match(settingsControls, /Save to preset/u);
+    assert.doesNotMatch(settingsControls, /Save to preset/u);
+    assert.doesNotMatch(settingsControls, />Pick</u);
+    assert.match(settingsControls, /selectedPresetIndex === index/u);
+  });
+
+  test("color preset selection tracks the chosen slot instead of duplicate color equality", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ColorSelector, {
+        label: "Window color",
+        value: "#112233",
+        presets: ["#112233", "#112233", "#445566"],
+        onChange: () => undefined,
+        onPresetChange: () => undefined,
+      }),
+    );
+
+    assert.equal(
+      markup.match(/settings-color-swatch is-selected/gu)?.length,
+      1,
+    );
   });
 
   test("match app wires the settings icon to the settings window", async () => {

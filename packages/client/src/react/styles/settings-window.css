@@ -108,8 +108,7 @@
 }
 
 .settings-loadout-actions button,
-.settings-color-picker-toggle,
-.settings-color-preset-save-grid button {
+.settings-color-picker-button {
   min-height: clamp(28px, calc(var(--card-height) / 5.8), 36px);
   border: 0;
   border-radius: 4px;
@@ -143,14 +142,12 @@
   min-width: 0;
 }
 
-.settings-color-picker-toggle {
-  min-height: clamp(26px, calc(var(--card-height) / 6.2), 34px);
-  padding: 0 calc(var(--floating-window-body-padding) * 0.75);
-}
-
 .settings-color-selector {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(86px, 0.48fr);
+  grid-template-columns:
+    minmax(0, 1fr) clamp(28px, calc(var(--card-height) / 5.8), 36px)
+    minmax(86px, 0.48fr);
   gap: 8px;
   align-items: center;
   min-width: 0;
@@ -176,61 +173,25 @@
   box-shadow: 0 0 0 var(--floating-window-border-width) rgba(255, 220, 98, 0.35);
 }
 
-.settings-color-picker-popover {
+.settings-color-picker-button {
   display: grid;
-  gap: calc(var(--floating-window-body-padding) * 0.65);
+  place-items: center;
   min-width: 0;
-  background: rgba(0, 0, 0, 0.2);
-  padding: calc(var(--floating-window-body-padding) * 0.72);
-}
-
-.settings-color-picker-popover input[type="color"] {
-  width: 100%;
-  min-height: clamp(34px, calc(var(--card-height) / 4.8), 46px);
-  border: 0;
-  background: transparent;
+  aspect-ratio: 1;
   padding: 0;
-  cursor: pointer;
 }
 
-.settings-color-preview-row {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--floating-window-body-padding) * 0.62);
-  min-width: 0;
-  color: var(--match-text-muted);
-  font-size: var(--floating-window-small-font-size);
-  font-variant-numeric: tabular-nums;
+.settings-color-picker-button svg {
+  width: 58%;
+  height: 58%;
 }
 
-.settings-color-preview {
-  width: clamp(24px, calc(var(--card-height) / 6), 34px);
-  height: clamp(24px, calc(var(--card-height) / 6), 34px);
-  box-shadow: inset 0 0 0 var(--floating-window-border-width)
-    rgba(255, 255, 255, 0.24);
-}
-
-.settings-color-preset-save {
-  display: grid;
-  gap: calc(var(--floating-window-body-padding) * 0.5);
-  min-width: 0;
-  color: var(--match-text);
-  font-size: var(--floating-window-small-font-size);
-  font-weight: 700;
-}
-
-.settings-color-preset-save-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 4px;
-  min-width: 0;
-}
-
-.settings-color-preset-save-grid button {
-  min-width: 0;
-  min-height: clamp(24px, calc(var(--card-height) / 6.4), 32px);
-  box-shadow: inset 0 0 0 var(--floating-window-border-width)
-    rgba(0, 0, 0, 0.62);
+.settings-color-picker-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .settings-color-selector input[type="text"] {
