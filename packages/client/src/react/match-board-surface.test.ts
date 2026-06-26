@@ -42,12 +42,15 @@ const renderSurface = (
     }),
   );
 
-test("lobby state renders through the shared board frame with no playmat target", () => {
+test("lobby state renders a visible empty playmat through the shared board frame", () => {
   const markup = renderSurface(lobbyState());
 
   assert.match(markup, /class="board-shell"/u);
   assert.match(markup, /class="hand-rail"/u);
-  assert.doesNotMatch(markup, /class="tabletop-board/u);
+  assert.match(markup, /class="tabletop-board"/u);
+  assert.match(markup, /class="playmat-side opponent-side"/u);
+  assert.match(markup, /class="playmat-side player-side"/u);
+  assert.match(markup, /class="zone zone-normal zone-slots"/u);
   assert.doesNotMatch(markup, /is-pregame-placeholder/u);
   assert.doesNotMatch(markup, /loading-panel/u);
 });
@@ -58,5 +61,8 @@ test("loading state renders inside the shared board frame", () => {
   assert.match(markup, /class="board-shell"/u);
   assert.match(markup, /class="hand-rail"/u);
   assert.match(markup, /class="tabletop-board"/u);
+  assert.match(markup, /class="playmat-zone center-spacer empty-playmat-center"/u);
+  assert.match(markup, /class="playmat-side opponent-side"/u);
+  assert.match(markup, /class="playmat-side player-side"/u);
   assert.match(markup, /class="loading-panel"/u);
 });
