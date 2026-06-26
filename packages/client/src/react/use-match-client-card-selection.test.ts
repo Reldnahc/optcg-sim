@@ -19,12 +19,29 @@ const group = (
 });
 
 describe("match client card selection", () => {
-  test("does not auto-submit completed hand-sourced card costs", () => {
+  test("auto-submits completed single-choice hand-sourced card costs", () => {
     assert.equal(
       shouldAutoSubmitCardCostSelection({
         group: group({
-          operation: "reveal",
+          operation: "trash",
           source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+        }),
+        complete: true,
+      }),
+      true,
+    );
+  });
+
+  test("does not auto-submit completed multi-choice hand-sourced card costs", () => {
+    assert.equal(
+      shouldAutoSubmitCardCostSelection({
+        group: group({
+          operation: "trash",
+          source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+          cardActions: [
+            { instanceIds: ["card-1"], actionIndex: 2 },
+            { instanceIds: ["card-2"], actionIndex: 3 },
+          ],
         }),
         complete: true,
       }),

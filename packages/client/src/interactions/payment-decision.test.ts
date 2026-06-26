@@ -543,7 +543,7 @@ describe("optional card-cost interaction", () => {
     );
   });
 
-  test("hand-sourced and ordered trash movement card costs require manual confirmation", () => {
+  test("multi-choice hand-sourced and ordered trash movement card costs require manual confirmation", () => {
     assert.equal(
       cardCostGroupRequiresManualConfirm({
         operation: "moveCards",
@@ -560,10 +560,22 @@ describe("optional card-cost interaction", () => {
     );
     assert.equal(
       cardCostGroupRequiresManualConfirm({
-        operation: "reveal",
+        operation: "trash",
         source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+        cardActions: [
+          { instanceIds: ["hand-1"], actionIndex: 2 },
+          { instanceIds: ["hand-2"], actionIndex: 3 },
+        ],
       }),
       true,
+    );
+    assert.equal(
+      cardCostGroupRequiresManualConfirm({
+        operation: "trash",
+        source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+        cardActions: [{ instanceIds: ["hand-1"], actionIndex: 2 }],
+      }),
+      false,
     );
   });
 

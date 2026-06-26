@@ -253,7 +253,7 @@ export const cardCostGroupRequiresManualConfirm = (
   group: Pick<OptionalCardCostGroup, "operation" | "source"> &
     Partial<Pick<OptionalCardCostGroup, "cardActions">>,
 ): boolean =>
-  group.source?.zone === "hand" ||
+  (group.source?.zone === "hand" && (group.cardActions?.length ?? 0) > 1) ||
   (group.operation === "moveCards" && group.source?.zone === "trash") ||
   new Set((group.cardActions ?? []).map((action) => action.instanceIds.length))
     .size > 1;
