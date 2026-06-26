@@ -22,6 +22,7 @@ type CardCostPaymentOption = Extract<
       | "trashFromField"
       | "moveCards"
       | "moveFieldToLife"
+      | "restDon"
       | "returnDon"
       | "revealFromHand";
   }
@@ -64,7 +65,7 @@ export const actionDecisionPayment = (
     return undefined;
   }
   const selectedCardInstanceIds =
-    option.type === "returnDon"
+    option.type === "restDon" || option.type === "returnDon"
       ? response.selectedDonInstanceIds
       : response.selectedCardInstanceIds;
   if (
@@ -110,13 +111,16 @@ const cardCostOperation = (
     | "trashFromField"
     | "moveCards"
     | "moveFieldToLife"
+    | "restDon"
     | "returnDon"
     | "revealFromHand",
-): "trash" | "moveCards" | "returnDon" | "reveal" => {
+): "trash" | "moveCards" | "restDon" | "returnDon" | "reveal" => {
   switch (optionType) {
     case "moveCards":
     case "moveFieldToLife":
       return "moveCards";
+    case "restDon":
+      return "restDon";
     case "returnDon":
       return "returnDon";
     case "revealFromHand":
@@ -141,6 +145,8 @@ const chooseCardCostLabel = (option: CardCostPaymentOption): string => {
       return "Choose cards from trash";
     case "moveFieldToLife":
       return "Choose Character to place into Life";
+    case "restDon":
+      return "Choose DON!! to rest";
     case "returnDon":
       return "Choose DON!! to return";
     case "revealFromHand":
@@ -157,6 +163,7 @@ const isCardCostPaymentOption = (
   option?.type === "trashFromField" ||
   option?.type === "moveCards" ||
   option?.type === "moveFieldToLife" ||
+  option?.type === "restDon" ||
   option?.type === "returnDon" ||
   option?.type === "revealFromHand";
 

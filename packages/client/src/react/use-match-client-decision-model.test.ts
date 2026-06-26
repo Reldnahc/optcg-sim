@@ -213,6 +213,82 @@ describe("match client decision model", () => {
     assert.equal(model.decisionPrompt, "Choose DON!! to attach");
   });
 
+  test("rest-DON pay costs use board-click cost selection instead of a modal", () => {
+    const snapshot = playerSnapshot();
+    snapshot.view.self.costArea = [
+      {
+        ...card("don-1", "DON", "costArea", p1),
+        state: "active",
+      },
+      {
+        ...card("don-2", "DON", "costArea", p1),
+        state: "active",
+      },
+      {
+        ...card("don-3", "DON", "costArea", p1),
+        state: "active",
+      },
+    ];
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "restDon",
+          chooseLabel: "Choose DON!! to rest",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-2" as InstanceId,
+          ],
+          source: { zone: "costArea", playerId: p1 },
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "restDon",
+          chooseLabel: "Choose DON!! to rest",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-3" as InstanceId,
+          ],
+          source: { zone: "costArea", playerId: p1 },
+        },
+      },
+    ];
+
+    const model = createMatchClientDecisionModel({
+      clientState: matchClientState(snapshot),
+      playerSnapshot: snapshot,
+      pendingDecision: payCostDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: [],
+      decisionDraft: undefined,
+    });
+
+    assert.equal(model.decisionModal, undefined);
+    assert.equal(model.activeCardCostGroup?.operation, "restDon");
+    assert.deepEqual(model.pendingChoiceInstanceIds, [
+      "don-1",
+      "don-2",
+      "don-3",
+    ]);
+    assert.equal(model.decisionPrompt, "Rest 2 DON!!");
+  });
+
   test("attach-DON pay costs highlight legal targets after selecting DON", () => {
     const snapshot = playerSnapshot();
     snapshot.view.opponent.costArea = [

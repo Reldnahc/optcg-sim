@@ -278,6 +278,65 @@ describe("optional card-cost interaction", () => {
     });
   });
 
+  test("collapses restDon payments into one cost-area selectable group", () => {
+    const source = { zone: "costArea" as Zone, playerId: "p1" as PlayerId };
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "restDon",
+          chooseLabel: "Choose DON!! to rest",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-2" as InstanceId,
+          ],
+          source,
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 2 DON!!",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "restDon",
+          chooseLabel: "Choose DON!! to rest",
+          selectedCardInstanceIds: [
+            "don-1" as InstanceId,
+            "don-3" as InstanceId,
+          ],
+          source,
+        },
+      },
+    ];
+
+    const group = autoOptionalCardCostGroup(
+      createOptionalCardCostChoice(payCostDecision, actions),
+    );
+
+    assert.deepEqual(group, {
+      chooseActionIndex: -5,
+      operation: "restDon",
+      chooseLabel: "Choose DON!! to rest",
+      requiredCount: 2,
+      source,
+      cardActions: [
+        { instanceIds: ["don-1", "don-2"], actionIndex: 2 },
+        { instanceIds: ["don-1", "don-3"], actionIndex: 3 },
+      ],
+    });
+    assert.equal(cardCostPaymentLabel(group), "Rest 2 DON!!");
+  });
+
   test("collapses attach-DON payment actions into one cost-area selectable group", () => {
     const actions: readonly ClientActionModel[] = [
       {

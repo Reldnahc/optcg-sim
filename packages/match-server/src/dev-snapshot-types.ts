@@ -23,6 +23,7 @@ export interface DevVisibleAction {
           | "trash"
           | "returnToHand"
           | "moveCards"
+          | "restDon"
           | "returnDon"
           | "reveal";
         chooseLabel: string;

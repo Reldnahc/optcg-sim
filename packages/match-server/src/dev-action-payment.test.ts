@@ -116,6 +116,41 @@ describe("dev action payment metadata", () => {
     );
   });
 
+  test("projects restDon payment as selectable cost-area DON", () => {
+    const state = minimalState([donCard("don-1"), donCard("don-2")]);
+    state.pendingDecision = {
+      id: "decision:rest-don" as DecisionId,
+      type: "payCost",
+      playerId: p1,
+      prompt: "Choose whether to pay this optional cost.",
+      causedBy: { type: "ruleProcess", name: "privateCausality" },
+      visibility: { type: "private", playerId: p1 },
+      cost: { type: "restDon", count: 2, optional: true },
+      paymentOptions: [{ id: "restDon", type: "restDon", count: 2 }],
+    };
+    const action: LegalAction = {
+      type: "respondToDecision",
+      decisionId: "decision:rest-don" as DecisionId,
+      response: {
+        type: "payment",
+        optionId: "restDon",
+        selectedDonInstanceIds: ["don-1" as InstanceId, "don-2" as InstanceId],
+      },
+    };
+
+    assert.deepEqual(actionDecisionPayment(state, action), {
+      kind: "cardCost",
+      operation: "restDon",
+      chooseLabel: "Choose DON!! to rest",
+      selectedCardInstanceIds: ["don-1", "don-2"],
+      selectedCards: [
+        { instanceId: "don-1", zone: "costArea", playerId: p1 },
+        { instanceId: "don-2", zone: "costArea", playerId: p1 },
+      ],
+      source: { zone: "costArea", playerId: p1 },
+    });
+  });
+
   test("does not project deterministic Life-to-hand cost as a collection choice", () => {
     const topLife = lifeCard("life-1");
     const state = minimalState([]);

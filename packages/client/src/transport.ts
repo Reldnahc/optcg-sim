@@ -23,6 +23,7 @@ export interface ClientVisibleAction {
           | "trash"
           | "returnToHand"
           | "moveCards"
+          | "restDon"
           | "returnDon"
           | "reveal";
         chooseLabel: string;

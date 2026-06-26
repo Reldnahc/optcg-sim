@@ -471,6 +471,9 @@ export const prominentDecisionPrompt = ({
     if (activeCardCostGroup.operation === "returnDon") {
       return `Return ${countLabel(count, "DON!!", "DON!!")}`;
     }
+    if (activeCardCostGroup.operation === "restDon") {
+      return `Rest ${countLabel(count, "DON!!", "DON!!")}`;
+    }
     if (activeCardCostGroup.operation === "trash") {
       return `Trash ${countLabel(count, "card", "cards")} from hand`;
     }

@@ -445,6 +445,8 @@ export const cardCostPaymentLabel = (
         return `Add ${countLabel(count, "Life card", "Life cards")} to hand`;
       }
       return group.chooseLabel;
+    case "restDon":
+      return `Rest ${countLabel(count, "DON!!", "DON!!")}`;
     case "returnDon":
       return `Return ${countLabel(count, "DON!!", "DON!!")}`;
     case "attachDon":
@@ -467,6 +469,8 @@ const chooseLabelForCardCostOperation = (
     case "trash":
       return "Choose card to trash";
     case "moveCards":
+      return fallback;
+    case "restDon":
       return fallback;
     case "returnDon":
       return fallback;
