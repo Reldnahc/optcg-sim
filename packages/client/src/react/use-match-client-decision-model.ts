@@ -164,6 +164,13 @@ export const createMatchClientDecisionModel = ({
           pendingDecisionResponseActions,
         )
       : undefined;
+  const optionalActivationUsesCardActions =
+    pendingDecision?.type === "chooseOptionalActivation" &&
+    playerSnapshot !== undefined &&
+    playerSnapshot.actions.some(
+      (action) =>
+        action.type === "respondToDecision" && action.placement !== undefined,
+    );
   const explicitCardCostGroup =
     activeCardCostChoice === undefined ||
     optionalCardCostChoice === undefined ||
@@ -230,6 +237,7 @@ export const createMatchClientDecisionModel = ({
     cardCostChoiceActive ||
     automaticPayCostActionIndex !== undefined ||
     quickPayActionIndex !== undefined ||
+    optionalActivationUsesCardActions ||
     pendingDecisionInteractionMode !== "modal" ||
     isDecisionModalSuppressed(pendingDecision)
       ? undefined

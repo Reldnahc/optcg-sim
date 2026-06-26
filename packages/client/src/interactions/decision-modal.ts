@@ -58,6 +58,12 @@ export interface DecisionModalPresentationModel {
   source?: CardRef;
 }
 
+export interface DecisionActionOptionModel {
+  actionIndex: number;
+  label: string;
+  cards?: CardRef[];
+}
+
 export type DecisionModalModel = DecisionModalPresentationModel &
   (
     | {
@@ -119,11 +125,21 @@ export type DecisionModalModel = DecisionModalPresentationModel &
         kind: "actionOptions";
         decisionId: DecisionId;
         card?: CardRef;
-        options: Array<{
-          actionIndex: number;
-          label: string;
-          cards?: CardRef[];
-        }>;
+        options: DecisionActionOptionModel[];
+        selectedActionIndex: number;
+        canConfirm: true;
+      }
+    | {
+        kind:
+          | "paymentOptions"
+          | "optionalActivation"
+          | "replacementOptions"
+          | "lifeTrigger"
+          | "rollbackConsent"
+          | "loopCount";
+        decisionId: DecisionId;
+        card?: CardRef;
+        options: DecisionActionOptionModel[];
         selectedActionIndex: number;
         canConfirm: true;
       }
@@ -347,7 +363,7 @@ const actionOptionModels = (
   decision: PublicPendingDecision,
   actions: readonly ClientActionModel[],
   options: { includePresentationCards?: boolean } = {},
-): Array<{ actionIndex: number; label: string; cards?: CardRef[] }> => {
+): DecisionActionOptionModel[] => {
   const includePresentationCards = options.includePresentationCards ?? true;
   const presentationLabelsByResponseKey = new Map(
     (decision.presentation.choices ?? []).map((choice) => [
@@ -405,6 +421,37 @@ const actionOptionModels = (
     });
   }
   return models;
+};
+
+const actionOptionDecisionKind = (
+  decision: PublicPendingDecision,
+):
+  | "paymentOptions"
+  | "optionalActivation"
+  | "replacementOptions"
+  | "lifeTrigger"
+  | "rollbackConsent"
+  | "loopCount"
+  | "actionOptions" => {
+  if (decision.type === "payCost") {
+    return "paymentOptions";
+  }
+  if (decision.type === "chooseOptionalActivation") {
+    return "optionalActivation";
+  }
+  if (decision.type === "chooseReplacement") {
+    return "replacementOptions";
+  }
+  if (decision.type === "confirmLifeTrigger") {
+    return "lifeTrigger";
+  }
+  if (decision.type === "rollbackConsent") {
+    return "rollbackConsent";
+  }
+  if (decision.type === "declareLoopCount") {
+    return "loopCount";
+  }
+  return "actionOptions";
 };
 
 const chooseOneOptionModels = (
@@ -866,9 +913,10 @@ export const createDecisionModalModel = (
     if (draft.decisionId !== decision.id || draft.kind !== "actionOptions") {
       throw new Error("Decision draft is not an actionOptions draft.");
     }
+    const kind = actionOptionDecisionKind(decision);
     return {
       ...modalPresentation(decision),
-      kind: "actionOptions",
+      kind,
       decisionId: decision.id,
       ...(decision.type === "confirmLifeTrigger"
         ? { card: decision.card }

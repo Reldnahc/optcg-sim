@@ -60,9 +60,35 @@ const cardDecisionModalKinds = new Set<DecisionModalModel["kind"]>([
   "orderTriggers",
 ]);
 
+const actionChoiceModalKinds = new Set<DecisionModalModel["kind"]>([
+  "actionOptions",
+  "paymentOptions",
+  "optionalActivation",
+  "replacementOptions",
+  "lifeTrigger",
+  "rollbackConsent",
+  "loopCount",
+]);
+
+const isActionChoiceModal = (
+  model: DecisionModalModel,
+): model is Extract<
+  DecisionModalModel,
+  {
+    kind:
+      | "actionOptions"
+      | "paymentOptions"
+      | "optionalActivation"
+      | "replacementOptions"
+      | "lifeTrigger"
+      | "rollbackConsent"
+      | "loopCount";
+  }
+> => actionChoiceModalKinds.has(model.kind);
+
 const decisionModalFrameClass = (model: DecisionModalModel): string =>
   cardDecisionModalKinds.has(model.kind) ||
-  (model.kind === "actionOptions" &&
+  (isActionChoiceModal(model) &&
     model.options.some((option) => option.cards !== undefined))
     ? "modal-frame-decision modal-frame-card-decision"
     : "modal-frame-decision";
@@ -142,7 +168,7 @@ export const DecisionModalHost = ({
   const renderConfirm =
     model.kind !== "binaryQuantity" &&
     model.kind !== "chooseOption" &&
-    model.kind !== "actionOptions" &&
+    !isActionChoiceModal(model) &&
     model.kind !== "chooseOne";
   return (
     <ModalFrame title={model.title} className={decisionModalFrameClass(model)}>
@@ -382,10 +408,10 @@ export const DecisionModalHost = ({
           })()}
         </div>
       ) : null}
-      {model.kind === "actionOptions" ? (
+      {isActionChoiceModal(model) ? (
         <>
           {(() => {
-            const previewCard = model.card;
+            const previewCard = "card" in model ? model.card : undefined;
             if (previewCard === undefined) {
               return null;
             }

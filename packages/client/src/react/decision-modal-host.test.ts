@@ -281,10 +281,10 @@ test("choose-one modals render custom one-click effect choices", () => {
   assert.doesNotMatch(markup, /decision-choice is-selected/u);
 });
 
-test("action option modals can render replacement choices as source cards", () => {
+test("replacement modals can render replacement choices as source cards", () => {
   const model: DecisionModalModel = {
     ...presentation,
-    kind: "actionOptions",
+    kind: "replacementOptions",
     decisionId: "decision-replacement" as never,
     options: [
       {
@@ -324,10 +324,10 @@ test("action option modals can render replacement choices as source cards", () =
   assert.doesNotMatch(markup, /primary-action/u);
 });
 
-test("life trigger action options render one card preview and text response buttons", () => {
+test("life trigger modals render one card preview and text response buttons", () => {
   const model: DecisionModalModel = {
     ...presentation,
-    kind: "actionOptions",
+    kind: "lifeTrigger",
     decisionId: "decision-life-trigger" as never,
     card: cardRef("life-trigger"),
     options: [

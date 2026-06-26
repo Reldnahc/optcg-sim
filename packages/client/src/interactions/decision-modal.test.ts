@@ -578,7 +578,7 @@ describe("headless decision modal models", () => {
       title: "Pay cost",
       instruction: "Choose a payment option.",
       prompt: "Pay cost to play card",
-      kind: "actionOptions",
+      kind: "paymentOptions",
       decisionId: decision.id,
       options: [
         { actionIndex: 4, label: "Pay 4 DON!!" },
@@ -624,7 +624,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [
       { actionIndex: 4, label: "Decline cost" },
       { actionIndex: 5, label: "Pay 4 DON!!" },
@@ -749,7 +749,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 4 DON!!" }]);
   });
 
@@ -800,7 +800,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [
       { actionIndex: 3, label: "Decline cost" },
       { actionIndex: 4, label: "Pay 3 DON!!" },
@@ -845,7 +845,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [{ actionIndex: 4, label: "Pay 4 DON!!" }]);
   });
 
@@ -887,7 +887,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [
       { actionIndex: 4, label: "Rest 1 DON!!" },
     ]);
@@ -931,7 +931,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [
       { actionIndex: 4, label: "Rest 1 DON!!" },
     ]);
@@ -963,7 +963,7 @@ describe("headless decision modal models", () => {
       title: "Life trigger",
       instruction: "Choose whether to activate this trigger.",
       prompt: "Activate life trigger?",
-      kind: "actionOptions",
+      kind: "lifeTrigger",
       decisionId: decision.id,
       card: cardRef("life-trigger"),
       options: [
@@ -1019,7 +1019,7 @@ describe("headless decision modal models", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "lifeTrigger");
     assert.equal(model.card?.instanceId, cardRef("life-trigger").instanceId);
     assert.deepEqual(model.options, [
       { actionIndex: 1, label: "Activate trigger" },

@@ -318,7 +318,7 @@ describe("match client decision model", () => {
     assert.equal(model.decisionModal, undefined);
   });
 
-  test("placed optional activation responses still feed the decision modal", () => {
+  test("placed optional activation responses route to source card actions", () => {
     const snapshot = playerSnapshot();
     const source = snapshot.view.self.leader;
     snapshot.view.pendingDecision = {
@@ -384,19 +384,12 @@ describe("match client decision model", () => {
       decisionDraft: undefined,
     });
 
+    assert.equal(model.decisionModal, undefined);
     assert.deepEqual(
-      model.pendingDecisionResponseActions.map((action) => action.responseKey),
+      model.board?.actionsByCardInstanceId[String(source.instanceId)]?.map(
+        (action) => action.responseKey,
+      ),
       ["activate", "decline"],
     );
-    const modal = model.decisionModal;
-    assert.ok(modal);
-    assert.equal(modal.source?.instanceId, source.instanceId);
-    if (modal.kind !== "actionOptions") {
-      assert.fail("Expected actionOptions optional activation modal.");
-    }
-    assert.deepEqual(modal.options, [
-      { actionIndex: 1, label: "Activate effect" },
-      { actionIndex: 2, label: "Decline effect" },
-    ]);
   });
 });
