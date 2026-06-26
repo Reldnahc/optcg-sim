@@ -32,7 +32,7 @@ describe("match client card selection", () => {
     );
   });
 
-  test("does not auto-submit completed multi-choice hand-sourced card costs", () => {
+  test("auto-submits completed exact-one hand-sourced card costs with multiple candidates", () => {
     assert.equal(
       shouldAutoSubmitCardCostSelection({
         group: group({
@@ -41,6 +41,25 @@ describe("match client card selection", () => {
           cardActions: [
             { instanceIds: ["card-1"], actionIndex: 2 },
             { instanceIds: ["card-2"], actionIndex: 3 },
+          ],
+        }),
+        complete: true,
+      }),
+      true,
+    );
+  });
+
+  test("does not auto-submit completed variable-count hand-sourced card costs", () => {
+    assert.equal(
+      shouldAutoSubmitCardCostSelection({
+        group: group({
+          operation: "trash",
+          minCount: 1,
+          requiredCount: 2,
+          source: { zone: "hand" as Zone, playerId: "p1" as PlayerId },
+          cardActions: [
+            { instanceIds: ["card-1"], actionIndex: 2 },
+            { instanceIds: ["card-1", "card-2"], actionIndex: 3 },
           ],
         }),
         complete: true,

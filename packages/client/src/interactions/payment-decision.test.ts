@@ -543,7 +543,7 @@ describe("optional card-cost interaction", () => {
     );
   });
 
-  test("multi-choice hand-sourced and ordered trash movement card costs require manual confirmation", () => {
+  test("ordered trash movement card costs require manual confirmation", () => {
     assert.equal(
       cardCostGroupRequiresManualConfirm({
         operation: "moveCards",
@@ -567,7 +567,7 @@ describe("optional card-cost interaction", () => {
           { instanceIds: ["hand-2"], actionIndex: 3 },
         ],
       }),
-      true,
+      false,
     );
     assert.equal(
       cardCostGroupRequiresManualConfirm({

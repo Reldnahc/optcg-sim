@@ -251,9 +251,9 @@ export const optionalCardCostAttachmentTargetInstanceIds = (
 
 export const cardCostGroupRequiresManualConfirm = (
   group: Pick<OptionalCardCostGroup, "operation" | "source"> &
-    Partial<Pick<OptionalCardCostGroup, "cardActions">>,
+    Partial<Pick<OptionalCardCostGroup, "cardActions" | "requiredCount">>,
 ): boolean =>
-  (group.source?.zone === "hand" && (group.cardActions?.length ?? 0) > 1) ||
+  (group.source?.zone === "hand" && (group.requiredCount ?? 1) > 1) ||
   (group.operation === "moveCards" && group.source?.zone === "trash") ||
   new Set((group.cardActions ?? []).map((action) => action.instanceIds.length))
     .size > 1;
