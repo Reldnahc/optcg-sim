@@ -231,10 +231,10 @@ describe("settings window", () => {
         onClose: () => undefined,
       }),
     );
-    const styles = await readFile(
-      join(sourceDirectory, "styles", "settings-window.css"),
-      "utf8",
-    );
+    const [styles, appShellStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "settings-window.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "app-shell.css"), "utf8"),
+    ]);
 
     assert.match(
       markup,
@@ -278,6 +278,14 @@ describe("settings window", () => {
       /\.settings-field\s*\{[^}]*font-size:\s*var\(--floating-window-font-size\);/u,
     );
     assert.match(styles, /\.settings-range-header\s*\{/u);
+    assert.match(
+      appShellStyles,
+      /--floating-window-font-size:\s*clamp\(\s*13px,\s*calc\(var\(--card-height\) \/ 13\.5\),\s*16px\s*\);/u,
+    );
+    assert.match(
+      appShellStyles,
+      /--floating-window-small-font-size:\s*clamp\(\s*12px,\s*calc\(var\(--card-height\) \/ 14\),\s*15px\s*\);/u,
+    );
   });
 
   test("match app wires the settings icon to the settings window", async () => {

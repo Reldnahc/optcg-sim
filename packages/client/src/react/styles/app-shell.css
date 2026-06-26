@@ -69,14 +69,14 @@
     14px
   );
   --floating-window-font-size: clamp(
-    11px,
+    13px,
     calc(var(--card-height) / 13.5),
-    14px
+    16px
   );
   --floating-window-small-font-size: clamp(
-    11px,
+    12px,
     calc(var(--card-height) / 14),
-    13px
+    15px
   );
   --floating-window-resize-handle-size: clamp(
     18px,
