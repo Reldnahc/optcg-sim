@@ -144,13 +144,21 @@ export const getBlockStepDecisionLegalActions = (
   if (hasUnsupportedBlockDecisionState(state, battle, decision.playerId)) {
     return [];
   }
+  const legalCandidates = getLegalBlockerCandidates(state, decision.playerId);
+  if (legalCandidates.length === 0) {
+    return [];
+  }
+  const legalCandidateRefs = legalCandidates.map((candidate) => candidate.card);
+  const decisionCandidates = decision.candidates.filter((candidate) =>
+    legalCandidateRefs.some((legal) => sameCardRef(legal, candidate.card)),
+  );
   return [
     {
       type: "respondToDecision",
       decisionId: decision.id,
       response: { type: "cards", cards: [] },
     },
-    ...decision.candidates.map((candidate) => ({
+    ...decisionCandidates.map((candidate) => ({
       type: "respondToDecision" as const,
       decisionId: decision.id,
       response: { type: "cards" as const, cards: [candidate.card] },
@@ -236,6 +244,12 @@ export const applyBlockStepDecisionResponse = (
     return illegalAction(state, "Decision player mismatch.");
   }
   if (hasUnsupportedBlockDecisionState(state, battle, decision.playerId)) {
+    return illegalAction(
+      state,
+      "Battle requires unsupported blocker, counter, or replacement handling.",
+    );
+  }
+  if (getLegalBlockerCandidates(state, decision.playerId).length === 0) {
     return illegalAction(
       state,
       "Battle requires unsupported blocker, counter, or replacement handling.",

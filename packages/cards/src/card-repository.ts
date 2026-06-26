@@ -433,7 +433,7 @@ const buildResolvedCard = (
     "trigger",
   );
   const supportStatus: CardSupportStatus =
-    lines.length === 0
+    lines.length === 0 || effectLines.length === 0
       ? "vanilla-confirmed"
       : builtDefinition.runtimeSupported
         ? "implemented-dsl"

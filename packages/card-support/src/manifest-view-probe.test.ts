@@ -58,6 +58,36 @@ describe("manifest view probe", () => {
       },
     ]);
   });
+
+  it("fails implemented DSL raw keyword text that has no effect definition", () => {
+    const cardId = "BLOCKER-001" as CardId;
+    const results = validateMatchCardManifestViewSafety({
+      manifest: manifestWithCard(
+        resolvedCard({
+          cardId,
+          effectText:
+            "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+          support: {
+            cardId,
+            status: "implemented-dsl",
+            tested: true,
+            rulesVersion: "probe",
+            cardDataVersion: "probe",
+            sourceTextHash: "source",
+            behaviorHash: "behavior",
+          },
+        }),
+      ),
+      cardIds: [cardId],
+    });
+
+    expect(results[0]).toMatchObject({
+      label: "BLOCKER-001",
+      cardId: "BLOCKER-001",
+      status: "failed",
+      reason: "implemented-dsl card has runtime text but no effect definition",
+    });
+  });
 });
 
 const manifestWithCard = (card: ResolvedCard): MatchCardManifest => ({

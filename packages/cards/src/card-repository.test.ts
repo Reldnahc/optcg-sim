@@ -311,7 +311,7 @@ describe("card repository", () => {
     const resolved = required(maybeResolved, "resolved card");
 
     assert.deepEqual(resolved.printedKeywords, ["blocker"]);
-    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.support.status, "vanilla-confirmed");
     assert.equal(resolved.support.effectDefinitionId, undefined);
   });
 

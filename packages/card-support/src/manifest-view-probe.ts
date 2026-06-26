@@ -192,7 +192,7 @@ const validateImplementedDslContract = (
 };
 
 const isMetadataOnlyImplementedDsl = (card: ResolvedCard): boolean => {
-  const lines = manifestEffectLines(card);
+  const lines = gameplayLinesFromTextParts([card.effectText, card.triggerText]);
   if (lines.length === 0) {
     return true;
   }
