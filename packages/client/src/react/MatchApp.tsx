@@ -46,7 +46,7 @@ import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-settings.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
-import { createControlPanelLayoutStore } from "./window-state-store.js";
+import { createWindowLayoutStore } from "./window-state-store.js";
 import type { MatchClientUi } from "./useMatchClient-support.js";
 export interface MatchAppProps {
   readonly accountSessionToken?: string | undefined;
@@ -155,11 +155,11 @@ export const MatchApp = ({
     enabled: matchScope !== undefined,
     matchId: matchScope,
   });
-  const controlPanelLayoutStore = useMemo(
+  const windowLayoutStore = useMemo(
     () =>
       typeof window === "undefined"
         ? undefined
-        : createControlPanelLayoutStore({
+        : createWindowLayoutStore({
             storage: createBrowserPersistentStorage(),
           }),
     [],
@@ -171,15 +171,14 @@ export const MatchApp = ({
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,
-  } = useControlPanelLayout({ layoutStore: controlPanelLayoutStore });
+  } = useControlPanelLayout({ layoutStore: windowLayoutStore });
   const {
     activeTabId: infoWindowActiveTab,
     groupedTabIds: configuredGroupedInfoWindowIds,
     load: loadInfoWindowConfig,
-    reset: resetInfoWindowConfig,
     setActiveTab: setInfoWindowActiveTab,
     setGroupedTabIds: setGroupedInfoWindowIds,
-  } = useInfoWindowConfig(revealWindowStateStore);
+  } = useInfoWindowConfig(windowLayoutStore);
   const {
     floatingWindowRects,
     activeFloatingWindowRects,
@@ -187,7 +186,6 @@ export const MatchApp = ({
     activeDockedWindowIds,
     activeFloatingWindowZIndexes,
     loadFloatingWindowState,
-    resetFloatingWindowState,
     activateFloatingWindow,
     updateFloatingWindowRect,
     openFloatingWindowGroup,
@@ -197,28 +195,16 @@ export const MatchApp = ({
     dockFloatingWindows,
     reorderDockedWindow,
     updateDockedWindowRects,
-  } = useFloatingWindowState({ matchScope, revealWindowStateStore });
+  } = useFloatingWindowState({ windowLayoutStore });
   const {
     revealWindowState,
     activeRevealWindowState,
     updateRevealWindowState,
   } = useRevealWindowState({ matchScope, revealWindowStateStore });
   useEffect(() => {
-    if (matchScope === undefined || revealWindowStateStore === undefined) {
-      resetFloatingWindowState();
-      resetInfoWindowConfig();
-      return;
-    }
     loadFloatingWindowState();
     loadInfoWindowConfig();
-  }, [
-    loadFloatingWindowState,
-    loadInfoWindowConfig,
-    matchScope,
-    resetInfoWindowConfig,
-    resetFloatingWindowState,
-    revealWindowStateStore,
-  ]);
+  }, [loadFloatingWindowState, loadInfoWindowConfig]);
   const {
     concedeDisabled,
     concedeConfirming,
@@ -459,7 +445,7 @@ export const MatchApp = ({
     updateInfoWindowDragTargets,
   });
   useEffect(() => {
-    if (matchScope === undefined || floatingWindowRects.scope !== matchScope) {
+    if (floatingWindowRects.scope === undefined) {
       return;
     }
     const nextPreviewOpen = activeOpenWindowIds.has(cardPreviewWindowKey);
@@ -471,7 +457,7 @@ export const MatchApp = ({
     if (nextActionLogOpen && !nextPreviewOpen) {
       setInfoWindowActiveTab("log");
     }
-  }, [activeOpenWindowIds, floatingWindowRects.scope, matchScope]);
+  }, [activeOpenWindowIds, floatingWindowRects.scope]);
   useEffect(() => {
     const dockRect = currentControlDockSlotRect();
     if (dockRect !== undefined) {

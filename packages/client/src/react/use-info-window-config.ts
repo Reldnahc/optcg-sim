@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import type { InfoWindowTabId } from "./InfoTabbedWindow.js";
 import type {
   InfoWindowConfig,
-  RevealWindowStateStore,
+  WindowLayoutStore,
 } from "./window-state-store.js";
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
@@ -21,7 +21,7 @@ export interface InfoWindowConfigControls {
 }
 
 export const useInfoWindowConfig = (
-  store: RevealWindowStateStore | undefined,
+  store: WindowLayoutStore | undefined,
 ): InfoWindowConfigControls => {
   const [config, setConfig] = useState<InfoWindowConfig>(
     () => defaultInfoWindowConfig,

@@ -3,8 +3,8 @@ import { describe, test } from "vitest";
 
 import { createMemoryClientStorage } from "../session.js";
 import {
-  createControlPanelLayoutStore,
   createRevealWindowStateStore,
+  createWindowLayoutStore,
 } from "./window-state-store.js";
 
 describe("reveal window state store", () => {
@@ -45,59 +45,51 @@ describe("reveal window state store", () => {
     assert.deepEqual([...store.loadDismissedRevealIds()], []);
   });
 
-  test("persists floating window rectangles by match", () => {
+  test("persists floating window rectangles globally across matches", () => {
     const storage = createMemoryClientStorage();
-    const matchOne = createRevealWindowStateStore({
+    const layoutStore = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
-    });
-    const matchTwo = createRevealWindowStateStore({
-      storage,
-      matchId: "match-2",
     });
 
-    matchOne.saveWindowRects({
+    layoutStore.saveWindowRects({
       "card-preview": { x: 10, y: 20, width: 300, height: 400 },
       "collection:Trash": { x: 30, y: 40, width: 500, height: 260 },
     });
 
-    assert.deepEqual(matchOne.loadWindowRects(), {
+    assert.deepEqual(layoutStore.loadWindowRects(), {
       "card-preview": { x: 10, y: 20, width: 300, height: 400 },
       "collection:Trash": { x: 30, y: 40, width: 500, height: 260 },
     });
-    assert.deepEqual(matchTwo.loadWindowRects(), {});
+    assert.equal(
+      storage.getItem("optcg:client:floating-window-rects:match-1"),
+      null,
+    );
   });
 
-  test("persists open floating window ids by match", () => {
+  test("persists open floating window ids globally across matches", () => {
     const storage = createMemoryClientStorage();
-    const matchOne = createRevealWindowStateStore({
+    const layoutStore = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
-    });
-    const matchTwo = createRevealWindowStateStore({
-      storage,
-      matchId: "match-2",
     });
 
-    matchOne.saveOpenWindowIds(
+    layoutStore.saveOpenWindowIds(
       new Set(["action-log", "collection:Player trash"]),
     );
 
     assert.deepEqual(
-      [...matchOne.loadOpenWindowIds()],
+      [...layoutStore.loadOpenWindowIds()],
       ["action-log", "collection:Player trash"],
     );
-    assert.deepEqual(
-      [...matchTwo.loadOpenWindowIds()],
-      ["card-preview", "action-log", "settings"],
+    assert.equal(
+      storage.getItem("optcg:client:open-floating-windows:match-1"),
+      null,
     );
   });
 
   test("defaults unsaved windows to preview open and docked first", () => {
     const storage = createMemoryClientStorage();
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(
@@ -112,9 +104,8 @@ describe("reveal window state store", () => {
 
   test("preserves an intentionally saved empty window layout", () => {
     const storage = createMemoryClientStorage();
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     store.saveOpenWindowIds(new Set());
@@ -126,7 +117,7 @@ describe("reveal window state store", () => {
 
   test("persists control panel width globally across matches", () => {
     const storage = createMemoryClientStorage();
-    const layoutStore = createControlPanelLayoutStore({
+    const layoutStore = createWindowLayoutStore({
       storage,
     });
     layoutStore.saveControlPanelLayout({
@@ -152,7 +143,7 @@ describe("reveal window state store", () => {
       "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: 340, controlDockHeight: 420 }),
     );
-    const store = createControlPanelLayoutStore({
+    const store = createWindowLayoutStore({
       storage,
     });
 
@@ -167,48 +158,42 @@ describe("reveal window state store", () => {
       "optcg:client:control-panel-layout",
       JSON.stringify({ controlRailWidth: "340" }),
     );
-    const store = createControlPanelLayoutStore({
+    const store = createWindowLayoutStore({
       storage,
     });
 
     assert.deepEqual(store.loadControlPanelLayout(), {});
   });
 
-  test("persists info window tab config by match", () => {
+  test("persists info window tab config globally across matches", () => {
     const storage = createMemoryClientStorage();
-    const matchOne = createRevealWindowStateStore({
+    const layoutStore = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
-    });
-    const matchTwo = createRevealWindowStateStore({
-      storage,
-      matchId: "match-2",
     });
 
-    matchOne.saveInfoWindowConfig({
+    layoutStore.saveInfoWindowConfig({
       activeTabId: "settings",
       groupedTabIds: ["preview", "settings"],
     });
 
-    assert.deepEqual(matchOne.loadInfoWindowConfig(), {
+    assert.deepEqual(layoutStore.loadInfoWindowConfig(), {
       activeTabId: "settings",
       groupedTabIds: ["preview", "settings"],
     });
-    assert.deepEqual(matchTwo.loadInfoWindowConfig(), {
-      activeTabId: "preview",
-      groupedTabIds: [],
-    });
+    assert.equal(
+      storage.getItem("optcg:client:info-window-config:match-1"),
+      null,
+    );
   });
 
   test("loads legacy boolean info window grouping as all known tabs", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:info-window-config:match-1",
+      "optcg:client:info-window-config",
       JSON.stringify({ activeTabId: "log", grouped: true }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadInfoWindowConfig(), {
@@ -220,12 +205,11 @@ describe("reveal window state store", () => {
   test("fails closed to empty open window ids for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:open-floating-windows:match-1",
+      "optcg:client:open-floating-windows",
       JSON.stringify({ window: "action-log" }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual([...store.loadOpenWindowIds()], []);
@@ -234,15 +218,14 @@ describe("reveal window state store", () => {
   test("fails closed to empty window rectangles for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:floating-window-rects:match-1",
+      "optcg:client:floating-window-rects",
       JSON.stringify({
         good: { x: 10, y: 20, width: 300, height: 400 },
         bad: { x: "10", y: 20, width: 300, height: 400 },
       }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadWindowRects(), {
@@ -253,12 +236,11 @@ describe("reveal window state store", () => {
   test("fails closed to default info window config for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
-      "optcg:client:info-window-config:match-1",
+      "optcg:client:info-window-config",
       JSON.stringify({ activeTabId: "settings", grouped: "yes" }),
     );
-    const store = createRevealWindowStateStore({
+    const store = createWindowLayoutStore({
       storage,
-      matchId: "match-1",
     });
 
     assert.deepEqual(store.loadInfoWindowConfig(), {

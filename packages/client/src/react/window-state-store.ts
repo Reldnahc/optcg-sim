@@ -6,6 +6,14 @@ export interface RevealWindowStateStore {
   saveDismissedRevealIds: (revealIds: ReadonlySet<string>) => void;
   loadMinimizedRevealIds: () => Set<string>;
   saveMinimizedRevealIds: (revealIds: ReadonlySet<string>) => void;
+}
+
+export interface ControlPanelLayoutStore {
+  loadControlPanelLayout: () => ControlPanelLayoutConfig;
+  saveControlPanelLayout: (layout: ControlPanelLayoutConfig) => void;
+}
+
+export interface WindowLayoutStore extends ControlPanelLayoutStore {
   loadWindowRects: () => Record<string, WindowRect>;
   saveWindowRects: (rects: Readonly<Record<string, WindowRect>>) => void;
   loadOpenWindowIds: () => Set<string>;
@@ -14,11 +22,6 @@ export interface RevealWindowStateStore {
   saveDockedWindowIds: (windowIds: ReadonlySet<string>) => void;
   loadInfoWindowConfig: () => InfoWindowConfig;
   saveInfoWindowConfig: (config: InfoWindowConfig) => void;
-}
-
-export interface ControlPanelLayoutStore {
-  loadControlPanelLayout: () => ControlPanelLayoutConfig;
-  saveControlPanelLayout: (layout: ControlPanelLayoutConfig) => void;
 }
 
 export interface InfoWindowConfig {
@@ -54,17 +57,13 @@ const isInfoWindowTabId = (
 const setKey = (matchId: string, name: "dismissed" | "minimized"): string =>
   `${keyPrefix}:${matchId}:${name}`;
 
-const windowRectsKey = (matchId: string): string =>
-  `${windowRectsKeyPrefix}:${matchId}`;
+const windowRectsKey = (): string => windowRectsKeyPrefix;
 
-const openWindowsKey = (matchId: string): string =>
-  `${openWindowsKeyPrefix}:${matchId}`;
+const openWindowsKey = (): string => openWindowsKeyPrefix;
 
-const dockedWindowsKey = (matchId: string): string =>
-  `${dockedWindowsKeyPrefix}:${matchId}`;
+const dockedWindowsKey = (): string => dockedWindowsKeyPrefix;
 
-const infoWindowConfigKey = (matchId: string): string =>
-  `${infoWindowConfigKeyPrefix}:${matchId}`;
+const infoWindowConfigKey = (): string => infoWindowConfigKeyPrefix;
 
 const controlPanelLayoutKey = (): string => controlPanelLayoutKeyPrefix;
 
@@ -245,37 +244,37 @@ export const createRevealWindowStateStore = ({
   saveMinimizedRevealIds(revealIds) {
     saveSet(storage, setKey(matchId, "minimized"), revealIds);
   },
-  loadWindowRects() {
-    return parseWindowRects(storage.getItem(windowRectsKey(matchId)));
-  },
-  saveWindowRects(rects) {
-    storage.setItem(windowRectsKey(matchId), JSON.stringify(rects));
-  },
-  loadOpenWindowIds() {
-    return loadSet(storage, openWindowsKey(matchId), defaultOpenWindowIds);
-  },
-  saveOpenWindowIds(windowIds) {
-    saveSet(storage, openWindowsKey(matchId), windowIds);
-  },
-  loadDockedWindowIds() {
-    return loadSet(storage, dockedWindowsKey(matchId), defaultDockedWindowIds);
-  },
-  saveDockedWindowIds(windowIds) {
-    saveSet(storage, dockedWindowsKey(matchId), windowIds);
-  },
-  loadInfoWindowConfig() {
-    return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey(matchId)));
-  },
-  saveInfoWindowConfig(config) {
-    storage.setItem(infoWindowConfigKey(matchId), JSON.stringify(config));
-  },
 });
 
-export const createControlPanelLayoutStore = ({
+export const createWindowLayoutStore = ({
   storage,
 }: {
   storage: ClientStorage;
-}): ControlPanelLayoutStore => ({
+}): WindowLayoutStore => ({
+  loadWindowRects() {
+    return parseWindowRects(storage.getItem(windowRectsKey()));
+  },
+  saveWindowRects(rects) {
+    storage.setItem(windowRectsKey(), JSON.stringify(rects));
+  },
+  loadOpenWindowIds() {
+    return loadSet(storage, openWindowsKey(), defaultOpenWindowIds);
+  },
+  saveOpenWindowIds(windowIds) {
+    saveSet(storage, openWindowsKey(), windowIds);
+  },
+  loadDockedWindowIds() {
+    return loadSet(storage, dockedWindowsKey(), defaultDockedWindowIds);
+  },
+  saveDockedWindowIds(windowIds) {
+    saveSet(storage, dockedWindowsKey(), windowIds);
+  },
+  loadInfoWindowConfig() {
+    return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey()));
+  },
+  saveInfoWindowConfig(config) {
+    storage.setItem(infoWindowConfigKey(), JSON.stringify(config));
+  },
   loadControlPanelLayout() {
     return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey()));
   },
