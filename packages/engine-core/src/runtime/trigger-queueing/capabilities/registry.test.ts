@@ -65,3 +65,16 @@ test("registry lookup returns source policy and router ownership", () => {
     "specializedAttack",
   );
 });
+
+test("every implemented trigger capability declares a non-unsupported router", () => {
+  for (const capability of allTriggerQueueCapabilities) {
+    assert.notEqual(capability.router, "unsupported", capability.triggerType);
+    if (capability.router === "genericEventReaction") {
+      assert.notEqual(
+        capability.runtimeEventTypes.length,
+        0,
+        capability.triggerType,
+      );
+    }
+  }
+});

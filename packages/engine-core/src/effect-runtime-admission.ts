@@ -14,6 +14,7 @@ import {
   isSupportedAutoRuntimeEffectBlock,
   triggerContainsType,
 } from "./effect-runtime-block-support.js";
+import { triggerQueueCapabilityForType } from "./runtime/trigger-queueing/capabilities/registry.js";
 import { isSupportedPermanentContinuousEffectBlock } from "./runtime/continuous/continuous.js";
 import { isSupportedReplacementEffectBlock } from "./effect-runtime-replacement-primitives.js";
 import { isSupportedSequenceBlock } from "./effect-runtime-sequence/support.js";
@@ -176,19 +177,27 @@ const unsupportedBodyReport = (
 
 const unsupportedEnvelope = (
   block: EffectBlock,
-): RuntimeSupportAdmissionResult =>
-  createRuntimeSupportReport([
-    ...entrySupportRecords(block, false, {
-      reason: "unsupported trigger/category/source-presence envelope",
-    }),
+): RuntimeSupportAdmissionResult => {
+  const reason = unsupportedEnvelopeReason(block);
+  return createRuntimeSupportReport([
+    ...entrySupportRecords(block, false, { reason }),
     runtimeSupportRecord({
       family: "body",
       id: effectBodyId(block.effect),
       supported: false,
-      reason: "unsupported trigger/category/source-presence envelope",
+      reason,
       effectPath: ["effect"],
     }),
   ]);
+};
+
+const unsupportedEnvelopeReason = (block: EffectBlock): string => {
+  const capability = triggerQueueCapabilityForType(block.trigger.type);
+  if (capability === undefined) {
+    return "unsupported trigger/category/source-presence envelope";
+  }
+  return `unsupported ${capability.router} trigger/category/source-presence envelope`;
+};
 
 const entrySupportRecords = (
   block: EffectBlock,
