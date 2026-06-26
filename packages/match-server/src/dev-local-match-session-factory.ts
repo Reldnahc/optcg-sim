@@ -13,6 +13,7 @@ import {
   initializeLocalDevMatchTimers,
   type MatchTimerPolicy,
 } from "./match-timers.js";
+import { compactRollbackForState } from "./local-rollback.js";
 import type { MatchSessionService } from "./session-service.js";
 import type {
   FirstPlayerChoiceState,
@@ -88,7 +89,10 @@ export const activeMatchRecoveryContext = (
   timersEnabled: session.timersEnabled,
   botPlayerIds: [...session.botPlayerIds],
   passiveBotPlayerIds: [...session.passiveBotPlayerIds],
-  rollback: session.match.rollback,
+  rollback: compactRollbackForState(
+    session.match.rollback,
+    session.match.state,
+  ),
   cardVariantOverrides: session.match.cardVariantOverrides,
 });
 

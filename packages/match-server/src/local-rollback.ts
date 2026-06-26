@@ -28,7 +28,7 @@ interface LocalRollbackPoint {
   stateSeq: number;
   actionSeq: number;
   label: string;
-  state: GameState;
+  state: RollbackPointState;
 }
 
 interface LocalRollbackRequest {
@@ -65,12 +65,28 @@ export const createLocalRollbackState = (
   config: LocalRollbackConfig | undefined,
 ): LocalRollbackState => ({
   enabled: config?.enabled ?? true,
-  maxPoints: config?.maxPoints ?? 40,
+  maxPoints: config?.maxPoints ?? 5,
   points: [],
 });
 
-export const cloneGameState = (state: GameState): GameState =>
-  structuredClone(state);
+type RollbackPointState = Omit<GameState, "cardManifest">;
+
+export const cloneGameStateForRollback = (
+  state: GameState,
+): RollbackPointState => {
+  const { cardManifest, ...rollbackState } = state;
+  void cardManifest;
+  return structuredClone(rollbackState);
+};
+
+const cloneRollbackPointState = (
+  state: GameState | RollbackPointState,
+): RollbackPointState => {
+  if ("cardManifest" in state) {
+    return cloneGameStateForRollback(state);
+  }
+  return structuredClone(state);
+};
 
 const nextStateSeq = (state: GameState): GameState["seq"] =>
   (Number(state.seq) + 1) as GameState["seq"];
@@ -114,7 +130,7 @@ const firstPublicAnchorEvent = (
 
 export const recordRollbackPoint = (
   rollback: LocalRollbackState,
-  previousState: GameState,
+  previousState: GameState | RollbackPointState,
   events: readonly EngineEvent[],
 ): LocalRollbackState => {
   if (!rollback.enabled) {
@@ -133,11 +149,28 @@ export const recordRollbackPoint = (
     stateSeq: previousState.seq,
     actionSeq: previousState.actionSeq,
     label: `Before event ${String(anchor.seq)}`,
-    state: cloneGameState(previousState),
+    state: cloneRollbackPointState(previousState),
   };
   return {
     ...rollback,
     points: [...rollback.points, point].slice(-rollback.maxPoints),
+  };
+};
+
+export const compactRollbackForState = (
+  rollback: LocalRollbackState,
+  state: GameState,
+): LocalRollbackState => {
+  if (state.status.type !== "completed" && state.status.type !== "gameOver") {
+    return rollback;
+  }
+  if (rollback.points.length === 0 && rollback.pendingRequest === undefined) {
+    return rollback;
+  }
+  return {
+    enabled: rollback.enabled,
+    maxPoints: rollback.maxPoints,
+    points: [],
   };
 };
 
@@ -290,7 +323,10 @@ export const resolveRollbackConsent = (
     };
   }
 
-  const restored = cloneGameState(point.state);
+  const restored: GameState = {
+    ...structuredClone(point.state),
+    cardManifest: state.cardManifest,
+  };
   restored.seq = (Number(state.seq) + 1) as GameState["seq"];
   restored.actionSeq = state.actionSeq + 1;
   return {

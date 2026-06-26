@@ -2,7 +2,11 @@ import { applyAction, getLegalActions } from "@optcg/engine-core";
 import type { GameState, PlayerId, TimerState } from "@optcg/types";
 
 import type { LocalDevMatch } from "./local-match.js";
-import { cloneGameState, recordRollbackPoint } from "./local-rollback.js";
+import {
+  cloneGameStateForRollback,
+  compactRollbackForState,
+  recordRollbackPoint,
+} from "./local-rollback.js";
 
 export interface MatchTimerPolicy {
   readonly gameTimeMs: number;
@@ -293,7 +297,7 @@ export const applyLocalDevMatchTimerExpiries = (
   if (expiry === undefined) {
     return;
   }
-  const previousState = cloneGameState(match.state);
+  const previousState = cloneGameStateForRollback(match.state);
   const result = applyAction(match.state, {
     type: "concede",
     playerId: expiry.playerId,
@@ -302,9 +306,8 @@ export const applyLocalDevMatchTimerExpiries = (
     return;
   }
   match.state = stopAllTimers(result.state);
-  match.rollback = recordRollbackPoint(
-    match.rollback,
-    previousState,
-    result.events,
+  match.rollback = compactRollbackForState(
+    recordRollbackPoint(match.rollback, previousState, result.events),
+    match.state,
   );
 };

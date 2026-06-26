@@ -244,6 +244,8 @@ describe("match timers", () => {
 
     assert.deepEqual(match.state.status, { type: "completed", winner: p1 });
     assert.equal(match.state.pendingDecision, undefined);
+    assert.equal(match.rollback.points.length, 0);
+    assert.equal(match.rollback.pendingRequest, undefined);
   });
 
   test("game timer expiry concedes the player holding up progress", () => {
@@ -262,5 +264,7 @@ describe("match timers", () => {
 
     assert.deepEqual(match.state.status, { type: "completed", winner: p1 });
     assert.equal(match.state.pendingDecision, undefined);
+    assert.equal(match.rollback.points.length, 0);
+    assert.equal(match.rollback.pendingRequest, undefined);
   });
 });

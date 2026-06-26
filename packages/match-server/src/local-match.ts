@@ -44,7 +44,8 @@ import type {
 } from "./dev-snapshot-types.js";
 import {
   cancelRollbackConsent,
-  cloneGameState,
+  compactRollbackForState,
+  cloneGameStateForRollback,
   createLocalRollbackState,
   recordRollbackPoint,
   requestRollbackConsent,
@@ -777,8 +778,9 @@ export const applyLocalDevAction = (
     });
   }
 
-  const previousState = recordActionTimingSpan("cloneGameState", () =>
-    cloneGameState(match.state),
+  const previousState = recordActionTimingSpan(
+    "cloneGameStateForRollback",
+    () => cloneGameStateForRollback(match.state),
   );
   const stateSeqBefore = match.state.seq;
   const stateHashBefore = timedStateHash("replayBefore", match.state);
@@ -802,8 +804,11 @@ export const applyLocalDevAction = (
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
-    match.rollback = recordActionTimingSpan("recordRollbackPoint", () =>
-      recordRollbackPoint(match.rollback, previousState, result.events),
+    match.rollback = compactRollbackForState(
+      recordActionTimingSpan("recordRollbackPoint", () =>
+        recordRollbackPoint(match.rollback, previousState, result.events),
+      ),
+      match.state,
     );
   }
   const replay =
@@ -875,8 +880,9 @@ export const applyLocalDevDecision = (
   };
   const stateSeqBefore = match.state.seq;
   const stateHashBefore = timedStateHash("replayBefore", match.state);
-  const previousState = recordActionTimingSpan("cloneGameState", () =>
-    cloneGameState(match.state),
+  const previousState = recordActionTimingSpan(
+    "cloneGameStateForRollback",
+    () => cloneGameStateForRollback(match.state),
   );
   const responseResult = recordActionTimingSpan("decisionApply", () =>
     decision.type === "mulligan"
@@ -893,8 +899,11 @@ export const applyLocalDevDecision = (
   const errors = result.errors?.map(describeEngineError) ?? [];
   if (errors.length === 0) {
     match.state = result.state;
-    match.rollback = recordActionTimingSpan("recordRollbackPoint", () =>
-      recordRollbackPoint(match.rollback, previousState, result.events),
+    match.rollback = compactRollbackForState(
+      recordActionTimingSpan("recordRollbackPoint", () =>
+        recordRollbackPoint(match.rollback, previousState, result.events),
+      ),
+      match.state,
     );
   }
   const replay =
