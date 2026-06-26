@@ -35,26 +35,27 @@
   display: grid;
   gap: calc(var(--floating-window-body-padding) * 0.92);
   min-width: 0;
-  border: var(--floating-window-border-width) solid var(--match-border-soft);
+  border: 0;
   border-left-color: var(--match-accent);
+  border-left-style: solid;
   border-left-width: calc(var(--floating-window-border-width) * 2);
-  border-radius: 6px;
   background: rgba(255, 255, 255, 0.035);
   padding: calc(var(--floating-window-body-padding) * 0.82);
+  padding-left: calc(var(--floating-window-body-padding) * 1.08);
 }
 
 .settings-section:last-child {
   padding: calc(var(--floating-window-body-padding) * 0.82);
-  border: var(--floating-window-border-width) solid var(--match-border-soft);
+  padding-left: calc(var(--floating-window-body-padding) * 1.08);
+  border: 0;
   border-left-color: var(--match-accent);
+  border-left-style: solid;
   border-left-width: calc(var(--floating-window-border-width) * 2);
 }
 
 .settings-section > h3 {
   margin: calc(var(--floating-window-body-padding) * -0.18) 0 0;
-  padding-bottom: calc(var(--floating-window-body-padding) * 0.55);
-  border-bottom: var(--floating-window-border-width) solid
-    rgba(255, 255, 255, 0.14);
+  padding-bottom: 0;
   color: var(--match-accent-strong);
   font-size: var(--floating-window-font-size);
   font-weight: 800;
@@ -68,12 +69,10 @@
   gap: calc(var(--floating-window-body-padding) * 0.72);
   min-width: 0;
   padding-top: calc(var(--floating-window-body-padding) * 0.75);
-  border-top: var(--floating-window-border-width) solid rgba(255, 255, 255, 0.1);
 }
 
 .settings-section > .settings-subsection:first-of-type {
   padding-top: 0;
-  border-top: 0;
 }
 
 .settings-subsection h4 {

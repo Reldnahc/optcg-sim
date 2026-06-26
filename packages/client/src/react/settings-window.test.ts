@@ -257,6 +257,20 @@ describe("settings window", () => {
     );
     assert.match(
       styles,
+      /\.settings-section\s*\{[^}]*border-left-color:\s*var\(--match-accent\);/u,
+    );
+    assert.doesNotMatch(
+      styles,
+      /\.settings-section\s*\{[^}]*border:\s*var\(--floating-window-border-width\)\s+solid\s+var\(--match-border-soft\);/u,
+    );
+    assert.doesNotMatch(styles, /\.settings-section\s*\{[^}]*border-radius:/u);
+    assert.doesNotMatch(
+      styles,
+      /\.settings-section\s*>\s*h3\s*\{[^}]*border-bottom:/u,
+    );
+    assert.doesNotMatch(styles, /\.settings-subsection\s*\{[^}]*border-top:/u);
+    assert.match(
+      styles,
       /\.settings-section\s*>\s*h3\s*\{[^}]*font-size:\s*var\(--floating-window-font-size\);/u,
     );
     assert.match(
