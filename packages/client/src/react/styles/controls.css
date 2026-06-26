@@ -12,6 +12,7 @@
   );
   --control-panel-padding: clamp(8px, calc(var(--card-height) / 16), 14px);
   --control-panel-radius: calc(var(--card-corner-radius) * 0.85);
+  --control-rail-surface: rgba(13, 13, 14, 0.86);
   --control-title-gap: clamp(6px, calc(var(--card-height) / 20), 10px);
   --control-title-font-size: clamp(22px, calc(var(--card-height) / 5.6), 34px);
   --control-body-font-size: clamp(12px, calc(var(--card-height) / 11), 15px);
@@ -49,7 +50,7 @@
 .controls-panel {
   border: 0;
   border-radius: 0;
-  background: var(--match-surface-panel);
+  background: var(--control-rail-surface);
   padding: var(--control-panel-padding);
 }
 

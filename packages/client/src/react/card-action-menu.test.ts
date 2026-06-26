@@ -264,6 +264,22 @@ describe("card action menu", () => {
     assert.equal(styles.includes(".match-facts"), false);
   });
 
+  test("control rail panel surface does not follow the customizable window color", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(
+      styles,
+      /\.control-rail\s*\{[^}]*--control-rail-surface:\s*rgba\(13,\s*13,\s*14,\s*0\.86\);/u,
+    );
+    assert.match(
+      styles,
+      /\.controls-panel\s*\{[^}]*background:\s*var\(--control-rail-surface\);/u,
+    );
+  });
+
   test("control rail renders preview control below the dock slot", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
