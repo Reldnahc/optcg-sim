@@ -63,8 +63,7 @@
   background: transparent;
 }
 
-.controls-panel,
-.loading-panel {
+.controls-panel {
   border: var(--card-outline-thin) solid var(--match-border);
   border-radius: var(--control-panel-radius);
   background: var(--match-surface-panel);
@@ -156,21 +155,6 @@
 
 .disconnect-timer {
   color: #ff7777;
-}
-
-.loading-panel {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  max-width: 480px;
-  margin: 40px auto;
-  color: var(--match-text);
-}
-
-.loading-panel h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 500;
 }
 
 .deck-hash-form {

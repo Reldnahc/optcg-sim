@@ -234,12 +234,6 @@
   grid-area: playmat-board;
 }
 
-.tabletop-board > .loading-panel {
-  grid-area: center-spacer;
-  align-self: center;
-  justify-self: center;
-}
-
 .hand-row {
   display: flex;
   min-width: 0;

@@ -1,14 +1,6 @@
-import type { ReactNode } from "react";
-
 import { Zone } from "./Zone.js";
 
-export interface EmptyPlaymatProps {
-  center?: ReactNode | undefined;
-}
-
-export const EmptyPlaymat = ({
-  center,
-}: EmptyPlaymatProps): React.JSX.Element => (
+export const EmptyPlaymat = (): React.JSX.Element => (
   <>
     <div className="playmat-side opponent-side">
       <div className="playmat-row opponent-resource-row">
@@ -64,9 +56,8 @@ export const EmptyPlaymat = ({
         </div>
       </div>
     </div>
-    <div className="playmat-zone center-spacer empty-playmat-center">
+    <div className="playmat-zone center-spacer">
       <div className="opponent-center-spacer" />
-      {center}
       <div className="player-center-spacer" />
     </div>
     <div className="playmat-side player-side">

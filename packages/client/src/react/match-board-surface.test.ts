@@ -55,14 +55,16 @@ test("lobby state renders a visible empty playmat through the shared board frame
   assert.doesNotMatch(markup, /loading-panel/u);
 });
 
-test("loading state renders inside the shared board frame", () => {
+test("loading state renders the same empty playmat without status text", () => {
   const markup = renderSurface(undefined);
 
   assert.match(markup, /class="board-shell"/u);
   assert.match(markup, /class="hand-rail"/u);
   assert.match(markup, /class="tabletop-board"/u);
-  assert.match(markup, /class="playmat-zone center-spacer empty-playmat-center"/u);
+  assert.match(markup, /class="playmat-zone center-spacer"/u);
   assert.match(markup, /class="playmat-side opponent-side"/u);
   assert.match(markup, /class="playmat-side player-side"/u);
-  assert.match(markup, /class="loading-panel"/u);
+  assert.doesNotMatch(markup, /loading-panel/u);
+  assert.doesNotMatch(markup, /Loading match/u);
+  assert.doesNotMatch(markup, /Waiting for first-player setup/u);
 });

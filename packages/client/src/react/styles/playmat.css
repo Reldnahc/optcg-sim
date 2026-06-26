@@ -370,15 +370,6 @@
   width: 100%;
 }
 
-.center-spacer.empty-playmat-center {
-  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
-  place-items: center;
-}
-
-.empty-playmat-center > .loading-panel {
-  margin: 0;
-}
-
 .opponent-center-spacer {
   min-height: 0;
 }
