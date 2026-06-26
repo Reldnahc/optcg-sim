@@ -178,16 +178,27 @@
   gap: 8px;
 }
 
-.lobby-deck-panel {
-  display: grid;
-  gap: 10px;
-  min-height: 0;
+.lobby-deck-modal {
+  width: min(620px, calc(100vw - 32px));
+  height: auto;
+  max-height: min(850px, calc(100vh - 24px));
+  overflow: hidden;
 }
 
-.lobby-deck-panel .deck-hash-form {
+.lobby-deck-panel {
   display: grid;
-  gap: calc(var(--control-rail-gap) * 0.75);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px;
   min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.lobby-deck-modal .deck-hash-form {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .deck-hash-field {
@@ -525,16 +536,6 @@
 .control-action-stack > :last-child {
   margin-bottom: 0;
 }
-
-.control-pregame-slot {
-  min-width: 0;
-}
-
-.control-pregame-slot + .control-actions,
-.control-pregame-slot + .action-menu-panel {
-  margin-top: var(--control-rail-gap);
-}
-
 .end-match-actions {
   display: grid;
   gap: calc(var(--control-rail-gap) * 0.75);

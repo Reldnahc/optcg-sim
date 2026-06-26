@@ -57,7 +57,6 @@ export interface ControlRailProps {
   concedeDisabled?: boolean | undefined;
   concedeConfirming?: boolean | undefined;
   onConcede?: (() => void) | undefined;
-  pregameControl?: ReactNode | undefined;
   previewControl?: ReactNode | undefined;
   actionLogControl?: ReactNode | undefined;
   settingsControl?: ReactNode | undefined;
@@ -89,7 +88,6 @@ export const ControlRail = ({
   concedeDisabled = true,
   concedeConfirming = false,
   onConcede,
-  pregameControl,
   previewControl,
   actionLogControl,
   settingsControl,
@@ -417,9 +415,6 @@ export const ControlRail = ({
                 </button>
               ) : null}
             </section>
-          )}
-          {pregameControl === undefined ? null : (
-            <div className="control-pregame-slot">{pregameControl}</div>
           )}
           <ActionMenu
             actions={globalActions}
