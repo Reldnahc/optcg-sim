@@ -460,6 +460,7 @@ export const applyRuntimePlaySelected = (params: {
     costArea: player.costArea,
     enterRested,
     ...(effectSourceCardId === undefined ? {} : { effectSourceCardId }),
+    ...(causedBy === undefined ? {} : { causedBy }),
     resolveOnPlayRuntime: false,
     incrementActionSeq: false,
     ...(supported.category === "character"

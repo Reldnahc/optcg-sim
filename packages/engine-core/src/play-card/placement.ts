@@ -193,6 +193,7 @@ export const placePlayedCardResult = (params: {
   admitNoEffectPlayedCardSpotlight?: boolean;
   engineOptions?: EngineResultOptions;
   effectSourceCardId?: CardInstance["cardId"];
+  causedBy?: CausalityRef;
   resolveOnPlayRuntime?: boolean;
   resolvePlayCardEffectRuntime?: ResolvePlayCardEffectRuntime;
   incrementActionSeq?: boolean;
@@ -216,6 +217,7 @@ export const placePlayedCardResult = (params: {
     admitNoEffectPlayedCardSpotlight = false,
     engineOptions = {},
     effectSourceCardId,
+    causedBy,
     resolveOnPlayRuntime = true,
     resolvePlayCardEffectRuntime,
     incrementActionSeq = true,
@@ -496,6 +498,10 @@ export const placePlayedCardResult = (params: {
     },
     { type: "public" },
   );
+  const moved = events[events.length - 1];
+  if (moved !== undefined && causedBy !== undefined) {
+    moved.causedBy = causedBy;
+  }
   appendEvent(
     state,
     events,
@@ -513,6 +519,10 @@ export const placePlayedCardResult = (params: {
     },
     { type: "public" },
   );
+  const played = events[events.length - 1];
+  if (played !== undefined && causedBy !== undefined) {
+    played.causedBy = causedBy;
+  }
   const nextStateBase: GameState = {
     ...state,
     seq: toStateSeq(state.seq + 1),
