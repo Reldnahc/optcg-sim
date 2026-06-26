@@ -552,7 +552,8 @@ export const createBoardViewModel = ({
   );
   const selfTimer = playerTimer(player.view, playerId);
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
-  const turnPlayerId = player.view.turn.turnPlayerId;
+  const activeFieldPlayerId =
+    player.view.timers.activePlayerId ?? player.view.turn.turnPlayerId;
   const battleArrow = battleArrowForView(player.view, playerId);
   const statusBanner = statusBannerForView(player.view, playerId);
   return {
@@ -560,7 +561,7 @@ export const createBoardViewModel = ({
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
     ...(statusBanner === undefined ? {} : { statusBanner }),
     ...(selfTimer === undefined ? {} : { selfTimer }),
-    selfIsTurnPlayer: turnPlayerId === playerId,
+    selfIsTurnPlayer: activeFieldPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
     ...(player.view.self.restrictions === undefined ||
     player.view.self.restrictions.length === 0
@@ -572,7 +573,7 @@ export const createBoardViewModel = ({
       "Opponent",
     ),
     ...(opponentTimer === undefined ? {} : { opponentTimer }),
-    opponentIsTurnPlayer: turnPlayerId === player.view.opponent.playerId,
+    opponentIsTurnPlayer: activeFieldPlayerId === player.view.opponent.playerId,
     ...(opponentConnectionStatus === undefined
       ? {}
       : { opponentConnectionStatus }),

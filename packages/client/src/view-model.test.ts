@@ -215,9 +215,40 @@ describe("board view model", () => {
     assert.deepEqual(model.opponentRestrictions, ["no-event-don-refresh"]);
   });
 
-  test("marks which player summary owns the current turn", () => {
+  test("marks the active field side from turn ownership when timers are idle", () => {
     const view = minimalView();
     view.turn.turnPlayerId = p2;
+    const snapshot: MatchSnapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      players: {
+        [p1]: {
+          view,
+          actions: [],
+        },
+      },
+    };
+
+    const p1Model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.equal(p1Model.selfIsTurnPlayer, false);
+    assert.equal(p1Model.opponentIsTurnPlayer, true);
+  });
+
+  test("marks the active field side from the running decision timer", () => {
+    const view = minimalView();
+    view.turn.turnPlayerId = p1;
+    view.timers = {
+      activePlayerId: p2,
+      players: {
+        [p1]: { remainingMs: 300_000, isRunning: false },
+        [p2]: { remainingMs: 120_000, isRunning: true },
+      },
+    };
     const snapshot: MatchSnapshot = {
       matchId: "match-1" as MatchId,
       stateSeq: 7,
