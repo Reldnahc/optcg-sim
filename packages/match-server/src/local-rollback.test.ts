@@ -11,8 +11,10 @@ import type {
 import { createFixtureDevMatchSetup } from "./default-dev-fixture-fetch.test-support.js";
 import {
   applyLocalDevAction,
+  applyLocalDevDecision,
   createLocalDevMatch,
   getLocalDevSnapshot,
+  requestLocalDevRollback,
   type DevMatchSetup,
 } from "./local-match.js";
 import {
@@ -153,6 +155,70 @@ describe("local rollback memory policy", () => {
     );
 
     assert.equal(JSON.stringify(rollback).includes("cardManifest"), false);
+  });
+
+  test("does not duplicate event or audit history inside rollback points", () => {
+    const match = createTestMatch();
+    const previousState = structuredClone(match.state);
+    previousState.seq = 1 as StateSeq;
+    previousState.actionSeq = 1;
+
+    const rollback = recordRollbackPoint(
+      createLocalRollbackState(undefined),
+      previousState,
+      [rollbackAnchorEvent(1)],
+    );
+    const serialized = JSON.stringify(rollback);
+
+    assert.equal(serialized.includes('"eventJournal":'), false);
+    assert.equal(serialized.includes('"audit":'), false);
+  });
+
+  test("restores event and audit history prefixes after rollback consent", () => {
+    const match = createTestMatch();
+    const before = advanceToMain(match);
+    const beforeState = structuredClone(match.state);
+    const endTurnAction = playerSnapshot(before, p1).actions.find((action) =>
+      action.label.includes("End turn"),
+    );
+    if (endTurnAction === undefined) {
+      throw new Error("Expected end turn action.");
+    }
+    const ended = applyLocalDevAction(match, {
+      playerId: p1,
+      actionIndex: endTurnAction.index,
+    });
+    assert.deepEqual(ended.errors, []);
+    assert.equal(
+      match.state.eventJournal.length > beforeState.eventJournal.length,
+      true,
+    );
+    const rollbackPoint = getLocalDevSnapshot(match).rollback?.points.find(
+      (point) => point.stateSeq === before.stateSeq,
+    );
+    if (rollbackPoint === undefined) {
+      throw new Error("Expected rollback point for pre-end-turn state.");
+    }
+    const requested = requestLocalDevRollback(match, {
+      playerId: p1,
+      rollbackPointId: rollbackPoint.rollbackPointId,
+    });
+    assert.deepEqual(requested.errors, []);
+    const decision = playerSnapshot(getLocalDevSnapshot(match), p2).view
+      .pendingDecision;
+    if (decision?.type !== "rollbackConsent") {
+      throw new Error("Expected rollback consent decision.");
+    }
+
+    const accepted = applyLocalDevDecision(match, {
+      playerId: p2,
+      decisionId: decision.id,
+      response: { type: "rollbackConsent", allow: true },
+    });
+
+    assert.deepEqual(accepted.errors, []);
+    assert.deepEqual(match.state.eventJournal, beforeState.eventJournal);
+    assert.deepEqual(match.state.audit, beforeState.audit);
   });
 
   test("clears rollback points after an accepted terminal action", () => {

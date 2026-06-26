@@ -28,6 +28,8 @@ interface LocalRollbackPoint {
   stateSeq: number;
   actionSeq: number;
   label: string;
+  eventJournalLength?: number;
+  auditLength?: number;
   state: RollbackPointState;
 }
 
@@ -69,23 +71,50 @@ export const createLocalRollbackState = (
   points: [],
 });
 
-type RollbackPointState = Omit<GameState, "cardManifest">;
+type RollbackPointState = Omit<
+  GameState,
+  "audit" | "cardManifest" | "eventJournal"
+>;
+
+interface RollbackPointCapture {
+  seq: GameState["seq"];
+  actionSeq: number;
+  eventJournalLength: number;
+  auditLength: number;
+  state: RollbackPointState;
+}
+
+type RollbackPointSource = GameState | RollbackPointCapture;
 
 export const cloneGameStateForRollback = (
   state: GameState,
-): RollbackPointState => {
-  const { cardManifest, ...rollbackState } = state;
+): RollbackPointCapture => {
+  const { audit, cardManifest, eventJournal, ...rollbackState } = state;
+  void audit;
   void cardManifest;
-  return structuredClone(rollbackState);
+  void eventJournal;
+  return {
+    seq: state.seq,
+    actionSeq: state.actionSeq,
+    eventJournalLength: state.eventJournal.length,
+    auditLength: state.audit.length,
+    state: structuredClone(rollbackState),
+  };
 };
 
-const cloneRollbackPointState = (
-  state: GameState | RollbackPointState,
-): RollbackPointState => {
-  if ("cardManifest" in state) {
-    return cloneGameStateForRollback(state);
+const captureRollbackPointSource = (
+  source: RollbackPointSource,
+): RollbackPointCapture => {
+  if ("state" in source) {
+    return {
+      seq: source.seq,
+      actionSeq: source.actionSeq,
+      eventJournalLength: source.eventJournalLength,
+      auditLength: source.auditLength,
+      state: structuredClone(source.state),
+    };
   }
-  return structuredClone(state);
+  return cloneGameStateForRollback(source);
 };
 
 const nextStateSeq = (state: GameState): GameState["seq"] =>
@@ -130,7 +159,7 @@ const firstPublicAnchorEvent = (
 
 export const recordRollbackPoint = (
   rollback: LocalRollbackState,
-  previousState: GameState | RollbackPointState,
+  previousState: RollbackPointSource,
   events: readonly EngineEvent[],
 ): LocalRollbackState => {
   if (!rollback.enabled) {
@@ -140,16 +169,19 @@ export const recordRollbackPoint = (
   if (anchor === undefined) {
     return rollback;
   }
+  const capture = captureRollbackPointSource(previousState);
   const point: LocalRollbackPoint = {
-    rollbackPointId: `rollback:${String(previousState.seq)}:${String(
-      previousState.actionSeq,
+    rollbackPointId: `rollback:${String(capture.seq)}:${String(
+      capture.actionSeq,
     )}:${String(anchor.id)}`,
     eventId: String(anchor.id),
     eventSeq: anchor.seq,
-    stateSeq: previousState.seq,
-    actionSeq: previousState.actionSeq,
+    stateSeq: capture.seq,
+    actionSeq: capture.actionSeq,
     label: `Before event ${String(anchor.seq)}`,
-    state: cloneRollbackPointState(previousState),
+    eventJournalLength: capture.eventJournalLength,
+    auditLength: capture.auditLength,
+    state: capture.state,
   };
   return {
     ...rollback,
@@ -323,9 +355,16 @@ export const resolveRollbackConsent = (
     };
   }
 
+  const legacyState = point.state as RollbackPointState &
+    Partial<Pick<GameState, "audit" | "eventJournal">>;
+  const eventJournalLength =
+    point.eventJournalLength ?? legacyState.eventJournal?.length ?? 0;
+  const auditLength = point.auditLength ?? legacyState.audit?.length ?? 0;
   const restored: GameState = {
     ...structuredClone(point.state),
     cardManifest: state.cardManifest,
+    eventJournal: state.eventJournal.slice(0, eventJournalLength),
+    audit: state.audit.slice(0, auditLength),
   };
   restored.seq = (Number(state.seq) + 1) as GameState["seq"];
   restored.actionSeq = state.actionSeq + 1;
