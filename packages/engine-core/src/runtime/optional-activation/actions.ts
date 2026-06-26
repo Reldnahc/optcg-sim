@@ -61,6 +61,7 @@ import { createSupportedTrashFromHandChoiceDecision } from "../primitives/trash-
 import { invalidDecision } from "../../engine-error-helpers.js";
 import { applyLifeVisibilityPayment } from "./life-visibility-payment.js";
 import { applyDonPayment } from "./don-payment.js";
+import { effectSourcedHandTrashPayload } from "./effect-sourced-hand-trash.js";
 import {
   selectedCountSatisfiesMoveCardsPayment,
   selectedMoveCardsPaymentCards,
@@ -589,6 +590,10 @@ export const applyOptionalActivationDecisionResponse = (
             }
           }
         }
+        const cardTrashedPayloadExtra =
+          selectedOption.type === "trashFromHand"
+            ? effectSourcedHandTrashPayload(state, decision)
+            : undefined;
         const movement = moveConcreteCardsToTrash(
           state,
           events,
@@ -596,6 +601,9 @@ export const applyOptionalActivationDecisionResponse = (
           {
             cardMovedPayloadShape: "publicZoneNames",
             cardMovedVisibility: { type: "public" },
+            ...(cardTrashedPayloadExtra === undefined
+              ? {}
+              : { cardTrashedPayloadExtra }),
             cardTrashedVisibility: { type: "public" },
             causedBy: { type: "decision", decisionId: decision.id },
             clearAttachedDon: true,

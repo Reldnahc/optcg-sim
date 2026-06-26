@@ -18,6 +18,7 @@ import {
   toDecisionId,
   toEffectId,
   toEngineEventId,
+  toStateSeq,
   withCardInZone,
 } from "./effect-runtime-queue/test-support.js";
 
@@ -90,6 +91,7 @@ const addHandTrashEvent = (
     sourceCardId?: CardId;
     sourceTypes?: string[];
     sourceCategory?: "leader" | "character" | "event" | "stage";
+    createdAtStateSeq?: GameState["seq"];
   } = {},
 ): void => {
   const handCard = must(must(state.players[p1], "p1").hand[1], "hand card");
@@ -106,7 +108,7 @@ const addHandTrashEvent = (
     },
     visibility: { type: "public" },
     causedBy: { type: "decision", decisionId: toDecisionId("decision:test") },
-    createdAtStateSeq: state.seq,
+    createdAtStateSeq: options.createdAtStateSeq ?? state.seq,
   };
   state.eventJournal.push(event);
 };
@@ -157,6 +159,24 @@ test("live handTrashedByEffect queueing preserves omitted state hash", () => {
 
   assert.equal(result.errors, undefined);
   assert.equal(result.stateHash, "");
+});
+
+test("handTrashedByEffect queues old decision-caused effect trash events", () => {
+  const state = setupHandTrashReactionSource();
+  state.seq = toStateSeq(10);
+  addHandTrashEvent(state, {
+    triggerSource: "effect",
+    createdAtStateSeq: toStateSeq(1),
+  });
+
+  const queued = processEffectRuntime(state);
+
+  assert.equal(queued.errors, undefined);
+  assert.deepEqual(
+    queued.events.map((event) => event.type),
+    ["effectQueued"],
+  );
+  assert.equal(queued.state.effectQueue.length, 1);
 });
 
 test("handTrashedByEffect ignores untagged hand trash so costs do not trigger it", () => {

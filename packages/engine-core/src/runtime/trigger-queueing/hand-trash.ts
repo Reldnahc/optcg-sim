@@ -84,6 +84,9 @@ const handTrashEventPlayer = (event: EngineEvent): PlayerId | undefined => {
 const isRecentRuntimeEvent = (state: GameState, event: EngineEvent): boolean =>
   Number(event.createdAtStateSeq) >= Math.max(0, Number(state.seq) - 2);
 
+const isRuntimeEffectEvent = (event: EngineEvent): boolean =>
+  event.causedBy?.type === "effect" || event.causedBy?.type === "decision";
+
 const sourceFieldEntryEventSeq = (
   state: GameState,
   source: CardInstance,
@@ -177,7 +180,7 @@ export const createHandTrashedByEffectTriggerQueueing = (
     const alreadyQueued = queuedHandTrashTriggerEventIds(state);
     const handTrashEvents = state.eventJournal.filter(
       (event) =>
-        isRecentRuntimeEvent(state, event) &&
+        (isRecentRuntimeEvent(state, event) || isRuntimeEffectEvent(event)) &&
         !alreadyQueued.has(String(event.id)) &&
         handTrashEventPlayer(event) !== undefined,
     );

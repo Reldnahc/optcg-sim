@@ -413,6 +413,9 @@ test("optional hand-trash cost payment records paidCost true and runs filtered s
     instanceId: paymentCard.instanceId,
     cardId: paymentCard.cardId,
     reason: "trashFromHand",
+    triggerSource: "effect",
+    sourceCardId: must(state.effectQueue[0], "source entry").source.cardId,
+    sourceCategory: "character",
   });
   assert.deepEqual(
     targetDecision.candidates.map((candidate) => candidate.card.instanceId),
