@@ -14,6 +14,7 @@ import type {
   CardId,
   EffectDefinition,
   GameState,
+  Keyword,
   MatchCardManifest,
   MatchId,
   PlayerId,
@@ -197,6 +198,9 @@ const isMetadataOnlyImplementedDsl = (card: ResolvedCard): boolean => {
     return true;
   }
   for (const line of lines) {
+    if (parseRawKeywordLine({ text: line }) !== undefined) {
+      continue;
+    }
     const parsed = parseCardEffectLinesDetailed(line);
     if (!parsed.ok) {
       return false;
@@ -225,10 +229,11 @@ const createProbeManifestFromEntry = (
     { evaluateRuntimeSupport: evaluateEffectBlockRuntimeSupport },
   );
   const definitionId = `${String(entry.cardId)}.manifest-view-probe`;
+  const hasRuntimeDefinition = materialized.definition !== undefined;
   const supportStatus =
     manifestEffectLines(entry).length === 0
       ? "vanilla-confirmed"
-      : materialized.runtimeSupported
+      : materialized.runtimeSupported && hasRuntimeDefinition
         ? "implemented-dsl"
         : "unsupported";
   const card = createResolvedProbeCard({
@@ -236,6 +241,7 @@ const createProbeManifestFromEntry = (
     category: entry.category ?? "character",
     sourceTextHash,
     behaviorHash: sourceTextHash,
+    printedKeywords: printedKeywordsFromLines(entry),
     support: {
       cardId: entry.cardId,
       status: supportStatus,
@@ -392,6 +398,7 @@ const createResolvedProbeCard = (params: {
   readonly triggerText?: string;
   readonly sourceTextHash: string;
   readonly behaviorHash: string;
+  readonly printedKeywords: readonly Keyword[];
   readonly support: ResolvedCard["support"];
 }): ResolvedCard => ({
   cardId: params.cardId,
@@ -404,7 +411,7 @@ const createResolvedProbeCard = (params: {
   colors: params.category === "don" ? [] : ["red"],
   attributes: [],
   types: [],
-  printedKeywords: [],
+  printedKeywords: [...params.printedKeywords],
   variants: [],
   legality: {},
   officialFaq: [],
@@ -430,6 +437,7 @@ const fillerCards = (): Record<CardId, ResolvedCard> => {
       category: "leader",
       sourceTextHash: manifestViewVersion,
       behaviorHash: manifestViewVersion,
+      printedKeywords: [],
       support: vanillaSupport(probeLeaderOne),
     }),
     [probeLeaderTwo]: createResolvedProbeCard({
@@ -437,6 +445,7 @@ const fillerCards = (): Record<CardId, ResolvedCard> => {
       category: "leader",
       sourceTextHash: manifestViewVersion,
       behaviorHash: manifestViewVersion,
+      printedKeywords: [],
       support: vanillaSupport(probeLeaderTwo),
     }),
   };
@@ -449,6 +458,7 @@ const fillerCards = (): Record<CardId, ResolvedCard> => {
       category: "character",
       sourceTextHash: manifestViewVersion,
       behaviorHash: manifestViewVersion,
+      printedKeywords: [],
       support: vanillaSupport(cardId),
     });
   }
@@ -472,6 +482,23 @@ const manifestEffectLines = (input: {
   gameplayLinesFromTextParts([input.effectText, input.triggerText]).filter(
     (line) => parseRawKeywordLine({ text: line }) === undefined,
   );
+
+const printedKeywordsFromLines = (input: {
+  readonly effectText?: string | null;
+  readonly triggerText?: string | null;
+}): readonly Keyword[] => {
+  const keywords: Keyword[] = [];
+  for (const line of gameplayLinesFromTextParts([
+    input.effectText,
+    input.triggerText,
+  ])) {
+    const parsed = parseRawKeywordLine({ text: line });
+    if (parsed !== undefined && !keywords.includes(parsed.keyword)) {
+      keywords.push(parsed.keyword);
+    }
+  }
+  return keywords;
+};
 
 const manifestText = (input: {
   readonly effectText?: string | null;

@@ -165,22 +165,47 @@ const readCardStat = (
   if (metadata === undefined) {
     return undefined;
   }
-  const computed = computeView(state, {
-    supportStatusPolicy: "ignore",
-    unsupportedCombatKeywordPolicy: "ignore",
-  }).cards[card.instanceId];
   switch (stat) {
-    case "cost":
+    case "cost": {
+      const computed = computeView(state, {
+        supportStatusPolicy: "ignore",
+        unsupportedCombatKeywordPolicy: "ignore",
+      }).cards[card.instanceId];
       return computed?.currentCost ?? metadata.cost;
+    }
     case "baseCost":
       return metadata.cost;
     case "power":
       return metadata.power;
     case "currentPower":
-      return computed?.currentPower ?? metadata.power;
+      return currentPowerForCondition(state, card, metadata.power);
     case "attachedDon":
       return card.attachedDon.length;
   }
+};
+
+const currentPowerForCondition = (
+  state: GameState,
+  card: CardInstance,
+  printedPower: number | undefined,
+): number | undefined => {
+  if (printedPower === undefined) {
+    return undefined;
+  }
+  const donBonus =
+    card.controller === state.turn.turnPlayerId
+      ? card.attachedDon.length * 1000
+      : 0;
+  const battle = state.battle as
+    | (NonNullable<GameState["battle"]> & { counterPower?: number })
+    | undefined;
+  const counterBonus =
+    battle !== undefined &&
+    battle.currentTarget.instanceId === card.instanceId &&
+    battle.currentTarget.cardId === card.cardId
+      ? (battle.counterPower ?? 0)
+      : 0;
+  return printedPower + donBonus + counterBonus;
 };
 
 export const evaluateCardStatComparison = (
