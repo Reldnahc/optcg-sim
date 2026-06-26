@@ -84,6 +84,48 @@
   line-height: 1.2;
 }
 
+.settings-loadout-manager {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.58);
+  min-width: 0;
+}
+
+.settings-loadout-manager select {
+  min-width: 0;
+  min-height: clamp(32px, calc(var(--card-height) / 4.8), 42px);
+  border: var(--floating-window-border-width) solid var(--match-border-soft);
+  border-radius: 4px;
+  color: var(--match-text);
+  background: var(--match-surface-field);
+  padding: 0 calc(var(--floating-window-body-padding) * 0.72);
+  font: inherit;
+}
+
+.settings-loadout-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--floating-window-body-padding) * 0.45);
+}
+
+.settings-loadout-actions button,
+.settings-color-picker-toggle,
+.settings-color-preset-save-grid button {
+  min-height: clamp(28px, calc(var(--card-height) / 5.8), 36px);
+  border: 0;
+  border-radius: 4px;
+  color: var(--match-text);
+  background: var(--match-surface-control);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--floating-window-small-font-size);
+  font-weight: 700;
+}
+
+.settings-loadout-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .settings-color-field {
   display: grid;
   gap: calc(var(--floating-window-body-padding) * 0.5);
@@ -91,6 +133,19 @@
   color: var(--match-text);
   font-size: var(--floating-window-font-size);
   line-height: 1.25;
+}
+
+.settings-color-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--floating-window-body-padding) * 0.55);
+  min-width: 0;
+}
+
+.settings-color-picker-toggle {
+  min-height: clamp(26px, calc(var(--card-height) / 6.2), 34px);
+  padding: 0 calc(var(--floating-window-body-padding) * 0.75);
 }
 
 .settings-color-selector {
@@ -119,6 +174,63 @@
 .settings-color-swatch.is-selected {
   border-color: var(--match-accent-strong);
   box-shadow: 0 0 0 var(--floating-window-border-width) rgba(255, 220, 98, 0.35);
+}
+
+.settings-color-picker-popover {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.65);
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.2);
+  padding: calc(var(--floating-window-body-padding) * 0.72);
+}
+
+.settings-color-picker-popover input[type="color"] {
+  width: 100%;
+  min-height: clamp(34px, calc(var(--card-height) / 4.8), 46px);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.settings-color-preview-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--floating-window-body-padding) * 0.62);
+  min-width: 0;
+  color: var(--match-text-muted);
+  font-size: var(--floating-window-small-font-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-color-preview {
+  width: clamp(24px, calc(var(--card-height) / 6), 34px);
+  height: clamp(24px, calc(var(--card-height) / 6), 34px);
+  box-shadow: inset 0 0 0 var(--floating-window-border-width)
+    rgba(255, 255, 255, 0.24);
+}
+
+.settings-color-preset-save {
+  display: grid;
+  gap: calc(var(--floating-window-body-padding) * 0.5);
+  min-width: 0;
+  color: var(--match-text);
+  font-size: var(--floating-window-small-font-size);
+  font-weight: 700;
+}
+
+.settings-color-preset-save-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-color-preset-save-grid button {
+  min-width: 0;
+  min-height: clamp(24px, calc(var(--card-height) / 6.4), 32px);
+  box-shadow: inset 0 0 0 var(--floating-window-border-width)
+    rgba(0, 0, 0, 0.62);
 }
 
 .settings-color-selector input[type="text"] {

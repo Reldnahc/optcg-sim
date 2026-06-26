@@ -1,12 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { FloatingWindow } from "./FloatingWindow.js";
 import type { WindowRect } from "./FloatingWindow.js";
+import { createBrowserPersistentStorage } from "./browser-storage.js";
 import {
   defaultMatchVisualSettingsValues,
   type MatchBackgroundImageFit,
   type MatchVisualSettings,
 } from "./match-visual-settings.js";
 import { useMatchVisualSettings } from "./match-visual-settings-context.js";
+import {
+  applyPersonalizationValues,
+  loadColorPresets,
+  loadPersonalizationLoadouts,
+  personalizationValuesFromSettings,
+  saveColorPreset,
+  savePersonalizationLoadouts,
+  type PersonalizationLoadout,
+} from "./match-personalization-store.js";
+import {
+  ColorSelector,
+  PersonalizationLoadoutManager,
+  RangeField,
+  SegmentedControl,
+  SettingsSection,
+  SettingsSubsection,
+} from "./settings-window/settings-controls.js";
+export { completeHexColorFromDraft } from "./settings-window/settings-controls.js";
 
 export interface SettingsWindowProps {
   className?: string | undefined;
@@ -27,16 +46,6 @@ export const defaultSettingsWindowRect: WindowRect = {
   height: 220,
 };
 
-const colorSwatches = [
-  "#101010",
-  "#0d0d0e",
-  "#222224",
-  "#17150d",
-  "#1f2933",
-  "#2d1b1b",
-  "#10251b",
-] as const;
-
 const backgroundImageFitOptions = [
   ["crop", "Crop"],
   ["stretch", "Stretch"],
@@ -44,17 +53,8 @@ const backgroundImageFitOptions = [
   ["tile", "Tile"],
 ] as const satisfies readonly (readonly [MatchBackgroundImageFit, string])[];
 
-const fullHexColorPattern = /^#?[0-9a-fA-F]{6}$/u;
-
-export const completeHexColorFromDraft = (
-  draft: string,
-): string | undefined => {
-  const trimmed = draft.trim();
-  if (!fullHexColorPattern.test(trimmed)) {
-    return undefined;
-  }
-  return (trimmed.startsWith("#") ? trimmed : `#${trimmed}`).toLowerCase();
-};
+const browserPersistentStorage = () =>
+  typeof window === "undefined" ? undefined : createBrowserPersistentStorage();
 
 export const resetMatchVisualSettings = (
   settings: MatchVisualSettings,
@@ -100,171 +100,14 @@ export const resetMatchVisualSettings = (
   );
 };
 
-const SegmentedControl = <T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  readonly label: string;
-  readonly value: T;
-  readonly options: readonly (readonly [T, string])[];
-  readonly onChange: (value: T) => void;
-}): React.JSX.Element => (
-  <div className="settings-segmented-field">
-    <span>{label}</span>
-    <div className="settings-segmented-control" role="group" aria-label={label}>
-      {options.map(([optionValue, optionLabel]) => (
-        <button
-          key={optionValue}
-          type="button"
-          className={value === optionValue ? "is-selected" : ""}
-          aria-pressed={value === optionValue}
-          onClick={() => {
-            onChange(optionValue);
-          }}
-        >
-          {optionLabel}
-        </button>
-      ))}
-    </div>
-  </div>
-);
-
-const ColorSelector = ({
-  label,
-  value,
-  onChange,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly onChange: (value: string) => void;
-}): React.JSX.Element => {
-  const [draftValue, setDraftValue] = useState(value);
-
-  useEffect(() => {
-    setDraftValue(value);
-  }, [value]);
-
-  return (
-    <div className="settings-color-field">
-      <span>{label}</span>
-      <div className="settings-color-selector">
-        <div
-          className="settings-color-swatches"
-          aria-label={`${label} presets`}
-        >
-          {colorSwatches.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={[
-                "settings-color-swatch",
-                value.toLowerCase() === color ? "is-selected" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              style={{ backgroundColor: color }}
-              aria-label={`${label} ${color}`}
-              aria-pressed={value.toLowerCase() === color}
-              onClick={() => {
-                setDraftValue(color);
-                onChange(color);
-              }}
-            />
-          ))}
-        </div>
-        <input
-          type="text"
-          inputMode="text"
-          pattern="#?[0-9a-fA-F]{6}"
-          maxLength={7}
-          spellCheck={false}
-          autoCapitalize="off"
-          value={draftValue}
-          aria-label={label}
-          onChange={(event) => {
-            const nextDraft = event.currentTarget.value;
-            setDraftValue(nextDraft);
-            const completeColor = completeHexColorFromDraft(nextDraft);
-            if (completeColor !== undefined) {
-              onChange(completeColor);
-            }
-          }}
-          onBlur={() => {
-            setDraftValue(value);
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const SettingsSection = ({
-  title,
-  children,
-}: {
-  readonly title: string;
-  readonly children: React.ReactNode;
-}): React.JSX.Element => (
-  <section className="settings-section" aria-label={title}>
-    <h3>{title}</h3>
-    {children}
-  </section>
-);
-
 const clampPercent = (value: number): number =>
   Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 50;
 
-const SettingsSubsection = ({
-  title,
-  children,
-}: {
-  readonly title: string;
-  readonly children: React.ReactNode;
-}): React.JSX.Element => (
-  <section className="settings-subsection" aria-label={title}>
-    <h4>{title}</h4>
-    {children}
-  </section>
-);
+const nextLoadoutId = (): string =>
+  `style-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
-const RangeField = ({
-  label,
-  min,
-  max,
-  value,
-  onChange,
-}: {
-  readonly label: string;
-  readonly min: number;
-  readonly max: number;
-  readonly value: number;
-  readonly onChange: (value: number) => void;
-}): React.JSX.Element => {
-  const roundedValue = Math.round(value);
-
-  return (
-    <label className="settings-field settings-range-field">
-      <span className="settings-range-header">
-        <span className="settings-label-text">{label}</span>
-        <output className="settings-range-value" aria-label={`${label} value`}>
-          {roundedValue}%
-        </output>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step="1"
-        value={value}
-        onChange={(event) => {
-          onChange(event.currentTarget.valueAsNumber);
-        }}
-      />
-    </label>
-  );
-};
+const nextLoadoutName = (loadouts: readonly PersonalizationLoadout[]): string =>
+  `Style ${String(loadouts.length + 1)}`;
 
 const cropFrameSize = (zoom: number): number => {
   const normalizedZoom = Number.isFinite(zoom)
@@ -275,6 +118,13 @@ const cropFrameSize = (zoom: number): number => {
 
 export const SettingsContent = (): React.JSX.Element => {
   const visualSettings = useMatchVisualSettings();
+  const [colorPresets, setColorPresets] = useState(() =>
+    loadColorPresets(browserPersistentStorage()),
+  );
+  const [personalizationLoadouts, setPersonalizationLoadouts] = useState(() =>
+    loadPersonalizationLoadouts(browserPersistentStorage()),
+  );
+  const [selectedLoadoutId, setSelectedLoadoutId] = useState("");
   const {
     backgroundColor,
     backgroundImageUrl,
@@ -315,6 +165,85 @@ export const SettingsContent = (): React.JSX.Element => {
   } = visualSettings;
   const cropDragPointerIdRef = useRef<number | undefined>(undefined);
   const hasBackgroundImage = backgroundImageUrl.length > 0;
+
+  const updateColorPreset = (index: number, color: string): void => {
+    setColorPresets(saveColorPreset(browserPersistentStorage(), index, color));
+  };
+
+  const saveLoadouts = (
+    loadouts: readonly PersonalizationLoadout[],
+  ): PersonalizationLoadout[] => {
+    const saved = savePersonalizationLoadouts(
+      browserPersistentStorage(),
+      loadouts,
+    );
+    setPersonalizationLoadouts(saved);
+    return saved;
+  };
+
+  const currentPersonalizationValues = () =>
+    personalizationValuesFromSettings(visualSettings);
+
+  const applyLoadout = (id: string): void => {
+    setSelectedLoadoutId(id);
+    const loadout = personalizationLoadouts.find(
+      (candidate) => candidate.id === id,
+    );
+    if (loadout === undefined) {
+      return;
+    }
+    applyPersonalizationValues(
+      browserPersistentStorage(),
+      visualSettings,
+      loadout.values,
+    );
+  };
+
+  const saveCurrentLoadout = (): void => {
+    const values = currentPersonalizationValues();
+    const existing = personalizationLoadouts.find(
+      (loadout) => loadout.id === selectedLoadoutId,
+    );
+    const nextLoadout =
+      existing === undefined
+        ? {
+            id: nextLoadoutId(),
+            name: nextLoadoutName(personalizationLoadouts),
+            values,
+          }
+        : { ...existing, values };
+    const saved = saveLoadouts(
+      existing === undefined
+        ? [...personalizationLoadouts, nextLoadout]
+        : personalizationLoadouts.map((loadout) =>
+            loadout.id === existing.id ? nextLoadout : loadout,
+          ),
+    );
+    setSelectedLoadoutId(nextLoadout.id);
+    setPersonalizationLoadouts(saved);
+  };
+
+  const createCurrentLoadout = (): void => {
+    const loadout = {
+      id: nextLoadoutId(),
+      name: nextLoadoutName(personalizationLoadouts),
+      values: currentPersonalizationValues(),
+    };
+    saveLoadouts([...personalizationLoadouts, loadout]);
+    setSelectedLoadoutId(loadout.id);
+  };
+
+  const deleteCurrentLoadout = (): void => {
+    if (selectedLoadoutId.length === 0) {
+      return;
+    }
+    saveLoadouts(
+      personalizationLoadouts.filter(
+        (loadout) => loadout.id !== selectedLoadoutId,
+      ),
+    );
+    setSelectedLoadoutId("");
+  };
 
   const selectBackgroundFile = (file: File | undefined): void => {
     if (file === undefined) {
@@ -404,12 +333,22 @@ export const SettingsContent = (): React.JSX.Element => {
         </label>
       </SettingsSection>
       <SettingsSection title="Personalization">
+        <PersonalizationLoadoutManager
+          loadouts={personalizationLoadouts}
+          selectedLoadoutId={selectedLoadoutId}
+          onSelect={applyLoadout}
+          onSave={saveCurrentLoadout}
+          onCreate={createCurrentLoadout}
+          onDelete={deleteCurrentLoadout}
+        />
         <SettingsSubsection title="Background">
           {hasBackgroundImage ? null : (
             <ColorSelector
               label="Background color"
               value={backgroundColor}
+              presets={colorPresets}
               onChange={setBackgroundColor}
+              onPresetChange={updateColorPreset}
             />
           )}
           <label className="settings-field">
@@ -498,7 +437,9 @@ export const SettingsContent = (): React.JSX.Element => {
           <ColorSelector
             label="Window color"
             value={windowColor}
+            presets={colorPresets}
             onChange={setWindowColor}
+            onPresetChange={updateColorPreset}
           />
         </SettingsSubsection>
         <SettingsSubsection title="Playmat">
@@ -512,7 +453,9 @@ export const SettingsContent = (): React.JSX.Element => {
           <ColorSelector
             label="Playmat color"
             value={playmatColor}
+            presets={colorPresets}
             onChange={setPlaymatColor}
+            onPresetChange={updateColorPreset}
           />
         </SettingsSubsection>
         <SettingsSubsection title="Zones">

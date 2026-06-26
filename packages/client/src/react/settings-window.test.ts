@@ -288,6 +288,40 @@ describe("settings window", () => {
     );
   });
 
+  test("personalization exposes style loadouts and editable color preset tools", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(SettingsWindow, {
+        onClose: () => undefined,
+      }),
+    );
+    const [settingsWindow, settingsControls] = await Promise.all([
+      readFile(join(sourceDirectory, "SettingsWindow.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "settings-window", "settings-controls.tsx"),
+        "utf8",
+      ),
+    ]);
+
+    assert.match(markup, /class="settings-loadout-manager"/u);
+    assert.match(markup, /aria-label="Personalization style loadout"/u);
+    assert.match(markup, />Save style</u);
+    assert.match(markup, />New style</u);
+    assert.match(markup, />Delete</u);
+    assert.match(markup, /aria-label="Open Background color picker"/u);
+    assert.match(markup, /aria-label="Open Window color picker"/u);
+    assert.match(markup, /aria-label="Open Playmat color picker"/u);
+    assert.match(
+      settingsWindow,
+      /loadPersonalizationLoadouts\(browserPersistentStorage\(\)\)/u,
+    );
+    assert.match(settingsWindow, /savePersonalizationLoadouts/u);
+    assert.match(settingsWindow, /applyPersonalizationValues/u);
+    assert.match(settingsWindow, /saveColorPreset/u);
+    assert.match(settingsControls, /settings-color-picker-popover/u);
+    assert.match(settingsControls, /type="color"/u);
+    assert.match(settingsControls, /Save to preset/u);
+  });
+
   test("match app wires the settings icon to the settings window", async () => {
     const [controlRail, matchApp, matchInfoWindows, toolbarControls] =
       await Promise.all([
@@ -382,6 +416,7 @@ describe("settings window", () => {
       settingsStore,
       appShellStyles,
       mainSource,
+      settingsControls,
     ] = await Promise.all([
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
       readFile(join(sourceDirectory, "SettingsWindow.tsx"), "utf8"),
@@ -392,6 +427,10 @@ describe("settings window", () => {
       readFile(join(sourceDirectory, "match-visual-settings-store.ts"), "utf8"),
       readFile(join(sourceDirectory, "styles/app-shell.css"), "utf8"),
       readFile(join(sourceDirectory, "main.tsx"), "utf8"),
+      readFile(
+        join(sourceDirectory, "settings-window", "settings-controls.tsx"),
+        "utf8",
+      ),
     ]);
 
     assert.match(matchApp, /usePersistedMatchVisualSettings/u);
@@ -451,8 +490,8 @@ describe("settings window", () => {
     assert.match(settingsWindow, /setWindowOpacity/u);
     assert.match(settingsWindow, /setPlaymatColor/u);
     assert.match(settingsWindow, /setPlaymatOpacity/u);
-    assert.match(settingsWindow, /settings-color-swatch/u);
-    assert.doesNotMatch(settingsWindow, /type="color"/u);
+    assert.match(settingsControls, /settings-color-swatch/u);
+    assert.match(settingsControls, /type="color"/u);
     assert.match(settingsWindow, /setSoundVolume/u);
     assert.match(settingsWindow, /setReduceDeckStackRendering/u);
     assert.match(settingsWindow, /setReducedMotion/u);
