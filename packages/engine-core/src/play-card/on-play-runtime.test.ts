@@ -744,6 +744,39 @@ test("On Play text without supported implemented-dsl definition fails closed wit
   assert.equal(JSON.stringify(result.state), before);
 });
 
+test("metadata-only implemented-dsl Character plays without looking up an effect definition", () => {
+  const state = setupMainPlayState();
+  const p1State = must(state.players[p1], "p1");
+  const character = must(p1State.hand[0], "metadata-only character");
+  state.cardManifest.cards[character.cardId] = resolvedCard({
+    cardId: character.cardId,
+    category: "character",
+    cost: 0,
+    power: 2000,
+    effectText:
+      "Under the rules of this game, you may have any number of this card in your deck.",
+    support: { status: "implemented-dsl" },
+  });
+
+  assert.equal(
+    hasPlayCardAction(getPlayCardLegalActions(state, p1), character),
+    true,
+  );
+  const result = applyPlayCardTestAction(state, {
+    type: "playCard",
+    cardInstanceId: character.instanceId,
+  });
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.pendingDecision, undefined);
+  assert.equal(
+    must(result.state.players[p1], "result p1").characters.some(
+      (played) => played.instanceId === character.instanceId,
+    ),
+    true,
+  );
+});
+
 test("Event payment responses reject stale, wrong-player, wrong-decision, malformed, duplicate, wrong-player-DON, rested, attached, and insufficient without mutation", () => {
   const state = setupMainPlayState();
   const p1State = must(state.players[p1], "p1");

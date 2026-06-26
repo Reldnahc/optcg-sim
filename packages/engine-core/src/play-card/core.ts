@@ -267,10 +267,16 @@ const shouldResolveOnPlayRuntime = (
   state: GameState,
   handCard: CardInstance,
   supported: SupportedPlayMetadata,
-): boolean =>
-  supported.category === "event" ||
-  state.cardManifest.cards[handCard.cardId]?.support.status ===
-    "implemented-dsl";
+): boolean => {
+  if (supported.category === "event") {
+    return true;
+  }
+  const support = state.cardManifest.cards[handCard.cardId]?.support;
+  return (
+    support?.status === "implemented-dsl" &&
+    support.effectDefinitionId !== undefined
+  );
+};
 
 const resolvePlayCardEffectRuntime = (
   originalState: GameState,
