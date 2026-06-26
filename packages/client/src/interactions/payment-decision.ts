@@ -14,6 +14,7 @@ export interface OptionalCardCostGroup {
   chooseActionIndex: number;
   operation: OptionalCardCostOperation;
   chooseLabel: string;
+  minCount?: number | undefined;
   requiredCount: number;
   source?: CardCostPayment["source"] | undefined;
   cardActions: Array<{
@@ -65,6 +66,7 @@ export const createOptionalCardCostChoice = (
     {
       operation: OptionalCardCostOperation;
       chooseLabel: string;
+      minCount: number;
       requiredCount: number;
       source?: CardCostPayment["source"] | undefined;
       cardActions: Array<{
@@ -75,12 +77,23 @@ export const createOptionalCardCostChoice = (
       }>;
     }
   >();
+  const variableSourceGroupKeys = new Set(
+    actions.flatMap((action) => {
+      const payment = action.decisionPayment;
+      return payment?.kind === "cardCost" &&
+        payment.source !== undefined &&
+        payment.selectedCardInstanceIds.length > 1
+        ? [sourceCardCostGroupKey(payment)]
+        : [];
+    }),
+  );
   for (const action of actions) {
     if (action.attachment !== undefined) {
       const groupKey = "attachDon:attachment";
       const current = groupedActions.get(groupKey) ?? {
         operation: "attachDon" as const,
         chooseLabel: "Choose DON!! to attach",
+        minCount: 1,
         requiredCount: 1,
         source: { zone: "costArea" as const },
         cardActions: [],
@@ -101,23 +114,26 @@ export const createOptionalCardCostChoice = (
     if (instanceIds.length === 0) {
       continue;
     }
-    const directVisibleCardCost = isDirectVisibleSingleCardCost(payment);
-    const groupKey = cardCostGroupKey(payment);
+    const sourceGroupKey = sourceCardCostGroupKey(payment);
+    const directVisibleCardCost =
+      isDirectVisibleSingleCardCost(payment) &&
+      !variableSourceGroupKeys.has(sourceGroupKey);
+    const groupKey = cardCostGroupKey(payment, directVisibleCardCost);
     const current = groupedActions.get(groupKey) ?? {
       operation: payment.operation,
       chooseLabel: chooseLabelForCardCostOperation(
         payment.operation,
         payment.chooseLabel,
       ),
+      minCount: instanceIds.length,
       requiredCount: instanceIds.length,
       ...(payment.source === undefined || directVisibleCardCost
         ? {}
         : { source: payment.source }),
       cardActions: [],
     };
-    if (current.requiredCount !== instanceIds.length) {
-      return undefined;
-    }
+    current.minCount = Math.min(current.minCount, instanceIds.length);
+    current.requiredCount = Math.max(current.requiredCount, instanceIds.length);
     current.cardActions.push({
       instanceIds,
       actionIndex: action.index,
@@ -129,12 +145,13 @@ export const createOptionalCardCostChoice = (
   }
   const groups = [...groupedActions.values()].map(
     (
-      { operation, chooseLabel, requiredCount, source, cardActions },
+      { operation, chooseLabel, minCount, requiredCount, source, cardActions },
       index,
     ) => ({
       chooseActionIndex: CHOOSE_CARD_COST_ACTION_INDEX - index,
       operation,
       chooseLabel,
+      ...(minCount === requiredCount ? {} : { minCount }),
       requiredCount,
       ...(source === undefined ? {} : { source }),
       cardActions,
@@ -191,7 +208,13 @@ export const optionalCardCostActionForSelection = (
   choice: OptionalCardCostGroup | undefined,
   instanceIds: readonly string[],
 ): number | undefined => {
-  if (choice === undefined || instanceIds.length !== choice.requiredCount) {
+  const minCount = choice?.minCount ?? choice?.requiredCount;
+  if (
+    choice === undefined ||
+    minCount === undefined ||
+    instanceIds.length < minCount ||
+    instanceIds.length > choice.requiredCount
+  ) {
     return undefined;
   }
   const selected = [...instanceIds].map(String).sort();
@@ -240,8 +263,12 @@ export const optionalCardCostAttachmentTargetInstanceIds = (
 };
 
 export const cardCostGroupRequiresManualConfirm = (
-  group: Pick<OptionalCardCostGroup, "operation" | "source">,
-): boolean => group.operation === "moveCards" && group.source?.zone === "trash";
+  group: Pick<OptionalCardCostGroup, "operation" | "source"> &
+    Partial<Pick<OptionalCardCostGroup, "cardActions">>,
+): boolean =>
+  (group.operation === "moveCards" && group.source?.zone === "trash") ||
+  new Set((group.cardActions ?? []).map((action) => action.instanceIds.length))
+    .size > 1;
 
 const donPaymentLabelPattern =
   /^(?:Pay(?: cost with)?|Rest) (?<count>[1-9]\d*) DON!!$/u;
@@ -426,8 +453,9 @@ export const cardCostPaymentLabel = (
     OptionalCardCostGroup,
     "operation" | "requiredCount" | "source" | "chooseLabel"
   >,
+  selectedCount = group.requiredCount,
 ): string => {
-  const count = group.requiredCount;
+  const count = selectedCount;
   switch (group.operation) {
     case "trash":
       if (group.source?.zone === "hand") {
@@ -481,14 +509,20 @@ const chooseLabelForCardCostOperation = (
   }
 };
 
-const cardCostGroupKey = (payment: CardCostPayment): string =>
-  isDirectVisibleSingleCardCost(payment)
+const sourceCardCostGroupKey = (payment: CardCostPayment): string =>
+  [
+    payment.operation,
+    payment.source?.zone ?? "",
+    payment.source?.playerId ?? "",
+  ].join(":");
+
+const cardCostGroupKey = (
+  payment: CardCostPayment,
+  directVisibleCardCost: boolean,
+): string =>
+  directVisibleCardCost
     ? [payment.operation, "direct-visible-card"].join(":")
-    : [
-        payment.operation,
-        payment.source?.zone ?? "",
-        payment.source?.playerId ?? "",
-      ].join(":");
+    : sourceCardCostGroupKey(payment);
 
 const isDirectVisibleSingleCardCost = (payment: CardCostPayment): boolean =>
   payment.selectedCardInstanceIds.length === 1 &&

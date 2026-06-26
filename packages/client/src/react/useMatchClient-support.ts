@@ -578,7 +578,7 @@ export const activeCardCostGlobalActions = ({
   ) {
     actions.push({
       index: CONFIRM_DECISION_SELECTION_ACTION_INDEX,
-      label: cardCostPaymentLabel(group),
+      label: cardCostPaymentLabel(group, selectedInstanceCount),
       type: "confirmDecisionSelection",
     });
   }

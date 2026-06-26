@@ -215,7 +215,10 @@ export const createMatchClientDecisionModel = ({
             optionalCardCostInstanceIds(activeCardCostGroup),
           selectedInstanceIds: [...activeCardCostSelectedInstanceIds],
           canConfirm: selectedCardCostActionIndex !== undefined,
-          confirmLabel: cardCostPaymentLabel(activeCardCostGroup),
+          confirmLabel: cardCostPaymentLabel(
+            activeCardCostGroup,
+            activeCardCostSelectedInstanceIds.length,
+          ),
           ...(activeCardCostGroup.operation === "moveCards" &&
           activeCardCostGroup.source?.zone === "trash"
             ? { orderHint: "1 is highest, last is bottom-most." }

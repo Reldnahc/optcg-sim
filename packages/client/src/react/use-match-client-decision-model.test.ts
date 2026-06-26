@@ -289,6 +289,71 @@ describe("match client decision model", () => {
     assert.equal(model.decisionPrompt, "Rest 2 DON!!");
   });
 
+  test("variable trash-from-hand pay costs use hand-card selection instead of a modal", () => {
+    const snapshot = playerSnapshot();
+    snapshot.view.self.hand = [
+      card("event-1", "OP00-EVENT", "hand", p1),
+      card("stage-1", "OP00-STAGE", "hand", p1),
+    ];
+    snapshot.actions = [
+      {
+        index: 1,
+        type: "respondToDecision",
+        label: "Decline cost",
+        decisionPayment: { kind: "paymentDeclined" },
+      },
+      {
+        index: 2,
+        type: "respondToDecision",
+        label: "Pay cost with 1 card",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "trash",
+          chooseLabel: "Choose card to trash",
+          selectedCardInstanceIds: ["event-1" as InstanceId],
+          source: { zone: "hand", playerId: p1 },
+        },
+      },
+      {
+        index: 3,
+        type: "respondToDecision",
+        label: "Pay cost with 2 cards",
+        decisionPayment: {
+          kind: "cardCost",
+          operation: "trash",
+          chooseLabel: "Choose card to trash",
+          selectedCardInstanceIds: [
+            "event-1" as InstanceId,
+            "stage-1" as InstanceId,
+          ],
+          source: { zone: "hand", playerId: p1 },
+        },
+      },
+    ];
+
+    const model = createMatchClientDecisionModel({
+      clientState: matchClientState(snapshot),
+      playerSnapshot: snapshot,
+      pendingDecision: payCostDecision,
+      activeAttackTargetChoice: undefined,
+      activeCounterTargetChoice: undefined,
+      activeCardCostChoice: undefined,
+      activeCardCostSelectedInstanceIds: ["event-1"],
+      decisionDraft: undefined,
+    });
+
+    assert.equal(model.decisionModal, undefined);
+    assert.equal(model.activeCardCostGroup?.operation, "trash");
+    assert.deepEqual(model.pendingChoiceInstanceIds, ["event-1", "stage-1"]);
+    assert.deepEqual(model.decisionSelectedInstanceIds, ["event-1"]);
+    const selection = model.activeCardCostSelection;
+    assert.ok(selection);
+    assert.equal(selection.canConfirm, true);
+    assert.equal(selection.confirmLabel, "Trash 1 card from hand");
+    assert.equal(model.selectedCardCostActionIndex, 2);
+    assert.equal(model.decisionPrompt, "Trash 2 cards from hand");
+  });
+
   test("attach-DON pay costs highlight legal targets after selecting DON", () => {
     const snapshot = playerSnapshot();
     snapshot.view.opponent.costArea = [
