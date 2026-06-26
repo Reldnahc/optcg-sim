@@ -96,6 +96,33 @@ describe("control panel layout", () => {
     );
   });
 
+  test("caps the rail at the normal maximum when no playmat is measured", () => {
+    assert.deepEqual(
+      normalizeControlPanelLayoutForViewport({
+        layout: {
+          controlRailWidth: 900,
+        },
+        viewportWidth: 1440,
+        viewportHeight: 900,
+        playmatRight: 0,
+      }),
+      {
+        controlRailWidth: 380,
+      },
+    );
+
+    assert.equal(
+      controlRailWidthFromDrag({
+        startWidth: defaultControlRailWidth,
+        startClientX: 1200,
+        currentClientX: 700,
+        viewportWidth: 1440,
+        playmatRight: 0,
+      }),
+      380,
+    );
+  });
+
   test("shrinks the rail from the left edge down to the minimum", () => {
     assert.equal(
       controlRailWidthFromDrag({

@@ -75,13 +75,15 @@ export const maxControlRailWidth = ({
   viewportWidth,
   playmatRight,
 }: Pick<ControlRailWidthInput, "viewportWidth" | "playmatRight">): number =>
-  Math.max(
-    minControlRailWidth,
-    viewportWidth -
-      controlRailRightInset -
-      playmatRight -
-      controlRailPlaymatGap,
-  );
+  playmatRight <= 0
+    ? controlRailDefaultMaxWidth
+    : Math.max(
+        minControlRailWidth,
+        viewportWidth -
+          controlRailRightInset -
+          playmatRight -
+          controlRailPlaymatGap,
+      );
 
 export const clampControlRailWidth = ({
   requestedWidth,

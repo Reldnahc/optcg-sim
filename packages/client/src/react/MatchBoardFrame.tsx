@@ -14,24 +14,18 @@ export const MatchBoardFrame = ({
   handRail,
   tabletop,
   onBackgroundClick,
-}: MatchBoardFrameProps): React.JSX.Element => {
-  const tabletopClassName = [
-    "tabletop-board",
-    tabletop === undefined ? "is-empty-tabletop" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  return (
-    <section
-      ref={rootRef}
-      className="board-shell"
-      onClick={() => {
-        onBackgroundClick?.();
-      }}
-    >
-      {overlay}
-      <div className="hand-rail">{handRail}</div>
-      <div className={tabletopClassName}>{tabletop}</div>
-    </section>
-  );
-};
+}: MatchBoardFrameProps): React.JSX.Element => (
+  <section
+    ref={rootRef}
+    className="board-shell"
+    onClick={() => {
+      onBackgroundClick?.();
+    }}
+  >
+    {overlay}
+    <div className="hand-rail">{handRail}</div>
+    {tabletop === undefined ? null : (
+      <div className="tabletop-board">{tabletop}</div>
+    )}
+  </section>
+);
