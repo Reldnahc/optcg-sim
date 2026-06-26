@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
 import { appRoutePath } from "./app-route.js";
@@ -97,6 +103,19 @@ const backgroundImageStyle = ({
 const reconnectScreenMessage =
   "The server might be restarting or shutting down. Please wait. Your game will resume once reconnected.";
 
+const useStableLayoutScope = (
+  matchScope: string | undefined,
+): string | undefined => {
+  const layoutScopeRef = useRef<string | undefined>(undefined);
+  if (layoutScopeRef.current === undefined && matchScope !== undefined) {
+    layoutScopeRef.current = matchScope;
+  }
+  if (matchScope === undefined) {
+    layoutScopeRef.current = undefined;
+  }
+  return layoutScopeRef.current;
+};
+
 export const MatchApp = ({
   accountSessionToken,
   client: suppliedClient,
@@ -155,14 +174,16 @@ export const MatchApp = ({
     enabled: matchScope !== undefined,
     matchId: matchScope,
   });
+  const layoutScope = useStableLayoutScope(matchScope);
   const windowLayoutStore = useMemo(
     () =>
-      typeof window === "undefined"
+      typeof window === "undefined" || layoutScope === undefined
         ? undefined
         : createWindowLayoutStore({
             storage: createBrowserPersistentStorage(),
+            scope: layoutScope,
           }),
-    [],
+    [layoutScope],
   );
   const {
     controlRailWidth,
@@ -195,7 +216,7 @@ export const MatchApp = ({
     dockFloatingWindows,
     reorderDockedWindow,
     updateDockedWindowRects,
-  } = useFloatingWindowState({ windowLayoutStore });
+  } = useFloatingWindowState({ layoutScope, windowLayoutStore });
   const {
     revealWindowState,
     activeRevealWindowState,

@@ -57,15 +57,23 @@ const isInfoWindowTabId = (
 const setKey = (matchId: string, name: "dismissed" | "minimized"): string =>
   `${keyPrefix}:${matchId}:${name}`;
 
-const windowRectsKey = (): string => windowRectsKeyPrefix;
+const scopedLayoutKey = (prefix: string, scope: string): string =>
+  `${prefix}:${scope}`;
 
-const openWindowsKey = (): string => openWindowsKeyPrefix;
+const windowRectsKey = (scope: string): string =>
+  scopedLayoutKey(windowRectsKeyPrefix, scope);
 
-const dockedWindowsKey = (): string => dockedWindowsKeyPrefix;
+const openWindowsKey = (scope: string): string =>
+  scopedLayoutKey(openWindowsKeyPrefix, scope);
 
-const infoWindowConfigKey = (): string => infoWindowConfigKeyPrefix;
+const dockedWindowsKey = (scope: string): string =>
+  scopedLayoutKey(dockedWindowsKeyPrefix, scope);
 
-const controlPanelLayoutKey = (): string => controlPanelLayoutKeyPrefix;
+const infoWindowConfigKey = (scope: string): string =>
+  scopedLayoutKey(infoWindowConfigKeyPrefix, scope);
+
+const controlPanelLayoutKey = (scope: string): string =>
+  scopedLayoutKey(controlPanelLayoutKeyPrefix, scope);
 
 const parseStringArray = (value: string | null): string[] => {
   if (value === null) {
@@ -248,37 +256,39 @@ export const createRevealWindowStateStore = ({
 
 export const createWindowLayoutStore = ({
   storage,
+  scope,
 }: {
   storage: ClientStorage;
+  scope: string;
 }): WindowLayoutStore => ({
   loadWindowRects() {
-    return parseWindowRects(storage.getItem(windowRectsKey()));
+    return parseWindowRects(storage.getItem(windowRectsKey(scope)));
   },
   saveWindowRects(rects) {
-    storage.setItem(windowRectsKey(), JSON.stringify(rects));
+    storage.setItem(windowRectsKey(scope), JSON.stringify(rects));
   },
   loadOpenWindowIds() {
-    return loadSet(storage, openWindowsKey(), defaultOpenWindowIds);
+    return loadSet(storage, openWindowsKey(scope), defaultOpenWindowIds);
   },
   saveOpenWindowIds(windowIds) {
-    saveSet(storage, openWindowsKey(), windowIds);
+    saveSet(storage, openWindowsKey(scope), windowIds);
   },
   loadDockedWindowIds() {
-    return loadSet(storage, dockedWindowsKey(), defaultDockedWindowIds);
+    return loadSet(storage, dockedWindowsKey(scope), defaultDockedWindowIds);
   },
   saveDockedWindowIds(windowIds) {
-    saveSet(storage, dockedWindowsKey(), windowIds);
+    saveSet(storage, dockedWindowsKey(scope), windowIds);
   },
   loadInfoWindowConfig() {
-    return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey()));
+    return parseInfoWindowConfig(storage.getItem(infoWindowConfigKey(scope)));
   },
   saveInfoWindowConfig(config) {
-    storage.setItem(infoWindowConfigKey(), JSON.stringify(config));
+    storage.setItem(infoWindowConfigKey(scope), JSON.stringify(config));
   },
   loadControlPanelLayout() {
-    return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey()));
+    return parseControlPanelLayout(storage.getItem(controlPanelLayoutKey(scope)));
   },
   saveControlPanelLayout(layout) {
-    storage.setItem(controlPanelLayoutKey(), JSON.stringify(layout));
+    storage.setItem(controlPanelLayoutKey(scope), JSON.stringify(layout));
   },
 });

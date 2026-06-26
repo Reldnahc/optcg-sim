@@ -16,8 +16,6 @@ import {
 } from "./window-state-model.js";
 import type { WindowLayoutStore } from "./window-state-store.js";
 
-const appWindowLayoutScope = "app";
-
 export interface FloatingWindowStateController {
   floatingWindowRects: FloatingWindowRectState;
   activeFloatingWindowRects: Record<string, WindowRect>;
@@ -89,26 +87,28 @@ const windowRectsEqual = (
 };
 
 export const useFloatingWindowState = ({
+  layoutScope,
   windowLayoutStore,
 }: {
+  layoutScope: string | undefined;
   windowLayoutStore: WindowLayoutStore | undefined;
 }): FloatingWindowStateController => {
   const [floatingWindowRects, setFloatingWindowRects] =
     useState<FloatingWindowRectState>(() => emptyFloatingWindowRectState);
   const activeFloatingWindowRects =
-    floatingWindowRects.scope === appWindowLayoutScope
+    layoutScope !== undefined && floatingWindowRects.scope === layoutScope
       ? floatingWindowRects.rects
       : {};
   const activeOpenWindowIds =
-    floatingWindowRects.scope === appWindowLayoutScope
+    layoutScope !== undefined && floatingWindowRects.scope === layoutScope
       ? floatingWindowRects.openWindowIds
       : new Set<string>();
   const activeDockedWindowIds =
-    floatingWindowRects.scope === appWindowLayoutScope
+    layoutScope !== undefined && floatingWindowRects.scope === layoutScope
       ? floatingWindowRects.dockedWindowIds
       : new Set<string>();
   const activeFloatingWindowZIndexes =
-    floatingWindowRects.scope === appWindowLayoutScope
+    layoutScope !== undefined && floatingWindowRects.scope === layoutScope
       ? Object.fromEntries(
           floatingWindowRects.floatingWindowZOrder.map((windowKey, index) => [
             windowKey,
@@ -122,7 +122,7 @@ export const useFloatingWindowState = ({
   }, []);
 
   const loadFloatingWindowState = useCallback((): void => {
-    if (windowLayoutStore === undefined) {
+    if (layoutScope === undefined || windowLayoutStore === undefined) {
       return;
     }
     const openWindowIds = windowLayoutStore.loadOpenWindowIds();
@@ -140,7 +140,7 @@ export const useFloatingWindowState = ({
       windowLayoutStore.saveWindowRects(rects);
     }
     setFloatingWindowRects({
-      scope: appWindowLayoutScope,
+      scope: layoutScope,
       rects,
       openWindowIds,
       dockedWindowIds,
@@ -148,26 +148,32 @@ export const useFloatingWindowState = ({
         (windowKey) => !dockedWindowIds.has(windowKey),
       ),
     });
-  }, [windowLayoutStore]);
+  }, [layoutScope, windowLayoutStore]);
 
   const activateFloatingWindow = useCallback((key: string): void => {
+    if (layoutScope === undefined) {
+      return;
+    }
     setFloatingWindowRects((current) =>
       floatingWindowStateAfterActivation({
         current,
-        scope: appWindowLayoutScope,
+        scope: layoutScope,
         windowKey: key,
       }),
     );
-  }, []);
+  }, [layoutScope]);
 
   const updateFloatingWindowRect = useCallback(
     (key: string, rect: WindowRect): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const base =
-          current.scope === appWindowLayoutScope
+          current.scope === layoutScope
             ? current
             : {
-                scope: appWindowLayoutScope,
+                scope: layoutScope,
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
@@ -191,7 +197,7 @@ export const useFloatingWindowState = ({
                 !dockedWindowIds.has(windowKey),
             );
         const next = {
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           rects: { ...base.rects, [key]: rect },
           openWindowIds: new Set(base.openWindowIds),
           dockedWindowIds,
@@ -202,15 +208,18 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const updateFloatingWindowOpen = useCallback(
     (key: string, open: boolean): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const next = floatingWindowStateAfterOpenChange({
           current,
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           windowKey: key,
           open,
         });
@@ -219,7 +228,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const openFloatingWindowGroup = useCallback(
@@ -232,10 +241,13 @@ export const useFloatingWindowState = ({
       rect: WindowRect;
       replacedWindowKeys: readonly string[];
     }): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const next = floatingWindowStateAfterFloatingGroupOpen({
           current,
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           windowKey,
           rect,
           replacedWindowKeys,
@@ -246,15 +258,18 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const updateCollectionWindowOpen = useCallback(
     (key: string, open: boolean): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const next = floatingWindowStateAfterCollectionOpenChange({
           current,
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           windowKey: key,
           open,
         });
@@ -263,7 +278,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const syncExternalFloatingWindows = useCallback(
@@ -274,10 +289,13 @@ export const useFloatingWindowState = ({
       windowKeys: readonly string[];
       managedWindowKeyPrefix: string;
     }): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const next = floatingWindowStateAfterExternalWindowSync({
           current,
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           windowKeys,
           managedWindowKeyPrefix,
         });
@@ -286,17 +304,20 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const dockFloatingWindow = useCallback(
     (key: string, rect: WindowRect): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const base =
-          current.scope === appWindowLayoutScope
+          current.scope === layoutScope
             ? current
             : {
-                scope: appWindowLayoutScope,
+                scope: layoutScope,
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
@@ -307,7 +328,7 @@ export const useFloatingWindowState = ({
         openWindowIds.add(key);
         dockedWindowIds.add(key);
         const next = {
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           rects: { ...base.rects, [key]: rect },
           openWindowIds,
           dockedWindowIds,
@@ -321,7 +342,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const dockFloatingWindowGroup = useCallback(
@@ -334,12 +355,15 @@ export const useFloatingWindowState = ({
       rect: WindowRect;
       replacedWindowKeys: readonly string[];
     }): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const base =
-          current.scope === appWindowLayoutScope
+          current.scope === layoutScope
             ? current
             : {
-                scope: appWindowLayoutScope,
+                scope: layoutScope,
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
@@ -353,7 +377,7 @@ export const useFloatingWindowState = ({
         const openWindowIds = new Set(base.openWindowIds);
         openWindowIds.add(windowKey);
         const next = {
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           rects: { ...base.rects, [windowKey]: rect },
           openWindowIds,
           dockedWindowIds,
@@ -367,7 +391,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const dockFloatingWindows = useCallback(
@@ -380,15 +404,15 @@ export const useFloatingWindowState = ({
       rect: WindowRect;
       replacedWindowKeys?: readonly string[] | undefined;
     }): void => {
-      if (windowKeys.length === 0) {
+      if (layoutScope === undefined || windowKeys.length === 0) {
         return;
       }
       setFloatingWindowRects((current) => {
         const base =
-          current.scope === appWindowLayoutScope
+          current.scope === layoutScope
             ? current
             : {
-                scope: appWindowLayoutScope,
+                scope: layoutScope,
                 rects: {},
                 openWindowIds: new Set<string>(),
                 dockedWindowIds: new Set<string>(),
@@ -407,7 +431,7 @@ export const useFloatingWindowState = ({
           rects[windowKey] = rect;
         }
         const next = {
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           rects,
           openWindowIds,
           dockedWindowIds,
@@ -421,16 +445,16 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   const updateDockedWindowRects = useCallback(
     (dockRect: WindowRect): void => {
-      if (activeDockedWindowIds.size === 0) {
+      if (layoutScope === undefined || activeDockedWindowIds.size === 0) {
         return;
       }
       setFloatingWindowRects((current) => {
-        if (current.scope !== appWindowLayoutScope) {
+        if (current.scope !== layoutScope) {
           return current;
         }
         const next = {
@@ -445,7 +469,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [activeDockedWindowIds.size, windowLayoutStore],
+    [activeDockedWindowIds.size, layoutScope, windowLayoutStore],
   );
 
   const reorderDockedWindow = useCallback(
@@ -454,10 +478,13 @@ export const useFloatingWindowState = ({
       targetWindowKey: string,
       placement: ReorderPlacement,
     ): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
       setFloatingWindowRects((current) => {
         const next = floatingWindowStateAfterDockedWindowReorder({
           current,
-          scope: appWindowLayoutScope,
+          scope: layoutScope,
           draggedWindowKey,
           targetWindowKey,
           placement,
@@ -466,7 +493,7 @@ export const useFloatingWindowState = ({
         return next;
       });
     },
-    [windowLayoutStore],
+    [layoutScope, windowLayoutStore],
   );
 
   return {
