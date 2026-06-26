@@ -175,7 +175,7 @@ describe("playmat structure", () => {
 
     assert.match(
       appShellStyles,
-      /--playmat-card-clearance:\s*clamp\(10px,\s*0\.972vh,\s*28px\);/,
+      /--playmat-card-clearance:\s*calc\(var\(--playmat-row-height\)\s*\/\s*16\.2857\);/,
     );
     assert.match(
       appShellStyles,

@@ -8,7 +8,7 @@
       (var(--playmat-border-width) * 2) + (var(--playmat-grid-gap) * 6)
   );
   --playmat-row-height: calc((100vh - var(--playmat-vertical-chrome)) / 6);
-  --playmat-card-clearance: clamp(10px, 0.972vh, 28px);
+  --playmat-card-clearance: calc(var(--playmat-row-height) / 16.2857);
   --desktop-card-min-height: 86px;
   --desktop-card-max-height: 240px;
   --card-height: clamp(
