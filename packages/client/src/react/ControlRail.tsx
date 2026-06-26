@@ -33,7 +33,6 @@ export interface ControlRailProps {
   onAction: (actionIndex: number) => void;
   onHome: () => void;
   onRematch?: (() => Promise<void> | void) | undefined;
-  onResizePointerDown?: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDockTabChange?: ((tabId: string) => void) | undefined;
   onDockTabClose?: ((tabId: string) => void) | undefined;
   onDockTabDragOut?:
@@ -77,7 +76,6 @@ export const ControlRail = ({
   onAction,
   onHome,
   onRematch,
-  onResizePointerDown,
   onDockTabChange,
   onDockTabClose,
   onDockTabDragOut,
@@ -133,13 +131,6 @@ export const ControlRail = ({
         .join(" ")}
       style={width === undefined ? undefined : { width: `${String(width)}px` }}
     >
-      <button
-        className="control-rail-resize-handle"
-        type="button"
-        aria-label="Resize controls"
-        title="Resize controls"
-        onPointerDown={onResizePointerDown}
-      />
       <section className="controls-panel">
         <div
           className={[

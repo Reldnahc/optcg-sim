@@ -1,28 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
 import {
   controlDockSlotRect,
-  defaultControlRailWidthForViewport,
-  controlRailWidthFromDrag,
   defaultControlRailWidth,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
 } from "./control-panel-layout.js";
-import type { ControlPanelLayoutStore } from "./window-state-store.js";
 
 export interface ControlPanelLayoutController {
   controlRailWidth: number;
   controlDockActive: boolean;
-  startControlRailResize: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
   completeControlDockDrop: (rect: WindowRect) => WindowRect | undefined;
   currentControlDockSlotRect: () => WindowRect | undefined;
-}
-
-export interface UseControlPanelLayoutInput {
-  layoutStore?: ControlPanelLayoutStore | undefined;
 }
 
 const elementRect = (selector: string): WindowRect | undefined => {
@@ -50,45 +41,44 @@ const playmatRightEdge = (): number => {
   return playmatRect === undefined ? 0 : playmatRect.x + playmatRect.width;
 };
 
-const defaultControlRailWidthForCurrentViewport = (): number =>
+const controlRailWidthForCurrentViewport = (): number =>
   typeof window === "undefined"
     ? defaultControlRailWidth
-    : defaultControlRailWidthForViewport({
+    : normalizeControlPanelLayoutForViewport({
+        layout: {},
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
-      });
+        playmatRight: playmatRightEdge(),
+      }).controlRailWidth;
 
-export const useControlPanelLayout = ({
-  layoutStore,
-}: UseControlPanelLayoutInput = {}): ControlPanelLayoutController => {
+export const useControlPanelLayout = (): ControlPanelLayoutController => {
   const [controlRailWidth, setControlRailWidth] = useState(() =>
-    defaultControlRailWidthForCurrentViewport(),
+    controlRailWidthForCurrentViewport(),
   );
   const [controlDockActive, setControlDockActive] = useState(false);
 
   useEffect(() => {
-    const layout = layoutStore?.loadControlPanelLayout();
     if (typeof window === "undefined") {
-      setControlRailWidth(layout?.controlRailWidth ?? defaultControlRailWidth);
       return;
     }
-    const normalizedLayout = normalizeControlPanelLayoutForViewport({
-      layout: layout ?? {},
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      playmatRight: playmatRightEdge(),
-    });
-    setControlRailWidth(normalizedLayout.controlRailWidth);
-    if (
-      layout !== undefined &&
-      layout.controlRailWidth !== undefined &&
-      layout.controlRailWidth !== normalizedLayout.controlRailWidth
-    ) {
-      layoutStore?.saveControlPanelLayout({
-        controlRailWidth: normalizedLayout.controlRailWidth,
-      });
+    const updateControlRailWidth = (): void => {
+      setControlRailWidth(controlRailWidthForCurrentViewport());
+    };
+    updateControlRailWidth();
+    window.addEventListener("resize", updateControlRailWidth);
+    const playmatElement = document.querySelector(".tabletop-board");
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(updateControlRailWidth);
+    if (playmatElement !== null) {
+      resizeObserver?.observe(playmatElement);
     }
-  }, [layoutStore]);
+    return () => {
+      window.removeEventListener("resize", updateControlRailWidth);
+      resizeObserver?.disconnect();
+    };
+  }, []);
 
   const resolveControlDockSnap = useCallback(
     (rect: WindowRect): WindowRect | undefined => {
@@ -122,43 +112,9 @@ export const useControlPanelLayout = ({
     [resolveControlDockSnap],
   );
 
-  const startControlRailResize = useCallback(
-    (event: ReactPointerEvent<HTMLButtonElement>): void => {
-      if (typeof document === "undefined" || typeof window === "undefined") {
-        return;
-      }
-      event.preventDefault();
-      const startWidth = controlRailWidth;
-      const startClientX = event.clientX;
-      const move = (moveEvent: PointerEvent): void => {
-        const nextWidth = controlRailWidthFromDrag({
-          startWidth,
-          startClientX,
-          currentClientX: moveEvent.clientX,
-          viewportWidth: window.innerWidth,
-          playmatRight: playmatRightEdge(),
-        });
-        setControlRailWidth(nextWidth);
-        layoutStore?.saveControlPanelLayout({
-          controlRailWidth: nextWidth,
-        });
-      };
-      const stop = (): void => {
-        document.removeEventListener("pointermove", move, true);
-        document.removeEventListener("pointerup", stop, true);
-        document.removeEventListener("pointercancel", stop, true);
-      };
-      document.addEventListener("pointermove", move, true);
-      document.addEventListener("pointerup", stop, true);
-      document.addEventListener("pointercancel", stop, true);
-    },
-    [controlRailWidth, layoutStore],
-  );
-
   return {
     controlRailWidth,
     controlDockActive,
-    startControlRailResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,

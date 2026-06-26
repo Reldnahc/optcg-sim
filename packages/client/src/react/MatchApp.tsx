@@ -52,10 +52,7 @@ import { useMatchAppWindowDocking } from "./use-match-app-window-docking.js";
 import { useMatchCollectionModal } from "./use-match-collection-modal.js";
 import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-settings.js";
 import { useRevealWindowState } from "./use-reveal-window-state.js";
-import {
-  createControlPanelLayoutStore,
-  createWindowLayoutStore,
-} from "./window-state-store.js";
+import { createWindowLayoutStore } from "./window-state-store.js";
 import type { MatchClientUi } from "./useMatchClient-support.js";
 export interface MatchAppProps {
   readonly accountSessionToken?: string | undefined;
@@ -188,23 +185,13 @@ export const MatchApp = ({
           }),
     [layoutScope],
   );
-  const controlPanelLayoutStore = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? undefined
-        : createControlPanelLayoutStore({
-            storage: createBrowserPersistentStorage(),
-          }),
-    [],
-  );
   const {
     controlRailWidth,
     controlDockActive,
-    startControlRailResize,
     updateControlDockTarget,
     completeControlDockDrop,
     currentControlDockSlotRect,
-  } = useControlPanelLayout({ layoutStore: controlPanelLayoutStore });
+  } = useControlPanelLayout();
   const {
     activeTabId: infoWindowActiveTab,
     groupedTabIds: configuredGroupedInfoWindowIds,
@@ -629,7 +616,6 @@ export const MatchApp = ({
           dockActive={controlDockActive}
           dockTabs={controlDockTabs}
           activeDockTabId={controlDockActiveTabId}
-          onResizePointerDown={startControlRailResize}
           onDockTabChange={setControlDockActiveTabId}
           onDockTabClose={closeDockWindow}
           onDockTabDragOut={dragOutDockWindow}

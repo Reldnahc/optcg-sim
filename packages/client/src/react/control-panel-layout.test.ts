@@ -6,9 +6,7 @@ import { describe, test } from "vitest";
 
 import {
   controlDockSlotRect,
-  controlRailWidthFromDrag,
   defaultControlRailWidthForViewport,
-  defaultControlRailWidth,
   desktopCardHeightForViewport,
   normalizeControlPanelLayoutForViewport,
   resolveControlDockSnapRect,
@@ -42,31 +40,21 @@ describe("control panel layout", () => {
     );
   });
 
-  test("resizes the rail from the left edge without crossing the playmat", () => {
-    assert.equal(
-      controlRailWidthFromDrag({
-        startWidth: defaultControlRailWidth,
-        startClientX: 1200,
-        currentClientX: 1000,
+  test("fills the available right-side control slot for the current viewport", () => {
+    assert.deepEqual(
+      normalizeControlPanelLayoutForViewport({
+        layout: {
+          controlRailWidth: 220,
+        },
         viewportWidth: 1440,
+        viewportHeight: 900,
         playmatRight: 980,
       }),
-      444,
+      {
+        controlRailWidth: 444,
+      },
     );
 
-    assert.equal(
-      controlRailWidthFromDrag({
-        startWidth: defaultControlRailWidth,
-        startClientX: 1200,
-        currentClientX: 700,
-        viewportWidth: 1440,
-        playmatRight: 980,
-      }),
-      444,
-    );
-  });
-
-  test("normalizes stale saved control panel sizes for the current viewport", () => {
     assert.deepEqual(
       normalizeControlPanelLayoutForViewport({
         layout: {
@@ -80,23 +68,9 @@ describe("control panel layout", () => {
         controlRailWidth: 244,
       },
     );
-
-    assert.deepEqual(
-      normalizeControlPanelLayoutForViewport({
-        layout: {
-          controlRailWidth: 120,
-        },
-        viewportWidth: 1180,
-        viewportHeight: 720,
-        playmatRight: 920,
-      }),
-      {
-        controlRailWidth: 220,
-      },
-    );
   });
 
-  test("caps the rail at the normal maximum when no playmat is measured", () => {
+  test("uses the normal full rail width when no playmat is measured", () => {
     assert.deepEqual(
       normalizeControlPanelLayoutForViewport({
         layout: {
@@ -109,30 +83,6 @@ describe("control panel layout", () => {
       {
         controlRailWidth: 380,
       },
-    );
-
-    assert.equal(
-      controlRailWidthFromDrag({
-        startWidth: defaultControlRailWidth,
-        startClientX: 1200,
-        currentClientX: 700,
-        viewportWidth: 1440,
-        playmatRight: 0,
-      }),
-      380,
-    );
-  });
-
-  test("shrinks the rail from the left edge down to the minimum", () => {
-    assert.equal(
-      controlRailWidthFromDrag({
-        startWidth: defaultControlRailWidth,
-        startClientX: 1200,
-        currentClientX: 1300,
-        viewportWidth: 1440,
-        playmatRight: 980,
-      }),
-      220,
     );
   });
 
@@ -184,20 +134,17 @@ describe("control panel layout", () => {
     });
   });
 
-  test("control panel layout is loaded and saved through the app layout store", async () => {
+  test("control panel layout is derived from viewport measurements instead of persisted resizing", async () => {
     const [hookSource, appSource] = await Promise.all([
       readFile(join(sourceDirectory, "use-control-panel-layout.ts"), "utf8"),
       readFile(join(sourceDirectory, "MatchApp.tsx"), "utf8"),
     ]);
 
-    assert.match(hookSource, /layoutStore\?: ControlPanelLayoutStore/u);
-    assert.match(hookSource, /loadControlPanelLayout\(\)/u);
-    assert.match(hookSource, /saveControlPanelLayout/u);
+    assert.doesNotMatch(hookSource, /layoutStore\?: ControlPanelLayoutStore/u);
+    assert.doesNotMatch(hookSource, /loadControlPanelLayout\(\)/u);
+    assert.doesNotMatch(hookSource, /saveControlPanelLayout/u);
     assert.doesNotMatch(hookSource, /estimatedCenteredPlaymatRightEdge/u);
-    assert.match(
-      appSource,
-      /useControlPanelLayout\(\{\s*layoutStore: controlPanelLayoutStore,?\s*\}\)/u,
-    );
-    assert.match(appSource, /createControlPanelLayoutStore/u);
+    assert.match(appSource, /useControlPanelLayout\(\)/u);
+    assert.doesNotMatch(appSource, /createControlPanelLayoutStore/u);
   });
 });

@@ -155,6 +155,8 @@ describe("control rail window dock", () => {
     );
 
     assert.match(markup, /control-window-dock has-docked-window/u);
+    assert.doesNotMatch(markup, /control-rail-resize-handle/u);
+    assert.doesNotMatch(markup, /Resize controls/u);
     assert.doesNotMatch(markup, /--control-window-dock-height/u);
     assert.doesNotMatch(markup, /aria-label="Resize dock"/u);
     assert.match(markup, /role="tablist"/u);
@@ -179,6 +181,11 @@ describe("control rail window dock", () => {
       /\.control-window-dock\s+span\s*\{[^}]*text-transform:\s*uppercase;/u,
     );
     assert.doesNotMatch(styles, /\.control-window-dock-resize-handle\s*\{/u);
+    assert.doesNotMatch(styles, /\.control-rail-resize-handle\s*\{/u);
+    assert.doesNotMatch(
+      styles,
+      /\.controls-panel\s*\{[^}]*border:\s*var\(--card-outline-thin\)\s+solid\s+var\(--match-border\);/u,
+    );
     assert.match(styles, /\.control-dock-window-grab-nub\s*\{/u);
   });
 

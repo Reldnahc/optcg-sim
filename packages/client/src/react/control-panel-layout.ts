@@ -85,48 +85,11 @@ export const maxControlRailWidth = ({
           controlRailPlaymatGap,
       );
 
-export const clampControlRailWidth = ({
-  requestedWidth,
-  viewportWidth,
-  playmatRight,
-}: ControlRailWidthInput): number =>
-  Math.min(
-    Math.max(minControlRailWidth, requestedWidth),
-    maxControlRailWidth({ viewportWidth, playmatRight }),
-  );
-
-export const controlRailWidthFromDrag = ({
-  startWidth,
-  startClientX,
-  currentClientX,
-  viewportWidth,
-  playmatRight,
-}: {
-  startWidth: number;
-  startClientX: number;
-  currentClientX: number;
-  viewportWidth: number;
-  playmatRight: number;
-}): number =>
-  clampControlRailWidth({
-    requestedWidth: startWidth + startClientX - currentClientX,
-    viewportWidth,
-    playmatRight,
-  });
-
 export const normalizeControlPanelLayoutForViewport = ({
-  layout,
   viewportWidth,
-  viewportHeight,
   playmatRight,
 }: ControlPanelLayoutViewportInput): NormalizedControlPanelLayout => ({
-  controlRailWidth: clampControlRailWidth({
-    requestedWidth:
-      layout.controlRailWidth ??
-      defaultControlRailWidthForViewport({ viewportWidth, viewportHeight }),
-    viewportWidth,
-    playmatRight,
-  }),
+  controlRailWidth: maxControlRailWidth({ viewportWidth, playmatRight }),
 });
 
 export const controlDockSlotRect = ({

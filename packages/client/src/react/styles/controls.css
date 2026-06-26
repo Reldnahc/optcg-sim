@@ -31,7 +31,6 @@
   --control-window-dock-height: calc(
     var(--control-window-dock-available-height) * 0.75
   );
-  --control-resize-hit-area: calc(var(--control-rail-gap) * 1.45);
   --control-grab-nub-width: calc(var(--control-dock-tab-height) * 0.58);
   --control-grab-dot-width: var(--card-outline-thin);
   --control-grab-dot-height: calc(var(--control-dock-tab-height) * 0.5);
@@ -47,25 +46,9 @@
   min-height: 0;
 }
 
-.control-rail-resize-handle {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--control-resize-hit-area) / -2);
-  z-index: 3;
-  width: var(--control-resize-hit-area);
-  border: 0;
-  background: transparent;
-  cursor: ew-resize;
-}
-
-.control-rail-resize-handle:hover {
-  background: transparent;
-}
-
 .controls-panel {
-  border: var(--card-outline-thin) solid var(--match-border);
-  border-radius: var(--control-panel-radius);
+  border: 0;
+  border-radius: 0;
   background: var(--match-surface-panel);
   padding: var(--control-panel-padding);
 }
