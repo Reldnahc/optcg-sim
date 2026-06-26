@@ -92,6 +92,14 @@ describe("poneglyph card source", () => {
           text: "[On Play] Draw 1 card.",
         },
       ],
+      manifestViewEntries: [
+        {
+          label: "OP01-001",
+          cardId: "OP01-001",
+          effectText: "[On Play] Draw 1 card.",
+          triggerText: null,
+        },
+      ],
     });
   });
 
@@ -125,6 +133,15 @@ describe("poneglyph card source", () => {
           lineNumber: 2,
           focusLineNumber: 1,
           text: "[On Play] Draw 1 card.",
+        },
+      ],
+      manifestViewEntries: [
+        {
+          label: "ST17-004",
+          cardId: "ST17-004",
+          effectText:
+            "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)\n[On Play] Draw 1 card.",
+          triggerText: null,
         },
       ],
     });
@@ -175,6 +192,15 @@ describe("poneglyph card source", () => {
           ].join("\n"),
         },
       ],
+      manifestViewEntries: [
+        {
+          label: "OP16-102",
+          cardId: "OP16-102",
+          effectText:
+            "[On K.O.] Draw 1 card, then play up to 1 [Fullalead] from your hand or trash.",
+          triggerText: "[Trigger] Activate this card's [On K.O.] effect.",
+        },
+      ],
     });
   });
 
@@ -199,7 +225,19 @@ describe("poneglyph card source", () => {
       { baseUrl: "https://example.test", fetchPoneglyph },
     );
 
-    expect(entries).toEqual({ ok: true, entries: [] });
+    expect(entries).toEqual({
+      ok: true,
+      entries: [],
+      manifestViewEntries: [
+        {
+          label: "OP16-042",
+          cardId: "OP16-042",
+          effectText:
+            "Under the rules of this game, you may have any number of this card in your deck.",
+          triggerText: null,
+        },
+      ],
+    });
   });
 
   it("skips alternate-name rules metadata in behavior coverage entries", async () => {
@@ -223,7 +261,19 @@ describe("poneglyph card source", () => {
       { baseUrl: "https://example.test", fetchPoneglyph },
     );
 
-    expect(entries).toEqual({ ok: true, entries: [] });
+    expect(entries).toEqual({
+      ok: true,
+      entries: [],
+      manifestViewEntries: [
+        {
+          label: "OP01-121",
+          cardId: "OP01-121",
+          effectText:
+            "Also treat this card's name as [Kouzuki Oden] according to the rules.\n[Double Attack] (This card deals 2 damage.)",
+          triggerText: null,
+        },
+      ],
+    });
   });
 
   it("skips deck-out replacement rules metadata in behavior coverage entries", async () => {
@@ -256,6 +306,15 @@ describe("poneglyph card source", () => {
           lineNumber: 2,
           focusLineNumber: 1,
           text: "[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+        },
+      ],
+      manifestViewEntries: [
+        {
+          label: "OP03-040",
+          cardId: "OP03-040",
+          effectText:
+            "When your deck is reduced to 0, you win the game instead of losing, according to the rules.\n[DON!! x1] When this Leader's attack deals damage to your opponent's Life, you may trash 1 card from the top of your deck.",
+          triggerText: null,
         },
       ],
     });
@@ -353,6 +412,20 @@ describe("poneglyph card source", () => {
           lineNumber: 1,
           focusLineNumber: 1,
           text: "[On Play] Draw 1 card.",
+        },
+      ],
+      manifestViewEntries: [
+        {
+          label: "OP01-001",
+          cardId: "OP01-001",
+          effectText: "[Activate: Main] Draw 1 card.",
+          triggerText: null,
+        },
+        {
+          label: "OP01-002",
+          cardId: "OP01-002",
+          effectText: "[On Play] Draw 1 card.",
+          triggerText: null,
         },
       ],
     });

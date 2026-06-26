@@ -6,6 +6,8 @@ import {
   type DeckHashDeck,
 } from "optcg-deck-hash";
 
+import type { ManifestViewProbeEntry } from "./manifest-view-probe.js";
+
 export interface BehaviorCoverageSourceEntry {
   readonly label: string;
   readonly text: string;
@@ -18,6 +20,7 @@ export interface PoneglyphCardProbePayload {
   readonly cardId: string;
   readonly effect: string | null;
   readonly trigger: string | null;
+  readonly cardType?: string | null;
 }
 
 export interface PoneglyphFetchResponse {
@@ -76,11 +79,13 @@ export const createPoneglyphCoverageEntriesFromCardIds = async (
   | {
       readonly ok: true;
       readonly entries: readonly BehaviorCoverageSourceEntry[];
+      readonly manifestViewEntries: readonly ManifestViewProbeEntry[];
     }
   | { readonly ok: false; readonly error: string }
 > => {
   const fetchedCards = await fetchPoneglyphCardPayloads(cardIds, options);
   const entries: BehaviorCoverageSourceEntry[] = [];
+  const manifestCards: PoneglyphCardProbePayload[] = [];
   for (const cardId of uniqueStrings(cardIds)) {
     const fetched = fetchedCards.get(cardId);
     if (fetched === undefined || !fetched.ok) {
@@ -92,8 +97,13 @@ export const createPoneglyphCoverageEntriesFromCardIds = async (
       };
     }
     entries.push(...coverageEntriesForCard(fetched.card));
+    manifestCards.push(fetched.card);
   }
-  return { ok: true, entries };
+  return {
+    ok: true,
+    entries,
+    manifestViewEntries: manifestViewEntriesForCards(manifestCards),
+  };
 };
 
 export const createPoneglyphCoverageEntriesFromSet = async (
@@ -106,6 +116,7 @@ export const createPoneglyphCoverageEntriesFromSet = async (
   | {
       readonly ok: true;
       readonly entries: readonly BehaviorCoverageSourceEntry[];
+      readonly manifestViewEntries: readonly ManifestViewProbeEntry[];
     }
   | { readonly ok: false; readonly error: string }
 > => {
@@ -128,6 +139,7 @@ export const createPoneglyphCoverageEntriesFromDeckHash = async (
   | {
       readonly ok: true;
       readonly entries: readonly BehaviorCoverageSourceEntry[];
+      readonly manifestViewEntries: readonly ManifestViewProbeEntry[];
     }
   | { readonly ok: false; readonly error: string }
 > => {
@@ -242,6 +254,9 @@ export const fetchPoneglyphCardPayload = async (
       cardId: cardPayload.card_number,
       effect: cardPayload.effect,
       trigger: cardPayload.trigger,
+      ...(cardPayload.card_type === undefined
+        ? {}
+        : { cardType: cardPayload.card_type }),
     },
   };
 };
@@ -412,6 +427,42 @@ const coverageEntriesForCard = (
   }));
 };
 
+const manifestViewEntriesForCards = (
+  cards: readonly PoneglyphCardProbePayload[],
+): readonly ManifestViewProbeEntry[] =>
+  cards.map((card) => {
+    const category = manifestViewCategoryFromPoneglyphType(card.cardType);
+    return {
+      label: card.cardId,
+      cardId: card.cardId,
+      effectText: card.effect,
+      triggerText: card.trigger,
+      ...(category === undefined ? {} : { category }),
+    };
+  });
+
+const manifestViewCategoryFromPoneglyphType = (
+  cardType: string | null | undefined,
+): ManifestViewProbeEntry["category"] | undefined => {
+  const normalized = cardType?.trim().toLowerCase();
+  switch (normalized) {
+    case "leader":
+      return "leader";
+    case "character":
+      return "character";
+    case "event":
+      return "event";
+    case "stage":
+      return "stage";
+    case "don":
+    case "don!!":
+    case "don!! card":
+      return "don";
+    default:
+      return undefined;
+  }
+};
+
 const isBehaviorCoverageRuntimeLine = (text: string): boolean =>
   parseRawKeywordLine({ text }) === undefined && !isRulesMetadataLine(text);
 
@@ -513,6 +564,7 @@ const fetchPoneglyphCardPayloadBatch = async (
           cardId: card.card_number,
           effect: card.effect,
           trigger: card.trigger,
+          ...(card.card_type === undefined ? {} : { cardType: card.card_type }),
         },
       ]),
     ),
@@ -703,6 +755,7 @@ const isPoneglyphCardProbePayload = (
   readonly card_number: CardId;
   readonly effect: string | null;
   readonly trigger?: string | null;
+  readonly card_type?: string | null;
 } => {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -710,10 +763,16 @@ const isPoneglyphCardProbePayload = (
   const candidate = value as Record<string, unknown>;
   const effect = candidate["effect"];
   const trigger = candidate["trigger"];
+  const cardType = candidate["card_type"];
   return (
     typeof candidate["card_number"] === "string" &&
     (typeof effect === "string" || effect === null) &&
-    (typeof trigger === "string" || trigger === null || trigger === undefined)
+    (typeof trigger === "string" ||
+      trigger === null ||
+      trigger === undefined) &&
+    (typeof cardType === "string" ||
+      cardType === null ||
+      cardType === undefined)
   );
 };
 
@@ -724,6 +783,7 @@ const toPoneglyphCardProbePayload = (
       readonly card_number: CardId;
       readonly effect: string | null;
       readonly trigger: string | null;
+      readonly card_type?: string | null;
     }
   | undefined => {
   if (isPoneglyphCardProbePayload(value)) {
@@ -731,6 +791,7 @@ const toPoneglyphCardProbePayload = (
       card_number: value.card_number,
       effect: value.effect,
       trigger: value.trigger ?? null,
+      ...(value.card_type === undefined ? {} : { card_type: value.card_type }),
     };
   }
   if (typeof value !== "object" || value === null) {
@@ -742,6 +803,7 @@ const toPoneglyphCardProbePayload = (
         card_number: data.card_number,
         effect: data.effect,
         trigger: data.trigger ?? null,
+        ...(data.card_type === undefined ? {} : { card_type: data.card_type }),
       }
     : undefined;
 };
@@ -756,6 +818,7 @@ const toPoneglyphCardProbeBatchPayload = (
           readonly card_number: CardId;
           readonly effect: string | null;
           readonly trigger: string | null;
+          readonly card_type?: string | null;
         }
       >;
       readonly missing: readonly string[];

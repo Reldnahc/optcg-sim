@@ -2,6 +2,10 @@ import {
   createBehaviorProbeReport,
   type BehaviorProbeScenario,
 } from "./behavior-probe.js";
+import {
+  createManifestViewProbeReport,
+  type ManifestViewProbeEntry,
+} from "./manifest-view-probe.js";
 
 export interface BehaviorCoverageEntry {
   readonly label: string;
@@ -11,6 +15,7 @@ export interface BehaviorCoverageEntry {
 
 export interface BehaviorCoverageRequest {
   readonly entries: readonly BehaviorCoverageEntry[];
+  readonly manifestViewEntries?: readonly ManifestViewProbeEntry[];
   readonly inventoryPrimitiveTypes: readonly string[];
 }
 
@@ -19,6 +24,7 @@ export type BehaviorCoverageBucket =
   | "scenarioMissing"
   | "scenarioFailed"
   | "materializationFailed"
+  | "manifestViewFailed"
   | "sourceFailed";
 
 export interface BehaviorCoverageBucketSummary {
@@ -26,6 +32,7 @@ export interface BehaviorCoverageBucketSummary {
   readonly scenarioMissing: number;
   readonly scenarioFailed: number;
   readonly materializationFailed: number;
+  readonly manifestViewFailed: number;
   readonly sourceFailed: number;
 }
 
@@ -61,6 +68,9 @@ export const createBehaviorCoverageReport = (
   let passedScenarioCount = 0;
   let failedScenarioCount = 0;
   let skippedScenarioCount = 0;
+  const manifestViewReport = createManifestViewProbeReport({
+    entries: request.manifestViewEntries ?? [],
+  });
 
   for (const entry of request.entries) {
     const probe = createBehaviorProbeReport({
@@ -121,6 +131,10 @@ export const createBehaviorCoverageReport = (
     (primitive) => !coveredPrimitiveTypes.has(primitive),
   );
 
+  bucketSummary.manifestViewFailed = manifestViewReport.results.filter(
+    (result) => result.status === "failed",
+  ).length;
+
   return {
     exitCode: hasFailingBuckets(bucketSummary) ? 1 : 0,
     lines: [
@@ -131,6 +145,7 @@ export const createBehaviorCoverageReport = (
       `Behavior coverage failed scenarios: ${String(failedScenarioCount)}`,
       `Behavior coverage skipped scenarios: ${String(skippedScenarioCount)}`,
       `Behavior coverage probe failures: ${String(probeFailures.length)}`,
+      ...manifestViewReport.lines,
       ...bucketLines(bucketSummary),
       ...coveredSourcePrimitives.map(
         (primitive) => `Behavior coverage covered primitive: ${primitive}`,
@@ -182,6 +197,10 @@ export const createBehaviorCoverageSourceFailureReport = (input: {
       "Behavior coverage failed scenarios: 0",
       "Behavior coverage skipped scenarios: 0",
       "Behavior coverage probe failures: 0",
+      "Manifest view probe entries: 0",
+      "Manifest view probe passed: 0",
+      "Manifest view probe failed: 0",
+      "Manifest view probe skipped: 0",
       ...bucketLines(bucketSummary),
       `Behavior coverage source failure: ${input.error}`,
     ],
@@ -197,6 +216,7 @@ export const createEmptyBehaviorCoverageBucketSummary =
     scenarioMissing: 0,
     scenarioFailed: 0,
     materializationFailed: 0,
+    manifestViewFailed: 0,
     sourceFailed: 0,
   });
 
@@ -211,12 +231,14 @@ const bucketLines = (
   `Behavior coverage bucket scenarioMissing: ${String(summary.scenarioMissing)}`,
   `Behavior coverage bucket scenarioFailed: ${String(summary.scenarioFailed)}`,
   `Behavior coverage bucket materializationFailed: ${String(summary.materializationFailed)}`,
+  `Behavior coverage bucket manifestViewFailed: ${String(summary.manifestViewFailed)}`,
   `Behavior coverage bucket sourceFailed: ${String(summary.sourceFailed)}`,
 ];
 
 const hasFailingBuckets = (summary: BehaviorCoverageBucketSummary): boolean =>
   summary.scenarioFailed > 0 ||
   summary.materializationFailed > 0 ||
+  summary.manifestViewFailed > 0 ||
   summary.sourceFailed > 0;
 
 const entryResultForScenario = (
@@ -259,6 +281,7 @@ const entryResultLines = (
 
 const bucketOrder: readonly BehaviorCoverageBucket[] = [
   "materializationFailed",
+  "manifestViewFailed",
   "sourceFailed",
   "scenarioFailed",
   "scenarioMissing",

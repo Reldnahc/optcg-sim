@@ -62,6 +62,7 @@ describe("behavior coverage", () => {
       scenarioMissing: 0,
       scenarioFailed: 0,
       materializationFailed: 1,
+      manifestViewFailed: 0,
       sourceFailed: 0,
     });
     expect(report.entryResults[0]).toEqual({
@@ -104,6 +105,7 @@ describe("behavior coverage", () => {
       scenarioMissing: 0,
       scenarioFailed: 0,
       materializationFailed: 0,
+      manifestViewFailed: 0,
       sourceFailed: 1,
     });
     expect(report.entryResults).toEqual([]);
@@ -117,6 +119,10 @@ describe("behavior coverage", () => {
         "Behavior coverage failed scenarios: 0",
         "Behavior coverage skipped scenarios: 0",
         "Behavior coverage probe failures: 0",
+        "Manifest view probe entries: 0",
+        "Manifest view probe passed: 0",
+        "Manifest view probe failed: 0",
+        "Manifest view probe skipped: 0",
         "Behavior coverage bucket sourceFailed: 1",
         "Behavior coverage source failure: Poneglyph card fetch failed for OP01-001: HTTP 503",
       ]),

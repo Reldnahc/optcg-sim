@@ -103,6 +103,8 @@ describe("behavior coverage CLI", () => {
     );
     expect(report.lines).toContain("Behavior coverage entries: 2");
     expect(report.lines).toContain("Behavior coverage passed scenarios: 2");
+    expect(report.lines).toContain("Manifest view probe entries: 2");
+    expect(report.lines).toContain("Manifest view probe failed: 0");
     expect(report.lines).not.toEqual(
       expect.arrayContaining([
         expect.stringContaining("unsupported referenced effect target"),

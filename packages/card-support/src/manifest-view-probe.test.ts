@@ -1,0 +1,102 @@
+import { describe, expect, it } from "vitest";
+import type { CardId, MatchCardManifest, ResolvedCard } from "@optcg/types";
+
+import {
+  createManifestViewProbeReport,
+  validateMatchCardManifestViewSafety,
+} from "./manifest-view-probe.js";
+
+describe("manifest view probe", () => {
+  it("accepts metadata-only implemented DSL without an effect definition", () => {
+    const report = createManifestViewProbeReport({
+      entries: [
+        {
+          label: "OP16-042",
+          cardId: "OP16-042",
+          category: "character",
+          effectText:
+            "Under the rules of this game, you may have any number of this card in your deck.",
+          triggerText: null,
+        },
+      ],
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Manifest view probe entries: 1");
+    expect(report.lines).toContain("Manifest view probe passed: 1");
+    expect(report.lines).toContain("Manifest view probe failed: 0");
+  });
+
+  it("fails implemented DSL runtime text that has no effect definition", () => {
+    const cardId = "BROKEN-001" as CardId;
+    const results = validateMatchCardManifestViewSafety({
+      manifest: manifestWithCard(
+        resolvedCard({
+          cardId,
+          effectText: "[On Play] Draw 1 card.",
+          support: {
+            cardId,
+            status: "implemented-dsl",
+            tested: true,
+            rulesVersion: "probe",
+            cardDataVersion: "probe",
+            sourceTextHash: "source",
+            behaviorHash: "behavior",
+          },
+        }),
+      ),
+      cardIds: [cardId],
+    });
+
+    expect(results).toEqual([
+      {
+        label: "BROKEN-001",
+        cardId: "BROKEN-001",
+        status: "failed",
+        reason:
+          "implemented-dsl card has runtime text but no effect definition",
+      },
+    ]);
+  });
+});
+
+const manifestWithCard = (card: ResolvedCard): MatchCardManifest => ({
+  manifestHash: "probe",
+  source: "manual-test",
+  cardDataVersion: "probe",
+  effectDefinitionsVersion: "probe",
+  customHandlerVersion: "probe",
+  banlistVersion: "probe",
+  createdAt: "2026-06-26T00:00:00.000Z",
+  cards: {
+    [card.cardId]: card,
+  },
+});
+
+const resolvedCard = (params: {
+  readonly cardId: CardId;
+  readonly effectText: string;
+  readonly support: ResolvedCard["support"];
+}): ResolvedCard => ({
+  cardId: params.cardId,
+  language: "en",
+  name: String(params.cardId),
+  category: "character",
+  set: "PROBE",
+  setName: "Manifest View Probe",
+  released: true,
+  colors: ["red"],
+  cost: 1,
+  power: 2000,
+  attributes: [],
+  types: [],
+  effectText: params.effectText,
+  printedKeywords: [],
+  variants: [],
+  legality: {},
+  officialFaq: [],
+  errata: [],
+  sourceTextHash: params.support.sourceTextHash,
+  behaviorHash: params.support.behaviorHash,
+  support: params.support,
+});

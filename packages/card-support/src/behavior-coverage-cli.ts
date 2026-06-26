@@ -19,6 +19,7 @@ import {
   type DeckHashCodecPort,
   type PoneglyphFetch,
 } from "./poneglyph-card-source.js";
+import type { ManifestViewProbeEntry } from "./manifest-view-probe.js";
 
 export interface BehaviorCoverageCliDependencies {
   readonly fetchPoneglyph?: PoneglyphFetch;
@@ -37,6 +38,7 @@ type CoverageSource =
       readonly ok: true;
       readonly sourceLabel: string;
       readonly entries: readonly BehaviorCoverageEntry[];
+      readonly manifestViewEntries: readonly ManifestViewProbeEntry[];
     }
   | {
       readonly ok: false;
@@ -91,6 +93,7 @@ export const createBehaviorCoverageCliReport = async (
   const report = createBehaviorCoverageReport({
     inventoryPrimitiveTypes,
     entries: source.entries,
+    manifestViewEntries: source.manifestViewEntries,
   });
   return {
     ...report,
@@ -129,6 +132,7 @@ const resolveCoverageSource = async (
         label: `text:${String(index + 1)}`,
         text,
       })),
+      manifestViewEntries: [],
     };
   }
 
@@ -182,6 +186,7 @@ const resolveCoverageSource = async (
         label: entry.label,
         text: entry.text,
       })),
+      manifestViewEntries: [],
     };
   }
 
@@ -216,6 +221,7 @@ const loadedSource = (
     | {
         readonly ok: true;
         readonly entries: readonly BehaviorCoverageEntry[];
+        readonly manifestViewEntries?: readonly ManifestViewProbeEntry[];
       }
     | { readonly ok: false; readonly error: string },
 ): CoverageSource => {
@@ -232,6 +238,7 @@ const loadedSource = (
     ok: true,
     sourceLabel,
     entries: result.entries,
+    manifestViewEntries: result.manifestViewEntries ?? [],
   };
 };
 
