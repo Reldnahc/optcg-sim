@@ -216,6 +216,56 @@ const SettingsSection = ({
 const clampPercent = (value: number): number =>
   Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 50;
 
+const SettingsSubsection = ({
+  title,
+  children,
+}: {
+  readonly title: string;
+  readonly children: React.ReactNode;
+}): React.JSX.Element => (
+  <section className="settings-subsection" aria-label={title}>
+    <h4>{title}</h4>
+    {children}
+  </section>
+);
+
+const RangeField = ({
+  label,
+  min,
+  max,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly min: number;
+  readonly max: number;
+  readonly value: number;
+  readonly onChange: (value: number) => void;
+}): React.JSX.Element => {
+  const roundedValue = Math.round(value);
+
+  return (
+    <label className="settings-field settings-range-field">
+      <span className="settings-range-header">
+        <span className="settings-label-text">{label}</span>
+        <output className="settings-range-value" aria-label={`${label} value`}>
+          {roundedValue}%
+        </output>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step="1"
+        value={value}
+        onChange={(event) => {
+          onChange(event.currentTarget.valueAsNumber);
+        }}
+      />
+    </label>
+  );
+};
+
 const cropFrameSize = (zoom: number): number => {
   const normalizedZoom = Number.isFinite(zoom)
     ? Math.min(250, Math.max(100, zoom))
@@ -354,8 +404,7 @@ export const SettingsContent = (): React.JSX.Element => {
         </label>
       </SettingsSection>
       <SettingsSection title="Personalization">
-        <section className="settings-surface-group" aria-label="Background">
-          <h4>Background</h4>
+        <SettingsSubsection title="Background">
           {hasBackgroundImage ? null : (
             <ColorSelector
               label="Background color"
@@ -394,21 +443,13 @@ export const SettingsContent = (): React.JSX.Element => {
               />
               {backgroundImageFit === "crop" ? (
                 <div className="settings-crop-helper">
-                  <label className="settings-field">
-                    <span>Crop zoom</span>
-                    <input
-                      type="range"
-                      min="100"
-                      max="250"
-                      step="1"
-                      value={backgroundImageCropZoom}
-                      onChange={(event) => {
-                        setBackgroundImageCropZoom(
-                          event.currentTarget.valueAsNumber,
-                        );
-                      }}
-                    />
-                  </label>
+                  <RangeField
+                    label="Crop zoom"
+                    min={100}
+                    max={250}
+                    value={backgroundImageCropZoom}
+                    onChange={setBackgroundImageCropZoom}
+                  />
                   <div
                     className="settings-crop-preview"
                     style={cropPreviewStyle}
@@ -445,90 +486,60 @@ export const SettingsContent = (): React.JSX.Element => {
               ) : null}
             </>
           ) : null}
-        </section>
-        <section className="settings-surface-group" aria-label="Windows">
-          <h4>Windows</h4>
-          <label className="settings-field">
-            <span>Window opacity</span>
-            <input
-              type="range"
-              min="50"
-              max="100"
-              step="1"
-              value={windowOpacity}
-              onChange={(event) => {
-                setWindowOpacity(event.currentTarget.valueAsNumber);
-              }}
-            />
-          </label>
+        </SettingsSubsection>
+        <SettingsSubsection title="Windows">
+          <RangeField
+            label="Window opacity"
+            min={50}
+            max={100}
+            value={windowOpacity}
+            onChange={setWindowOpacity}
+          />
           <ColorSelector
             label="Window color"
             value={windowColor}
             onChange={setWindowColor}
           />
-        </section>
-        <section className="settings-surface-group" aria-label="Playmat">
-          <h4>Playmat</h4>
-          <label className="settings-field">
-            <span>Playmat opacity</span>
-            <input
-              type="range"
-              min="50"
-              max="100"
-              step="1"
-              value={playmatOpacity}
-              onChange={(event) => {
-                setPlaymatOpacity(event.currentTarget.valueAsNumber);
-              }}
-            />
-          </label>
+        </SettingsSubsection>
+        <SettingsSubsection title="Playmat">
+          <RangeField
+            label="Playmat opacity"
+            min={50}
+            max={100}
+            value={playmatOpacity}
+            onChange={setPlaymatOpacity}
+          />
           <ColorSelector
             label="Playmat color"
             value={playmatColor}
             onChange={setPlaymatColor}
           />
-        </section>
-        <label className="settings-field">
-          <span>Zone guide visibility</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
+        </SettingsSubsection>
+        <SettingsSubsection title="Zones">
+          <RangeField
+            label="Zone guide visibility"
+            min={0}
+            max={100}
             value={zoneGuideVisibility}
-            onChange={(event) => {
-              setZoneGuideVisibility(event.currentTarget.valueAsNumber);
-            }}
+            onChange={setZoneGuideVisibility}
           />
-        </label>
-        <label className="settings-field">
-          <span>Zone background visibility</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
+          <RangeField
+            label="Zone background visibility"
+            min={0}
+            max={100}
             value={zoneBackgroundVisibility}
-            onChange={(event) => {
-              setZoneBackgroundVisibility(event.currentTarget.valueAsNumber);
-            }}
+            onChange={setZoneBackgroundVisibility}
           />
-        </label>
+        </SettingsSubsection>
       </SettingsSection>
       <SettingsSection title="Sound">
-        <label className="settings-field">
-          <span>Sound volume</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value={soundVolume}
-            onChange={(event) => {
-              setSoundVolume(event.currentTarget.valueAsNumber);
-            }}
-          />
-        </label>
+        <RangeField
+          label="Sound volume"
+          min={0}
+          max={100}
+          value={soundVolume}
+          onChange={setSoundVolume}
+        />
       </SettingsSection>
       <SettingsSection title="Video">
         <label className="settings-checkbox-field">

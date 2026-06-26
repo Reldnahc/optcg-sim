@@ -68,8 +68,14 @@ describe("settings window", () => {
     assert.match(markup, /Playmat/u);
     assert.match(markup, /Playmat opacity/u);
     assert.match(markup, /Playmat color/u);
-    assert.match(markup, /<span>Window opacity<\/span><input[^>]*min="50"/u);
-    assert.match(markup, /<span>Playmat opacity<\/span><input[^>]*min="50"/u);
+    assert.match(
+      markup,
+      /<span class="settings-label-text">Window opacity<\/span><output class="settings-range-value" aria-label="Window opacity value">86%<\/output><\/span><input[^>]*min="50"/u,
+    );
+    assert.match(
+      markup,
+      /<span class="settings-label-text">Playmat opacity<\/span><output class="settings-range-value" aria-label="Playmat opacity value">92%<\/output><\/span><input[^>]*min="50"/u,
+    );
     assert.match(markup, /class="[^"]*settings-color-swatch/u);
     assert.match(markup, /pattern="#\?\[0-9a-fA-F\]\{6\}"/u);
     assert.match(markup, /maxLength="7"/u);
@@ -217,6 +223,47 @@ describe("settings window", () => {
       /<section class="settings-section" aria-label="Video"><h3>Video<\/h3>.*Reduce deck stack rendering.*Reduced motion.*<\/section>/u,
     );
     assert.doesNotMatch(markup, /Customization/u);
+  });
+
+  test("settings presentation separates sections and shows range values", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(SettingsWindow, {
+        onClose: () => undefined,
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "settings-window.css"),
+      "utf8",
+    );
+
+    assert.match(
+      markup,
+      /class="settings-subsection" aria-label="Background"/u,
+    );
+    assert.match(markup, /class="settings-subsection" aria-label="Windows"/u);
+    assert.match(markup, /class="settings-subsection" aria-label="Playmat"/u);
+    assert.match(markup, /class="settings-subsection" aria-label="Zones"/u);
+    assert.match(
+      markup,
+      /<span class="settings-label-text">Window opacity<\/span><output class="settings-range-value" aria-label="Window opacity value">\d+%<\/output>/u,
+    );
+    assert.match(
+      markup,
+      /<span class="settings-label-text">Sound volume<\/span><output class="settings-range-value" aria-label="Sound volume value">\d+%<\/output>/u,
+    );
+    assert.match(
+      styles,
+      /\.settings-section\s*\{[^}]*background:\s*rgba\(255,\s*255,\s*255,\s*0\.035\);/u,
+    );
+    assert.match(
+      styles,
+      /\.settings-section\s*>\s*h3\s*\{[^}]*font-size:\s*var\(--floating-window-font-size\);/u,
+    );
+    assert.match(
+      styles,
+      /\.settings-field\s*\{[^}]*font-size:\s*var\(--floating-window-font-size\);/u,
+    );
+    assert.match(styles, /\.settings-range-header\s*\{/u);
   });
 
   test("match app wires the settings icon to the settings window", async () => {
