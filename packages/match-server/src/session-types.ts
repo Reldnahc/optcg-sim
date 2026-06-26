@@ -185,6 +185,7 @@ export interface MatchRecoveryContext {
   readonly firstPlayerChoice: FirstPlayerChoiceState;
   readonly timersEnabled: boolean;
   readonly botPlayerIds: readonly PlayerId[];
+  readonly passiveBotPlayerIds?: readonly PlayerId[];
   readonly rollback: LocalRollbackState;
   readonly cardVariantOverrides: Readonly<Record<InstanceId, VariantKey>>;
 }

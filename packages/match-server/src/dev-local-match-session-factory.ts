@@ -33,6 +33,7 @@ export interface ActiveLocalDevMatchSession {
   firstPlayerChoice: FirstPlayerChoiceState;
   timersEnabled: boolean;
   botPlayerIds: ReadonlySet<PlayerId>;
+  passiveBotPlayerIds: ReadonlySet<PlayerId>;
 }
 
 export interface PendingFirstPlayerLocalDevMatchSession {
@@ -43,6 +44,7 @@ export interface PendingFirstPlayerLocalDevMatchSession {
   firstPlayerChoice: FirstPlayerChoiceState;
   timersEnabled: boolean;
   botPlayerIds: ReadonlySet<PlayerId>;
+  passiveBotPlayerIds: ReadonlySet<PlayerId>;
 }
 
 export type LocalDevMatchSession =
@@ -54,6 +56,7 @@ export interface CreateActiveLocalDevMatchSessionOptions {
   readonly seats?: Record<string, LocalDevMatchSeat>;
   readonly timersEnabled?: boolean;
   readonly botPlayerIds?: ReadonlySet<PlayerId>;
+  readonly passiveBotPlayerIds?: ReadonlySet<PlayerId>;
   readonly initialTimers?: TimerState;
   readonly persistence?: MatchPersistence;
   readonly initialRecords?: {
@@ -84,6 +87,7 @@ export const activeMatchRecoveryContext = (
   firstPlayerChoice: session.firstPlayerChoice,
   timersEnabled: session.timersEnabled,
   botPlayerIds: [...session.botPlayerIds],
+  passiveBotPlayerIds: [...session.passiveBotPlayerIds],
   rollback: session.match.rollback,
   cardVariantOverrides: session.match.cardVariantOverrides,
 });
@@ -163,6 +167,8 @@ export const createActiveLocalDevMatchSession = (
 ): ActiveLocalDevMatchSession => {
   const timersEnabled = options.timersEnabled ?? true;
   const botPlayerIds = options.botPlayerIds ?? new Set<PlayerId>();
+  const passiveBotPlayerIds =
+    options.passiveBotPlayerIds ?? new Set<PlayerId>();
   const match = createLocalDevMatch(setup);
   if (timersEnabled) {
     initializeLocalDevMatchTimers(match, matchTimerPolicy);
@@ -191,6 +197,7 @@ export const createActiveLocalDevMatchSession = (
     firstPlayerChoice: resolvedChoice,
     timersEnabled,
     botPlayerIds,
+    passiveBotPlayerIds,
   };
   sessionService.registerLocalDevMatch({
     local: match,
@@ -216,6 +223,7 @@ export const createPendingLocalDevMatchSession = (
   seats?: Record<string, LocalDevMatchSeat>,
   timersEnabled = true,
   botPlayerIds: ReadonlySet<PlayerId> = new Set(),
+  passiveBotPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): PendingFirstPlayerLocalDevMatchSession => {
   const pendingChoice = pendingFirstPlayerChoice(setup, firstPlayerChoice);
   const match = createLocalDevMatch(setup);
@@ -236,5 +244,6 @@ export const createPendingLocalDevMatchSession = (
     firstPlayerChoice: pendingChoice,
     timersEnabled,
     botPlayerIds,
+    passiveBotPlayerIds,
   };
 };

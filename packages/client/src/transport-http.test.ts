@@ -117,6 +117,43 @@ describe("dev HTTP match transport", () => {
     );
   });
 
+  test("sends passive bot lobby settings when creating a lobby", async () => {
+    const recorder = createRecordingFetch(() =>
+      responseJson({
+        lobbyId: "lobby-1",
+        settings: {
+          formatId: "Standard",
+          botOpponent: true,
+          botBehavior: "passive",
+        },
+        seats: {},
+      }),
+    );
+    const transport = createDevHttpMatchTransport({
+      baseUrl: "http://localhost:3000/",
+      fetch: recorder.fetch,
+    });
+
+    await transport.createLobby({
+      settings: {
+        formatId: "Standard",
+        botOpponent: true,
+        botBehavior: "passive",
+      },
+    });
+
+    assert.equal(
+      recorder.requests[0]?.init?.body,
+      JSON.stringify({
+        settings: {
+          formatId: "Standard",
+          botOpponent: true,
+          botBehavior: "passive",
+        },
+      }),
+    );
+  });
+
   test("joins primitive lobbies by reusable short join code", async () => {
     const recorder = createRecordingFetch(() =>
       responseJson({

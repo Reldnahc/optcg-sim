@@ -97,6 +97,7 @@ const recoverActiveSession = ({
     firstPlayerChoice: context.firstPlayerChoice,
     timersEnabled: context.timersEnabled,
     botPlayerIds: new Set(context.botPlayerIds),
+    passiveBotPlayerIds: new Set(context.passiveBotPlayerIds ?? []),
   };
   sessionService.registerLocalDevMatch({
     local: match,

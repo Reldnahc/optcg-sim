@@ -11,7 +11,11 @@ import type {
   Zone,
 } from "@optcg/types";
 
-import { chooseBotAction, createBotStrategy } from "./bot-player.js";
+import {
+  chooseBotAction,
+  createBotStrategy,
+  createPassiveBotStrategy,
+} from "./bot-player.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -613,6 +617,97 @@ describe("bot decision liveness", () => {
     );
 
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("passive bot ends main phase instead of activating effects", () => {
+    const strategy = createPassiveBotStrategy();
+    const chosen = strategy.chooseAction({
+      snapshot: {
+        stateSeq: 7,
+        actionSeq: 3,
+        stateHash: "hash",
+        status: "active",
+        turn: {
+          turnNumber: 1,
+          turnPlayerId: botId,
+          phase: "main",
+          globalTurn: 1,
+          playerTurnCounts: { [botId]: 1 },
+        },
+        activePlayerId: botId,
+        players: {
+          [botId]: {
+            view: {},
+            actions: [
+              {
+                index: 0,
+                type: "activateEffect",
+                label: "Activate effect",
+              },
+              {
+                index: 1,
+                type: "endMainPhase",
+                label: "End turn",
+              },
+            ],
+          },
+        },
+      } as unknown as DevMatchSnapshot,
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
+  test("passive bot takes the first mandatory visible decision response", () => {
+    const strategy = createPassiveBotStrategy();
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithDecision(
+        {
+          ...baseDecision("decision:mandatory-pay-cost", "payCost"),
+        },
+        [
+          {
+            index: 3,
+            type: "respondToDecision",
+            label: "Return 1 DON!!",
+            responseKey: "returnDon",
+          },
+        ],
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 3 });
+  });
+
+  test("passive bot declines optional visible decision responses", () => {
+    const strategy = createPassiveBotStrategy();
+    const chosen = strategy.chooseAction({
+      snapshot: snapshotWithDecision(
+        {
+          ...baseDecision("decision:optional-pay-cost", "payCost"),
+        },
+        [
+          {
+            index: 3,
+            type: "respondToDecision",
+            label: "Return 1 DON!!",
+            responseKey: "returnDon",
+          },
+          {
+            index: 4,
+            type: "respondToDecision",
+            label: "Decline",
+            responseKey: "decline",
+            decisionPayment: { kind: "paymentDeclined" },
+          },
+        ],
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 4 });
   });
 
   test("answers character overflow selectCards decisions from candidates", () => {

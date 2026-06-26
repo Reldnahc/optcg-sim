@@ -200,6 +200,9 @@ const createLobbySettings = (
   formatId: settings?.formatId ?? defaultDevDeckFormatId,
   ...(settings?.timerDisabled === true ? { timerDisabled: true } : {}),
   ...(settings?.botOpponent === true ? { botOpponent: true } : {}),
+  ...(settings?.botOpponent === true && settings.botBehavior === "passive"
+    ? { botBehavior: "passive" as const }
+    : {}),
 });
 
 const lobbySettings = (lobby: CustomLobbyState): CustomLobbySettings =>
@@ -469,6 +472,10 @@ export const createCustomLobbyRegistry = async (
         timersEnabled: lobbySettings(lobby).timerDisabled !== true,
         ...(lobbySettings(lobby).botOpponent === true
           ? { botPlayerIds: [playerOrder[1]] }
+          : {}),
+        ...(lobbySettings(lobby).botOpponent === true &&
+        lobbySettings(lobby).botBehavior === "passive"
+          ? { passiveBotPlayerIds: [playerOrder[1]] }
           : {}),
       },
     );

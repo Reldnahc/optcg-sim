@@ -11,7 +11,9 @@ export type {
 export {
   chooseBotActionReport,
   createBotStrategy,
+  createPassiveBotStrategy,
   defaultBotStrategy,
+  passiveBotStrategy,
   type BotStrategyActionReport,
 } from "./bot-strategy.js";
 

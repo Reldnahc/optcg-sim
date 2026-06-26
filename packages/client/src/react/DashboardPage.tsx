@@ -40,6 +40,7 @@ const privateLobbyHref = (
   formatName: string,
   timerDisabled: boolean,
   botOpponent: boolean,
+  passiveBot: boolean,
 ): string => {
   const url = new URL(appRoutePath("match"), "http://localhost");
   url.searchParams.set("lobbyFormat", lobbyFormatIdForSelection(formatName));
@@ -48,6 +49,9 @@ const privateLobbyHref = (
   }
   if (botOpponent) {
     url.searchParams.set("botOpponent", "1");
+    if (passiveBot) {
+      url.searchParams.set("passiveBot", "1");
+    }
   }
   return `${url.pathname}${url.search}`;
 };
@@ -64,12 +68,14 @@ export interface DashboardPageViewProps {
   readonly selectedLoadoutId: string;
   readonly privateLobbyTimerDisabled: boolean;
   readonly privateLobbyBotOpponent: boolean;
+  readonly privateLobbyPassiveBot: boolean;
   readonly onSelectMode: (mode: PlayMode) => void;
   readonly onSelectFormat: (formatName: string) => void;
   readonly onSelectLoadout: (loadoutId: string) => void;
   readonly onRefreshLoadouts: () => void;
   readonly onSetPrivateLobbyTimerDisabled: (disabled: boolean) => void;
   readonly onSetPrivateLobbyBotOpponent: (enabled: boolean) => void;
+  readonly onSetPrivateLobbyPassiveBot: (enabled: boolean) => void;
 }
 
 const isQueueMode = (mode: PlayMode): boolean => mode !== "privateLobby";
@@ -104,12 +110,14 @@ export const DashboardPageView = ({
   selectedLoadoutId,
   privateLobbyTimerDisabled,
   privateLobbyBotOpponent,
+  privateLobbyPassiveBot,
   onSelectMode,
   onSelectFormat,
   onSelectLoadout,
   onRefreshLoadouts,
   onSetPrivateLobbyTimerDisabled,
   onSetPrivateLobbyBotOpponent,
+  onSetPrivateLobbyPassiveBot,
 }: DashboardPageViewProps): React.JSX.Element => {
   const queueMode = isQueueMode(mode);
   const visibleFormats = visibleFormatsForMode(mode, formats);
@@ -197,11 +205,27 @@ export const DashboardPageView = ({
                 type="checkbox"
                 checked={privateLobbyBotOpponent}
                 onChange={(event) => {
-                  onSetPrivateLobbyBotOpponent(event.currentTarget.checked);
+                  const enabled = event.currentTarget.checked;
+                  onSetPrivateLobbyBotOpponent(enabled);
+                  if (!enabled) {
+                    onSetPrivateLobbyPassiveBot(false);
+                  }
                 }}
               />
               <span>Play against bot</span>
             </label>
+            {privateLobbyBotOpponent ? (
+              <label className="play-selector-checkbox">
+                <input
+                  type="checkbox"
+                  checked={privateLobbyPassiveBot}
+                  onChange={(event) => {
+                    onSetPrivateLobbyPassiveBot(event.currentTarget.checked);
+                  }}
+                />
+                <span>Passive bot</span>
+              </label>
+            ) : null}
           </div>
         ) : null}
 
@@ -250,6 +274,7 @@ export const DashboardPageView = ({
                 selectedFormatName,
                 privateLobbyTimerDisabled,
                 privateLobbyBotOpponent,
+                privateLobbyPassiveBot,
               )}
             >
               Make Lobby
@@ -288,6 +313,7 @@ export const DashboardPage = (): React.JSX.Element => {
   const [privateLobbyTimerDisabled, setPrivateLobbyTimerDisabled] =
     useState(false);
   const [privateLobbyBotOpponent, setPrivateLobbyBotOpponent] = useState(false);
+  const [privateLobbyPassiveBot, setPrivateLobbyPassiveBot] = useState(false);
   const apiClient = useMemo(
     () =>
       createPoneglyphApiClient({
@@ -382,12 +408,14 @@ export const DashboardPage = (): React.JSX.Element => {
       selectedLoadoutId={selectedLoadoutId}
       privateLobbyTimerDisabled={privateLobbyTimerDisabled}
       privateLobbyBotOpponent={privateLobbyBotOpponent}
+      privateLobbyPassiveBot={privateLobbyPassiveBot}
       onSelectMode={setMode}
       onSelectFormat={setSelectedFormatName}
       onSelectLoadout={setSelectedLoadoutId}
       onRefreshLoadouts={refreshLoadouts}
       onSetPrivateLobbyTimerDisabled={setPrivateLobbyTimerDisabled}
       onSetPrivateLobbyBotOpponent={setPrivateLobbyBotOpponent}
+      onSetPrivateLobbyPassiveBot={setPrivateLobbyPassiveBot}
     />
   );
 };

@@ -6,6 +6,7 @@ import {
 } from "./bot-candidates.js";
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import { chooseBotDecisionResponse } from "./bot-decision-responder.js";
+import { chooseDefaultBotDecision } from "./bot-default-profile.js";
 import { buildBotFeatures, type BotFeatures } from "./bot-features.js";
 import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import {
@@ -97,6 +98,26 @@ const chooseBestScoredCandidate = (
   [...scored].sort(
     (left, right) => right.breakdown.total - left.breakdown.total,
   )[0];
+
+const firstVisibleDecisionAction = (
+  actions: readonly BotActionContext["action"][],
+): BotActionContext["action"] | undefined =>
+  actions.find((action) => action.type === "respondToDecision");
+
+const passiveDeclineDecisionAction = (
+  actions: readonly BotActionContext["action"][],
+): BotActionContext["action"] | undefined =>
+  actions.find(
+    (action) =>
+      action.type === "respondToDecision" &&
+      (action.responseKey === "decline" ||
+        action.decisionPayment?.kind === "paymentDeclined"),
+  );
+
+const passiveEndMainPhaseAction = (
+  actions: readonly BotActionContext["action"][],
+): BotActionContext["action"] | undefined =>
+  actions.find((action) => action.type === "endMainPhase");
 
 // Counter-step pass still needs evaluated useCounter utilities. Move this into
 // the responder after score breakdown exposes a structured counter term.
@@ -246,6 +267,33 @@ export const createBotStrategy = (
     return chooseStrategyActionReport({ ...input, profile })?.choice;
   },
 });
+
+export const createPassiveBotStrategy = (): BotStrategy => ({
+  chooseAction({ snapshot, botPlayerId }): BotActionChoice | undefined {
+    const player = snapshot.players[botPlayerId];
+    const actions = player?.actions ?? [];
+    const pendingDecision = player?.view.pendingDecision;
+    const botOwnsPendingDecision = pendingDecision?.playerId === botPlayerId;
+    if (botOwnsPendingDecision) {
+      const visibleDecisionAction =
+        passiveDeclineDecisionAction(actions) ??
+        firstVisibleDecisionAction(actions);
+      if (visibleDecisionAction !== undefined) {
+        return {
+          type: "submitAction",
+          actionIndex: visibleDecisionAction.index,
+        };
+      }
+      return chooseDefaultBotDecision({ snapshot, botPlayerId });
+    }
+    const endMainPhase = passiveEndMainPhaseAction(actions);
+    return endMainPhase === undefined
+      ? undefined
+      : { type: "submitAction", actionIndex: endMainPhase.index };
+  },
+});
+
+export const passiveBotStrategy = createPassiveBotStrategy();
 
 export const chooseBotActionReport = (input: {
   readonly snapshot: BotActionContext["snapshot"];

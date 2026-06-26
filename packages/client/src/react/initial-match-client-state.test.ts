@@ -216,6 +216,28 @@ test("initial match route passes bot opponent setting to lobby creation", async 
   assert.equal("lobbyId" in state, true);
 });
 
+test("initial match route passes passive bot setting to lobby creation", async () => {
+  testWindow.history.replaceState(
+    {},
+    "",
+    "/match?lobbyFormat=Standard&botOpponent=1&passiveBot=1",
+  );
+  const controller = fakeController();
+
+  const state = await loadInitialMatchClientState(controller);
+
+  assert.deepEqual(controller.startedLobbies, [
+    {
+      settings: {
+        formatId: "Standard",
+        botOpponent: true,
+        botBehavior: "passive",
+      },
+    },
+  ]);
+  assert.equal("lobbyId" in state, true);
+});
+
 test("initial room alias route joins the lobby by short code", async () => {
   testWindow.history.replaceState({}, "", "/r/ab12");
   const controller = fakeController();

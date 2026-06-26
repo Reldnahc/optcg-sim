@@ -127,6 +127,9 @@ export const lobbyTimerDisabledFromUrl = (): boolean =>
 export const lobbyBotOpponentFromUrl = (): boolean =>
   new URL(window.location.href).searchParams.get("botOpponent") === "1";
 
+export const lobbyPassiveBotFromUrl = (): boolean =>
+  new URL(window.location.href).searchParams.get("passiveBot") === "1";
+
 export const setMatchLocation = (matchId: MatchId): void => {
   const url = new URL(window.location.href);
   if (lobbyJoinCodeFromPath() !== undefined) {

@@ -28,7 +28,11 @@ import type {
   SessionActionResult,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
-import { defaultBotStrategy, type BotStrategy } from "./bot-player.js";
+import {
+  defaultBotStrategy,
+  passiveBotStrategy,
+  type BotStrategy,
+} from "./bot-player.js";
 import { requestHash } from "./action-envelope.js";
 import {
   createActiveLocalDevMatchSession,
@@ -485,10 +489,14 @@ export const createLocalDevMatchRegistry = async (
   };
 
   const botRequestFromChoice = (
+    session: ActiveLocalDevMatchSession,
     botPlayerId: PlayerId,
     snapshot: ReturnType<typeof getLocalDevSnapshot>,
   ): SessionActionRequest | undefined => {
-    const choice = botStrategy.chooseAction({ snapshot, botPlayerId });
+    const strategy = session.passiveBotPlayerIds.has(botPlayerId)
+      ? passiveBotStrategy
+      : botStrategy;
+    const choice = strategy.chooseAction({ snapshot, botPlayerId });
     if (choice === undefined) {
       return undefined;
     }
@@ -529,7 +537,11 @@ export const createLocalDevMatchRegistry = async (
             }
             await waitForPendingCheckpoint(matchId);
             const snapshot = getLocalDevSnapshot(session.match);
-            const request = botRequestFromChoice(botPlayerId, snapshot);
+            const request = botRequestFromChoice(
+              session,
+              botPlayerId,
+              snapshot,
+            );
             if (request === undefined) {
               return false;
             }
@@ -581,6 +593,7 @@ export const createLocalDevMatchRegistry = async (
         ));
       const createSession = (): LocalDevMatchSession => {
         const botPlayerIds = new Set(options?.botPlayerIds ?? []);
+        const passiveBotPlayerIds = new Set(options?.passiveBotPlayerIds ?? []);
         return options?.firstPlayerChoice?.resolvedFirstPlayerId === undefined
           ? createPendingLocalDevMatchSession(
               actualSetup,
@@ -589,6 +602,7 @@ export const createLocalDevMatchRegistry = async (
               options?.seats,
               options?.timersEnabled,
               botPlayerIds,
+              passiveBotPlayerIds,
             )
           : {
               ...createActiveLocalDevMatchSession(
@@ -609,6 +623,7 @@ export const createLocalDevMatchRegistry = async (
                     ? {}
                     : { seats: options.seats }),
                   botPlayerIds,
+                  passiveBotPlayerIds,
                   ...(matchPersistence === undefined
                     ? {}
                     : { persistence: matchPersistence }),
@@ -765,6 +780,7 @@ export const createLocalDevMatchRegistry = async (
               firstPlayerChoice: resolvedChoice,
               timersEnabled: session.timersEnabled,
               botPlayerIds: session.botPlayerIds,
+              passiveBotPlayerIds: session.passiveBotPlayerIds,
               seats: session.seats,
               initialTimers: session.match.state.timers,
               ...(matchPersistence === undefined

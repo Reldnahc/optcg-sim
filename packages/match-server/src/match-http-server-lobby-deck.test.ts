@@ -15,6 +15,7 @@ interface CreatedCustomLobbyBody {
     formatId?: string;
     timerDisabled?: boolean;
     botOpponent?: boolean;
+    botBehavior?: "passive";
   };
   matchId?: string;
   seat?: { playerId?: string; sessionToken?: string };
@@ -141,6 +142,7 @@ const createCustomLobby = async (
     formatId: string;
     timerDisabled?: boolean;
     botOpponent?: boolean;
+    botBehavior?: "passive";
   },
 ): Promise<CreatedCustomLobbyBody> => {
   const response = await fetch(`${server.url()}/api/lobbies`, {
@@ -378,6 +380,38 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.ok(loadedSettings !== undefined);
       assert.equal(loadedSettings.formatId, "Standard");
       assert.equal(loadedSettings.timerDisabled, true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("creates custom lobbies with passive bot settings", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const lobby = await createCustomLobby(server, {
+        formatId: "Standard",
+        botOpponent: true,
+        botBehavior: "passive",
+      });
+
+      const createdSettings = lobby.settings;
+      assert.ok(createdSettings !== undefined);
+      assert.equal(createdSettings.formatId, "Standard");
+      assert.equal(createdSettings.botOpponent, true);
+      assert.equal(createdSettings.botBehavior, "passive");
+      if (lobby.lobbyId === undefined) {
+        throw new Error("Expected created lobby id.");
+      }
+      const response = await fetch(
+        `${server.url()}/api/lobbies/${lobby.lobbyId}`,
+      );
+      assert.equal(response.status, 200);
+      const loaded = (await response.json()) as CreatedCustomLobbyBody;
+      const loadedSettings = loaded.settings;
+      assert.ok(loadedSettings !== undefined);
+      assert.equal(loadedSettings.botOpponent, true);
+      assert.equal(loadedSettings.botBehavior, "passive");
     } finally {
       await server.close();
     }

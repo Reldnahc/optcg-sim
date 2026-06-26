@@ -45,6 +45,7 @@ export interface LocalDevMatchRegistry {
       seats?: Record<string, LocalDevMatchSeat>;
       timersEnabled?: boolean;
       botPlayerIds?: readonly PlayerId[];
+      passiveBotPlayerIds?: readonly PlayerId[];
     },
   ) => Promise<CreatedDevMatchResponse>;
   createRematchSeed: (

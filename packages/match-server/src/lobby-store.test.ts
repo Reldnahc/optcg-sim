@@ -83,6 +83,23 @@ describe("redis lobby store", () => {
     expect(await store.getLobby("lobby-test")).toEqual(lobby());
   });
 
+  test("stores passive bot lobby settings in Redis", async () => {
+    const redis = new FakeRedis();
+    const store = createRedisLobbyStore({ redis });
+    const passiveBotLobby: CustomLobbyState = {
+      ...lobby(),
+      settings: {
+        formatId: "Standard",
+        botOpponent: true,
+        botBehavior: "passive",
+      },
+    };
+
+    await store.createLobby(passiveBotLobby);
+
+    expect(await store.getLobby("lobby-test")).toEqual(passiveBotLobby);
+  });
+
   test("stores lobby join code aliases in Redis", async () => {
     const redis = new FakeRedis();
     const store = createRedisLobbyStore({ redis });

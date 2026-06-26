@@ -21,6 +21,7 @@ export interface CustomLobbySettings {
   readonly formatId: string;
   readonly timerDisabled?: boolean;
   readonly botOpponent?: boolean;
+  readonly botBehavior?: "passive";
 }
 
 export interface CustomLobbyState {
@@ -100,6 +101,9 @@ const parseLobby = (value: string): CustomLobbyState => {
               : {}),
             ...(parsed["settings"]["botOpponent"] === true
               ? { botOpponent: true }
+              : {}),
+            ...(parsed["settings"]["botBehavior"] === "passive"
+              ? { botBehavior: "passive" as const }
               : {}),
           },
         }

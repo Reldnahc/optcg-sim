@@ -31,6 +31,9 @@ const parseCreateLobbySettings = (
     ...(requestBody.settings["botOpponent"] === true
       ? { botOpponent: true }
       : {}),
+    ...(requestBody.settings["botBehavior"] === "passive"
+      ? { botBehavior: "passive" }
+      : {}),
   };
 };
 
