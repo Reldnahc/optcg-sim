@@ -7,7 +7,7 @@ import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
-import { parseDevSessionToken } from "./dev-auth.js";
+import { createDevUserSessionToken, parseDevSessionToken } from "./dev-auth.js";
 import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
 interface CreatedCustomLobbyBody {
@@ -719,6 +719,71 @@ describe("dev HTTP lobby deck submissions", () => {
       assert.equal(requireLobbySeat(result, "p1").claimed, true);
       assert.equal(requireLobbySeat(result, "p1").deck.status, "ready");
       assert.equal(requireLobbySeat(result, "p2").claimed, false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("verified account loadout preserves joined profile identity token", async () => {
+    const server = await createHandoffMatchHttpServer(
+      {
+        verify() {
+          return Promise.resolve(verifiedHandoff());
+        },
+        verifyBatch() {
+          return Promise.resolve([]);
+        },
+      },
+      [],
+    );
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createCustomLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+      const accountToken = createDevUserSessionToken(
+        "user-1",
+        "session-1",
+        "Tester",
+        {
+          imageUrl: "https://cdn.example/avatar.png",
+          crop: { x: 0.25, y: 0.1, size: 0.5 },
+        },
+        {
+          key: "pirate_rookie",
+          label: "Pirate Rookie",
+          style: { text_color: "#e8e9ed", font_weight: 700 },
+        },
+      );
+      await joinCustomLobby(server, lobbyId, accountToken);
+
+      const result = await submitCustomLobbyLoadout(
+        server,
+        lobbyId,
+        "handoff-token",
+      );
+
+      const seat = result.seat;
+      if (seat === undefined) {
+        throw new Error("Expected account handoff to return a lobby seat.");
+      }
+      assert.deepEqual(parseDevSessionToken(seat.sessionToken ?? ""), {
+        type: "user",
+        userId: "user-1",
+        sessionId: "session-1",
+        displayName: "Tester",
+        avatar: {
+          imageUrl: "https://cdn.example/avatar.png",
+          crop: { x: 0.25, y: 0.1, size: 0.5 },
+        },
+        title: {
+          key: "pirate_rookie",
+          label: "Pirate Rookie",
+          style: { text_color: "#e8e9ed", font_weight: 700 },
+        },
+      });
     } finally {
       await server.close();
     }

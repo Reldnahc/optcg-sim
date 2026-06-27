@@ -289,19 +289,35 @@ export const createCustomLobbyRegistry = async (
         seat.subject !== undefined &&
         subjectsOwnSameAccount(seat.subject, auth.subject),
     );
+  const refreshSeatSubject = (
+    seat: CustomLobbySeatState,
+    subject: AuthContext["subject"],
+  ): void => {
+    seat.subject = {
+      ...seat.subject,
+      ...subject,
+      ...(subject.displayName === undefined
+        ? {}
+        : { displayName: subject.displayName }),
+      ...(subject.avatar === undefined ? {} : { avatar: subject.avatar }),
+      ...(subject.title === undefined ? {} : { title: subject.title }),
+    };
+  };
+  const sessionTokenForSubject = (subject: AuthContext["subject"]): string =>
+    createDevUserSessionToken(
+      subject.userId,
+      subject.sessionId,
+      subject.displayName,
+      subject.avatar,
+      subject.title,
+    );
   const claimOpenSeat = (
     lobby: CustomLobbyState,
     auth: AuthContext,
   ): CustomLobbySeatState | "full" => {
     const existing = findSeatForAuth(lobby, auth);
     if (existing !== undefined) {
-      existing.subject = {
-        ...existing.subject,
-        ...auth.subject,
-        ...(auth.subject.displayName === undefined
-          ? {}
-          : { displayName: auth.subject.displayName }),
-      };
+      refreshSeatSubject(existing, auth.subject);
       return existing;
     }
     const open = Object.values(lobby.seats).find(
@@ -495,6 +511,7 @@ export const createCustomLobbyRegistry = async (
     return lobbyStore.updateLobby(lobbyId, async (lobby) => {
       const existing = findSeatForAuth(lobby, auth);
       if (existing !== undefined) {
+        refreshSeatSubject(existing, auth.subject);
         await ensureMatchWhenReady(lobby);
         return {
           ...lobbyResponseForLocalRegistry(lobby),
@@ -622,10 +639,13 @@ export const createCustomLobbyRegistry = async (
           ...lobbyResponseForLocalRegistry(lobby),
           seat: {
             playerId: seat.playerId,
-            sessionToken: createDevUserSessionToken(
-              handoff.claims.sub,
-              handoff.claims.sid,
-            ),
+            sessionToken:
+              seat.subject === undefined
+                ? createDevUserSessionToken(
+                    handoff.claims.sub,
+                    handoff.claims.sid,
+                  )
+                : sessionTokenForSubject(seat.subject),
           },
         };
       });
