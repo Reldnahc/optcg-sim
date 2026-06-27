@@ -81,7 +81,9 @@ describe("PlayerSummaryLabel", () => {
       join(sourceDirectory, "styles", "controls.css"),
       "utf8",
     );
-    const titleRule = styles.match(/\.player-profile-title\s*\{(?<body>[^}]*)\}/u);
+    const titleRule = styles.match(
+      /\.player-profile-title\s*\{(?<body>[^}]*)\}/u,
+    );
     const titleRuleBody = titleRule?.groups?.["body"];
 
     assert.ok(titleRuleBody);
@@ -89,6 +91,37 @@ describe("PlayerSummaryLabel", () => {
     assert.doesNotMatch(titleRuleBody, /\bbackground(?:-color)?\s*:/u);
     assert.doesNotMatch(titleRuleBody, /\bborder-radius\s*:/u);
     assert.doesNotMatch(titleRuleBody, /\bpadding\s*:/u);
+    assert.match(
+      titleRuleBody,
+      /font-size:\s*var\(--control-body-font-size\);/u,
+    );
+    assert.match(titleRuleBody, /font-weight:\s*700;/u);
+  });
+
+  test("styles avatar frame like the account preview instead of a gray inset badge", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+    const avatarRule = styles.match(
+      /\.player-summary-avatar\s*\{(?<body>[^}]*)\}/u,
+    );
+    const avatarRuleBody = avatarRule?.groups?.["body"];
+    const imageRule = styles.match(
+      /\.player-summary-avatar img\s*\{(?<body>[^}]*)\}/u,
+    );
+    const imageRuleBody = imageRule?.groups?.["body"];
+
+    assert.ok(avatarRuleBody);
+    assert.ok(imageRuleBody);
+    assert.doesNotMatch(avatarRuleBody, /box-shadow:\s*inset/u);
+    assert.doesNotMatch(avatarRuleBody, /var\(--match-surface-control\)/u);
+    assert.match(
+      avatarRuleBody,
+      /background:\s*rgba\(15,\s*18,\s*25,\s*0\.94\);/u,
+    );
+    assert.match(imageRuleBody, /display:\s*block;/u);
+    assert.match(imageRuleBody, /max-height:\s*none;/u);
   });
 
   test("renders no profile title when one is not provided", () => {
