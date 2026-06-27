@@ -1,9 +1,14 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, test } from "vitest";
 
 import { PlayerSummaryLabel } from "./PlayerSummaryLabel.js";
+
+const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 
 describe("PlayerSummaryLabel", () => {
   test("renders the player's avatar crop when one is available", () => {
@@ -51,6 +56,7 @@ describe("PlayerSummaryLabel", () => {
             glow_color: "#fde68a",
           },
         },
+        status: "connected",
       }),
     );
 
@@ -64,6 +70,25 @@ describe("PlayerSummaryLabel", () => {
     );
     assert.match(markup, /color:transparent/u);
     assert.match(markup, /text-shadow:0 0 10px #fde68a/u);
+    assert.match(
+      markup,
+      /<span class="player-name">Tester<\/span><span class="connection-status is-connected"[^>]*><\/span><\/h2><span class="player-profile-title"/u,
+    );
+  });
+
+  test("styles profile title as account text instead of a chip", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+    const titleRule = styles.match(/\.player-profile-title\s*\{(?<body>[^}]*)\}/u);
+    const titleRuleBody = titleRule?.groups?.["body"];
+
+    assert.ok(titleRuleBody);
+    assert.doesNotMatch(titleRuleBody, /\bborder\s*:/u);
+    assert.doesNotMatch(titleRuleBody, /\bbackground(?:-color)?\s*:/u);
+    assert.doesNotMatch(titleRuleBody, /\bborder-radius\s*:/u);
+    assert.doesNotMatch(titleRuleBody, /\bpadding\s*:/u);
   });
 
   test("renders no profile title when one is not provided", () => {

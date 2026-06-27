@@ -55,7 +55,7 @@ const loadedImageAspectRatio = (image: HTMLImageElement): number => {
   return image.naturalWidth / image.naturalHeight;
 };
 
-const fallbackTitleTextColor = "var(--match-text)";
+const fallbackTitleTextColor = "#e8e9ed";
 const hexColorPattern =
   /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu;
 
@@ -200,27 +200,31 @@ export const PlayerSummaryLabel = ({
   timer?: PlayerSummaryTimerModel | undefined;
 }): JSX.Element => (
   <div className="player-summary-label">
-    <h2>
+    <div className="player-summary-identity">
       <PlayerSummaryAvatar label={label} avatar={avatar} />
-      <span className="player-name">{label}</span>
-      {title === undefined ? null : (
-        <span
-          className="player-profile-title"
-          data-title-key={title.key}
-          title={title.label}
-          style={profileTitleStyle(title.style)}
-        >
-          {title.label}
-        </span>
-      )}
-      {status === undefined ? null : (
-        <span
-          className={`connection-status is-${status}`}
-          aria-label={`${label} ${status}`}
-          title={status === "connected" ? "Connected" : "Disconnected"}
-        />
-      )}
-    </h2>
+      <div className="player-summary-copy">
+        <h2>
+          <span className="player-name">{label}</span>
+          {status === undefined ? null : (
+            <span
+              className={`connection-status is-${status}`}
+              aria-label={`${label} ${status}`}
+              title={status === "connected" ? "Connected" : "Disconnected"}
+            />
+          )}
+        </h2>
+        {title === undefined ? null : (
+          <span
+            className="player-profile-title"
+            data-title-key={title.key}
+            title={title.label}
+            style={profileTitleStyle(title.style)}
+          >
+            {title.label}
+          </span>
+        )}
+      </div>
+    </div>
     {timer === undefined ? null : (
       <div className="player-timers" aria-label={`${label} timers`}>
         <span
