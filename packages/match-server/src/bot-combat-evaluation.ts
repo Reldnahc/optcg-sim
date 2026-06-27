@@ -369,8 +369,9 @@ const scoreCounterAction = (
   }
   if (isBattleTargetLeader(snapshot, botPlayerId)) {
     const lifeCount = snapshot.players[botPlayerId]?.view.self.life.count ?? 0;
-    if (lifeCount < 4 && counterValue >= counterNeeded) {
-      const lifePressurePenalty = lifeCount <= 2 ? 0 : 12;
+    if (lifeCount <= 4 && counterValue >= counterNeeded) {
+      const lifePressurePenalty =
+        lifeCount >= 4 ? 24 : lifeCount === 3 ? 12 : 0;
       const overCounterPenalty =
         Math.max(0, counterValue - counterNeeded) / 1_000;
       return (

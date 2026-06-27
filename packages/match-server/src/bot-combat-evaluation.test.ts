@@ -389,6 +389,62 @@ describe("bot combat evaluation", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("uses an efficient counter to preserve mid-life leader health", () => {
+    const snapshot = snapshotWithActions(
+      [
+        {
+          index: 0,
+          type: "respondToDecision",
+          label: "End counter step",
+        },
+        {
+          index: 1,
+          type: "useCounter",
+          label: "Counter with 2000",
+          counter: {
+            cardInstanceId: "counter-card" as InstanceId,
+            targetInstanceId: "bot-leader" as InstanceId,
+          },
+        },
+      ],
+      {
+        selfLifeCount: 4,
+        selfLeader: { currentPower: 5000 },
+        selfHand: [
+          {
+            instanceId: "counter-card" as InstanceId,
+            cardId: "OP01-003" as CardId,
+            printedCounter: 2000,
+          },
+        ],
+        opponentLeader: { currentPower: 6000 },
+      },
+    );
+    viewForBot(snapshot).battle = {
+      attacker: {
+        instanceId: "opponent-leader" as InstanceId,
+        cardId: "OP01-002" as CardId,
+        playerId: "p1" as PlayerId,
+      },
+      originalTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP01-001" as CardId,
+        playerId: botId,
+      },
+      currentTarget: {
+        instanceId: "bot-leader" as InstanceId,
+        cardId: "OP01-001" as CardId,
+        playerId: botId,
+      },
+      step: "counter",
+      damageCount: 1,
+    };
+
+    const chosen = chooseBotAction(snapshot, botId);
+
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+  });
+
   test("does not use counter when it cannot stop leader damage", () => {
     const snapshot = snapshotWithActions(
       [
