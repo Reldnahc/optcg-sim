@@ -14,8 +14,8 @@ test("lobby deck selection is hosted as a modal instead of the control rail or b
   assert.doesNotMatch(matchAppSource, /lobbyDeckPanel=/u);
   assert.doesNotMatch(boardSurfaceSource, /lobbyDeckPanel/u);
   assert.match(matchAppSource, /<LobbyDeckPanel/u);
-  assert.match(boardSurfaceSource, /isLobbyClientState\(clientState\)/u);
   assert.match(boardSurfaceSource, /<MatchBoardFrame/u);
+  assert.match(boardSurfaceSource, /<EmptyPlaymat/u);
   assert.doesNotMatch(boardSurfaceSource, /PregameBoardFootprint/u);
   assert.doesNotMatch(boardSurfaceSource, /is-pregame-placeholder/u);
   assert.doesNotMatch(boardSurfaceSource, /return null;/u);

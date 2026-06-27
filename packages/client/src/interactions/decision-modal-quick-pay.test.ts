@@ -65,7 +65,7 @@ describe("quick-pay decision modal labels", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [
       { actionIndex: 2, label: "Rest this card" },
       { actionIndex: 3, label: "Trash this card" },
@@ -96,7 +96,7 @@ describe("quick-pay decision modal labels", () => {
       responseActions,
     );
 
-    assert.equal(model.kind, "actionOptions");
+    assert.equal(model.kind, "paymentOptions");
     assert.deepEqual(model.options, [{ actionIndex: 5, label: "Pay 1 DON!!" }]);
   });
 });
