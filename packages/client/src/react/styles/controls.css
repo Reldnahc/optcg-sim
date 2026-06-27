@@ -84,14 +84,14 @@
 
 .player-summary-label {
   display: grid;
-  gap: calc(var(--control-rail-gap) / 2);
+  gap: clamp(2px, calc(var(--card-height) / 80), 4px);
   min-width: 0;
 }
 
 .player-summary-identity {
   display: flex;
   align-items: center;
-  gap: var(--control-title-gap);
+  gap: clamp(6px, calc(var(--card-height) / 20), 10px);
   min-width: 0;
 }
 
@@ -104,9 +104,9 @@
 .player-summary-avatar {
   position: relative;
   display: grid;
-  flex: 0 0 clamp(44px, calc(var(--control-title-font-size) * 1.55), 56px);
-  width: clamp(44px, calc(var(--control-title-font-size) * 1.55), 56px);
-  height: clamp(44px, calc(var(--control-title-font-size) * 1.55), 56px);
+  flex: 0 0 clamp(44px, calc(var(--card-height) / 2.8), 56px);
+  width: clamp(44px, calc(var(--card-height) / 2.8), 56px);
+  height: clamp(44px, calc(var(--card-height) / 2.8), 56px);
   border: max(1px, calc(var(--card-outline-thin) * 0.45)) solid
     rgba(255, 255, 255, 0.22);
   border-radius: 50%;
@@ -148,7 +148,7 @@
   min-width: 0;
   max-width: 18ch;
   overflow: hidden;
-  font-size: var(--control-body-font-size);
+  font-size: clamp(12px, calc(var(--card-height) / 11), 15px);
   font-weight: 700;
   line-height: 1.15;
   text-overflow: ellipsis;
@@ -157,8 +157,8 @@
 
 .connection-status {
   flex: 0 0 auto;
-  width: calc(var(--control-title-font-size) * 0.44);
-  height: calc(var(--control-title-font-size) * 0.44);
+  width: clamp(10px, calc(var(--card-height) / 16), 15px);
+  height: clamp(10px, calc(var(--card-height) / 16), 15px);
   border: max(1px, calc(var(--card-outline-thin) * 0.45)) solid
     rgba(0, 0, 0, 0.72);
   border-radius: 50%;

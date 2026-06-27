@@ -93,7 +93,7 @@ describe("PlayerSummaryLabel", () => {
     assert.doesNotMatch(titleRuleBody, /\bpadding\s*:/u);
     assert.match(
       titleRuleBody,
-      /font-size:\s*var\(--control-body-font-size\);/u,
+      /font-size:\s*clamp\(12px,\s*calc\(var\(--card-height\) \/ 11\),\s*15px\);/u,
     );
     assert.match(titleRuleBody, /font-weight:\s*700;/u);
   });
@@ -122,6 +122,24 @@ describe("PlayerSummaryLabel", () => {
     );
     assert.match(imageRuleBody, /display:\s*block;/u);
     assert.match(imageRuleBody, /max-height:\s*none;/u);
+  });
+
+  test("sizes playmat identity without control rail scoped variables", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+    const playerSummaryRules = [
+      ...styles.matchAll(
+        /\.(?:player-summary-label|player-summary-identity|player-summary-avatar|player-profile-title|connection-status)\b[^{]*\{(?<body>[^}]*)\}/gu,
+      ),
+    ];
+    const playerSummaryStyles = playerSummaryRules
+      .map((rule) => rule.groups?.["body"] ?? "")
+      .join("\n");
+
+    assert.notEqual(playerSummaryRules.length, 0);
+    assert.doesNotMatch(playerSummaryStyles, /var\(--control-/u);
   });
 
   test("renders no profile title when one is not provided", () => {
