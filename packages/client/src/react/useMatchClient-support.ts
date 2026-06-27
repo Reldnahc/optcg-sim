@@ -54,6 +54,7 @@ export interface MatchClientUiState {
   accountLoadouts: readonly AccountLoadout[];
   accountLoadoutsStatus: "idle" | "loading" | "ready" | "error";
   accountLoadoutsError?: string | undefined;
+  lastSubmittedLoadoutId?: string | undefined;
   accountLoadoutValidationRequired: boolean;
   rematchStatus?: "requestedBySelf" | "requestedByOpponent" | undefined;
   connectionStatus?: MatchLiveConnectionStatus | undefined;

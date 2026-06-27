@@ -95,6 +95,8 @@ export const useMatchClient = ({
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [accountLoadoutsError, setAccountLoadoutsError] = useState<string>();
+  const [lastSubmittedLoadoutId, setLastSubmittedLoadoutId] =
+    useState<string>();
   const [
     accountLoadoutValidationRequired,
     setAccountLoadoutValidationRequired,
@@ -307,6 +309,7 @@ export const useMatchClient = ({
         } else if (isLobbyClientState(result)) {
           setLobbyLocation(result);
         }
+        setLastSubmittedLoadoutId(loadoutId);
         setClientState(result);
         setErrors([]);
       } catch (error) {
@@ -738,6 +741,9 @@ export const useMatchClient = ({
       accountLoadouts,
       accountLoadoutsStatus,
       ...(accountLoadoutsError === undefined ? {} : { accountLoadoutsError }),
+      ...(lastSubmittedLoadoutId === undefined
+        ? {}
+        : { lastSubmittedLoadoutId }),
       accountLoadoutValidationRequired,
       ...(rematchStatus === undefined ? {} : { rematchStatus }),
       ...(liveConnectionStatus === undefined

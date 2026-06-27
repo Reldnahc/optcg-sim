@@ -12,10 +12,20 @@ export interface LobbyDeckPanelProps {
   loadouts: readonly AccountLoadout[];
   loadoutsStatus: "idle" | "loading" | "ready" | "error";
   loadoutsError?: string | undefined;
+  preferredLoadoutId?: string | undefined;
   requirePlayableValidation?: boolean | undefined;
   onRefreshLoadouts: () => void;
   onSubmitLoadout: (loadoutId: string) => Promise<void>;
 }
+
+const initialSelectedLoadoutId = (
+  loadouts: readonly AccountLoadout[],
+  preferredLoadoutId: string | undefined,
+): string =>
+  preferredLoadoutId !== undefined &&
+  loadouts.some((loadout) => loadout.id === preferredLoadoutId)
+    ? preferredLoadoutId
+    : (loadouts[0]?.id ?? "");
 
 export const LobbyDeckPanel = ({
   disabled = false,
@@ -23,12 +33,13 @@ export const LobbyDeckPanel = ({
   loadouts,
   loadoutsStatus,
   loadoutsError,
+  preferredLoadoutId,
   requirePlayableValidation = true,
   onRefreshLoadouts,
   onSubmitLoadout,
 }: LobbyDeckPanelProps): React.JSX.Element => {
-  const [selectedLoadoutId, setSelectedLoadoutId] = useState(
-    loadouts[0]?.id ?? "",
+  const [selectedLoadoutId, setSelectedLoadoutId] = useState(() =>
+    initialSelectedLoadoutId(loadouts, preferredLoadoutId),
   );
   const { selfDeckStatus } = lobbyDeckStatuses(lobbyState);
   const selectedLoadout = loadouts.find(
@@ -53,9 +64,11 @@ export const LobbyDeckPanel = ({
 
   useEffect(() => {
     if (!selectedLoadoutExists) {
-      setSelectedLoadoutId(loadouts[0]?.id ?? "");
+      setSelectedLoadoutId(
+        initialSelectedLoadoutId(loadouts, preferredLoadoutId),
+      );
     }
-  }, [loadouts, selectedLoadoutExists]);
+  }, [loadouts, preferredLoadoutId, selectedLoadoutExists]);
 
   return (
     <ModalFrame className="lobby-deck-modal">

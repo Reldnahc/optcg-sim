@@ -597,6 +597,7 @@ export const MatchApp = ({
             loadouts={client.state.accountLoadouts}
             loadoutsStatus={client.state.accountLoadoutsStatus}
             loadoutsError={client.state.accountLoadoutsError}
+            preferredLoadoutId={client.state.lastSubmittedLoadoutId}
             requirePlayableValidation={
               client.state.accountLoadoutValidationRequired
             }

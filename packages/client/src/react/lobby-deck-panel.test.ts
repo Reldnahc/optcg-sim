@@ -127,6 +127,28 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(html, /textarea/u);
   });
 
+  test("prefers the last submitted loadout by id instead of list position", () => {
+    const html = renderToStaticMarkup(
+      createElement(LobbyDeckPanel, {
+        lobbyState: lobbyState(),
+        loadouts,
+        loadoutsStatus: "ready",
+        preferredLoadoutId: "loadout-2",
+        onRefreshLoadouts: () => undefined,
+        onSubmitLoadout: () => Promise.resolve(),
+      }),
+    );
+
+    assert.match(
+      html,
+      /deck-loadout-option is-selected[\s\S]*Luffy Life/u,
+    );
+    assert.doesNotMatch(
+      html,
+      /deck-loadout-option is-selected[\s\S]*Enel Yellow/u,
+    );
+  });
+
   test("shows account auth failures without exposing a manual deck fallback", () => {
     const html = renderToStaticMarkup(
       createElement(LobbyDeckPanel, {
