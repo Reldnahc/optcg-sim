@@ -121,6 +121,7 @@ test("bot rematches count the bot as already accepted", async () => {
   assert.equal(rematch.joinCode, joinCode);
   assert.equal(rematch.settings.botOpponent, true);
   assert.equal(rematch.seat?.playerId, p1);
+  assert.equal(rematch.seats["p2"]?.deck.status, "ready");
 });
 
 test("lobby responses do not expose match ids unavailable to the local registry", async () => {

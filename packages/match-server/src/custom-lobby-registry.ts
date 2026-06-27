@@ -848,6 +848,9 @@ export const createCustomLobbyRegistry = async (
               ...(seat.subject === undefined
                 ? {}
                 : { subject: structuredClone(seat.subject) }),
+              ...(seed.botPlayerIds.includes(seat.playerId)
+                ? { deckSubmission: structuredClone(botDeckSubmission) }
+                : {}),
             },
           ]),
         ),
