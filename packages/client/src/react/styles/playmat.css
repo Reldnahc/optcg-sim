@@ -437,16 +437,16 @@
   border: var(--card-outline-thin) solid var(--match-border);
   border-radius: calc(var(--card-corner-radius) * 0.85);
   background: var(--match-surface-panel);
-  padding: clamp(6px, calc(var(--card-height) / 22), 10px);
+  padding: clamp(8px, calc(var(--card-height) / 17.6), 13px);
 }
 
 .playmat-summary h2 {
   display: flex;
   align-items: center;
-  gap: clamp(6px, calc(var(--card-height) / 20), 10px);
+  gap: clamp(8px, calc(var(--card-height) / 16), 13px);
   margin: 0;
   color: var(--match-text);
-  font-size: clamp(16px, calc(var(--card-height) / 7), 24px);
+  font-size: clamp(20px, calc(var(--card-height) / 5.6), 30px);
   font-weight: 500;
 }
 

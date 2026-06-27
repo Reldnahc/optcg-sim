@@ -93,7 +93,7 @@ describe("PlayerSummaryLabel", () => {
     assert.doesNotMatch(titleRuleBody, /\bpadding\s*:/u);
     assert.match(
       titleRuleBody,
-      /font-size:\s*clamp\(12px,\s*calc\(var\(--card-height\) \/ 11\),\s*15px\);/u,
+      /font-size:\s*clamp\(15px,\s*calc\(var\(--card-height\) \/ 8\.8\),\s*19px\);/u,
     );
     assert.match(titleRuleBody, /font-weight:\s*700;/u);
   });
@@ -118,6 +118,14 @@ describe("PlayerSummaryLabel", () => {
     assert.doesNotMatch(avatarRuleBody, /var\(--match-surface-control\)/u);
     assert.match(
       avatarRuleBody,
+      /width:\s*clamp\(55px,\s*calc\(var\(--card-height\) \/ 2\.24\),\s*70px\);/u,
+    );
+    assert.match(
+      avatarRuleBody,
+      /height:\s*clamp\(55px,\s*calc\(var\(--card-height\) \/ 2\.24\),\s*70px\);/u,
+    );
+    assert.match(
+      avatarRuleBody,
       /background:\s*rgba\(15,\s*18,\s*25,\s*0\.94\);/u,
     );
     assert.match(imageRuleBody, /display:\s*block;/u);
@@ -140,6 +148,38 @@ describe("PlayerSummaryLabel", () => {
 
     assert.notEqual(playerSummaryRules.length, 0);
     assert.doesNotMatch(playerSummaryStyles, /var\(--control-/u);
+  });
+
+  test("scales playmat identity text and spacing up from the compact baseline", async () => {
+    const [controlStyles, playmatStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "controls.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "playmat.css"), "utf8"),
+    ]);
+
+    assert.match(
+      controlStyles,
+      /\.player-summary-label\s*\{[^}]*gap:\s*clamp\(3px,\s*calc\(var\(--card-height\) \/ 64\),\s*5px\);/u,
+    );
+    assert.match(
+      controlStyles,
+      /\.player-summary-identity\s*\{[^}]*gap:\s*clamp\(8px,\s*calc\(var\(--card-height\) \/ 16\),\s*13px\);/u,
+    );
+    assert.match(
+      controlStyles,
+      /\.player-summary-copy\s*\{[^}]*gap:\s*0\.1em;/u,
+    );
+    assert.match(
+      controlStyles,
+      /\.connection-status\s*\{[^}]*width:\s*clamp\(13px,\s*calc\(var\(--card-height\) \/ 12\.8\),\s*19px\);[^}]*height:\s*clamp\(13px,\s*calc\(var\(--card-height\) \/ 12\.8\),\s*19px\);/u,
+    );
+    assert.match(
+      playmatStyles,
+      /\.playmat-summary\s*\{[^}]*padding:\s*clamp\(8px,\s*calc\(var\(--card-height\) \/ 17\.6\),\s*13px\);/u,
+    );
+    assert.match(
+      playmatStyles,
+      /\.playmat-summary h2\s*\{[^}]*gap:\s*clamp\(8px,\s*calc\(var\(--card-height\) \/ 16\),\s*13px\);[^}]*font-size:\s*clamp\(20px,\s*calc\(var\(--card-height\) \/ 5\.6\),\s*30px\);/u,
+    );
   });
 
   test("renders no profile title when one is not provided", () => {
