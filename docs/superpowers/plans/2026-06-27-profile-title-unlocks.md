@@ -259,67 +259,70 @@ assert.deepEqual(sessionResponse.json().data.user.profile.title, null);
 Add a new test named `profile serialization includes selected title and unlocked titles` using the fake DB profile rows:
 
 ```js
-await runTest("profile serialization includes selected title and unlocked titles", async () => {
-  const db = new AuthRoutesDb();
-  db.users.set("user-auth", {
-    id: "user-auth",
-    username: "tester",
-    display_name: "Tester",
-    email: "tester@example.com",
-    email_verified_at: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    selected_title_key: "founder_gold",
-    selected_title_label: "Founder",
-    selected_title_style: {
-      text_color: "#ffd76a",
-      font_family: "display",
-      font_weight: 800,
-      animation: "shine",
-    },
-  });
-  db.profileTitles = [
-    {
-      key: "pirate_rookie",
-      label: "Pirate Rookie",
-      unlock_mode: "no_requirement",
-      style: { text_color: "#e8e9ed", animation: "none" },
-      active: true,
-      sort_order: 10,
-    },
-    {
+await runTest(
+  "profile serialization includes selected title and unlocked titles",
+  async () => {
+    const db = new AuthRoutesDb();
+    db.users.set("user-auth", {
+      id: "user-auth",
+      username: "tester",
+      display_name: "Tester",
+      email: "tester@example.com",
+      email_verified_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      selected_title_key: "founder_gold",
+      selected_title_label: "Founder",
+      selected_title_style: {
+        text_color: "#ffd76a",
+        font_family: "display",
+        font_weight: 800,
+        animation: "shine",
+      },
+    });
+    db.profileTitles = [
+      {
+        key: "pirate_rookie",
+        label: "Pirate Rookie",
+        unlock_mode: "no_requirement",
+        style: { text_color: "#e8e9ed", animation: "none" },
+        active: true,
+        sort_order: 10,
+      },
+      {
+        key: "founder_gold",
+        label: "Founder",
+        unlock_mode: "manual",
+        style: { text_color: "#ffd76a", animation: "shine" },
+        active: true,
+        sort_order: 20,
+      },
+    ];
+
+    const app = buildAuthRoutesTestApp(db);
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/me",
+      headers: { authorization: "Bearer token-user-auth" },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json().data.profile.title, {
       key: "founder_gold",
       label: "Founder",
-      unlock_mode: "manual",
-      style: { text_color: "#ffd76a", animation: "shine" },
-      active: true,
-      sort_order: 20,
-    },
-  ];
-
-  const app = buildAuthRoutesTestApp(db);
-  const response = await app.inject({
-    method: "GET",
-    url: "/v1/me",
-    headers: { authorization: "Bearer token-user-auth" },
-  });
-
-  assert.equal(response.statusCode, 200);
-  assert.deepEqual(response.json().data.profile.title, {
-    key: "founder_gold",
-    label: "Founder",
-    style: {
-      text_color: "#ffd76a",
-      font_family: "display",
-      font_weight: 800,
-      animation: "shine",
-    },
-  });
-  assert.deepEqual(
-    response.json().data.profile.unlocked_titles.map((title) => title.key),
-    ["pirate_rookie", "founder_gold"],
-  );
-});
+      style: {
+        text_color: "#ffd76a",
+        font_family: "display",
+        font_weight: 800,
+        animation: "shine",
+      },
+    });
+    assert.deepEqual(
+      response.json().data.profile.unlocked_titles.map((title) => title.key),
+      ["pirate_rookie", "founder_gold"],
+    );
+  },
+);
 ```
 
 Update the `AuthRoutesDb` fake query dispatcher in this test file so title catalog queries return `db.profileTitles` and user rows can expose `selected_title_key`, `selected_title_label`, and `selected_title_style`. Do not change the expected HTTP response shape shown in this step.
@@ -382,14 +385,22 @@ Add style parsing helpers:
 const TITLE_FONT_FAMILIES = new Set(["display", "body", "mono"]);
 const TITLE_ANIMATIONS = new Set(["none", "shine", "pulse"]);
 
-function readString(record: Record<string, unknown>, key: string): string | undefined {
+function readString(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = record[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function readNumber(record: Record<string, unknown>, key: string): number | undefined {
+function readNumber(
+  record: Record<string, unknown>,
+  key: string,
+): number | undefined {
   const value = record[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -404,19 +415,34 @@ export function serializeTitleStyle(value: unknown): ProfileTitleStyle {
   const gradient = isRecord(value.gradient)
     ? {
         from: readString(value.gradient, "from") ?? textColor,
-        ...(readString(value.gradient, "via") === undefined ? {} : { via: readString(value.gradient, "via") }),
+        ...(readString(value.gradient, "via") === undefined
+          ? {}
+          : { via: readString(value.gradient, "via") }),
         to: readString(value.gradient, "to") ?? textColor,
-        ...(readNumber(value.gradient, "angle") === undefined ? {} : { angle: readNumber(value.gradient, "angle") }),
+        ...(readNumber(value.gradient, "angle") === undefined
+          ? {}
+          : { angle: readNumber(value.gradient, "angle") }),
       }
     : null;
   return {
     text_color: textColor,
-    ...(fontFamily !== undefined && TITLE_FONT_FAMILIES.has(fontFamily) ? { font_family: fontFamily as ProfileTitleStyle["font_family"] } : {}),
-    ...(readNumber(value, "font_weight") === undefined ? {} : { font_weight: readNumber(value, "font_weight") }),
+    ...(fontFamily !== undefined && TITLE_FONT_FAMILIES.has(fontFamily)
+      ? { font_family: fontFamily as ProfileTitleStyle["font_family"] }
+      : {}),
+    ...(readNumber(value, "font_weight") === undefined
+      ? {}
+      : { font_weight: readNumber(value, "font_weight") }),
     ...(gradient === null ? {} : { gradient }),
-    ...(readString(value, "outline_color") === undefined ? {} : { outline_color: readString(value, "outline_color") }),
-    ...(readString(value, "glow_color") === undefined ? {} : { glow_color: readString(value, "glow_color") }),
-    animation: animation !== undefined && TITLE_ANIMATIONS.has(animation) ? animation as ProfileTitleStyle["animation"] : "none",
+    ...(readString(value, "outline_color") === undefined
+      ? {}
+      : { outline_color: readString(value, "outline_color") }),
+    ...(readString(value, "glow_color") === undefined
+      ? {}
+      : { glow_color: readString(value, "glow_color") }),
+    animation:
+      animation !== undefined && TITLE_ANIMATIONS.has(animation)
+        ? (animation as ProfileTitleStyle["animation"])
+        : "none",
   };
 }
 ```
@@ -424,13 +450,14 @@ export function serializeTitleStyle(value: unknown): ProfileTitleStyle {
 Build selected title inside `serializeUser`:
 
 ```ts
-const title = user.selected_title_key && user.selected_title_label
-  ? {
-      key: user.selected_title_key,
-      label: user.selected_title_label,
-      style: serializeTitleStyle(user.selected_title_style),
-    }
-  : null;
+const title =
+  user.selected_title_key && user.selected_title_label
+    ? {
+        key: user.selected_title_key,
+        label: user.selected_title_label,
+        style: serializeTitleStyle(user.selected_title_style),
+      }
+    : null;
 ```
 
 Return:
@@ -454,7 +481,10 @@ export type SerializedTitleRow = {
   style: unknown;
 };
 
-export async function listUnlockedProfileTitles(runQuery: QueryExecutor, userId: string): Promise<SerializedTitleRow[]> {
+export async function listUnlockedProfileTitles(
+  runQuery: QueryExecutor,
+  userId: string,
+): Promise<SerializedTitleRow[]> {
   const result = await runQuery<SerializedTitleRow>(
     `
       SELECT pt.key, pt.label, pt.style
@@ -628,7 +658,16 @@ Add tests:
 ```js
 await runTest("profile title update selects unlocked title", async () => {
   const db = new AuthRoutesDb();
-  db.profileTitles = [{ key: "pirate_rookie", label: "Pirate Rookie", unlock_mode: "no_requirement", style: { text_color: "#e8e9ed" }, active: true, sort_order: 10 }];
+  db.profileTitles = [
+    {
+      key: "pirate_rookie",
+      label: "Pirate Rookie",
+      unlock_mode: "no_requirement",
+      style: { text_color: "#e8e9ed" },
+      active: true,
+      sort_order: 10,
+    },
+  ];
   const app = buildAuthRoutesTestApp(db);
   const response = await app.inject({
     method: "PUT",
@@ -642,7 +681,16 @@ await runTest("profile title update selects unlocked title", async () => {
 
 await runTest("profile title update rejects locked manual title", async () => {
   const db = new AuthRoutesDb();
-  db.profileTitles = [{ key: "founder_gold", label: "Founder", unlock_mode: "manual", style: { text_color: "#ffd76a" }, active: true, sort_order: 20 }];
+  db.profileTitles = [
+    {
+      key: "founder_gold",
+      label: "Founder",
+      unlock_mode: "manual",
+      style: { text_color: "#ffd76a" },
+      active: true,
+      sort_order: 20,
+    },
+  ];
   const app = buildAuthRoutesTestApp(db);
   const response = await app.inject({
     method: "PUT",
@@ -683,59 +731,87 @@ Expected: FAIL because route is not registered.
 In `src/routes/me.ts`, update imports:
 
 ```ts
-import { listUnlockedProfileTitles, updateProfileAvatar, updateProfileTitle } from "../repos/profiles.js";
-import { meRouteSchema, updateProfileAvatarRouteSchema, updateProfileTitleRouteSchema } from "../schemas/auth.js";
+import {
+  listUnlockedProfileTitles,
+  updateProfileAvatar,
+  updateProfileTitle,
+} from "../repos/profiles.js";
+import {
+  meRouteSchema,
+  updateProfileAvatarRouteSchema,
+  updateProfileTitleRouteSchema,
+} from "../schemas/auth.js";
 import { serializeTitleStyle } from "../auth/serializeUser.js";
 ```
 
 Update `/me` handler:
 
 ```ts
-app.get("/me", {
-  preHandler: requireAuth(runQuery),
-  schema: meRouteSchema,
-}, async (request) => {
-  const unlockedRows = await listUnlockedProfileTitles(runQuery, request.auth!.user.id);
-  return {
-    data: serializeUser({
-      ...request.auth!.user,
-      unlocked_titles: unlockedRows.map((title) => ({
-        key: title.key,
-        label: title.label,
-        style: serializeTitleStyle(title.style),
-      })),
-    }),
-  };
-});
-```
-
-Add `PUT` handler:
-
-```ts
-app.put("/me/profile/title", {
-  preHandler: requireAuth(runQuery),
-  schema: updateProfileTitleRouteSchema,
-}, async (request) => {
-  const body = request.body as { title_key: string | null };
-  const profile = await updateProfileTitle(runQuery, request.auth!.user.id, body.title_key);
-  const unlockedRows = await listUnlockedProfileTitles(runQuery, request.auth!.user.id);
-  const selected = unlockedRows.find((title) => title.key === profile.selected_title_key);
-  return {
-    data: {
-      user: serializeUser({
+app.get(
+  "/me",
+  {
+    preHandler: requireAuth(runQuery),
+    schema: meRouteSchema,
+  },
+  async (request) => {
+    const unlockedRows = await listUnlockedProfileTitles(
+      runQuery,
+      request.auth!.user.id,
+    );
+    return {
+      data: serializeUser({
         ...request.auth!.user,
-        selected_title_key: selected?.key ?? null,
-        selected_title_label: selected?.label ?? null,
-        selected_title_style: selected?.style ?? null,
         unlocked_titles: unlockedRows.map((title) => ({
           key: title.key,
           label: title.label,
           style: serializeTitleStyle(title.style),
         })),
       }),
-    },
-  };
-});
+    };
+  },
+);
+```
+
+Add `PUT` handler:
+
+```ts
+app.put(
+  "/me/profile/title",
+  {
+    preHandler: requireAuth(runQuery),
+    schema: updateProfileTitleRouteSchema,
+  },
+  async (request) => {
+    const body = request.body as { title_key: string | null };
+    const profile = await updateProfileTitle(
+      runQuery,
+      request.auth!.user.id,
+      body.title_key,
+    );
+    const unlockedRows = await listUnlockedProfileTitles(
+      runQuery,
+      request.auth!.user.id,
+    );
+    const selected = unlockedRows.find(
+      (title) => title.key === profile.selected_title_key,
+    );
+    return {
+      data: {
+        user: serializeUser({
+          ...request.auth!.user,
+          selected_title_key: selected?.key ?? null,
+          selected_title_label: selected?.label ?? null,
+          selected_title_style: selected?.style ?? null,
+          unlocked_titles: unlockedRows.map((title) => ({
+            key: title.key,
+            label: title.label,
+            style: serializeTitleStyle(title.style),
+          })),
+        }),
+      },
+    };
+  },
+);
 ```
 
 - [ ] **Step 4: Run auth verification**
@@ -797,11 +873,16 @@ test("updateProfileTitle puts selected title key", async () => {
     },
   });
 
-  const response = await client.updateProfileTitle({ title_key: "pirate_rookie" });
+  const response = await client.updateProfileTitle({
+    title_key: "pirate_rookie",
+  });
 
   assert.equal(requests[0].url, "https://auth.example/v1/me/profile/title");
   assert.equal(requests[0].init.method, "PUT");
-  assert.equal(requests[0].init.body, JSON.stringify({ title_key: "pirate_rookie" }));
+  assert.equal(
+    requests[0].init.body,
+    JSON.stringify({ title_key: "pirate_rookie" }),
+  );
   assert.equal(response.data.user.profile.title.key, "pirate_rookie");
 });
 ```
@@ -870,7 +951,11 @@ export function updateProfileTitle(
   input: UpdateProfileTitleInput,
   options: AuthRequestOptions = {},
 ) {
-  return authPut<UpdateProfileTitleResponse>("/me/profile/title", input, options);
+  return authPut<UpdateProfileTitleResponse>(
+    "/me/profile/title",
+    input,
+    options,
+  );
 }
 ```
 
@@ -922,7 +1007,9 @@ import { adminProfileTitleRoutes } from "./profileTitles.js";
 
 type QueryCall = { sql: string; params?: unknown[] };
 
-function createQueryExecutor(rowsByPattern: Array<{ pattern: RegExp; rows: unknown[] }>) {
+function createQueryExecutor(
+  rowsByPattern: Array<{ pattern: RegExp; rows: unknown[] }>,
+) {
   const calls: QueryCall[] = [];
   const queryExecutor = async <T>(sql: string, params?: unknown[]) => {
     calls.push({ sql, params });
@@ -934,17 +1021,45 @@ function createQueryExecutor(rowsByPattern: Array<{ pattern: RegExp; rows: unkno
 
 test("admin profile title routes resolve a user and list unlocks", async () => {
   const db = createQueryExecutor([
-    { pattern: /FROM auth\.users/u, rows: [{ id: "user-1", username: "tester", display_name: "Tester", email: "tester@example.com", selected_title_key: "pirate_rookie" }] },
-    { pattern: /FROM auth\.profile_titles/u, rows: [{ key: "pirate_rookie", label: "Pirate Rookie", unlock_mode: "no_requirement", style: { text_color: "#e8e9ed" }, active: true, sort_order: 10 }] },
+    {
+      pattern: /FROM auth\.users/u,
+      rows: [
+        {
+          id: "user-1",
+          username: "tester",
+          display_name: "Tester",
+          email: "tester@example.com",
+          selected_title_key: "pirate_rookie",
+        },
+      ],
+    },
+    {
+      pattern: /FROM auth\.profile_titles/u,
+      rows: [
+        {
+          key: "pirate_rookie",
+          label: "Pirate Rookie",
+          unlock_mode: "no_requirement",
+          style: { text_color: "#e8e9ed" },
+          active: true,
+          sort_order: 10,
+        },
+      ],
+    },
   ]);
   const app = Fastify();
   app.decorateRequest("admin", null);
   app.addHook("onRequest", async (request) => {
     request.admin = { email: "admin@example.com" };
   });
-  await app.register(adminProfileTitleRoutes, { queryExecutor: db.queryExecutor });
+  await app.register(adminProfileTitleRoutes, {
+    queryExecutor: db.queryExecutor,
+  });
 
-  const response = await app.inject({ method: "GET", url: "/profile-titles/users/tester@example.com" });
+  const response = await app.inject({
+    method: "GET",
+    url: "/profile-titles/users/tester@example.com",
+  });
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.json().data.user.email, "tester@example.com");
@@ -953,16 +1068,44 @@ test("admin profile title routes resolve a user and list unlocks", async () => {
 
 test("admin profile title routes grant manual title with admin email", async () => {
   const db = createQueryExecutor([
-    { pattern: /FROM auth\.users/u, rows: [{ id: "user-1", username: "tester", display_name: "Tester", email: "tester@example.com", selected_title_key: null }] },
-    { pattern: /FROM auth\.profile_titles/u, rows: [{ key: "founder_gold", label: "Founder", unlock_mode: "manual", style: { text_color: "#ffd76a" }, active: true, sort_order: 20 }] },
-    { pattern: /INSERT INTO auth\.user_title_unlocks/u, rows: [{ id: "unlock-1" }] },
+    {
+      pattern: /FROM auth\.users/u,
+      rows: [
+        {
+          id: "user-1",
+          username: "tester",
+          display_name: "Tester",
+          email: "tester@example.com",
+          selected_title_key: null,
+        },
+      ],
+    },
+    {
+      pattern: /FROM auth\.profile_titles/u,
+      rows: [
+        {
+          key: "founder_gold",
+          label: "Founder",
+          unlock_mode: "manual",
+          style: { text_color: "#ffd76a" },
+          active: true,
+          sort_order: 20,
+        },
+      ],
+    },
+    {
+      pattern: /INSERT INTO auth\.user_title_unlocks/u,
+      rows: [{ id: "unlock-1" }],
+    },
   ]);
   const app = Fastify();
   app.decorateRequest("admin", null);
   app.addHook("onRequest", async (request) => {
     request.admin = { email: "admin@example.com" };
   });
-  await app.register(adminProfileTitleRoutes, { queryExecutor: db.queryExecutor });
+  await app.register(adminProfileTitleRoutes, {
+    queryExecutor: db.queryExecutor,
+  });
 
   const response = await app.inject({
     method: "POST",
@@ -971,7 +1114,10 @@ test("admin profile title routes grant manual title with admin email", async () 
   });
 
   assert.equal(response.statusCode, 200);
-  assert.equal(db.calls.some((call) => call.params?.includes("admin@example.com")), true);
+  assert.equal(
+    db.calls.some((call) => call.params?.includes("admin@example.com")),
+    true,
+  );
 });
 ```
 
@@ -1030,7 +1176,10 @@ const userWhereSql = `
   OR lower(u.email) = lower($1)
 `;
 
-async function resolveUser(runQuery: QueryExecutor, identity: string): Promise<AdminUserRow | null> {
+async function resolveUser(
+  runQuery: QueryExecutor,
+  identity: string,
+): Promise<AdminUserRow | null> {
   const result = await runQuery<AdminUserRow>(
     `
       SELECT
@@ -1049,7 +1198,10 @@ async function resolveUser(runQuery: QueryExecutor, identity: string): Promise<A
   return result.rows[0] ?? null;
 }
 
-async function listTitlesForUser(runQuery: QueryExecutor, userId: string): Promise<AdminTitleRow[]> {
+async function listTitlesForUser(
+  runQuery: QueryExecutor,
+  userId: string,
+): Promise<AdminTitleRow[]> {
   const result = await runQuery<AdminTitleRow>(
     `
       SELECT
@@ -1074,37 +1226,57 @@ async function listTitlesForUser(runQuery: QueryExecutor, userId: string): Promi
   return result.rows;
 }
 
-export async function adminProfileTitleRoutes(app: FastifyInstance, options: Options = {}) {
+export async function adminProfileTitleRoutes(
+  app: FastifyInstance,
+  options: Options = {},
+) {
   const runQuery = options.queryExecutor ?? query;
 
-  app.get("/profile-titles", { schema: adminProfileTitleCatalogRouteSchema }, async () => ({
-    data: (await runQuery<AdminTitleRow>(
-      `SELECT key, label, unlock_mode, style, active, sort_order FROM auth.profile_titles ORDER BY sort_order ASC, key ASC`,
-    )).rows,
-  }));
+  app.get(
+    "/profile-titles",
+    { schema: adminProfileTitleCatalogRouteSchema },
+    async () => ({
+      data: (
+        await runQuery<AdminTitleRow>(
+          `SELECT key, label, unlock_mode, style, active, sort_order FROM auth.profile_titles ORDER BY sort_order ASC, key ASC`,
+        )
+      ).rows,
+    }),
+  );
 
-  app.get("/profile-titles/users/:identity", { schema: adminProfileTitleUserRouteSchema }, async (request, reply) => {
-    const { identity } = request.params as { identity: string };
-    const user = await resolveUser(runQuery, identity);
-    if (!user) return replyWithError(reply, 404, "User not found");
-    const titles = await listTitlesForUser(runQuery, user.id);
-    return { data: { user, titles } };
-  });
+  app.get(
+    "/profile-titles/users/:identity",
+    { schema: adminProfileTitleUserRouteSchema },
+    async (request, reply) => {
+      const { identity } = request.params as { identity: string };
+      const user = await resolveUser(runQuery, identity);
+      if (!user) return replyWithError(reply, 404, "User not found");
+      const titles = await listTitlesForUser(runQuery, user.id);
+      return { data: { user, titles } };
+    },
+  );
 
-  app.post("/profile-titles/users/:identity/title-unlocks", { schema: adminGrantProfileTitleRouteSchema }, async (request, reply) => {
-    const { identity } = request.params as { identity: string };
-    const body = request.body as { title_key?: unknown; note?: unknown };
-    if (typeof body.title_key !== "string" || body.title_key.trim().length === 0) {
-      return replyWithError(reply, 400, "title_key is required");
-    }
-    const user = await resolveUser(runQuery, identity);
-    if (!user) return replyWithError(reply, 404, "User not found");
-    const adminEmail = request.admin?.email;
-    if (!adminEmail) return reply.code(401).send(adminError(401, "Missing admin identity"));
+  app.post(
+    "/profile-titles/users/:identity/title-unlocks",
+    { schema: adminGrantProfileTitleRouteSchema },
+    async (request, reply) => {
+      const { identity } = request.params as { identity: string };
+      const body = request.body as { title_key?: unknown; note?: unknown };
+      if (
+        typeof body.title_key !== "string" ||
+        body.title_key.trim().length === 0
+      ) {
+        return replyWithError(reply, 400, "title_key is required");
+      }
+      const user = await resolveUser(runQuery, identity);
+      if (!user) return replyWithError(reply, 404, "User not found");
+      const adminEmail = request.admin?.email;
+      if (!adminEmail)
+        return reply.code(401).send(adminError(401, "Missing admin identity"));
 
-    try {
-      await runQuery(
-        `
+      try {
+        await runQuery(
+          `
           INSERT INTO auth.user_title_unlocks (user_id, title_key, granted_by_admin_email, note)
           SELECT $1, pt.key, $3, $4
           FROM auth.profile_titles pt
@@ -1117,39 +1289,52 @@ export async function adminProfileTitleRoutes(app: FastifyInstance, options: Opt
             note = EXCLUDED.note,
             updated_at = now()
         `,
-        [user.id, body.title_key.trim(), adminEmail, body.note == null ? null : String(body.note)],
-      );
-    } catch (error) {
-      return replyWithError(reply, 400, getErrorMessage(error));
-    }
-    return { data: { ok: true } };
-  });
+          [
+            user.id,
+            body.title_key.trim(),
+            adminEmail,
+            body.note == null ? null : String(body.note),
+          ],
+        );
+      } catch (error) {
+        return replyWithError(reply, 400, getErrorMessage(error));
+      }
+      return { data: { ok: true } };
+    },
+  );
 
-  app.delete("/profile-titles/users/:identity/title-unlocks/:titleKey", { schema: adminRevokeProfileTitleRouteSchema }, async (request, reply) => {
-    const { identity, titleKey } = request.params as { identity: string; titleKey: string };
-    const user = await resolveUser(runQuery, identity);
-    if (!user) return replyWithError(reply, 404, "User not found");
-    await runQuery(
-      `
+  app.delete(
+    "/profile-titles/users/:identity/title-unlocks/:titleKey",
+    { schema: adminRevokeProfileTitleRouteSchema },
+    async (request, reply) => {
+      const { identity, titleKey } = request.params as {
+        identity: string;
+        titleKey: string;
+      };
+      const user = await resolveUser(runQuery, identity);
+      if (!user) return replyWithError(reply, 404, "User not found");
+      await runQuery(
+        `
         UPDATE auth.user_title_unlocks
         SET revoked_at = COALESCE(revoked_at, now()), updated_at = now()
         WHERE user_id = $1
           AND title_key = $2
           AND revoked_at IS NULL
       `,
-      [user.id, titleKey],
-    );
-    await runQuery(
-      `
+        [user.id, titleKey],
+      );
+      await runQuery(
+        `
         UPDATE auth.user_profiles
         SET selected_title_key = NULL, updated_at = now()
         WHERE user_id = $1
           AND selected_title_key = $2
       `,
-      [user.id, titleKey],
-    );
-    return { data: { ok: true } };
-  });
+        [user.id, titleKey],
+      );
+      return { data: { ok: true } };
+    },
+  );
 }
 ```
 
@@ -1265,14 +1450,18 @@ Add:
 export function useProfileTitleCatalog() {
   return useQuery({
     queryKey: queryKeys.profileTitleCatalog,
-    queryFn: () => adminFetch<AdminProfileTitleCatalogResponse>("/profile-titles"),
+    queryFn: () =>
+      adminFetch<AdminProfileTitleCatalogResponse>("/profile-titles"),
   });
 }
 
 export function useProfileTitleUser(identity: string) {
   return useQuery({
     queryKey: queryKeys.profileTitleUser(identity),
-    queryFn: () => adminFetch<AdminProfileTitleUserResponse>(`/profile-titles/users/${encodeURIComponent(identity)}`),
+    queryFn: () =>
+      adminFetch<AdminProfileTitleUserResponse>(
+        `/profile-titles/users/${encodeURIComponent(identity)}`,
+      ),
     enabled: identity.trim().length > 0,
   });
 }
@@ -1281,12 +1470,17 @@ export function useGrantProfileTitleMutation(identity: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { title_key: string; note?: string | null }) =>
-      adminFetch<MutationOkResponse>(`/profile-titles/users/${encodeURIComponent(identity)}/title-unlocks`, {
-        method: "POST",
-        body: input,
-      }),
+      adminFetch<MutationOkResponse>(
+        `/profile-titles/users/${encodeURIComponent(identity)}/title-unlocks`,
+        {
+          method: "POST",
+          body: input,
+        },
+      ),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.profileTitleUser(identity) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.profileTitleUser(identity),
+      });
     },
   });
 }
@@ -1300,7 +1494,9 @@ export function useRevokeProfileTitleMutation(identity: string) {
         { method: "DELETE" },
       ),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.profileTitleUser(identity) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.profileTitleUser(identity),
+      });
     },
   });
 }
@@ -1312,7 +1508,12 @@ Create `src/pages/UnlockManager.tsx`:
 
 ```tsx
 import { useMemo, useState } from "react";
-import { useGrantProfileTitleMutation, useProfileTitleCatalog, useProfileTitleUser, useRevokeProfileTitleMutation } from "../api/hooks";
+import {
+  useGrantProfileTitleMutation,
+  useProfileTitleCatalog,
+  useProfileTitleUser,
+  useRevokeProfileTitleMutation,
+} from "../api/hooks";
 import { Button } from "../components/shared/Button";
 import { TextAreaField, TextField } from "../components/shared/Form";
 import { StatusBadge } from "../components/shared/StatusBadge";
@@ -1328,22 +1529,40 @@ export function UnlockManagerPage() {
   const revokeTitle = useRevokeProfileTitleMutation(identity);
 
   const manualTitles = useMemo(
-    () => (catalogQuery.data?.data ?? []).filter((title) => title.unlock_mode === "manual" && title.active),
+    () =>
+      (catalogQuery.data?.data ?? []).filter(
+        (title) => title.unlock_mode === "manual" && title.active,
+      ),
     [catalogQuery.data],
   );
 
   async function handleGrant() {
-    await grantTitle.mutateAsync({ title_key: titleKey, note: note.trim() || null });
+    await grantTitle.mutateAsync({
+      title_key: titleKey,
+      note: note.trim() || null,
+    });
     setNote("");
   }
 
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-border bg-bg-card p-5">
-        <h2 className="font-display text-xl text-text-primary">Unlock Manager</h2>
+        <h2 className="font-display text-xl text-text-primary">
+          Unlock Manager
+        </h2>
         <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-          <TextField label="Exact user ID, email, or username" onChange={(event) => setIdentityDraft(event.target.value)} value={identityDraft} />
-          <Button disabled={!identityDraft.trim()} onClick={() => setIdentity(identityDraft.trim())} type="button">Load User</Button>
+          <TextField
+            label="Exact user ID, email, or username"
+            onChange={(event) => setIdentityDraft(event.target.value)}
+            value={identityDraft}
+          />
+          <Button
+            disabled={!identityDraft.trim()}
+            onClick={() => setIdentity(identityDraft.trim())}
+            type="button"
+          >
+            Load User
+          </Button>
         </div>
       </section>
 
@@ -1351,38 +1570,89 @@ export function UnlockManagerPage() {
         <section className="rounded-lg border border-border bg-bg-card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h3 className="font-display text-lg text-text-primary">{userQuery.data.data.user.display_name}</h3>
-              <p className="text-sm text-text-secondary">{userQuery.data.data.user.email ?? userQuery.data.data.user.username}</p>
+              <h3 className="font-display text-lg text-text-primary">
+                {userQuery.data.data.user.display_name}
+              </h3>
+              <p className="text-sm text-text-secondary">
+                {userQuery.data.data.user.email ??
+                  userQuery.data.data.user.username}
+              </p>
             </div>
-            <StatusBadge tone="accent">Active: {userQuery.data.data.user.selected_title_key ?? "None"}</StatusBadge>
+            <StatusBadge tone="accent">
+              Active: {userQuery.data.data.user.selected_title_key ?? "None"}
+            </StatusBadge>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)_auto]">
             <label className="grid gap-1 text-sm text-text-secondary">
               Manual title
-              <select className="rounded border border-border bg-bg-input px-3 py-2 text-text-primary" onChange={(event) => setTitleKey(event.target.value)} value={titleKey}>
+              <select
+                className="rounded border border-border bg-bg-input px-3 py-2 text-text-primary"
+                onChange={(event) => setTitleKey(event.target.value)}
+                value={titleKey}
+              >
                 <option value="">Select title</option>
-                {manualTitles.map((title) => <option key={title.key} value={title.key}>{title.label} ({title.key})</option>)}
+                {manualTitles.map((title) => (
+                  <option key={title.key} value={title.key}>
+                    {title.label} ({title.key})
+                  </option>
+                ))}
               </select>
             </label>
-            <TextAreaField label="Note" onChange={(event) => setNote(event.target.value)} value={note} />
-            <Button disabled={!titleKey || grantTitle.isPending} onClick={() => void handleGrant()} type="button">Grant</Button>
+            <TextAreaField
+              label="Note"
+              onChange={(event) => setNote(event.target.value)}
+              value={note}
+            />
+            <Button
+              disabled={!titleKey || grantTitle.isPending}
+              onClick={() => void handleGrant()}
+              type="button"
+            >
+              Grant
+            </Button>
           </div>
 
           <div className="mt-6 overflow-hidden rounded border border-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-bg-secondary text-text-muted">
-                <tr><th className="px-3 py-2">Title</th><th className="px-3 py-2">Mode</th><th className="px-3 py-2">State</th><th className="px-3 py-2" /></tr>
+                <tr>
+                  <th className="px-3 py-2">Title</th>
+                  <th className="px-3 py-2">Mode</th>
+                  <th className="px-3 py-2">State</th>
+                  <th className="px-3 py-2" />
+                </tr>
               </thead>
               <tbody>
                 {userQuery.data.data.titles.map((title) => (
                   <tr key={title.key} className="border-t border-border">
-                    <td className="px-3 py-2 text-text-primary">{title.label} <span className="text-text-muted">({title.key})</span></td>
-                    <td className="px-3 py-2 text-text-secondary">{title.unlock_mode}</td>
-                    <td className="px-3 py-2">{title.unlocked || title.unlock_mode === "no_requirement" ? <StatusBadge tone="success">Available</StatusBadge> : <StatusBadge tone="muted">Locked</StatusBadge>}</td>
+                    <td className="px-3 py-2 text-text-primary">
+                      {title.label}{" "}
+                      <span className="text-text-muted">({title.key})</span>
+                    </td>
+                    <td className="px-3 py-2 text-text-secondary">
+                      {title.unlock_mode}
+                    </td>
+                    <td className="px-3 py-2">
+                      {title.unlocked ||
+                      title.unlock_mode === "no_requirement" ? (
+                        <StatusBadge tone="success">Available</StatusBadge>
+                      ) : (
+                        <StatusBadge tone="muted">Locked</StatusBadge>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right">
                       {title.unlock_mode === "manual" && title.unlocked ? (
-                        <Button disabled={revokeTitle.isPending} onClick={() => void revokeTitle.mutateAsync(title.key)} tone="danger" type="button">Revoke</Button>
+                        <Button
+                          disabled={revokeTitle.isPending}
+                          onClick={() =>
+                            void revokeTitle.mutateAsync(title.key)
+                          }
+                          tone="danger"
+                          type="button"
+                        >
+                          Revoke
+                        </Button>
                       ) : null}
                     </td>
                   </tr>
@@ -1468,12 +1738,16 @@ function safeColor(value: string | null | undefined, fallback: string) {
   return value && hexColorPattern.test(value) ? value : fallback;
 }
 
-export function profileTitleStyle(style: AuthProfileTitleStyle | null | undefined): CSSProperties {
+export function profileTitleStyle(
+  style: AuthProfileTitleStyle | null | undefined,
+): CSSProperties {
   if (!style) return {};
   const color = safeColor(style.text_color, "#e8e9ed");
-  const fontWeight = typeof style.font_weight === "number" ? style.font_weight : 700;
+  const fontWeight =
+    typeof style.font_weight === "number" ? style.font_weight : 700;
   if (style.gradient) {
-    const angle = typeof style.gradient.angle === "number" ? style.gradient.angle : 90;
+    const angle =
+      typeof style.gradient.angle === "number" ? style.gradient.angle : 90;
     const from = safeColor(style.gradient.from, color);
     const via = safeColor(style.gradient.via ?? null, "");
     const to = safeColor(style.gradient.to, color);
@@ -1486,13 +1760,17 @@ export function profileTitleStyle(style: AuthProfileTitleStyle | null | undefine
       WebkitBackgroundClip: "text",
       backgroundClip: "text",
       WebkitTextFillColor: "transparent",
-      textShadow: style.glow_color ? `0 0 12px ${safeColor(style.glow_color, color)}` : undefined,
+      textShadow: style.glow_color
+        ? `0 0 12px ${safeColor(style.glow_color, color)}`
+        : undefined,
     };
   }
   return {
     color,
     fontWeight,
-    textShadow: style.glow_color ? `0 0 12px ${safeColor(style.glow_color, color)}` : undefined,
+    textShadow: style.glow_color
+      ? `0 0 12px ${safeColor(style.glow_color, color)}`
+      : undefined,
   };
 }
 ```
@@ -1509,7 +1787,9 @@ import { profileTitleStyle } from "../account/profileTitleStyle";
 Add state:
 
 ```ts
-const [selectedTitleKey, setSelectedTitleKey] = useState<string | null>(authSession.user.profile.title?.key ?? null);
+const [selectedTitleKey, setSelectedTitleKey] = useState<string | null>(
+  authSession.user.profile.title?.key ?? null,
+);
 const unlockedTitles = authSession.user.profile.unlocked_titles ?? [];
 ```
 
@@ -1521,9 +1801,13 @@ async function handleSaveTitle() {
   setError(null);
   try {
     const response = await updateProfileTitle({ title_key: selectedTitleKey });
-    setAuthSession((current) => current === null ? current : { ...current, user: response.data.user });
+    setAuthSession((current) =>
+      current === null ? current : { ...current, user: response.data.user },
+    );
   } catch (saveError) {
-    setError(saveError instanceof Error ? saveError.message : "Could not save title.");
+    setError(
+      saveError instanceof Error ? saveError.message : "Could not save title.",
+    );
   } finally {
     setSaving(false);
   }
@@ -1536,11 +1820,18 @@ Add UI near avatar preview:
 <section className="grid gap-3 rounded-lg border border-border bg-bg-secondary p-4">
   <h2 className="font-display text-lg text-text-primary">Profile title</h2>
   <div className="flex items-center gap-3">
-    <AvatarPreview avatar={authSession.user.profile.avatar} label={`${displayName} avatar`} className="h-14 w-14" />
+    <AvatarPreview
+      avatar={authSession.user.profile.avatar}
+      label={`${displayName} avatar`}
+      className="h-14 w-14"
+    />
     <div>
       <div className="text-text-primary">{displayName}</div>
       {authSession.user.profile.title ? (
-        <div className="text-sm" style={profileTitleStyle(authSession.user.profile.title.style)}>
+        <div
+          className="text-sm"
+          style={profileTitleStyle(authSession.user.profile.title.style)}
+        >
           {authSession.user.profile.title.label}
         </div>
       ) : (
@@ -1555,7 +1846,9 @@ Add UI near avatar preview:
   >
     <option value="">No title</option>
     {unlockedTitles.map((title) => (
-      <option key={title.key} value={title.key}>{title.label}</option>
+      <option key={title.key} value={title.key}>
+        {title.label}
+      </option>
     ))}
   </select>
   <button
@@ -1650,7 +1943,12 @@ export interface PlayerTitleView {
     text_color: string;
     font_family?: "display" | "body" | "mono";
     font_weight?: number;
-    gradient?: { from: string; via?: string; to: string; angle?: number } | null;
+    gradient?: {
+      from: string;
+      via?: string;
+      to: string;
+      angle?: number;
+    } | null;
     outline_color?: string | null;
     glow_color?: string | null;
     animation?: "none" | "shine" | "pulse";
@@ -1663,8 +1961,10 @@ Add `title?: PlayerTitleView` to `MatchSnapshot.playerLabels` entries.
 In `packages/client/src/view-model.ts`, add `selfTitle?: PlayerTitleView`, `opponentTitle?: PlayerTitleView`, helper:
 
 ```ts
-const playerTitle = (snapshot: MatchSnapshot, playerId: PlayerId): PlayerTitleView | undefined =>
-  snapshot.playerLabels?.[playerId]?.title;
+const playerTitle = (
+  snapshot: MatchSnapshot,
+  playerId: PlayerId,
+): PlayerTitleView | undefined => snapshot.playerLabels?.[playerId]?.title;
 ```
 
 - [ ] **Step 4: Add auth subject token support**
@@ -1685,7 +1985,8 @@ In `packages/client/src/react/use-sim-auth.ts`, map:
 
 ```ts
 const sessionTitle = (session: SimAuthSession): PlayerTitleView | undefined =>
-  session.user.profile?.title === null || session.user.profile?.title === undefined
+  session.user.profile?.title === null ||
+  session.user.profile?.title === undefined
     ? undefined
     : {
         key: session.user.profile.title.key,
@@ -1707,11 +2008,16 @@ In `BoardLayout.tsx`, pass `title={board.selfTitle}` and `title={board.opponentT
 In `PlayerSummaryLabel.tsx`, add `title?: PlayerTitleView`; render:
 
 ```tsx
-{title === undefined ? null : (
-  <span className="player-summary-title" style={playerTitleStyle(title.style)}>
-    {title.label}
-  </span>
-)}
+{
+  title === undefined ? null : (
+    <span
+      className="player-summary-title"
+      style={playerTitleStyle(title.style)}
+    >
+      {title.label}
+    </span>
+  );
+}
 ```
 
 Add local bounded `playerTitleStyle` helper. Reuse the same color/gradient validation approach from web.

@@ -150,18 +150,21 @@ export const useFloatingWindowState = ({
     });
   }, [layoutScope, windowLayoutStore]);
 
-  const activateFloatingWindow = useCallback((key: string): void => {
-    if (layoutScope === undefined) {
-      return;
-    }
-    setFloatingWindowRects((current) =>
-      floatingWindowStateAfterActivation({
-        current,
-        scope: layoutScope,
-        windowKey: key,
-      }),
-    );
-  }, [layoutScope]);
+  const activateFloatingWindow = useCallback(
+    (key: string): void => {
+      if (layoutScope === undefined) {
+        return;
+      }
+      setFloatingWindowRects((current) =>
+        floatingWindowStateAfterActivation({
+          current,
+          scope: layoutScope,
+          windowKey: key,
+        }),
+      );
+    },
+    [layoutScope],
+  );
 
   const updateFloatingWindowRect = useCallback(
     (key: string, rect: WindowRect): void => {

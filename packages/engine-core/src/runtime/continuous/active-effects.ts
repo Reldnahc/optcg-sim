@@ -166,7 +166,10 @@ export const allContinuousEffects = (
     (effect) => !sourceEffectsAreInvalidated(state, effect),
   );
   try {
-    return [...stored, ...deriveImplementedDslPermanentContinuousEffects(state)];
+    return [
+      ...stored,
+      ...deriveImplementedDslPermanentContinuousEffects(state),
+    ];
   } catch (error) {
     if (error instanceof TypeError) {
       return stored;

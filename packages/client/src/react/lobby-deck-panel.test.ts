@@ -139,10 +139,7 @@ describe("lobby deck panel", () => {
       }),
     );
 
-    assert.match(
-      html,
-      /deck-loadout-option is-selected[\s\S]*Luffy Life/u,
-    );
+    assert.match(html, /deck-loadout-option is-selected[\s\S]*Luffy Life/u);
     assert.doesNotMatch(
       html,
       /deck-loadout-option is-selected[\s\S]*Enel Yellow/u,

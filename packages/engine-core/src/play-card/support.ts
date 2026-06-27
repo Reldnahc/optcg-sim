@@ -8,9 +8,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
-import {
-  deriveImplementedDslHandContinuousEffects,
-} from "../runtime/continuous/continuous.js";
+import { deriveImplementedDslHandContinuousEffects } from "../runtime/continuous/continuous.js";
 import { allContinuousEffects } from "../runtime/continuous/active-effects.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { evaluateEffectBlockRuntimeSupport } from "../effect-runtime-admission.js";
