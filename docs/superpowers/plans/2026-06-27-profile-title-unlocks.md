@@ -142,7 +142,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS user_title_unlocks_active_unique_idx
   WHERE revoked_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS user_title_unlocks_user_active_idx
-  ON auth.user_title_unlocks(user_id, revoked_at, title_key);
+  ON auth.user_title_unlocks(user_id, title_key)
+  WHERE revoked_at IS NULL;
 
 INSERT INTO auth.profile_titles (key, label, unlock_mode, style, active, sort_order)
 VALUES
