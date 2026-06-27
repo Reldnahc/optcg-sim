@@ -189,6 +189,29 @@ describe("control rail window dock", () => {
     assert.match(styles, /\.control-dock-window-grab-nub\s*\{/u);
   });
 
+  test("drop target feedback visibly changes the control dock surface", async () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        dockActive: true,
+        onAction: () => undefined,
+        onHome: () => undefined,
+      }),
+    );
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "controls.css"),
+      "utf8",
+    );
+
+    assert.match(markup, /control-rail is-dock-active/u);
+    assert.match(
+      styles,
+      /\.control-rail\.is-dock-active \.control-window-dock\s*\{[^}]*border-color:\s*rgba\(89,\s*255,\s*143,\s*0\.9\);[^}]*color:\s*rgba\(89,\s*255,\s*143,\s*0\.95\);[^}]*background:\s*rgba\(39,\s*95,\s*62,\s*0\.42\);/u,
+    );
+  });
+
   test("renders a single docked window as one draggable tab", async () => {
     const markup = renderToStaticMarkup(
       createElement(ControlRail, {
