@@ -182,6 +182,53 @@ describe("PlayerSummaryLabel", () => {
     );
   });
 
+  test("styles timers as a separate bottom-right playmat clock block", async () => {
+    const [controlStyles, playmatStyles] = await Promise.all([
+      readFile(join(sourceDirectory, "styles", "controls.css"), "utf8"),
+      readFile(join(sourceDirectory, "styles", "playmat.css"), "utf8"),
+    ]);
+    const timerRule = controlStyles.match(
+      /\.player-timers\s*\{(?<body>[^}]*)\}/u,
+    );
+    const timerRuleBody = timerRule?.groups?.["body"];
+    const gameTimerRule = controlStyles.match(
+      /\.game-timer\s*\{(?<body>[^}]*)\}/u,
+    );
+    const gameTimerRuleBody = gameTimerRule?.groups?.["body"];
+    const disconnectRule = controlStyles.match(
+      /\.disconnect-timer\s*\{(?<body>[^}]*)\}/u,
+    );
+    const disconnectRuleBody = disconnectRule?.groups?.["body"];
+
+    assert.ok(timerRuleBody);
+    assert.ok(gameTimerRuleBody);
+    assert.ok(disconnectRuleBody);
+    assert.match(
+      playmatStyles,
+      /\.playmat-summary\s*\{[^}]*position:\s*relative;/u,
+    );
+    assert.match(timerRuleBody, /position:\s*absolute;/u);
+    assert.match(timerRuleBody, /right:\s*clamp\(8px,/u);
+    assert.match(timerRuleBody, /bottom:\s*clamp\(8px,/u);
+    assert.match(timerRuleBody, /justify-items:\s*end;/u);
+    assert.match(
+      timerRuleBody,
+      /background:\s*rgba\(8,\s*10,\s*14,\s*0\.72\);/u,
+    );
+    assert.doesNotMatch(timerRuleBody, /var\(--control-/u);
+    assert.match(
+      gameTimerRuleBody,
+      /font-size:\s*clamp\(20px,\s*calc\(var\(--card-height\) \/ 5\.8\),\s*31px\);/u,
+    );
+    assert.match(gameTimerRuleBody, /font-weight:\s*800;/u);
+    assert.doesNotMatch(gameTimerRuleBody, /var\(--control-/u);
+    assert.match(disconnectRuleBody, /border-radius:\s*999px;/u);
+    assert.match(
+      disconnectRuleBody,
+      /background:\s*rgba\(177,\s*45,\s*54,\s*0\.3\);/u,
+    );
+  });
+
   test("renders no profile title when one is not provided", () => {
     const markup = renderToStaticMarkup(
       createElement(PlayerSummaryLabel, { label: "Tester" }),
