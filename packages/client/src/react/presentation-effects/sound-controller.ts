@@ -45,6 +45,7 @@ const defaultAudioFactory: PresentationAudioFactory = (url) => {
 
 let sharedContext: BrowserAudioContext | undefined;
 let lastPlayedIntentId: string | undefined;
+const maxSoundIntentsPerBatch = 3;
 
 const context = (): BrowserAudioContext | undefined => {
   if (sharedContext !== undefined) {
@@ -141,7 +142,7 @@ export const playPresentationSoundIntents = (
   if (!resolvedOptions.enabled) {
     return;
   }
-  for (const intent of intents) {
+  for (const intent of intents.slice(0, maxSoundIntentsPerBatch)) {
     if (intent.id === lastPlayedIntentId) {
       continue;
     }

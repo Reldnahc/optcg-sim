@@ -83,4 +83,50 @@ describe("presentation sound planner", () => {
       [{ id: "sound:move-1", cue: "move" }],
     );
   });
+
+  test("coalesces simultaneous DON attachment movements into one movement cue", () => {
+    assert.deepEqual(
+      planSoundIntents([
+        movement({
+          id: "attach-don-1",
+          fromZoneKey: "self:costArea",
+          toZoneKey: "self:leaderArea",
+        }),
+        movement({
+          id: "attach-don-2",
+          fromZoneKey: "self:costArea",
+          toZoneKey: "self:leaderArea",
+        }),
+        movement({
+          id: "attach-don-3",
+          fromZoneKey: "self:costArea",
+          toZoneKey: "self:leaderArea",
+        }),
+      ]),
+      [{ id: "sound:movement-burst:move", cue: "move" }],
+    );
+  });
+
+  test("uses one trash cue when a trashed character also moves attached DON", () => {
+    assert.deepEqual(
+      planSoundIntents([
+        movement({
+          id: "character-trash",
+          fromZoneKey: "self:characterArea",
+          toZoneKey: "self:trash",
+        }),
+        movement({
+          id: "attached-don-1",
+          fromZoneKey: "self:characterArea",
+          toZoneKey: "self:costArea",
+        }),
+        movement({
+          id: "attached-don-2",
+          fromZoneKey: "self:characterArea",
+          toZoneKey: "self:costArea",
+        }),
+      ]),
+      [{ id: "sound:movement-burst:trash", cue: "trash" }],
+    );
+  });
 });

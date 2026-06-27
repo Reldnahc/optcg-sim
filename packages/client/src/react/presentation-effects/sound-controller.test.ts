@@ -43,4 +43,33 @@ describe("presentation sound controller", () => {
 
     assert.deepEqual(played, [{ url: "/sounds/draw.wav", volume: 0.16 }]);
   });
+
+  test("caps one playback batch so stacked cues cannot all fire at once", () => {
+    const played: string[] = [];
+
+    playPresentationSoundIntents(
+      [
+        { id: "sound-controller-cap-1", cue: "draw" },
+        { id: "sound-controller-cap-2", cue: "play" },
+        { id: "sound-controller-cap-3", cue: "trash" },
+        { id: "sound-controller-cap-4", cue: "move" },
+      ],
+      {
+        assetUrls,
+        audioFactory: (url) => ({
+          volume: 1,
+          currentTime: 0,
+          play: () => {
+            played.push(url);
+          },
+        }),
+      },
+    );
+
+    assert.deepEqual(played, [
+      "/sounds/draw.wav",
+      "/sounds/play.wav",
+      "/sounds/trash.wav",
+    ]);
+  });
 });
