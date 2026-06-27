@@ -451,6 +451,7 @@ export const BoardLayout = ({
                 <PlayerSummaryLabel
                   label={board.opponentLabel}
                   avatar={board.opponentAvatar}
+                  title={board.opponentTitle}
                   status={board.opponentConnectionStatus}
                   timer={board.opponentTimer}
                 />
@@ -570,6 +571,7 @@ export const BoardLayout = ({
                 <PlayerSummaryLabel
                   label={board.selfLabel}
                   avatar={board.selfAvatar}
+                  title={board.selfTitle}
                   status={board.selfConnectionStatus}
                   timer={board.selfTimer}
                 />

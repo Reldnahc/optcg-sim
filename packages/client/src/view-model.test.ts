@@ -192,6 +192,64 @@ describe("board view model", () => {
     });
   });
 
+  test("projects player profile titles from the match snapshot", () => {
+    const snapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      playerLabels: {
+        [p1]: {
+          title: {
+            key: "regional-winner",
+            label: "Regional Winner",
+            style: { text_color: "#fde68a", font_weight: 800 },
+          },
+        },
+        [p2]: {
+          title: {
+            key: "store-champion",
+            label: "Store Champion",
+            style: {
+              gradient: {
+                from: "#38bdf8",
+                to: "#a78bfa",
+                angle: 120,
+              },
+            },
+          },
+        },
+      },
+      players: {
+        [p1]: {
+          view: minimalView(),
+          actions: [],
+        },
+      },
+    } as MatchSnapshot;
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(model.selfTitle, {
+      key: "regional-winner",
+      label: "Regional Winner",
+      style: { text_color: "#fde68a", font_weight: 800 },
+    });
+    assert.deepEqual(model.opponentTitle, {
+      key: "store-champion",
+      label: "Store Champion",
+      style: {
+        gradient: {
+          from: "#38bdf8",
+          to: "#a78bfa",
+          angle: 120,
+        },
+      },
+    });
+  });
+
   test("projects game and disconnect timers for both player summaries", () => {
     const view = minimalView();
     view.timers = {

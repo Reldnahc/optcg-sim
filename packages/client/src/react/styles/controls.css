@@ -129,6 +129,23 @@
   white-space: nowrap;
 }
 
+.player-profile-title {
+  display: inline-block;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(42%, 16ch);
+  border: max(1px, calc(var(--card-outline-thin) * 0.45)) solid
+    rgba(246, 232, 209, 0.28);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.28);
+  padding: 0.08em 0.42em;
+  overflow: hidden;
+  font-size: 0.5em;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .connection-status {
   flex: 0 0 auto;
   width: calc(var(--control-title-font-size) * 0.44);

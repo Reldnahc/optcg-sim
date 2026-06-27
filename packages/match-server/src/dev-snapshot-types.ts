@@ -92,6 +92,24 @@ export interface DevPlayerAvatarView {
   };
 }
 
+export interface DevPlayerProfileTitleView {
+  key: string;
+  label: string;
+  style: {
+    text_color?: string;
+    font_family?: "display" | "body" | "mono";
+    font_weight?: number;
+    gradient?: {
+      from: string;
+      via?: string;
+      to: string;
+      angle?: number;
+    };
+    outline_color?: string;
+    glow_color?: string;
+  };
+}
+
 export interface DevMatchSnapshot {
   stateSeq: number;
   actionSeq: number;
@@ -106,6 +124,7 @@ export interface DevMatchSnapshot {
         displayName?: string;
         connectionStatus?: "connected" | "disconnected";
         avatar?: DevPlayerAvatarView;
+        title?: DevPlayerProfileTitleView;
       }
     >
   >;

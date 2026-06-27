@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CSSProperties, JSX, SyntheticEvent } from "react";
 
-import type { PlayerAvatarView } from "../transport.js";
+import type { PlayerAvatarView, PlayerProfileTitleView } from "../transport.js";
 import type { PlayerSummaryTimerModel } from "../view-model.js";
 
 type AvatarCrop = PlayerAvatarView["crop"];
@@ -55,6 +55,91 @@ const loadedImageAspectRatio = (image: HTMLImageElement): number => {
   return image.naturalWidth / image.naturalHeight;
 };
 
+const fallbackTitleTextColor = "var(--match-text)";
+const hexColorPattern =
+  /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu;
+
+const fontFamilyByKey = {
+  display: "var(--font-display)",
+  body: "var(--font-sans)",
+  mono: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+} satisfies Record<
+  NonNullable<PlayerProfileTitleView["style"]["font_family"]>,
+  string
+>;
+
+const isHexColor = (value: unknown): value is string =>
+  typeof value === "string" && hexColorPattern.test(value);
+
+const resolveFontWeight = (value: unknown): number =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 100 &&
+  value <= 900
+    ? value
+    : 700;
+
+const isFontFamilyKey = (
+  value: unknown,
+): value is NonNullable<PlayerProfileTitleView["style"]["font_family"]> =>
+  value === "display" || value === "body" || value === "mono";
+
+const resolveTitleGradient = (
+  style: PlayerProfileTitleView["style"],
+): string | undefined => {
+  const gradient = style.gradient;
+  if (
+    gradient === undefined ||
+    !isHexColor(gradient.from) ||
+    !isHexColor(gradient.to)
+  ) {
+    return undefined;
+  }
+  const angle =
+    typeof gradient.angle === "number" &&
+    Number.isFinite(gradient.angle) &&
+    gradient.angle >= 0 &&
+    gradient.angle <= 360
+      ? gradient.angle
+      : 90;
+  const stops = isHexColor(gradient.via)
+    ? [gradient.from, gradient.via, gradient.to]
+    : [gradient.from, gradient.to];
+  return `linear-gradient(${String(angle)}deg, ${stops.join(", ")})`;
+};
+
+const profileTitleStyle = (
+  style: PlayerProfileTitleView["style"],
+): CSSProperties => {
+  const gradient = resolveTitleGradient(style);
+  const color = isHexColor(style.text_color)
+    ? style.text_color
+    : fallbackTitleTextColor;
+  const resolvedStyle: CSSProperties = {
+    color: gradient === undefined ? color : "transparent",
+    fontWeight: resolveFontWeight(style.font_weight),
+  };
+  const shadows = [
+    isHexColor(style.glow_color) ? `0 0 10px ${style.glow_color}` : undefined,
+    isHexColor(style.outline_color)
+      ? `-1px 0 ${style.outline_color}, 0 1px ${style.outline_color}, 1px 0 ${style.outline_color}, 0 -1px ${style.outline_color}`
+      : undefined,
+  ].filter((shadow): shadow is string => shadow !== undefined);
+
+  if (isFontFamilyKey(style.font_family)) {
+    resolvedStyle.fontFamily = fontFamilyByKey[style.font_family];
+  }
+  if (gradient !== undefined) {
+    resolvedStyle.backgroundImage = gradient;
+    resolvedStyle.backgroundClip = "text";
+    resolvedStyle.WebkitBackgroundClip = "text";
+  }
+  if (shadows.length > 0) {
+    resolvedStyle.textShadow = shadows.join(", ");
+  }
+  return resolvedStyle;
+};
+
 const UserIcon = (): JSX.Element => (
   <svg
     viewBox="0 0 24 24"
@@ -104,11 +189,13 @@ const PlayerSummaryAvatar = ({
 export const PlayerSummaryLabel = ({
   label,
   avatar,
+  title,
   status,
   timer,
 }: {
   label: string;
   avatar?: PlayerAvatarView | undefined;
+  title?: PlayerProfileTitleView | undefined;
   status?: "connected" | "disconnected" | undefined;
   timer?: PlayerSummaryTimerModel | undefined;
 }): JSX.Element => (
@@ -116,6 +203,16 @@ export const PlayerSummaryLabel = ({
     <h2>
       <PlayerSummaryAvatar label={label} avatar={avatar} />
       <span className="player-name">{label}</span>
+      {title === undefined ? null : (
+        <span
+          className="player-profile-title"
+          data-title-key={title.key}
+          title={title.label}
+          style={profileTitleStyle(title.style)}
+        >
+          {title.label}
+        </span>
+      )}
       {status === undefined ? null : (
         <span
           className={`connection-status is-${status}`}

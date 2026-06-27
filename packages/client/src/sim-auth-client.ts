@@ -11,9 +11,31 @@ export interface SimProfileAvatar {
   };
 }
 
+export type SimProfileTitleStyle = {
+  readonly text_color?: string;
+  readonly font_family?: "display" | "body" | "mono";
+  readonly font_weight?: number;
+  readonly gradient?: {
+    readonly from: string;
+    readonly via?: string;
+    readonly to: string;
+    readonly angle?: number;
+  } | null;
+  readonly outline_color?: string | null;
+  readonly glow_color?: string | null;
+  readonly animation?: "none" | "shine" | "pulse";
+};
+
+export interface SimProfileTitle {
+  readonly key: string;
+  readonly label: string;
+  readonly style: SimProfileTitleStyle;
+}
+
 export type SimAuthUser = AuthUser & {
   readonly profile?: {
     readonly avatar: SimProfileAvatar | null;
+    readonly title?: SimProfileTitle | null;
   };
 };
 

@@ -9,12 +9,31 @@ export interface PlayerAvatarView {
   };
 }
 
+export interface PlayerProfileTitleView {
+  readonly key: string;
+  readonly label: string;
+  readonly style: {
+    readonly text_color?: string;
+    readonly font_family?: "display" | "body" | "mono";
+    readonly font_weight?: number;
+    readonly gradient?: {
+      readonly from: string;
+      readonly via?: string;
+      readonly to: string;
+      readonly angle?: number;
+    };
+    readonly outline_color?: string;
+    readonly glow_color?: string;
+  };
+}
+
 export type AuthSubject = {
   type: "user";
   userId: string;
   sessionId: string;
   displayName?: string;
   avatar?: PlayerAvatarView;
+  title?: PlayerProfileTitleView;
 };
 
 export interface AuthContext {
@@ -30,6 +49,7 @@ export const createDevUserSessionToken = (
   sessionId: string,
   displayName?: string,
   avatar?: PlayerAvatarView,
+  title?: PlayerProfileTitleView,
 ): string => {
   const payload: AuthSubject = {
     type: "user",
@@ -37,6 +57,7 @@ export const createDevUserSessionToken = (
     sessionId,
     ...(displayName === undefined ? {} : { displayName }),
     ...(avatar === undefined ? {} : { avatar }),
+    ...(title === undefined ? {} : { title }),
   };
   return `user-json:${encodeURIComponent(JSON.stringify(payload))}`;
 };
@@ -71,6 +92,93 @@ const avatarFromUnknown = (value: unknown): PlayerAvatarView | undefined => {
     : { imageUrl, crop: { x, y, size } };
 };
 
+const hexColorPattern =
+  /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/iu;
+
+const hexColor = (value: unknown): string | undefined =>
+  typeof value === "string" && hexColorPattern.test(value) ? value : undefined;
+
+const fontFamily = (
+  value: unknown,
+): PlayerProfileTitleView["style"]["font_family"] | undefined =>
+  value === "display" || value === "body" || value === "mono"
+    ? value
+    : undefined;
+
+const fontWeight = (value: unknown): number | undefined =>
+  typeof value === "number" &&
+  Number.isFinite(value) &&
+  value >= 100 &&
+  value <= 900
+    ? value
+    : undefined;
+
+const titleGradientFromUnknown = (
+  value: unknown,
+): PlayerProfileTitleView["style"]["gradient"] | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const from = hexColor(value["from"]);
+  const via = hexColor(value["via"]);
+  const to = hexColor(value["to"]);
+  const angle = numberField(value, "angle");
+  if (from === undefined || to === undefined) {
+    return undefined;
+  }
+  return {
+    from,
+    ...(via === undefined ? {} : { via }),
+    to,
+    ...(angle === undefined || angle < 0 || angle > 360 ? {} : { angle }),
+  };
+};
+
+const titleStyleFromUnknown = (
+  value: unknown,
+): PlayerProfileTitleView["style"] | undefined => {
+  if (value === undefined) {
+    return {};
+  }
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const textColor = hexColor(value["text_color"]);
+  const titleFontFamily = fontFamily(value["font_family"]);
+  const titleFontWeight = fontWeight(value["font_weight"]);
+  const gradient = titleGradientFromUnknown(value["gradient"]);
+  const outlineColor = hexColor(value["outline_color"]);
+  const glowColor = hexColor(value["glow_color"]);
+  return {
+    ...(textColor === undefined ? {} : { text_color: textColor }),
+    ...(titleFontFamily === undefined ? {} : { font_family: titleFontFamily }),
+    ...(titleFontWeight === undefined ? {} : { font_weight: titleFontWeight }),
+    ...(gradient === undefined ? {} : { gradient }),
+    ...(outlineColor === undefined ? {} : { outline_color: outlineColor }),
+    ...(glowColor === undefined ? {} : { glow_color: glowColor }),
+  };
+};
+
+const titleFromUnknown = (
+  value: unknown,
+): PlayerProfileTitleView | undefined => {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const key = value["key"];
+  const label = value["label"];
+  if (
+    typeof key !== "string" ||
+    key.length === 0 ||
+    typeof label !== "string" ||
+    label.length === 0
+  ) {
+    return undefined;
+  }
+  const style = titleStyleFromUnknown(value["style"]);
+  return style === undefined ? undefined : { key, label, style };
+};
+
 const parseJsonUserToken = (token: string): AuthSubject | undefined => {
   if (!token.startsWith("user-json:")) {
     return undefined;
@@ -103,12 +211,14 @@ const parseJsonUserToken = (token: string): AuthSubject | undefined => {
     return undefined;
   }
   const avatar = avatarFromUnknown(payload["avatar"]);
+  const title = titleFromUnknown(payload["title"]);
   return {
     type,
     userId,
     sessionId,
     ...(displayName === undefined ? {} : { displayName }),
     ...(avatar === undefined ? {} : { avatar }),
+    ...(title === undefined ? {} : { title }),
   };
 };
 

@@ -69,4 +69,65 @@ describe("sim auth session token", () => {
       },
     });
   });
+
+  test("includes the selected profile title for dev match identity", () => {
+    const session = {
+      user: {
+        id: "user-1",
+        username: "tester",
+        display_name: "Tester One",
+        email: null,
+        email_verified: false,
+        profile: {
+          title: {
+            key: "regional-winner",
+            label: "Regional Winner",
+            style: {
+              text_color: "#fde68a",
+              font_family: "display",
+              font_weight: 800,
+              gradient: {
+                from: "#facc15",
+                via: "#fb923c",
+                to: "#f43f5e",
+                angle: 135,
+              },
+              outline_color: "#111827",
+              glow_color: "#fde68a",
+            },
+          },
+        },
+      },
+      session: {
+        id: "session-1",
+        expiresAt: "2026-06-03T00:00:00.000Z",
+      },
+    } as SimAuthSession;
+
+    const token = simAuthSessionToken(session);
+    assert.equal(token.startsWith("user-json:"), true);
+    assert.deepEqual(JSON.parse(decodeURIComponent(token.slice(10))), {
+      type: "user",
+      userId: "user-1",
+      sessionId: "session-1",
+      displayName: "Tester One",
+      title: {
+        key: "regional-winner",
+        label: "Regional Winner",
+        style: {
+          text_color: "#fde68a",
+          font_family: "display",
+          font_weight: 800,
+          gradient: {
+            from: "#facc15",
+            via: "#fb923c",
+            to: "#f43f5e",
+            angle: 135,
+          },
+          outline_color: "#111827",
+          glow_color: "#fde68a",
+        },
+      },
+    });
+  });
 });

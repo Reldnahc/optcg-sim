@@ -72,6 +72,24 @@ export interface PlayerAvatarView {
   };
 }
 
+export interface PlayerProfileTitleView {
+  key: string;
+  label: string;
+  style: {
+    text_color?: string;
+    font_family?: "display" | "body" | "mono";
+    font_weight?: number;
+    gradient?: {
+      from: string;
+      via?: string;
+      to: string;
+      angle?: number;
+    };
+    outline_color?: string;
+    glow_color?: string;
+  };
+}
+
 export interface MatchSnapshot {
   matchId?: MatchId;
   stateSeq: number;
@@ -84,6 +102,7 @@ export interface MatchSnapshot {
         displayName?: string;
         connectionStatus?: "connected" | "disconnected";
         avatar?: PlayerAvatarView;
+        title?: PlayerProfileTitleView;
       }
     >
   >;

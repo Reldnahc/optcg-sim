@@ -102,14 +102,17 @@ const playerLabelsFromSeats = (
         ? "connected"
         : undefined;
       const avatar = seat.subject?.avatar;
+      const title = seat.subject?.title;
       const label = {
         displayName,
         connectionStatus,
         ...(avatar === undefined ? {} : { avatar }),
+        ...(title === undefined ? {} : { title }),
       };
       return (displayName === undefined || displayName.length === 0) &&
         connectionStatus === undefined &&
-        avatar === undefined
+        avatar === undefined &&
+        title === undefined
         ? []
         : [[seat.playerId, label] as const];
     }),
@@ -140,6 +143,7 @@ const refreshSeatSubject = (
       ? {}
       : { displayName: subject.displayName }),
     ...(subject.avatar === undefined ? {} : { avatar: subject.avatar }),
+    ...(subject.title === undefined ? {} : { title: subject.title }),
   };
 };
 
@@ -149,6 +153,7 @@ const sessionTokenForSubject = (subject: AuthContext["subject"]): string =>
     subject.sessionId,
     subject.displayName,
     subject.avatar,
+    subject.title,
   );
 
 export const matchSeatsWithMatchId = (

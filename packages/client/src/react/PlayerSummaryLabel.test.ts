@@ -29,4 +29,48 @@ describe("PlayerSummaryLabel", () => {
 
     assert.match(markup, /player-summary-avatar-placeholder/u);
   });
+
+  test("renders the player's profile title with bounded style", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlayerSummaryLabel, {
+        label: "Tester",
+        title: {
+          key: "regional-winner",
+          label: "Regional Winner",
+          style: {
+            text_color: "#fde68a",
+            font_family: "display",
+            font_weight: 800,
+            gradient: {
+              from: "#facc15",
+              via: "#fb923c",
+              to: "#f43f5e",
+              angle: 135,
+            },
+            outline_color: "#111827",
+            glow_color: "#fde68a",
+          },
+        },
+      }),
+    );
+
+    assert.match(markup, /class="player-profile-title"/u);
+    assert.match(markup, /data-title-key="regional-winner"/u);
+    assert.match(markup, />Regional Winner</u);
+    assert.match(markup, /font-weight:800/u);
+    assert.match(
+      markup,
+      /background-image:linear-gradient\(135deg, #facc15, #fb923c, #f43f5e\)/u,
+    );
+    assert.match(markup, /color:transparent/u);
+    assert.match(markup, /text-shadow:0 0 10px #fde68a/u);
+  });
+
+  test("renders no profile title when one is not provided", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlayerSummaryLabel, { label: "Tester" }),
+    );
+
+    assert.doesNotMatch(markup, /player-profile-title/u);
+  });
 });
