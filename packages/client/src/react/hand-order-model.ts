@@ -1,5 +1,22 @@
 import type { ClientCardModel } from "../view-model.js";
 
+export const reconcileContinuousHandOrder = ({
+  currentHandIds,
+  previousHandIds,
+  rememberedOrder,
+}: {
+  readonly currentHandIds: readonly string[];
+  readonly previousHandIds: readonly string[] | undefined;
+  readonly rememberedOrder: readonly string[];
+}): string[] => {
+  const currentIds = new Set(currentHandIds);
+  const previousIds =
+    previousHandIds === undefined ? currentIds : new Set(previousHandIds);
+  return rememberedOrder.filter(
+    (instanceId) => currentIds.has(instanceId) && previousIds.has(instanceId),
+  );
+};
+
 export const orderCardsByInstanceIds = (
   cards: readonly ClientCardModel[],
   order: readonly string[] = [],
