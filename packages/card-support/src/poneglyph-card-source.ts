@@ -445,6 +445,9 @@ const manifestViewCategoryFromPoneglyphType = (
   cardType: string | null | undefined,
 ): ManifestViewProbeEntry["category"] | undefined => {
   const normalized = cardType?.trim().toLowerCase();
+  if (normalized === undefined) {
+    return undefined;
+  }
   switch (normalized) {
     case "leader":
       return "leader";

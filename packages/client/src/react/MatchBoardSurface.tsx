@@ -20,6 +20,7 @@ export const MatchBoardSurface = ({
   clientState: _clientState,
   ...boardProps
 }: MatchBoardSurfaceProps): React.JSX.Element | null => {
+  void _clientState;
   if (board === undefined) {
     return (
       <MatchBoardFrame

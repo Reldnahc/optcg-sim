@@ -143,6 +143,45 @@ export interface PublicDecision<TType extends string = string> {
   timeoutMs?: number;
 }
 
+export type PayCostInteractionOperation =
+  | "trash"
+  | "returnToHand"
+  | "moveCards"
+  | "rest"
+  | "ko"
+  | "restDon"
+  | "returnDon"
+  | "reveal"
+  | "attachDon";
+
+export interface PayCostInteractionSelectedCard {
+  instanceId: InstanceId;
+  zone: Zone;
+  playerId?: PlayerId | undefined;
+  index?: number | undefined;
+}
+
+export interface PayCostInteractionGroup {
+  chooseActionIndex: number;
+  operation: PayCostInteractionOperation;
+  chooseLabel: string;
+  minCount?: number | undefined;
+  requiredCount: number;
+  source?: { zone: Zone; playerId?: PlayerId | undefined } | undefined;
+  cardActions: Array<{
+    instanceIds: string[];
+    actionIndex: number;
+    targetInstanceId?: string | undefined;
+    selectedCards?: PayCostInteractionSelectedCard[] | undefined;
+  }>;
+}
+
+export interface PayCostInteraction {
+  decisionId: DecisionId;
+  declineActionIndex: number;
+  groups: PayCostInteractionGroup[];
+}
+
 export interface PublicChooseQuantityDecision extends PublicDecision<"chooseQuantity"> {
   type: "chooseQuantity";
   mode: "exact" | "upTo";
