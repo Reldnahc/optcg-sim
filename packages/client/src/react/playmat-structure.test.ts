@@ -621,6 +621,10 @@ describe("playmat structure", () => {
       appShellStyles.includes("--playmat-summary-zone-width"),
       false,
     );
+    assert.match(
+      playmatStyles,
+      /\.playmat-summary\s*\{[^}]*align-content:\s*start;/u,
+    );
     assert.doesNotMatch(
       playmatStyles,
       /\.player-leader\s*\{[^}]*width:\s*var\(--card-zone-width\);/u,

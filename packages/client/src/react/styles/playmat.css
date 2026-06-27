@@ -431,7 +431,7 @@
 
 .playmat-summary {
   display: grid;
-  align-content: center;
+  align-content: start;
   min-width: 0;
   min-height: 0;
   border: var(--card-outline-thin) solid var(--match-border);
