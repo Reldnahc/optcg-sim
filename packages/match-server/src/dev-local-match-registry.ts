@@ -506,6 +506,9 @@ export const createLocalDevMatchRegistry = async (
           playerId: botPlayerId,
           actionIndex: choice.actionIndex,
           expectedStateSeq: snapshot.stateSeq,
+          ...(choice.selectedDonInstanceIds === undefined
+            ? {}
+            : { selectedDonInstanceIds: choice.selectedDonInstanceIds }),
         }
       : {
           type: "respondToDecision",

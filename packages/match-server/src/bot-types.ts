@@ -1,6 +1,7 @@
 import type {
   DecisionId,
   DecisionResponse,
+  InstanceId,
   PlayerId,
   PublicCardView,
 } from "@optcg/types";
@@ -13,6 +14,7 @@ import type {
 export interface BotSubmitActionChoice {
   readonly type: "submitAction";
   readonly actionIndex: number;
+  readonly selectedDonInstanceIds?: readonly InstanceId[];
 }
 
 export interface BotDecisionChoice {

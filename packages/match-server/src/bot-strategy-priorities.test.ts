@@ -556,7 +556,15 @@ describe("bot strategy priorities", () => {
       botId,
     );
 
-    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+    assert.deepEqual(chosen, {
+      type: "submitAction",
+      actionIndex: 1,
+      selectedDonInstanceIds: [
+        "don-1" as InstanceId,
+        "don-2" as InstanceId,
+        "don-3" as InstanceId,
+      ],
+    });
   });
 
   test("does not attach DON to a character with no remaining attack", () => {

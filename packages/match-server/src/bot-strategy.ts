@@ -20,6 +20,7 @@ import type {
   BotActionContext,
   BotBehaviorProfile,
   BotDecisionReason,
+  BotSubmitActionChoice,
   BotStrategy,
 } from "./bot-types.js";
 
@@ -98,6 +99,27 @@ const chooseBestScoredCandidate = (
   [...scored].sort(
     (left, right) => right.breakdown.total - left.breakdown.total,
   )[0];
+
+const selectedDonInstanceIdsForAttachChoice = (
+  chosenAction: BotActionContext["action"],
+  actions: readonly BotActionContext["action"][],
+): BotSubmitActionChoice["selectedDonInstanceIds"] | undefined => {
+  const targetInstanceId = chosenAction.attachment?.targetInstanceId;
+  if (chosenAction.type !== "attachDon" || targetInstanceId === undefined) {
+    return undefined;
+  }
+  const selectedDonInstanceIds = [
+    ...new Set(
+      actions.flatMap((action) =>
+        action.type === "attachDon" &&
+        action.attachment?.targetInstanceId === targetInstanceId
+          ? [action.attachment.donInstanceId]
+          : [],
+      ),
+    ),
+  ];
+  return selectedDonInstanceIds.length > 1 ? selectedDonInstanceIds : undefined;
+};
 
 const firstVisibleDecisionAction = (
   actions: readonly BotActionContext["action"][],
@@ -238,6 +260,15 @@ const chooseStrategyActionReport = ({
       choice: {
         type: "submitAction",
         actionIndex: chosen.candidate.action.index,
+        ...(() => {
+          const selectedDonInstanceIds = selectedDonInstanceIdsForAttachChoice(
+            chosen.candidate.action,
+            actions,
+          );
+          return selectedDonInstanceIds === undefined
+            ? {}
+            : { selectedDonInstanceIds };
+        })(),
       },
       score: chosen.breakdown,
       intent,
