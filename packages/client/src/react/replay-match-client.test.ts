@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
+import type { CardId, PlayerId } from "@optcg/types";
 
 import { replayFramesFromDetail } from "./replay-match-client.js";
 
@@ -47,6 +48,46 @@ describe("replayFramesFromDetail", () => {
 
     assert.equal(frames.length, 1);
     assert.equal(frames[0]?.label, "Initial state");
+  });
+
+  test("prefers manifest scan images over stock images for replay card display", () => {
+    const playerId = "p1" as PlayerId;
+    const cardId = "OP01-001" as CardId;
+    const frames = replayFramesFromDetail({
+      matchId: "match-1",
+      manifestSnapshot: {
+        cards: {
+          "OP01-001": {
+            cardId: "OP01-001",
+            name: "Leader",
+            category: "leader",
+            variants: [
+              {
+                stockImageFull: "https://cdn.example/stock.png",
+                scanImageDisplay: "https://cdn.example/scan.webp",
+              },
+            ],
+          },
+        },
+      },
+      frameReconstruction: {
+        status: "ready",
+        frames: [
+          {
+            index: 0,
+            actionIndex: 0,
+            label: "Initial state",
+            snapshot,
+          },
+        ],
+      },
+      deterministicEntries: [],
+    });
+
+    assert.equal(
+      frames[0]?.clientState.cards.players[playerId]?.cards[cardId]?.imageUrl,
+      "https://cdn.example/scan.webp",
+    );
   });
 
   test("creates frame-backed playback entries from saved snapshots", () => {

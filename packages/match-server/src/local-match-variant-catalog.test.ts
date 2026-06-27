@@ -55,6 +55,60 @@ const vanillaCard = (
 });
 
 describe("local dev match variant catalog", () => {
+  test("prefers scan display images over stock images for card catalog entries", () => {
+    const l1 = "L1" as CardId;
+    const c1 = "C1" as CardId;
+    const match = createLocalDevMatch({
+      matchId: "scan-priority-match" as MatchId,
+      firstPlayerId: p1,
+      playerOrder: [p1, p2],
+      rngSeed: "scan-priority-seed",
+      shuffleDecks: false,
+      players: [
+        {
+          playerId: p1,
+          leaderCardId: l1,
+          leaderLifeCount: 0,
+          deckCardIds: [c1, c1, c1, c1, c1],
+          donDeckCardIds: [],
+        },
+        {
+          playerId: p2,
+          leaderCardId: l1,
+          leaderLifeCount: 0,
+          deckCardIds: [c1, c1, c1, c1, c1],
+          donDeckCardIds: [],
+        },
+      ],
+      cardManifest: {
+        manifestHash: "scan-priority-manifest",
+        source: "manual-test",
+        cardDataVersion: "test",
+        effectDefinitionsVersion: "test",
+        customHandlerVersion: "test",
+        banlistVersion: "test",
+        createdAt: "2026-05-31T00:00:00.000Z",
+        cards: {
+          [l1]: vanillaCard(l1, "Leader One", "leader"),
+          [c1]: vanillaCard(c1, "Scan Character", "character", [
+            {
+              variantKey: "C1:v0" as VariantKey,
+              variantIndex: 0,
+              stockImageFull: "https://cdn.example/c1-stock.png",
+              scanImageDisplay: "https://cdn.example/c1-scan.webp",
+            },
+          ]),
+        },
+      },
+    });
+
+    const catalog = getLocalDevCardCatalogForPlayer(match, p1);
+    assert.equal(
+      catalog.players[p1]?.cards[c1]?.imageUrl,
+      "https://cdn.example/c1-scan.webp",
+    );
+  });
+
   test("preserves per-instance deck hash variants outside engine state", () => {
     const l1 = "L1" as CardId;
     const l2 = "L2" as CardId;

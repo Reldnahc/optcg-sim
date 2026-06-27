@@ -478,7 +478,7 @@ const devCardCatalogEntry = (
       ? card.variants[0]
       : card.variants.find((variant) => variant.variantKey === variantKey);
   const imageUrl =
-    selectedVariant?.stockImageFull ?? selectedVariant?.scanImageDisplay;
+    selectedVariant?.scanImageDisplay ?? selectedVariant?.stockImageFull;
   return {
     cardId: card.cardId,
     name: card.name,

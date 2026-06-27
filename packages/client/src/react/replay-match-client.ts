@@ -51,8 +51,8 @@ const imageUrlFromManifestCard = (
   const firstVariant = variants.find(isRecord);
   return firstVariant === undefined
     ? undefined
-    : (stringValue(firstVariant["stockImageFull"]) ??
-        stringValue(firstVariant["scanImageDisplay"]));
+    : (stringValue(firstVariant["scanImageDisplay"]) ??
+        stringValue(firstVariant["stockImageFull"]));
 };
 
 const catalogEntryFromManifestCard = (
