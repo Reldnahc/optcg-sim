@@ -12,6 +12,7 @@ import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
+import { parseDevSessionToken } from "./dev-auth.js";
 
 const createFixtureMatchHttpServer = async () =>
   createMatchHttpServer({
@@ -545,9 +546,15 @@ describe("match HTTP server", () => {
       const body = (await reconnect.json()) as {
         seat?: { playerId?: string; sessionToken?: string };
       };
-      assert.deepEqual(body.seat, {
-        playerId: "p1",
-        sessionToken: reconnectToken,
+      const seat = body.seat;
+      if (seat === undefined) {
+        throw new Error("Expected reconnect response to include a seat.");
+      }
+      assert.equal(seat.playerId, "p1");
+      assert.deepEqual(parseDevSessionToken(seat.sessionToken ?? ""), {
+        type: "user",
+        userId: "user-p1",
+        sessionId: "session-reconnect",
       });
     } finally {
       await server.close();
@@ -573,9 +580,15 @@ describe("match HTTP server", () => {
       const body = (await claim.json()) as {
         seat?: { playerId?: string; sessionToken?: string };
       };
-      assert.deepEqual(body.seat, {
-        playerId: "p1",
-        sessionToken: token,
+      const seat = body.seat;
+      if (seat === undefined) {
+        throw new Error("Expected claim response to include a seat.");
+      }
+      assert.equal(seat.playerId, "p1");
+      assert.deepEqual(parseDevSessionToken(seat.sessionToken ?? ""), {
+        type: "user",
+        userId: "user-p1",
+        sessionId: "session-existing",
       });
     } finally {
       await server.close();

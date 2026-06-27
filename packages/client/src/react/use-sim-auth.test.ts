@@ -22,7 +22,51 @@ describe("sim auth session token", () => {
 
     assert.equal(
       simAuthSessionToken(session),
-      "user:user-1:session-1:Tester%20One",
+      `user-json:${encodeURIComponent(
+        JSON.stringify({
+          type: "user",
+          userId: "user-1",
+          sessionId: "session-1",
+          displayName: "Tester One",
+        }),
+      )}`,
     );
+  });
+
+  test("includes the account avatar crop for dev match identity", () => {
+    const session = {
+      user: {
+        id: "user-1",
+        username: "tester",
+        display_name: "Tester One",
+        email: null,
+        email_verified: false,
+        profile: {
+          avatar: {
+            card_image_id: "card-image-1",
+            image_source: "scan",
+            image_url: "https://cdn.example/avatar.png",
+            crop: { x: 0.25, y: 0.1, size: 0.5 },
+          },
+        },
+      },
+      session: {
+        id: "session-1",
+        expiresAt: "2026-06-03T00:00:00.000Z",
+      },
+    } as SimAuthSession;
+
+    const token = simAuthSessionToken(session);
+    assert.equal(token.startsWith("user-json:"), true);
+    assert.deepEqual(JSON.parse(decodeURIComponent(token.slice(10))), {
+      type: "user",
+      userId: "user-1",
+      sessionId: "session-1",
+      displayName: "Tester One",
+      avatar: {
+        imageUrl: "https://cdn.example/avatar.png",
+        crop: { x: 0.25, y: 0.1, size: 0.5 },
+      },
+    });
   });
 });

@@ -75,11 +75,11 @@ describe("control rail window dock", () => {
     assert.match(markup, /playmat-summary player-summary/u);
     assert.match(
       markup,
-      /<h2><span class="player-name">Bob<\/span><span class="connection-status is-disconnected"/u,
+      /<span class="player-name">Bob<\/span><span class="connection-status is-disconnected"/u,
     );
     assert.match(
       markup,
-      /<h2><span class="player-name">Alice<\/span><span class="connection-status is-connected"/u,
+      /<span class="player-name">Alice<\/span><span class="connection-status is-connected"/u,
     );
     assert.match(markup, /12:34/u);
     assert.match(markup, /0:30/u);

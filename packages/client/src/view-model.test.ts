@@ -150,6 +150,48 @@ describe("board view model", () => {
     assert.equal(p1Model.opponentConnectionStatus, "disconnected");
   });
 
+  test("projects player avatars from the match snapshot", () => {
+    const snapshot = {
+      matchId: "match-1" as MatchId,
+      stateSeq: 7,
+      playerLabels: {
+        [p1]: {
+          avatar: {
+            imageUrl: "https://cdn.example/self-avatar.png",
+            crop: { x: 0.25, y: 0.1, size: 0.5 },
+          },
+        },
+        [p2]: {
+          avatar: {
+            imageUrl: "https://cdn.example/opponent-avatar.png",
+            crop: { x: 0.1, y: 0.2, size: 0.6 },
+          },
+        },
+      },
+      players: {
+        [p1]: {
+          view: minimalView(),
+          actions: [],
+        },
+      },
+    } as MatchSnapshot;
+
+    const model = createBoardViewModel({
+      snapshot,
+      catalog: { players: {} },
+      playerId: p1,
+    });
+
+    assert.deepEqual(model.selfAvatar, {
+      imageUrl: "https://cdn.example/self-avatar.png",
+      crop: { x: 0.25, y: 0.1, size: 0.5 },
+    });
+    assert.deepEqual(model.opponentAvatar, {
+      imageUrl: "https://cdn.example/opponent-avatar.png",
+      crop: { x: 0.1, y: 0.2, size: 0.6 },
+    });
+  });
+
   test("projects game and disconnect timers for both player summaries", () => {
     const view = minimalView();
     view.timers = {

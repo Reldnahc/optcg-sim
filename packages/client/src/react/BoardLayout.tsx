@@ -450,6 +450,7 @@ export const BoardLayout = ({
               <section className="playmat-summary opponent-summary">
                 <PlayerSummaryLabel
                   label={board.opponentLabel}
+                  avatar={board.opponentAvatar}
                   status={board.opponentConnectionStatus}
                   timer={board.opponentTimer}
                 />
@@ -568,6 +569,7 @@ export const BoardLayout = ({
               <section className="playmat-summary player-summary">
                 <PlayerSummaryLabel
                   label={board.selfLabel}
+                  avatar={board.selfAvatar}
                   status={board.selfConnectionStatus}
                   timer={board.selfTimer}
                 />

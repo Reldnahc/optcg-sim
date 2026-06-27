@@ -14,6 +14,7 @@ import type {
   MatchCardCatalog,
   MatchCardCatalogEntry,
   MatchSnapshot,
+  PlayerAvatarView,
 } from "./transport.js";
 
 export interface ClientCardModel {
@@ -90,6 +91,8 @@ export interface BoardViewModel {
   statusBanner?: StatusBannerModel;
   selfTimer?: PlayerSummaryTimerModel;
   opponentTimer?: PlayerSummaryTimerModel;
+  selfAvatar?: PlayerAvatarView;
+  opponentAvatar?: PlayerAvatarView;
   selfIsTurnPlayer: boolean;
   opponentIsTurnPlayer: boolean;
   selfConnectionStatus?: "connected" | "disconnected";
@@ -503,6 +506,11 @@ const playerConnectionStatus = (
 ): "connected" | "disconnected" | undefined =>
   snapshot.playerLabels?.[playerId]?.connectionStatus;
 
+const playerAvatar = (
+  snapshot: MatchSnapshot,
+  playerId: PlayerId,
+): PlayerAvatarView | undefined => snapshot.playerLabels?.[playerId]?.avatar;
+
 const formatTimer = (remainingMs: number): string => {
   const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -550,6 +558,8 @@ export const createBoardViewModel = ({
     snapshot,
     player.view.opponent.playerId,
   );
+  const selfAvatar = playerAvatar(snapshot, playerId);
+  const opponentAvatar = playerAvatar(snapshot, player.view.opponent.playerId);
   const selfTimer = playerTimer(player.view, playerId);
   const opponentTimer = playerTimer(player.view, player.view.opponent.playerId);
   const activeFieldPlayerId =
@@ -561,6 +571,7 @@ export const createBoardViewModel = ({
     selfLabel: playerDisplayLabel(snapshot, playerId, "Player"),
     ...(statusBanner === undefined ? {} : { statusBanner }),
     ...(selfTimer === undefined ? {} : { selfTimer }),
+    ...(selfAvatar === undefined ? {} : { selfAvatar }),
     selfIsTurnPlayer: activeFieldPlayerId === playerId,
     ...(selfConnectionStatus === undefined ? {} : { selfConnectionStatus }),
     ...(player.view.self.restrictions === undefined ||
@@ -573,6 +584,7 @@ export const createBoardViewModel = ({
       "Opponent",
     ),
     ...(opponentTimer === undefined ? {} : { opponentTimer }),
+    ...(opponentAvatar === undefined ? {} : { opponentAvatar }),
     opponentIsTurnPlayer: activeFieldPlayerId === player.view.opponent.playerId,
     ...(opponentConnectionStatus === undefined
       ? {}

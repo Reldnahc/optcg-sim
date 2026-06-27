@@ -7,6 +7,7 @@ import {
   createDefaultDevFixtureFetch,
   createFixtureDevMatchSetup,
 } from "./default-dev-fixture-fetch.test-support.js";
+import { parseDevSessionToken } from "./dev-auth.js";
 import type { SimHandoffVerifier, VerifiedSimHandoff } from "./sim-handoff.js";
 
 interface CreatedCustomLobbyBody {
@@ -710,7 +711,11 @@ describe("dev HTTP lobby deck submissions", () => {
         throw new Error("Expected account handoff to claim a lobby seat.");
       }
       assert.equal(seat.playerId, "p1");
-      assert.equal(seat.sessionToken, "user:user-1:session-1");
+      assert.deepEqual(parseDevSessionToken(seat.sessionToken ?? ""), {
+        type: "user",
+        userId: "user-1",
+        sessionId: "session-1",
+      });
       assert.equal(requireLobbySeat(result, "p1").claimed, true);
       assert.equal(requireLobbySeat(result, "p1").deck.status, "ready");
       assert.equal(requireLobbySeat(result, "p2").claimed, false);

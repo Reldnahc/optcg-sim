@@ -101,10 +101,17 @@ const playerLabelsFromSeats = (
       const connectionStatus = virtualConnectedPlayerIds.has(seat.playerId)
         ? "connected"
         : undefined;
+      const avatar = seat.subject?.avatar;
+      const label = {
+        displayName,
+        connectionStatus,
+        ...(avatar === undefined ? {} : { avatar }),
+      };
       return (displayName === undefined || displayName.length === 0) &&
-        connectionStatus === undefined
+        connectionStatus === undefined &&
+        avatar === undefined
         ? []
-        : [[seat.playerId, { displayName, connectionStatus }] as const];
+        : [[seat.playerId, label] as const];
     }),
   ) as ReturnType<typeof getLocalDevSnapshot>["playerLabels"];
   return labels === undefined || Object.keys(labels).length === 0
@@ -132,8 +139,17 @@ const refreshSeatSubject = (
     ...(subject.displayName === undefined
       ? {}
       : { displayName: subject.displayName }),
+    ...(subject.avatar === undefined ? {} : { avatar: subject.avatar }),
   };
 };
+
+const sessionTokenForSubject = (subject: AuthContext["subject"]): string =>
+  createDevUserSessionToken(
+    subject.userId,
+    subject.sessionId,
+    subject.displayName,
+    subject.avatar,
+  );
 
 export const matchSeatsWithMatchId = (
   sourceSeats: Record<string, Omit<LocalDevMatchSeat, "matchId">>,
@@ -826,11 +842,7 @@ export const createLocalDevMatchRegistry = async (
               matchId,
               seat: {
                 playerId,
-                sessionToken: createDevUserSessionToken(
-                  seat.subject.userId,
-                  seat.subject.sessionId,
-                  seat.subject.displayName,
-                ),
+                sessionToken: sessionTokenForSubject(seat.subject),
               },
               ...(session.status === "active"
                 ? {}
@@ -846,11 +858,7 @@ export const createLocalDevMatchRegistry = async (
         if (auth === undefined) {
           return "unauthenticated";
         }
-        const sessionToken = createDevUserSessionToken(
-          auth.subject.userId,
-          auth.subject.sessionId,
-          auth.subject.displayName,
-        );
+        const sessionToken = sessionTokenForSubject(auth.subject);
         await saveSeatSubjectChange(matchId, session, seat, () => {
           seat.subject = auth.subject;
         });
@@ -892,11 +900,7 @@ export const createLocalDevMatchRegistry = async (
           matchId,
           seat: {
             playerId: seat.playerId,
-            sessionToken: createDevUserSessionToken(
-              refreshedSubject.userId,
-              refreshedSubject.sessionId,
-              refreshedSubject.displayName,
-            ),
+            sessionToken: sessionTokenForSubject(refreshedSubject),
           },
           ...(session.status === "active"
             ? {}

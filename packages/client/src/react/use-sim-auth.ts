@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createSimAuthClient } from "../sim-auth-client.js";
+import type { PlayerAvatarView } from "../transport.js";
 import type {
   SimAuthClient,
   SimAuthSession,
@@ -25,14 +26,34 @@ export interface UseSimAuthState {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-export const simAuthSessionToken = (session: SimAuthSession): string =>
-  `user:${encodeURIComponent(session.user.id)}:${encodeURIComponent(
-    session.session.id,
-  )}:${encodeURIComponent(
-    session.user.display_name.length === 0
-      ? session.user.username
-      : session.user.display_name,
+const sessionDisplayName = (session: SimAuthSession): string =>
+  session.user.display_name.length === 0
+    ? session.user.username
+    : session.user.display_name;
+
+const sessionAvatar = (
+  session: SimAuthSession,
+): PlayerAvatarView | undefined =>
+  session.user.profile?.avatar === null ||
+  session.user.profile?.avatar === undefined
+    ? undefined
+    : {
+        imageUrl: session.user.profile.avatar.image_url,
+        crop: { ...session.user.profile.avatar.crop },
+      };
+
+export const simAuthSessionToken = (session: SimAuthSession): string => {
+  const avatar = sessionAvatar(session);
+  return `user-json:${encodeURIComponent(
+    JSON.stringify({
+      type: "user",
+      userId: session.user.id,
+      sessionId: session.session.id,
+      displayName: sessionDisplayName(session),
+      ...(avatar === undefined ? {} : { avatar }),
+    }),
   )}`;
+};
 
 const registerInput = (input: RegisterCredentials): SimRegisterInput => ({
   username: input.username,

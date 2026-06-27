@@ -11,7 +11,13 @@ test("snapshot connection statuses treat virtual players as connected", () => {
   const snapshot = {
     stateSeq: 1,
     playerLabels: {
-      [p2]: { displayName: "Bot" },
+      [p2]: {
+        displayName: "Bot",
+        avatar: {
+          imageUrl: "https://cdn.example/avatar.png",
+          crop: { x: 0.25, y: 0.1, size: 0.5 },
+        },
+      },
     },
     players: {},
   } as Parameters<typeof snapshotWithConnectionStatuses>[0];
@@ -41,4 +47,8 @@ test("snapshot connection statuses treat virtual players as connected", () => {
   assert.equal(p1Label.connectionStatus, "disconnected");
   assert.equal(p2Label.connectionStatus, "connected");
   assert.equal(p2Label.displayName, "Bot");
+  assert.deepEqual(p2Label.avatar, {
+    imageUrl: "https://cdn.example/avatar.png",
+    crop: { x: 0.25, y: 0.1, size: 0.5 },
+  });
 });

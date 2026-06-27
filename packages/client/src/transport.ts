@@ -63,6 +63,15 @@ export interface ClientPlayerSnapshot {
   payCostInteraction?: PayCostInteraction | undefined;
 }
 
+export interface PlayerAvatarView {
+  imageUrl: string;
+  crop: {
+    x: number;
+    y: number;
+    size: number;
+  };
+}
+
 export interface MatchSnapshot {
   matchId?: MatchId;
   stateSeq: number;
@@ -74,6 +83,7 @@ export interface MatchSnapshot {
       {
         displayName?: string;
         connectionStatus?: "connected" | "disconnected";
+        avatar?: PlayerAvatarView;
       }
     >
   >;

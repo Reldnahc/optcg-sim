@@ -83,6 +83,15 @@ export interface DevRollbackView {
   };
 }
 
+export interface DevPlayerAvatarView {
+  imageUrl: string;
+  crop: {
+    x: number;
+    y: number;
+    size: number;
+  };
+}
+
 export interface DevMatchSnapshot {
   stateSeq: number;
   actionSeq: number;
@@ -96,6 +105,7 @@ export interface DevMatchSnapshot {
       {
         displayName?: string;
         connectionStatus?: "connected" | "disconnected";
+        avatar?: DevPlayerAvatarView;
       }
     >
   >;

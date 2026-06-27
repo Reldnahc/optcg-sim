@@ -1,8 +1,24 @@
 import { AuthClientError, createAuthClient } from "optcg-auth-client";
 import type { AuthFetchImplementation, AuthUser } from "optcg-auth-client";
 
+export interface SimProfileAvatar {
+  readonly image_source: "render" | "scan";
+  readonly image_url: string;
+  readonly crop: {
+    readonly x: number;
+    readonly y: number;
+    readonly size: number;
+  };
+}
+
+export type SimAuthUser = AuthUser & {
+  readonly profile?: {
+    readonly avatar: SimProfileAvatar | null;
+  };
+};
+
 export interface SimAuthSession {
-  readonly user: AuthUser;
+  readonly user: SimAuthUser;
   readonly session: {
     readonly id: string;
     readonly expiresAt: string;
@@ -32,7 +48,7 @@ export interface CreateSimAuthClientOptions {
 
 const sessionFromResponse = (response: {
   readonly data: {
-    readonly user: AuthUser;
+    readonly user: SimAuthUser;
     readonly session: { readonly id: string; readonly expires_at: string };
   };
 }): SimAuthSession => ({
