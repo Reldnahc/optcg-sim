@@ -284,9 +284,9 @@ describe("board view model", () => {
       isRunning: true,
     });
     assert.deepEqual(p1Model.opponentTimer, {
-      game: "1:05",
+      game: "01:05",
       isRunning: false,
-      disconnect: "1:59",
+      disconnect: "01:59",
     });
   });
 

@@ -88,7 +88,7 @@ describe("PlayerSummaryLabel", () => {
     );
 
     assert.match(markup, /class="disconnect-timer"/u);
-    assert.match(markup, />0:30</u);
+    assert.match(markup, />DC 00:30</u);
   });
 
   test("styles profile title as account text instead of a chip", async () => {
@@ -238,10 +238,11 @@ describe("PlayerSummaryLabel", () => {
     );
     assert.match(gameTimerRuleBody, /font-weight:\s*800;/u);
     assert.doesNotMatch(gameTimerRuleBody, /var\(--control-/u);
-    assert.match(disconnectRuleBody, /border-radius:\s*999px;/u);
+    assert.doesNotMatch(disconnectRuleBody, /\bborder\s*:/u);
+    assert.doesNotMatch(disconnectRuleBody, /\bbackground\s*:/u);
     assert.match(
       disconnectRuleBody,
-      /background:\s*rgba\(177,\s*45,\s*54,\s*0\.3\);/u,
+      /font-size:\s*clamp\(10px,\s*calc\(var\(--card-height\) \/ 16\),\s*13px\);/u,
     );
   });
 
