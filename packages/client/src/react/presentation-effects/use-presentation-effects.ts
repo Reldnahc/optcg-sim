@@ -4,7 +4,7 @@ import type { RefObject } from "react";
 import type { EngineEvent } from "@optcg/types";
 
 import type { BoardViewModel } from "../../view-model.js";
-import { planAttentionSoundIntent } from "./attention-sound-planner.js";
+import { planAttentionSoundRouting } from "./attention-sound-routing.js";
 import { planPresentationEventIntents } from "./event-presentation-intents.js";
 import { planEventSoundIntents } from "./event-sound-planner.js";
 import {
@@ -33,7 +33,7 @@ export const usePresentationEffects = (input: {
   );
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const clearTimerRef = useRef<number | undefined>(undefined);
-  const previousLocalActiveRef = useRef<boolean>(false);
+  const previousLocalActiveRef = useRef<boolean | undefined>(undefined);
   const [movements, setMovements] = useState<readonly CardMovementIntent[]>([]);
 
   useLayoutEffect(() => {
@@ -75,26 +75,19 @@ export const usePresentationEffects = (input: {
       movementEventIds,
       currentPlayerId: input.board.playerId,
     });
-    const currentLocalActive =
-      input.board.selfIsTurnPlayer ||
-      (input.board.activeCardInstanceIds !== undefined &&
-        input.board.activeCardInstanceIds.length > 0);
-    const activationKey =
-      input.board.statusBanner === undefined
-        ? `active:${String(currentLocalActive)}`
-        : `turn:${String(input.board.statusBanner.turnNumber)}:${input.board.statusBanner.tone}`;
-    const attentionSoundIntents = planAttentionSoundIntent({
+    const attentionSoundRouting = planAttentionSoundRouting({
       previousLocalActive: previousLocalActiveRef.current,
-      currentLocalActive,
+      board: input.board,
       documentHidden: typeof document !== "undefined" ? document.hidden : false,
       windowFocused:
         typeof document !== "undefined" &&
         typeof document.hasFocus === "function"
           ? document.hasFocus()
           : true,
-      activationKey,
     });
-    previousLocalActiveRef.current = currentLocalActive;
+    previousLocalActiveRef.current =
+      attentionSoundRouting.nextPreviousLocalActive;
+    const attentionSoundIntents = attentionSoundRouting.soundIntents;
     const soundIntents = [
       ...movementSoundIntents,
       ...eventSoundIntents,

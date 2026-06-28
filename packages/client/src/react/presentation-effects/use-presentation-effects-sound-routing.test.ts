@@ -15,7 +15,7 @@ describe("presentation effects sound routing", () => {
 
     assert.match(source, /planSoundIntents/u);
     assert.match(source, /planEventSoundIntents/u);
-    assert.match(source, /planAttentionSoundIntent/u);
+    assert.match(source, /planAttentionSoundRouting/u);
     assert.match(source, /\.\.\.movementSoundIntents/u);
     assert.match(source, /\.\.\.eventSoundIntents/u);
     assert.match(source, /\.\.\.attentionSoundIntents/u);
