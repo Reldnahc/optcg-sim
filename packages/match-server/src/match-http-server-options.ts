@@ -23,6 +23,7 @@ import {
 import { createLocalReplayFixtureRepository } from "./local-replay-fixture-repository.js";
 import type { SimHandoffVerifier } from "./sim-handoff.js";
 import type { MatchPersistence } from "./session-types.js";
+import type { CompletedMatchStatSink } from "./stat-sink.js";
 
 export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetupOptions {
   readonly setup?: Parameters<typeof createLocalDevMatch>[0];
@@ -36,6 +37,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly rawDeckVerificationMode?: DevDeckVerificationMode;
   readonly simHandoffVerifier?: SimHandoffVerifier;
   readonly completedMatchRepository?: CompletedMatchRepository;
+  readonly statSink?: CompletedMatchStatSink;
   readonly matchPersistence?: MatchPersistence;
   readonly recoverActiveMatches?: boolean;
   readonly replayRepository?: CompletedMatchReplayRepository;

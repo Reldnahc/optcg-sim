@@ -20,6 +20,7 @@ import {
   recordActionTimingSpan,
   recordActionTimingSpanAsync,
 } from "./action-timing-log.js";
+import { buildEventStatContext } from "./completed-match-event-stat-context.js";
 import type {
   ClientActionEnvelope,
   FirstPlayerChoiceState,
@@ -28,6 +29,9 @@ import type {
   SessionActionResult,
 } from "./session-types.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
+import { extractEventStatOperations } from "./event-stat-extractor.js";
+import { extractCompletedMatchStatOperations } from "./match-stat-extractor.js";
+import type { CompletedMatchStatSink } from "./stat-sink.js";
 import {
   defaultBotStrategy,
   passiveBotStrategy,
@@ -238,6 +242,7 @@ export const createLocalDevMatchRegistry = async (
     readonly botActionDelayMs?: number;
     readonly createDefaultMatch?: boolean;
     readonly completedMatchRepository?: CompletedMatchRepository;
+    readonly statSink?: CompletedMatchStatSink;
     readonly includeActionSnapshots?: boolean;
     readonly matchPersistence?: MatchPersistence;
     readonly recoveryLockTtlMs?: number;
@@ -494,6 +499,22 @@ export const createLocalDevMatchRegistry = async (
     await recordActionTimingSpanAsync("completedMatchSave", async () => {
       await completedMatchRepository.saveCompletedMatch(record);
     });
+    const statSink = options.statSink;
+    if (statSink !== undefined) {
+      const operations = [
+        ...extractCompletedMatchStatOperations(record),
+        ...extractEventStatOperations(
+          session.match.state.eventJournal,
+          buildEventStatContext(record, session.match.state),
+        ),
+      ];
+      await recordActionTimingSpanAsync("completedMatchStats", async () => {
+        await statSink.recordCompletedMatchStats({
+          matchId: record.matchId,
+          operations,
+        });
+      });
+    }
     completedPersistedMatchIds.add(session.match.state.matchId);
   };
 

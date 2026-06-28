@@ -797,6 +797,7 @@ export const createMatchHttpServer = async (
           ? {}
           : { completedMatchRepository };
       })(),
+      ...(options.statSink === undefined ? {} : { statSink: options.statSink }),
       ...(matchPersistence === undefined ? {} : { matchPersistence }),
       includeActionSnapshots: false,
       matchTimerPolicy: resolveMatchTimerPolicy(options),
