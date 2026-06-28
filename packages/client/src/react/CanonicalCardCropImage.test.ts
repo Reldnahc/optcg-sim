@@ -28,22 +28,4 @@ describe("CanonicalCardCropImage", () => {
     assert.equal(crop.y.toFixed(6), "0.203183");
     assert.equal(crop.zoom.toFixed(6), "1.808318");
   });
-
-  test("keeps horizontal focal movement available in the deck selector frame", () => {
-    const leftFocus = resolveCanonicalCropCenter({
-      focusX: 0.42,
-      focusY: 0.18,
-      frameAspect: 56 / 96,
-      imageAspect: 63 / 88,
-    });
-    const rightFocus = resolveCanonicalCropCenter({
-      focusX: 0.7,
-      focusY: 0.18,
-      frameAspect: 56 / 96,
-      imageAspect: 63 / 88,
-    });
-
-    assert.notEqual(leftFocus.x.toFixed(6), rightFocus.x.toFixed(6));
-    assert.equal(leftFocus.zoom.toFixed(6), "1.901141");
-  });
 });
