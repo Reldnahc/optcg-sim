@@ -200,6 +200,10 @@ const pushLeaderStats = (
 export const extractCompletedMatchStatOperations = (
   record: CompletedMatchRecord,
 ): UserStatOperation[] => {
+  if (record.status === "abandoned") {
+    return [];
+  }
+
   const operations: UserStatOperation[] = [];
   const duration = durationSeconds(record.startedAt, record.endedAt);
   const ended = dateFromIso(record.endedAt);

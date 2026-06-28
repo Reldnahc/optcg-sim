@@ -5,12 +5,16 @@ import {
   type CompletedMatchSeatContext,
 } from "./local-completed-match-record.js";
 import {
+  applyLocalDevAction,
   createLocalDevMatch,
   createPremadeDevMatchSetup,
+  getLocalDevSnapshot,
+  type LocalDevMatch,
 } from "./local-match.js";
-import type { CardId, MatchId } from "@optcg/types";
+import type { CardId, MatchId, PlayerId } from "@optcg/types";
 import type { ReadyDeckSubmission } from "./deck-submission.js";
 import { createDefaultDevFixtureFetch } from "./default-dev-fixture-fetch.test-support.js";
+import { extractCompletedMatchStatOperations } from "./match-stat-extractor.js";
 import type { VerifiedSimHandoff } from "./sim-handoff.js";
 
 const readySubmission = (
@@ -57,6 +61,59 @@ const verifiedHandoff = (hash: string): VerifiedSimHandoff => ({
     },
   },
 });
+
+const applyFirstVisibleConcedeAction = (match: LocalDevMatch): PlayerId => {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const snapshot = getLocalDevSnapshot(match);
+    const concedeOwner = Object.entries(snapshot.players).find(([, player]) =>
+      player.actions.some((action) => action.type === "concede"),
+    );
+    const playerId = concedeOwner?.[0] as PlayerId | undefined;
+    const actionIndex = concedeOwner?.[1].actions.find(
+      (action) => action.type === "concede",
+    )?.index;
+    if (playerId !== undefined && actionIndex !== undefined) {
+      const result = applyLocalDevAction(match, {
+        playerId,
+        actionIndex,
+        expectedStateSeq: snapshot.stateSeq,
+        includeSnapshot: false,
+      });
+      expect(result.errors).toEqual([]);
+      expect(match.state.status.type).toBe("completed");
+      return playerId;
+    }
+
+    const pendingDecision = Object.values(snapshot.players).find(
+      (player) => player.view.pendingDecision !== undefined,
+    )?.view.pendingDecision;
+    if (pendingDecision === undefined) {
+      throw new Error("Expected pending setup before concede action.");
+    }
+    const setupAction = snapshot.players[pendingDecision.playerId]?.actions[0];
+    if (setupAction?.index === undefined) {
+      throw new Error("Expected visible setup action.");
+    }
+    const result = applyLocalDevAction(match, {
+      playerId: pendingDecision.playerId,
+      actionIndex: setupAction.index,
+      expectedStateSeq: snapshot.stateSeq,
+      includeSnapshot: false,
+    });
+    expect(result.errors).toEqual([]);
+  }
+  throw new Error("Timed out advancing setup to concession.");
+};
+
+const operationKeys = (
+  operations: ReturnType<typeof extractCompletedMatchStatOperations>,
+): ReadonlySet<string> =>
+  new Set(
+    operations.map(
+      (operation) =>
+        `${operation.userId}|${operation.statKey}|${operation.operation}|${operation.value}`,
+    ),
+  );
 
 describe("local completed match record mapping", () => {
   test("stores reconstructable replay state for completed matches", async () => {
@@ -248,5 +305,86 @@ describe("local completed match record mapping", () => {
       displayName: "Bot",
       isWinner: true,
     });
+  });
+
+  test("preserves concede reason from real local completed state for stat extraction", async () => {
+    const setup = await createPremadeDevMatchSetup({
+      matchId: "44444444-4444-4444-4444-444444444444" as MatchId,
+      fetchCard: createDefaultDevFixtureFetch(),
+    });
+    const match = createLocalDevMatch(setup);
+    const concedingPlayerId = applyFirstVisibleConcedeAction(match);
+    const winningPlayerId = setup.playerOrder.find(
+      (playerId) => playerId !== concedingPlayerId,
+    );
+    if (winningPlayerId === undefined) {
+      throw new Error("Expected conceding player to have an opponent.");
+    }
+
+    const record = buildLocalCompletedMatchRecord({
+      match,
+      setup,
+      seats: {
+        [setup.playerOrder[0]]: {
+          playerId: setup.playerOrder[0],
+          subject: {
+            type: "user",
+            userId: "00000000-0000-0000-0000-000000000001",
+            sessionId: "00000000-0000-0000-0000-0000000000aa",
+            displayName: "First Account Player",
+          },
+          deckSubmission: readySubmission("first-hash", "OP01-001"),
+        },
+        [setup.playerOrder[1]]: {
+          playerId: setup.playerOrder[1],
+          subject: {
+            type: "user",
+            userId: "00000000-0000-0000-0000-000000000002",
+            sessionId: "00000000-0000-0000-0000-0000000000bb",
+            displayName: "Second Account Player",
+          },
+          deckSubmission: readySubmission("second-hash", "OP05-060"),
+        },
+      },
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: setup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: setup.playerOrder[0],
+      },
+      records: [],
+      endedAt: "2026-06-08T00:10:00.000Z",
+    });
+    if (record === undefined) {
+      throw new Error("Expected completed record after concession.");
+    }
+
+    expect(record.resultReason).toBe("concede");
+    expect(record.winType).toBe("concede");
+    expect(
+      record.players.find((player) => player.seatId === concedingPlayerId),
+    ).toMatchObject({
+      result: "loss",
+      resultReason: "player_concede",
+    });
+
+    const concedingUserId =
+      concedingPlayerId === setup.playerOrder[0]
+        ? "00000000-0000-0000-0000-000000000001"
+        : "00000000-0000-0000-0000-000000000002";
+    const winningUserId =
+      winningPlayerId === setup.playerOrder[0]
+        ? "00000000-0000-0000-0000-000000000001"
+        : "00000000-0000-0000-0000-000000000002";
+    const operations = operationKeys(
+      extractCompletedMatchStatOperations(record),
+    );
+
+    expect(
+      operations.has(`${concedingUserId}|matches_conceded|increment|1`),
+    ).toBe(true);
+    expect(
+      operations.has(`${winningUserId}|matches_opponent_conceded|increment|1`),
+    ).toBe(true);
   });
 });

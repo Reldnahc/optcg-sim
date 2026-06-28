@@ -40,6 +40,12 @@ export interface BuildLocalCompletedMatchRecordInput {
   readonly endedAt: string;
 }
 
+interface LocalCompletionReasonMetadata {
+  readonly matchResultReason: string;
+  readonly winType: string;
+  readonly concedingPlayerId?: PlayerId;
+}
+
 const jsonObject = (value: unknown): JsonObject => {
   const cloned = JSON.parse(JSON.stringify(value)) as unknown;
   return typeof cloned === "object" && cloned !== null && !Array.isArray(cloned)
@@ -162,9 +168,85 @@ const creationSourceForSetup = (setup: DevMatchSetup): MatchCreationSource =>
       }
     : { type: "dev" };
 
+const latestGameEndedPayload = (
+  match: LocalDevMatch,
+): JsonObject | undefined => {
+  for (
+    let index = match.state.eventJournal.length - 1;
+    index >= 0;
+    index -= 1
+  ) {
+    const event = match.state.eventJournal[index];
+    if (event?.type === "gameEnded" && isJsonRecord(event.payload)) {
+      return event.payload;
+    }
+  }
+  return undefined;
+};
+
+const stringPayloadValue = (
+  payload: JsonObject | undefined,
+  key: string,
+): string | undefined => {
+  const value = payload?.[key];
+  return typeof value === "string" ? value : undefined;
+};
+
+const playerIdPayloadValue = (
+  match: LocalDevMatch,
+  payload: JsonObject | undefined,
+  key: string,
+): PlayerId | undefined => {
+  const value = stringPayloadValue(payload, key);
+  return value !== undefined &&
+    Object.prototype.hasOwnProperty.call(match.state.players, value)
+    ? (value as PlayerId)
+    : undefined;
+};
+
+const completionReasonMetadata = (
+  input: BuildLocalCompletedMatchRecordInput,
+): LocalCompletionReasonMetadata => {
+  const status = input.match.state.status;
+  if (status.type === "gameOver") {
+    return { matchResultReason: "game_over", winType: "game" };
+  }
+
+  const payload = latestGameEndedPayload(input.match);
+  const reason = stringPayloadValue(payload, "reason");
+  const loser = playerIdPayloadValue(input.match, payload, "loser");
+  if (reason === "concede" && loser !== undefined) {
+    return {
+      matchResultReason: "concede",
+      winType: "concede",
+      concedingPlayerId: loser,
+    };
+  }
+
+  return { matchResultReason: "completed", winType: "game" };
+};
+
+const playerResultReason = (
+  metadata: LocalCompletionReasonMetadata,
+  playerId: PlayerId,
+  winner: PlayerId | "draw",
+): string => {
+  if (metadata.concedingPlayerId === undefined) {
+    return metadata.matchResultReason;
+  }
+  if (metadata.concedingPlayerId === playerId) {
+    return "player_concede";
+  }
+  if (winner === playerId) {
+    return "opponent_concede";
+  }
+  return metadata.matchResultReason;
+};
+
 const buildPlayerRecord = (
   input: BuildLocalCompletedMatchRecordInput,
   seat: CompletedMatchSeatContext,
+  metadata: LocalCompletionReasonMetadata,
 ): CompletedMatchPlayerRecord => {
   const player = input.match.state.players[seat.playerId];
   const submission = seat.deckSubmission;
@@ -193,8 +275,7 @@ const buildPlayerRecord = (
     startingDeckOrderHash:
       submission === undefined ? null : hashJson(submission.decoded.main),
     result: playerResult(winner, seat.playerId),
-    resultReason:
-      input.match.state.status.type === "gameOver" ? "game_over" : "completed",
+    resultReason: playerResultReason(metadata, seat.playerId, winner),
     wentFirst: input.setup.firstPlayerId === seat.playerId,
     choseFirst: input.firstPlayerChoice.chooserPlayerId === seat.playerId,
     isWinner: winner === seat.playerId,
@@ -212,9 +293,12 @@ export const buildLocalCompletedMatchRecord = (
   const winnerSeatId = status.winner === "draw" ? null : status.winner;
   const winnerSeat =
     winnerSeatId === null ? undefined : input.seats[winnerSeatId];
+  const reasonMetadata = completionReasonMetadata(input);
   const players = input.setup.playerOrder.flatMap((playerId) => {
     const seat = input.seats[String(playerId)];
-    return seat === undefined ? [] : [buildPlayerRecord(input, seat)];
+    return seat === undefined
+      ? []
+      : [buildPlayerRecord(input, seat, reasonMetadata)];
   });
   if (players.length === 0) {
     return undefined;
@@ -260,8 +344,8 @@ export const buildLocalCompletedMatchRecord = (
     firstPlayerChooserSeatId: input.firstPlayerChoice.chooserPlayerId,
     winnerUserId: uuidOrNull(winnerSeat?.subject?.userId),
     winnerSeatId,
-    resultReason: "completed",
-    winType: "game",
+    resultReason: reasonMetadata.matchResultReason,
+    winType: reasonMetadata.winType,
     startedAt: input.setup.cardManifest.createdAt,
     endedAt: input.endedAt,
     turnCount: input.match.state.turn.globalTurn,

@@ -186,6 +186,18 @@ const playerAt = (
 };
 
 describe("completed match stat extraction", () => {
+  test("fails closed for abandoned completed-match records", () => {
+    const record = completedRecord({
+      status: "abandoned",
+      resultReason: "abandoned",
+      winType: null,
+      winnerUserId: null,
+      winnerSeatId: null,
+    });
+
+    assert.deepEqual(extractCompletedMatchStatOperations(record), []);
+  });
+
   test("extracts summary stats for a completed match with two account users", () => {
     const operations = operationKeys(completedRecord());
 
@@ -404,6 +416,30 @@ describe("completed match stat extraction", () => {
     expectOperation(operations, firstUserId, "novice_bot_matches_completed");
     expectOperation(operations, firstUserId, "novice_bot_matches_won");
     expectOperation(operations, firstUserId, "quick_wins");
+  });
+
+  test("extracts advanced bot stats from completed-record metadata", () => {
+    const base = completedRecord();
+    const record = completedRecord({
+      gameType: "dev",
+      players: [
+        playerAt(base, 0),
+        {
+          ...playerAt(base, 1),
+          userId: null,
+          displayName: "Advanced Practice Opponent",
+          isBot: true,
+          botDifficulty: "advanced",
+        },
+      ],
+    });
+    const operations = operationKeys(record);
+
+    expectOperation(operations, firstUserId, "bot_matches_completed");
+    expectOperation(operations, firstUserId, "bot_matches_won");
+    expectOperation(operations, firstUserId, "advanced_bot_matches_completed");
+    expectOperation(operations, firstUserId, "advanced_bot_matches_won");
+    expectNoStat(operations, "novice_bot_matches_completed");
   });
 
   test("does not infer bots from display names alone", () => {
