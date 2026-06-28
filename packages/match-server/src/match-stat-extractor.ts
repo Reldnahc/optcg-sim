@@ -195,13 +195,15 @@ const pushLeaderStats = (
   }
 };
 
+// Reads transient player metadata such as isBot/botDifficulty from the freshly
+// built completion record. Run before persisting or reconstructing from SQL.
 export const extractCompletedMatchStatOperations = (
   record: CompletedMatchRecord,
 ): UserStatOperation[] => {
   const operations: UserStatOperation[] = [];
   const duration = durationSeconds(record.startedAt, record.endedAt);
   const ended = dateFromIso(record.endedAt);
-  const hasConcede =
+  const matchHasConcede =
     indicatesConcede(record.resultReason) || indicatesConcede(record.winType);
 
   for (const player of record.players) {
@@ -212,14 +214,21 @@ export const extractCompletedMatchStatOperations = (
       (candidate) => candidate.seatId !== player.seatId,
     );
     const playedBot = opponent?.isBot === true;
+    const playerConceded =
+      player.result === "loss" &&
+      (matchHasConcede || indicatesConcede(player.resultReason));
+    const opponentConceded =
+      player.result === "win" &&
+      opponent?.result === "loss" &&
+      (matchHasConcede || indicatesConcede(opponent.resultReason));
 
     pushIncrement(operations, player.userId, statKeys.matchesCompleted);
     pushOutcomeStats(operations, player.userId, player.result);
 
-    if (hasConcede && player.result === "loss") {
+    if (playerConceded) {
       pushIncrement(operations, player.userId, statKeys.matchesConceded);
     }
-    if (hasConcede && player.result === "win") {
+    if (opponentConceded) {
       pushIncrement(
         operations,
         player.userId,
@@ -328,12 +337,6 @@ export const extractCompletedMatchStatOperations = (
         record.turnCount,
       );
     }
-    pushIncrement(
-      operations,
-      player.userId,
-      statKeys.totalActionsTaken,
-      record.actionCount,
-    );
     if (duration !== undefined) {
       pushIncrement(
         operations,

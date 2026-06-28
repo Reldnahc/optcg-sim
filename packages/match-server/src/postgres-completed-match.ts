@@ -15,7 +15,11 @@ export type JsonObject = Record<string, unknown>;
 export interface CompletedMatchPlayerRecord {
   readonly seatId: PlayerId;
   readonly userId: string | null;
+  // Transient metadata for completed-match stat extraction only.
+  // This is intentionally not persisted in sim.match_players.
   readonly isBot?: boolean;
+  // Transient metadata for completed-match stat extraction only.
+  // This is intentionally not persisted in sim.match_players.
   readonly botDifficulty?: "novice" | "advanced" | null;
   readonly savedDeckId: string | null;
   readonly handoffTokenId: string | null;

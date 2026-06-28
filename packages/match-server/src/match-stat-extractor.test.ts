@@ -46,6 +46,20 @@ const expectNoStat = (
   );
 };
 
+const expectNoOperation = (
+  operations: ReadonlySet<string>,
+  userId: string,
+  statKey: string,
+): void => {
+  assert.equal(
+    [...operations].some((operation) =>
+      operation.startsWith(`${userId}|${statKey}|`),
+    ),
+    false,
+    `Unexpected ${userId} ${statKey}`,
+  );
+};
+
 const completedRecord = (
   overrides: Partial<CompletedMatchRecord> = {},
 ): CompletedMatchRecord => ({
@@ -196,7 +210,7 @@ describe("completed match stat extraction", () => {
     expectOperation(operations, firstUserId, "matches_started_first");
     expectOperation(operations, firstUserId, "matches_won_started_first");
     expectOperation(operations, firstUserId, "total_turns_played", 12);
-    expectOperation(operations, firstUserId, "total_actions_taken", 48);
+    expectNoOperation(operations, firstUserId, "total_actions_taken");
     expectOperation(operations, firstUserId, "total_match_seconds", 1920);
     expectOperation(operations, firstUserId, "long_matches_completed");
     expectOperation(
@@ -246,7 +260,7 @@ describe("completed match stat extraction", () => {
     expectOperation(operations, secondUserId, "pvp_matches_completed");
     expectOperation(operations, secondUserId, "matches_started_second");
     expectOperation(operations, secondUserId, "total_turns_played", 12);
-    expectOperation(operations, secondUserId, "total_actions_taken", 48);
+    expectNoOperation(operations, secondUserId, "total_actions_taken");
     expectOperation(operations, secondUserId, "total_match_seconds", 1920);
     expectOperation(operations, secondUserId, "leader_matches_lost:OP05-060");
     expectOperation(
@@ -294,6 +308,45 @@ describe("completed match stat extraction", () => {
 
     expectOperation(operations, secondUserId, "matches_conceded");
     expectOperation(operations, firstUserId, "matches_opponent_conceded");
+  });
+
+  test("maps player-level concede reason when match-level reason is completed", () => {
+    const base = completedRecord();
+    const operations = operationKeys(
+      completedRecord({
+        resultReason: "completed",
+        winType: "game",
+        players: [
+          playerAt(base, 0),
+          {
+            ...playerAt(base, 1),
+            resultReason: "player_concede",
+          },
+        ],
+      }),
+    );
+
+    expectOperation(operations, secondUserId, "matches_conceded");
+    expectOperation(operations, firstUserId, "matches_opponent_conceded");
+  });
+
+  test("uses ISO week-year keys at UTC year boundaries", () => {
+    const operations = operationKeys(
+      completedRecord({
+        endedAt: "2027-01-01T00:00:00.000Z",
+      }),
+    );
+
+    expectOperation(
+      operations,
+      firstUserId,
+      "weekly_matches_completed:2026-53",
+    );
+    expectOperation(
+      operations,
+      secondUserId,
+      "weekly_matches_completed:2026-53",
+    );
   });
 
   test("extracts bot and novice bot stats for account users but not synthetic bots", () => {
