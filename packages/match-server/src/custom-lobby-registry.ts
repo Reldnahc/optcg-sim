@@ -45,6 +45,7 @@ import {
   type LobbyValidationTimingSpan,
 } from "./lobby-validation-timing-log.js";
 import { createDefaultBotDeckSubmission } from "./bot-deck.js";
+import { createBotSubject } from "./bot-identity.js";
 
 export interface CreatedCustomLobbyResponse {
   lobbyId: string;
@@ -230,12 +231,7 @@ const lobbyResponse = (
     : { matchId: lobby.matchId }),
 });
 
-const botSubject = {
-  type: "user" as const,
-  userId: "bot",
-  sessionId: "bot",
-  displayName: "Bot",
-};
+const botSubject = createBotSubject();
 
 const createLobbyStore = async (
   options: CreateCustomLobbyRegistryOptions,

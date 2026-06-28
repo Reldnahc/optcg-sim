@@ -33,6 +33,7 @@ import {
   passiveBotStrategy,
   type BotStrategy,
 } from "./bot-player.js";
+import { botTitleForDifficulty } from "./bot-identity.js";
 import { requestHash } from "./action-envelope.js";
 import {
   createActiveLocalDevMatchSession,
@@ -97,12 +98,23 @@ const playerLabelsFromSeats = (
 ): ReturnType<typeof getLocalDevSnapshot>["playerLabels"] => {
   const labels = Object.fromEntries(
     Object.values(seats).flatMap((seat) => {
-      const displayName = seat.subject?.displayName?.trim();
-      const connectionStatus = virtualConnectedPlayerIds.has(seat.playerId)
+      const isVirtualConnectedPlayer = virtualConnectedPlayerIds.has(
+        seat.playerId,
+      );
+      const subjectDisplayName = seat.subject?.displayName?.trim();
+      const displayName =
+        subjectDisplayName === undefined || subjectDisplayName.length === 0
+          ? isVirtualConnectedPlayer
+            ? "Bot"
+            : undefined
+          : subjectDisplayName;
+      const connectionStatus = isVirtualConnectedPlayer
         ? "connected"
         : undefined;
       const avatar = seat.subject?.avatar;
-      const title = seat.subject?.title;
+      const title =
+        seat.subject?.title ??
+        (isVirtualConnectedPlayer ? botTitleForDifficulty() : undefined);
       const label = {
         displayName,
         connectionStatus,

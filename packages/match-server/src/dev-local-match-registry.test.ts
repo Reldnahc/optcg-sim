@@ -117,6 +117,38 @@ test("can create active matches without game timers", async () => {
   assert.deepEqual(match.state.timers.players, {});
 });
 
+test("bot player labels default to novice identity without a seat subject", async () => {
+  const registry = await createLocalDevMatchRegistry(
+    () => Promise.resolve(structuredClone(premadeSetup)),
+    undefined,
+    { createDefaultMatch: false },
+  );
+  const matchId = "bot-label-default-title" as MatchId;
+  const botPlayerId = premadeSetup.playerOrder[1];
+  const created = await registry.createMatch(
+    { ...structuredClone(premadeSetup), matchId },
+    {
+      firstPlayerChoice: {
+        source: "game-one-random-chooser",
+        chooserPlayerId: premadeSetup.playerOrder[0],
+        choice: "goFirst",
+        resolvedFirstPlayerId: premadeSetup.playerOrder[0],
+      },
+      botPlayerIds: botPlayerId === undefined ? [] : [botPlayerId],
+    },
+  );
+
+  if (created.snapshot === undefined || botPlayerId === undefined) {
+    throw new Error("Expected active match snapshot with a bot player.");
+  }
+
+  const label = created.snapshot.playerLabels?.[botPlayerId];
+  assert.equal(label?.displayName, "Bot");
+  assert.equal(label?.connectionStatus, "connected");
+  assert.equal(label?.title?.key, "bot-novice");
+  assert.equal(label?.title?.label, "Novice Bot");
+});
+
 test("accepted registry actions include snapshots for replay frames", async () => {
   const registry = await createLocalDevMatchRegistry(
     () => Promise.resolve(structuredClone(premadeSetup)),

@@ -49,7 +49,10 @@ interface ClaimedMatchSeatBody {
 interface CreatedMatchBody {
   snapshot?: {
     status?: string;
-    playerLabels?: Record<string, { displayName?: string }>;
+    playerLabels?: Record<
+      string,
+      { displayName?: string; title?: { key?: string; label?: string } }
+    >;
   };
 }
 
@@ -214,6 +217,11 @@ describe("dev HTTP bot lobbies", () => {
       const snapshot = requireSnapshot(resolved);
 
       assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.equal(snapshot.playerLabels?.["p2"]?.title?.key, "bot-novice");
+      assert.equal(
+        snapshot.playerLabels?.["p2"]?.title?.label,
+        "Novice Bot",
+      );
       assert.notEqual(snapshot.status, "completed");
       assert.notEqual(snapshot.status, "gameOver");
     } finally {
@@ -254,6 +262,11 @@ describe("dev HTTP bot lobbies", () => {
       const snapshot = requireSnapshot(resolved);
 
       assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
+      assert.equal(snapshot.playerLabels?.["p2"]?.title?.key, "bot-novice");
+      assert.equal(
+        snapshot.playerLabels?.["p2"]?.title?.label,
+        "Novice Bot",
+      );
       assert.notEqual(snapshot.status, "completed");
       assert.notEqual(snapshot.status, "gameOver");
     } finally {
