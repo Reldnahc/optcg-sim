@@ -14,9 +14,65 @@ type CropFocus = {
   y: number | null;
 } | null | undefined;
 
+interface CropSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+interface CropImageLayout {
+  readonly width: number;
+  readonly height: number;
+  readonly left: number;
+  readonly top: number;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
+
+const resolveFocus = (cropFocus: CropFocus): { x: number; y: number } => ({
+  x: typeof cropFocus?.x === "number" ? cropFocus.x : FALLBACK_FOCUS_X,
+  y: typeof cropFocus?.y === "number" ? cropFocus.y : FALLBACK_FOCUS_Y,
+});
+
+const resolveCropZoom = ({
+  frameAspect,
+  imageAspect,
+}: {
+  frameAspect: number;
+  imageAspect: number;
+}): number => {
+  const viewportWidthAt1x = frameAspect > imageAspect
+    ? 1
+    : frameAspect / imageAspect;
+  const viewportHeightAt1x = frameAspect > imageAspect
+    ? imageAspect / frameAspect
+    : 1;
+  return Math.max(
+    1,
+    viewportWidthAt1x / CARD_CROP_LEGAL_RECT.width,
+    viewportHeightAt1x / CARD_CROP_LEGAL_RECT.height,
+  );
+};
+
+const resolveRenderedImage = ({
+  frameSize,
+  imageSize,
+  zoom,
+}: {
+  frameSize: CropSize;
+  imageSize: CropSize;
+  zoom: number;
+}): { width: number; height: number } => {
+  const coverScale = Math.max(
+    frameSize.width / imageSize.width,
+    frameSize.height / imageSize.height,
+  );
+  return {
+    width: imageSize.width * coverScale * zoom,
+    height: imageSize.height * coverScale * zoom,
+  };
+};
 
 export function resolveCanonicalCropCenter({
   focusX,
@@ -55,6 +111,42 @@ export function resolveCanonicalCropCenter({
     x: clamp(focusX, centerMinX, centerMaxX),
     y: clamp(focusY, centerMinY, centerMaxY),
     zoom: effectiveZoom,
+  };
+}
+
+export function resolveFocalCropImageLayout({
+  cropFocus,
+  frameSize,
+  imageSize,
+}: {
+  cropFocus: CropFocus;
+  frameSize: CropSize;
+  imageSize: CropSize;
+}): CropImageLayout {
+  const focus = resolveFocus(cropFocus);
+  const zoom = resolveCropZoom({
+    frameAspect: frameSize.width / frameSize.height,
+    imageAspect: imageSize.width / imageSize.height,
+  });
+  const rendered = resolveRenderedImage({
+    frameSize,
+    imageSize,
+    zoom,
+  });
+
+  return {
+    width: rendered.width,
+    height: rendered.height,
+    left: clamp(
+      frameSize.width / 2 - focus.x * rendered.width,
+      frameSize.width - rendered.width,
+      0,
+    ),
+    top: clamp(
+      frameSize.height / 2 - focus.y * rendered.height,
+      frameSize.height - rendered.height,
+      0,
+    ),
   };
 }
 
@@ -106,32 +198,17 @@ export function CanonicalCardCropImage({
 
   let style: CSSProperties | undefined;
   if (hasLayout) {
-    const focusX = typeof cropFocus?.x === "number"
-      ? cropFocus.x
-      : FALLBACK_FOCUS_X;
-    const focusY = typeof cropFocus?.y === "number"
-      ? cropFocus.y
-      : FALLBACK_FOCUS_Y;
-    const imageAspect = imageSize.width / imageSize.height;
-    const frameAspect = frameSize.width / frameSize.height;
-    const crop = resolveCanonicalCropCenter({
-      focusX,
-      focusY,
-      frameAspect,
-      imageAspect,
+    const layout = resolveFocalCropImageLayout({
+      cropFocus,
+      frameSize,
+      imageSize,
     });
-    const coverScale = Math.max(
-      frameSize.width / imageSize.width,
-      frameSize.height / imageSize.height,
-    );
-    const renderedWidth = imageSize.width * coverScale * crop.zoom;
-    const renderedHeight = imageSize.height * coverScale * crop.zoom;
 
     style = {
-      width: `${renderedWidth}px`,
-      height: `${renderedHeight}px`,
-      left: `${frameSize.width / 2 - crop.x * renderedWidth}px`,
-      top: `${frameSize.height / 2 - crop.y * renderedHeight}px`,
+      width: `${layout.width}px`,
+      height: `${layout.height}px`,
+      left: `${layout.left}px`,
+      top: `${layout.top}px`,
     };
   } else {
     style = {
