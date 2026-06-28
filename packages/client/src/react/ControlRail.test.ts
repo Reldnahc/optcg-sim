@@ -1,11 +1,13 @@
 import { strict as assert } from "node:assert";
+import { readFile } from "node:fs/promises";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
-import type { PlayerId } from "@optcg/types";
+import type { CardId, InstanceId, PlayerId } from "@optcg/types";
 
 import { ControlRail } from "./ControlRail.js";
+import { controlRailTurnState } from "./MatchApp.js";
 
 const buttonWithAriaLabel = (markup: string, label: string): string => {
   const match = new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`, "u").exec(
@@ -16,6 +18,9 @@ const buttonWithAriaLabel = (markup: string, label: string): string => {
   }
   return match[0];
 };
+
+const toCardId = (value: string): CardId => value as CardId;
+const toInstanceId = (value: string): InstanceId => value as InstanceId;
 
 test("control rail orders dock, tools, turn status, then main controls", () => {
   const markup = renderToStaticMarkup(
@@ -57,6 +62,67 @@ test("control rail orders dock, tools, turn status, then main controls", () => {
   assert.equal(dockPosition < toolStripPosition, true);
   assert.equal(toolStripPosition < statusPosition, true);
   assert.equal(statusPosition < actionPosition, true);
+});
+
+test("control rail turn state uses the active battle step for combat labels", () => {
+  const turnState = controlRailTurnState({
+    turn: {
+      globalTurn: 7,
+      playerTurnCounts: {},
+      turnPlayerId: "p1" as PlayerId,
+      phase: "main",
+    },
+    battle: {
+      attacker: {
+        instanceId: toInstanceId("attacker"),
+        cardId: toCardId("OP00-001"),
+        playerId: "p1" as PlayerId,
+      },
+      originalTarget: {
+        instanceId: toInstanceId("target"),
+        cardId: toCardId("OP00-002"),
+        playerId: "p2" as PlayerId,
+      },
+      currentTarget: {
+        instanceId: toInstanceId("target"),
+        cardId: toCardId("OP00-002"),
+        playerId: "p2" as PlayerId,
+      },
+      step: "block",
+      damageCount: 1,
+    },
+  });
+
+  const markup = renderToStaticMarkup(
+    createElement(ControlRail, {
+      errors: [],
+      globalActions: [],
+      disabled: false,
+      turnState,
+      onAction: () => undefined,
+      onHome: () => undefined,
+    }),
+  );
+
+  assert.match(markup, /Turn 7/u);
+  assert.match(markup, /Block Step/u);
+  assert.doesNotMatch(markup, /Main Phase/u);
+});
+
+test("control rail turn status scales number and phase text 50 percent larger", async () => {
+  const styles = await readFile(
+    new URL("./styles/controls.css", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    styles,
+    /\.control-turn-number\s*\{[^}]*font-size:\s*clamp\(22\.5px,\s*calc\(var\(--card-height\) \/ 5\.8\),\s*31\.5px\);/u,
+  );
+  assert.match(
+    styles,
+    /\.control-turn-phase\s*\{[^}]*font-size:\s*clamp\(16\.5px,\s*calc\(var\(--card-height\) \/ 8\),\s*19\.5px\);/u,
+  );
 });
 
 test("control rail keeps home and rematch hidden during active matches", () => {

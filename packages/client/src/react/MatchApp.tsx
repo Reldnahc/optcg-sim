@@ -5,6 +5,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import type { PlayerView, PublicTurnState } from "@optcg/types";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
 import { appRoutePath } from "./app-route.js";
@@ -59,6 +60,16 @@ export interface MatchAppProps {
   readonly client?: MatchClientUi | undefined;
   readonly replayControls?: React.ReactNode | undefined;
 }
+
+export const controlRailTurnState = (
+  view: Pick<PlayerView, "turn" | "battle"> | undefined,
+): PublicTurnState | undefined => {
+  if (view === undefined) {
+    return undefined;
+  }
+  const step = view.battle?.step ?? view.turn.step;
+  return step === undefined ? view.turn : { ...view.turn, step };
+};
 
 const hexColorToRgb = (hexColor: string): string => {
   const normalized = /^#[0-9a-f]{6}$/u.test(hexColor) ? hexColor : "#000000";
@@ -610,7 +621,7 @@ export const MatchApp = ({
           globalActions={controlGlobalActions}
           disabled={client.state.actionInFlight}
           opponentConnectionStatus={displayBoard?.opponentConnectionStatus}
-          turnState={playerSnapshot?.view.turn}
+          turnState={controlRailTurnState(playerSnapshot?.view)}
           matchStatus={matchState?.snapshot.status}
           rematchStatus={client.state.rematchStatus}
           width={controlRailWidth}
