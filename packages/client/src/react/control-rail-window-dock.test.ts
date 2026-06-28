@@ -103,7 +103,7 @@ describe("control rail window dock", () => {
 
     assert.match(
       styles,
-      /\.connection-status\s*\{[^}]*width:\s*calc\(var\(--control-title-font-size\) \* 0\.44\);[^}]*border:\s*max\(1px,\s*calc\(var\(--card-outline-thin\) \* 0\.45\)\) solid\s*rgba\(0,\s*0,\s*0,\s*0\.72\);[^}]*transform:\s*translateY\(0\.04em\);/u,
+      /\.connection-status\s*\{[^}]*width:\s*clamp\(13px,\s*calc\(var\(--card-height\) \/ 12\.8\),\s*19px\);[^}]*height:\s*clamp\(13px,\s*calc\(var\(--card-height\) \/ 12\.8\),\s*19px\);[^}]*border:\s*max\(1px,\s*calc\(var\(--card-outline-thin\) \* 0\.45\)\) solid\s*rgba\(0,\s*0,\s*0,\s*0\.72\);[^}]*transform:\s*translateY\(0\.04em\);/u,
     );
     assert.match(
       styles,
