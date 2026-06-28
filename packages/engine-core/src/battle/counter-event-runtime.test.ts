@@ -403,12 +403,12 @@ test("Counter Event cannot-attack sequence fully resolves and blocks the selecte
     true,
   );
 
-  const { battle: _battle, pendingDecision: _pendingDecision, ...stateRest } =
-    resolved.state;
   const afterBattle = {
-    ...stateRest,
+    ...resolved.state,
     turn: { ...resolved.state.turn, turnPlayerId: p1, phase: "main" as const },
   };
+  delete afterBattle.battle;
+  delete afterBattle.pendingDecision;
   const view = computeView(afterBattle);
   assert.deepEqual(view.legalAttackTargets[restrictedAttacker.instanceId], []);
 });

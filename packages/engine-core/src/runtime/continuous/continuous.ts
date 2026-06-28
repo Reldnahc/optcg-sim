@@ -31,8 +31,14 @@ import {
   isSupportedDonPhasePlacementEffect,
   toDonPhasePlacementModifier,
 } from "./don-phase-placement-modifier.js";
+import {
+  battleAttackerRef,
+  battleCurrentTargetRef,
+  controllerLeaderRef,
+} from "./battle-card-ref.js";
 import { isSupportedPermanentBasePowerEffect } from "./permanent-base-power.js";
 import { isSupportedPermanentInvalidateEffects } from "./effect-invalidation-modifier.js";
+import { isSupportedPowerEffectValue } from "./power-effect-support.js";
 import {
   resolveBasePowerValue,
   resolveDynamicNumberValue,
@@ -270,6 +276,27 @@ export const createRecord = (
     },
     createdAtStateSeq: state.seq,
   };
+};
+
+const createExactRecordForCardRef = (
+  state: GameState,
+  entry: EffectQueueEntry,
+  effect: ContinuousQueueEffect,
+  card: CardRef | null,
+  context?: ContinuousResolutionContext,
+): ContinuousEffectRecord[] | null => {
+  if (card === null) {
+    return null;
+  }
+  const record = createRecord(
+    state,
+    entry,
+    effect,
+    toExactCardTarget(entry, card, state, 0),
+    0,
+    context,
+  );
+  return record === null ? null : [record];
 };
 
 const isPublicResolvableFieldObject = (
@@ -550,79 +577,31 @@ export const createContinuousRecordsForResolvedEffect = (
     return records;
   }
   if (target.type === "myLeader") {
-    const leader = state.players[entry.controllerId]?.leader;
-    if (leader === undefined) {
-      return null;
-    }
-    const record = createRecord(
+    return createExactRecordForCardRef(
       state,
       entry,
       effect,
-      toExactCardTarget(
-        entry,
-        {
-          instanceId: leader.instanceId,
-          cardId: leader.cardId,
-          playerId: entry.controllerId,
-          zone: leader.zone,
-        },
-        state,
-        0,
-      ),
-      0,
+      controllerLeaderRef(state, entry),
       context,
     );
-    return record === null ? null : [record];
   }
   if (target.type === "attacker") {
-    const attacker = state.battle?.attacker;
-    if (attacker === undefined) {
-      return null;
-    }
-    const attackerCard = reifyCardRef(state, attacker);
-    if (attackerCard === null) {
-      return null;
-    }
-    const attackerRef: CardRef = {
-      instanceId: attackerCard.card.instanceId,
-      cardId: attackerCard.card.cardId,
-      playerId: attackerCard.playerId,
-      zone: attackerCard.card.zone,
-    };
-    const record = createRecord(
+    return createExactRecordForCardRef(
       state,
       entry,
       effect,
-      toExactCardTarget(entry, attackerRef, state, 0),
-      0,
+      battleAttackerRef(state),
       context,
     );
-    return record === null ? null : [record];
   }
   if (target.type === "attackTarget") {
-    const battleTarget = state.battle?.currentTarget;
-    if (battleTarget === undefined) {
-      return null;
-    }
-    const targetCard = reifyCardRef(state, battleTarget);
-    if (targetCard === null) {
-      return null;
-    }
-    const targetRef: CardRef = {
-      instanceId: targetCard.card.instanceId,
-      cardId: targetCard.card.cardId,
-      playerId: targetCard.playerId,
-      zone: targetCard.card.zone,
-    };
-    const record = createRecord(
+    return createExactRecordForCardRef(
       state,
       entry,
       effect,
-      toExactCardTarget(entry, targetRef, state, 0),
-      0,
+      battleCurrentTargetRef(state),
       context,
     );
-    return record === null ? null : [record];
   }
   if (target.type === "all" && effectValueUsesAffectedCard(effect)) {
     return createAffectedCardRecordsForAllTarget(
@@ -646,71 +625,6 @@ const isPermanentBlock = (
   block: EffectDefinition["effects"][number],
 ): boolean =>
   block.category === "permanent" && block.trigger.type === "permanent";
-
-const isSupportedPowerEffectValue = (
-  value: Extract<Effect, { type: "modifyPower" }>["value"],
-): boolean => {
-  if (typeof value === "number") {
-    return Number.isSafeInteger(value);
-  }
-  if (value.type === "sumSelectedCardCosts") {
-    return Number.isSafeInteger(value.multiplier) && value.multiplier > 0;
-  }
-  if (value.type === "countDistinctMatchingFieldNames") {
-    return (
-      value.player === "self" &&
-      Number.isSafeInteger(value.multiplier) &&
-      value.multiplier > 0 &&
-      value.filter.custom === "differentNames"
-    );
-  }
-  if (value.type === "paidCostCardCount") {
-    return (
-      value.cost.length > 0 &&
-      Number.isSafeInteger(value.multiplier) &&
-      value.multiplier > 0
-    );
-  }
-  if (value.type === "countAttachedDon") {
-    return (
-      Number.isSafeInteger(value.per) &&
-      value.per > 0 &&
-      Number.isSafeInteger(value.multiplier) &&
-      value.multiplier !== 0 &&
-      (value.target.type === "self" ||
-        value.target.type === "affectedCard" ||
-        value.target.type === "myLeader" ||
-        value.target.type === "opponentLeader" ||
-        value.target.type === "savedFieldObject")
-    );
-  }
-  if (value.type === "savedNumber") {
-    return false;
-  }
-  if (value.type === "countMatchingZoneCardsAcrossPlayers") {
-    return (
-      value.filter === undefined &&
-      value.players.length > 0 &&
-      value.players.every(
-        (player) => player === "self" || player === "opponent",
-      ) &&
-      Number.isSafeInteger(value.per) &&
-      value.per > 0 &&
-      Number.isSafeInteger(value.multiplier) &&
-      value.multiplier !== 0
-    );
-  }
-  if (value.type !== "countMatchingZoneCards") {
-    return false;
-  }
-  return (
-    value.player === "self" &&
-    Number.isSafeInteger(value.per) &&
-    value.per > 0 &&
-    Number.isSafeInteger(value.multiplier) &&
-    value.multiplier !== 0
-  );
-};
 
 const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
   if (effect.type === "modifyPower") {

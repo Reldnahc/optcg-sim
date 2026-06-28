@@ -45,11 +45,6 @@ import { getActiveDonCount } from "../play-card/support.js";
 import { getUnsupportedCounterWindowReason } from "./counter-window-support.js";
 import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
 
-type CreateCounterStepPassDecision = (
-  state: GameState,
-  options?: { requirePotentialCounterActions?: boolean },
-) => NonNullable<GameState["pendingDecision"]> | null;
-
 export const getLegalCharacterCounterActions = (
   state: GameState,
   defenderId: PlayerId,
@@ -218,7 +213,7 @@ export const applyUseCounter = (
   }
   const metadata = state.cardManifest.cards[handCard.cardId];
   let counterValue: number | undefined;
-  let usesBattleCounterPower = true;
+  const usesBattleCounterPower = true;
   const effectiveCharacterCounter = getEffectiveCharacterCounterValue(
     state,
     handCard,
@@ -581,7 +576,7 @@ export const resolveCounterCardUse = (params: {
     nextBattle.counterPower =
       ((battle as EngineInternalBattleState).counterPower ?? 0) + counterValue;
   }
-  let nextState: GameState = {
+  const nextState: GameState = {
     ...movedResult.state,
     seq: toStateSeq(state.seq + 1),
     actionSeq: state.actionSeq + 1,

@@ -31,7 +31,6 @@ export const hasPotentialCharacterCounterActions = (
   state: GameState,
   defenderId: PlayerId,
 ): boolean => {
-  const target = state.battle?.currentTarget;
   const defender = state.players[defenderId];
   if (defender === undefined) {
     return false;
