@@ -50,6 +50,46 @@ const paymentAction = (optionId: string): LegalAction => ({
   response: { type: "payment", optionId },
 });
 
+const counterEventLabelState = (
+  definition: EffectDefinition,
+  counterCardId: CardId,
+  counterInstanceId: InstanceId,
+): GameState =>
+  ({
+    cardManifest: {
+      cards: {
+        [counterCardId]: {
+          cardId: counterCardId,
+          name: "Counter Event",
+          category: "event",
+          support: {
+            status: "implemented-dsl",
+            effectDefinitionId: "counter-event-definition",
+          },
+        },
+      },
+      effectDefinitions: {
+        "counter-event-definition": definition,
+      },
+    },
+    players: {
+      [p1]: {
+        playerId: p1,
+        leader: {
+          instanceId: "leader-instance" as InstanceId,
+          cardId: "leader-card" as CardId,
+        },
+        deck: [],
+        hand: [{ instanceId: counterInstanceId, cardId: counterCardId }],
+        trash: [],
+        characters: [],
+        costArea: [],
+        donDeck: [],
+        life: [],
+      },
+    },
+  }) as unknown as GameState;
+
 describe("local dev action labels", () => {
   test("labels Event Counter actions by their selected effect", () => {
     const counterCardId = "counter-event-card" as CardId;
@@ -89,40 +129,11 @@ describe("local dev action labels", () => {
         reviewer: "test",
       },
     };
-    const state = {
-      cardManifest: {
-        cards: {
-          [counterCardId]: {
-            cardId: counterCardId,
-            name: "Counter Event",
-            category: "event",
-            support: {
-              status: "implemented-dsl",
-              effectDefinitionId: "counter-event-definition",
-            },
-          },
-        },
-        effectDefinitions: {
-          "counter-event-definition": definition,
-        },
-      },
-      players: {
-        [p1]: {
-          playerId: p1,
-          leader: {
-            instanceId: "leader-instance" as InstanceId,
-            cardId: "leader-card" as CardId,
-          },
-          deck: [],
-          hand: [{ instanceId: counterInstanceId, cardId: counterCardId }],
-          trash: [],
-          characters: [],
-          costArea: [],
-          donDeck: [],
-          life: [],
-        },
-      },
-    } as unknown as GameState;
+    const state = counterEventLabelState(
+      definition,
+      counterCardId,
+      counterInstanceId,
+    );
     const target = {
       instanceId: targetInstanceId,
       cardId: "target-card" as CardId,
@@ -146,6 +157,119 @@ describe("local dev action labels", () => {
         target,
       }),
       "Counter: Give Leader +2000 power",
+    );
+  });
+
+  test("keeps duplicate Event Counter effect labels distinguishable", () => {
+    const counterCardId = "counter-event-card" as CardId;
+    const counterInstanceId = "counter-event-instance" as InstanceId;
+    const firstEffectId = "counter-event-card:counter:first-draw" as EffectId;
+    const secondEffectId = "counter-event-card:counter:second-draw" as EffectId;
+    const definition: EffectDefinition = {
+      cardId: counterCardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: firstEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          id: secondEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "rules",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "test",
+      },
+    };
+    const state = counterEventLabelState(
+      definition,
+      counterCardId,
+      counterInstanceId,
+    );
+    const target = {
+      instanceId: "target-instance" as InstanceId,
+      cardId: "target-card" as CardId,
+      playerId: p1,
+    };
+
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: firstEffectId,
+        target,
+      }),
+      "Counter: Draw 1 card (first-draw)",
+    );
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: secondEffectId,
+        target,
+      }),
+      "Counter: Draw 1 card (second-draw)",
+    );
+  });
+
+  test("labels negative Event Counter power modifiers without double signs", () => {
+    const counterCardId = "counter-event-card" as CardId;
+    const counterInstanceId = "counter-event-instance" as InstanceId;
+    const powerEffectId = "counter-event-card:counter:power-down" as EffectId;
+    const definition: EffectDefinition = {
+      cardId: counterCardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: powerEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: {
+            type: "modifyPower",
+            target: { type: "opponentLeader" },
+            value: -1000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "rules",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "test",
+      },
+    };
+    const state = counterEventLabelState(
+      definition,
+      counterCardId,
+      counterInstanceId,
+    );
+
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: powerEffectId,
+        target: {
+          instanceId: "target-instance" as InstanceId,
+          cardId: "target-card" as CardId,
+          playerId: p1,
+        },
+      }),
+      "Counter: Give opponent's Leader -1000 power",
     );
   });
 

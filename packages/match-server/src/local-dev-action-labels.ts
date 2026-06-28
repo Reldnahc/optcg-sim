@@ -66,6 +66,14 @@ const numberValueLabel = (value: EffectNumberValue): string | undefined =>
 
 type EffectNumberValue = Extract<Effect, { type: "draw" }>["count"];
 
+const signedNumberLabel = (value: number): string =>
+  value > 0 ? `+${String(value)}` : String(value);
+
+const effectIdSuffix = (effectId: string): string => {
+  const parts = effectId.split(":").filter((part) => part.length > 0);
+  return parts.at(-1) ?? effectId;
+};
+
 const targetLabel = (
   target: Extract<Effect, { type: "modifyPower" }>["target"],
 ): string => {
@@ -95,7 +103,7 @@ const effectLabel = (effect: Effect): string | undefined => {
     const value = numberValueLabel(effect.value);
     return value === undefined
       ? `Give ${targetLabel(effect.target)} power`
-      : `Give ${targetLabel(effect.target)} +${value} power`;
+      : `Give ${targetLabel(effect.target)} ${signedNumberLabel(Number(value))} power`;
   }
   if (effect.type === "cannotAttack") {
     return "Stop a card from attacking";
@@ -135,7 +143,24 @@ const counterEventEffectLabel = (
   if (effectBlock === undefined) {
     return `Counter: ${String(action.effectId)}`;
   }
-  return `Counter: ${effectLabel(effectBlock.effect) ?? String(action.effectId)}`;
+  const label = effectLabel(effectBlock.effect);
+  if (label === undefined) {
+    return `Counter: ${String(action.effectId)}`;
+  }
+  const siblingLabels = state.cardManifest.effectDefinitions?.[
+    definitionId
+  ]?.effects.flatMap((candidate) => {
+    if (candidate.trigger.type !== "counter") {
+      return [];
+    }
+    const candidateLabel = effectLabel(candidate.effect);
+    return candidateLabel === undefined ? [] : [candidateLabel];
+  });
+  const duplicateLabel =
+    siblingLabels?.filter((candidate) => candidate === label).length ?? 0;
+  return duplicateLabel > 1
+    ? `Counter: ${label} (${effectIdSuffix(String(action.effectId))})`
+    : `Counter: ${label}`;
 };
 
 const paymentOptionForAction = (
