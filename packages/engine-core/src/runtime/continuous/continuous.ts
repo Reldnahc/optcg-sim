@@ -599,6 +599,31 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
+  if (target.type === "attackTarget") {
+    const battleTarget = state.battle?.currentTarget;
+    if (battleTarget === undefined) {
+      return null;
+    }
+    const targetCard = reifyCardRef(state, battleTarget);
+    if (targetCard === null) {
+      return null;
+    }
+    const targetRef: CardRef = {
+      instanceId: targetCard.card.instanceId,
+      cardId: targetCard.card.cardId,
+      playerId: targetCard.playerId,
+      zone: targetCard.card.zone,
+    };
+    const record = createRecord(
+      state,
+      entry,
+      effect,
+      toExactCardTarget(entry, targetRef, state, 0),
+      0,
+      context,
+    );
+    return record === null ? null : [record];
+  }
   if (target.type === "all" && effectValueUsesAffectedCard(effect)) {
     return createAffectedCardRecordsForAllTarget(
       state,
@@ -693,6 +718,7 @@ const isSupportedDerivedEffectShape = (effect: Effect): boolean => {
       isSupportedPowerEffectValue(effect.value) &&
       (effect.target.type === "self" ||
         effect.target.type === "myLeader" ||
+        effect.target.type === "attackTarget" ||
         (effect.target.type === "all" && isSupportedTarget(effect.target))) &&
       isSupportedDuration(effect.duration)
     );

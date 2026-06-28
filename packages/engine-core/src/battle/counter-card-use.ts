@@ -27,7 +27,11 @@ import {
 import { reifyCardRef } from "../actions/state.js";
 import { counterEventEffectCostSelectionCountIsAllowed } from "./counter-event-cost-selection.js";
 import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
-import { getSupportedCounterEventActivation } from "./counter-event-activation.js";
+import {
+  getSupportedCounterEventActivation,
+  queueCounterEventEffects,
+  type SupportedCounterEventActivation,
+} from "./counter-event-activation.js";
 import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
 import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
 import { resolveCounterEventSequences } from "./counter-event-sequence-resolution.js";
@@ -234,13 +238,7 @@ export const applyUseCounter = (
   }
   const metadata = state.cardManifest.cards[handCard.cardId];
   let counterValue: number | undefined;
-  let printedCost = 0;
   let usesBattleCounterPower = true;
-  let trailingSequence: CounterEventTrailingSequence | undefined;
-  let effectCost: Extract<OptionalCost, { type: "trashFromHand" }> | undefined;
-  let runtimeEffects: SupportedCounterEventRuntime["effects"] | undefined;
-  let sequenceEffects: SupportedCounterEventSequence["effects"] | undefined;
-  let counterDuration: SupportedCounterEventPower["duration"] | undefined;
   const effectiveCharacterCounter = getEffectiveCharacterCounterValue(
     state,
     handCard,
@@ -257,114 +255,83 @@ export const applyUseCounter = (
       );
     }
     counterValue = effectiveCharacterCounter;
-  } else {
-    const supportedCounterEvent = getSupportedCounterEventPower(
-      state,
-      handCard,
-      action.target,
-      battle.currentTarget,
-    );
-    const supportedRuntimeEvent =
-      supportedCounterEvent === null
-        ? getSupportedCounterEventRuntime(state, handCard, action.target)
-        : null;
-    const supportedSequenceEvent =
-      supportedCounterEvent === null && supportedRuntimeEvent === null
-        ? getSupportedCounterEventSequence(state, handCard, action.target)
-        : null;
-    if (
-      supportedCounterEvent === null &&
-      supportedRuntimeEvent === null &&
-      supportedSequenceEvent === null
-    ) {
+  } else if (metadata?.category === "event") {
+    if (!sameCardRef(action.target, battle.currentTarget)) {
       return illegalAction(
         state,
-        metadata?.category === "event"
-          ? "Counter Events are unsupported in the Counter Step."
-          : "Counter card must be a Character with counter.",
+        "Counter Event target must be current battle target.",
       );
     }
-    if (supportedCounterEvent !== null) {
-      counterValue = supportedCounterEvent.value;
-      printedCost = supportedCounterEvent.printedCost;
-      usesBattleCounterPower = supportedCounterEvent.usesBattleCounterPower;
-      counterDuration = supportedCounterEvent.duration;
-      trailingSequence = supportedCounterEvent.trailingSequence;
-      effectCost = supportedCounterEvent.effectCost;
-    } else if (supportedRuntimeEvent !== null) {
-      counterValue = 0;
-      printedCost = supportedRuntimeEvent.printedCost;
-      usesBattleCounterPower = false;
-      runtimeEffects = supportedRuntimeEvent.effects;
-    } else if (supportedSequenceEvent !== null) {
-      counterValue = 0;
-      printedCost = supportedSequenceEvent.printedCost;
-      usesBattleCounterPower = false;
-      sequenceEffects = supportedSequenceEvent.effects;
-    } else {
+    const activation = getSupportedCounterEventActivation(
+      state,
+      handCard,
+      decision.playerId,
+    );
+    if (activation === null) {
       return illegalAction(
         state,
         "Counter Events are unsupported in the Counter Step.",
       );
     }
-  }
-  if (
-    metadata?.category === "event" &&
-    getActiveDonCount(defender.costArea) < printedCost
-  ) {
-    return illegalAction(state, "Counter Event requires enough active DON!!.");
-  }
-  if (printedCost > 0) {
-    const decisionId = toDecisionId(
-      counterPayCostDecisionId(
-        String(handCard.instanceId),
-        String(action.target.instanceId),
-        state.seq + 1,
-        "printed",
-      ),
-    );
-    const events: EngineEvent[] = [];
-    appendEvent(
-      state,
-      events,
-      "decisionCreated",
-      { decisionId, decisionType: "payCost", playerId: decision.playerId },
-      { type: "public" },
-    );
-    const nextState: GameState = {
-      ...state,
-      seq: toStateSeq(state.seq + 1),
-      actionSeq: state.actionSeq + 1,
-      pendingDecision: {
-        id: decisionId,
-        type: "payCost",
-        playerId: decision.playerId,
-        prompt: `Pay cost for ${String(handCard.cardId)}`,
-        causedBy: {
-          type: "playerAction",
-          actionId: `action:${String(state.actionSeq + 1)}`,
+    if (getActiveDonCount(defender.costArea) < activation.printedCost) {
+      return illegalAction(state, "Counter Event requires enough active DON!!.");
+    }
+    if (activation.printedCost > 0) {
+      const decisionId = toDecisionId(
+        counterPayCostDecisionId(
+          String(handCard.instanceId),
+          String(action.target.instanceId),
+          state.seq + 1,
+          "printed",
+        ),
+      );
+      const events: EngineEvent[] = [];
+      appendEvent(
+        state,
+        events,
+        "decisionCreated",
+        { decisionId, decisionType: "payCost", playerId: decision.playerId },
+        { type: "public" },
+      );
+      const nextState: GameState = {
+        ...state,
+        seq: toStateSeq(state.seq + 1),
+        actionSeq: state.actionSeq + 1,
+        pendingDecision: {
+          id: decisionId,
+          type: "payCost",
+          playerId: decision.playerId,
+          prompt: `Pay cost for ${String(handCard.cardId)}`,
+          causedBy: {
+            type: "playerAction",
+            actionId: `action:${String(state.actionSeq + 1)}`,
+          },
+          visibility: { type: "public" },
+          cost: { type: "restDon", count: activation.printedCost },
+          paymentOptions: [
+            { id: "restDon", type: "restDon", count: activation.printedCost },
+          ],
         },
-        visibility: { type: "public" },
-        cost: { type: "restDon", count: printedCost },
-        paymentOptions: [
-          { id: "restDon", type: "restDon", count: printedCost },
-        ],
-      },
-      eventJournal: [...state.eventJournal, ...events],
-    };
-    assertGameStateInvariantsIfEnabled(nextState, options);
-    return toEngineResult(nextState, events, undefined, options);
-  }
-  if (effectCost !== undefined) {
-    return createCounterEventEffectCostDecision({
-      battle,
-      cost: effectCost,
-      decisionPlayerId: decision.playerId,
-      handCard,
-      options,
+        eventJournal: [...state.eventJournal, ...events],
+      };
+      assertGameStateInvariantsIfEnabled(nextState, options);
+      return toEngineResult(nextState, events, undefined, options);
+    }
+    return resolveCounterEventActivation({
       state,
-      target: action.target,
+      decisionPlayerId: decision.playerId,
+      battle,
+      handCard,
+      activation,
+      costArea: defender.costArea,
+      priorEvents: [],
+      options,
+      ...(state.pendingDecision === undefined
+        ? {}
+        : { pendingDecision: state.pendingDecision }),
     });
+  } else {
+    return illegalAction(state, "Counter card must be a Character with counter.");
   }
 
   const counterResult = resolveCounterCardUse({
@@ -375,14 +342,9 @@ export const applyUseCounter = (
     target: action.target,
     counterValue,
     usesBattleCounterPower,
-    ...(counterDuration === undefined ? {} : { counterDuration }),
-    ...(trailingSequence === undefined ? {} : { trailingSequence }),
-    ...(runtimeEffects === undefined ? {} : { runtimeEffects }),
-    ...(sequenceEffects === undefined ? {} : { sequenceEffects }),
     costArea: defender.costArea,
     decisionResolvedId: undefined,
-    applyCounterPower:
-      runtimeEffects === undefined && sequenceEffects === undefined,
+    applyCounterPower: true,
     pendingDecision: state.pendingDecision,
     priorEvents: [],
     options,
@@ -712,6 +674,135 @@ export const applyCounterEventTargetDecisionResponse = (params: {
     priorEvents: events,
     options,
   });
+};
+
+export const resolveCounterEventActivation = (params: {
+  readonly state: GameState;
+  readonly decisionPlayerId: PlayerId;
+  readonly battle: NonNullable<GameState["battle"]>;
+  readonly handCard: CardInstance;
+  readonly activation: SupportedCounterEventActivation;
+  readonly costArea: GameState["players"][PlayerId]["costArea"];
+  readonly decisionResolvedId?: NonNullable<GameState["pendingDecision"]>["id"];
+  readonly pendingDecision?: NonNullable<GameState["pendingDecision"]>;
+  readonly priorEvents: readonly EngineEvent[];
+  readonly options?: EngineResultOptions;
+}): EngineResult => {
+  const {
+    state,
+    decisionPlayerId,
+    battle,
+    handCard,
+    activation,
+    costArea,
+    decisionResolvedId,
+    pendingDecision,
+    priorEvents,
+    options,
+  } = params;
+  const defender = state.players[decisionPlayerId];
+  if (defender === undefined) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+
+  const events: EngineEvent[] = [];
+  if (decisionResolvedId !== undefined) {
+    appendEvent(
+      state,
+      events,
+      "decisionResolved",
+      { decisionId: decisionResolvedId, playerId: decisionPlayerId },
+      { type: "public" },
+    );
+  }
+  const targetPower = getSupportedBattleCombatViewOrNull(state, battle)
+    ?.targetView.currentPower;
+  appendEvent(state, events, "counterUsed", {
+    playerId: decisionPlayerId,
+    instanceId: handCard.instanceId,
+    cardId: handCard.cardId,
+    target: battle.currentTarget,
+    value: 0,
+    ...(targetPower === undefined ? {} : { targetPower }),
+  });
+  const counterUsed = events.at(-1);
+  if (counterUsed !== undefined && counterUsed.type === "counterUsed") {
+    appendCombatSpotlightEntryCreatedEvent({
+      state,
+      events,
+      anchorEvent: counterUsed,
+      combat: {
+        eventKind: "counterUsed",
+        source: {
+          instanceId: handCard.instanceId,
+          cardId: handCard.cardId,
+          playerId: decisionPlayerId,
+          zone: handCard.zone,
+        },
+        target: battle.currentTarget,
+        counterPower: 0,
+      },
+    });
+  }
+
+  const movedResult = moveConcreteCardsToTrash(state, events, [handCard], {
+    cardMovedPayloadShape: "zoneRefs",
+    cardMovedVisibility: { type: "public" },
+    cardTrashedVisibility: { type: "public" },
+    clearAttachedDon: true,
+    emitCardTrashed: true,
+    includeCardIdentityInCardMoved: true,
+    playerId: decisionPlayerId,
+    reason: "counter",
+    sourceZone: "hand",
+  });
+  const movedDefender = movedResult.state.players[decisionPlayerId];
+  if (movedDefender === undefined) {
+    return illegalAction(state, "Decision player mismatch.");
+  }
+  const trashedCard = movedDefender.trash.find(
+    (card) => card.instanceId === handCard.instanceId,
+  );
+  if (trashedCard === undefined) {
+    return illegalAction(state, "Counter card movement failed.");
+  }
+
+  let nextState: GameState = {
+    ...movedResult.state,
+    actionSeq: state.actionSeq + 1,
+    players: {
+      ...movedResult.state.players,
+      [decisionPlayerId]: {
+        ...movedDefender,
+        costArea,
+      },
+    },
+    battle,
+    eventJournal: [...state.eventJournal, ...events],
+  };
+  delete nextState.pendingDecision;
+
+  const queued = queueCounterEventEffects({
+    state: nextState,
+    controllerId: decisionPlayerId,
+    source: trashedCard,
+    activation,
+  });
+  nextState = queued.state;
+  if (queued.events.length === 0 && pendingDecision !== undefined) {
+    nextState = {
+      ...nextState,
+      pendingDecision,
+    };
+  }
+
+  assertGameStateInvariantsIfEnabled(nextState, options);
+  return toEngineResult(
+    nextState,
+    [...priorEvents, ...events, ...queued.events],
+    undefined,
+    options,
+  );
 };
 
 export const resolveCounterCardUse = (params: {

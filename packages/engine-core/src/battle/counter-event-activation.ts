@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  EngineEvent,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -7,6 +8,7 @@ import type {
   PlayerId,
 } from "@optcg/types";
 
+import { appendEffectQueuedEvent, toStateSeq } from "../action-results.js";
 import { evaluateQueuedEffectCondition } from "../effect-runtime-conditions.js";
 import { isEffectBlockInvalidated } from "../effect-invalidation.js";
 import { isSupportedSequenceBlock } from "../effect-runtime-sequence/support.js";
@@ -49,9 +51,11 @@ export const getSupportedCounterEventActivation = (
     return null;
   }
 
-  const effects = definition.effects.map((effect) =>
-    toSupportedCounterSequence(state, card, controllerId, effect),
-  );
+  const effects = definition.effects
+    .filter((effect) => effect.trigger.type === "counter")
+    .map((effect) =>
+      toSupportedCounterSequence(state, card, controllerId, effect),
+    );
   if (effects.length === 0 || effects.some((effect) => effect === null)) {
     return null;
   }
@@ -61,6 +65,111 @@ export const getSupportedCounterEventActivation = (
     effects: effects.filter(
       (effect): effect is CounterSequenceBlock => effect !== null,
     ),
+  };
+};
+
+export const queueCounterEventEffects = (params: {
+  readonly state: GameState;
+  readonly controllerId: PlayerId;
+  readonly source: CardInstance;
+  readonly activation: SupportedCounterEventActivation;
+}): { readonly state: GameState; readonly events: readonly EngineEvent[] } => {
+  const events: EngineEvent[] = [];
+  const effectBlocks = counterEventQueueBlocks(params.activation.effects);
+  const queueState =
+    params.activation.effects.length > 1
+      ? withCounterEventQueueBlocks(
+          params.state,
+          params.source.cardId,
+          effectBlocks,
+        )
+      : params.state;
+  const entries = effectBlocks.map((effectBlock) =>
+    ({
+      ...toCounterEventRuntimeQueueEntry(
+        queueState,
+        params.controllerId,
+        params.source,
+        effectBlock,
+      ),
+      state: "pending" as const,
+    }),
+  );
+  if (entries.length === 0) {
+    return { events, state: queueState };
+  }
+
+  const resolved = queueState.cardManifest.cards[params.source.cardId];
+  for (const [index, entry] of entries.entries()) {
+    const effectBlock = effectBlocks[index];
+    if (effectBlock !== undefined) {
+      appendEffectQueuedEvent(queueState, events, entry, effectBlock, resolved);
+    }
+  }
+
+  return {
+    events,
+    state: {
+      ...queueState,
+      seq: toStateSeq(queueState.seq + 1),
+      effectQueue: [...queueState.effectQueue, ...entries],
+      eventJournal: [...queueState.eventJournal, ...events],
+    },
+  };
+};
+
+const counterEventQueueBlocks = (
+  effects: readonly CounterSequenceBlock[],
+): readonly CounterSequenceBlock[] => {
+  const first = effects[0];
+  if (first === undefined || effects.length <= 1) {
+    return effects;
+  }
+  return [
+    {
+      ...first,
+      id: `${String(first.id)}:counter-batch` as CounterSequenceBlock["id"],
+      effect: {
+        type: "sequence",
+        effects: effects.flatMap((effect) => effect.effect.effects),
+      },
+    },
+  ];
+};
+
+const withCounterEventQueueBlocks = (
+  state: GameState,
+  cardId: CardInstance["cardId"],
+  effectBlocks: readonly CounterSequenceBlock[],
+): GameState => {
+  const metadata = state.cardManifest.cards[cardId];
+  const definitionId = metadata?.support.effectDefinitionId;
+  if (definitionId === undefined) {
+    return state;
+  }
+  const definition = state.cardManifest.effectDefinitions?.[definitionId];
+  if (definition === undefined) {
+    return state;
+  }
+  const existingIds = new Set(definition.effects.map((effect) => effect.id));
+  const additions = effectBlocks.filter(
+    (effectBlock) => !existingIds.has(effectBlock.id),
+  );
+  if (additions.length === 0) {
+    return state;
+  }
+  return {
+    ...state,
+    cardManifest: {
+      ...state.cardManifest,
+      effectDefinitions: {
+        ...state.cardManifest.effectDefinitions,
+        [definitionId]: {
+          ...definition,
+          effects: [...definition.effects, ...additions],
+        },
+      },
+    },
   };
 };
 

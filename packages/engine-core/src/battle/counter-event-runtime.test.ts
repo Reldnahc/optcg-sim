@@ -221,7 +221,9 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
       "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
+      "effectQueued",
       "effectResolved",
+      "ruleProcessingChecked",
       "decisionCreated",
     ],
   );

@@ -366,6 +366,7 @@ const isSupportedChooseFromZonesTarget = (
 export const isSupportedTarget = (target: Target): boolean => {
   if (target.type === "self") return true;
   if (target.type === "attacker") return true;
+  if (target.type === "attackTarget") return true;
   if (target.type === "choose") return true;
   if (target.type === "chooseFromZones") {
     return isSupportedChooseFromZonesTarget(target);

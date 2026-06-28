@@ -44,9 +44,11 @@ import {
   applyCounterEventTargetDecisionResponse,
   createCounterEventEffectCostDecision,
   getLegalCharacterCounterActions,
+  resolveCounterEventActivation,
   resolveCounterCardUse,
 } from "./counter-card-use.js";
 import { prependEventsToEngineResult } from "../engine-result-events.js";
+import { getSupportedCounterEventActivation } from "./counter-event-activation.js";
 
 export { applyUseCounter } from "./counter-card-use.js";
 export {
@@ -241,6 +243,90 @@ export const applyCounterStepDecisionResponse = (
     const handCard = defender.hand[handIndex];
     if (handCard === undefined) {
       return illegalAction(state, "Decision card not found.");
+    }
+    if (
+      context.kind === "printed" &&
+      state.cardManifest.cards[handCard.cardId]?.category === "event"
+    ) {
+      const activation = getSupportedCounterEventActivation(
+        state,
+        handCard,
+        decision.playerId,
+      );
+      if (
+        activation === null ||
+        String(battle.currentTarget.instanceId) !== context.targetInstanceId
+      ) {
+        return illegalAction(state, "Unsupported payCost decision context.");
+      }
+      if (action.response.type !== "payment") {
+        return illegalAction(state, "Unsupported decision response.");
+      }
+      if (action.response.optionId !== "restDon") {
+        return illegalAction(state, "Payment option mismatch.");
+      }
+      const selected = action.response.selectedDonInstanceIds;
+      if (
+        selected === undefined ||
+        selected.length !== activation.printedCost
+      ) {
+        return illegalAction(state, "Payment DON!! selection count mismatch.");
+      }
+      if (new Set(selected).size !== selected.length) {
+        return illegalAction(
+          state,
+          "Payment DON!! selection contains duplicates.",
+        );
+      }
+      const costAreaById = new Map(
+        defender.costArea.map((card) => [card.instanceId, card]),
+      );
+      for (const donId of selected) {
+        const don = costAreaById.get(donId);
+        if (don === undefined || don.state !== "active") {
+          return illegalAction(state, "Payment DON!! selection is invalid.");
+        }
+      }
+      const restedSet = new Set(selected);
+      const nextCostArea = defender.costArea.map((card) =>
+        restedSet.has(card.instanceId)
+          ? { ...card, state: "rested" as const }
+          : card,
+      );
+      const events: EngineEvent[] = [];
+      appendEvent(
+        state,
+        events,
+        "costPaid",
+        {
+          playerId: decision.playerId,
+          optionId: "restDon",
+          selectedDonInstanceIds: selected,
+        },
+        { type: "public" },
+      );
+      const stagedState: GameState = {
+        ...state,
+        eventJournal: [...state.eventJournal, ...events],
+      };
+      const nextCounterDecision =
+        createCounterStepPassDecision(stagedState, {
+          requirePotentialCounterActions: false,
+        }) ?? undefined;
+      return resolveCounterEventActivation({
+        state: stagedState,
+        decisionPlayerId: decision.playerId,
+        battle,
+        handCard,
+        activation,
+        costArea: nextCostArea,
+        decisionResolvedId: decision.id,
+        priorEvents: events,
+        options,
+        ...(nextCounterDecision === undefined
+          ? {}
+          : { pendingDecision: nextCounterDecision }),
+      });
     }
     const supportedTargets = getSupportedCounterEventPowerTargets(
       state,

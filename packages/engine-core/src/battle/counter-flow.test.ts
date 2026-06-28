@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { EffectDefinition, SelectionId } from "@optcg/types";
+import type { EffectDefinition, EngineResult, SelectionId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
+import { processEffectRuntime } from "../effect-runtime.js";
+import { computeView } from "../view/compute-view.js";
 import { applyDeclareAttack } from "./actions.js";
 type EngineInternalBattleState = NonNullable<
   ReturnType<typeof setupAttackState>["battle"]
@@ -12,6 +14,21 @@ const battleCounterPower = (
   battle: ReturnType<typeof setupAttackState>["battle"],
 ): number | undefined =>
   (battle as EngineInternalBattleState | undefined)?.counterPower;
+
+const drainAutomaticRuntime = (result: EngineResult): EngineResult => {
+  let current = result;
+  for (let step = 0; step < 10; step += 1) {
+    if (
+      current.errors !== undefined ||
+      current.state.pendingDecision !== undefined ||
+      current.state.effectQueue.length === 0
+    ) {
+      return current;
+    }
+    current = processEffectRuntime(current.state);
+  }
+  return current;
+};
 import {
   must,
   p1,
@@ -564,7 +581,10 @@ test("supported Counter Event appears in defender legal actions and resolves to 
     target,
   });
   assert.equal(used.errors, undefined);
-  assert.equal(battleCounterPower(used.state.battle), 2000);
+  assert.equal(
+    computeView(used.state).cards[p2State.leader.instanceId]?.currentPower,
+    7000,
+  );
   assert.deepEqual(
     used.events.map((event) => event.type),
     [
@@ -572,7 +592,9 @@ test("supported Counter Event appears in defender legal actions and resolves to 
       "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
+      "effectQueued",
       "effectResolved",
+      "ruleProcessingChecked",
       "decisionCreated",
     ],
   );
@@ -679,14 +701,19 @@ test("supported Counter Event remains legal with multiple supported counter powe
     true,
   );
 
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = drainAutomaticRuntime(
+    applyAction(opened.state, {
+      type: "useCounter",
+      cardInstanceId: counterEvent.instanceId,
+      target: must(opened.state.battle, "battle").currentTarget,
+    }),
+  );
 
   assert.equal(used.errors, undefined);
-  assert.equal(battleCounterPower(used.state.battle), 3000);
+  assert.equal(
+    computeView(used.state).cards[p2State.leader.instanceId]?.currentPower,
+    8000,
+  );
 });
 
 test("conditional Counter Event can apply choose-from-leader-or-character power to current battle target", () => {
@@ -758,9 +785,20 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
     cardInstanceId: counterEvent.instanceId,
     target: must(opened.state.battle, "battle").currentTarget,
   });
-
   assert.equal(used.errors, undefined);
-  assert.equal(battleCounterPower(used.state.battle), 4000);
+  const targetDecision = must(used.state.pendingDecision, "target decision");
+  assert.equal(targetDecision.type, "selectTargets");
+  const selected = applyAction(used.state, {
+    type: "respondToDecision",
+    decisionId: targetDecision.id,
+    response: { type: "targets", targets: [cardRef(p2State.leader, p2)] },
+  });
+
+  assert.equal(selected.errors, undefined);
+  assert.equal(
+    computeView(selected.state).cards[p2State.leader.instanceId]?.currentPower,
+    9000,
+  );
 });
 
 test("Counter Event sequence resolves power then conditional trash-to-hand selection", () => {
@@ -916,12 +954,26 @@ test("Counter Event sequence resolves power then conditional trash-to-hand selec
     target: must(opened.state.battle, "battle").currentTarget,
   });
   assert.equal(used.errors, undefined);
-  const selectionDecision = must(
+  const powerTargetDecision = must(
     used.state.pendingDecision,
+    "power target decision",
+  );
+  assert.equal(powerTargetDecision.type, "selectTargets");
+  const targeted = applyAction(used.state, {
+    type: "respondToDecision",
+    decisionId: powerTargetDecision.id,
+    response: { type: "targets", targets: [cardRef(p2State.leader, p2)] },
+  });
+  assert.equal(targeted.errors, undefined);
+  const selectionDecision = must(
+    targeted.state.pendingDecision,
     "trash-to-hand selection decision",
   );
 
-  assert.equal(battleCounterPower(used.state.battle), 1000);
+  assert.equal(
+    computeView(targeted.state).cards[p2State.leader.instanceId]?.currentPower,
+    6000,
+  );
   assert.equal(selectionDecision.type, "selectCards");
   assert.deepEqual(
     selectionDecision.candidates.map((candidate) => candidate.card.instanceId),
@@ -932,7 +984,7 @@ test("Counter Event sequence resolves power then conditional trash-to-hand selec
     selectionDecision.candidates[0],
     "trash-to-hand candidate",
   );
-  const selected = applyAction(used.state, {
+  const selected = applyAction(targeted.state, {
     type: "respondToDecision",
     decisionId: selectionDecision.id,
     response: { type: "cards", cards: [selectedCandidate.card] },
@@ -1028,7 +1080,9 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
       "spotlightEntryCreated",
       "cardMoved",
       "cardTrashed",
+      "effectQueued",
       "effectResolved",
+      "ruleProcessingChecked",
       "decisionCreated",
     ],
   );
@@ -1039,7 +1093,10 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
     ),
     true,
   );
-  assert.equal(battleCounterPower(paid.state.battle), 1000);
+  assert.equal(
+    computeView(paid.state).cards[p2State.leader.instanceId]?.currentPower,
+    6000,
+  );
   const replay = applyAction(structuredClone(use.state), {
     type: "respondToDecision",
     decisionId: must(use.state.pendingDecision, "decision").id,
