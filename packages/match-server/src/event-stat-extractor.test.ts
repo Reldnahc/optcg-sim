@@ -406,31 +406,6 @@ test("extracts battle KOs only when the movement payload identifies the battle s
   assert.equal(values.get(statKeys.charactersKoByBattle), 1);
 });
 
-test("does not emit cards_discarded without supported event evidence", () => {
-  const values = statValues([
-    event("cardTrashed", {
-      playerId: p1,
-      instanceId: "discarded-card",
-      cardId: "discarded-card-id",
-      reason: "trashFromHand",
-    }),
-  ]);
-
-  assert.equal(values.get(statKeys.cardsDiscarded), undefined);
-});
-
-test("does not emit cards_searched without supported event evidence", () => {
-  const values = statValues([
-    event("cardRevealed", {
-      revealId: "search-reveal",
-      cards: [{ playerId: p1, instanceId: "char-1", cardId: "char-card-id" }],
-      origin: "search",
-    }),
-  ]);
-
-  assert.equal(values.get(statKeys.cardsSearched), undefined);
-});
-
 test("does not emit don_restored_total without supported event evidence", () => {
   const values = statValues([
     event("cardMoved", {
@@ -443,28 +418,4 @@ test("does not emit don_restored_total without supported event evidence", () => 
   ]);
 
   assert.equal(values.get(statKeys.donRestored), undefined);
-});
-
-test("does not emit characters_ko_by_effect without supported event evidence", () => {
-  const values = statValues([
-    event("cardKOd", {
-      playerId: p2,
-      instanceId: "ko-target",
-    }),
-    event("cardMoved", {
-      playerId: p2,
-      instanceId: "ko-target",
-      cardId: "ko-target-card",
-      from: {
-        zone: "characterArea",
-        playerId: p2,
-        slot: "character",
-        index: 0,
-      },
-      to: { zone: "trash", playerId: p2, slot: "trash", index: 0 },
-      reason: "ko",
-    }),
-  ]);
-
-  assert.equal(values.get(statKeys.charactersKoByEffect), undefined);
 });

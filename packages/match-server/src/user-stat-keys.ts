@@ -227,17 +227,14 @@ export const statKeys = {
   counterCardsUsed: "counter_cards_used",
   counterPowerUsedTotal: "counter_power_used_total",
   charactersKoByBattle: "characters_ko_by_battle",
-  charactersKoByEffect: "characters_ko_by_effect",
 
   cardsDrawn: "cards_drawn",
-  cardsDiscarded: "cards_discarded",
   cardsTrashedFromHand: "cards_trashed_from_hand",
   cardsTrashedFromDeck: "cards_trashed_from_deck",
   cardsAddedFromLife: "cards_added_from_life",
   lifeDamageTaken: "life_damage_taken",
   lifeRecovered: "life_recovered",
   cardsRevealed: "cards_revealed",
-  cardsSearched: "cards_searched",
 
   effectsActivatedTotal: "effects_activated_total",
   onPlayEffectsActivated: "on_play_effects_activated",

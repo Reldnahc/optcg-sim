@@ -180,19 +180,16 @@ test("in-game combat stat keys use exact catalog names", () => {
   assert.equal(statKeys.counterCardsUsed, "counter_cards_used");
   assert.equal(statKeys.counterPowerUsedTotal, "counter_power_used_total");
   assert.equal(statKeys.charactersKoByBattle, "characters_ko_by_battle");
-  assert.equal(statKeys.charactersKoByEffect, "characters_ko_by_effect");
 });
 
 test("in-game card movement stat keys use exact catalog names", () => {
   assert.equal(statKeys.cardsDrawn, "cards_drawn");
-  assert.equal(statKeys.cardsDiscarded, "cards_discarded");
   assert.equal(statKeys.cardsTrashedFromHand, "cards_trashed_from_hand");
   assert.equal(statKeys.cardsTrashedFromDeck, "cards_trashed_from_deck");
   assert.equal(statKeys.cardsAddedFromLife, "cards_added_from_life");
   assert.equal(statKeys.lifeDamageTaken, "life_damage_taken");
   assert.equal(statKeys.lifeRecovered, "life_recovered");
   assert.equal(statKeys.cardsRevealed, "cards_revealed");
-  assert.equal(statKeys.cardsSearched, "cards_searched");
 });
 
 test("in-game effect stat keys use exact catalog names", () => {
@@ -231,6 +228,12 @@ test("stat keys do not emit old colon-reordered names", () => {
   assert.notEqual(statKeys.pvpMatchesCompleted, "pvp:matches_completed");
 });
 
+test("stat keys do not expose stale unsupported stat names", () => {
+  assert.equal("cardsDiscarded" in statKeys, false);
+  assert.equal("cardsSearched" in statKeys, false);
+  assert.equal("charactersKoByEffect" in statKeys, false);
+});
+
 test("stat keys do not emit removed non-catalog in-game names", () => {
   const emittedKeys = [
     statKeys.cardsPlayed,
@@ -257,16 +260,13 @@ test("stat keys do not emit removed non-catalog in-game names", () => {
     statKeys.counterCardsUsed,
     statKeys.counterPowerUsedTotal,
     statKeys.cardsDrawn,
-    statKeys.cardsDiscarded,
     statKeys.cardsTrashedFromHand,
     statKeys.cardsTrashedFromDeck,
     statKeys.cardsAddedFromLife,
     statKeys.charactersKoByBattle,
-    statKeys.charactersKoByEffect,
     statKeys.lifeDamageTaken,
     statKeys.lifeRecovered,
     statKeys.cardsRevealed,
-    statKeys.cardsSearched,
     statKeys.effectsActivatedTotal,
     statKeys.onPlayEffectsActivated,
     statKeys.activateMainEffectsActivated,
