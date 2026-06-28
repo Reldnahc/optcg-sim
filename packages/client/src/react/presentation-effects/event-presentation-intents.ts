@@ -4,8 +4,10 @@ import {
   presentationZoneKey,
   type PresentationZoneKey,
 } from "./movement-planner.js";
+import type { PresentationSoundCue } from "./sound-cues.js";
 
-export type PresentationEventSoundCue =
+export type PresentationEventSoundCue = Extract<
+  PresentationSoundCue,
   | "attach"
   | "counter"
   | "damage"
@@ -15,7 +17,8 @@ export type PresentationEventSoundCue =
   | "return"
   | "reveal"
   | "shuffle"
-  | "trigger";
+  | "trigger"
+>;
 
 export interface PresentationEventMovementRoute {
   readonly instanceId: string;

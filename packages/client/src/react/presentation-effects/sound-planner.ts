@@ -1,29 +1,22 @@
 import type { CardMovementIntent } from "./movement-planner.js";
+import type { PresentationSoundCue } from "./sound-cues.js";
 
-export type PresentationSoundCue =
-  | "attach"
-  | "counter"
-  | "damage"
-  | "draw"
-  | "ko"
-  | "move"
-  | "play"
-  | "rest"
-  | "return"
-  | "reveal"
-  | "shuffle"
-  | "trash"
-  | "trigger";
+export type { PresentationSoundCue } from "./sound-cues.js";
 
 export interface PresentationSoundIntent {
   id: string;
   cue: PresentationSoundCue;
 }
 
+type MovementSoundCue = Extract<
+  PresentationSoundCue,
+  "draw" | "move" | "play" | "trash"
+>;
+
 const zoneName = (zoneKey: string | undefined): string | undefined =>
   zoneKey?.split(":")[1];
 
-const cueForMovement = (movement: CardMovementIntent): PresentationSoundCue => {
+const cueForMovement = (movement: CardMovementIntent): MovementSoundCue => {
   const fromZone = zoneName(movement.fromZoneKey);
   const toZone = zoneName(movement.toZoneKey);
   if (fromZone === "deck" && toZone === "hand") {
@@ -41,32 +34,23 @@ const cueForMovement = (movement: CardMovementIntent): PresentationSoundCue => {
   return "move";
 };
 
-const cuePriority = (cue: PresentationSoundCue): number => {
+const cuePriority = (cue: MovementSoundCue): number => {
   switch (cue) {
     case "trash":
-    case "ko":
-    case "damage":
       return 4;
     case "draw":
-    case "reveal":
       return 3;
     case "play":
-    case "trigger":
-    case "counter":
       return 2;
-    case "attach":
-    case "return":
-    case "rest":
-    case "shuffle":
     case "move":
       return 1;
   }
 };
 
 const dominantCue = (
-  cues: readonly PresentationSoundCue[],
-): PresentationSoundCue | undefined =>
-  cues.reduce<PresentationSoundCue | undefined>((best, cue) => {
+  cues: readonly MovementSoundCue[],
+): MovementSoundCue | undefined =>
+  cues.reduce<MovementSoundCue | undefined>((best, cue) => {
     if (best === undefined || cuePriority(cue) > cuePriority(best)) {
       return cue;
     }
