@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -56,6 +57,12 @@ import { usePersistedMatchVisualSettings } from "./use-persisted-match-visual-se
 import { useRevealWindowState } from "./use-reveal-window-state.js";
 import { createWindowLayoutStore } from "./window-state-store.js";
 import type { MatchClientUi } from "./useMatchClient-support.js";
+import type { PresentationInteractionSoundCue } from "./presentation-effects/interaction-sound-planner.js";
+import { playInteractionSound } from "./presentation-effects/interaction-sound-router.js";
+import {
+  boardCardClickInteractionCue,
+  matchPresentationSoundOptions,
+} from "./match-app-interaction-sound.js";
 export interface MatchAppProps {
   readonly accountSessionToken?: string | undefined;
   readonly client?: MatchClientUi | undefined;
@@ -134,6 +141,20 @@ export const MatchApp = ({
   replayControls,
 }: MatchAppProps): React.JSX.Element => {
   const visualSettings = usePersistedMatchVisualSettings();
+  const presentationSound = matchPresentationSoundOptions(
+    visualSettings.soundVolume,
+  );
+  const playInteractionCue = useCallback(
+    (cue: PresentationInteractionSoundCue, sourceKey: string): void => {
+      playInteractionSound({
+        cue,
+        sourceKey,
+        enabled: presentationSound.enabled,
+        volume: presentationSound.volume,
+      });
+    },
+    [presentationSound.enabled, presentationSound.volume],
+  );
   const liveClient = useMatchClient({
     accountSessionToken: accountSessionToken ?? "replay-disabled",
     confirmAttachDon: visualSettings.confirmAttachDon,
@@ -317,10 +338,14 @@ export const MatchApp = ({
     disabled: client.state.actionInFlight,
     displayBoard,
     onConfirmDecision: () => {
+      playInteractionCue("confirm", "collection-confirm");
       void client.confirmDecision();
     },
     onPreviewCard: previewHoveredCard,
-    onToggleDecisionCard: client.toggleDecisionCard,
+    onToggleDecisionCard: (instanceId) => {
+      playInteractionCue("select", `collection-card:${instanceId}`);
+      client.toggleDecisionCard(instanceId);
+    },
     updateCollectionWindowOpen,
     activateFloatingWindow,
     updateControlDockTarget,
@@ -568,6 +593,8 @@ export const MatchApp = ({
           clientState={clientState}
           presentationEvents={playerSnapshot?.view.events ?? []}
           reduceDeckStackRendering={visualSettings.reduceDeckStackRendering}
+          soundEnabled={presentationSound.enabled}
+          soundVolume={presentationSound.volume}
           decisionPrompt={decisionPromptVisible ? decisionPrompt : undefined}
           effectSpotlightPresentation={effectSpotlightPresentation}
           effectSpotlightControls={effectSpotlight?.controls}
@@ -578,14 +605,24 @@ export const MatchApp = ({
           selectedDonInstanceIds={selectedDonInstanceIds}
           cardActions={client.cardActions}
           actionDisabled={client.state.actionInFlight}
-          onCardClick={client.selectCard}
+          onCardClick={(instanceId) => {
+            playInteractionCue(
+              boardCardClickInteractionCue({
+                actionInFlight: client.state.actionInFlight,
+              }),
+              `card:${instanceId}`,
+            );
+            client.selectCard(instanceId);
+          }}
           onCardAction={(actionIndex) => {
+            playInteractionCue("confirm", `card-action:${String(actionIndex)}`);
             void client.submitAction(actionIndex);
           }}
           onPreviewCard={previewHoveredCard}
           onMoveHandCard={moveHandCard}
           onViewCollection={onViewCollection}
           onBackgroundClick={() => {
+            playInteractionCue("emptyClick", "board");
             client.selectCard(undefined);
           }}
         />
@@ -653,6 +690,10 @@ export const MatchApp = ({
               return;
             }
             resetEndTurnConfirmation();
+            playInteractionCue(
+              "confirm",
+              `global-action:${String(actionIndex)}`,
+            );
             void client.submitAction(actionIndex);
           }}
           onHome={() => {
@@ -691,6 +732,7 @@ export const MatchApp = ({
             if (concedeAction === undefined || !requestConcedeConfirmation()) {
               return;
             }
+            playInteractionCue("confirm", "concede");
             void client.submitAction(concedeAction.index);
           }}
         />
@@ -732,18 +774,63 @@ export const MatchApp = ({
             onDragEnd: (windowKey, rect) =>
               completeDockableWindowDrag(windowKey, rect),
           }}
-          onToggleCard={client.toggleDecisionCard}
-          onChooseTrigger={client.chooseDecisionTriggerValue}
-          onQuantity={client.setDecisionQuantityValue}
-          onOption={setVisibleDecisionOption}
-          onActionOption={client.setDecisionActionOptionValue}
-          onSubmitQuantity={submitVisibleDecisionQuantity}
-          onSubmitOption={submitVisibleDecisionOption}
-          onSubmitActionOption={submitVisibleDecisionActionOption}
+          onToggleCard={(instanceId) => {
+            playInteractionCue("select", `decision-card:${instanceId}`);
+            client.toggleDecisionCard(instanceId);
+          }}
+          onChooseTrigger={(triggerId) => {
+            playInteractionCue("select", `trigger:${triggerId}`);
+            client.chooseDecisionTriggerValue(triggerId);
+          }}
+          onQuantity={(quantity) => {
+            playInteractionCue("select", `quantity:${String(quantity)}`);
+            client.setDecisionQuantityValue(quantity);
+          }}
+          onOption={(option) => {
+            playInteractionCue("select", `option:${option}`);
+            setVisibleDecisionOption(option);
+          }}
+          onActionOption={(actionIndex) => {
+            playInteractionCue(
+              "select",
+              `action-option:${String(actionIndex)}`,
+            );
+            client.setDecisionActionOptionValue(actionIndex);
+          }}
+          onSubmitQuantity={(quantity) => {
+            playInteractionCue(
+              "confirm",
+              `submit-quantity:${String(quantity)}`,
+            );
+            submitVisibleDecisionQuantity(quantity);
+          }}
+          onSubmitOption={(option) => {
+            playInteractionCue("confirm", `submit-option:${option}`);
+            submitVisibleDecisionOption(option);
+          }}
+          onSubmitActionOption={(actionIndex) => {
+            playInteractionCue(
+              "confirm",
+              `submit-action-option:${String(actionIndex)}`,
+            );
+            submitVisibleDecisionActionOption(actionIndex);
+          }}
           onPreviewCard={previewHoveredCard}
-          onMoveOrderedCard={client.moveDecisionCard}
-          onPlacementDestination={client.setDecisionPlacementDestination}
-          onConfirm={confirmVisibleDecision}
+          onMoveOrderedCard={(draggedId, targetId, placement) => {
+            playInteractionCue(
+              "select",
+              `ordered-card:${draggedId}:${targetId}:${placement}`,
+            );
+            client.moveDecisionCard(draggedId, targetId, placement);
+          }}
+          onPlacementDestination={(destination) => {
+            playInteractionCue("select", `placement:${destination}`);
+            client.setDecisionPlacementDestination(destination);
+          }}
+          onConfirm={() => {
+            playInteractionCue("confirm", "decision-confirm");
+            confirmVisibleDecision();
+          }}
         />
         <MatchInfoWindows
           actionLogEntries={actionLogEntries}

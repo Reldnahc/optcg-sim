@@ -27,6 +27,7 @@ export const usePresentationEffects = (input: {
   board: BoardViewModel;
   events: readonly EngineEvent[];
   soundEnabled?: boolean | undefined;
+  soundVolume?: number | undefined;
 }): PresentationEffectsController => {
   const previousSnapshotRef = useRef<PresentationSnapshot | undefined>(
     undefined,
@@ -100,6 +101,9 @@ export const usePresentationEffects = (input: {
     if (soundIntents.length > 0) {
       playPresentationSoundIntents(soundIntents, {
         enabled: input.soundEnabled ?? true,
+        ...(input.soundVolume === undefined
+          ? {}
+          : { volume: input.soundVolume }),
       });
     }
     if (plannedMovements.length === 0) {
@@ -112,7 +116,13 @@ export const usePresentationEffects = (input: {
       setMovements([]);
       clearTimerRef.current = undefined;
     }, movementDurationMs);
-  }, [input.board, input.events, input.rootRef, input.soundEnabled]);
+  }, [
+    input.board,
+    input.events,
+    input.rootRef,
+    input.soundEnabled,
+    input.soundVolume,
+  ]);
 
   return { movements };
 };

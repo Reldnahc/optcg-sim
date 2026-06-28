@@ -272,4 +272,32 @@ describe("presentation sound controller", () => {
       );
     });
   });
+
+  test("does not suppress repeated intent ids across later playback windows", () => {
+    const calls: string[] = [];
+    const audioContext = fakeAudioContext(calls);
+    let nowMs = 40_000;
+
+    const options = {
+      audioContextFactory: () => audioContext,
+      bufferLoader: () => ({ kind: "loaded" as const, buffer: {} }),
+      nowMs: () => nowMs,
+      random: () => 0.5,
+    };
+
+    playPresentationSoundIntents(
+      [{ id: "same-attention-transition", cue: "yourTurn" }],
+      options,
+    );
+    nowMs += 1_000;
+    playPresentationSoundIntents(
+      [{ id: "same-attention-transition", cue: "yourTurn" }],
+      options,
+    );
+
+    assert.equal(
+      calls.filter((entry) => entry.startsWith("source.start:")).length,
+      2,
+    );
+  });
 });

@@ -47,6 +47,7 @@ export interface BoardLayoutProps {
   onBackgroundClick: () => void;
   presentationEvents?: readonly EngineEvent[] | undefined;
   soundEnabled?: boolean | undefined;
+  soundVolume?: number | undefined;
   reduceDeckStackRendering?: boolean | undefined;
 }
 
@@ -269,6 +270,7 @@ export const BoardLayout = ({
   onBackgroundClick,
   presentationEvents = [],
   soundEnabled = true,
+  soundVolume,
   reduceDeckStackRendering = false,
 }: BoardLayoutProps): React.JSX.Element => {
   const activeCardInstanceIds = board.activeCardInstanceIds ?? [];
@@ -296,6 +298,7 @@ export const BoardLayout = ({
     board,
     events: presentationEvents,
     soundEnabled,
+    soundVolume,
   });
 
   return (

@@ -93,7 +93,6 @@ const defaultAudioFactory: PresentationAudioFactory = (url) => {
 };
 
 let sharedContext: AudioContext | undefined;
-let lastPlayedIntentId: string | undefined;
 const maxSoundIntentsPerBatch = 4;
 const lastPlayedCueAtMs = new Map<PresentationSoundCue, number>();
 const defaultAudioBufferCache = new Map<
@@ -292,10 +291,6 @@ export const playPresentationSoundIntents = (
   }
   const nowMs = resolvedOptions.nowMs();
   for (const [index, intent] of orderedIntents(intents).entries()) {
-    if (intent.id === lastPlayedIntentId) {
-      continue;
-    }
-    lastPlayedIntentId = intent.id;
     if (!allowedByCooldown(intent.cue, nowMs)) {
       continue;
     }
