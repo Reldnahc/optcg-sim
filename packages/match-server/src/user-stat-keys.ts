@@ -113,6 +113,9 @@ const won = "matches_won";
 const lost = "matches_lost";
 const drawn = "matches_drawn";
 
+const scopedStatKey = (key: string, value: string, label: string): string =>
+  `${key}:${scopeSegment(value, label)}`;
+
 export const statKeys = {
   matchesCompleted: completed,
   matchesWon: won,
@@ -121,83 +124,89 @@ export const statKeys = {
   matchesConceded: "matches_conceded",
   matchesOpponentConceded: "matches_opponent_conceded",
 
-  pvpMatchesCompleted: "pvp:matches_completed",
-  pvpMatchesWon: "pvp:matches_won",
-  botMatchesCompleted: "bot:matches_completed",
-  botMatchesWon: "bot:matches_won",
-  noviceBotMatchesCompleted: "novice_bot:matches_completed",
-  noviceBotMatchesWon: "novice_bot:matches_won",
-  advancedBotMatchesCompleted: "advanced_bot:matches_completed",
-  advancedBotMatchesWon: "advanced_bot:matches_won",
+  pvpMatchesCompleted: "pvp_matches_completed",
+  pvpMatchesWon: "pvp_matches_won",
+  botMatchesCompleted: "bot_matches_completed",
+  botMatchesWon: "bot_matches_won",
+  noviceBotMatchesCompleted: "novice_bot_matches_completed",
+  noviceBotMatchesWon: "novice_bot_matches_won",
+  advancedBotMatchesCompleted: "advanced_bot_matches_completed",
+  advancedBotMatchesWon: "advanced_bot_matches_won",
 
   formatMatchesCompleted: (formatId: string) =>
-    `format:${scopeSegment(formatId, "Format id")}:${completed}`,
+    scopedStatKey("format_matches_completed", formatId, "Format id"),
   formatMatchesWon: (formatId: string) =>
-    `format:${scopeSegment(formatId, "Format id")}:${won}`,
+    scopedStatKey("format_matches_won", formatId, "Format id"),
   gameTypeMatchesCompleted: (gameType: string) =>
-    `game_type:${scopeSegment(gameType, "Game type")}:${completed}`,
+    scopedStatKey("game_type_matches_completed", gameType, "Game type"),
   gameTypeMatchesWon: (gameType: string) =>
-    `game_type:${scopeSegment(gameType, "Game type")}:${won}`,
-  rankedMatchesCompleted: "ranked:matches_completed",
-  rankedMatchesWon: "ranked:matches_won",
-  casualMatchesCompleted: "casual:matches_completed",
-  casualMatchesWon: "casual:matches_won",
+    scopedStatKey("game_type_matches_won", gameType, "Game type"),
+  rankedMatchesCompleted: "ranked_matches_completed",
+  rankedMatchesWon: "ranked_matches_won",
+  casualMatchesCompleted: "casual_matches_completed",
+  casualMatchesWon: "casual_matches_won",
 
   leaderMatchesCompleted: (cardNumber: string) =>
-    `leader:${scopeSegment(cardNumber, "Leader card number")}:${completed}`,
+    scopedStatKey(
+      "leader_matches_completed",
+      cardNumber,
+      "Leader card number",
+    ),
   leaderMatchesWon: (cardNumber: string) =>
-    `leader:${scopeSegment(cardNumber, "Leader card number")}:${won}`,
+    scopedStatKey("leader_matches_won", cardNumber, "Leader card number"),
   leaderMatchesLost: (cardNumber: string) =>
-    `leader:${scopeSegment(cardNumber, "Leader card number")}:${lost}`,
+    scopedStatKey("leader_matches_lost", cardNumber, "Leader card number"),
   leaderMatchesDrawn: (cardNumber: string) =>
-    `leader:${scopeSegment(cardNumber, "Leader card number")}:${drawn}`,
+    scopedStatKey("leader_matches_drawn", cardNumber, "Leader card number"),
 
   leaderColorCompleted: (bucket: ColorBucket) =>
-    `leader_color:${bucket}:${completed}`,
-  leaderColorWon: (bucket: ColorBucket) => `leader_color:${bucket}:${won}`,
-  leaderColorLost: (bucket: ColorBucket) => `leader_color:${bucket}:${lost}`,
-  leaderColorDrawn: (bucket: ColorBucket) => `leader_color:${bucket}:${drawn}`,
+    `leader_color_matches_completed:${bucket}`,
+  leaderColorWon: (bucket: ColorBucket) => `leader_color_matches_won:${bucket}`,
+  leaderColorLost: (bucket: ColorBucket) =>
+    `leader_color_matches_lost:${bucket}`,
+  leaderColorDrawn: (bucket: ColorBucket) =>
+    `leader_color_matches_drawn:${bucket}`,
 
   leaderNameCompleted: (key: string) =>
-    `leader_name:${scopeSegment(key, "Leader name key")}:${completed}`,
+    scopedStatKey("leader_name_matches_completed", key, "Leader name key"),
   leaderNameWon: (key: string) =>
-    `leader_name:${scopeSegment(key, "Leader name key")}:${won}`,
+    scopedStatKey("leader_name_matches_won", key, "Leader name key"),
   leaderNameLost: (key: string) =>
-    `leader_name:${scopeSegment(key, "Leader name key")}:${lost}`,
+    scopedStatKey("leader_name_matches_lost", key, "Leader name key"),
   leaderNameDrawn: (key: string) =>
-    `leader_name:${scopeSegment(key, "Leader name key")}:${drawn}`,
+    scopedStatKey("leader_name_matches_drawn", key, "Leader name key"),
 
-  firstPlayerMatchesCompleted: "first_player:matches_completed",
-  firstPlayerMatchesWon: "first_player:matches_won",
-  secondPlayerMatchesCompleted: "second_player:matches_completed",
-  secondPlayerMatchesWon: "second_player:matches_won",
+  firstPlayerMatchesCompleted: "matches_started_first",
+  firstPlayerMatchesWon: "matches_won_started_first",
+  secondPlayerMatchesCompleted: "matches_started_second",
+  secondPlayerMatchesWon: "matches_won_started_second",
 
   totalTurnsPlayed: "total_turns_played",
   totalActionsTaken: "total_actions_taken",
-  totalPlayTimeSeconds: "total_play_time_seconds",
-  fastestWinSeconds: "fastest_win_seconds",
-  longestMatchSeconds: "longest_match_seconds",
+  totalMatchSeconds: "total_match_seconds",
+  longMatchesCompleted: "long_matches_completed",
+  quickWins: "quick_wins",
 
   dailyMatchesCompleted: (dateKey: string) =>
-    `calendar:daily:${scopeSegment(dateKey, "Daily date key")}:${completed}`,
+    scopedStatKey("daily_matches_completed", dateKey, "Daily date key"),
   dailyMatchesWon: (dateKey: string) =>
-    `calendar:daily:${scopeSegment(dateKey, "Daily date key")}:${won}`,
+    scopedStatKey("daily_matches_won", dateKey, "Daily date key"),
   weeklyMatchesCompleted: (weekKey: string) =>
-    `calendar:weekly:${scopeSegment(weekKey, "Weekly date key")}:${completed}`,
+    scopedStatKey("weekly_matches_completed", weekKey, "Weekly date key"),
   weeklyMatchesWon: (weekKey: string) =>
-    `calendar:weekly:${scopeSegment(weekKey, "Weekly date key")}:${won}`,
+    scopedStatKey("weekly_matches_won", weekKey, "Weekly date key"),
   monthlyMatchesCompleted: (monthKey: string) =>
-    `calendar:monthly:${scopeSegment(monthKey, "Monthly date key")}:${completed}`,
+    scopedStatKey("monthly_matches_completed", monthKey, "Monthly date key"),
   monthlyMatchesWon: (monthKey: string) =>
-    `calendar:monthly:${scopeSegment(monthKey, "Monthly date key")}:${won}`,
+    scopedStatKey("monthly_matches_won", monthKey, "Monthly date key"),
 
-  cardsDrawn: "cards_drawn",
-  cardsPlayed: "cards_played",
-  charactersPlayed: "characters_played",
-  charactersKo: "characters_ko",
-  damageDealt: "damage_dealt",
-  damageReceived: "damage_received",
-  donAttached: "don_attached",
-  lifeRecovered: "life_recovered",
-  triggersActivated: "triggers_activated",
+  cardsDrawn: "cards_drawn_total",
+  cardsPlayed: "cards_played_total",
+  charactersPlayed: "characters_played_total",
+  charactersKo: "characters_ko_total",
+  damageDealt: "damage_dealt_total",
+  damageReceived: "damage_received_total",
+  donAttached: "don_attached_total",
+  lifeRecovered: "life_recovered_total",
+  triggersActivated: "triggers_activated_total",
 } as const;
