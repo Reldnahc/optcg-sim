@@ -200,13 +200,59 @@ export const statKeys = {
   monthlyMatchesWon: (monthKey: string) =>
     scopedStatKey("monthly_matches_won", monthKey, "Monthly date key"),
 
-  cardsDrawn: "cards_drawn_total",
   cardsPlayed: "cards_played_total",
   charactersPlayed: "characters_played_total",
-  charactersKo: "characters_ko_total",
-  damageDealt: "damage_dealt_total",
-  damageReceived: "damage_received_total",
+  eventsPlayed: "events_played_total",
+  stagesPlayed: "stages_played_total",
+  cardsPlayedByCard: (cardNumber: string) =>
+    scopedStatKey("cards_played_by_card", cardNumber, "Card number"),
+  charactersPlayedByCard: (cardNumber: string) =>
+    scopedStatKey("characters_played_by_card", cardNumber, "Card number"),
+  eventsPlayedByCard: (cardNumber: string) =>
+    scopedStatKey("events_played_by_card", cardNumber, "Card number"),
+  stagesPlayedByCard: (cardNumber: string) =>
+    scopedStatKey("stages_played_by_card", cardNumber, "Card number"),
+  cardsPlayedColor: (bucket: ColorBucket) => `cards_played_color:${bucket}`,
+  charactersPlayedColor: (bucket: ColorBucket) =>
+    `characters_played_color:${bucket}`,
+  eventsPlayedColor: (bucket: ColorBucket) => `events_played_color:${bucket}`,
+  stagesPlayedColor: (bucket: ColorBucket) => `stages_played_color:${bucket}`,
+
   donAttached: "don_attached_total",
-  lifeRecovered: "life_recovered_total",
-  triggersActivated: "triggers_activated_total",
+  donRestored: "don_restored_total",
+  donReturned: "don_returned_total",
+  donRamped: "don_ramped_total",
+
+  attacksDeclared: "attacks_declared",
+  leaderAttacksDeclared: "leader_attacks_declared",
+  characterAttacksDeclared: "character_attacks_declared",
+  blockersUsed: "blockers_used",
+  countersUsed: "counters_used",
+  counterCardsUsed: "counter_cards_used",
+  counterPowerUsedTotal: "counter_power_used_total",
+  charactersKoByBattle: "characters_ko_by_battle",
+  charactersKoByEffect: "characters_ko_by_effect",
+
+  cardsDrawn: "cards_drawn",
+  cardsDiscarded: "cards_discarded",
+  cardsTrashedFromHand: "cards_trashed_from_hand",
+  cardsTrashedFromDeck: "cards_trashed_from_deck",
+  cardsAddedFromLife: "cards_added_from_life",
+  lifeDamageTaken: "life_damage_taken",
+  lifeRecovered: "life_recovered",
+  cardsRevealed: "cards_revealed",
+  cardsSearched: "cards_searched",
+
+  effectsActivatedTotal: "effects_activated_total",
+  onPlayEffectsActivated: "on_play_effects_activated",
+  activateMainEffectsActivated: "activate_main_effects_activated",
+  triggerEffectsActivated: "trigger_effects_activated",
+  counterEventsPlayed: "counter_events_played",
+
+  currentWinStreak: "current_win_streak",
+  bestWinStreak: "best_win_streak",
+  currentLossStreak: "current_loss_streak",
+  bestLossStreak: "best_loss_streak",
+  currentDailyPlayStreak: "current_daily_play_streak",
+  bestDailyPlayStreak: "best_daily_play_streak",
 } as const;

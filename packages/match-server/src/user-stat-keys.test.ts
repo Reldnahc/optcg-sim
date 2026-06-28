@@ -32,6 +32,18 @@ const expectedColorBuckets = [
   "black-yellow",
 ] as const;
 
+const removedNonCatalogInGameStatNames = [
+  "cards_drawn_total",
+  "characters_ko_total",
+  "damage_dealt_total",
+  "damage_received_total",
+  "life_recovered_total",
+  "triggers_activated_total",
+] as const;
+const removedNonCatalogInGameStatNameSet: ReadonlySet<string> = new Set(
+  removedNonCatalogInGameStatNames,
+);
+
 test("colorBucketKey builds exact mono and ordered dual buckets", () => {
   assert.equal(colorBucketKey(["Red"]), "mono-red");
   assert.equal(colorBucketKey(["blue", "red"]), "red-blue");
@@ -112,6 +124,112 @@ test("calendar and activity stat keys use exact catalog names", () => {
   assert.equal(statKeys.charactersPlayed, "characters_played_total");
 });
 
+test("in-game card play stat keys use exact catalog names", () => {
+  assert.equal(statKeys.cardsPlayed, "cards_played_total");
+  assert.equal(statKeys.charactersPlayed, "characters_played_total");
+  assert.equal(statKeys.eventsPlayed, "events_played_total");
+  assert.equal(statKeys.stagesPlayed, "stages_played_total");
+
+  assert.equal(
+    statKeys.cardsPlayedByCard("OP01-016"),
+    "cards_played_by_card:OP01-016",
+  );
+  assert.equal(
+    statKeys.charactersPlayedByCard("OP01-016"),
+    "characters_played_by_card:OP01-016",
+  );
+  assert.equal(
+    statKeys.eventsPlayedByCard("OP01-016"),
+    "events_played_by_card:OP01-016",
+  );
+  assert.equal(
+    statKeys.stagesPlayedByCard("OP01-016"),
+    "stages_played_by_card:OP01-016",
+  );
+});
+
+test("in-game card color play stat keys use exact catalog names", () => {
+  assert.equal(
+    statKeys.cardsPlayedColor("black-yellow"),
+    "cards_played_color:black-yellow",
+  );
+  assert.equal(
+    statKeys.charactersPlayedColor("black-yellow"),
+    "characters_played_color:black-yellow",
+  );
+  assert.equal(
+    statKeys.eventsPlayedColor("black-yellow"),
+    "events_played_color:black-yellow",
+  );
+  assert.equal(
+    statKeys.stagesPlayedColor("black-yellow"),
+    "stages_played_color:black-yellow",
+  );
+});
+
+test("in-game DON resource stat keys use exact catalog names", () => {
+  assert.equal(statKeys.donAttached, "don_attached_total");
+  assert.equal(statKeys.donRestored, "don_restored_total");
+  assert.equal(statKeys.donReturned, "don_returned_total");
+  assert.equal(statKeys.donRamped, "don_ramped_total");
+});
+
+test("in-game combat stat keys use exact catalog names", () => {
+  assert.equal(statKeys.attacksDeclared, "attacks_declared");
+  assert.equal(statKeys.leaderAttacksDeclared, "leader_attacks_declared");
+  assert.equal(
+    statKeys.characterAttacksDeclared,
+    "character_attacks_declared",
+  );
+  assert.equal(statKeys.blockersUsed, "blockers_used");
+  assert.equal(statKeys.countersUsed, "counters_used");
+  assert.equal(statKeys.counterCardsUsed, "counter_cards_used");
+  assert.equal(statKeys.counterPowerUsedTotal, "counter_power_used_total");
+  assert.equal(statKeys.charactersKoByBattle, "characters_ko_by_battle");
+  assert.equal(statKeys.charactersKoByEffect, "characters_ko_by_effect");
+});
+
+test("in-game card movement stat keys use exact catalog names", () => {
+  assert.equal(statKeys.cardsDrawn, "cards_drawn");
+  assert.equal(statKeys.cardsDiscarded, "cards_discarded");
+  assert.equal(statKeys.cardsTrashedFromHand, "cards_trashed_from_hand");
+  assert.equal(statKeys.cardsTrashedFromDeck, "cards_trashed_from_deck");
+  assert.equal(statKeys.cardsAddedFromLife, "cards_added_from_life");
+  assert.equal(statKeys.lifeDamageTaken, "life_damage_taken");
+  assert.equal(statKeys.lifeRecovered, "life_recovered");
+  assert.equal(statKeys.cardsRevealed, "cards_revealed");
+  assert.equal(statKeys.cardsSearched, "cards_searched");
+});
+
+test("in-game effect stat keys use exact catalog names", () => {
+  assert.equal(statKeys.effectsActivatedTotal, "effects_activated_total");
+  assert.equal(
+    statKeys.onPlayEffectsActivated,
+    "on_play_effects_activated",
+  );
+  assert.equal(
+    statKeys.activateMainEffectsActivated,
+    "activate_main_effects_activated",
+  );
+  assert.equal(
+    statKeys.triggerEffectsActivated,
+    "trigger_effects_activated",
+  );
+  assert.equal(statKeys.counterEventsPlayed, "counter_events_played");
+});
+
+test("streak stat keys use exact catalog names", () => {
+  assert.equal(statKeys.currentWinStreak, "current_win_streak");
+  assert.equal(statKeys.bestWinStreak, "best_win_streak");
+  assert.equal(statKeys.currentLossStreak, "current_loss_streak");
+  assert.equal(statKeys.bestLossStreak, "best_loss_streak");
+  assert.equal(
+    statKeys.currentDailyPlayStreak,
+    "current_daily_play_streak",
+  );
+  assert.equal(statKeys.bestDailyPlayStreak, "best_daily_play_streak");
+});
+
 test("stat keys do not emit old colon-reordered names", () => {
   assert.notEqual(
     statKeys.leaderMatchesCompleted("OP01-001"),
@@ -126,6 +244,61 @@ test("stat keys do not emit old colon-reordered names", () => {
     "leader_name:monkey-d-luffy:matches_lost",
   );
   assert.notEqual(statKeys.pvpMatchesCompleted, "pvp:matches_completed");
+});
+
+test("stat keys do not emit removed non-catalog in-game names", () => {
+  const emittedKeys = [
+    statKeys.cardsPlayed,
+    statKeys.charactersPlayed,
+    statKeys.eventsPlayed,
+    statKeys.stagesPlayed,
+    statKeys.cardsPlayedByCard("OP01-016"),
+    statKeys.charactersPlayedByCard("OP01-016"),
+    statKeys.eventsPlayedByCard("OP01-016"),
+    statKeys.stagesPlayedByCard("OP01-016"),
+    statKeys.cardsPlayedColor("black-yellow"),
+    statKeys.charactersPlayedColor("black-yellow"),
+    statKeys.eventsPlayedColor("black-yellow"),
+    statKeys.stagesPlayedColor("black-yellow"),
+    statKeys.donAttached,
+    statKeys.donRestored,
+    statKeys.donReturned,
+    statKeys.donRamped,
+    statKeys.attacksDeclared,
+    statKeys.leaderAttacksDeclared,
+    statKeys.characterAttacksDeclared,
+    statKeys.blockersUsed,
+    statKeys.countersUsed,
+    statKeys.counterCardsUsed,
+    statKeys.counterPowerUsedTotal,
+    statKeys.cardsDrawn,
+    statKeys.cardsDiscarded,
+    statKeys.cardsTrashedFromHand,
+    statKeys.cardsTrashedFromDeck,
+    statKeys.cardsAddedFromLife,
+    statKeys.charactersKoByBattle,
+    statKeys.charactersKoByEffect,
+    statKeys.lifeDamageTaken,
+    statKeys.lifeRecovered,
+    statKeys.cardsRevealed,
+    statKeys.cardsSearched,
+    statKeys.effectsActivatedTotal,
+    statKeys.onPlayEffectsActivated,
+    statKeys.activateMainEffectsActivated,
+    statKeys.triggerEffectsActivated,
+    statKeys.counterEventsPlayed,
+    statKeys.currentWinStreak,
+    statKeys.bestWinStreak,
+    statKeys.currentLossStreak,
+    statKeys.bestLossStreak,
+    statKeys.currentDailyPlayStreak,
+    statKeys.bestDailyPlayStreak,
+  ];
+
+  assert.deepEqual(
+    emittedKeys.filter((key) => removedNonCatalogInGameStatNameSet.has(key)),
+    [],
+  );
 });
 
 test("colorBuckets exports all expected buckets", () => {
