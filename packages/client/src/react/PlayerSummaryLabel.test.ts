@@ -285,6 +285,7 @@ describe("PlayerSummaryLabel", () => {
       summaryRuleBody,
       /background:\s*rgba\(8,\s*10,\s*14,\s*0\.38\);/u,
     );
+    assert.match(summaryRuleBody, /border-radius:\s*0;/u);
   });
 
   test("renders no profile title when one is not provided", () => {

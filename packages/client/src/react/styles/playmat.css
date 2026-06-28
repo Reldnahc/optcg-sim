@@ -437,7 +437,7 @@
   min-height: 0;
   border: max(1px, calc(var(--card-outline-thin) * 0.5)) solid
     rgba(255, 255, 255, 0.14);
-  border-radius: calc(var(--card-corner-radius) * 0.85);
+  border-radius: 0;
   background: rgba(8, 10, 14, 0.38);
   padding: clamp(8px, calc(var(--card-height) / 17.6), 13px);
 }
