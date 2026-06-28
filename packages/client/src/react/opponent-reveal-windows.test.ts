@@ -264,7 +264,7 @@ describe("opponent reveal windows", () => {
     assert.deepEqual(windows, []);
   });
 
-  test("keeps active life trigger reveals visible even after dismissal", () => {
+  test("does not open floating reveal windows for active life trigger records", () => {
     const triggerRevealId = "reveal:life-trigger:trigger-card-1:12";
     const snapshot: ClientPlayerSnapshot = {
       view: {
@@ -292,12 +292,10 @@ describe("opponent reveal windows", () => {
         dismissed: new Set(),
         minimized: new Set(),
       },
-      activeDismissedRevealIds: new Set([triggerRevealId]),
+      activeDismissedRevealIds: new Set(),
       cardModel,
     });
 
-    assert.equal(windows.length, 1);
-    assert.equal(windows[0]?.revealId, triggerRevealId);
-    assert.equal(windows[0].model.title, "Revealed");
+    assert.deepEqual(windows, []);
   });
 });
