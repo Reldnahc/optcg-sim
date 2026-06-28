@@ -260,6 +260,18 @@ const playCue = (
   playAssetCue(cue, options);
 };
 
+const playCueSafely = (
+  cue: PresentationSoundCue,
+  index: number,
+  options: ResolvedPresentationSoundOptions,
+): void => {
+  try {
+    playCue(cue, index, options);
+  } catch {
+    // Sound playback is decorative; failures must not affect gameplay.
+  }
+};
+
 export const playPresentationSoundIntents = (
   intents: readonly PresentationSoundIntent[],
   options: PresentationSoundOptions = {},
@@ -287,6 +299,6 @@ export const playPresentationSoundIntents = (
     if (!allowedByCooldown(intent.cue, nowMs)) {
       continue;
     }
-    playCue(intent.cue, index, resolvedOptions);
+    playCueSafely(intent.cue, index, resolvedOptions);
   }
 };

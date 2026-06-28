@@ -200,4 +200,76 @@ describe("presentation sound controller", () => {
       1,
     );
   });
+
+  test("swallows throwing Web Audio setup and still attempts the next cue", () => {
+    const played: string[] = [];
+    const audioContext = fakeAudioContext([]);
+
+    assert.doesNotThrow(() => {
+      playPresentationSoundIntents(
+        [
+          { id: "web-audio-throw-trigger", cue: "trigger" },
+          { id: "web-audio-throw-select", cue: "select" },
+        ],
+        {
+          assetUrls: {
+            select: "/sounds/select-after-web-audio-throw.wav",
+            trigger: "/sounds/throwing-web-audio.wav",
+          },
+          audioContextFactory: () => audioContext,
+          audioFactory: (url) => ({
+            volume: 1,
+            currentTime: 0,
+            play: () => {
+              played.push(url);
+            },
+          }),
+          bufferLoader: (cue) => {
+            if (cue === "trigger") {
+              throw new Error("web audio setup failed");
+            }
+            return { kind: "missing" };
+          },
+          nowMs: () => 20_000,
+          random: () => 0.5,
+        },
+      );
+    });
+
+    assert.deepEqual(played, ["/sounds/select-after-web-audio-throw.wav"]);
+  });
+
+  test("swallows throwing HTML audio setup and playback paths", () => {
+    assert.doesNotThrow(() => {
+      playPresentationSoundIntents(
+        [{ id: "html-audio-factory-throw", cue: "ko" }],
+        {
+          assetUrls: { ko: "/sounds/throwing-html-factory.wav" },
+          audioContextFactory: () => undefined,
+          audioFactory: () => {
+            throw new Error("html audio factory failed");
+          },
+          nowMs: () => 21_000,
+        },
+      );
+    });
+
+    assert.doesNotThrow(() => {
+      playPresentationSoundIntents(
+        [{ id: "html-audio-play-throw", cue: "yourTurn" }],
+        {
+          assetUrls: { yourTurn: "/sounds/throwing-html-play.wav" },
+          audioContextFactory: () => undefined,
+          audioFactory: () => ({
+            volume: 1,
+            currentTime: 0,
+            play: () => {
+              throw new Error("html audio play failed");
+            },
+          }),
+          nowMs: () => 22_000,
+        },
+      );
+    });
+  });
 });
