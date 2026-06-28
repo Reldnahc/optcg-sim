@@ -199,38 +199,96 @@ export const createMatchClientController = ({
   let liveConnection: LiveMatchConnection | undefined;
   let lobbyLiveConnection: LiveLobbyConnection | undefined;
 
+  const isLiveMatchState = (
+    state: MatchClientSessionState,
+  ): state is MatchClientState => "snapshot" in state;
+
+  const isFirstPlayerSetupState = (
+    state: MatchClientSessionState,
+  ): state is FirstPlayerSetupClientState =>
+    "firstPlayerChoice" in state && !("snapshot" in state);
+
+  const isLobbyState = (
+    state: MatchClientSessionState,
+  ): state is LobbyClientState => "lobbyId" in state;
+
   const disconnectLobbyConnection = (): void => {
     lobbyLiveConnection?.close();
     lobbyLiveConnection = undefined;
   };
 
+  const commitSessionState = (
+    nextState: MatchClientSessionState,
+  ): { readonly state: MatchClientSessionState; readonly changed: boolean } => {
+    if (isLiveMatchState(nextState)) {
+      if (
+        currentState !== undefined &&
+        currentState.matchId === nextState.matchId &&
+        nextState.snapshot.stateSeq < currentState.snapshot.stateSeq
+      ) {
+        return { state: currentState, changed: false };
+      }
+      currentState = nextState;
+      currentFirstPlayerSetupState = undefined;
+      currentLobbyState = undefined;
+      disconnectLobbyConnection();
+      return { state: currentState, changed: true };
+    }
+
+    if (isFirstPlayerSetupState(nextState) || "matchId" in nextState) {
+      if (
+        currentState !== undefined &&
+        currentState.matchId === nextState.matchId
+      ) {
+        return { state: currentState, changed: false };
+      }
+      currentState = undefined;
+      currentFirstPlayerSetupState = isFirstPlayerSetupState(nextState)
+        ? nextState
+        : undefined;
+      currentLobbyState = undefined;
+      disconnectLobbyConnection();
+      return { state: nextState, changed: true };
+    }
+
+    if (isLobbyState(nextState)) {
+      currentState = undefined;
+      currentFirstPlayerSetupState = undefined;
+      currentLobbyState = nextState;
+      return { state: currentLobbyState, changed: true };
+    }
+
+    return { state: nextState, changed: false };
+  };
+
+  const commitMatchState = (nextState: MatchClientState): MatchClientState => {
+    const committed = commitSessionState(nextState).state;
+    if (!isLiveMatchState(committed)) {
+      throw new Error("Session transition did not produce live match state.");
+    }
+    return committed;
+  };
+
   const waitForSocketState = (
     seat: ClientSeatIdentity,
-  ): HydratingMatchClientState => {
+  ): MatchClientSessionState => {
     const hydratingState = {
       matchId: seat.matchId,
       seat,
     };
-    currentState = undefined;
-    currentFirstPlayerSetupState = undefined;
-    currentLobbyState = undefined;
-    disconnectLobbyConnection();
-    return hydratingState;
+    return commitSessionState(hydratingState).state;
   };
 
   const loadSetupState = (
     seat: ClientSeatIdentity,
     firstPlayerChoice: FirstPlayerChoiceView,
-  ): FirstPlayerSetupClientState => {
-    currentState = undefined;
-    currentFirstPlayerSetupState = {
+  ): MatchClientSessionState => {
+    const setupState = {
       matchId: seat.matchId,
       seat,
       firstPlayerChoice,
     };
-    currentLobbyState = undefined;
-    disconnectLobbyConnection();
-    return currentFirstPlayerSetupState;
+    return commitSessionState(setupState).state;
   };
 
   const claimAndLoad = async (
@@ -259,8 +317,7 @@ export const createMatchClientController = ({
   ): Promise<MatchClientSessionState> => {
     const matchId = lobbyState.lobby.matchId;
     if (matchId === undefined) {
-      currentLobbyState = lobbyState;
-      return lobbyState;
+      return commitSessionState(lobbyState).state;
     }
     try {
       return await claimAndLoad(
@@ -269,8 +326,7 @@ export const createMatchClientController = ({
       );
     } catch (error: unknown) {
       if (isTransientMatchNotFound(error, String(matchId))) {
-        currentLobbyState = lobbyState;
-        return lobbyState;
+        return commitSessionState(lobbyState).state;
       }
       throw error;
     }
@@ -457,9 +513,7 @@ export const createMatchClientController = ({
         );
       }
       if (isJoinedCustomLobby(created)) {
-        currentState = undefined;
-        currentFirstPlayerSetupState = undefined;
-        currentLobbyState = {
+        return commitSessionState({
           lobbyId: created.lobbyId,
           ...(created.joinCode === undefined
             ? {}
@@ -470,8 +524,7 @@ export const createMatchClientController = ({
             sessionToken: credential.sessionToken,
           },
           lobby: created,
-        };
-        return currentLobbyState;
+        }).state;
       }
       const seat = {
         matchId: created.matchId,
@@ -510,13 +563,6 @@ export const createMatchClientController = ({
       if (result.snapshot === undefined) {
         throw new Error("First-player choice did not start the match.");
       }
-      if (
-        currentState !== undefined &&
-        currentState.matchId === setupState.matchId &&
-        currentState.snapshot.stateSeq >= result.snapshot.stateSeq
-      ) {
-        return currentState;
-      }
       return waitForSocketState(setupState.seat);
     },
     connectLive({ onState, onRematchRequest, onConnectionStatus, onError }) {
@@ -541,7 +587,7 @@ export const createMatchClientController = ({
           ) {
             return;
           }
-          currentState = {
+          const committed = commitSessionState({
             matchId: message.matchId,
             seat: {
               matchId: message.matchId,
@@ -549,9 +595,10 @@ export const createMatchClientController = ({
             },
             snapshot: message.snapshot,
             cards: message.cards,
-          };
-          currentLobbyState = undefined;
-          onState(currentState);
+          });
+          if (committed.changed) {
+            onState(committed.state);
+          }
         },
         onTimerSync(message) {
           if (
@@ -560,7 +607,7 @@ export const createMatchClientController = ({
           ) {
             return;
           }
-          currentState = {
+          currentState = commitMatchState({
             ...currentState,
             snapshot: {
               ...currentState.snapshot,
@@ -580,16 +627,21 @@ export const createMatchClientController = ({
                 ),
               ),
             },
-          };
+          });
           onState(currentState);
         },
         onSetupSync(message) {
-          onState(
-            loadSetupState(
-              { matchId: message.matchId, playerId: credential.playerId },
-              message.firstPlayerChoice,
-            ),
-          );
+          const committed = commitSessionState({
+            matchId: message.matchId,
+            seat: {
+              matchId: message.matchId,
+              playerId: credential.playerId,
+            },
+            firstPlayerChoice: message.firstPlayerChoice,
+          });
+          if (committed.changed) {
+            onState(committed.state);
+          }
         },
         onSessionTransition(message) {
           const transition =
@@ -717,7 +769,7 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      currentState = {
+      currentState = commitMatchState({
         matchId: credential.matchId,
         seat: {
           matchId: credential.matchId,
@@ -725,7 +777,7 @@ export const createMatchClientController = ({
         },
         snapshot: result.snapshot,
         cards: result.cards,
-      };
+      });
       return currentState;
     },
     async respondToDecision(input) {
@@ -745,7 +797,7 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      currentState = {
+      currentState = commitMatchState({
         matchId: credential.matchId,
         seat: {
           matchId: credential.matchId,
@@ -753,7 +805,7 @@ export const createMatchClientController = ({
         },
         snapshot: result.snapshot,
         cards: result.cards,
-      };
+      });
       return currentState;
     },
     async requestRollback(input) {
@@ -771,7 +823,7 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      currentState = {
+      currentState = commitMatchState({
         matchId: credential.matchId,
         seat: {
           matchId: credential.matchId,
@@ -779,7 +831,7 @@ export const createMatchClientController = ({
         },
         snapshot: result.snapshot,
         cards: result.cards,
-      };
+      });
       return currentState;
     },
     async cancelRollback() {
@@ -796,7 +848,7 @@ export const createMatchClientController = ({
           transportInput,
         );
       throwIfActionResultFailed(result.errors);
-      currentState = {
+      currentState = commitMatchState({
         matchId: credential.matchId,
         seat: {
           matchId: credential.matchId,
@@ -804,7 +856,7 @@ export const createMatchClientController = ({
         },
         snapshot: result.snapshot,
         cards: result.cards,
-      };
+      });
       return currentState;
     },
     currentCredential() {

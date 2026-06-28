@@ -343,6 +343,69 @@ describe("match client controller", () => {
     assert.equal("snapshot" in result, true);
   });
 
+  test("stale setup sync does not downgrade loaded match state", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p1" as PlayerId);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    emitLoadedMatchState(liveTransport);
+
+    liveTransport.emitSetup({
+      type: "setupSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      firstPlayerChoice: {
+        chooserPlayerId: "p1" as PlayerId,
+        choices: ["goFirst", "goSecond"],
+      },
+    });
+
+    assert.equal(states.length, 1);
+    assert.equal(controller.currentState()?.snapshot.stateSeq, 1);
+  });
+
+  test("refresh does not downgrade loaded match state to hydration", async () => {
+    const transport = createFakeTransport();
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p1" as PlayerId);
+    controller.connectLive({
+      onState() {},
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+    emitLoadedMatchState(liveTransport);
+
+    const refreshed = await controller.refresh();
+
+    assert.equal("snapshot" in refreshed, true);
+    assert.equal(controller.currentState()?.snapshot.stateSeq, 1);
+  });
+
   test("live timer sync updates timers without replacing cards", async () => {
     const transport = createFakeTransport();
     const liveTransport = createFakeLiveTransport();
