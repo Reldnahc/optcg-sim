@@ -22,7 +22,7 @@ export const AppRootContent = ({
   const route = appRouteFromPath(
     path ?? `${window.location.pathname}${window.location.search}`,
   );
-  if (route.id === "match" || route.id === "lobbies") {
+  if (route.id === "match") {
     return (
       <div data-app-route="match">
         {matchSurface ??

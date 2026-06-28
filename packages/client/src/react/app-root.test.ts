@@ -61,7 +61,7 @@ describe("client app root", () => {
     assert.doesNotMatch(html, /Dashboard/u);
   });
 
-  test("delegates concrete lobby routes to the match surface", () => {
+  test("leaves concrete lobby routes outside the sim client", () => {
     const html = renderToStaticMarkup(
       createElement(AppRootContent, {
         matchSurface: createElement("div", { "data-testid": "lobby-surface" }),
@@ -69,12 +69,12 @@ describe("client app root", () => {
       }),
     );
 
-    assert.match(html, /data-app-route="match"/u);
-    assert.match(html, /data-testid="lobby-surface"/u);
-    assert.doesNotMatch(html, /Make Lobby/u);
+    assert.match(html, /Page not found/u);
+    assert.match(html, /\/lobbies\/lobby-1/u);
+    assert.doesNotMatch(html, /data-testid="lobby-surface"/u);
   });
 
-  test("delegates room code routes to the match surface", () => {
+  test("leaves room code routes outside the sim client", () => {
     const html = renderToStaticMarkup(
       createElement(AppRootContent, {
         matchSurface: createElement("div", { "data-testid": "room-surface" }),
@@ -82,9 +82,9 @@ describe("client app root", () => {
       }),
     );
 
-    assert.match(html, /data-app-route="match"/u);
-    assert.match(html, /data-testid="room-surface"/u);
-    assert.doesNotMatch(html, /Page not found/u);
+    assert.match(html, /Page not found/u);
+    assert.match(html, /\/r\/ab12/u);
+    assert.doesNotMatch(html, /data-testid="room-surface"/u);
   });
 
   test("delegates replay routes to the replay surface", () => {

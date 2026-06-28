@@ -1,13 +1,12 @@
 export type AppRouteId =
   | "dashboard"
-  | "lobbies"
   | "match"
   | "replayList"
   | "replay"
   | "notFound";
 
 export interface AppRouteDefinition {
-  id: Exclude<AppRouteId, "lobbies" | "notFound">;
+  id: Exclude<AppRouteId, "notFound">;
   path: string;
   label: string;
 }
@@ -39,16 +38,6 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
   }
 
   const route = routeByPath.get(parsed.pathname);
-  if (
-    parsed.pathname.startsWith("/lobbies/") ||
-    /^\/r\/[0-9a-z]{4}$/u.test(parsed.pathname)
-  ) {
-    return {
-      id: "lobbies",
-      path: parsed.pathname,
-      search: parsed.search,
-    };
-  }
   if (/^\/replays\/[^/]+$/u.test(parsed.pathname)) {
     return {
       id: "replay",
@@ -64,7 +53,7 @@ export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
 };
 
 export const appRoutePath = (
-  id: Exclude<AppRouteId, "lobbies" | "replay" | "notFound">,
+  id: Exclude<AppRouteId, "replay" | "notFound">,
 ): string => {
   const route = appRoutes.find((candidate) => candidate.id === id);
   if (route === undefined) {
