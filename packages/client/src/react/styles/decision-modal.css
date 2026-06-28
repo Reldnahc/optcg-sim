@@ -30,8 +30,8 @@
   --decision-single-card-height: min(
     calc(var(--card-height) * 2),
     calc(
-      100vh - (var(--modal-viewport-gutter) * 2) - (var(--modal-padding) * 2) -
-        (var(--modal-gap) * 6)
+      var(--app-viewport-height) - (var(--modal-viewport-gutter) * 2) -
+        (var(--modal-padding) * 2) - (var(--modal-gap) * 6)
     )
   );
 

@@ -1,4 +1,6 @@
 .match-app {
+  --app-viewport-width: 100vw;
+  --app-viewport-height: 100vh;
   --match-app-padding: 8px;
   --playmat-board-padding: 8px;
   --playmat-border-width: 2px;
@@ -7,7 +9,9 @@
     (var(--match-app-padding) * 2) + (var(--playmat-board-padding) * 2) +
       (var(--playmat-border-width) * 2) + (var(--playmat-grid-gap) * 6)
   );
-  --playmat-row-height: calc((100vh - var(--playmat-vertical-chrome)) / 6);
+  --playmat-row-height: calc(
+    (var(--app-viewport-height) - var(--playmat-vertical-chrome)) / 6
+  );
   --playmat-card-clearance: calc(var(--playmat-row-height) / 16.2857);
   --desktop-card-min-height: 86px;
   --desktop-card-max-height: 240px;
@@ -133,11 +137,18 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
-  height: 100vh;
+  height: var(--app-viewport-height);
   background-color: var(--match-background-color);
   padding: var(--match-app-padding);
   overflow: visible;
   isolation: isolate;
+}
+
+@supports (height: 100dvh) {
+  .match-app {
+    --app-viewport-height: 100dvh;
+    --app-viewport-width: 100dvw;
+  }
 }
 
 .match-app::before {

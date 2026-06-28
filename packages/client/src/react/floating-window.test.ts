@@ -67,6 +67,16 @@ describe("floating window", () => {
     );
   });
 
+  test("floating window state re-clamps windows after visual viewport changes", async () => {
+    const source = await readFile(
+      join(sourceDirectory, "use-floating-window-state.ts"),
+      "utf8",
+    );
+
+    assert.match(source, /subscribeAppViewportChanges/u);
+    assert.match(source, /normalizeFloatingWindowRectsForViewport/u);
+  });
+
   test("off-screen drops prefer minimize when a window supports minimize", () => {
     assert.equal(
       resolveOffscreenDropAction(

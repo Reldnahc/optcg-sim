@@ -8,6 +8,7 @@ import {
 import type { PlayerView, PublicTurnState } from "@optcg/types";
 import type { ClientCardModel } from "../view-model.js";
 import { ActionLogButton } from "./ActionLogButton.js";
+import { useAppViewportCssVariables } from "./app-viewport.js";
 import { appRoutePath } from "./app-route.js";
 import { actionLogCardModel } from "./card-model.js";
 import { CardPreviewButton } from "./CardPreviewButton.js";
@@ -515,7 +516,9 @@ export const MatchApp = ({
     positionY: visualSettings.backgroundImagePositionY,
   });
   const backgroundImageEnabled = visualSettings.backgroundImageUrl.length > 0;
+  const viewportStyle = useAppViewportCssVariables();
   const matchAppStyle = {
+    ...viewportStyle,
     "--match-background-color": visualSettings.backgroundColor,
     "--match-background-image": backgroundImageEnabled
       ? `url(${JSON.stringify(visualSettings.backgroundImageUrl)})`
@@ -543,7 +546,9 @@ export const MatchApp = ({
       | "--match-background-image"
       | "--match-background-size"
       | "--match-background-repeat"
-      | "--match-background-position",
+      | "--match-background-position"
+      | "--app-viewport-width"
+      | "--app-viewport-height",
       string
     >;
   const matchAppClassName = [

@@ -340,7 +340,7 @@ describe("lobby deck panel", () => {
 
     assert.match(
       styles,
-      /\.lobby-deck-modal\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(850px,\s*calc\(100vh - 24px\)\);/u,
+      /\.lobby-deck-modal\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*min\(850px,\s*calc\(var\(--app-viewport-height\) - 24px\)\);/u,
     );
     assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(

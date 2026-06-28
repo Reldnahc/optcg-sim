@@ -25,7 +25,9 @@
     calc(100vw - (var(--modal-viewport-gutter) * 2))
   );
   height: auto;
-  max-height: calc(100vh - (var(--modal-viewport-gutter) * 2));
+  max-height: calc(
+    var(--app-viewport-height) - (var(--modal-viewport-gutter) * 2)
+  );
   overflow: auto;
   gap: var(--modal-gap);
   border: var(--card-outline-thin) solid var(--match-border-strong);
@@ -43,7 +45,7 @@
   );
   min-height: min(
     var(--modal-card-decision-min-block),
-    calc(100vh - (var(--modal-viewport-gutter) * 2))
+    calc(var(--app-viewport-height) - (var(--modal-viewport-gutter) * 2))
   );
 }
 

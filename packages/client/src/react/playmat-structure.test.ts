@@ -121,7 +121,13 @@ describe("playmat structure", () => {
     );
     assert.match(
       appShellStyles,
-      /--playmat-row-height:\s*calc\(\(100vh\s*-\s*var\(--playmat-vertical-chrome\)\)\s*\/\s*6\);/,
+      /--playmat-row-height:\s*calc\(\s*\(var\(--app-viewport-height\)\s*-\s*var\(--playmat-vertical-chrome\)\)\s*\/\s*6\s*\);/,
+    );
+    assert.match(appShellStyles, /--app-viewport-width:\s*100vw;/u);
+    assert.match(appShellStyles, /--app-viewport-height:\s*100vh;/u);
+    assert.match(
+      appShellStyles,
+      /@supports\s*\(height:\s*100dvh\)\s*\{[\s\S]*--app-viewport-height:\s*100dvh;[\s\S]*--app-viewport-width:\s*100dvw;/u,
     );
     assert.match(appShellStyles, /padding:\s*var\(--match-app-padding\);/);
     assert.match(
@@ -130,7 +136,7 @@ describe("playmat structure", () => {
     );
     assert.match(
       playmatStyles,
-      /height:\s*calc\(100vh\s*-\s*\(var\(--match-app-padding\)\s*\*\s*2\)\);/,
+      /height:\s*calc\(var\(--app-viewport-height\)\s*-\s*\(var\(--match-app-padding\)\s*\*\s*2\)\);/,
     );
     assert.match(playmatStyles, /gap:\s*var\(--playmat-grid-gap\);/);
     assert.match(
@@ -575,7 +581,7 @@ describe("playmat structure", () => {
 
     assert.match(
       controlsStyles,
-      /--control-window-dock-available-height:\s*max\(\s*0vh,\s*calc\(\s*100vh\s*-\s*\(var\(--control-rail-gap\) \* 4\)\s*-\s*\(var\(--control-summary-height\) \* 2\)\s*-\s*var\(--control-icon-button-size\)\s*-\s*\(var\(--control-panel-padding\) \* 2\)\s*\)\s*\);/u,
+      /--control-window-dock-available-height:\s*max\(\s*0px,\s*calc\(\s*var\(--app-viewport-height\)\s*-\s*\(var\(--control-rail-gap\) \* 4\)\s*-\s*\(var\(--control-summary-height\) \* 2\)\s*-\s*var\(--control-icon-button-size\)\s*-\s*\(var\(--control-panel-padding\) \* 2\)\s*\)\s*\);/u,
     );
     assert.match(
       controlsStyles,

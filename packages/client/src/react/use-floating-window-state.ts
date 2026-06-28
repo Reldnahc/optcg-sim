@@ -1,6 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
+import {
+  currentAppViewportMetrics,
+  subscribeAppViewportChanges,
+} from "./app-viewport.js";
 import { resizeDockedWindowRects } from "./control-panel-layout.js";
 import type { ReorderPlacement } from "./drag-reorder.js";
 import {
@@ -55,16 +59,6 @@ export interface FloatingWindowStateController {
   ) => void;
   updateDockedWindowRects: (dockRect: WindowRect) => void;
 }
-
-const currentViewport = ():
-  | {
-      width: number;
-      height: number;
-    }
-  | undefined =>
-  typeof window === "undefined"
-    ? undefined
-    : { width: window.innerWidth, height: window.innerHeight };
 
 const windowRectsEqual = (
   left: Readonly<Record<string, WindowRect>>,
@@ -128,7 +122,7 @@ export const useFloatingWindowState = ({
     const openWindowIds = windowLayoutStore.loadOpenWindowIds();
     const dockedWindowIds = windowLayoutStore.loadDockedWindowIds();
     const storedRects = windowLayoutStore.loadWindowRects();
-    const viewport = currentViewport();
+    const viewport = currentAppViewportMetrics();
     const rects =
       viewport === undefined
         ? storedRects
@@ -147,6 +141,29 @@ export const useFloatingWindowState = ({
       floatingWindowZOrder: [...openWindowIds].filter(
         (windowKey) => !dockedWindowIds.has(windowKey),
       ),
+    });
+  }, [layoutScope, windowLayoutStore]);
+
+  useEffect(() => {
+    if (layoutScope === undefined) {
+      return undefined;
+    }
+    return subscribeAppViewportChanges((viewport) => {
+      setFloatingWindowRects((current) => {
+        if (current.scope !== layoutScope) {
+          return current;
+        }
+        const rects = normalizeFloatingWindowRectsForViewport({
+          rects: current.rects,
+          viewport,
+        });
+        if (windowRectsEqual(current.rects, rects)) {
+          return current;
+        }
+        const next = { ...current, rects };
+        windowLayoutStore?.saveWindowRects(next.rects);
+        return next;
+      });
     });
   }, [layoutScope, windowLayoutStore]);
 

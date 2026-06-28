@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { WindowRect } from "./FloatingWindow.js";
 import {
+  currentAppViewportMetrics,
+  subscribeAppViewportChanges,
+} from "./app-viewport.js";
+import {
   controlDockSlotRect,
   defaultControlRailWidth,
   normalizeControlPanelLayoutForViewport,
@@ -44,12 +48,15 @@ const playmatRightEdge = (): number => {
 const controlRailWidthForCurrentViewport = (): number =>
   typeof window === "undefined"
     ? defaultControlRailWidth
-    : normalizeControlPanelLayoutForViewport({
-        layout: {},
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-        playmatRight: playmatRightEdge(),
-      }).controlRailWidth;
+    : (() => {
+        const viewport = currentAppViewportMetrics();
+        return normalizeControlPanelLayoutForViewport({
+          layout: {},
+          viewportWidth: viewport?.width ?? window.innerWidth,
+          viewportHeight: viewport?.height ?? window.innerHeight,
+          playmatRight: playmatRightEdge(),
+        }).controlRailWidth;
+      })();
 
 export const useControlPanelLayout = (): ControlPanelLayoutController => {
   const [controlRailWidth, setControlRailWidth] = useState(() =>
@@ -74,8 +81,12 @@ export const useControlPanelLayout = (): ControlPanelLayoutController => {
     if (playmatElement !== null) {
       resizeObserver?.observe(playmatElement);
     }
+    const unsubscribeViewport = subscribeAppViewportChanges(
+      updateControlRailWidth,
+    );
     return () => {
       window.removeEventListener("resize", updateControlRailWidth);
+      unsubscribeViewport();
       resizeObserver?.disconnect();
     };
   }, []);

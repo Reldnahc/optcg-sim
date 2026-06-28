@@ -21,9 +21,9 @@
   --control-action-height: clamp(30px, calc(var(--card-height) / 5), 38px);
   --control-dock-tab-height: clamp(26px, calc(var(--card-height) / 5.4), 34px);
   --control-window-dock-available-height: max(
-    0vh,
+    0px,
     calc(
-      100vh - (var(--control-rail-gap) * 4) -
+      var(--app-viewport-height) - (var(--control-rail-gap) * 4) -
         (var(--control-summary-height) * 2) - var(--control-icon-button-size) -
         (var(--control-panel-padding) * 2)
     )
@@ -222,7 +222,7 @@
 .lobby-deck-modal {
   width: min(620px, calc(100vw - 32px));
   height: auto;
-  max-height: min(850px, calc(100vh - 24px));
+  max-height: min(850px, calc(var(--app-viewport-height) - 24px));
   overflow: hidden;
 }
 

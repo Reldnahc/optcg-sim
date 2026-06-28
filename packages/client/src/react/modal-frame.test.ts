@@ -79,7 +79,7 @@ describe("modal frame", () => {
     assert.match(styles, /\.modal-frame\s*\{[^}]*height:\s*auto;/u);
     assert.match(
       styles,
-      /\.modal-frame\s*\{[^}]*max-height:\s*calc\(100vh - \(var\(--modal-viewport-gutter\) \* 2\)\);/u,
+      /\.modal-frame\s*\{[^}]*max-height:\s*calc\(\s*var\(--app-viewport-height\) - \(var\(--modal-viewport-gutter\) \* 2\)\s*\);/u,
     );
     assert.match(styles, /\.modal-frame\s*\{[^}]*overflow:\s*auto;/u);
     assert.match(
@@ -105,7 +105,7 @@ describe("modal frame", () => {
     );
     assert.match(
       styles,
-      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(\s*var\(--modal-card-decision-min-block\),\s*calc\(100vh - \(var\(--modal-viewport-gutter\) \* 2\)\)\s*\);/u,
+      /\.modal-frame-card-decision\s*\{[^}]*min-height:\s*min\(\s*var\(--modal-card-decision-min-block\),\s*calc\(var\(--app-viewport-height\) - \(var\(--modal-viewport-gutter\) \* 2\)\s*\)\s*\);/u,
     );
   });
 
