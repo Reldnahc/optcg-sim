@@ -147,8 +147,9 @@
   display: block;
   min-width: 0;
   max-width: 18ch;
+  margin-left: 0.35em;
   overflow: hidden;
-  font-size: clamp(15px, calc(var(--card-height) / 8.8), 19px);
+  font-size: clamp(14px, calc(var(--card-height) / 9.6), 17px);
   font-weight: 700;
   line-height: 1.15;
   text-overflow: ellipsis;

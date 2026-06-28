@@ -76,13 +76,29 @@ describe("PlayerSummaryLabel", () => {
     );
   });
 
-  test("temporarily renders a sample disconnect timer when none is active", () => {
+  test("renders no disconnect timer when none is active", () => {
     const markup = renderToStaticMarkup(
       createElement(PlayerSummaryLabel, {
         label: "Tester",
         timer: {
           game: "34:56",
           isRunning: true,
+        },
+      }),
+    );
+
+    assert.doesNotMatch(markup, /class="disconnect-timer"/u);
+    assert.doesNotMatch(markup, />DC /u);
+  });
+
+  test("renders active disconnect timer as secondary status", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlayerSummaryLabel, {
+        label: "Tester",
+        timer: {
+          game: "34:56",
+          isRunning: true,
+          disconnect: "00:30",
         },
       }),
     );
@@ -108,8 +124,10 @@ describe("PlayerSummaryLabel", () => {
     assert.doesNotMatch(titleRuleBody, /\bpadding\s*:/u);
     assert.match(
       titleRuleBody,
-      /font-size:\s*clamp\(15px,\s*calc\(var\(--card-height\) \/ 8\.8\),\s*19px\);/u,
+      /font-size:\s*clamp\(14px,\s*calc\(var\(--card-height\) \/ 9\.6\),\s*17px\);/u,
     );
+    assert.match(titleRuleBody, /margin-left:\s*0\.35em;/u);
+    assert.match(titleRuleBody, /white-space:\s*nowrap;/u);
     assert.match(titleRuleBody, /font-weight:\s*700;/u);
   });
 
