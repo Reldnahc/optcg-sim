@@ -55,6 +55,18 @@ interface BrowserAudioContextWindow {
   webkitAudioContext?: BrowserAudioContextConstructor;
 }
 
+type CachedPresentationAudioBuffer =
+  | {
+      readonly status: "loaded";
+      readonly buffer: AudioBuffer;
+    }
+  | {
+      readonly status: "pending";
+    }
+  | {
+      readonly status: "failed";
+    };
+
 export interface PresentationAudioElement {
   currentTime: number;
   volume: number;
@@ -80,14 +92,69 @@ const defaultAudioFactory: PresentationAudioFactory = (url) => {
   return new Audio(url);
 };
 
-const missingAudioBufferLoader = (): MissingPresentationAudioBuffer => ({
-  kind: "missing",
-});
-
 let sharedContext: AudioContext | undefined;
 let lastPlayedIntentId: string | undefined;
 const maxSoundIntentsPerBatch = 4;
 const lastPlayedCueAtMs = new Map<PresentationSoundCue, number>();
+const defaultAudioBufferCache = new Map<
+  string,
+  CachedPresentationAudioBuffer
+>();
+
+const defaultAudioBufferLoader = (
+  _cue: PresentationSoundCue,
+  url: string,
+  context: AudioContext,
+): PresentationAudioBufferLoadResult => {
+  const cached = defaultAudioBufferCache.get(url);
+  if (cached?.status === "loaded") {
+    return {
+      kind: "loaded",
+      buffer: cached.buffer,
+    };
+  }
+  if (cached !== undefined) {
+    return {
+      kind: "missing",
+    };
+  }
+  if (typeof fetch === "undefined") {
+    return {
+      kind: "missing",
+    };
+  }
+
+  defaultAudioBufferCache.set(url, { status: "pending" });
+  void fetch(url)
+    .then((response) => {
+      if (!response.ok) {
+        defaultAudioBufferCache.set(url, { status: "failed" });
+        return undefined;
+      }
+      return response.arrayBuffer();
+    })
+    .then((encodedAudio) => {
+      if (encodedAudio === undefined) {
+        return undefined;
+      }
+      return context.decodeAudioData(encodedAudio);
+    })
+    .then((buffer) => {
+      if (buffer !== undefined) {
+        defaultAudioBufferCache.set(url, {
+          status: "loaded",
+          buffer,
+        });
+      }
+    })
+    .catch(() => {
+      defaultAudioBufferCache.set(url, { status: "failed" });
+    });
+
+  return {
+    kind: "missing",
+  };
+};
 
 const defaultAudioContextFactory = (): AudioContext | undefined => {
   if (sharedContext !== undefined) {
@@ -204,7 +271,7 @@ export const playPresentationSoundIntents = (
     audioFactory: options.audioFactory ?? defaultAudioFactory,
     audioContextFactory:
       options.audioContextFactory ?? defaultAudioContextFactory,
-    bufferLoader: options.bufferLoader ?? missingAudioBufferLoader,
+    bufferLoader: options.bufferLoader ?? defaultAudioBufferLoader,
     random: options.random ?? Math.random,
     nowMs: options.nowMs ?? Date.now,
   };

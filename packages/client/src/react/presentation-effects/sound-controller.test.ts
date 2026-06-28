@@ -5,7 +5,10 @@ import { playPresentationSoundIntents } from "./sound-controller.js";
 import { allPresentationSoundCues } from "./sound-cues.js";
 import { presentationSoundAssetUrls } from "./sound-assets.js";
 
-const fakeAudioContext = (calls: string[]) =>
+const fakeAudioContext = (
+  calls: string[],
+  decodeAudioData?: (data: ArrayBuffer) => Promise<AudioBuffer>,
+) =>
   ({
     currentTime: 0,
     destination: {},
@@ -35,6 +38,7 @@ const fakeAudioContext = (calls: string[]) =>
         },
       };
     },
+    decodeAudioData,
   }) as unknown as AudioContext;
 
 test("declares one asset URL for every cue", () => {
@@ -59,6 +63,10 @@ describe("presentation sound controller", () => {
 
     playPresentationSoundIntents([{ id: "web-audio-draw", cue: "draw" }], {
       audioContextFactory: () => audioContext,
+      audioFactory: () => {
+        calls.push("audioFactory");
+        return undefined;
+      },
       bufferLoader: () => ({
         kind: "loaded",
         buffer: { cue: "draw" },
@@ -75,6 +83,7 @@ describe("presentation sound controller", () => {
       "gain.connect",
       "source.start:0",
     ]);
+    assert.equal(calls.includes("audioFactory"), false);
   });
 
   test("falls back to HTML audio when Web Audio is unavailable", () => {
@@ -115,6 +124,80 @@ describe("presentation sound controller", () => {
     assert.equal(
       played.filter((entry) => entry.startsWith("source.start:")).length,
       2,
+    );
+  });
+
+  test("loads default Web Audio buffers asynchronously and reuses cached buffers", async () => {
+    const calls: string[] = [];
+    const played: string[] = [];
+    const decodedBuffer = { decoded: true };
+    const previousFetch = globalThis.fetch;
+    const audioContext = fakeAudioContext(calls, (data) => {
+      calls.push(`decode:${String(data.byteLength)}`);
+      return Promise.resolve(decodedBuffer as unknown as AudioBuffer);
+    });
+    const fakeFetch: typeof fetch = (url) => {
+      const requestUrl =
+        typeof url === "string" ? url : url instanceof URL ? url.href : url.url;
+      calls.push(`fetch:${requestUrl}`);
+      return Promise.resolve(new Response(new ArrayBuffer(4)));
+    };
+
+    globalThis.fetch = fakeFetch;
+
+    try {
+      playPresentationSoundIntents(
+        [{ id: "default-loader-confirm-1", cue: "confirm" }],
+        {
+          assetUrls: { confirm: "/sounds/default-loader-confirm.wav" },
+          audioContextFactory: () => audioContext,
+          audioFactory: (url) => ({
+            volume: 1,
+            currentTime: 0,
+            play: () => {
+              played.push(url);
+            },
+          }),
+          nowMs: () => 10_000,
+          random: () => 0.5,
+        },
+      );
+
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+      });
+
+      playPresentationSoundIntents(
+        [{ id: "default-loader-confirm-2", cue: "confirm" }],
+        {
+          assetUrls: { confirm: "/sounds/default-loader-confirm.wav" },
+          audioContextFactory: () => audioContext,
+          audioFactory: (url) => ({
+            volume: 1,
+            currentTime: 0,
+            play: () => {
+              played.push(url);
+            },
+          }),
+          nowMs: () => 11_000,
+          random: () => 0.5,
+        },
+      );
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+
+    assert.deepEqual(played, ["/sounds/default-loader-confirm.wav"]);
+    assert.equal(
+      calls.filter(
+        (entry) => entry === "fetch:/sounds/default-loader-confirm.wav",
+      ).length,
+      1,
+    );
+    assert.ok(calls.includes("decode:4"));
+    assert.equal(
+      calls.filter((entry) => entry.startsWith("source.start:")).length,
+      1,
     );
   });
 });
