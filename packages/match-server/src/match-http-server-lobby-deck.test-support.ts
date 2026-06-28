@@ -24,6 +24,28 @@ export interface CreatedCustomLobbyBody {
     {
       playerId?: string;
       claimed?: boolean;
+      displayName?: string;
+      avatar?: {
+        imageUrl: string;
+        crop: { x: number; y: number; size: number };
+      };
+      title?: {
+        key: string;
+        label: string;
+        style: {
+          text_color?: string;
+          font_family?: "display" | "body" | "mono";
+          font_weight?: number;
+          gradient?: {
+            from: string;
+            via?: string;
+            to: string;
+            angle?: number;
+          };
+          outline_color?: string;
+          glow_color?: string;
+        };
+      };
       deck: { status: "missing" | "ready" | "invalid" };
     }
   >;

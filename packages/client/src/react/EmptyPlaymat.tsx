@@ -1,6 +1,23 @@
+import type { PlayerAvatarView, PlayerProfileTitleView } from "../transport.js";
+import { PlayerSummaryLabel } from "./PlayerSummaryLabel.js";
 import { Zone } from "./Zone.js";
 
-export const EmptyPlaymat = (): React.JSX.Element => (
+export interface EmptyPlaymatPlayerSummary {
+  label: string;
+  avatar?: PlayerAvatarView | undefined;
+  title?: PlayerProfileTitleView | undefined;
+  status?: "connected" | "disconnected" | undefined;
+}
+
+export interface EmptyPlaymatProps {
+  selfSummary?: EmptyPlaymatPlayerSummary | undefined;
+  opponentSummary?: EmptyPlaymatPlayerSummary | undefined;
+}
+
+export const EmptyPlaymat = ({
+  selfSummary,
+  opponentSummary,
+}: EmptyPlaymatProps): React.JSX.Element => (
   <>
     <div className="playmat-side opponent-side">
       <div className="playmat-row opponent-resource-row">
@@ -38,7 +55,11 @@ export const EmptyPlaymat = (): React.JSX.Element => (
             stackCount={0}
           />
         </div>
-        <section className="playmat-summary opponent-summary" />
+        <section className="playmat-summary opponent-summary">
+          {opponentSummary === undefined ? null : (
+            <PlayerSummaryLabel {...opponentSummary} />
+          )}
+        </section>
         <div className="playmat-zone opponent-leader">
           <Zone label="Leader" cards={[]} size="small" />
         </div>
@@ -73,7 +94,11 @@ export const EmptyPlaymat = (): React.JSX.Element => (
         <div className="playmat-zone player-life">
           <Zone label="Life" cards={[]} size="small" displayMode="life" />
         </div>
-        <section className="playmat-summary player-summary" />
+        <section className="playmat-summary player-summary">
+          {selfSummary === undefined ? null : (
+            <PlayerSummaryLabel {...selfSummary} />
+          )}
+        </section>
         <div className="playmat-zone player-leader">
           <Zone label="Leader" cards={[]} size="small" />
         </div>

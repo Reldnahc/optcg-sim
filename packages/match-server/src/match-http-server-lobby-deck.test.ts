@@ -483,6 +483,55 @@ describe("dev HTTP lobby deck submissions", () => {
     }
   });
 
+  test("custom lobby responses expose public joined player identity", async () => {
+    const server = await createDeckHashMatchHttpServer();
+    await server.listen(0, "127.0.0.1");
+    try {
+      const created = await createCustomLobby(server);
+      const lobbyId = created.lobbyId;
+      if (lobbyId === undefined) {
+        throw new Error("Created lobby response did not include a lobby id.");
+      }
+      const accountToken = createDevUserSessionToken(
+        "user-1",
+        "session-1",
+        "Tester",
+        {
+          imageUrl: "https://cdn.example/avatar.png",
+          crop: { x: 0.25, y: 0.1, size: 0.5 },
+        },
+        {
+          key: "pirate_rookie",
+          label: "Pirate Rookie",
+          style: { text_color: "#e8e9ed", font_weight: 700 },
+        },
+      );
+
+      const joined = await joinCustomLobby(server, lobbyId, accountToken);
+      const loadedResponse = await fetch(
+        `${server.url()}/api/lobbies/${lobbyId}`,
+      );
+      assert.equal(loadedResponse.status, 200);
+      const loaded = (await loadedResponse.json()) as CreatedCustomLobbyBody;
+
+      for (const lobby of [joined, loaded]) {
+        const seat = requireLobbySeat(lobby, "p1");
+        assert.equal(seat.displayName, "Tester");
+        assert.deepEqual(seat.avatar, {
+          imageUrl: "https://cdn.example/avatar.png",
+          crop: { x: 0.25, y: 0.1, size: 0.5 },
+        });
+        assert.deepEqual(seat.title, {
+          key: "pirate_rookie",
+          label: "Pirate Rookie",
+          style: { text_color: "#e8e9ed", font_weight: 700 },
+        });
+      }
+    } finally {
+      await server.close();
+    }
+  });
+
   test("custom lobby waits for both claimed seats and ready deck submissions", async () => {
     const server = await createDeckHashMatchHttpServer();
     await server.listen(0, "127.0.0.1");

@@ -17,7 +17,11 @@ import {
   type DeckHashCodecPort,
   type ReadyDeckSubmission,
 } from "./deck-submission.js";
-import type { AuthContext } from "./dev-auth.js";
+import type {
+  AuthContext,
+  PlayerAvatarView,
+  PlayerProfileTitleView,
+} from "./dev-auth.js";
 import { createDevUserSessionToken } from "./dev-auth.js";
 import { subjectsOwnSameAccount } from "./dev-auth.js";
 import {
@@ -57,6 +61,9 @@ export interface CreatedCustomLobbyResponse {
       playerId: PlayerId;
       claimed: boolean;
       deck: { status: "missing" | "ready" | "invalid" };
+      displayName?: string;
+      avatar?: PlayerAvatarView;
+      title?: PlayerProfileTitleView;
     }
   >;
   matchId?: MatchId;
@@ -223,6 +230,15 @@ const lobbyResponse = (
         playerId: seat.playerId,
         claimed: seat.subject !== undefined,
         deck: { status: seat.deckSubmission?.status ?? "missing" },
+        ...(seat.subject?.displayName === undefined
+          ? {}
+          : { displayName: seat.subject.displayName }),
+        ...(seat.subject?.avatar === undefined
+          ? {}
+          : { avatar: seat.subject.avatar }),
+        ...(seat.subject?.title === undefined
+          ? {}
+          : { title: seat.subject.title }),
       },
     ]),
   ),

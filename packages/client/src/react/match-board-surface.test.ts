@@ -21,7 +21,23 @@ const lobbyState = (): LobbyClientState => ({
       p1: {
         playerId: "p1" as PlayerId,
         claimed: true,
+        displayName: "Alice",
+        avatar: {
+          imageUrl: "https://cdn.example/alice.png",
+          crop: { x: 0.1, y: 0.2, size: 0.6 },
+        },
+        title: {
+          key: "champion",
+          label: "Champion",
+          style: { text_color: "#f8fafc", font_weight: 700 },
+        },
         deck: { status: "missing" },
+      },
+      p2: {
+        playerId: "p2" as PlayerId,
+        claimed: true,
+        displayName: "Bob",
+        deck: { status: "ready" },
       },
     },
   },
@@ -53,6 +69,17 @@ test("lobby state renders a visible empty playmat through the shared board frame
   assert.match(markup, /class="zone zone-normal zone-slots"/u);
   assert.doesNotMatch(markup, /is-pregame-placeholder/u);
   assert.doesNotMatch(markup, /loading-panel/u);
+});
+
+test("lobby state renders joined player identity in empty playmat summaries", () => {
+  const markup = renderSurface(lobbyState());
+
+  assert.match(markup, /Alice/u);
+  assert.match(markup, /Bob/u);
+  assert.match(markup, /Champion/u);
+  assert.match(markup, /https:\/\/cdn\.example\/alice\.png/u);
+  assert.match(markup, /Alice connected/u);
+  assert.match(markup, /Bob connected/u);
 });
 
 test("loading state renders the same empty playmat without status text", () => {

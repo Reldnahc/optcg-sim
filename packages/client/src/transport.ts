@@ -192,7 +192,14 @@ export interface CustomLobby {
   settings?: CustomLobbySettings;
   seats: Record<
     string,
-    { playerId: PlayerId; claimed: boolean; deck: LobbyDeckStatus }
+    {
+      playerId: PlayerId;
+      claimed: boolean;
+      displayName?: string;
+      avatar?: PlayerAvatarView;
+      title?: PlayerProfileTitleView;
+      deck: LobbyDeckStatus;
+    }
   >;
   matchId?: MatchId;
 }
