@@ -261,7 +261,7 @@ export type PublicLegalAction =
   | { type: "attachDon"; don: CardRef; target: CardRef }
   | { type: "declareAttack"; attacker: CardRef; target: CardRef }
   | { type: "activateBlocker"; blocker: CardRef }
-  | { type: "useCounter"; card: CardRef; target: CardRef }
+  | { type: "useCounter"; card: CardRef; target: CardRef; effectId?: EffectId }
   | { type: "endMainPhase" }
   | { type: "concede"; playerId: PlayerId }
   | {

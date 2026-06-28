@@ -27,6 +27,7 @@ import { reifyCardRef } from "../actions/state.js";
 import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
 import {
   getSupportedCounterEventActivation,
+  getSupportedCounterEventActivations,
   queueCounterEventEffects,
   type SupportedCounterEventActivation,
 } from "./counter-event-activation.js";
@@ -89,28 +90,27 @@ export const getLegalCharacterCounterActions = (
   }
   return defender.hand.flatMap((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const eventActivation =
-      metadata?.category === "event"
-        ? getSupportedCounterEventActivation(state, card, defenderId)
-        : null;
+    if (metadata?.category === "event") {
+      return getSupportedCounterEventActivations(state, defenderId).flatMap(
+        ({ card: eventCard, activation }) =>
+          eventCard.instanceId === card.instanceId &&
+          getActiveDonCount(defender.costArea) >= activation.printedCost
+            ? [
+                {
+                  type: "useCounter" as const,
+                  cardInstanceId: card.instanceId,
+                  effectId: activation.effectId,
+                  target: battle.currentTarget,
+                },
+              ]
+            : [],
+      );
+    }
     if (
-      !(
-        (metadata?.category === "character" &&
-          (getEffectiveCharacterCounterValue(state, card) ?? 0) > 0) ||
-        (eventActivation !== null &&
-          getActiveDonCount(defender.costArea) >= eventActivation.printedCost)
-      )
+      metadata?.category !== "character" ||
+      (getEffectiveCharacterCounterValue(state, card) ?? 0) <= 0
     ) {
       return [];
-    }
-    if (metadata?.category === "event" && eventActivation !== null) {
-      return [
-        {
-          type: "useCounter" as const,
-          cardInstanceId: card.instanceId,
-          target: battle.currentTarget,
-        },
-      ];
     }
     return [
       {
@@ -231,6 +231,9 @@ export const applyUseCounter = (
     }
     counterValue = effectiveCharacterCounter;
   } else if (metadata?.category === "event") {
+    if (action.effectId === undefined) {
+      return illegalAction(state, "Counter Event action requires an effectId.");
+    }
     if (!sameCardRef(action.target, battle.currentTarget)) {
       return illegalAction(
         state,
@@ -241,6 +244,7 @@ export const applyUseCounter = (
       state,
       handCard,
       decision.playerId,
+      action.effectId,
     );
     if (activation === null) {
       return illegalAction(
@@ -259,6 +263,7 @@ export const applyUseCounter = (
         counterPayCostDecisionId(
           String(handCard.instanceId),
           String(action.target.instanceId),
+          String(activation.effectId),
           state.seq + 1,
           "printed",
         ),

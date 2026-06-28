@@ -1,5 +1,6 @@
 import type {
   Action,
+  EffectId,
   EngineEvent,
   EngineResult,
   GameState,
@@ -223,6 +224,7 @@ export const applyCounterStepDecisionResponse = (
         state,
         handCard,
         decision.playerId,
+        context.effectId as EffectId,
       );
       if (
         activation === null ||

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardInstance, CardRef } from "@optcg/types";
+import type { CardInstance, CardRef, EffectId } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { applyDeclareAttack } from "./actions.js";
@@ -33,6 +33,7 @@ test("useCounter with an Event card fails closed with unsupported Counter Event 
   const result = applyAction(openedState, {
     type: "useCounter",
     cardInstanceId: counterCard.instanceId,
+    effectId: `${String(counterCard.cardId)}:counter:1` as EffectId,
     target: must(openedState.battle, "battle").currentTarget,
   });
 
@@ -398,11 +399,17 @@ test("supported nonzero-cost Counter Event rejects forged payCost response witho
     attacker: cardRef(p1State.leader, p1),
     target: cardRef(p2State.leader, p2),
   });
-  const use = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const use = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(use.errors, undefined);
   const before = JSON.stringify(use.state);
 
@@ -469,6 +476,7 @@ test("costed Counter Event without active DON is not legal and fails closed with
   const result = applyAction(opened.state, {
     type: "useCounter",
     cardInstanceId: counterEvent.instanceId,
+    effectId: `${String(counterEvent.cardId)}:counter:1` as EffectId,
     target: must(opened.state.battle, "battle").currentTarget,
   });
 

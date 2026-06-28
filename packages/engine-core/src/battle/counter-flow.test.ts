@@ -601,11 +601,17 @@ test("conditional Counter Event can apply choose-from-leader-or-character power 
     ),
     true,
   );
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(used.errors, undefined);
   const targetDecision = must(used.state.pendingDecision, "target decision");
   assert.equal(targetDecision.type, "selectTargets");
@@ -769,11 +775,17 @@ test("Counter Event sequence resolves power then conditional trash-to-hand selec
     "counter",
     JSON.stringify(opened.state.battle),
   );
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(used.errors, undefined);
   const powerTargetDecision = must(
     used.state.pendingDecision,
@@ -847,11 +859,17 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
     target: cardRef(p2State.leader, p2),
   });
   assert.equal(opened.errors, undefined);
-  const use = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const use = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(use.errors, undefined);
   assert.equal(use.state.pendingDecision?.type, "payCost");
   assert.equal(

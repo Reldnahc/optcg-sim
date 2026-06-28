@@ -1034,7 +1034,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical decision routing",
       "heading_level": 2,
-      "marker_line": 465,
+      "marker_line": 470,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s017`"
     },
     {
@@ -1043,7 +1043,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Canonical event visibility",
       "heading_level": 2,
-      "marker_line": 528,
+      "marker_line": 533,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s018`"
     },
     {
@@ -1052,7 +1052,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Deterministic RNG",
       "heading_level": 2,
-      "marker_line": 545,
+      "marker_line": 550,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s019`"
     },
     {
@@ -1061,7 +1061,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "State hashing",
       "heading_level": 2,
-      "marker_line": 570,
+      "marker_line": 575,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s020`"
     },
     {
@@ -1070,7 +1070,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Invariant hooks",
       "heading_level": 2,
-      "marker_line": 594,
+      "marker_line": 599,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s021`"
     },
     {
@@ -1079,7 +1079,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Internal state sequencing",
       "heading_level": 2,
-      "marker_line": 618,
+      "marker_line": 623,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s022`"
     },
     {
@@ -1088,7 +1088,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Error handling inside the engine",
       "heading_level": 2,
-      "marker_line": 638,
+      "marker_line": 643,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s023`"
     },
     {
@@ -1097,7 +1097,7 @@
       "doc_path": "03-game-state-events-decisions.md",
       "heading": "Account-level saved loadouts",
       "heading_level": 2,
-      "marker_line": 658,
+      "marker_line": 663,
       "visible_line": "Section Ref: `03-game-state-events-decisions.s024`"
     },
     {
@@ -3527,7 +3527,7 @@
       "doc_path": "16-typescript-interface-draft.md",
       "heading": "Engine result",
       "heading_level": 2,
-      "marker_line": 277,
+      "marker_line": 278,
       "visible_line": "Section Ref: `16-typescript-interface-draft.s009`"
     },
     {
@@ -3536,7 +3536,7 @@
       "doc_path": "16-typescript-interface-draft.md",
       "heading": "Hashing rules",
       "heading_level": 2,
-      "marker_line": 293,
+      "marker_line": 294,
       "visible_line": "Section Ref: `16-typescript-interface-draft.s010`"
     },
     {
@@ -3545,7 +3545,7 @@
       "doc_path": "16-typescript-interface-draft.md",
       "heading": "Poneglyph raw and normalized interfaces",
       "heading_level": 2,
-      "marker_line": 310,
+      "marker_line": 311,
       "visible_line": "Section Ref: `16-typescript-interface-draft.s011`"
     },
     {
@@ -3554,7 +3554,7 @@
       "doc_path": "16-typescript-interface-draft.md",
       "heading": "Effect-local transient selections",
       "heading_level": 2,
-      "marker_line": 450,
+      "marker_line": 451,
       "visible_line": "Section Ref: `16-typescript-interface-draft.s012`"
     },
     {
@@ -3563,7 +3563,7 @@
       "doc_path": "16-typescript-interface-draft.md",
       "heading": "Account-level loadouts",
       "heading_level": 2,
-      "marker_line": 480,
+      "marker_line": 481,
       "visible_line": "Section Ref: `16-typescript-interface-draft.s013`"
     },
     {

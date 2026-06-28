@@ -1,5 +1,6 @@
 export interface CounterPayCostDecisionContext {
   counterEventInstanceId: string;
+  effectId: string;
   kind: "effect" | "printed";
   targetInstanceId: string;
 }
@@ -15,13 +16,14 @@ const decodeDecisionSegment = (value: string): string =>
   decodeURIComponent(value);
 
 const counterPayCostDecisionPattern =
-  /^decision:counterStep:payCost:([^:]+):([^:]+):(?:(effect|printed):)?\d+$/;
+  /^decision:counterStep:payCost:([^:]+):([^:]+):([^:]+):(?:(effect|printed):)?\d+$/;
 const counterTargetDecisionPattern =
   /^decision:counterStep:target:([^:]+):\d+$/;
 
 export const counterPayCostDecisionId = (
   counterEventInstanceId: string,
   targetInstanceId: string,
+  effectId: string,
   sequence: number,
   kind: "effect" | "printed" = "printed",
 ): string =>
@@ -29,6 +31,7 @@ export const counterPayCostDecisionId = (
     "decision:counterStep:payCost",
     encodeDecisionSegment(counterEventInstanceId),
     encodeDecisionSegment(targetInstanceId),
+    encodeDecisionSegment(effectId),
     kind,
     String(sequence),
   ].join(":");
@@ -37,12 +40,17 @@ export const parseCounterPayCostDecisionId = (
   id: string,
 ): CounterPayCostDecisionContext | null => {
   const match = counterPayCostDecisionPattern.exec(id);
-  if (match?.[1] === undefined || match[2] === undefined) {
+  if (
+    match?.[1] === undefined ||
+    match[2] === undefined ||
+    match[3] === undefined
+  ) {
     return null;
   }
   return {
     counterEventInstanceId: decodeDecisionSegment(match[1]),
-    kind: match[3] === "effect" ? "effect" : "printed",
+    effectId: decodeDecisionSegment(match[3]),
+    kind: match[4] === "effect" ? "effect" : "printed",
     targetInstanceId: decodeDecisionSegment(match[2]),
   };
 };

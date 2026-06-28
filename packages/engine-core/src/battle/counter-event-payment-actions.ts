@@ -1,5 +1,6 @@
 import type {
   CardInstance,
+  EffectId,
   GameState,
   LegalAction,
   PlayerId,
@@ -40,6 +41,7 @@ export const getCounterEventPaymentLegalActions = (
     state,
     handCard,
     playerId,
+    context.effectId as EffectId,
   );
   if (
     activation === null ||

@@ -82,4 +82,31 @@ describe("counter targeting interaction", () => {
     );
     assert.deepEqual(createCollapsedCounterActions(actions), actions);
   });
+
+  test("does not collapse separate Counter Event effects into target choice UI", () => {
+    const actions: readonly ClientActionModel[] = [
+      {
+        index: 4,
+        type: "useCounter",
+        label: "Draw",
+        counter: {
+          cardInstanceId: "counter-event" as InstanceId,
+          effectId: "counter-event:draw",
+          targetInstanceId: "leader-target" as InstanceId,
+        },
+      },
+      {
+        index: 5,
+        type: "useCounter",
+        label: "Power",
+        counter: {
+          cardInstanceId: "counter-event" as InstanceId,
+          effectId: "counter-event:power",
+          targetInstanceId: "leader-target" as InstanceId,
+        },
+      },
+    ];
+
+    assert.deepEqual(createCollapsedCounterActions(actions), actions);
+  });
 });

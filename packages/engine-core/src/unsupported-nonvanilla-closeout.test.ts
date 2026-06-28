@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type {
   CardInstance,
+  EffectId,
   EngineResult,
   GameState,
   PlayerId,
@@ -136,6 +137,7 @@ describe("unsupported non-vanilla closeout", () => {
     const result = applyAction(openedState, {
       type: "useCounter",
       cardInstanceId: counterCard.instanceId,
+      effectId: `${String(counterCard.cardId)}:counter:1` as EffectId,
       target: must(openedState.battle, "battle").currentTarget,
     });
 

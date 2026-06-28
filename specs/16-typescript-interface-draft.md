@@ -226,6 +226,7 @@ export type Action =
       type: "useCounter";
       handInstanceId: InstanceId;
       targetInstanceId: InstanceId;
+      effectId?: EffectId;
     }
   | {
       type: "respondToDecision";

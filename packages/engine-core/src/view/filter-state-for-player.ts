@@ -500,7 +500,12 @@ const toPublicLegalAction = (
       if (!isCardRefVisibleToPlayer(state, playerId, action.target)) {
         return undefined;
       }
-      return { type: "useCounter", card, target: action.target };
+      return {
+        type: "useCounter",
+        card,
+        target: action.target,
+        ...(action.effectId === undefined ? {} : { effectId: action.effectId }),
+      };
     }
     case "playCard": {
       const card = findSelfHandCardRef(state, playerId, action.cardInstanceId);

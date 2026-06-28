@@ -10,6 +10,14 @@ export interface CounterTargetChoice {
   targetActions: Array<{ targetInstanceId: string; actionIndex: number }>;
 }
 
+const counterActionKey = (action: ClientActionModel): string | undefined =>
+  action.counter === undefined
+    ? undefined
+    : [
+        String(action.counter.cardInstanceId),
+        action.counter.effectId ?? "character-counter",
+      ].join(":");
+
 export const createCounterTargetChoice = (
   counterCardInstanceId: string,
   actions: readonly ClientActionModel[],
@@ -41,10 +49,16 @@ export const createCollapsedCounterActions = (
     (action) => action.type === "useCounter",
   );
   const otherActions = actions.filter((action) => action.type !== "useCounter");
+  const counterKeys = new Set(
+    counterActions.flatMap((action) => {
+      const key = counterActionKey(action);
+      return key === undefined ? [] : [key];
+    }),
+  );
   const counterAmount = counterActions.find(
     (action) => action.counter?.amount !== undefined,
   )?.counter?.amount;
-  return counterActions.length <= 1
+  return counterActions.length <= 1 || counterKeys.size !== 1
     ? [...actions]
     : [
         {

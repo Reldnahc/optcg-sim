@@ -4,6 +4,7 @@ import type {
   Effect,
   EffectDefinition,
   EffectQueueEntry,
+  EffectId,
   GameState,
   PlayerId,
 } from "@optcg/types";
@@ -21,14 +22,16 @@ type CounterSequenceBlock = EffectDefinition["effects"][number] & {
 };
 
 export interface SupportedCounterEventActivation {
+  readonly effectId: EffectId;
+  readonly effect: CounterSequenceBlock;
   readonly printedCost: number;
-  readonly effects: readonly CounterSequenceBlock[];
 }
 
 export const getSupportedCounterEventActivation = (
   state: GameState,
   card: CardInstance,
   controllerId: PlayerId,
+  effectId: EffectId,
 ): SupportedCounterEventActivation | null => {
   const metadata = state.cardManifest.cards[card.cardId];
   if (
@@ -51,20 +54,26 @@ export const getSupportedCounterEventActivation = (
     return null;
   }
 
-  const effects = definition.effects
-    .filter((effect) => effect.trigger.type === "counter")
-    .map((effect) =>
-      toSupportedCounterSequence(state, card, controllerId, effect),
-    );
-  if (effects.length === 0 || effects.some((effect) => effect === null)) {
+  const effect = definition.effects.find(
+    (candidate) => candidate.id === effectId,
+  );
+  if (effect === undefined || effect.trigger.type !== "counter") {
+    return null;
+  }
+  const supportedEffect = toSupportedCounterSequence(
+    state,
+    card,
+    controllerId,
+    effect,
+  );
+  if (supportedEffect === null) {
     return null;
   }
 
   return {
+    effect: supportedEffect,
+    effectId: supportedEffect.id,
     printedCost,
-    effects: effects.filter(
-      (effect): effect is CounterSequenceBlock => effect !== null,
-    ),
   };
 };
 
@@ -75,98 +84,32 @@ export const queueCounterEventEffects = (params: {
   readonly activation: SupportedCounterEventActivation;
 }): { readonly state: GameState; readonly events: readonly EngineEvent[] } => {
   const events: EngineEvent[] = [];
-  const effectBlocks = counterEventQueueBlocks(params.activation.effects);
-  const queueState =
-    params.activation.effects.length > 1
-      ? withCounterEventQueueBlocks(
-          params.state,
-          params.source.cardId,
-          effectBlocks,
-        )
-      : params.state;
-  const entries = effectBlocks.map((effectBlock) => ({
+  const entry = {
     ...toCounterEventRuntimeQueueEntry(
-      queueState,
+      params.state,
       params.controllerId,
       params.source,
-      effectBlock,
+      params.activation.effect,
     ),
     state: "pending" as const,
-  }));
-  if (entries.length === 0) {
-    return { events, state: queueState };
-  }
+  };
 
-  const resolved = queueState.cardManifest.cards[params.source.cardId];
-  for (const [index, entry] of entries.entries()) {
-    const effectBlock = effectBlocks[index];
-    if (effectBlock !== undefined) {
-      appendEffectQueuedEvent(queueState, events, entry, effectBlock, resolved);
-    }
-  }
+  const resolved = params.state.cardManifest.cards[params.source.cardId];
+  appendEffectQueuedEvent(
+    params.state,
+    events,
+    entry,
+    params.activation.effect,
+    resolved,
+  );
 
   return {
     events,
     state: {
-      ...queueState,
-      seq: toStateSeq(queueState.seq + 1),
-      effectQueue: [...queueState.effectQueue, ...entries],
-      eventJournal: [...queueState.eventJournal, ...events],
-    },
-  };
-};
-
-const counterEventQueueBlocks = (
-  effects: readonly CounterSequenceBlock[],
-): readonly CounterSequenceBlock[] => {
-  const first = effects[0];
-  if (first === undefined || effects.length <= 1) {
-    return effects;
-  }
-  return [
-    {
-      ...first,
-      id: `${String(first.id)}:counter-batch` as CounterSequenceBlock["id"],
-      effect: {
-        type: "sequence",
-        effects: effects.flatMap((effect) => effect.effect.effects),
-      },
-    },
-  ];
-};
-
-const withCounterEventQueueBlocks = (
-  state: GameState,
-  cardId: CardInstance["cardId"],
-  effectBlocks: readonly CounterSequenceBlock[],
-): GameState => {
-  const metadata = state.cardManifest.cards[cardId];
-  const definitionId = metadata?.support.effectDefinitionId;
-  if (definitionId === undefined) {
-    return state;
-  }
-  const definition = state.cardManifest.effectDefinitions?.[definitionId];
-  if (definition === undefined) {
-    return state;
-  }
-  const existingIds = new Set(definition.effects.map((effect) => effect.id));
-  const additions = effectBlocks.filter(
-    (effectBlock) => !existingIds.has(effectBlock.id),
-  );
-  if (additions.length === 0) {
-    return state;
-  }
-  return {
-    ...state,
-    cardManifest: {
-      ...state.cardManifest,
-      effectDefinitions: {
-        ...state.cardManifest.effectDefinitions,
-        [definitionId]: {
-          ...definition,
-          effects: [...definition.effects, ...additions],
-        },
-      },
+      ...params.state,
+      seq: toStateSeq(params.state.seq + 1),
+      effectQueue: [...params.state.effectQueue, entry],
+      eventJournal: [...params.state.eventJournal, ...events],
     },
   };
 };
@@ -183,14 +126,40 @@ export const getSupportedCounterEventActivations = (
     return [];
   }
 
-  return player.hand.flatMap((card) => {
-    const activation = getSupportedCounterEventActivation(
-      state,
-      card,
-      controllerId,
-    );
-    return activation === null ? [] : [{ card, activation }];
-  });
+  return player.hand.flatMap((card) =>
+    getSupportedCounterEventIds(state, card).flatMap((effectId) => {
+      const activation = getSupportedCounterEventActivation(
+        state,
+        card,
+        controllerId,
+        effectId,
+      );
+      return activation === null ? [] : [{ card, activation }];
+    }),
+  );
+};
+
+export const getSupportedCounterEventIds = (
+  state: GameState,
+  card: CardInstance,
+): readonly EffectId[] => {
+  const metadata = state.cardManifest.cards[card.cardId];
+  if (
+    metadata?.category !== "event" ||
+    metadata.support.status !== "implemented-dsl" ||
+    metadata.support.effectDefinitionId === undefined ||
+    (metadata.support.customHandlerIds?.length ?? 0) > 0
+  ) {
+    return [];
+  }
+  const definition =
+    state.cardManifest.effectDefinitions?.[metadata.support.effectDefinitionId];
+  if (definition?.implementationStatus !== "implemented-dsl") {
+    return [];
+  }
+  return definition.effects
+    .filter((effect) => effect.trigger.type === "counter")
+    .map((effect) => effect.id);
 };
 
 const toSupportedCounterSequence = (

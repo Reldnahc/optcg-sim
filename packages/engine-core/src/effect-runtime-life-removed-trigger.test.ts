@@ -22,6 +22,7 @@ import { applyAction } from "./actions.js";
 import {
   cardRef,
   installSupportedCounterEvent,
+  legalCounterActionForCard,
   setupAttackState,
 } from "./battle/test-fixtures.js";
 import {
@@ -556,11 +557,10 @@ test("opponent activation reaction queues after the opponent Counter Event effec
   });
   assert.equal(opened.errors, undefined);
 
-  const countered = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const countered = applyAction(
+    opened.state,
+    legalCounterActionForCard(opened.state, p2, counterEvent),
+  );
   assert.equal(countered.errors, undefined);
   assert.deepEqual(
     countered.events.map((event) => event.type),

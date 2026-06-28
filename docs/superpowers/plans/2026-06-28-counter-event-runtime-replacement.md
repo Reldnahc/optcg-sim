@@ -546,36 +546,32 @@ export const queueCounterEventEffects = (params: {
   readonly activation: SupportedCounterEventActivation;
 }): { readonly state: GameState; readonly events: readonly EngineEvent[] } => {
   const events: EngineEvent[] = [];
-  const entries = params.activation.effects.map((effectBlock) =>
-    toCounterEventRuntimeQueueEntry(
-      params.state,
-      params.controllerId,
-      params.source,
-      effectBlock,
-    ),
+  const entry = toCounterEventRuntimeQueueEntry(
+    params.state,
+    params.controllerId,
+    params.source,
+    params.activation.effect,
   );
-  for (const entry of entries) {
-    appendEvent(
-      params.state,
-      events,
-      "effectQueued",
-      {
-        queueEntryId: entry.id,
-        timingWindowId: entry.timingWindowId,
-        generation: entry.generation,
-        effectBlockId: entry.effectBlockId,
-        source: entry.source,
-        orderingGroup: entry.orderingGroup,
-      },
-      { type: "public" },
-    );
-  }
+  appendEvent(
+    params.state,
+    events,
+    "effectQueued",
+    {
+      queueEntryId: entry.id,
+      timingWindowId: entry.timingWindowId,
+      generation: entry.generation,
+      effectBlockId: entry.effectBlockId,
+      source: entry.source,
+      orderingGroup: entry.orderingGroup,
+    },
+    { type: "public" },
+  );
   return {
     events,
     state: {
       ...params.state,
       seq: toStateSeq(params.state.seq + 1),
-      effectQueue: [...params.state.effectQueue, ...entries],
+      effectQueue: [...params.state.effectQueue, entry],
       eventJournal: [...params.state.eventJournal, ...events],
     },
   };

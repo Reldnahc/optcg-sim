@@ -46,6 +46,7 @@ export interface ClientVisibleAction {
   counter?: {
     cardInstanceId: InstanceId;
     targetInstanceId: InstanceId;
+    effectId?: string | undefined;
     amount?: number | undefined;
   };
   placement?: {

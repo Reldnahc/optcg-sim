@@ -9,11 +9,12 @@ import type {
   EngineResult,
   GameState,
   Keyword,
+  LegalAction,
   PlayerId,
   Protection,
 } from "@optcg/types";
 
-import { applyAction } from "../index.js";
+import { applyAction, getLegalActions } from "../index.js";
 import {
   createActiveState,
   must,
@@ -546,6 +547,20 @@ export const assertCounterStepPassDecision = (
   assert.deepEqual(decision.defaultResponse, { type: "cards", cards: [] });
   return decision;
 };
+
+export const legalCounterActionForCard = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+): Extract<LegalAction, { type: "useCounter" }> =>
+  must(
+    getLegalActions(state, playerId).find(
+      (action): action is Extract<LegalAction, { type: "useCounter" }> =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === card.instanceId,
+    ),
+    "counter action",
+  );
 
 export const passCounterStep = (
   state: GameState,

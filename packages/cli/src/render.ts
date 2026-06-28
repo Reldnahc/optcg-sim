@@ -130,9 +130,11 @@ const renderLegalAction = (action: LegalAction): string => {
     case "activateBlocker":
       return `activate-blocker blocker=${renderCardRef(action.blocker)}`;
     case "useCounter":
-      return `use-counter card=${String(action.cardInstanceId)} target=${renderCardRef(
-        action.target,
-      )}`;
+      return `use-counter card=${String(action.cardInstanceId)}${
+        action.effectId === undefined
+          ? ""
+          : ` effect=${String(action.effectId)}`
+      } target=${renderCardRef(action.target)}`;
     case "endMainPhase":
       return "end-main-phase";
     case "concede":

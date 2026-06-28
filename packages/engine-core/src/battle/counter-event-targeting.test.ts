@@ -142,16 +142,23 @@ test("Counter Event chooses a non-battle leader-or-character target through norm
       {
         type: "useCounter",
         cardInstanceId: counterEvent.instanceId,
+        effectId: `${String(counterEvent.cardId)}:counter:1`,
         target: must(opened.state.battle, "battle").currentTarget,
       },
     ],
   );
 
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(used.errors, undefined);
   const decision = must(used.state.pendingDecision, "target decision");
   assert.equal(decision.type, "selectTargets");
@@ -179,11 +186,17 @@ test("Counter Event trash-from-hand cost resolves before normal target selection
   installTrashHandCostCounterEvent(state, counterEvent);
 
   const opened = openCounterStep(state);
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(used.errors, undefined);
   const costDecision = must(used.state.pendingDecision, "cost decision");
   assert.equal(costDecision.type, "payCost");

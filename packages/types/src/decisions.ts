@@ -334,7 +334,12 @@ export type Action =
     }
   | { type: "declareAttack"; attacker: CardRef; target: CardRef }
   | { type: "activateBlocker"; blocker: CardRef }
-  | { type: "useCounter"; cardInstanceId: InstanceId; target: CardRef }
+  | {
+      type: "useCounter";
+      cardInstanceId: InstanceId;
+      target: CardRef;
+      effectId?: EffectId;
+    }
   | { type: "endMainPhase" }
   | { type: "concede"; playerId: PlayerId }
   | {

@@ -341,12 +341,16 @@ const actionFromValue = (value: unknown): Action | undefined => {
     }
     case "useCounter": {
       const cardInstanceId = stringValue(value["cardInstanceId"]);
+      const effectId = stringValue(value["effectId"]);
       const target = cardRefFromValue(value["target"]);
       return cardInstanceId === undefined || target === undefined
         ? undefined
         : {
             type: "useCounter",
             cardInstanceId: cardInstanceId as InstanceId,
+            ...(effectId === undefined
+              ? {}
+              : { effectId: effectId as EffectId }),
             target,
           };
     }

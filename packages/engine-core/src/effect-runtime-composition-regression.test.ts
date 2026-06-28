@@ -533,11 +533,17 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
     ),
     true,
   );
-  const useCounter = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterCard.instanceId,
-    target: must(opened.state.battle, "opened battle").currentTarget,
-  });
+  const useCounter = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterCard.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(useCounter.errors, undefined);
   assert.equal(
     useCounter.events.some((event) => event.type === "counterUsed"),
@@ -572,11 +578,17 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
     ),
     true,
   );
-  const useCounterMultiEffect = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterCard.instanceId,
-    target: must(opened.state.battle, "opened battle").currentTarget,
-  });
+  const useCounterMultiEffect = applyAction(
+    opened.state,
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterCard.instanceId,
+      ),
+      "counter action",
+    ),
+  );
   assert.equal(useCounterMultiEffect.errors, undefined);
   assert.equal(
     useCounterMultiEffect.events.some((event) => event.type === "counterUsed"),
@@ -628,17 +640,31 @@ test("life-trigger and counter matrices preserve supported wrappers and fail clo
     },
   });
   assert.equal(unsupportedOpened.errors, undefined);
+  const unsupportedLegalActions = getLegalActions(unsupportedOpened.state, p2);
   assert.equal(
-    getLegalActions(unsupportedOpened.state, p2).some(
+    unsupportedLegalActions.some(
       (action) =>
         action.type === "useCounter" &&
-        action.cardInstanceId === unsupportedCard.instanceId,
+        action.cardInstanceId === unsupportedCard.instanceId &&
+        action.effectId === unsupportedCounterEffect.id,
+    ),
+    true,
+  );
+  assert.equal(
+    unsupportedLegalActions.some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === unsupportedCard.instanceId &&
+        action.effectId ===
+          (`${String(unsupportedCounterEffect.id)}:duplicate` as typeof unsupportedCounterEffect.id),
     ),
     false,
   );
   const directCounter = applyAction(unsupportedOpened.state, {
     type: "useCounter",
     cardInstanceId: unsupportedCard.instanceId,
+    effectId:
+      `${String(unsupportedCounterEffect.id)}:duplicate` as typeof unsupportedCounterEffect.id,
     target: must(unsupportedOpened.state.battle, "battle").currentTarget,
   });
   assert.deepEqual(directCounter.errors, [

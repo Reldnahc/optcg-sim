@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardInstance, EffectDefinition, EffectId } from "@optcg/types";
+import type {
+  CardInstance,
+  EffectDefinition,
+  EffectId,
+  GameState,
+  PlayerId,
+} from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { processEffectRuntime } from "../effect-runtime.js";
@@ -153,6 +159,144 @@ const installCannotAttackCounterEvent = (
   };
 };
 
+const installMultiBlockCounterEvent = (
+  state: ReturnType<typeof setupAttackState>,
+  card: CardInstance,
+): { drawEffectId: EffectId; powerEffectId: EffectId } => {
+  const definitionId = `${String(card.cardId)}:counter-multi`;
+  const drawEffectId = `${String(card.cardId)}:counter-multi:draw` as EffectId;
+  const powerEffectId =
+    `${String(card.cardId)}:counter-multi:power` as EffectId;
+  state.cardManifest.cards[card.cardId] = resolvedCard({
+    cardId: card.cardId,
+    category: "event",
+    cost: 0,
+    effectText:
+      "[Counter] Draw 1 card. [Counter] Your Leader gets +2000 power during this battle.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: definitionId,
+    },
+  });
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [definitionId]: {
+      cardId: card.cardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: drawEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          id: powerEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: {
+            type: "modifyPower",
+            target: { type: "myLeader" },
+            value: 2000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "r1",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "qa-reviewer",
+      },
+    },
+  };
+  return { drawEffectId, powerEffectId };
+};
+
+const legalCounterAction = (
+  state: GameState,
+  playerId: PlayerId,
+  card: CardInstance,
+) =>
+  must(
+    getLegalActions(state, playerId).find(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === card.instanceId,
+    ),
+    "legal Counter Event action",
+  );
+
+test("Counter Event legal actions expose each real Counter effect block separately", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const { drawEffectId, powerEffectId } = installMultiBlockCounterEvent(
+    state,
+    counterEvent,
+  );
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+
+  const counterActions = getLegalActions(opened.state, p2).flatMap((action) =>
+    action.type === "useCounter" &&
+    action.cardInstanceId === counterEvent.instanceId
+      ? [action]
+      : [],
+  );
+  assert.deepEqual(
+    counterActions.map((action) => action.effectId).sort(),
+    [drawEffectId, powerEffectId].sort(),
+  );
+});
+
+test("Counter Event activation queues only the selected real effect block", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  const { powerEffectId } = installMultiBlockCounterEvent(state, counterEvent);
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  const action = must(
+    getLegalActions(opened.state, p2).find(
+      (candidate) =>
+        candidate.type === "useCounter" &&
+        candidate.cardInstanceId === counterEvent.instanceId &&
+        candidate.effectId === powerEffectId,
+    ),
+    "power counter action",
+  );
+
+  const used = applyAction(opened.state, action);
+
+  assert.equal(used.errors, undefined);
+  const queued = must(
+    used.events.find((event) => event.type === "effectQueued"),
+    "effectQueued event",
+  );
+  const payload = queued.payload as { readonly effectBlockId?: unknown };
+  assert.equal(payload.effectBlockId, powerEffectId);
+  assert.equal(
+    used.events.some((event) => event.type === "cardDrawn"),
+    false,
+  );
+});
+
 test("supported non-power Counter Event grants battle K.O. replacement after printed cost", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
@@ -177,11 +321,10 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
     true,
   );
 
-  const use = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const use = applyAction(
+    opened.state,
+    legalCounterAction(opened.state, p2, counterEvent),
+  );
   assert.equal(use.errors, undefined);
   assert.equal(use.state.pendingDecision?.type, "payCost");
 
@@ -277,11 +420,10 @@ test("supported Counter Event sequence resolves after printed cost", () => {
     true,
   );
 
-  const use = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const use = applyAction(
+    opened.state,
+    legalCounterAction(opened.state, p2, counterEvent),
+  );
   assert.equal(use.errors, undefined);
   assert.equal(use.state.pendingDecision?.type, "payCost");
 
@@ -340,11 +482,10 @@ test("Counter Event cannot-attack sequence fully resolves and blocks the selecte
   });
   assert.equal(opened.errors, undefined);
 
-  const used = applyAction(opened.state, {
-    type: "useCounter",
-    cardInstanceId: counterEvent.instanceId,
-    target: must(opened.state.battle, "battle").currentTarget,
-  });
+  const used = applyAction(
+    opened.state,
+    legalCounterAction(opened.state, p2, counterEvent),
+  );
   assert.equal(used.errors, undefined);
   assert.equal(used.state.pendingDecision?.type, "payCost");
 

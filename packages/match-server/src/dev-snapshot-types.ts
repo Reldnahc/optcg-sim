@@ -46,6 +46,7 @@ export interface DevVisibleAction {
   counter?: {
     cardInstanceId: CardInstance["instanceId"];
     targetInstanceId: CardInstance["instanceId"];
+    effectId?: string | undefined;
     amount?: number | undefined;
   };
   placement?: {

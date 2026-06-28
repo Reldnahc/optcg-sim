@@ -134,6 +134,9 @@ const actionCounter = (
   return {
     cardInstanceId: action.cardInstanceId,
     targetInstanceId: action.target.instanceId,
+    ...(action.effectId === undefined
+      ? {}
+      : { effectId: String(action.effectId) }),
     ...(amount === undefined ? {} : { amount }),
   };
 };
