@@ -425,7 +425,14 @@ const handleCardRevealed = (
   operations: OperationSink,
   context: EventStatContext,
 ): void => {
-  if (!publicEvent(event) || !isRecord(event.payload)) {
+  if (
+    event.visibility.type !== "public" &&
+    event.visibility.type !== "private" &&
+    event.visibility.type !== "replayOnly"
+  ) {
+    return;
+  }
+  if (!isRecord(event.payload)) {
     return;
   }
   const cards = event.payload["cards"];

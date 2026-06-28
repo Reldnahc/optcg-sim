@@ -279,6 +279,43 @@ test("extracts movement resource stats without double-counting paired draw movem
   assert.equal(values.get(statKeys.cardsRevealed), 2);
 });
 
+test("extracts private chooser reveal stats from server-side card evidence", () => {
+  const values = statValues([
+    event(
+      "cardRevealed",
+      {
+        revealId: "private-reveal",
+        cards: [
+          { playerId: p1, instanceId: "event-1", cardId: "event-card-id" },
+          { playerId: p1, instanceId: "char-1", cardId: "char-card-id" },
+        ],
+        origin: "effect",
+      },
+      { visibility: { type: "private", playerId: p1 as never } },
+    ),
+  ]);
+
+  assert.equal(values.get(statKeys.cardsRevealed), 2);
+});
+
+test("does not emit reveal stats for hidden events", () => {
+  const values = statValues([
+    event(
+      "cardRevealed",
+      {
+        revealId: "hidden-reveal",
+        cards: [
+          { playerId: p1, instanceId: "event-1", cardId: "event-card-id" },
+        ],
+        origin: "effect",
+      },
+      { visibility: { type: "hidden" } },
+    ),
+  ]);
+
+  assert.equal(values.get(statKeys.cardsRevealed), undefined);
+});
+
 test("extracts DON and effect activation stats when payload proves the family", () => {
   const values = statValues([
     event("donAttached", {
@@ -410,6 +447,10 @@ test("does not emit don_restored_total without supported event evidence", () => 
 
 test("does not emit characters_ko_by_effect without supported event evidence", () => {
   const values = statValues([
+    event("cardKOd", {
+      playerId: p2,
+      instanceId: "ko-target",
+    }),
     event("cardMoved", {
       playerId: p2,
       instanceId: "ko-target",
