@@ -1,6 +1,7 @@
 import type {
   CardId,
   CardInstance,
+  Effect,
   GameState,
   LegalAction,
   PaymentOption,
@@ -43,6 +44,98 @@ const counterAmount = (
     }
   }
   return undefined;
+};
+
+const cardForInstance = (
+  state: GameState,
+  instanceId: CardInstance["instanceId"],
+): CardInstance | undefined => {
+  for (const player of Object.values(state.players)) {
+    const card = allPlayerCards(player).find(
+      (candidate) => candidate.instanceId === instanceId,
+    );
+    if (card !== undefined) {
+      return card;
+    }
+  }
+  return undefined;
+};
+
+const numberValueLabel = (value: EffectNumberValue): string | undefined =>
+  typeof value === "number" ? String(value) : undefined;
+
+type EffectNumberValue = Extract<Effect, { type: "draw" }>["count"];
+
+const targetLabel = (
+  target: Extract<Effect, { type: "modifyPower" }>["target"],
+): string => {
+  if (target.type === "myLeader") {
+    return "Leader";
+  }
+  if (target.type === "opponentLeader") {
+    return "opponent's Leader";
+  }
+  if (target.type === "self") {
+    return "this card";
+  }
+  if (target.type === "savedFieldObject") {
+    return "selected card";
+  }
+  return "target";
+};
+
+const effectLabel = (effect: Effect): string | undefined => {
+  if (effect.type === "draw") {
+    const count = numberValueLabel(effect.count);
+    return count === undefined
+      ? "Draw cards"
+      : `Draw ${countLabel(Number(count), "card", "cards")}`;
+  }
+  if (effect.type === "modifyPower") {
+    const value = numberValueLabel(effect.value);
+    return value === undefined
+      ? `Give ${targetLabel(effect.target)} power`
+      : `Give ${targetLabel(effect.target)} +${value} power`;
+  }
+  if (effect.type === "cannotAttack") {
+    return "Stop a card from attacking";
+  }
+  if (effect.type === "sequence") {
+    const labels = effect.effects.flatMap((segment) => {
+      if (segment.effect.type === "payCost") {
+        return [];
+      }
+      const label = effectLabel(segment.effect);
+      return label === undefined ? [] : [label];
+    });
+    return labels.length === 0 ? undefined : labels.slice(0, 2).join(" then ");
+  }
+  return undefined;
+};
+
+const counterEventEffectLabel = (
+  state: GameState,
+  action: Extract<LegalAction, { type: "useCounter" }>,
+): string | undefined => {
+  if (action.effectId === undefined) {
+    return undefined;
+  }
+  const card = cardForInstance(state, action.cardInstanceId);
+  if (card === undefined) {
+    return undefined;
+  }
+  const metadata = state.cardManifest.cards[card.cardId];
+  const definitionId = metadata?.support.effectDefinitionId;
+  if (metadata?.category !== "event" || definitionId === undefined) {
+    return undefined;
+  }
+  const effectBlock = state.cardManifest.effectDefinitions?.[
+    definitionId
+  ]?.effects.find((candidate) => candidate.id === action.effectId);
+  if (effectBlock === undefined) {
+    return `Counter: ${String(action.effectId)}`;
+  }
+  return `Counter: ${effectLabel(effectBlock.effect) ?? String(action.effectId)}`;
 };
 
 const paymentOptionForAction = (
@@ -289,6 +382,10 @@ export const actionLabel = (state: GameState, action: LegalAction): string => {
     case "activateBlocker":
       return `Block with ${cardName(state, action.blocker.cardId)}`;
     case "useCounter": {
+      const counterEventLabel = counterEventEffectLabel(state, action);
+      if (counterEventLabel !== undefined) {
+        return counterEventLabel;
+      }
       const amount = counterAmount(state, action.cardInstanceId);
       return amount === undefined || amount <= 0
         ? `Counter with ${instanceName(state, action.cardInstanceId)}`

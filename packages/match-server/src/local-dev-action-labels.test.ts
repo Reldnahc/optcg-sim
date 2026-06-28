@@ -3,6 +3,8 @@ import { describe, test } from "vitest";
 import type {
   CardId,
   DecisionId,
+  EffectDefinition,
+  EffectId,
   GameState,
   InstanceId,
   LegalAction,
@@ -49,6 +51,104 @@ const paymentAction = (optionId: string): LegalAction => ({
 });
 
 describe("local dev action labels", () => {
+  test("labels Event Counter actions by their selected effect", () => {
+    const counterCardId = "counter-event-card" as CardId;
+    const counterInstanceId = "counter-event-instance" as InstanceId;
+    const targetInstanceId = "target-instance" as InstanceId;
+    const drawEffectId = "counter-event-card:counter:draw" as EffectId;
+    const powerEffectId = "counter-event-card:counter:power" as EffectId;
+    const definition: EffectDefinition = {
+      cardId: counterCardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: drawEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          id: powerEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: {
+            type: "modifyPower",
+            target: { type: "myLeader" },
+            value: 2000,
+            duration: { type: "thisBattle" },
+          },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "rules",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "test",
+      },
+    };
+    const state = {
+      cardManifest: {
+        cards: {
+          [counterCardId]: {
+            cardId: counterCardId,
+            name: "Counter Event",
+            category: "event",
+            support: {
+              status: "implemented-dsl",
+              effectDefinitionId: "counter-event-definition",
+            },
+          },
+        },
+        effectDefinitions: {
+          "counter-event-definition": definition,
+        },
+      },
+      players: {
+        [p1]: {
+          playerId: p1,
+          leader: {
+            instanceId: "leader-instance" as InstanceId,
+            cardId: "leader-card" as CardId,
+          },
+          deck: [],
+          hand: [{ instanceId: counterInstanceId, cardId: counterCardId }],
+          trash: [],
+          characters: [],
+          costArea: [],
+          donDeck: [],
+          life: [],
+        },
+      },
+    } as unknown as GameState;
+    const target = {
+      instanceId: targetInstanceId,
+      cardId: "target-card" as CardId,
+      playerId: p1,
+    };
+
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: drawEffectId,
+        target,
+      }),
+      "Counter: Draw 1 card",
+    );
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: powerEffectId,
+        target,
+      }),
+      "Counter: Give Leader +2000 power",
+    );
+  });
+
   test("labels counter actions with the counter amount when known", () => {
     const counterCardId = "counter-card" as CardId;
     const counterInstanceId = "counter-instance" as InstanceId;
