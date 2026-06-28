@@ -794,6 +794,13 @@ describe("card behavior probe", () => {
     expect(report.lines).toContain("Behavior probe: passed");
     expect(report.lines).toContain("Scenario 1 entrypoint: counter");
     expect(report.lines).toContain("Scenario 1 result: passed");
+    expect(report.lines).toContain("Scenario 1 pending decisions: drained");
+    expect(report.lines).toContain("Scenario 1 effect queue: drained");
+    expect(
+      report.lines.some((line) =>
+        line.startsWith("Scenario 1 effect resolutions: "),
+      ),
+    ).toBe(true);
   });
 
   it("builds trash cards for trash-to-deck activation costs", () => {

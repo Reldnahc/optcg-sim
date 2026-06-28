@@ -750,11 +750,11 @@ test("block support delegates sequence trigger admission to entry adapters", asy
   );
 });
 
-test("counter trailing sequence support uses flattened sequence segments", async () => {
+test("counter event activation does not inspect exact sequence indexes", async () => {
   const content = await readFile(
     path.join(
       repoRoot,
-      "packages/engine-core/src/battle/counter-event-trailing-sequence.ts",
+      "packages/engine-core/src/battle/counter-event-activation.ts",
     ),
     "utf8",
   );
@@ -770,7 +770,7 @@ test("engine decoupling paths stay free of exact-shape authorization smells", as
     "packages/engine-core/src/runtime/optional-activation/activate-main.ts",
     "packages/engine-core/src/replacement/primitives/support-shapes.ts",
     "packages/engine-core/src/replacement/instead-effects.ts",
-    "packages/engine-core/src/battle/counter-event-trailing-sequence.ts",
+    "packages/engine-core/src/battle/counter-event-activation.ts",
   ];
   const forbidden = [
     /definition\.effects\.length\s*(?:[!=]==?\s*(?!0\b)\d+|[<>]=?\s*(?!0\b)\d+)/,

@@ -845,7 +845,8 @@ const drainRuntime = (
       options.allowBattleRemainder === true &&
       state.battle !== undefined &&
       state.effectQueue.length === 0 &&
-      state.deferredTriggers.length === 0
+      state.deferredTriggers.length === 0 &&
+      state.pendingDecision === undefined
     ) {
       return drainResult(
         true,
