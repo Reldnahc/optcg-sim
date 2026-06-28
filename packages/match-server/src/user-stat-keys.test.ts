@@ -74,10 +74,7 @@ test("stat key builders format scoped stats", () => {
     statKeys.formatMatchesWon("constructed"),
     "format_matches_won:constructed",
   );
-  assert.equal(
-    statKeys.gameTypeMatchesWon("dev"),
-    "game_type_matches_won:dev",
-  );
+  assert.equal(statKeys.gameTypeMatchesWon("dev"), "game_type_matches_won:dev");
   assert.equal(statKeys.rankedMatchesCompleted, "ranked_matches_completed");
   assert.equal(
     statKeys.leaderMatchesCompleted("OP01-001"),
@@ -177,10 +174,7 @@ test("in-game DON resource stat keys use exact catalog names", () => {
 test("in-game combat stat keys use exact catalog names", () => {
   assert.equal(statKeys.attacksDeclared, "attacks_declared");
   assert.equal(statKeys.leaderAttacksDeclared, "leader_attacks_declared");
-  assert.equal(
-    statKeys.characterAttacksDeclared,
-    "character_attacks_declared",
-  );
+  assert.equal(statKeys.characterAttacksDeclared, "character_attacks_declared");
   assert.equal(statKeys.blockersUsed, "blockers_used");
   assert.equal(statKeys.countersUsed, "counters_used");
   assert.equal(statKeys.counterCardsUsed, "counter_cards_used");
@@ -203,18 +197,12 @@ test("in-game card movement stat keys use exact catalog names", () => {
 
 test("in-game effect stat keys use exact catalog names", () => {
   assert.equal(statKeys.effectsActivatedTotal, "effects_activated_total");
-  assert.equal(
-    statKeys.onPlayEffectsActivated,
-    "on_play_effects_activated",
-  );
+  assert.equal(statKeys.onPlayEffectsActivated, "on_play_effects_activated");
   assert.equal(
     statKeys.activateMainEffectsActivated,
     "activate_main_effects_activated",
   );
-  assert.equal(
-    statKeys.triggerEffectsActivated,
-    "trigger_effects_activated",
-  );
+  assert.equal(statKeys.triggerEffectsActivated, "trigger_effects_activated");
   assert.equal(statKeys.counterEventsPlayed, "counter_events_played");
 });
 
@@ -223,10 +211,7 @@ test("streak stat keys use exact catalog names", () => {
   assert.equal(statKeys.bestWinStreak, "best_win_streak");
   assert.equal(statKeys.currentLossStreak, "current_loss_streak");
   assert.equal(statKeys.bestLossStreak, "best_loss_streak");
-  assert.equal(
-    statKeys.currentDailyPlayStreak,
-    "current_daily_play_streak",
-  );
+  assert.equal(statKeys.currentDailyPlayStreak, "current_daily_play_streak");
   assert.equal(statKeys.bestDailyPlayStreak, "best_daily_play_streak");
 });
 

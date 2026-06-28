@@ -147,11 +147,7 @@ export const statKeys = {
   casualMatchesWon: "casual_matches_won",
 
   leaderMatchesCompleted: (cardNumber: string) =>
-    scopedStatKey(
-      "leader_matches_completed",
-      cardNumber,
-      "Leader card number",
-    ),
+    scopedStatKey("leader_matches_completed", cardNumber, "Leader card number"),
   leaderMatchesWon: (cardNumber: string) =>
     scopedStatKey("leader_matches_won", cardNumber, "Leader card number"),
   leaderMatchesLost: (cardNumber: string) =>

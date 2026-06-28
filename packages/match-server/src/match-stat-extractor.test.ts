@@ -15,7 +15,7 @@ const firstSeatId = "p1" as PlayerId;
 const secondSeatId = "p2" as PlayerId;
 
 const operationKey = (operation: UserStatOperation): string =>
-  `${operation.userId}|${operation.statKey}|${operation.operation}|${operation.value}`;
+  `${operation.userId}|${operation.statKey}|${operation.operation}|${String(operation.value)}`;
 
 const operationKeys = (record: CompletedMatchRecord): ReadonlySet<string> =>
   new Set(extractCompletedMatchStatOperations(record).map(operationKey));
@@ -27,9 +27,9 @@ const expectOperation = (
   value = 1,
 ): void => {
   assert.equal(
-    operations.has(`${userId}|${statKey}|increment|${value}`),
+    operations.has(`${userId}|${statKey}|increment|${String(value)}`),
     true,
-    `Missing ${userId} ${statKey} ${value}`,
+    `Missing ${userId} ${statKey} ${String(value)}`,
   );
 };
 
@@ -180,7 +180,7 @@ const playerAt = (
 ): CompletedMatchRecord["players"][number] => {
   const player = record.players[index];
   if (player === undefined) {
-    throw new Error(`Missing test player at index ${index}`);
+    throw new Error(`Missing test player at index ${String(index)}`);
   }
   return player;
 };

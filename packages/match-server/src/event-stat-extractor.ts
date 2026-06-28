@@ -6,10 +6,7 @@ import { colorBuckets, statKeys, type ColorBucket } from "./user-stat-keys.js";
 export interface EventStatContext {
   readonly userIdByPlayerId: ReadonlyMap<string, string>;
   readonly cardNumberByInstanceId: ReadonlyMap<string, string>;
-  readonly categoryByInstanceId: ReadonlyMap<
-    string,
-    "leader" | "character" | "event" | "stage" | string
-  >;
+  readonly categoryByInstanceId: ReadonlyMap<string, string>;
   readonly colorBucketByCardNumber: ReadonlyMap<string, string>;
 }
 

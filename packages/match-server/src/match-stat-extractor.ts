@@ -53,12 +53,12 @@ const durationSeconds = (
 const pad2 = (value: number): string => value.toString().padStart(2, "0");
 
 const dayKey = (date: Date): string =>
-  `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(
+  `${String(date.getUTCFullYear())}-${pad2(date.getUTCMonth() + 1)}-${pad2(
     date.getUTCDate(),
   )}`;
 
 const monthKey = (date: Date): string =>
-  `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}`;
+  `${String(date.getUTCFullYear())}-${pad2(date.getUTCMonth() + 1)}`;
 
 const isoWeekKey = (date: Date): string => {
   const utcDate = new Date(
@@ -70,7 +70,7 @@ const isoWeekKey = (date: Date): string => {
   const week = Math.ceil(
     ((utcDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
   );
-  return `${utcDate.getUTCFullYear()}-${pad2(week)}`;
+  return `${String(utcDate.getUTCFullYear())}-${pad2(week)}`;
 };
 
 const indicatesConcede = (value: string | null): boolean =>

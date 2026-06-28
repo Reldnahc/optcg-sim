@@ -111,7 +111,7 @@ const operationKeys = (
   new Set(
     operations.map(
       (operation) =>
-        `${operation.userId}|${operation.statKey}|${operation.operation}|${operation.value}`,
+        `${operation.userId}|${operation.statKey}|${operation.operation}|${String(operation.value)}`,
     ),
   );
 

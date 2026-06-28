@@ -134,19 +134,29 @@ test("bot player labels default to novice identity without a seat subject", asyn
         choice: "goFirst",
         resolvedFirstPlayerId: premadeSetup.playerOrder[0],
       },
-      botPlayerIds: botPlayerId === undefined ? [] : [botPlayerId],
+      botPlayerIds: [botPlayerId],
     },
   );
 
-  if (created.snapshot === undefined || botPlayerId === undefined) {
-    throw new Error("Expected active match snapshot with a bot player.");
+  const snapshot = created.snapshot;
+  if (snapshot === undefined) {
+    throw new Error("Expected created match response to include a snapshot.");
   }
-
-  const label = created.snapshot.playerLabels?.[botPlayerId];
-  assert.equal(label?.displayName, "Bot");
-  assert.equal(label?.connectionStatus, "connected");
-  assert.equal(label?.title?.key, "bot-novice");
-  assert.equal(label?.title?.label, "Novice Bot");
+  const labels = snapshot.playerLabels;
+  if (labels === undefined) {
+    throw new Error(
+      "Expected created match snapshot to include player labels.",
+    );
+  }
+  const label = labels[botPlayerId];
+  if (label === undefined) {
+    throw new Error("Expected created match snapshot to include bot label.");
+  }
+  assert.equal(label.displayName, "Bot");
+  assert.equal(label.connectionStatus, "connected");
+  assert.ok(label.title);
+  assert.equal(label.title.key, "bot-novice");
+  assert.equal(label.title.label, "Novice Bot");
 });
 
 test("accepted registry actions include snapshots for replay frames", async () => {

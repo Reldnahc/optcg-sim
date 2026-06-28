@@ -13,8 +13,9 @@ test("bot identity defaults to novice difficulty", () => {
   const subject = createBotSubject();
 
   assert.equal(subject.displayName, "Bot");
-  assert.equal(subject.title?.key, "bot-novice");
-  assert.equal(subject.title?.label, "Novice Bot");
+  assert.ok(subject.title);
+  assert.equal(subject.title.key, "bot-novice");
+  assert.equal(subject.title.label, "Novice Bot");
 });
 
 test("bot title definitions include novice and advanced difficulties", () => {

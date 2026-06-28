@@ -78,8 +78,9 @@ const createRecordingSink = (): {
   return {
     calls,
     sink: {
-      async recordCompletedMatchStats(input) {
+      recordCompletedMatchStats(input) {
         calls.push(input);
+        return Promise.resolve();
       },
     },
   };
@@ -93,19 +94,16 @@ const createSavingRepository = (): {
   return {
     savedMatchIds,
     repository: {
-      async saveCompletedMatch(record) {
+      saveCompletedMatch(record) {
         savedMatchIds.push(record.matchId);
+        return Promise.resolve();
       },
     },
   };
 };
 
 const firstSetupPlayerId = (setup: DevMatchSetup): PlayerId => {
-  const playerId = setup.playerOrder[0];
-  if (playerId === undefined) {
-    throw new Error("Expected fixture setup to include a first player.");
-  }
-  return playerId;
+  return setup.playerOrder[0];
 };
 
 const startMatch = async (
@@ -347,9 +345,13 @@ test("records completed-match stats after saving the completed match", async () 
   assert.equal(completed.submittedEventStatAction, true);
   assert.deepEqual(savedMatchIds, [matchId]);
   assert.equal(calls.length, 1);
-  assert.equal(calls[0]?.matchId, matchId);
+  const [call] = calls;
+  if (call === undefined) {
+    throw new Error("Expected completed-match stats to be recorded.");
+  }
+  assert.equal(call.matchId, matchId);
   assert.equal(
-    calls[0]?.operations.some(
+    call.operations.some(
       (operation) =>
         operation.userId === firstUserId &&
         operation.statKey === "matches_completed",
@@ -357,7 +359,7 @@ test("records completed-match stats after saving the completed match", async () 
     true,
   );
   assert.equal(
-    calls[0]?.operations.some(
+    call.operations.some(
       (operation) =>
         operation.userId === firstUserId &&
         operation.statKey === statKeys.donAttached,
@@ -380,9 +382,7 @@ test("does not record stats without a completed-match repository", async () => {
 test("does not record stats when completed-match save fails", async () => {
   const { sink, calls } = createRecordingSink();
   const repository: CompletedMatchRepository = {
-    async saveCompletedMatch() {
-      throw new Error("save failed");
-    },
+    saveCompletedMatch: () => Promise.reject(new Error("save failed")),
   };
   const matchId = "stats-save-fails" as MatchId;
   const { registry, snapshot } = await startMatch(matchId, {
@@ -400,11 +400,12 @@ test("retries stat sink failures without resaving completed matches", async () =
   const { repository, savedMatchIds } = createSavingRepository();
   let sinkCalls = 0;
   const sink: CompletedMatchStatSink = {
-    async recordCompletedMatchStats() {
+    recordCompletedMatchStats() {
       sinkCalls += 1;
       if (sinkCalls === 1) {
-        throw new Error("stat sink failed");
+        return Promise.reject(new Error("stat sink failed"));
       }
+      return Promise.resolve();
     },
   };
   const matchId = "stats-sink-fails-after-save" as MatchId;

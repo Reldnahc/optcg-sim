@@ -269,9 +269,7 @@ describe("PlayerSummaryLabel", () => {
       join(sourceDirectory, "styles", "playmat.css"),
       "utf8",
     );
-    const summaryRule = styles.match(
-      /\.playmat-summary\s*\{(?<body>[^}]*)\}/u,
-    );
+    const summaryRule = styles.match(/\.playmat-summary\s*\{(?<body>[^}]*)\}/u);
     const summaryRuleBody = summaryRule?.groups?.["body"];
 
     assert.ok(summaryRuleBody);

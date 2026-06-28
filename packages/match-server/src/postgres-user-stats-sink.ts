@@ -290,8 +290,7 @@ const aggregateOperations = (
         statKey: operation.statKey,
         operation: operation.operation,
         value,
-        ...("requiresDailyActivity" in operation &&
-        operation.requiresDailyActivity === true
+        ...("requiresDailyActivity" in operation
           ? { requiresDailyActivity: true as const }
           : {}),
       });
@@ -304,10 +303,7 @@ const aggregateOperations = (
     } else {
       existing.value = value;
     }
-    if (
-      "requiresDailyActivity" in operation &&
-      operation.requiresDailyActivity === true
-    ) {
+    if ("requiresDailyActivity" in operation) {
       existing.requiresDailyActivity = true;
     }
   }
@@ -462,7 +458,7 @@ const previousUtcDateKey = (playDate: string): string => {
   date.setUTCDate(date.getUTCDate() - 1);
   const monthKey = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dayKey = String(date.getUTCDate()).padStart(2, "0");
-  return `${date.getUTCFullYear()}-${monthKey}-${dayKey}`;
+  return `${String(date.getUTCFullYear())}-${monthKey}-${dayKey}`;
 };
 
 const deriveOutcomeStreakOperations = (

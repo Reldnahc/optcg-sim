@@ -36,9 +36,9 @@ const createQueryRecorder = (
   const calls: QueryCall[] = [];
   return {
     calls,
-    async query(sql, params) {
+    query(sql, params) {
       calls.push({ sql, params });
-      return rowsForCall(sql, params);
+      return Promise.resolve(rowsForCall(sql, params));
     },
   };
 };
@@ -158,9 +158,13 @@ test("applies aggregated completed-match stats through one idempotent CTE and ev
     /INSERT INTO auth\.user_title_unlocks/i.test(call.sql),
   );
   assert.equal(titleCalls.length, 1);
-  assert.deepEqual(titleCalls[0]?.params, [userOne]);
+  const [titleCall] = titleCalls;
+  if (titleCall === undefined) {
+    throw new Error("Expected one title unlock query.");
+  }
+  assert.deepEqual(titleCall.params, [userOne]);
   assert.match(
-    titleCalls[0]?.sql ?? "",
+    titleCall.sql,
     /\(\s*req\.operator\s*=\s*'gte'\s+AND\s+stat\.value\s*>=\s*req\.threshold\s*\)\s+IS\s+NOT\s+TRUE/i,
   );
 });

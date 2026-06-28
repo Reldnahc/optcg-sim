@@ -215,13 +215,15 @@ describe("dev HTTP bot lobbies", () => {
 
       const resolved = await chooseFirstPlayer(server, matchId, chooser);
       const snapshot = requireSnapshot(resolved);
+      const botLabel = snapshot.playerLabels?.["p2"];
+      if (botLabel === undefined) {
+        throw new Error("Expected resolved snapshot to include bot label.");
+      }
+      assert.ok(botLabel.title);
 
-      assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
-      assert.equal(snapshot.playerLabels?.["p2"]?.title?.key, "bot-novice");
-      assert.equal(
-        snapshot.playerLabels?.["p2"]?.title?.label,
-        "Novice Bot",
-      );
+      assert.equal(botLabel.displayName, "Bot");
+      assert.equal(botLabel.title.key, "bot-novice");
+      assert.equal(botLabel.title.label, "Novice Bot");
       assert.notEqual(snapshot.status, "completed");
       assert.notEqual(snapshot.status, "gameOver");
     } finally {
@@ -260,13 +262,15 @@ describe("dev HTTP bot lobbies", () => {
         "goSecond",
       );
       const snapshot = requireSnapshot(resolved);
+      const botLabel = snapshot.playerLabels?.["p2"];
+      if (botLabel === undefined) {
+        throw new Error("Expected resolved snapshot to include bot label.");
+      }
+      assert.ok(botLabel.title);
 
-      assert.equal(snapshot.playerLabels?.["p2"]?.displayName, "Bot");
-      assert.equal(snapshot.playerLabels?.["p2"]?.title?.key, "bot-novice");
-      assert.equal(
-        snapshot.playerLabels?.["p2"]?.title?.label,
-        "Novice Bot",
-      );
+      assert.equal(botLabel.displayName, "Bot");
+      assert.equal(botLabel.title.key, "bot-novice");
+      assert.equal(botLabel.title.label, "Novice Bot");
       assert.notEqual(snapshot.status, "completed");
       assert.notEqual(snapshot.status, "gameOver");
     } finally {
