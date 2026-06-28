@@ -3,17 +3,57 @@ import type {
   PresentationSoundIntent,
 } from "./sound-planner.js";
 import { presentationSoundAssetUrls } from "./sound-assets.js";
+import { presentationSoundCueProfiles } from "./sound-cues.js";
+
+export interface LoadedPresentationAudioBuffer {
+  readonly kind: "loaded";
+  readonly buffer: unknown;
+}
+
+export interface MissingPresentationAudioBuffer {
+  readonly kind: "missing";
+}
+
+export type PresentationAudioBufferLoadResult =
+  | LoadedPresentationAudioBuffer
+  | MissingPresentationAudioBuffer;
 
 export interface PresentationSoundOptions {
   enabled?: boolean;
   volume?: number;
   assetUrls?: Partial<Record<PresentationSoundCue, string>>;
   audioFactory?: PresentationAudioFactory;
+  audioContextFactory?: () => AudioContext | undefined;
+  bufferLoader?: (
+    cue: PresentationSoundCue,
+    url: string,
+    context: AudioContext,
+  ) => PresentationAudioBufferLoadResult;
+  random?: () => number;
+  nowMs?: () => number;
 }
 
-type BrowserAudioContext = AudioContext & {
-  resume: () => Promise<void>;
-};
+interface ResolvedPresentationSoundOptions {
+  readonly enabled: boolean;
+  readonly volume: number;
+  readonly assetUrls: Partial<Record<PresentationSoundCue, string>>;
+  readonly audioFactory: PresentationAudioFactory;
+  readonly audioContextFactory: () => AudioContext | undefined;
+  readonly bufferLoader: (
+    cue: PresentationSoundCue,
+    url: string,
+    context: AudioContext,
+  ) => PresentationAudioBufferLoadResult;
+  readonly random: () => number;
+  readonly nowMs: () => number;
+}
+
+type BrowserAudioContextConstructor = new () => AudioContext;
+
+interface BrowserAudioContextWindow {
+  AudioContext?: BrowserAudioContextConstructor;
+  webkitAudioContext?: BrowserAudioContextConstructor;
+}
 
 export interface PresentationAudioElement {
   currentTime: number;
@@ -25,14 +65,11 @@ export type PresentationAudioFactory = (
   url: string,
 ) => PresentationAudioElement | undefined;
 
-const audioConstructor = (): (new () => BrowserAudioContext) | undefined => {
+const audioConstructor = (): BrowserAudioContextConstructor | undefined => {
   if (typeof window === "undefined") {
     return undefined;
   }
-  const constructors = window as unknown as {
-    AudioContext?: new () => BrowserAudioContext;
-    webkitAudioContext?: new () => BrowserAudioContext;
-  };
+  const constructors = window as unknown as BrowserAudioContextWindow;
   return constructors.AudioContext ?? constructors.webkitAudioContext;
 };
 
@@ -43,11 +80,16 @@ const defaultAudioFactory: PresentationAudioFactory = (url) => {
   return new Audio(url);
 };
 
-let sharedContext: BrowserAudioContext | undefined;
-let lastPlayedIntentId: string | undefined;
-const maxSoundIntentsPerBatch = 3;
+const missingAudioBufferLoader = (): MissingPresentationAudioBuffer => ({
+  kind: "missing",
+});
 
-const context = (): BrowserAudioContext | undefined => {
+let sharedContext: AudioContext | undefined;
+let lastPlayedIntentId: string | undefined;
+const maxSoundIntentsPerBatch = 4;
+const lastPlayedCueAtMs = new Map<PresentationSoundCue, number>();
+
+const defaultAudioContextFactory = (): AudioContext | undefined => {
   if (sharedContext !== undefined) {
     return sharedContext;
   }
@@ -59,42 +101,72 @@ const context = (): BrowserAudioContext | undefined => {
   return sharedContext;
 };
 
-const cueFrequency = (cue: PresentationSoundCue): number => {
-  switch (cue) {
-    case "attention":
-      return 880;
-    case "yourTurn":
-      return 740;
-    case "confirm":
-      return 720;
-    case "draw":
-    case "reveal":
-      return 660;
-    case "select":
-      return 620;
-    case "play":
-    case "trigger":
-    case "counter":
-      return 440;
-    case "emptyClick":
-      return 300;
-    case "trash":
-    case "ko":
-    case "damage":
-    case "invalidClick":
-      return 180;
-    case "attach":
-    case "return":
-    case "rest":
-    case "shuffle":
-    case "move":
-      return 330;
+const orderedIntents = (
+  intents: readonly PresentationSoundIntent[],
+): PresentationSoundIntent[] =>
+  [...intents]
+    .sort(
+      (left, right) =>
+        presentationSoundCueProfiles[right.cue].priority -
+        presentationSoundCueProfiles[left.cue].priority,
+    )
+    .slice(0, maxSoundIntentsPerBatch);
+
+const allowedByCooldown = (
+  cue: PresentationSoundCue,
+  nowMs: number,
+): boolean => {
+  const profile = presentationSoundCueProfiles[cue];
+  const previous = lastPlayedCueAtMs.get(cue);
+  if (previous !== undefined && nowMs - previous < profile.minimumIntervalMs) {
+    return false;
   }
+  lastPlayedCueAtMs.set(cue, nowMs);
+  return true;
+};
+
+const playbackRateForCue = (
+  cue: PresentationSoundCue,
+  random: () => number,
+): number => {
+  const jitter = presentationSoundCueProfiles[cue].playbackRateJitter;
+  return 1 + (random() * 2 - 1) * jitter;
+};
+
+const playWebAudioCue = (
+  cue: PresentationSoundCue,
+  index: number,
+  options: ResolvedPresentationSoundOptions,
+): boolean => {
+  const url = options.assetUrls[cue];
+  if (url === undefined) {
+    return false;
+  }
+  const audio = options.audioContextFactory();
+  if (audio === undefined) {
+    return false;
+  }
+  const loaded = options.bufferLoader(cue, url, audio);
+  if (loaded.kind !== "loaded") {
+    return false;
+  }
+
+  void audio.resume().catch(() => undefined);
+  const profile = presentationSoundCueProfiles[cue];
+  const source = audio.createBufferSource();
+  const gain = audio.createGain();
+  source.buffer = loaded.buffer as AudioBuffer;
+  source.playbackRate.value = playbackRateForCue(cue, options.random);
+  gain.gain.value = options.volume * profile.volume;
+  source.connect(gain);
+  gain.connect(audio.destination);
+  source.start(audio.currentTime + (profile.burstSpacingMs * index) / 1000);
+  return true;
 };
 
 const playAssetCue = (
   cue: PresentationSoundCue,
-  options: Required<PresentationSoundOptions>,
+  options: ResolvedPresentationSoundOptions,
 ): boolean => {
   const url = options.assetUrls[cue];
   if (url === undefined) {
@@ -104,7 +176,7 @@ const playAssetCue = (
   if (audio === undefined) {
     return false;
   }
-  audio.volume = options.volume;
+  audio.volume = options.volume * presentationSoundCueProfiles[cue].volume;
   audio.currentTime = 0;
   void Promise.resolve(audio.play()).catch(() => undefined);
   return true;
@@ -112,52 +184,42 @@ const playAssetCue = (
 
 const playCue = (
   cue: PresentationSoundCue,
-  options: Required<PresentationSoundOptions>,
+  index: number,
+  options: ResolvedPresentationSoundOptions,
 ): void => {
-  if (playAssetCue(cue, options)) {
+  if (playWebAudioCue(cue, index, options)) {
     return;
   }
-  const audio = context();
-  if (audio === undefined) {
-    return;
-  }
-  void audio.resume().catch(() => undefined);
-  const now = audio.currentTime;
-  const oscillator = audio.createOscillator();
-  const gain = audio.createGain();
-  oscillator.type = cue === "trash" ? "sawtooth" : "triangle";
-  oscillator.frequency.setValueAtTime(cueFrequency(cue), now);
-  oscillator.frequency.exponentialRampToValueAtTime(
-    Math.max(80, cueFrequency(cue) * 0.72),
-    now + 0.08,
-  );
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(options.volume, now + 0.012);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.11);
-  oscillator.connect(gain);
-  gain.connect(audio.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.12);
+  playAssetCue(cue, options);
 };
 
 export const playPresentationSoundIntents = (
   intents: readonly PresentationSoundIntent[],
   options: PresentationSoundOptions = {},
 ): void => {
-  const resolvedOptions: Required<PresentationSoundOptions> = {
+  const resolvedOptions: ResolvedPresentationSoundOptions = {
     enabled: options.enabled ?? true,
     volume: options.volume ?? 0.16,
     assetUrls: options.assetUrls ?? presentationSoundAssetUrls,
     audioFactory: options.audioFactory ?? defaultAudioFactory,
+    audioContextFactory:
+      options.audioContextFactory ?? defaultAudioContextFactory,
+    bufferLoader: options.bufferLoader ?? missingAudioBufferLoader,
+    random: options.random ?? Math.random,
+    nowMs: options.nowMs ?? Date.now,
   };
   if (!resolvedOptions.enabled) {
     return;
   }
-  for (const intent of intents.slice(0, maxSoundIntentsPerBatch)) {
+  const nowMs = resolvedOptions.nowMs();
+  for (const [index, intent] of orderedIntents(intents).entries()) {
     if (intent.id === lastPlayedIntentId) {
       continue;
     }
     lastPlayedIntentId = intent.id;
-    playCue(intent.cue, resolvedOptions);
+    if (!allowedByCooldown(intent.cue, nowMs)) {
+      continue;
+    }
+    playCue(intent.cue, index, resolvedOptions);
   }
 };
