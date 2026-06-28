@@ -107,9 +107,9 @@ describe("lobby deck panel", () => {
     assert.match(html, /OP05-098 \/ Ranked/u);
     assert.match(
       html,
-      /background-image:url\(&quot;https:\/\/cdn\.poneglyph\.one\/images\/OP05-098\/en\/stock\/2\/full\.png&quot;\)/u,
+      /<img src="https:\/\/cdn\.poneglyph\.one\/images\/OP05-098\/en\/stock\/2\/full\.png" alt="" loading="lazy" decoding="async" class="canonical-card-crop-image" style="width:100%;height:100%;left:0;top:0;object-fit:cover;object-position:50% 0%"/u,
     );
-    assert.match(html, /background-position:42% 18%/u);
+    assert.doesNotMatch(html, /background-position:42% 18%/u);
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);
@@ -414,6 +414,14 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(
       styles,
       /\.deck-loadout-submit-button\s*\{[^}]*background:/u,
+    );
+    assert.match(
+      styles,
+      /\.canonical-card-crop-frame\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;/u,
+    );
+    assert.match(
+      styles,
+      /\.canonical-card-crop-image\s*\{[^}]*position:\s*absolute;[^}]*max-width:\s*none;[^}]*max-height:\s*none;[^}]*object-fit:\s*fill;/u,
     );
   });
 

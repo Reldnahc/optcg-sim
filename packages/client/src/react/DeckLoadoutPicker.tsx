@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AccountLoadout } from "../account-client.js";
+import { CanonicalCardCropImage } from "./CanonicalCardCropImage.js";
 
 export interface DeckLoadoutPickerProps {
   readonly disabled?: boolean | undefined;
@@ -100,37 +101,27 @@ const isSelectableLoadout = (
     loadout.validation?.status === "playable" ||
     loadout.validation?.status === "unchecked");
 
-const percent = (value: number): string => `${String(value * 100)}%`;
-
-const leaderCropStyle = (
-  loadout: AccountLoadout | undefined,
-): CSSProperties | undefined => {
-  if (loadout?.leaderImageUrl === undefined || loadout.leaderImageUrl === null) {
-    return undefined;
-  }
-  const focus = loadout.leaderCropFocus;
-  return {
-    backgroundImage: `url("${loadout.leaderImageUrl}")`,
-    backgroundPosition:
-      focus === null ? "50% 0%" : `${percent(focus.x)} ${percent(focus.y)}`,
-  };
-};
-
 const LeaderCrop = ({
   loadout,
 }: {
   readonly loadout: AccountLoadout | undefined;
-}): React.JSX.Element => (
-  <span
-    className="deck-loadout-leader-crop"
-    style={leaderCropStyle(loadout)}
-    aria-hidden="true"
-  >
-    {loadout?.leaderImageUrl === undefined || loadout.leaderImageUrl === null
-      ? (loadout?.leaderCardId ?? "")
-      : ""}
-  </span>
-);
+}): React.JSX.Element => {
+  const imageUrl = loadout?.leaderImageUrl ?? null;
+
+  return (
+    <span className="deck-loadout-leader-crop" aria-hidden="true">
+      {imageUrl === null ? (
+        loadout?.leaderCardId ?? ""
+      ) : (
+        <CanonicalCardCropImage
+          src={imageUrl}
+          alt=""
+          cropFocus={loadout?.leaderCropFocus ?? null}
+        />
+      )}
+    </span>
+  );
+};
 
 export const DeckLoadoutPicker = ({
   disabled = false,
