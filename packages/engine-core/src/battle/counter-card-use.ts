@@ -249,7 +249,10 @@ export const applyUseCounter = (
       );
     }
     if (getActiveDonCount(defender.costArea) < activation.printedCost) {
-      return illegalAction(state, "Counter Event requires enough active DON!!.");
+      return illegalAction(
+        state,
+        "Counter Event requires enough active DON!!.",
+      );
     }
     if (activation.printedCost > 0) {
       const decisionId = toDecisionId(
@@ -306,7 +309,10 @@ export const applyUseCounter = (
         : { pendingDecision: state.pendingDecision }),
     });
   } else {
-    return illegalAction(state, "Counter card must be a Character with counter.");
+    return illegalAction(
+      state,
+      "Counter card must be a Character with counter.",
+    );
   }
 
   const counterResult = resolveCounterCardUse({

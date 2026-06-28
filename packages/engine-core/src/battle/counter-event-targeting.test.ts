@@ -238,7 +238,10 @@ test("condition-failed Counter Event does not hide another legal Counter Event",
     "condition-failed counter event",
   );
   installChooseLeaderOrCharacterCounterEvent(state, legalCounterEvent);
-  installChooseLeaderOrCharacterCounterEvent(state, conditionFailedCounterEvent);
+  installChooseLeaderOrCharacterCounterEvent(
+    state,
+    conditionFailedCounterEvent,
+  );
   const definitionId = `${String(conditionFailedCounterEvent.cardId)}:counter`;
   const definition = must(
     state.cardManifest.effectDefinitions?.[definitionId],

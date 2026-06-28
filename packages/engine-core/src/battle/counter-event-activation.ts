@@ -84,17 +84,15 @@ export const queueCounterEventEffects = (params: {
           effectBlocks,
         )
       : params.state;
-  const entries = effectBlocks.map((effectBlock) =>
-    ({
-      ...toCounterEventRuntimeQueueEntry(
-        queueState,
-        params.controllerId,
-        params.source,
-        effectBlock,
-      ),
-      state: "pending" as const,
-    }),
-  );
+  const entries = effectBlocks.map((effectBlock) => ({
+    ...toCounterEventRuntimeQueueEntry(
+      queueState,
+      params.controllerId,
+      params.source,
+      effectBlock,
+    ),
+    state: "pending" as const,
+  }));
   if (entries.length === 0) {
     return { events, state: queueState };
   }
@@ -247,6 +245,10 @@ const counterEventConditionPasses = (
   if (effect.condition === undefined) {
     return true;
   }
-  const evaluated = evaluateQueuedEffectCondition(state, entry, effect.condition);
+  const evaluated = evaluateQueuedEffectCondition(
+    state,
+    entry,
+    effect.condition,
+  );
   return evaluated.supported && evaluated.passed;
 };

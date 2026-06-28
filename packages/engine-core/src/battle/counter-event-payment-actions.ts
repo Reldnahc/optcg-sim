@@ -1,4 +1,9 @@
-import type { CardInstance, GameState, LegalAction, PlayerId } from "@optcg/types";
+import type {
+  CardInstance,
+  GameState,
+  LegalAction,
+  PlayerId,
+} from "@optcg/types";
 
 import { chooseDonCombos } from "../play-card/legal-actions.js";
 import { parseCounterPayCostDecisionId } from "./counter-event-payment-context.js";

@@ -73,6 +73,7 @@
 ### Task 1: Add Failing Full-Flow Test For Non-Power Counter Restriction
 
 **Files:**
+
 - Modify: `packages/engine-core/src/battle/counter-event-runtime.test.ts`
 
 - [ ] **Step 1: Add imports needed by the new test**
@@ -232,7 +233,8 @@ test("Counter Event cannot-attack sequence fully resolves and blocks the selecte
         effect.modifier.operation.type === "restriction" &&
         effect.modifier.operation.restriction === "cannotAttack" &&
         effect.modifier.target.type === "exactCard" &&
-        effect.modifier.target.card.instanceId === restrictedAttacker.instanceId,
+        effect.modifier.target.card.instanceId ===
+          restrictedAttacker.instanceId,
     ),
     true,
   );
@@ -270,6 +272,7 @@ git commit -m "test: expose targeted counter event restriction gap"
 ### Task 2: Introduce Generic Counter Event Activation Support
 
 **Files:**
+
 - Create: `packages/engine-core/src/battle/counter-event-activation.ts`
 - Modify: `packages/engine-core/src/battle/counter-actions.ts`
 - Modify: `packages/engine-core/src/battle/counter-card-use.ts`
@@ -297,7 +300,10 @@ import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-e
 export interface SupportedCounterEventActivation {
   readonly printedCost: number;
   readonly effects: readonly (EffectDefinition["effects"][number] & {
-    readonly effect: Extract<EffectDefinition["effects"][number]["effect"], { type: "sequence" }>;
+    readonly effect: Extract<
+      EffectDefinition["effects"][number]["effect"],
+      { type: "sequence" }
+    >;
   })[];
 }
 
@@ -326,7 +332,9 @@ export const getSupportedCounterEventActivation = (
   }
   const effects = definition.effects
     .filter((effect) => effect.trigger.type === "counter")
-    .map((effect) => toSupportedCounterSequence(state, card, controllerId, effect));
+    .map((effect) =>
+      toSupportedCounterSequence(state, card, controllerId, effect),
+    );
   if (effects.length === 0 || effects.some((effect) => effect === null)) {
     return null;
   }
@@ -339,13 +347,20 @@ export const getSupportedCounterEventActivation = (
 export const getSupportedCounterEventActivations = (
   state: GameState,
   controllerId: PlayerId,
-): readonly { readonly card: CardInstance; readonly activation: SupportedCounterEventActivation }[] => {
+): readonly {
+  readonly card: CardInstance;
+  readonly activation: SupportedCounterEventActivation;
+}[] => {
   const player = state.players[controllerId];
   if (player === undefined) {
     return [];
   }
   return player.hand.flatMap((card) => {
-    const activation = getSupportedCounterEventActivation(state, card, controllerId);
+    const activation = getSupportedCounterEventActivation(
+      state,
+      card,
+      controllerId,
+    );
     return activation === null ? [] : [{ card, activation }];
   });
 };
@@ -397,7 +412,11 @@ const counterEventConditionPasses = (
   if (effect.condition === undefined) {
     return true;
   }
-  const evaluated = evaluateQueuedEffectCondition(state, entry, effect.condition);
+  const evaluated = evaluateQueuedEffectCondition(
+    state,
+    entry,
+    effect.condition,
+  );
   return evaluated.supported && evaluated.passed;
 };
 ```
@@ -424,6 +443,7 @@ git commit -m "feat: add generic counter event activation support"
 ### Task 3: Route Legal Counter Event Actions Through Generic Activation
 
 **Files:**
+
 - Modify: `packages/engine-core/src/battle/counter-card-use.ts`
 - Modify: `packages/engine-core/src/battle/counter-actions.ts`
 - Modify: `packages/engine-core/src/battle/counter-window-support.ts`
@@ -451,8 +471,8 @@ const eventActivation =
 Use this legality condition:
 
 ```ts
-(eventActivation !== null &&
-  getActiveDonCount(defender.costArea) >= eventActivation.printedCost)
+eventActivation !== null &&
+  getActiveDonCount(defender.costArea) >= eventActivation.printedCost;
 ```
 
 For legal Event actions, return exactly one action targeting `battle.currentTarget`:
@@ -477,8 +497,9 @@ The potential Counter Event check should be:
 
 ```ts
 getSupportedCounterEventActivations(state, defenderId).some(
-  ({ activation }) => getActiveDonCount(defender.costArea) >= activation.printedCost,
-)
+  ({ activation }) =>
+    getActiveDonCount(defender.costArea) >= activation.printedCost,
+);
 ```
 
 Import `getActiveDonCount` from `../play-card/support.js` if not already available.
@@ -505,6 +526,7 @@ git commit -m "refactor: expose counter events through generic activation"
 ### Task 4: Replace Event Counter Resolution With Queue Insertion
 
 **Files:**
+
 - Modify: `packages/engine-core/src/battle/counter-card-use.ts`
 - Modify: `packages/engine-core/src/battle/counter-actions.ts`
 - Modify: `packages/engine-core/src/battle/counter-event-activation.ts`
@@ -656,6 +678,7 @@ git commit -m "refactor: resolve counter events through effect queue"
 ### Task 5: Replace `battle.counterPower` With Normal `thisBattle` Continuous Power
 
 **Files:**
+
 - Modify: `packages/engine-core/src/battle/counter-flow.test.ts`
 - Modify: `packages/engine-core/src/battle/damage-*.test.ts` only where tests directly inspect `battle.counterPower`
 - Modify: battle resolution code that reads `battle.counterPower`
@@ -734,6 +757,7 @@ git commit -m "refactor: remove legacy counter power state"
 ### Task 6: Delete Legacy Counter Event Branches And Files
 
 **Files:**
+
 - Delete:
   - `packages/engine-core/src/battle/counter-event-support.ts`
   - `packages/engine-core/src/battle/counter-event-power-record.ts`
@@ -792,6 +816,7 @@ git commit -m "refactor: remove legacy counter event runtime"
 ### Task 7: Harden Behavior Probe For Counter Events
 
 **Files:**
+
 - Modify: `packages/card-support/src/behavior-probe.ts`
 - Modify: `packages/card-support/src/behavior-probe.test.ts`
 
@@ -865,6 +890,7 @@ git commit -m "test: require counter event probes to drain effect decisions"
 ### Task 8: Final Verification And Cleanup
 
 **Files:**
+
 - Any files touched by previous tasks.
 
 - [ ] **Step 1: Run source scans for removed legacy paths**
