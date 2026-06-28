@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import type { AccountLoadout } from "../account-client.js";
 
@@ -100,6 +100,22 @@ const isSelectableLoadout = (
     loadout.validation?.status === "playable" ||
     loadout.validation?.status === "unchecked");
 
+const percent = (value: number): string => `${String(value * 100)}%`;
+
+const leaderCropStyle = (
+  loadout: AccountLoadout | undefined,
+): CSSProperties | undefined => {
+  if (loadout?.leaderImageUrl === undefined || loadout.leaderImageUrl === null) {
+    return undefined;
+  }
+  const focus = loadout.leaderCropFocus;
+  return {
+    backgroundImage: `url("${loadout.leaderImageUrl}")`,
+    backgroundPosition:
+      focus === null ? "50% 0%" : `${percent(focus.x)} ${percent(focus.y)}`,
+  };
+};
+
 const LeaderCrop = ({
   loadout,
 }: {
@@ -107,11 +123,7 @@ const LeaderCrop = ({
 }): React.JSX.Element => (
   <span
     className="deck-loadout-leader-crop"
-    style={
-      loadout?.leaderImageUrl === undefined || loadout.leaderImageUrl === null
-        ? undefined
-        : { backgroundImage: `url("${loadout.leaderImageUrl}")` }
-    }
+    style={leaderCropStyle(loadout)}
     aria-hidden="true"
   >
     {loadout?.leaderImageUrl === undefined || loadout.leaderImageUrl === null

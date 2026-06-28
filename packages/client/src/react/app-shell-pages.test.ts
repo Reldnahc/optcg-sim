@@ -22,6 +22,7 @@ const loadouts: readonly AccountLoadout[] = [
     leaderVariantIndex: 2,
     leaderImageUrl:
       "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
+    leaderCropFocus: null,
     updatedAt: "2026-06-02T00:00:00.000Z",
   },
 ];

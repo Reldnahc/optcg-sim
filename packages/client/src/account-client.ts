@@ -15,8 +15,14 @@ export interface AccountLoadout {
   readonly leaderCardId: string | null;
   readonly leaderVariantIndex: number | null;
   readonly leaderImageUrl: string | null;
+  readonly leaderCropFocus: AccountLoadoutLeaderCropFocus | null;
   readonly updatedAt: string;
   readonly validation?: AccountLoadoutValidation | undefined;
+}
+
+export interface AccountLoadoutLeaderCropFocus {
+  readonly x: number;
+  readonly y: number;
 }
 
 export type AccountLoadoutValidationStatus =
@@ -76,6 +82,7 @@ const normalizeLibraryDeck = (
   foldersById: ReadonlyMap<string, DeckLibraryFolder>,
   options: { readonly includeDeckHash: boolean },
 ): AccountLoadout => {
+  const record = objectRecord(value, "Deck collection");
   const folder =
     value.folder_id === null ? undefined : foldersById.get(value.folder_id);
   if (value.loadout_id === null) {
@@ -100,6 +107,7 @@ const normalizeLibraryDeck = (
             value.leader_card_number,
             value.leader_variant_index,
           ),
+    leaderCropFocus: normalizeLeaderCropFocus(record["leader_crop_focus"]),
     updatedAt: value.updated_at,
   };
 };
@@ -153,6 +161,23 @@ const nullableNumberField = (
   return fieldValue;
 };
 
+const normalizeLeaderCropFocus = (
+  value: unknown,
+): AccountLoadoutLeaderCropFocus | null => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Readonly<Record<string, unknown>>;
+  const x = record["x"];
+  const y = record["y"];
+  return typeof x === "number" &&
+    Number.isFinite(x) &&
+    typeof y === "number" &&
+    Number.isFinite(y)
+    ? { x, y }
+    : null;
+};
+
 const normalizeLoadout = (value: Loadout): AccountLoadout => {
   const record = objectRecord(value, "Loadout");
   const leaderCardId = nullableStringField(record, "leader_card_number");
@@ -172,6 +197,7 @@ const normalizeLoadout = (value: Loadout): AccountLoadout => {
       leaderCardId === null
         ? null
         : poneglyphCardStockImageUrl(leaderCardId, leaderVariantIndex),
+    leaderCropFocus: null,
     updatedAt: requiredStringField(record, "updated_at"),
   };
 };

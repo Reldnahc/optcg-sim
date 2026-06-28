@@ -51,6 +51,7 @@ const loadouts: readonly AccountLoadout[] = [
     leaderVariantIndex: 2,
     leaderImageUrl:
       "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
+    leaderCropFocus: { x: 0.42, y: 0.18 },
     updatedAt: "2026-06-02T00:00:00.000Z",
   },
   {
@@ -64,6 +65,7 @@ const loadouts: readonly AccountLoadout[] = [
     leaderVariantIndex: null,
     leaderImageUrl:
       "https://cdn.poneglyph.one/images/OP05-060/en/stock/0/full.png",
+    leaderCropFocus: null,
     updatedAt: "2026-06-01T00:00:00.000Z",
   },
 ];
@@ -107,6 +109,7 @@ describe("lobby deck panel", () => {
       html,
       /background-image:url\(&quot;https:\/\/cdn\.poneglyph\.one\/images\/OP05-098\/en\/stock\/2\/full\.png&quot;\)/u,
     );
+    assert.match(html, /background-position:42% 18%/u);
     assert.match(html, /Enel Yellow/u);
     assert.match(html, /Unfiled/u);
     assert.match(html, /Luffy Life/u);

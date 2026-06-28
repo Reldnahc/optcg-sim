@@ -17,6 +17,7 @@ const loadout = (overrides: Partial<AccountLoadout> = {}): AccountLoadout => ({
   leaderCardId: "OP09-001",
   leaderVariantIndex: null,
   leaderImageUrl: null,
+  leaderCropFocus: null,
   updatedAt: "2026-06-01T00:00:00.000Z",
   ...overrides,
 });
