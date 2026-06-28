@@ -366,7 +366,7 @@ export const DashboardPage = (): React.JSX.Element => {
     setLoadoutsStatus("loading");
     setLoadoutsError(undefined);
     void accountClient
-      .listLoadouts()
+      .listLoadouts({ includeFolders: true })
       .then((nextLoadouts) => {
         setLoadouts(nextLoadouts);
         setSelectedLoadoutId((current) =>

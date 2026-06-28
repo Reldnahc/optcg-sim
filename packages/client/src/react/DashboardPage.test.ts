@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
@@ -63,4 +64,16 @@ test("passive bot checkbox only appears when bot opponent is selected", () => {
 
   assert.equal(html.includes("Passive bot"), false);
   assert.doesNotMatch(html, /passiveBot=1/u);
+});
+
+test("dashboard deck selector loads deck-library loadouts with crop focus", () => {
+  const source = readFileSync(
+    new URL("DashboardPage.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /accountClient\s*\.listLoadouts\(\{\s*includeFolders:\s*true\s*\}\)/u,
+  );
 });
