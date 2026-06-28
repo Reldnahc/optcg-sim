@@ -223,6 +223,69 @@ describe("local dev action labels", () => {
     );
   });
 
+  test("keeps Event Counter label suffixes unique when effect ids share a tail", () => {
+    const counterCardId = "counter-event-card" as CardId;
+    const counterInstanceId = "counter-event-instance" as InstanceId;
+    const firstEffectId = "counter-event-card:line-a:draw" as EffectId;
+    const secondEffectId = "counter-event-card:line-b:draw" as EffectId;
+    const definition: EffectDefinition = {
+      cardId: counterCardId,
+      implementationStatus: "implemented-dsl",
+      effects: [
+        {
+          id: firstEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+        {
+          id: secondEffectId,
+          category: "auto",
+          trigger: { type: "counter" },
+          sourcePresencePolicy: "resolveFromDestinationZone",
+          effect: { type: "draw", player: "self", count: 1 },
+        },
+      ],
+      metadata: {
+        sourceTextHash: "source-hash",
+        rulesVersion: "rules",
+        effectDefinitionsVersion: "fixture",
+        tested: true,
+        reviewer: "test",
+      },
+    };
+    const state = counterEventLabelState(
+      definition,
+      counterCardId,
+      counterInstanceId,
+    );
+    const target = {
+      instanceId: "target-instance" as InstanceId,
+      cardId: "target-card" as CardId,
+      playerId: p1,
+    };
+
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: firstEffectId,
+        target,
+      }),
+      "Counter: Draw 1 card (line-a:draw)",
+    );
+    assert.equal(
+      actionLabel(state, {
+        type: "useCounter",
+        cardInstanceId: counterInstanceId,
+        effectId: secondEffectId,
+        target,
+      }),
+      "Counter: Draw 1 card (line-b:draw)",
+    );
+  });
+
   test("labels negative Event Counter power modifiers without double signs", () => {
     const counterCardId = "counter-event-card" as CardId;
     const counterInstanceId = "counter-event-instance" as InstanceId;

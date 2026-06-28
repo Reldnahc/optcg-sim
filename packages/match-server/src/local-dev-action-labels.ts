@@ -69,9 +69,24 @@ type EffectNumberValue = Extract<Effect, { type: "draw" }>["count"];
 const signedNumberLabel = (value: number): string =>
   value > 0 ? `+${String(value)}` : String(value);
 
-const effectIdSuffix = (effectId: string): string => {
-  const parts = effectId.split(":").filter((part) => part.length > 0);
-  return parts.at(-1) ?? effectId;
+const uniqueEffectIdSuffix = (
+  effectId: string,
+  siblingEffectIds: readonly string[],
+): string => {
+  const effectParts = effectId.split(":").filter((part) => part.length > 0);
+  const siblingParts = siblingEffectIds.map((sibling) =>
+    sibling.split(":").filter((part) => part.length > 0),
+  );
+  for (let count = 1; count <= effectParts.length; count += 1) {
+    const suffix = effectParts.slice(-count).join(":");
+    const matchingSuffixes = siblingParts.filter(
+      (parts) => parts.slice(-count).join(":") === suffix,
+    );
+    if (matchingSuffixes.length === 1) {
+      return suffix;
+    }
+  }
+  return effectId;
 };
 
 const targetLabel = (
@@ -147,19 +162,26 @@ const counterEventEffectLabel = (
   if (label === undefined) {
     return `Counter: ${String(action.effectId)}`;
   }
-  const siblingLabels = state.cardManifest.effectDefinitions?.[
+  const siblingLabelEntries = state.cardManifest.effectDefinitions?.[
     definitionId
   ]?.effects.flatMap((candidate) => {
     if (candidate.trigger.type !== "counter") {
       return [];
     }
     const candidateLabel = effectLabel(candidate.effect);
-    return candidateLabel === undefined ? [] : [candidateLabel];
+    return candidateLabel === undefined
+      ? []
+      : [{ effectId: String(candidate.id), label: candidateLabel }];
   });
-  const duplicateLabel =
-    siblingLabels?.filter((candidate) => candidate === label).length ?? 0;
-  return duplicateLabel > 1
-    ? `Counter: ${label} (${effectIdSuffix(String(action.effectId))})`
+  const duplicateEffectIds =
+    siblingLabelEntries
+      ?.filter((candidate) => candidate.label === label)
+      .map((candidate) => candidate.effectId) ?? [];
+  return duplicateEffectIds.length > 1
+    ? `Counter: ${label} (${uniqueEffectIdSuffix(
+        String(action.effectId),
+        duplicateEffectIds,
+      )})`
     : `Counter: ${label}`;
 };
 
