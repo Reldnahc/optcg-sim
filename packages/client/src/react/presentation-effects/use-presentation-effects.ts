@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import type { EngineEvent } from "@optcg/types";
 
 import type { BoardViewModel } from "../../view-model.js";
+import { planAttentionSoundIntent } from "./attention-sound-planner.js";
 import { planPresentationEventIntents } from "./event-presentation-intents.js";
 import { planEventSoundIntents } from "./event-sound-planner.js";
 import {
@@ -32,6 +33,7 @@ export const usePresentationEffects = (input: {
   );
   const seenEventIdsRef = useRef<Set<string>>(new Set());
   const clearTimerRef = useRef<number | undefined>(undefined);
+  const previousLocalActiveRef = useRef<boolean>(false);
   const [movements, setMovements] = useState<readonly CardMovementIntent[]>([]);
 
   useLayoutEffect(() => {
@@ -73,7 +75,31 @@ export const usePresentationEffects = (input: {
       movementEventIds,
       currentPlayerId: input.board.playerId,
     });
-    const soundIntents = [...movementSoundIntents, ...eventSoundIntents];
+    const currentLocalActive =
+      input.board.selfIsTurnPlayer ||
+      (input.board.activeCardInstanceIds !== undefined &&
+        input.board.activeCardInstanceIds.length > 0);
+    const activationKey =
+      input.board.statusBanner === undefined
+        ? `active:${String(currentLocalActive)}`
+        : `turn:${String(input.board.statusBanner.turnNumber)}:${input.board.statusBanner.tone}`;
+    const attentionSoundIntents = planAttentionSoundIntent({
+      previousLocalActive: previousLocalActiveRef.current,
+      currentLocalActive,
+      documentHidden: typeof document !== "undefined" ? document.hidden : false,
+      windowFocused:
+        typeof document !== "undefined" &&
+        typeof document.hasFocus === "function"
+          ? document.hasFocus()
+          : true,
+      activationKey,
+    });
+    previousLocalActiveRef.current = currentLocalActive;
+    const soundIntents = [
+      ...movementSoundIntents,
+      ...eventSoundIntents,
+      ...attentionSoundIntents,
+    ];
 
     if (plannedMovements.length > 0) {
       setMovements(plannedMovements);
