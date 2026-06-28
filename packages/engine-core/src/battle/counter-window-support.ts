@@ -1,6 +1,6 @@
 import type { GameState, PlayerId } from "@optcg/types";
 
-import { getSupportedCounterEventPowerTargets } from "./counter-event-support.js";
+import { getSupportedCounterEventActivations } from "./counter-event-activation.js";
 import { getActiveDonCount } from "../play-card/support.js";
 import { getEffectiveCharacterCounterValue } from "./effective-counter.js";
 
@@ -38,18 +38,17 @@ export const hasPotentialCharacterCounterActions = (
   }
   return defender.hand.some((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvents = getSupportedCounterEventPowerTargets(
+    const supportedEvents = getSupportedCounterEventActivations(
       state,
-      card,
       defenderId,
-      target,
     );
     return (
       (metadata?.category === "character" &&
         (getEffectiveCharacterCounterValue(state, card) ?? 0) > 0) ||
       supportedEvents.some(
-        (supportedEvent) =>
-          getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
+        ({ card: eventCard, activation }) =>
+          eventCard.instanceId === card.instanceId &&
+          getActiveDonCount(defender.costArea) >= activation.printedCost,
       )
     );
   });

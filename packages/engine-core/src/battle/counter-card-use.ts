@@ -27,6 +27,7 @@ import {
 import { reifyCardRef } from "../actions/state.js";
 import { counterEventEffectCostSelectionCountIsAllowed } from "./counter-event-cost-selection.js";
 import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
+import { getSupportedCounterEventActivation } from "./counter-event-activation.js";
 import { createCounterEventPowerRecord } from "./counter-event-power-record.js";
 import { toCounterEventRuntimeQueueEntry } from "./counter-event-runtime-queue-entry.js";
 import { resolveCounterEventSequences } from "./counter-event-sequence-resolution.js";
@@ -109,78 +110,28 @@ export const getLegalCharacterCounterActions = (
   }
   return defender.hand.flatMap((card) => {
     const metadata = state.cardManifest.cards[card.cardId];
-    const supportedEvents = getSupportedCounterEventPowerTargets(
-      state,
-      card,
-      defenderId,
-      battle.currentTarget,
-    );
-    const supportedRuntimeEvent = getSupportedCounterEventRuntime(
-      state,
-      card,
-      battle.currentTarget,
-    );
-    const supportedSequenceEvent =
-      supportedRuntimeEvent === null
-        ? getSupportedCounterEventSequence(state, card, battle.currentTarget)
+    const eventActivation =
+      metadata?.category === "event"
+        ? getSupportedCounterEventActivation(state, card, defenderId)
         : null;
     if (
       !(
         (metadata?.category === "character" &&
           (getEffectiveCharacterCounterValue(state, card) ?? 0) > 0) ||
-        supportedEvents.some(
-          (supportedEvent) =>
-            getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
-        ) ||
-        (supportedRuntimeEvent !== null &&
-          getActiveDonCount(defender.costArea) >=
-            supportedRuntimeEvent.printedCost) ||
-        (supportedSequenceEvent !== null &&
-          getActiveDonCount(defender.costArea) >=
-            supportedSequenceEvent.printedCost)
+        (eventActivation !== null &&
+          getActiveDonCount(defender.costArea) >= eventActivation.printedCost)
       )
     ) {
       return [];
     }
-    if (metadata?.category === "event") {
-      if (supportedRuntimeEvent !== null) {
-        return [
-          {
-            type: "useCounter" as const,
-            cardInstanceId: card.instanceId,
-            target: supportedRuntimeEvent.target,
-          },
-        ];
-      }
-      if (supportedSequenceEvent !== null) {
-        return [
-          {
-            type: "useCounter" as const,
-            cardInstanceId: card.instanceId,
-            target: supportedSequenceEvent.target,
-          },
-        ];
-      }
-      if (
-        supportedEvents.some(
-          (supportedEvent) =>
-            supportedEvent.effectCost !== undefined &&
-            getActiveDonCount(defender.costArea) >= supportedEvent.printedCost,
-        )
-      ) {
-        return [
-          {
-            type: "useCounter" as const,
-            cardInstanceId: card.instanceId,
-            target: battle.currentTarget,
-          },
-        ];
-      }
-      return supportedEvents.map((supportedEvent) => ({
-        type: "useCounter" as const,
-        cardInstanceId: card.instanceId,
-        target: supportedEvent.target,
-      }));
+    if (metadata?.category === "event" && eventActivation !== null) {
+      return [
+        {
+          type: "useCounter" as const,
+          cardInstanceId: card.instanceId,
+          target: battle.currentTarget,
+        },
+      ];
     }
     return [
       {
