@@ -41,3 +41,21 @@ test("selected-target K.O. primitive does not own generic field-removal executio
   );
   assert.match(source, /runtime\/primitives\/field-removal|\.\/field-removal/);
 });
+
+test("field-removal replacement process classification does not encode deck placement", () => {
+  const productionSources = [
+    "packages/engine-core/src/effect-runtime-sequence/selected-bounce.ts",
+    "packages/engine-core/src/replacement/field-removal-process/types.ts",
+    "packages/engine-core/src/replacement/field-removal-process/builders.ts",
+    "packages/engine-core/src/replacement/unreplaced-field-removal.ts",
+    "packages/engine-core/src/replacement/field-removal-protection.ts",
+  ]
+    .map(readSource)
+    .join("\n");
+
+  assert.doesNotMatch(
+    productionSources,
+    /moveFromFieldToDeckBottom/,
+    "deck top/bottom placement must live in fieldRemovalDestination, not fieldRemovalAttempt.classification",
+  );
+});

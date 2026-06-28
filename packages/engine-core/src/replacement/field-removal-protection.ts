@@ -69,15 +69,6 @@ const isSupportedFieldRemovalClassification = (
 ): value is ProtectionFieldRemovalClassification =>
   typeof value === "string" && supportedFieldRemovalClassifications.has(value);
 
-const normalizeFieldRemovalClassification = (
-  value: unknown,
-): ProtectionFieldRemovalClassification | undefined => {
-  if (value === "moveFromFieldToDeckBottom") {
-    return "moveFromFieldToDeck";
-  }
-  return isSupportedFieldRemovalClassification(value) ? value : undefined;
-};
-
 const isSupportedDuration = (
   duration: ContinuousEffectRecord["duration"],
 ): boolean =>
@@ -234,15 +225,12 @@ const attemptFromProcess = (
   if (attempt["processFamily"] !== "fieldRemoval") {
     return { ok: false, reason: "ambiguous-field-removal-source" };
   }
-  const classification = normalizeFieldRemovalClassification(
-    attempt["classification"],
-  );
-  if (classification === undefined) {
+  if (!isSupportedFieldRemovalClassification(attempt["classification"])) {
     return { ok: false, reason: "unsupported-field-removal-destination" };
   }
   if (
     process.type !== "moveZone" &&
-    classification !== "moveFromFieldToTrash"
+    attempt["classification"] !== "moveFromFieldToTrash"
   ) {
     return { ok: false, reason: "unsupported-field-removal-destination" };
   }
@@ -259,7 +247,7 @@ const attemptFromProcess = (
     ok: true,
     attempt: {
       processFamily: "fieldRemoval",
-      classification,
+      classification: attempt["classification"],
       sourceKind: attempt["sourceKind"],
       sourceControllerId: attempt["sourceControllerId"] as PlayerId,
       ...(typeof attempt["sourceCardId"] === "string"

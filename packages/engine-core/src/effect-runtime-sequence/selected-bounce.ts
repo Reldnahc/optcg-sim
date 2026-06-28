@@ -60,22 +60,27 @@ export const applyBounceSequenceSegment = (params: {
     params.effect.destination === "hand"
       ? "moveFromFieldToHand"
       : params.effect.destination === "deckBottom"
-        ? "moveFromFieldToDeckBottom"
+        ? "moveFromFieldToDeck"
         : "moveFromFieldToLife";
   const destination =
-    params.effect.destination === "lifeTop" ||
-    params.effect.destination === "lifeBottom"
+    params.effect.destination === "deckBottom"
       ? {
-          zone: "life" as const,
-          position:
-            params.effect.destination === "lifeTop"
-              ? ("top" as const)
-              : ("bottom" as const),
-          ...(params.effect.destinationFaceUp === undefined
-            ? {}
-            : { faceUp: params.effect.destinationFaceUp }),
+          zone: "deck" as const,
+          position: "bottom" as const,
         }
-      : undefined;
+      : params.effect.destination === "lifeTop" ||
+          params.effect.destination === "lifeBottom"
+        ? {
+            zone: "life" as const,
+            position:
+              params.effect.destination === "lifeTop"
+                ? ("top" as const)
+                : ("bottom" as const),
+            ...(params.effect.destinationFaceUp === undefined
+              ? {}
+              : { faceUp: params.effect.destinationFaceUp }),
+          }
+        : undefined;
   let nextState = params.state;
   const events: EngineEvent[] = [];
   const resultKey = params.segmentKey(params.segment, params.index);

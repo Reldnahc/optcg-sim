@@ -498,7 +498,8 @@ test("K.O. protection does not block opponent effect owner deck-bottom movement"
     sourceControllerRelation: "opponentControlled",
   } satisfies Protection);
   const process = buildSelectedTargetMoveZoneReplacementProcess({
-    classification: "moveFromFieldToDeckBottom",
+    classification: "moveFromFieldToDeck",
+    destination: { zone: "deck", position: "bottom" },
     entry,
     target: targetRef,
     targetIndex: 0,

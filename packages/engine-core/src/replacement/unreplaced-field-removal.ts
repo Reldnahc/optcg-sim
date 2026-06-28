@@ -123,10 +123,10 @@ const fieldRemovalMoveDestination = (
     if (attempt.classification === "moveFromFieldToHand") {
       return { destination: "hand" };
     }
-    if (attempt.classification === "moveFromFieldToDeckBottom") {
-      return { destination: "deckBottom" };
-    }
-    if (attempt.classification === "moveFromFieldToLife") {
+    if (
+      attempt.classification === "moveFromFieldToDeck" ||
+      attempt.classification === "moveFromFieldToLife"
+    ) {
       const destination =
         "fieldRemovalDestination" in payload
           ? payload.fieldRemovalDestination
@@ -135,6 +135,18 @@ const fieldRemovalMoveDestination = (
         typeof destination === "object" &&
         destination !== null &&
         "zone" in destination &&
+        attempt.classification === "moveFromFieldToDeck" &&
+        destination.zone === "deck" &&
+        "position" in destination &&
+        destination.position === "bottom"
+      ) {
+        return { destination: "deckBottom" };
+      }
+      if (
+        typeof destination === "object" &&
+        destination !== null &&
+        "zone" in destination &&
+        attempt.classification === "moveFromFieldToLife" &&
         destination.zone === "life" &&
         "position" in destination &&
         (destination.position === "top" || destination.position === "bottom")

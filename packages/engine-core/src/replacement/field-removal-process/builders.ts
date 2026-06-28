@@ -2,6 +2,7 @@ import type {
   CardRef,
   EffectQueueEntry,
   PlayerId,
+  ProtectionFieldRemovalClassification,
   ReplacementProcess,
 } from "@optcg/types";
 
@@ -9,6 +10,11 @@ import type {
   SelectedTargetKoReplacementPayload,
   SelectedTargetRestReplacementPayload,
 } from "./types.js";
+
+type FieldRemovalMoveZoneClassification = Extract<
+  ProtectionFieldRemovalClassification,
+  "moveFromFieldToDeck" | "moveFromFieldToHand" | "moveFromFieldToLife"
+>;
 
 export const buildKoReplacementProcess = (params: {
   battleContinuation?: SelectedTargetKoReplacementPayload["battleContinuation"];
@@ -112,15 +118,8 @@ export const buildSelectedTargetsFieldRemovalKoReplacementProcess = (
 };
 
 export const buildSelectedTargetMoveZoneReplacementProcess = (params: {
-  classification:
-    | "moveFromFieldToDeckBottom"
-    | "moveFromFieldToHand"
-    | "moveFromFieldToLife";
-  destination?: {
-    zone: "life";
-    position: "top" | "bottom";
-    faceUp?: boolean;
-  };
+  classification: FieldRemovalMoveZoneClassification;
+  destination?: SelectedTargetKoReplacementPayload["fieldRemovalDestination"];
   entry: EffectQueueEntry;
   target: CardRef;
   targetIndex: number;
@@ -162,15 +161,8 @@ export const buildSelectedTargetFieldRemovalMoveZoneReplacementProcess =
 
 export const buildSelectedTargetsFieldRemovalMoveZoneReplacementProcess =
   (params: {
-    classification:
-      | "moveFromFieldToDeckBottom"
-      | "moveFromFieldToHand"
-      | "moveFromFieldToLife";
-    destination?: {
-      zone: "life";
-      position: "top" | "bottom";
-      faceUp?: boolean;
-    };
+    classification: FieldRemovalMoveZoneClassification;
+    destination?: SelectedTargetKoReplacementPayload["fieldRemovalDestination"];
     entry: EffectQueueEntry;
     targets: readonly CardRef[];
   }): ReplacementProcess => {

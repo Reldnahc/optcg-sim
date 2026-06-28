@@ -7,6 +7,7 @@ import type {
   EffectQueueEntry,
   GameState,
   PlayerId,
+  ProtectionFieldRemovalClassification,
   ReplacementProcess,
 } from "@optcg/types";
 
@@ -18,20 +19,21 @@ export interface SelectedTargetKoReplacementPayload {
   targets?: CardRef[];
   fieldRemovalAttempt: {
     processFamily: "fieldRemoval";
-    classification:
-      | "moveFromFieldToDeckBottom"
-      | "moveFromFieldToLife"
-      | "moveFromFieldToHand"
-      | "moveFromFieldToTrash";
+    classification: ProtectionFieldRemovalClassification;
     sourceKind: "battle" | "cardEffect";
     sourceControllerId: PlayerId;
     sourceCardId?: CardId;
   };
-  fieldRemovalDestination?: {
-    zone: "life";
-    position: "top" | "bottom";
-    faceUp?: boolean;
-  };
+  fieldRemovalDestination?:
+    | {
+        zone: "deck";
+        position: "top" | "bottom";
+      }
+    | {
+        zone: "life";
+        position: "top" | "bottom";
+        faceUp?: boolean;
+      };
   battleContinuation?: {
     type: "endBattleAfterCharacterKoAttempt";
   };
