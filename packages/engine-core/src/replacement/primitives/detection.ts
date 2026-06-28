@@ -7,6 +7,7 @@ import type {
   ReplacementProcess,
 } from "@optcg/types";
 
+import { isEffectBlockInvalidated } from "../../effect-invalidation.js";
 import {
   cardRefsEqual,
   fieldRemovalProcessTargets,
@@ -228,7 +229,9 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
       if (!lookup.ok) return lookup;
 
       const replacementEffects = lookup.definition.effects.filter(
-        isReplacementTriggerEffect,
+        (effect) =>
+          isReplacementTriggerEffect(effect) &&
+          !isEffectBlockInvalidated(state, source.card, effect),
       );
       if (replacementEffects.length === 0) continue;
 
@@ -288,6 +291,9 @@ export const detectSupportedSelectedTargetKoReplacementCandidate = (
       state,
       controllerId,
     )) {
+      if (isEffectBlockInvalidated(state, source.card, effect)) {
+        continue;
+      }
       const candidateId = `temporary:${String(effect.id)}`;
       if (replacementAlreadyUsed(process, candidateId)) {
         continue;

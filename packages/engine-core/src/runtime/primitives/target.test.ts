@@ -5,6 +5,7 @@ import type {
   CardId,
   CardInstance,
   CardRef,
+  ContinuousEffectRecord,
   Effect,
   EffectDefinition,
   EffectQueueEntry,
@@ -33,6 +34,57 @@ const toCardId = (value: string): CardId => value as CardId;
 const toEffectId = (value: string): EffectId => value as EffectId;
 const toInstanceId = (value: string): InstanceId => value as InstanceId;
 const toQueueEntryId = (value: string): QueueEntryId => value as QueueEntryId;
+
+const cardRefFor = (card: CardInstance, playerId: CardRef["playerId"]) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId,
+  zone: card.zone,
+});
+
+const continuousSourceSnapshot = (
+  card: CardInstance,
+  playerId: CardRef["playerId"],
+): ContinuousEffectRecord["sourceSnapshot"] => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  ownerId: card.owner,
+  controllerId: playerId,
+  zone: card.zone,
+  category: card.zone.zone === "leaderArea" ? "leader" : "character",
+  colors: ["red"],
+  keywords: [],
+  power: card.zone.zone === "leaderArea" ? 5000 : 3000,
+});
+
+const invalidateCardEffectsRecord = (
+  state: ReturnType<typeof createActiveState>,
+  target: CardInstance,
+): ContinuousEffectRecord => {
+  const source = must(state.players[p1], "p1").leader;
+  return {
+    id: `continuous:invalidate-card:${String(target.instanceId)}`,
+    source: cardRefFor(source, p1),
+    sourceSnapshot: continuousSourceSnapshot(source, p1),
+    controller: p1,
+    modifier: {
+      layer: "effectInvalidation",
+      target: {
+        type: "exactCard",
+        card: cardRefFor(target, target.controller),
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:negated-card",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "invalidateEffects" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-negate-card" },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const publicCharacterRequest = (
   overrides: Partial<TargetRequest> = {},
@@ -404,6 +456,24 @@ test("detects one reviewed optional would-be-KOd self replacement candidate for 
   });
   assert.deepEqual(state, before);
   assert.equal(hashCanonicalStateValue(state), beforeHash);
+});
+
+test("does not detect KO replacement candidates from negated source effects", () => {
+  const { state, entry, refs, targetA } = setupKoPrimitiveState();
+  setupReviewedKoReplacementDefinition(state, targetA);
+  state.continuousEffects.push(invalidateCardEffectsRecord(state, targetA));
+  const process = buildSelectedTargetKoReplacementProcess(
+    entry,
+    must(refs[0], "target A ref"),
+    0,
+  );
+
+  const detected = detectSupportedSelectedTargetKoReplacementCandidate(
+    state,
+    process,
+  );
+
+  assert.deepEqual(detected, { ok: true });
 });
 
 test("detects mandatory would-be-KOd self replacement candidate as non-declinable", () => {
