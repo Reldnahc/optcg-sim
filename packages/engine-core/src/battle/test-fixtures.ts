@@ -626,7 +626,7 @@ export const installSupportedCounterEvent = (
       metadata: {
         sourceTextHash: "source-hash",
         rulesVersion: "r1",
-        effectDefinitionsVersion: "fixture",
+        effectDefinitionsVersion: state.cardManifest.effectDefinitionsVersion,
         tested: true,
         reviewer: "qa-reviewer",
       },
