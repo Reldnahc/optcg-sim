@@ -264,6 +264,29 @@ describe("PlayerSummaryLabel", () => {
     );
   });
 
+  test("styles playmat summary shell as a subtle translucent overlay", async () => {
+    const styles = await readFile(
+      join(sourceDirectory, "styles", "playmat.css"),
+      "utf8",
+    );
+    const summaryRule = styles.match(
+      /\.playmat-summary\s*\{(?<body>[^}]*)\}/u,
+    );
+    const summaryRuleBody = summaryRule?.groups?.["body"];
+
+    assert.ok(summaryRuleBody);
+    assert.doesNotMatch(summaryRuleBody, /var\(--match-surface-panel\)/u);
+    assert.doesNotMatch(summaryRuleBody, /var\(--match-border\)/u);
+    assert.match(
+      summaryRuleBody,
+      /border:\s*max\(1px,\s*calc\(var\(--card-outline-thin\) \* 0\.5\)\) solid\s+rgba\(255,\s*255,\s*255,\s*0\.14\);/u,
+    );
+    assert.match(
+      summaryRuleBody,
+      /background:\s*rgba\(8,\s*10,\s*14,\s*0\.38\);/u,
+    );
+  });
+
   test("renders no profile title when one is not provided", () => {
     const markup = renderToStaticMarkup(
       createElement(PlayerSummaryLabel, { label: "Tester" }),
