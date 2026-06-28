@@ -100,13 +100,7 @@ const normalizeLibraryDeck = (
     favorite: value.favorite,
     leaderCardId: value.leader_card_number,
     leaderVariantIndex: value.leader_variant_index,
-    leaderImageUrl:
-      value.leader_card_number === null
-        ? null
-        : poneglyphCardStockImageUrl(
-            value.leader_card_number,
-            value.leader_variant_index,
-          ),
+    leaderImageUrl: normalizeLeaderImageUrl(record),
     leaderCropFocus: normalizeLeaderCropFocus(record["leader_crop_focus"]),
     updatedAt: value.updated_at,
   };
@@ -176,6 +170,23 @@ const normalizeLeaderCropFocus = (
     Number.isFinite(y)
     ? { x, y }
     : null;
+};
+
+const normalizeLeaderImageUrl = (
+  record: Readonly<Record<string, unknown>>,
+): string | null => {
+  const imageUrl = record["leader_image_url"];
+  if (typeof imageUrl === "string" && imageUrl.length > 0) {
+    return imageUrl;
+  }
+  const leaderCardId = nullableStringField(record, "leader_card_number");
+  if (leaderCardId === null) {
+    return null;
+  }
+  return poneglyphCardStockImageUrl(
+    leaderCardId,
+    nullableNumberField(record, "leader_variant_index"),
+  );
 };
 
 const normalizeLoadout = (value: Loadout): AccountLoadout => {
