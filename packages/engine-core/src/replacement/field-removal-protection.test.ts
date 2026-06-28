@@ -12,6 +12,7 @@ import { hashCanonicalStateValue } from "../state/canonical-state.js";
 import { computeView } from "../view/compute-view.js";
 import { setupFullCharacterPlayState } from "../play-card/test-fixtures.js";
 import {
+  buildSelectedTargetMoveZoneReplacementProcess,
   buildSelectedTargetKoReplacementProcess,
   executeSelectedTargetEffectPrimitive,
   executeUnreplacedSelectedTargetKoProcess,
@@ -486,6 +487,37 @@ test("K.O. protection source card filter ignores nonmatching opponent Character 
     nextP2.characters.some((card) => card.instanceId === target.instanceId),
     false,
   );
+});
+
+test("K.O. protection does not block opponent effect owner deck-bottom movement", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  protectTargetFromOpponentEffectRemoval(state, target, {
+    process: "ko",
+    sourceKind: "cardEffect",
+    sourceControllerRelation: "opponentControlled",
+  } satisfies Protection);
+  const process = buildSelectedTargetMoveZoneReplacementProcess({
+    classification: "moveFromFieldToDeckBottom",
+    entry,
+    target: targetRef,
+    targetIndex: 0,
+  });
+
+  const result = executeUnreplacedSelectedTargetKoProcess(
+    state,
+    [],
+    entry.effectBlockId,
+    process,
+  );
+
+  assert.ok("state" in result);
+  const nextP2 = must(result.state.players[p2], "p2");
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(nextP2.deck.at(-1)?.instanceId, target.instanceId);
 });
 
 test("K.O. protection source card filter prevents effects from Characters without a named attribute", () => {

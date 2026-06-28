@@ -581,11 +581,15 @@ const cardMatchesFilter = (
     return false;
   }
 
+  const needsComputedCard =
+    filter.cost !== undefined ||
+    filter.currentPower !== undefined ||
+    statComparisonsNeedComputedView(filter.statComparisons);
+  const hasComputedCardEffects =
+    state.continuousEffects.length > 0 ||
+    Object.keys(state.cardManifest.effectDefinitions ?? {}).length > 0;
   const computedCard =
-    state.continuousEffects.length > 0 &&
-    (filter.cost !== undefined ||
-      filter.currentPower !== undefined ||
-      statComparisonsNeedComputedView(filter.statComparisons))
+    needsComputedCard && hasComputedCardEffects
       ? computedCardViewFor(state, instance)
       : undefined;
 
