@@ -256,6 +256,7 @@ export const createLocalDevMatchRegistry = async (
   const sessions = new Map<MatchId, LocalDevMatchSession>();
   const completedPersistedMatchIds = new Set<MatchId>();
   const completedPersistingMatchIds = new Set<MatchId>();
+  const completedStatRecordedMatchIds = new Set<MatchId>();
   const activeBotRuns = new Set<MatchId>();
   const recoveredTimerSuspendedMatchIds = new Set<MatchId>();
   const pendingCheckpointWrites = new Map<MatchId, Promise<void>>();
@@ -499,8 +500,12 @@ export const createLocalDevMatchRegistry = async (
     await recordActionTimingSpanAsync("completedMatchSave", async () => {
       await completedMatchRepository.saveCompletedMatch(record);
     });
+    completedPersistedMatchIds.add(session.match.state.matchId);
     const statSink = options.statSink;
-    if (statSink !== undefined) {
+    if (
+      statSink !== undefined &&
+      !completedStatRecordedMatchIds.has(session.match.state.matchId)
+    ) {
       const operations = [
         ...extractCompletedMatchStatOperations(record),
         ...extractEventStatOperations(
@@ -514,8 +519,8 @@ export const createLocalDevMatchRegistry = async (
           operations,
         });
       });
+      completedStatRecordedMatchIds.add(session.match.state.matchId);
     }
-    completedPersistedMatchIds.add(session.match.state.matchId);
   };
 
   const scheduleCompletedMatchPersistence = (

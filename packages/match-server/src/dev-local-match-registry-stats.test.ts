@@ -320,6 +320,32 @@ test("does not record stats when completed-match save fails", async () => {
   assert.deepEqual(calls, []);
 });
 
+test("does not resave completed matches after stat sink failure", async () => {
+  const { repository, savedMatchIds } = createSavingRepository();
+  let sinkCalls = 0;
+  const sink: CompletedMatchStatSink = {
+    async recordCompletedMatchStats() {
+      sinkCalls += 1;
+      throw new Error("stat sink failed");
+    },
+  };
+  const matchId = "stats-sink-fails-after-save" as MatchId;
+  const { registry, snapshot } = await startMatch(matchId, {
+    completedMatchRepository: repository,
+    statSink: sink,
+  });
+
+  await completeByConcession(registry, matchId, snapshot);
+  await waitForScheduledPersistence();
+  await completeByConcession(registry, matchId, snapshot).catch(
+    () => undefined,
+  );
+  await waitForScheduledPersistence();
+
+  assert.deepEqual(savedMatchIds, [matchId]);
+  assert.equal(sinkCalls, 1);
+});
+
 test("records completed-match stats once when completion persistence is scheduled repeatedly", async () => {
   const { repository } = createSavingRepository();
   const { sink, calls } = createRecordingSink();

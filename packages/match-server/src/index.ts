@@ -82,6 +82,10 @@ export type {
   CompletedMatchRepository,
   CompletedMatchTransaction,
 } from "./postgres-completed-match.js";
+export type {
+  CompletedMatchStatSink,
+  CompletedMatchStatSinkInput,
+} from "./stat-sink.js";
 export { recoverActiveMatches } from "./match-recovery.js";
 export type {
   RecoveredMatchSummary,
