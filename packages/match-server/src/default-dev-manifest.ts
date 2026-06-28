@@ -17,6 +17,7 @@ import {
   type ReadyDeckSubmission,
 } from "./deck-submission.js";
 import {
+  adaptDeckConstructionRules,
   validateDeckLoadout,
   type DeckValidationCachePort,
   type ExplicitDonDeckSubmission,
@@ -314,6 +315,32 @@ export const validateAndAdaptDevDecklist = async ({
   return {
     ...decklist,
     donDeckCount: validation.matchDonDeck.cards.length,
+  };
+};
+
+const adaptDevDecklistConstructionRules = (
+  decklist: DevDecklist,
+  cardManifest: Awaited<
+    ReturnType<typeof buildDevMatchCardManifestFromPoneglyphIds>
+  >,
+): DevDecklist => {
+  const adaptation = adaptDeckConstructionRules({
+    mainDeck: {
+      source: "deckHash",
+      hash: "dev-decklist",
+      status: "ready",
+      decoded: {
+        leader: decklist.leader,
+        main: decklist.deckEntries,
+      },
+      donDeckCount: decklist.donDeckCount,
+    },
+    donDeck: createExplicitDevDonDeckSubmission(decklist.donDeckCount),
+    cards: cardManifest.cards,
+  });
+  return {
+    ...decklist,
+    donDeckCount: adaptation.matchDonDeck.cards.length,
   };
 };
 
@@ -813,7 +840,7 @@ const prepareDevDecklistForSetup = async ({
 }): Promise<DevDecklist> => {
   validateDevDeckSubmissionVariants(decklist, cardManifest);
   if (verificationMode === "decodeOnly") {
-    return decklist;
+    return adaptDevDecklistConstructionRules(decklist, cardManifest);
   }
   const validationCache =
     input.validationCache ?? (await createRequestScopedRedisCache(input));

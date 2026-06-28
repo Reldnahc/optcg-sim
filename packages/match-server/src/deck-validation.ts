@@ -88,6 +88,12 @@ export interface ValidatedDonDeck {
   readonly cards: readonly CardId[];
 }
 
+export interface DeckConstructionRuleAdaptation {
+  readonly requestedDonDeck: ValidatedDonDeck;
+  readonly matchDonDeck: ValidatedDonDeck;
+  readonly constructionRules: readonly AppliedDeckRule[];
+}
+
 export type DeckValidationResult =
   | {
       readonly valid: true;
@@ -203,6 +209,28 @@ export const validateDeckLoadout = async (
   return result;
 };
 
+export const adaptDeckConstructionRules = (
+  input: Pick<DeckValidationInput, "mainDeck" | "donDeck" | "cards">,
+): DeckConstructionRuleAdaptation => {
+  const requestedDonDeck = { cards: expandDonDeck(input.donDeck.entries) };
+  const leader = input.cards[input.mainDeck.decoded.leader.cardId];
+  const constructionRules = extractSubmittedDeckConstructionRules(
+    input,
+    leader,
+  );
+  const requiredDonDeckSize =
+    constructionRules.find((rule) => rule.type === "donDeckSize")?.count ??
+    defaultDonDeckSize;
+  const matchDonDeck = {
+    cards: requestedDonDeck.cards.slice(0, requiredDonDeckSize),
+  };
+  return {
+    requestedDonDeck,
+    matchDonDeck,
+    constructionRules,
+  };
+};
+
 const runDeckValidation = (
   input: DeckValidationInput,
   normalized: NormalizedDeckLoadout,
@@ -257,16 +285,10 @@ const runDeckValidation = (
     }
   }
 
-  const constructionRules = extractSubmittedDeckConstructionRules(
-    input,
-    leader,
-  );
+  const { matchDonDeck, constructionRules } = adaptDeckConstructionRules(input);
   const requiredDonDeckSize =
     constructionRules.find((rule) => rule.type === "donDeckSize")?.count ??
     defaultDonDeckSize;
-  const matchDonDeck = {
-    cards: requestedDonDeck.cards.slice(0, requiredDonDeckSize),
-  };
 
   if (requestedDonDeck.cards.length < requiredDonDeckSize) {
     errors.push({
@@ -447,7 +469,7 @@ const isSimulatorPlayableCard = (card: ResolvedCard): boolean =>
   card.support.status === "vanilla-confirmed";
 
 const extractSubmittedDeckConstructionRules = (
-  input: DeckValidationInput,
+  input: Pick<DeckValidationInput, "mainDeck" | "cards">,
   leader: ResolvedCard | undefined,
 ): readonly AppliedDeckRule[] => {
   const seenCardIds = new Set<CardId>();

@@ -9,6 +9,7 @@ import {
   createDevDeckCardIds,
   createDevDeckVariantIndexes,
   createDevDonDeckCardIds,
+  createDevMatchSetupFromDeckSubmissions,
   createDefaultDevMatchSetup,
   createDevRngSeed,
   createDevManifestCardIds,
@@ -245,6 +246,54 @@ describe("default dev manifest boundary", () => {
     });
 
     assert.equal(adapted.donDeckCount, 6);
+  });
+
+  test("decode-only setup truncates submitted DON decks from leader construction rules", async () => {
+    const fixtureFetch = createDefaultDevFixtureFetch();
+    const fetchCard: ReturnType<typeof createDefaultDevFixtureFetch> = async (
+      url,
+      init,
+    ) => {
+      const response = await fixtureFetch(url, init);
+      return {
+        ...response,
+        json: async () => {
+          const body = (await response.json()) as {
+            data?: Record<string, { effect?: string }>;
+            missing?: string[];
+          };
+          const leader = body.data?.["OP13-079"];
+          if (leader !== undefined) {
+            leader.effect =
+              "Under the rules of this game, your DON!! deck consists of 6 cards.";
+          }
+          return body;
+        },
+      };
+    };
+
+    const setup = await createDevMatchSetupFromDeckSubmissions({
+      matchId: "decode-only-don-rule" as MatchId,
+      firstPlayerId: "p1" as PlayerId,
+      playerOrder: ["p1" as PlayerId, "p2" as PlayerId],
+      createdAt: "2026-05-04T00:00:00.000Z",
+      firstPlayer: readySubmission(
+        "OP13-079" as CardId,
+        [{ cardId: "OP13-080" as CardId, count: 50 }],
+        10,
+      ),
+      secondPlayer: readySubmission(
+        "OP13-079" as CardId,
+        [{ cardId: "OP13-080" as CardId, count: 50 }],
+        10,
+      ),
+      firstPlayerVerificationMode: "decodeOnly",
+      secondPlayerVerificationMode: "decodeOnly",
+      fetchCard,
+    });
+
+    assert.equal(setup.players[0].donDeckCardIds.length, 6);
+    assert.equal(setup.players[1].donDeckCardIds.length, 6);
   });
 
   test("dev generated effect definition cache version invalidates parser-output changes", () => {
