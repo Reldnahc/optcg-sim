@@ -5,6 +5,7 @@ import {
 } from "node:http";
 import type { Duplex } from "node:stream";
 import type { MatchId, PlayerId } from "@optcg/types";
+import { withTransaction as withPostgresTransaction } from "optcg-db/db/client.js";
 
 import {
   createCustomLobbyRegistry,
@@ -83,6 +84,10 @@ import {
 } from "./match-http-server-options.js";
 import { broadcastServerShutdown } from "./server-shutdown-notice.js";
 import type { CompletedMatchReplayRepository } from "./postgres-completed-match.js";
+import {
+  createPostgresUserStatsSink,
+  type PostgresUserStatsQuery,
+} from "./postgres-user-stats-sink.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
 
@@ -490,6 +495,12 @@ const handleNotFoundRequest = (response: ServerResponse): Promise<void> => {
   return Promise.resolve();
 };
 
+const createDefaultPostgresUserStatsQuery =
+  (): PostgresUserStatsQuery => (sql, params) =>
+    withPostgresTransaction((client) =>
+      client.query(sql, params === undefined ? undefined : [...params]),
+    );
+
 const playerSetupPayload = (
   matchId: MatchId,
   firstPlayerChoice: unknown,
@@ -783,6 +794,14 @@ export const createMatchHttpServer = async (
   const socketConnections = new Set<DevSocketConnection>();
   const lobbySocketConnections = new Set<DevLobbySocketConnection>();
   const matchPersistence = await resolveActiveMatchPersistence(options);
+  const completedMatchRepository = resolveCompletedMatchRepository(options);
+  const statSink =
+    options.statSink ??
+    (completedMatchRepository !== undefined &&
+    options.completedMatchRepository === undefined &&
+    process.env["PONEGLYPH_SIM_COMPLETED_MATCH_DB"] === "true"
+      ? createPostgresUserStatsSink(createDefaultPostgresUserStatsQuery())
+      : undefined);
   const registry = await createLocalDevMatchRegistry(
     createDefaultSetup,
     options.setup,
@@ -790,14 +809,10 @@ export const createMatchHttpServer = async (
       ...(options.createDefaultMatch === undefined
         ? {}
         : { createDefaultMatch: options.createDefaultMatch }),
-      ...(() => {
-        const completedMatchRepository =
-          resolveCompletedMatchRepository(options);
-        return completedMatchRepository === undefined
-          ? {}
-          : { completedMatchRepository };
-      })(),
-      ...(options.statSink === undefined ? {} : { statSink: options.statSink }),
+      ...(completedMatchRepository === undefined
+        ? {}
+        : { completedMatchRepository }),
+      ...(statSink === undefined ? {} : { statSink }),
       ...(matchPersistence === undefined ? {} : { matchPersistence }),
       includeActionSnapshots: false,
       matchTimerPolicy: resolveMatchTimerPolicy(options),
