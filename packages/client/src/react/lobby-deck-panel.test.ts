@@ -393,11 +393,11 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(styles, /\.deck-status-list/u);
     assert.match(
       styles,
-      /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
+      /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*56px minmax\(0,\s*1fr\);/u,
     );
     assert.match(
       styles,
-      /\.deck-loadout-selected\s*\{[^}]*min-height:\s*56px;/u,
+      /\.deck-loadout-selected\s*\{[^}]*min-height:\s*96px;/u,
     );
     assert.match(
       styles,
@@ -405,15 +405,15 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
+      /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*56px minmax\(0,\s*1fr\);/u,
     );
     assert.match(
       styles,
-      /\.deck-loadout-option\s*\{[^}]*min-height:\s*56px;/u,
+      /\.deck-loadout-option\s*\{[^}]*min-height:\s*96px;/u,
     );
     assert.match(
       styles,
-      /\.deck-loadout-option \.deck-loadout-leader-crop\s*\{[^}]*min-height:\s*56px;/u,
+      /\.deck-loadout-option \.deck-loadout-leader-crop\s*\{[^}]*min-height:\s*96px;/u,
     );
     assert.match(
       styles,
