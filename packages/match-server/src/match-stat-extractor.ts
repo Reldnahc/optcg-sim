@@ -200,7 +200,7 @@ const pushLeaderStats = (
 export const extractCompletedMatchStatOperations = (
   record: CompletedMatchRecord,
 ): UserStatOperation[] => {
-  if (record.status === "abandoned") {
+  if (record.status !== "completed" && record.status !== "draw") {
     return [];
   }
 

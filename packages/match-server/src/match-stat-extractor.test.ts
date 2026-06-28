@@ -186,17 +186,20 @@ const playerAt = (
 };
 
 describe("completed match stat extraction", () => {
-  test("fails closed for abandoned completed-match records", () => {
-    const record = completedRecord({
-      status: "abandoned",
-      resultReason: "abandoned",
-      winType: null,
-      winnerUserId: null,
-      winnerSeatId: null,
-    });
+  test.each(["abandoned", "errored", "no_contest"] as const)(
+    "fails closed for %s completed-match records",
+    (status) => {
+      const record = completedRecord({
+        status,
+        resultReason: status,
+        winType: null,
+        winnerUserId: null,
+        winnerSeatId: null,
+      });
 
-    assert.deepEqual(extractCompletedMatchStatOperations(record), []);
-  });
+      assert.deepEqual(extractCompletedMatchStatOperations(record), []);
+    },
+  );
 
   test("extracts summary stats for a completed match with two account users", () => {
     const operations = operationKeys(completedRecord());
