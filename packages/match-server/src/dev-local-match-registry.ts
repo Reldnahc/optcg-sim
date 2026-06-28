@@ -48,6 +48,7 @@ import {
   createdSeatResponse,
   firstPlayerChoiceResponse,
   isCompletedSession,
+  playerLabelsFromSeats,
   previousLoserId,
   refreshSeatSubject,
   rematchSeatsFromSource,
@@ -298,6 +299,7 @@ export const createLocalDevMatchRegistry = async (
     return {
       matchId: setup.matchId,
       seats: createdSeatResponse(session.seats),
+      playerLabels: playerLabelsFromSeats(session.seats, session.botPlayerIds),
       firstPlayerChoice: firstPlayerChoiceResponse(session.firstPlayerChoice),
       ...(session.status === "active"
         ? { snapshot: getLocalDevSnapshot(session.match) }
@@ -735,6 +737,10 @@ export const createLocalDevMatchRegistry = async (
               ...(session.status === "active"
                 ? {}
                 : {
+                    playerLabels: playerLabelsFromSeats(
+                      session.seats,
+                      session.botPlayerIds,
+                    ),
                     firstPlayerChoice: firstPlayerChoiceResponse(
                       session.firstPlayerChoice,
                     ),
@@ -756,6 +762,10 @@ export const createLocalDevMatchRegistry = async (
           ...(session.status === "active"
             ? {}
             : {
+                playerLabels: playerLabelsFromSeats(
+                  session.seats,
+                  session.botPlayerIds,
+                ),
                 firstPlayerChoice: firstPlayerChoiceResponse(
                   session.firstPlayerChoice,
                 ),
@@ -793,6 +803,10 @@ export const createLocalDevMatchRegistry = async (
           ...(session.status === "active"
             ? {}
             : {
+                playerLabels: playerLabelsFromSeats(
+                  session.seats,
+                  session.botPlayerIds,
+                ),
                 firstPlayerChoice: firstPlayerChoiceResponse(
                   session.firstPlayerChoice,
                 ),
@@ -824,6 +838,18 @@ export const createLocalDevMatchRegistry = async (
         return undefined;
       }
       return firstPlayerChoiceResponse(session.firstPlayerChoice);
+    },
+    getFirstPlayerSetupLabels(matchId) {
+      const session = sessions.get(matchId);
+      if (
+        session === undefined ||
+        session.status === "active" ||
+        session.match.state.status.type === "completed" ||
+        session.match.state.status.type === "gameOver"
+      ) {
+        return undefined;
+      }
+      return playerLabelsFromSeats(session.seats, session.botPlayerIds);
     },
     virtualConnectedPlayerIds(matchId) {
       return sessions.get(matchId)?.botPlayerIds ?? new Set();

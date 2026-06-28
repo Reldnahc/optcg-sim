@@ -47,7 +47,7 @@ export const createdSeatResponse = (
     ]),
   );
 
-const playerLabelsFromSeats = (
+export const playerLabelsFromSeats = (
   seats: Record<string, LocalDevMatchSeat>,
   virtualConnectedPlayerIds: ReadonlySet<PlayerId> = new Set(),
 ): ReturnType<typeof getLocalDevSnapshot>["playerLabels"] => {

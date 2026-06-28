@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { test } from "vitest";
 
-import type { PlayerId } from "@optcg/types";
+import type { MatchId, PlayerId } from "@optcg/types";
 
 import type { LobbyClientState } from "../controller.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
@@ -80,6 +80,36 @@ test("lobby state renders joined player identity in empty playmat summaries", ()
   assert.match(markup, /https:\/\/cdn\.example\/alice\.png/u);
   assert.match(markup, /Alice connected/u);
   assert.match(markup, /Bob connected/u);
+});
+
+test("first-player setup state renders player identity in empty playmat summaries", () => {
+  const markup = renderSurface({
+    matchId: "match-1" as MatchId,
+    seat: {
+      matchId: "match-1" as MatchId,
+      playerId: "p1" as PlayerId,
+    },
+    firstPlayerChoice: {
+      chooserPlayerId: "p1" as PlayerId,
+      choices: ["goFirst", "goSecond"],
+    },
+    playerLabels: {
+      ["p1" as PlayerId]: {
+        displayName: "Alice",
+        avatar: {
+          imageUrl: "https://cdn.example/alice.png",
+          crop: { x: 0.1, y: 0.2, size: 0.6 },
+        },
+      },
+      ["p2" as PlayerId]: {
+        displayName: "Bob",
+      },
+    },
+  });
+
+  assert.match(markup, /Alice/u);
+  assert.match(markup, /Bob/u);
+  assert.match(markup, /https:\/\/cdn\.example\/alice\.png/u);
 });
 
 test("loading state renders the same empty playmat without status text", () => {

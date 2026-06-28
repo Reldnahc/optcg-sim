@@ -57,6 +57,7 @@ export interface FirstPlayerSetupClientState {
   matchId: MatchId;
   seat: ClientSeatIdentity;
   firstPlayerChoice: FirstPlayerChoiceView;
+  playerLabels?: MatchSnapshot["playerLabels"];
 }
 
 export type MatchClientSessionState =
@@ -282,11 +283,13 @@ export const createMatchClientController = ({
   const loadSetupState = (
     seat: ClientSeatIdentity,
     firstPlayerChoice: FirstPlayerChoiceView,
+    playerLabels?: MatchSnapshot["playerLabels"],
   ): MatchClientSessionState => {
     const setupState = {
       matchId: seat.matchId,
       seat,
       firstPlayerChoice,
+      ...(playerLabels === undefined ? {} : { playerLabels }),
     };
     return commitSessionState(setupState).state;
   };
@@ -307,7 +310,11 @@ export const createMatchClientController = ({
       sessionToken: claimed.seat.sessionToken,
     });
     if (claimed.firstPlayerChoice !== undefined) {
-      return loadSetupState(seat, claimed.firstPlayerChoice);
+      return loadSetupState(
+        seat,
+        claimed.firstPlayerChoice,
+        claimed.playerLabels,
+      );
     }
     return waitForSocketState(seat);
   };
@@ -463,7 +470,7 @@ export const createMatchClientController = ({
             "Created match did not include snapshot or setup choice.",
           );
         }
-        return loadSetupState(seat, firstPlayerChoice);
+        return loadSetupState(seat, firstPlayerChoice, created.playerLabels);
       }
       return waitForSocketState(seat);
     },
@@ -485,7 +492,11 @@ export const createMatchClientController = ({
         playerId: claimed.seat.playerId,
       };
       if (claimed.firstPlayerChoice !== undefined) {
-        return loadSetupState(seat, claimed.firstPlayerChoice);
+        return loadSetupState(
+          seat,
+          claimed.firstPlayerChoice,
+          claimed.playerLabels,
+        );
       }
       return waitForSocketState(seat);
     },
@@ -546,7 +557,11 @@ export const createMatchClientController = ({
         if (firstPlayerChoice === undefined) {
           throw new Error("Rematch did not include snapshot or setup choice.");
         }
-        return loadSetupState(seat, firstPlayerChoice);
+        return loadSetupState(
+          seat,
+          firstPlayerChoice,
+          created.playerLabels ?? claimed.playerLabels,
+        );
       }
       return waitForSocketState(seat);
     },
@@ -638,6 +653,9 @@ export const createMatchClientController = ({
               playerId: credential.playerId,
             },
             firstPlayerChoice: message.firstPlayerChoice,
+            ...(message.playerLabels === undefined
+              ? {}
+              : { playerLabels: message.playerLabels }),
           });
           if (committed.changed) {
             onState(committed.state);

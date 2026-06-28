@@ -504,12 +504,14 @@ const createDefaultPostgresUserStatsQuery =
 const playerSetupPayload = (
   matchId: MatchId,
   firstPlayerChoice: unknown,
+  playerLabels: unknown,
   connection: DevSocketConnection,
 ): Record<string, unknown> => ({
   type: "setupSync",
   matchId,
   serverSeq: ++connection.serverSeq,
   firstPlayerChoice,
+  ...(playerLabels === undefined ? {} : { playerLabels }),
 });
 
 const handleWebSocketUpgrade = async (
@@ -689,7 +691,12 @@ const handleWebSocketUpgrade = async (
   if (match === undefined) {
     sendSocketJson(
       connection,
-      playerSetupPayload(matchId, firstPlayerChoice, connection),
+      playerSetupPayload(
+        matchId,
+        firstPlayerChoice,
+        registry.getFirstPlayerSetupLabels(matchId),
+        connection,
+      ),
     );
   } else {
     sendSocketJson(

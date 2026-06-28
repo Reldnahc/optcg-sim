@@ -14,6 +14,7 @@ import type { LocalDevMatchSetup } from "./dev-local-match-session-factory.js";
 export interface CreatedDevMatchResponse {
   matchId: MatchId;
   seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  playerLabels?: ReturnType<typeof getLocalDevSnapshot>["playerLabels"];
   firstPlayerChoice: {
     chooserPlayerId: PlayerId;
     choices: readonly FirstPlayerChoiceValue[];
@@ -25,6 +26,7 @@ export interface CreatedDevMatchResponse {
 export interface ClaimedDevSeatResponse {
   matchId: MatchId;
   seat: { playerId: PlayerId; sessionToken: string };
+  playerLabels?: ReturnType<typeof getLocalDevSnapshot>["playerLabels"];
   firstPlayerChoice?: CreatedDevMatchResponse["firstPlayerChoice"];
 }
 
@@ -99,6 +101,9 @@ export interface LocalDevMatchRegistry {
   getFirstPlayerChoice: (
     matchId: MatchId,
   ) => CreatedDevMatchResponse["firstPlayerChoice"] | undefined;
+  getFirstPlayerSetupLabels: (
+    matchId: MatchId,
+  ) => CreatedDevMatchResponse["playerLabels"] | undefined;
   virtualConnectedPlayerIds: (matchId: MatchId) => ReadonlySet<PlayerId>;
   applyEnvelope: (
     envelope: ClientActionEnvelope,

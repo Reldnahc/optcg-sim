@@ -159,6 +159,7 @@ export interface MatchCardCatalog {
 export interface CreatedMatch {
   matchId: MatchId;
   seats: Record<string, { playerId: PlayerId; claimed: boolean }>;
+  playerLabels?: MatchSnapshot["playerLabels"];
   snapshot?: MatchSnapshot;
   firstPlayerChoice?: FirstPlayerChoiceView;
 }
@@ -169,6 +170,7 @@ export interface ClaimedSeat {
     playerId: PlayerId;
     sessionToken: string;
   };
+  playerLabels?: MatchSnapshot["playerLabels"];
   firstPlayerChoice?: FirstPlayerChoiceView;
 }
 
@@ -303,6 +305,7 @@ export interface MatchSetupSyncMessage {
   matchId: MatchId;
   serverSeq: number;
   firstPlayerChoice: FirstPlayerChoiceView;
+  playerLabels?: MatchSnapshot["playerLabels"];
 }
 
 export interface MatchSessionTransitionMessage {
@@ -311,6 +314,7 @@ export interface MatchSessionTransitionMessage {
   serverSeq: number;
   nextMatchId?: MatchId;
   nextLobbyId?: string;
+  playerLabels?: MatchSnapshot["playerLabels"];
   firstPlayerChoice?: FirstPlayerChoiceView;
 }
 
