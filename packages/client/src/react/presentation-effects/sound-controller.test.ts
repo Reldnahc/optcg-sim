@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import { describe, test } from "vitest";
 
 import { playPresentationSoundIntents } from "./sound-controller.js";
-import type { PresentationSoundCue } from "./sound-planner.js";
+import {
+  allPresentationSoundCues,
+  type PresentationSoundCue,
+} from "./sound-cues.js";
+import { presentationSoundAssetUrls } from "./sound-assets.js";
 
 const assetUrls: Partial<Record<PresentationSoundCue, string>> = {
   attach: "/sounds/move.wav",
@@ -19,6 +23,21 @@ const assetUrls: Partial<Record<PresentationSoundCue, string>> = {
   trash: "/sounds/trash.wav",
   trigger: "/sounds/play.wav",
 };
+
+test("declares one asset URL for every cue", () => {
+  assert.deepEqual(
+    Object.keys(presentationSoundAssetUrls).sort(),
+    [...allPresentationSoundCues].sort(),
+  );
+
+  for (const cue of allPresentationSoundCues) {
+    assert.match(
+      presentationSoundAssetUrls[cue],
+      /\.wav(?:$|\?)/u,
+      `${cue} must map to a WAV asset.`,
+    );
+  }
+});
 
 describe("presentation sound controller", () => {
   test("plays configured asset files for sound cues", () => {
