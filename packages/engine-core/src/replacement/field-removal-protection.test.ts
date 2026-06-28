@@ -521,6 +521,33 @@ test("K.O. protection does not block opponent effect owner deck-bottom movement"
   assert.equal(nextP2.deck.at(-1)?.instanceId, target.instanceId);
 });
 
+test("opponent effect owner deck-top movement places the field card on top of deck", () => {
+  const { state, entry, target, targetRef } =
+    setupFieldRemovalProtectionState();
+  const process = buildSelectedTargetMoveZoneReplacementProcess({
+    classification: "moveFromFieldToDeck",
+    destination: { zone: "deck", position: "top" },
+    entry,
+    target: targetRef,
+    targetIndex: 0,
+  });
+
+  const result = executeUnreplacedSelectedTargetKoProcess(
+    state,
+    [],
+    entry.effectBlockId,
+    process,
+  );
+
+  assert.ok("state" in result);
+  const nextP2 = must(result.state.players[p2], "p2");
+  assert.equal(
+    nextP2.characters.some((card) => card.instanceId === target.instanceId),
+    false,
+  );
+  assert.equal(nextP2.deck[0]?.instanceId, target.instanceId);
+});
+
 test("K.O. protection source card filter prevents effects from Characters without a named attribute", () => {
   const { state, entry, target, targetRef } =
     setupFieldRemovalProtectionState();

@@ -12,7 +12,7 @@ import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,
 } from "../concrete-card-movement.js";
-import { moveFieldCardToOwnerDeckBottom } from "../movement/field-to-deck.js";
+import { moveFieldCardToOwnerDeck } from "../movement/field-to-deck.js";
 import { moveFieldCardToOwnerHand } from "../movement/field-to-hand.js";
 import { moveFieldCardToOwnerLife } from "../movement/field-to-life.js";
 import { applyFieldRemovalProtection } from "./field-removal-protection.js";
@@ -96,7 +96,7 @@ const findCardByInstanceId = (
 const fieldRemovalMoveDestination = (
   process: ReplacementProcess,
 ):
-  | { destination: "deckBottom" }
+  | { destination: "deck"; position: "top" | "bottom" }
   | { destination: "hand" }
   | {
       destination: "life";
@@ -138,9 +138,9 @@ const fieldRemovalMoveDestination = (
         attempt.classification === "moveFromFieldToDeck" &&
         destination.zone === "deck" &&
         "position" in destination &&
-        destination.position === "bottom"
+        (destination.position === "top" || destination.position === "bottom")
       ) {
-        return { destination: "deckBottom" };
+        return { destination: "deck", position: destination.position };
       }
       if (
         typeof destination === "object" &&
@@ -225,11 +225,12 @@ const executeUnreplacedSingleMoveZoneProcess = (
         : { faceUp: destination.faceUp }),
     });
   }
-  return moveFieldCardToOwnerDeckBottom({
+  return moveFieldCardToOwnerDeck({
     card: located.card,
     causedBy: process.causedBy,
     events,
     playerId: located.playerId,
+    position: destination.position,
     sourceZone: located.zone,
     state,
   });

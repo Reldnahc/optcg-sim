@@ -22,6 +22,19 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
   sourceZone: "characterArea" | "stageArea";
   state: GameState;
 }): { state: GameState } => {
+  return moveFieldCardToOwnerDeck({ ...params, position: "bottom" });
+};
+
+export const moveFieldCardToOwnerDeck = (params: {
+  card: CardInstance;
+  causedBy: CausalityRef;
+  events: EngineEvent[];
+  playerId: PlayerId;
+  position: "top" | "bottom";
+  reason?: "effect" | "moveCardsCost";
+  sourceZone: "characterArea" | "stageArea";
+  state: GameState;
+}): { state: GameState } => {
   const player = params.state.players[params.playerId];
   if (player === undefined) {
     return { state: params.state };
@@ -34,12 +47,11 @@ export const moveFieldCardToOwnerDeckBottom = (params: {
       : card,
   );
   const deckCard = clearFieldOnlyCardState(params.card);
-  const nextDeck = reindexZoneCards(
-    [...player.deck, deckCard],
-    "deck",
-    params.playerId,
-    "deck",
-  );
+  const deckCards =
+    params.position === "top"
+      ? [deckCard, ...player.deck]
+      : [...player.deck, deckCard];
+  const nextDeck = reindexZoneCards(deckCards, "deck", params.playerId, "deck");
   const nextCharacters =
     params.sourceZone === "characterArea"
       ? reindexZoneCards(
