@@ -510,6 +510,13 @@ export const createMatchClientController = ({
       if (result.snapshot === undefined) {
         throw new Error("First-player choice did not start the match.");
       }
+      if (
+        currentState !== undefined &&
+        currentState.matchId === setupState.matchId &&
+        currentState.snapshot.stateSeq >= result.snapshot.stateSeq
+      ) {
+        return currentState;
+      }
       return waitForSocketState(setupState.seat);
     },
     connectLive({ onState, onRematchRequest, onConnectionStatus, onError }) {

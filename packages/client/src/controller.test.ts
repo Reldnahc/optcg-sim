@@ -260,6 +260,89 @@ describe("match client controller", () => {
     assert.equal(match !== undefined && "snapshot" in match, true);
   });
 
+  test("first-player choice does not overwrite live match state with hydration when socket wins the race", async () => {
+    const transport = createFakeTransport();
+    transport.createMatch = () =>
+      Promise.resolve({
+        matchId: "match-1" as MatchId,
+        seats: {
+          p1: { playerId: "p1" as PlayerId, claimed: false },
+          p2: { playerId: "p2" as PlayerId, claimed: false },
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    transport.claimSeat = (input) => {
+      transport.claimedSeats.push(input);
+      return Promise.resolve({
+        matchId: input.matchId,
+        seat: {
+          playerId: input.playerId,
+          sessionToken: input.sessionToken ?? `token-${String(input.playerId)}`,
+        },
+        firstPlayerChoice: {
+          chooserPlayerId: "p1" as PlayerId,
+          choices: ["goFirst", "goSecond"],
+        },
+      });
+    };
+    let resolveChoice:
+      | ((
+          value: Awaited<ReturnType<typeof transport.chooseFirstPlayer>>,
+        ) => void)
+      | undefined;
+    transport.chooseFirstPlayer = () =>
+      new Promise((resolve) => {
+        resolveChoice = resolve;
+      });
+    const liveTransport = createFakeLiveTransport();
+    const controller = createMatchClientController({
+      accountSessionToken,
+      transport,
+      liveTransport,
+      sessionStore: createClientSessionStore({
+        storage: createMemoryClientStorage(),
+      }),
+    });
+    await controller.startNewLocalMatch("p1" as PlayerId);
+    const states: MatchClientSessionState[] = [];
+    controller.connectLive({
+      onState(state) {
+        states.push(state);
+      },
+      onError(message) {
+        throw new Error(message);
+      },
+    });
+
+    const choice = controller.chooseFirstPlayer({ choice: "goFirst" });
+    liveTransport.emitState({
+      type: "stateSync",
+      matchId: "match-1" as MatchId,
+      serverSeq: 2,
+      stateSeq: 1,
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+      cards: { players: {} },
+    });
+    resolveChoice?.({
+      matchId: "match-1" as MatchId,
+      firstPlayerChoice: {
+        chooserPlayerId: "p1" as PlayerId,
+        choices: ["goFirst", "goSecond"],
+        resolvedFirstPlayerId: "p1" as PlayerId,
+      },
+      snapshot: { matchId: "match-1" as MatchId, stateSeq: 1, players: {} },
+    });
+
+    const result = await choice;
+    const latestState = states.at(-1);
+
+    assert.equal(latestState !== undefined && "snapshot" in latestState, true);
+    assert.equal("snapshot" in result, true);
+  });
+
   test("live timer sync updates timers without replacing cards", async () => {
     const transport = createFakeTransport();
     const liveTransport = createFakeLiveTransport();
