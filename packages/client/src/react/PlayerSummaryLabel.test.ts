@@ -76,6 +76,21 @@ describe("PlayerSummaryLabel", () => {
     );
   });
 
+  test("temporarily renders a sample disconnect timer when none is active", () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlayerSummaryLabel, {
+        label: "Tester",
+        timer: {
+          game: "34:56",
+          isRunning: true,
+        },
+      }),
+    );
+
+    assert.match(markup, /class="disconnect-timer"/u);
+    assert.match(markup, />0:30</u);
+  });
+
   test("styles profile title as account text instead of a chip", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),
@@ -211,6 +226,7 @@ describe("PlayerSummaryLabel", () => {
     assert.match(timerRuleBody, /right:\s*clamp\(8px,/u);
     assert.match(timerRuleBody, /bottom:\s*clamp\(8px,/u);
     assert.match(timerRuleBody, /justify-items:\s*end;/u);
+    assert.doesNotMatch(timerRuleBody, /\bborder\s*:/u);
     assert.match(
       timerRuleBody,
       /background:\s*rgba\(8,\s*10,\s*14,\s*0\.72\);/u,

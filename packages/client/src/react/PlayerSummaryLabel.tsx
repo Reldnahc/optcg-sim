@@ -6,6 +6,8 @@ import type { PlayerSummaryTimerModel } from "../view-model.js";
 
 type AvatarCrop = PlayerAvatarView["crop"];
 
+const sampleDisconnectTimer = "0:30";
+
 const finiteOr = (value: number, fallback: number): number =>
   Number.isFinite(value) ? value : fallback;
 
@@ -235,11 +237,9 @@ export const PlayerSummaryLabel = ({
         >
           {timer.game}
         </span>
-        {timer.disconnect === undefined ? null : (
-          <span className="disconnect-timer" title="Reconnect timer">
-            {timer.disconnect}
-          </span>
-        )}
+        <span className="disconnect-timer" title="Reconnect timer">
+          {timer.disconnect ?? sampleDisconnectTimer}
+        </span>
       </div>
     )}
   </div>
