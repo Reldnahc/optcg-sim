@@ -4,7 +4,7 @@ import { describe, test } from "vitest";
 import { playPresentationSoundIntents } from "./sound-controller.js";
 import type { PresentationSoundCue } from "./sound-planner.js";
 
-const assetUrls: Record<PresentationSoundCue, string> = {
+const assetUrls: Partial<Record<PresentationSoundCue, string>> = {
   attach: "/sounds/move.wav",
   counter: "/sounds/play.wav",
   damage: "/sounds/trash.wav",
