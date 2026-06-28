@@ -401,10 +401,10 @@ test("Counter Event cannot-attack sequence fully resolves and blocks the selecte
     true,
   );
 
+  const { battle: _battle, pendingDecision: _pendingDecision, ...stateRest } =
+    resolved.state;
   const afterBattle = {
-    ...resolved.state,
-    battle: undefined,
-    pendingDecision: undefined,
+    ...stateRest,
     turn: { ...resolved.state.turn, turnPlayerId: p1, phase: "main" as const },
   };
   const view = computeView(afterBattle);
