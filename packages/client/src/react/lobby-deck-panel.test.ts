@@ -397,11 +397,23 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
+      /\.deck-loadout-selected\s*\{[^}]*min-height:\s*56px;/u,
+    );
+    assert.match(
+      styles,
       /\.deck-loadout-selected,\s*\.deck-loadout-option\s*\{[^}]*padding:\s*0;/u,
     );
     assert.match(
       styles,
       /\.deck-loadout-option\s*\{[^}]*grid-template-columns:\s*112px minmax\(0,\s*1fr\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-option\s*\{[^}]*min-height:\s*56px;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-option \.deck-loadout-leader-crop\s*\{[^}]*min-height:\s*56px;/u,
     );
     assert.match(
       styles,

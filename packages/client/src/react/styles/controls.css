@@ -297,7 +297,7 @@
 }
 
 .deck-loadout-selected {
-  min-height: 68px;
+  min-height: 56px;
 }
 
 .deck-loadout-selected:hover:not(:disabled),
@@ -318,7 +318,7 @@
   display: grid;
   width: 100%;
   height: 100%;
-  min-height: 54px;
+  min-height: 56px;
   place-items: center;
   color: var(--match-text-muted);
   background:
@@ -495,11 +495,11 @@
 
 .deck-loadout-option {
   grid-template-columns: 112px minmax(0, 1fr);
-  min-height: 52px;
+  min-height: 56px;
 }
 
 .deck-loadout-option .deck-loadout-leader-crop {
-  min-height: 52px;
+  min-height: 56px;
 }
 
 .deck-loadout-option.is-favorite {
