@@ -19,17 +19,17 @@ describe("client app routes", () => {
     assert.equal(appRouteFromPath("/replays").id, "replayList");
   });
 
-  test("leaves concrete lobby URLs outside the sim client", () => {
+  test("maps concrete lobby URLs to the lobbies route", () => {
     const route = appRouteFromPath("/lobbies/lobby-1");
 
-    assert.equal(route.id, "notFound");
+    assert.equal(route.id, "lobbies");
     assert.equal(route.path, "/lobbies/lobby-1");
   });
 
-  test("leaves room code URLs outside the sim client", () => {
+  test("maps room code URLs to the lobbies route", () => {
     const route = appRouteFromPath("/r/ab12");
 
-    assert.equal(route.id, "notFound");
+    assert.equal(route.id, "lobbies");
     assert.equal(route.path, "/r/ab12");
   });
 
@@ -67,6 +67,7 @@ describe("client app routes", () => {
 
   test("separates shell routes from the match-board route", () => {
     assert.equal(isShellRoute("dashboard"), true);
+    assert.equal(isShellRoute("lobbies"), true);
     assert.equal(isShellRoute("notFound"), true);
     assert.equal(isShellRoute("match"), false);
     assert.equal(isShellRoute("replayList"), true);
