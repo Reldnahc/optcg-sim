@@ -159,6 +159,44 @@ test("applies aggregated completed-match stats through one idempotent CTE and ev
   );
   assert.equal(titleCalls.length, 1);
   assert.deepEqual(titleCalls[0]?.params, [userOne]);
+  assert.match(
+    titleCalls[0]?.sql ?? "",
+    /\(\s*req\.operator\s*=\s*'gte'\s+AND\s+stat\.value\s*>=\s*req\.threshold\s*\)\s+IS\s+NOT\s+TRUE/i,
+  );
+});
+
+test("evaluates title unlocks for attempted users when stat events were already inserted", async () => {
+  const { calls, query } = createQueryRecorder((sql) => {
+    if (/FROM auth\.user_stats/i.test(sql) && /stat_key = ANY/i.test(sql)) {
+      return { rows: [] };
+    }
+    if (/INSERT INTO auth\.user_stat_events/i.test(sql)) {
+      return { rows: [] };
+    }
+    if (/INSERT INTO auth\.user_title_unlocks/i.test(sql)) {
+      return { rows: [] };
+    }
+    throw new Error(`Unhandled SQL: ${sql}`);
+  });
+  const sink = createPostgresUserStatsSink(query);
+
+  await sink.recordCompletedMatchStats({
+    matchId: "match-1-retry" as MatchId,
+    operations: [
+      {
+        userId: userOne,
+        statKey: statKeys.matchesCompleted,
+        operation: "increment",
+        value: 1,
+      },
+    ],
+  });
+
+  const titleCalls = calls.filter((call) =>
+    /INSERT INTO auth\.user_title_unlocks/i.test(call.sql),
+  );
+  assert.equal(titleCalls.length, 1);
+  assert.deepEqual(titleCalls[0]?.params, [userOne]);
 });
 
 test("rejects mixed operation kinds for the same user stat before writing", async () => {

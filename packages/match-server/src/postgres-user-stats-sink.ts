@@ -207,8 +207,7 @@ const evaluateAutomaticTitleUnlocksSql = `
           ON stat.user_id = $1
          AND stat.stat_key = req.stat_key
         WHERE req.title_key = pt.key
-          AND req.operator = 'gte'
-          AND COALESCE(stat.value, 0) < req.threshold
+          AND (req.operator = 'gte' AND stat.value >= req.threshold) IS NOT TRUE
       )
   )
   INSERT INTO auth.user_title_unlocks (user_id, title_key, granted_by_admin_email, note)
@@ -590,15 +589,12 @@ const operationPayload = (operations: readonly AggregatedOperation[]): string =>
     })),
   );
 
-const affectedUserIds = (
-  rows: readonly Record<string, unknown>[] | undefined,
+const operationUserIds = (
+  operations: readonly Pick<AggregatedOperation, "userId">[],
 ): readonly string[] => {
   const userIds = new Set<string>();
-  for (const row of rows ?? []) {
-    const userId = rowString(row["user_id"]);
-    if (userId !== undefined) {
-      userIds.add(userId);
-    }
+  for (const operation of operations) {
+    userIds.add(operation.userId);
   }
   return [...userIds].sort();
 };
@@ -620,6 +616,9 @@ const recordCompletedMatchStats = async (
     ...outcomes.keys(),
     ...dailyCandidates.map((candidate) => candidate.userId),
   ]);
+  // These reads and writes are not guaranteed to share one transaction through
+  // the current runQuery API, so advisory transaction locks would be unreliable
+  // until this sink has an explicit transaction runner.
   const currentStats = await readCurrentStats(
     runQuery,
     [...usersWithDerivedStats].sort(),
@@ -643,14 +642,14 @@ const recordCompletedMatchStats = async (
     ),
   ]);
 
-  const result = await runQuery(applyStatsSql, [
+  await runQuery(applyStatsSql, [
     sourceType,
     sourceId,
     operationPayload(operations),
     JSON.stringify(dailyCandidates),
   ]);
 
-  for (const userId of affectedUserIds(result.rows)) {
+  for (const userId of operationUserIds(operations)) {
     await runQuery(evaluateAutomaticTitleUnlocksSql, [userId]);
   }
 };

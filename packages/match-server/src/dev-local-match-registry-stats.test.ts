@@ -14,7 +14,10 @@ import {
 import type { AuthContext } from "./dev-auth.js";
 import type { DevMatchSetup } from "./local-match.js";
 import type { CompletedMatchRepository } from "./postgres-completed-match.js";
-import type { SessionActionRequest } from "./session-types.js";
+import type {
+  ClientActionEnvelope,
+  SessionActionRequest,
+} from "./session-types.js";
 import type {
   CompletedMatchStatSink,
   CompletedMatchStatSinkInput,
@@ -254,6 +257,79 @@ const completeByConcession = async (
   throw new Error("Timed out advancing setup to concession.");
 };
 
+const completeByConcessionWithEnvelope = async (
+  registry: LocalDevMatchRegistry,
+  matchId: MatchId,
+  initialSnapshot: NonNullable<CreatedDevMatchResponse["snapshot"]>,
+): Promise<ClientActionEnvelope> => {
+  let snapshot = initialSnapshot;
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const concedeOwner = Object.entries(snapshot.players).find(([, player]) =>
+      player.actions.some((action) => action.type === "concede"),
+    );
+    const concedePlayerId = concedeOwner?.[0] as PlayerId | undefined;
+    const concedeActionIndex = concedeOwner?.[1].actions.find(
+      (action) => action.type === "concede",
+    )?.index;
+    if (concedePlayerId !== undefined && concedeActionIndex !== undefined) {
+      const request: SessionActionRequest = {
+        type: "submitAction",
+        playerId: concedePlayerId,
+        actionIndex: concedeActionIndex,
+        expectedStateSeq: snapshot.stateSeq,
+      };
+      const envelope: ClientActionEnvelope = {
+        protocolVersion: "dev",
+        matchId,
+        playerId: concedePlayerId,
+        clientActionId: `stats-concede-retry-${String(attempt)}`,
+        expectedStateSeq: snapshot.stateSeq,
+        requestHash: requestHash(request),
+        request,
+      };
+      const result = await registry.applyEnvelope(envelope);
+      if (result === "matchNotFound" || !result.accepted) {
+        throw new Error("Expected concession action to be accepted.");
+      }
+      return envelope;
+    }
+
+    const pendingPlayerId = Object.values(snapshot.players).find(
+      (player) => player.view.pendingDecision !== undefined,
+    )?.view.pendingDecision?.playerId;
+    if (pendingPlayerId === undefined) {
+      throw new Error("Expected pending setup before concede action.");
+    }
+    const setupAction = snapshot.players[pendingPlayerId]?.actions[0];
+    if (setupAction?.index === undefined) {
+      throw new Error("Expected visible setup action.");
+    }
+    const request: SessionActionRequest = {
+      type: "submitAction",
+      playerId: pendingPlayerId,
+      actionIndex: setupAction.index,
+      expectedStateSeq: snapshot.stateSeq,
+    };
+    const result = await registry.applyEnvelope({
+      protocolVersion: "dev",
+      matchId,
+      playerId: pendingPlayerId,
+      clientActionId: `stats-setup-retry-${String(attempt)}`,
+      expectedStateSeq: snapshot.stateSeq,
+      requestHash: requestHash(request),
+      request,
+    });
+    if (result === "matchNotFound" || !result.accepted) {
+      throw new Error("Expected setup action to be accepted.");
+    }
+    if (result.snapshot === undefined) {
+      throw new Error("Expected setup action snapshot.");
+    }
+    snapshot = result.snapshot;
+  }
+  throw new Error("Timed out advancing setup to concession.");
+};
+
 test("records completed-match stats after saving the completed match", async () => {
   const { repository, savedMatchIds } = createSavingRepository();
   const { sink, calls } = createRecordingSink();
@@ -320,13 +396,15 @@ test("does not record stats when completed-match save fails", async () => {
   assert.deepEqual(calls, []);
 });
 
-test("does not resave completed matches after stat sink failure", async () => {
+test("retries stat sink failures without resaving completed matches", async () => {
   const { repository, savedMatchIds } = createSavingRepository();
   let sinkCalls = 0;
   const sink: CompletedMatchStatSink = {
     async recordCompletedMatchStats() {
       sinkCalls += 1;
-      throw new Error("stat sink failed");
+      if (sinkCalls === 1) {
+        throw new Error("stat sink failed");
+      }
     },
   };
   const matchId = "stats-sink-fails-after-save" as MatchId;
@@ -335,15 +413,21 @@ test("does not resave completed matches after stat sink failure", async () => {
     statSink: sink,
   });
 
-  await completeByConcession(registry, matchId, snapshot);
-  await waitForScheduledPersistence();
-  await completeByConcession(registry, matchId, snapshot).catch(
-    () => undefined,
+  const concessionEnvelope = await completeByConcessionWithEnvelope(
+    registry,
+    matchId,
+    snapshot,
   );
+  await waitForScheduledPersistence();
+  const retryResult = await registry.applyEnvelope(concessionEnvelope);
+  if (retryResult === "matchNotFound") {
+    throw new Error("Expected completed concession retry to find the match.");
+  }
+  assert.equal(retryResult.accepted, true);
   await waitForScheduledPersistence();
 
   assert.deepEqual(savedMatchIds, [matchId]);
-  assert.equal(sinkCalls, 1);
+  assert.equal(sinkCalls, 2);
 });
 
 test("records completed-match stats once when completion persistence is scheduled repeatedly", async () => {

@@ -476,9 +476,16 @@ export const createLocalDevMatchRegistry = async (
     const completedMatchRepository = options.completedMatchRepository;
     if (
       completedMatchRepository === undefined ||
-      !isCompletedSession(session) ||
-      completedPersistedMatchIds.has(session.match.state.matchId)
+      !isCompletedSession(session)
     ) {
+      return;
+    }
+    const matchId = session.match.state.matchId;
+    const shouldSaveCompletedMatch = !completedPersistedMatchIds.has(matchId);
+    const statSink = options.statSink;
+    const shouldRecordCompletedStats =
+      statSink !== undefined && !completedStatRecordedMatchIds.has(matchId);
+    if (!shouldSaveCompletedMatch && !shouldRecordCompletedStats) {
       return;
     }
     const record = recordActionTimingSpan("completedMatchRecordBuild", () =>
@@ -497,15 +504,13 @@ export const createLocalDevMatchRegistry = async (
     if (record === undefined) {
       return;
     }
-    await recordActionTimingSpanAsync("completedMatchSave", async () => {
-      await completedMatchRepository.saveCompletedMatch(record);
-    });
-    completedPersistedMatchIds.add(session.match.state.matchId);
-    const statSink = options.statSink;
-    if (
-      statSink !== undefined &&
-      !completedStatRecordedMatchIds.has(session.match.state.matchId)
-    ) {
+    if (shouldSaveCompletedMatch) {
+      await recordActionTimingSpanAsync("completedMatchSave", async () => {
+        await completedMatchRepository.saveCompletedMatch(record);
+      });
+      completedPersistedMatchIds.add(matchId);
+    }
+    if (shouldRecordCompletedStats) {
       const operations = [
         ...extractCompletedMatchStatOperations(record),
         ...extractEventStatOperations(
@@ -519,7 +524,7 @@ export const createLocalDevMatchRegistry = async (
           operations,
         });
       });
-      completedStatRecordedMatchIds.add(session.match.state.matchId);
+      completedStatRecordedMatchIds.add(matchId);
     }
   };
 
@@ -527,11 +532,15 @@ export const createLocalDevMatchRegistry = async (
     session: ActiveLocalDevMatchSession,
   ): void => {
     const matchId = session.match.state.matchId;
+    const shouldSaveCompletedMatch = !completedPersistedMatchIds.has(matchId);
+    const shouldRecordCompletedStats =
+      options.statSink !== undefined &&
+      !completedStatRecordedMatchIds.has(matchId);
     if (
       options.completedMatchRepository === undefined ||
       !isCompletedSession(session) ||
-      completedPersistedMatchIds.has(matchId) ||
-      completedPersistingMatchIds.has(matchId)
+      completedPersistingMatchIds.has(matchId) ||
+      (!shouldSaveCompletedMatch && !shouldRecordCompletedStats)
     ) {
       return;
     }
