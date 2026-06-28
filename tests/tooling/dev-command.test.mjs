@@ -29,4 +29,6 @@ test("root dev command starts both client and match server", async () => {
   assert.match(runner, /@optcg\/match-server/u);
   assert.match(runner, /@optcg\/client/u);
   assert.match(runner, /--filter/u);
+  assert.match(runner, /OPTCG_CLIENT_BASE/u);
+  assert.match(runner, /\/sim-runtime\//u);
 });

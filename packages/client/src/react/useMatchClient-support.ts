@@ -98,18 +98,61 @@ export const matchIdFromUrl = (): MatchId | undefined => {
   return value === null ? undefined : (value as MatchId);
 };
 
-export const lobbyIdFromPath = (): string | undefined => {
+const normalizeClientBasePath = (basePath: string): string => {
+  if (basePath === "" || basePath === "/") {
+    return "/";
+  }
+  return `/${basePath.replace(/^\/+|\/+$/gu, "")}`;
+};
+
+const stripClientBasePathname = (
+  pathname: string,
+  basePath: string,
+): string => {
+  const normalizedBase = normalizeClientBasePath(basePath);
+  if (normalizedBase === "/") {
+    return pathname;
+  }
+  if (pathname === normalizedBase) {
+    return "/";
+  }
+  return pathname.startsWith(`${normalizedBase}/`)
+    ? pathname.slice(normalizedBase.length)
+    : pathname;
+};
+
+const prefixClientBasePathname = (
+  pathname: string,
+  basePath: string,
+): string => {
+  const normalizedBase = normalizeClientBasePath(basePath);
+  const normalizedPath = `/${pathname.replace(/^\/+/u, "")}`;
+  if (normalizedBase === "/") {
+    return normalizedPath;
+  }
+  return normalizedPath === "/"
+    ? normalizedBase
+    : `${normalizedBase}${normalizedPath}`;
+};
+
+export const lobbyIdFromPath = (
+  basePath = import.meta.env.BASE_URL,
+): string | undefined => {
   const url = new URL(window.location.href);
-  const pathMatch = /^\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(url.pathname);
+  const pathname = stripClientBasePathname(url.pathname, basePath);
+  const pathMatch = /^\/lobbies\/(?<lobbyId>[^/]+)$/u.exec(pathname);
   if (pathMatch !== null) {
     return decodeURIComponent(pathMatch.groups?.["lobbyId"] ?? "");
   }
   return undefined;
 };
 
-export const lobbyJoinCodeFromPath = (): string | undefined => {
+export const lobbyJoinCodeFromPath = (
+  basePath = import.meta.env.BASE_URL,
+): string | undefined => {
   const url = new URL(window.location.href);
-  const pathMatch = /^\/r\/(?<joinCode>[0-9a-z]{4})$/u.exec(url.pathname);
+  const pathname = stripClientBasePathname(url.pathname, basePath);
+  const pathMatch = /^\/r\/(?<joinCode>[0-9a-z]{4})$/u.exec(pathname);
   if (pathMatch !== null) {
     return pathMatch.groups?.["joinCode"];
   }
@@ -146,13 +189,20 @@ export const setMatchLocation = (matchId: MatchId): void => {
 
 export const setLobbyLocation = (
   lobby: string | { readonly lobbyId: string; readonly joinCode?: string },
+  basePath = import.meta.env.BASE_URL,
 ): void => {
   const url = new URL(window.location.href);
   if (typeof lobby === "string" || lobby.joinCode === undefined) {
     const lobbyId = typeof lobby === "string" ? lobby : lobby.lobbyId;
-    url.pathname = `/lobbies/${encodeURIComponent(lobbyId)}`;
+    url.pathname = prefixClientBasePathname(
+      `/lobbies/${encodeURIComponent(lobbyId)}`,
+      basePath,
+    );
   } else {
-    url.pathname = `/r/${encodeURIComponent(lobby.joinCode)}`;
+    url.pathname = prefixClientBasePathname(
+      `/r/${encodeURIComponent(lobby.joinCode)}`,
+      basePath,
+    );
   }
   url.search = "";
   window.history.replaceState({}, "", url);

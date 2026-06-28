@@ -9,22 +9,28 @@ const proxyErrorCode = (error) => {
   return error.code;
 };
 
-export default defineConfig({
-  server: {
-    proxy: {
-      "/api": {
-        target: process.env.OPTCG_MATCH_SERVER_URL ?? "http://127.0.0.1:5177",
-        changeOrigin: true,
-        ws: true,
-        configure: (proxy) => {
-          proxy.on("error", (error) => {
-            if (ignoredWebSocketAbortCodes.has(proxyErrorCode(error))) {
-              return;
-            }
-            throw error;
-          });
+export default defineConfig(({ command }) => {
+  const clientBase =
+    process.env.OPTCG_CLIENT_BASE ?? (command === "serve" ? "/sim-runtime/" : "/");
+
+  return {
+    base: clientBase,
+    server: {
+      proxy: {
+        "/api": {
+          target: process.env.OPTCG_MATCH_SERVER_URL ?? "http://127.0.0.1:5177",
+          changeOrigin: true,
+          ws: true,
+          configure: (proxy) => {
+            proxy.on("error", (error) => {
+              if (ignoredWebSocketAbortCodes.has(proxyErrorCode(error))) {
+                return;
+              }
+              throw error;
+            });
+          },
         },
       },
     },
-  },
+  };
 });

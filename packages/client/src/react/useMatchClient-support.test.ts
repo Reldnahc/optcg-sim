@@ -22,8 +22,11 @@ import {
   CLEAR_DECISION_SELECTION_ACTION_INDEX,
   CONFIRM_DECISION_SELECTION_ACTION_INDEX,
   applyPendingDecisionLifeChoiceCards,
+  lobbyIdFromPath,
+  lobbyJoinCodeFromPath,
   prominentDecisionPrompt,
   resolvingEffectSourceInstanceIds,
+  setLobbyLocation,
   setMatchLocation,
   zoneClickVisibleInstanceIds,
 } from "./useMatchClient-support.js";
@@ -704,6 +707,86 @@ describe("match client support helpers", () => {
       setMatchLocation("match-rematch-1" as MatchId);
 
       assert.equal(testWindow.location.href, "http://localhost/r/ab12");
+    } finally {
+      if (!hadWindow) {
+        Reflect.deleteProperty(globalThis, "window");
+      } else {
+        Object.defineProperty(globalThis, "window", {
+          configurable: true,
+          value: originalWindow,
+        });
+      }
+    }
+  });
+
+  test("lobby path readers ignore the configured client base path", () => {
+    const hadWindow = Object.prototype.hasOwnProperty.call(
+      globalThis,
+      "window",
+    );
+    const originalWindow = Reflect.get(globalThis, "window");
+    const testWindow = {
+      location: { href: "http://localhost/sim-runtime/lobbies/lobby-1" },
+    };
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: testWindow,
+    });
+    try {
+      assert.equal(lobbyIdFromPath("/sim-runtime/"), "lobby-1");
+
+      testWindow.location.href = "http://localhost/sim-runtime/r/ab12";
+      assert.equal(lobbyJoinCodeFromPath("/sim-runtime/"), "ab12");
+    } finally {
+      if (!hadWindow) {
+        Reflect.deleteProperty(globalThis, "window");
+      } else {
+        Object.defineProperty(globalThis, "window", {
+          configurable: true,
+          value: originalWindow,
+        });
+      }
+    }
+  });
+
+  test("lobby URL updates preserve the configured client base path", () => {
+    const hadWindow = Object.prototype.hasOwnProperty.call(
+      globalThis,
+      "window",
+    );
+    const originalWindow = Reflect.get(globalThis, "window");
+    const testWindow = {
+      location: {
+        href: "http://localhost/sim-runtime/match?lobbyFormat=sandbox-open",
+      },
+      history: {
+        replaceState(_state: unknown, _title: string, url: string) {
+          testWindow.location.href = new URL(
+            url,
+            testWindow.location.href,
+          ).href;
+        },
+      },
+    };
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: testWindow,
+    });
+    try {
+      setLobbyLocation({ lobbyId: "lobby 1" }, "/sim-runtime/");
+      assert.equal(
+        testWindow.location.href,
+        "http://localhost/sim-runtime/lobbies/lobby%201",
+      );
+
+      setLobbyLocation(
+        { lobbyId: "ignored", joinCode: "ab12" },
+        "/sim-runtime/",
+      );
+      assert.equal(
+        testWindow.location.href,
+        "http://localhost/sim-runtime/r/ab12",
+      );
     } finally {
       if (!hadWindow) {
         Reflect.deleteProperty(globalThis, "window");

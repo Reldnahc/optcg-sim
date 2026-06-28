@@ -47,6 +47,17 @@ describe("client app routes", () => {
     assert.equal(route.search, "?matchId=abc&seat=p2");
   });
 
+  test("maps configured base-prefixed routes to route ids", () => {
+    const route = appRouteFromPath(
+      "/sim-runtime/match?lobbyFormat=sandbox-open",
+      "/sim-runtime/",
+    );
+
+    assert.equal(route.id, "match");
+    assert.equal(route.path, "/match");
+    assert.equal(route.search, "?lobbyFormat=sandbox-open");
+  });
+
   test("preserves existing root match links with match query params only", () => {
     assert.equal(appRouteFromPath("/?matchId=abc&seat=p1").id, "match");
     assert.equal(appRouteFromPath("/?lobbyId=abc&seat=p2").id, "dashboard");

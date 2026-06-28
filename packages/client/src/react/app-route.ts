@@ -28,37 +28,61 @@ const routeByPath = new Map<string, AppRouteDefinition>(
   appRoutes.map((route) => [route.path, route]),
 );
 
-export const appRouteFromPath = (pathWithSearch: string): AppRouteState => {
+const normalizeBasePath = (basePath: string): string => {
+  if (basePath === "" || basePath === "/") {
+    return "/";
+  }
+  return `/${basePath.replace(/^\/+|\/+$/gu, "")}`;
+};
+
+const stripBasePath = (pathname: string, basePath: string): string => {
+  const normalizedBase = normalizeBasePath(basePath);
+  if (normalizedBase === "/") {
+    return pathname;
+  }
+  if (pathname === normalizedBase) {
+    return "/";
+  }
+  return pathname.startsWith(`${normalizedBase}/`)
+    ? pathname.slice(normalizedBase.length)
+    : pathname;
+};
+
+export const appRouteFromPath = (
+  pathWithSearch: string,
+  basePath = import.meta.env.BASE_URL,
+): AppRouteState => {
   const parsed = new URL(pathWithSearch, "http://localhost");
-  if (parsed.pathname === "/" && parsed.searchParams.has("matchId")) {
+  const pathname = stripBasePath(parsed.pathname, basePath);
+  if (pathname === "/" && parsed.searchParams.has("matchId")) {
     return {
       id: "match",
-      path: parsed.pathname,
+      path: pathname,
       search: parsed.search,
     };
   }
 
-  const route = routeByPath.get(parsed.pathname);
+  const route = routeByPath.get(pathname);
   if (
-    parsed.pathname.startsWith("/lobbies/") ||
-    /^\/r\/[0-9a-z]{4}$/u.test(parsed.pathname)
+    pathname.startsWith("/lobbies/") ||
+    /^\/r\/[0-9a-z]{4}$/u.test(pathname)
   ) {
     return {
       id: "lobbies",
-      path: parsed.pathname,
+      path: pathname,
       search: parsed.search,
     };
   }
-  if (/^\/replays\/[^/]+$/u.test(parsed.pathname)) {
+  if (/^\/replays\/[^/]+$/u.test(pathname)) {
     return {
       id: "replay",
-      path: parsed.pathname,
+      path: pathname,
       search: parsed.search,
     };
   }
   return {
     id: route?.id ?? "notFound",
-    path: parsed.pathname,
+    path: pathname,
     search: parsed.search,
   };
 };

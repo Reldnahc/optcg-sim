@@ -8,6 +8,15 @@ const sourceDirectory = dirname(fileURLToPath(import.meta.url));
 const clientRoot = join(sourceDirectory, "..");
 
 describe("client Vite dev proxy", () => {
+  test("supports a local tunnel base path for client dev assets", async () => {
+    const config = await readFile(join(clientRoot, "vite.config.mjs"), "utf8");
+
+    assert.equal(config.includes("OPTCG_CLIENT_BASE"), true);
+    assert.equal(config.includes('command === "serve"'), true);
+    assert.equal(config.includes('"/sim-runtime/"'), true);
+    assert.match(config, /base:\s*clientBase/u);
+  });
+
   test("proxies match API websocket upgrades in dev", async () => {
     const config = await readFile(join(clientRoot, "vite.config.mjs"), "utf8");
 

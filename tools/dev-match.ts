@@ -3,6 +3,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 interface DevProcess {
   name: string;
   args: readonly string[];
+  env?: NodeJS.ProcessEnv;
 }
 
 const devProcesses: readonly DevProcess[] = [
@@ -13,6 +14,9 @@ const devProcesses: readonly DevProcess[] = [
   {
     name: "client",
     args: ["pnpm", "--filter", "@optcg/client", "dev"],
+    env: {
+      OPTCG_CLIENT_BASE: process.env["OPTCG_CLIENT_BASE"] ?? "/sim-runtime/",
+    },
   },
 ];
 
@@ -31,7 +35,7 @@ const stopAll = (): void => {
 const startProcess = (processConfig: DevProcess): void => {
   const child = spawn("corepack", processConfig.args, {
     cwd: process.cwd(),
-    env: process.env,
+    env: { ...process.env, ...processConfig.env },
     shell: process.platform === "win32",
     stdio: "inherit",
   });
