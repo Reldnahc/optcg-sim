@@ -36,6 +36,7 @@ export interface BuildLocalCompletedMatchRecordInput {
   readonly seats: Record<string, CompletedMatchSeatContext>;
   readonly firstPlayerChoice: FirstPlayerChoiceState;
   readonly records: readonly StoredSessionRecord[];
+  readonly botPlayerIds?: readonly PlayerId[];
   readonly endedAt: string;
 }
 
@@ -174,9 +175,11 @@ const buildPlayerRecord = (
       ? status.winner
       : "draw";
   const leader = submission?.decoded.leader;
+  const isBot = input.botPlayerIds?.includes(seat.playerId) === true;
   return {
     seatId: seat.playerId,
     userId: uuidOrNull(seat.subject?.userId ?? handoff?.claims.sub),
+    ...(isBot ? { isBot: true, botDifficulty: "novice" as const } : {}),
     savedDeckId: handoff?.resolvedLoadout.loadoutId ?? null,
     handoffTokenId: null,
     displayName: seat.subject?.displayName ?? null,

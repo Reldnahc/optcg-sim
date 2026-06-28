@@ -235,6 +235,7 @@ describe("local completed match record mapping", () => {
         resolvedFirstPlayerId: setup.playerOrder[1],
       },
       records: [],
+      botPlayerIds: [setup.playerOrder[1]],
       endedAt: "2026-06-08T00:10:00.000Z",
     });
 
@@ -242,6 +243,8 @@ describe("local completed match record mapping", () => {
     expect(record?.players[1]).toMatchObject({
       seatId: setup.playerOrder[1],
       userId: null,
+      isBot: true,
+      botDifficulty: "novice",
       displayName: "Bot",
       isWinner: true,
     });

@@ -15,6 +15,8 @@ export type JsonObject = Record<string, unknown>;
 export interface CompletedMatchPlayerRecord {
   readonly seatId: PlayerId;
   readonly userId: string | null;
+  readonly isBot?: boolean;
+  readonly botDifficulty?: "novice" | "advanced" | null;
   readonly savedDeckId: string | null;
   readonly handoffTokenId: string | null;
   readonly displayName: string | null;

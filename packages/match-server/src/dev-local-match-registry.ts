@@ -484,6 +484,7 @@ export const createLocalDevMatchRegistry = async (
         records:
           sessionService.getRuntime(session.match.state.matchId)?.records() ??
           [],
+        botPlayerIds: [...session.botPlayerIds],
         endedAt: new Date().toISOString(),
       }),
     );
