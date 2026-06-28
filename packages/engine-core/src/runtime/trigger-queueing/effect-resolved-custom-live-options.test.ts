@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type {
+  CardInstance,
+  ContinuousEffectRecord,
   EffectQueueEntry,
   EngineEvent,
   EngineResult,
@@ -26,6 +28,52 @@ const liveOptions = {
   includeStateHash: false,
   validateInvariants: false,
 } as const;
+
+const cardRef = (card: CardInstance) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId: card.controller,
+  zone: card.zone,
+});
+
+const invalidateCardEffectsRecord = (
+  state: GameState,
+  target: CardInstance,
+): ContinuousEffectRecord => {
+  const source = must(state.players[p1], "p1").leader;
+  return {
+    id: `continuous:invalidate-card:${String(target.instanceId)}`,
+    source: cardRef(source),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      keywords: [],
+      power: 5000,
+    },
+    controller: source.controller,
+    modifier: {
+      layer: "effectInvalidation",
+      target: {
+        type: "exactCard",
+        card: cardRef(target),
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:negated-card",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "invalidateEffects" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-negate-card" },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const createTriggerQueueing = () =>
   createKOTriggerQueueing(
@@ -176,4 +224,58 @@ test("effect-resolved custom trigger queueing accepts every supported same-event
     result.events.map((event) => event.type),
     ["effectQueued", "effectQueued"],
   );
+});
+
+test("effect-resolved custom trigger queueing skips negated source effects", () => {
+  const { state } = queueingState();
+  const p1State = must(state.players[p1], "p1");
+  const resolvedEntry = queueDrawForP1();
+  const customSource = withCardInZone({
+    state,
+    playerId: p1,
+    card: {
+      ...must(p1State.hand[1], "custom trigger source"),
+      cardId: toCardId("custom-trigger-source"),
+    },
+    zone: "characterArea",
+    index: 1,
+  });
+  setupCustomEffectResolvedDefinition(
+    state,
+    customSource,
+    `effectResolved:${String(resolvedEntry.effectBlockId)}`,
+  );
+  state.continuousEffects.push(
+    invalidateCardEffectsRecord(state, customSource),
+  );
+  const resolutionEvents: EngineEvent[] = [
+    {
+      id: toEngineEventId("event:resolved:1:effectResolved"),
+      seq: state.eventJournal.length + 1,
+      type: "effectResolved",
+      payload: {
+        queueEntryId: resolvedEntry.id,
+        timingWindowId: resolvedEntry.timingWindowId,
+        generation: resolvedEntry.generation,
+        effectBlockId: resolvedEntry.effectBlockId,
+        sourcePresencePolicy: resolvedEntry.sourcePresencePolicy,
+      },
+      visibility: { type: "public" },
+      causedBy: {
+        type: "effect",
+        queueEntryId: resolvedEntry.id,
+        effectId: resolvedEntry.effectBlockId,
+      },
+      createdAtStateSeq: state.seq,
+    },
+  ];
+  const triggerQueueing = createTriggerQueueing();
+
+  const result = triggerQueueing.queueEffectResolvedCustomTriggers(
+    state,
+    resolvedEntry,
+    resolutionEvents,
+  );
+
+  assert.equal(result, undefined);
 });

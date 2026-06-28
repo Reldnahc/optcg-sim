@@ -23,6 +23,7 @@ import {
   toStateSeq,
 } from "../../action-results.js";
 import { zonesEqual } from "../../actions/state.js";
+import { isEffectBlockInvalidated } from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
@@ -179,8 +180,22 @@ export const createKOTriggerQueueing = (
       if (!lookup.ok) {
         return { ok: false, error: lookup.error };
       }
-      const onKOEffects = lookup.definition.effects.filter((effect) =>
-        isAutoRuntimeTriggerCandidate(effect, onKOAutoAdapter),
+      const liveSource = findCardInstance(
+        state,
+        payload.playerId,
+        payload.instanceId,
+      );
+      const lastKnownSource = findCardInstance(
+        sourceState,
+        payload.playerId,
+        payload.instanceId,
+      );
+      const invalidationSource = lastKnownSource ?? liveSource;
+      const onKOEffects = lookup.definition.effects.filter(
+        (effect) =>
+          isAutoRuntimeTriggerCandidate(effect, onKOAutoAdapter) &&
+          (invalidationSource === undefined ||
+            !isEffectBlockInvalidated(sourceState, invalidationSource, effect)),
       );
       if (onKOEffects.length === 0) {
         continue;
@@ -198,16 +213,6 @@ export const createKOTriggerQueueing = (
         };
       }
 
-      const liveSource = findCardInstance(
-        state,
-        payload.playerId,
-        payload.instanceId,
-      );
-      const lastKnownSource = findCardInstance(
-        sourceState,
-        payload.playerId,
-        payload.instanceId,
-      );
       for (const effectBlock of matching) {
         const source =
           effectBlock.sourcePresencePolicy === "resolveFromLastKnownInformation"
@@ -415,8 +420,14 @@ export const createKOTriggerQueueing = (
       if (!lookup.ok) {
         return toEngineResult(state, [], [lookup.error], options);
       }
-      const matching = lookup.definition.effects.filter((effect) =>
-        isSupportedEffectResolvedCustomEffect(effect, eventName),
+      const matching = lookup.definition.effects.filter(
+        (
+          effect,
+        ): effect is EffectDefinition["effects"][number] & {
+          sourcePresencePolicy: EffectQueueEntry["sourcePresencePolicy"];
+        } =>
+          isSupportedEffectResolvedCustomEffect(effect, eventName) &&
+          !isEffectBlockInvalidated(state, source, effect),
       );
       if (matching.length === 0) {
         continue;

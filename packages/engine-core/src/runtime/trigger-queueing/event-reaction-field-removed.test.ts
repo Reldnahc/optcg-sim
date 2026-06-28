@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import type {
   CardInstance,
+  ContinuousEffectRecord,
   EffectDefinition,
   SourcePresencePolicy,
 } from "@optcg/types";
@@ -20,6 +21,52 @@ import {
   toQueueEntryId,
   withCardInZone,
 } from "../../effect-runtime-queue/test-support.js";
+
+const cardRef = (card: CardInstance) => ({
+  instanceId: card.instanceId,
+  cardId: card.cardId,
+  playerId: card.controller,
+  zone: card.zone,
+});
+
+const invalidateCardEffectsRecord = (
+  state: ReturnType<typeof createActiveState>,
+  target: CardInstance,
+): ContinuousEffectRecord => {
+  const source = must(state.players[p2], "p2").leader;
+  return {
+    id: `continuous:invalidate-card:${String(target.instanceId)}`,
+    source: cardRef(source),
+    sourceSnapshot: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      ownerId: source.owner,
+      controllerId: source.controller,
+      zone: source.zone,
+      category: "leader",
+      colors: ["red"],
+      keywords: [],
+      power: 5000,
+    },
+    controller: source.controller,
+    modifier: {
+      layer: "effectInvalidation",
+      target: {
+        type: "exactCard",
+        card: cardRef(target),
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected:negated-card",
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: { type: "invalidateEffects" },
+    },
+    duration: { type: "thisTurn" },
+    createdBy: { type: "ruleProcess", name: "test-negate-card" },
+    createdAtStateSeq: state.seq,
+  };
+};
 
 const appendFieldRemovedEvent = (
   state: ReturnType<typeof createActiveState>,
@@ -145,6 +192,22 @@ test("event reactions queue self fieldRemoved effects from last-known field sour
 
 test("event reactions do not queue removed field sources without last-known policy", () => {
   const { state } = selfFieldRemovedReactionState("mustRemainInSameZone");
+
+  const result = processEffectRuntime(state);
+
+  assert.equal(result.errors, undefined);
+  assert.equal(result.state.effectQueue.length, 0);
+  assert.equal(
+    result.events.some((event) => event.type === "effectQueued"),
+    false,
+  );
+});
+
+test("event reactions do not queue removed field sources whose effects were negated", () => {
+  const { source, state } = selfFieldRemovedReactionState(
+    "resolveFromLastKnownInformation",
+  );
+  state.continuousEffects = [invalidateCardEffectsRecord(state, source)];
 
   const result = processEffectRuntime(state);
 

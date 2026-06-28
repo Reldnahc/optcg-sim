@@ -14,7 +14,10 @@ import {
   toEngineResult,
   toStateSeq,
 } from "../../action-results.js";
-import { isCardEffectInvalidated } from "../../effect-invalidation.js";
+import {
+  isCardEffectInvalidated,
+  isEffectBlockInvalidated,
+} from "../../effect-invalidation.js";
 import {
   isAutoRuntimeTriggerCandidate,
   isSupportedAutoRuntimeEffectBlock,
@@ -147,6 +150,13 @@ const eventReactionSourceCandidates = (
   ];
 };
 
+const sourceForInvalidation = (
+  candidate: EventReactionSourceCandidate,
+): CardInstance =>
+  candidate.lastKnownZone === undefined
+    ? candidate.source
+    : { ...candidate.source, zone: candidate.lastKnownZone };
+
 const sourceFieldEntryEventSeq = (
   state: GameState,
   source: CardInstance,
@@ -216,8 +226,9 @@ export const createEventReactionTriggerQueueing = (
     for (const event of reactionEvents) {
       for (const candidate of eventReactionSourceCandidates(state, event)) {
         const { source } = candidate;
+        const invalidationSource = sourceForInvalidation(candidate);
         if (
-          isCardEffectInvalidated(state, source) ||
+          isCardEffectInvalidated(state, invalidationSource) ||
           !didEventHappenAfterSourceEntered(state, event, source)
         ) {
           continue;
@@ -238,6 +249,9 @@ export const createEventReactionTriggerQueueing = (
           return toEngineResult(state, [], [lookup.error], options);
         }
         const reactionEffects = lookup.definition.effects.flatMap((effect) => {
+          if (isEffectBlockInvalidated(state, invalidationSource, effect)) {
+            return [];
+          }
           const match = matchEventTrigger(
             state,
             source,
