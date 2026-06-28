@@ -49,6 +49,11 @@ import { useMatchClientCardSelection } from "./use-match-client-card-selection.j
 import { createMatchClientDecisionModel } from "./use-match-client-decision-model.js";
 import { useMatchRollbackActions } from "./use-match-rollback-actions.js";
 import { useMatchSessionActions } from "./use-match-session-actions.js";
+import { createBrowserPersistentStorage } from "./browser-storage.js";
+import {
+  loadPreferredLobbyLoadoutId,
+  savePreferredLobbyLoadoutId,
+} from "./preferred-lobby-loadout-store.js";
 
 export interface UseMatchClientOptions {
   readonly accountSessionToken: string;
@@ -87,6 +92,13 @@ export const useMatchClient = ({
     [accountSessionToken],
   );
   const accountClient = useMemo(() => createPoneglyphAccountClient(), []);
+  const preferredLoadoutStorage = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? undefined
+        : createBrowserPersistentStorage(),
+    [],
+  );
   const [clientState, setClientState] = useState<MatchClientSessionState>();
   const [accountLoadouts, setAccountLoadouts] = useState<
     readonly AccountLoadout[]
@@ -95,8 +107,9 @@ export const useMatchClient = ({
     "idle" | "loading" | "ready" | "error"
   >("idle");
   const [accountLoadoutsError, setAccountLoadoutsError] = useState<string>();
-  const [lastSubmittedLoadoutId, setLastSubmittedLoadoutId] =
-    useState<string>();
+  const [lastSubmittedLoadoutId, setLastSubmittedLoadoutId] = useState(() =>
+    loadPreferredLobbyLoadoutId(preferredLoadoutStorage),
+  );
   const [
     accountLoadoutValidationRequired,
     setAccountLoadoutValidationRequired,
@@ -309,7 +322,9 @@ export const useMatchClient = ({
         } else if (isLobbyClientState(result)) {
           setLobbyLocation(result);
         }
-        setLastSubmittedLoadoutId(loadoutId);
+        setLastSubmittedLoadoutId(
+          savePreferredLobbyLoadoutId(preferredLoadoutStorage, loadoutId),
+        );
         setClientState(result);
         setErrors([]);
       } catch (error) {
@@ -324,6 +339,7 @@ export const useMatchClient = ({
       accountLoadouts,
       clientState,
       controller,
+      preferredLoadoutStorage,
     ],
   );
 
