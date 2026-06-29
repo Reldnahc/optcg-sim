@@ -432,7 +432,7 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.concede-button\s*\{[^}]*grid-auto-flow:\s*column;[^}]*width:\s*clamp\(92px,\s*calc\(var\(--control-icon-button-size\) \* 3\),\s*136px\);[^}]*font-weight:\s*800;[^}]*white-space:\s*nowrap;/u,
+      /\.concede-button\s*\{[^}]*grid-auto-flow:\s*column;[^}]*width:\s*clamp\(92px,\s*calc\(var\(--control-icon-button-size\) \* 3\),\s*136px\);[^}]*border:\s*var\(--card-outline-thin\) solid rgba\(255,\s*132,\s*132,\s*0\.42\);[^}]*font-weight:\s*800;[^}]*white-space:\s*nowrap;/u,
     );
     assert.match(styles, /\.concede-button svg\s*\{/u);
     assert.match(

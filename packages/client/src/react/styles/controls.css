@@ -729,6 +729,7 @@
   grid-auto-flow: column;
   gap: calc(var(--control-rail-gap) * 0.45);
   width: clamp(92px, calc(var(--control-icon-button-size) * 3), 136px);
+  border: var(--card-outline-thin) solid rgba(255, 132, 132, 0.42);
   padding: 0 calc(var(--control-rail-gap) * 0.8);
   color: rgba(255, 220, 220, 0.9);
   font-size: var(--control-small-font-size);
