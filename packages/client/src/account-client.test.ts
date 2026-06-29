@@ -131,8 +131,6 @@ describe("Poneglyph account client", () => {
                   leader_card_number: "OP05-098",
                   leader_variant_index: 2,
                   leader_crop_focus: { x: 0.42, y: 0.18 },
-                  leader_image_url:
-                    "https://cdn.poneglyph.one/images/OP05-098/en/scans/2/thumb.webp",
                   leader_copy_count: 1,
                   preview_card_number: null,
                   preview_variant_index: null,
@@ -171,7 +169,7 @@ describe("Poneglyph account client", () => {
         leaderCardId: "OP05-098",
         leaderVariantIndex: 2,
         leaderImageUrl:
-          "https://cdn.poneglyph.one/images/OP05-098/en/scans/2/thumb.webp",
+          "https://cdn.poneglyph.one/images/OP05-098/en/stock/2/full.png",
         leaderCropFocus: { x: 0.42, y: 0.18 },
         updatedAt: "2026-06-02T00:00:00.000Z",
       },
