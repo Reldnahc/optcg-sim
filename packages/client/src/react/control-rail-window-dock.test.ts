@@ -253,6 +253,44 @@ describe("control rail window dock", () => {
     assert.match(dragOutSource, /startPoppedOutDrag/u);
   });
 
+  test("permanent info dock tabs do not render close buttons", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ControlRail, {
+        errors: [],
+        globalActions: [],
+        disabled: false,
+        onAction: () => undefined,
+        onHome: () => undefined,
+        dockTabs: [
+          {
+            id: "card-preview",
+            title: "Preview",
+            closable: false,
+            renderContent: () => createElement("p", null, "preview"),
+          },
+          {
+            id: "action-log",
+            title: "Log",
+            closable: false,
+            renderContent: () => createElement("p", null, "log"),
+          },
+          {
+            id: "settings",
+            title: "Settings",
+            closable: false,
+            renderContent: () => createElement("p", null, "settings"),
+          },
+        ],
+        activeDockTabId: "settings",
+        onDockTabClose: () => undefined,
+      }),
+    );
+
+    assert.match(markup, /aria-selected="true"[^>]*>Settings<\/button>/u);
+    assert.doesNotMatch(markup, /aria-label="Close Settings"/u);
+    assert.doesNotMatch(markup, /control-dock-window-close/u);
+  });
+
   test("renders only the active dock tab content", () => {
     let activeRenderCount = 0;
     let inactiveRenderCount = 0;

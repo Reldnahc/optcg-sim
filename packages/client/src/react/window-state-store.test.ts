@@ -85,10 +85,12 @@ describe("reveal window state store", () => {
       new Set(["action-log", "collection:Player trash"]),
     );
 
-    assert.deepEqual(
-      [...flowOne.loadOpenWindowIds()],
-      ["action-log", "collection:Player trash"],
-    );
+    assert.deepEqual([...flowOne.loadOpenWindowIds()], [
+      "card-preview",
+      "action-log",
+      "settings",
+      "collection:Player trash",
+    ]);
     assert.deepEqual(
       [...flowTwo.loadOpenWindowIds()],
       ["card-preview", "action-log", "settings"],
@@ -113,7 +115,7 @@ describe("reveal window state store", () => {
     );
   });
 
-  test("preserves an intentionally saved empty window layout", () => {
+  test("preserves an intentionally empty dock layout but keeps main windows open", () => {
     const storage = createMemoryClientStorage();
     const store = createWindowLayoutStore({
       storage,
@@ -123,7 +125,10 @@ describe("reveal window state store", () => {
     store.saveOpenWindowIds(new Set());
     store.saveDockedWindowIds(new Set());
 
-    assert.deepEqual([...store.loadOpenWindowIds()], []);
+    assert.deepEqual(
+      [...store.loadOpenWindowIds()],
+      ["card-preview", "action-log", "settings"],
+    );
     assert.deepEqual([...store.loadDockedWindowIds()], []);
   });
 
@@ -226,7 +231,7 @@ describe("reveal window state store", () => {
     });
   });
 
-  test("fails closed to empty open window ids for malformed stored data", () => {
+  test("fails closed to permanent open window ids for malformed stored data", () => {
     const storage = createMemoryClientStorage();
     storage.setItem(
       "optcg:client:open-floating-windows:flow-1",
@@ -237,7 +242,10 @@ describe("reveal window state store", () => {
       scope: "flow-1",
     });
 
-    assert.deepEqual([...store.loadOpenWindowIds()], []);
+    assert.deepEqual(
+      [...store.loadOpenWindowIds()],
+      ["card-preview", "action-log", "settings"],
+    );
   });
 
   test("fails closed to empty window rectangles for malformed stored data", () => {

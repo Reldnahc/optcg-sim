@@ -41,6 +41,7 @@ const infoWindowConfigKeyPrefix = "optcg:client:info-window-config";
 const controlPanelLayoutKeyPrefix = "optcg:client:control-panel-layout";
 const defaultOpenWindowIds = ["card-preview", "action-log", "settings"];
 const defaultDockedWindowIds = ["card-preview", "action-log", "settings"];
+const alwaysOpenWindowIds = ["card-preview", "action-log", "settings"];
 
 const defaultInfoWindowConfig: InfoWindowConfig = {
   activeTabId: "preview",
@@ -105,6 +106,9 @@ const saveSet = (
 ): void => {
   storage.setItem(key, JSON.stringify([...values]));
 };
+
+const withAlwaysOpenWindowIds = (windowIds: ReadonlySet<string>): Set<string> =>
+  new Set([...alwaysOpenWindowIds, ...windowIds]);
 
 const isWindowRect = (value: unknown): value is WindowRect => {
   if (typeof value !== "object" || value === null) {
@@ -267,10 +271,12 @@ export const createWindowLayoutStore = ({
     storage.setItem(windowRectsKey(scope), JSON.stringify(rects));
   },
   loadOpenWindowIds() {
-    return loadSet(storage, openWindowsKey(scope), defaultOpenWindowIds);
+    return withAlwaysOpenWindowIds(
+      loadSet(storage, openWindowsKey(scope), defaultOpenWindowIds),
+    );
   },
   saveOpenWindowIds(windowIds) {
-    saveSet(storage, openWindowsKey(scope), windowIds);
+    saveSet(storage, openWindowsKey(scope), withAlwaysOpenWindowIds(windowIds));
   },
   loadDockedWindowIds() {
     return loadSet(storage, dockedWindowsKey(scope), defaultDockedWindowIds);

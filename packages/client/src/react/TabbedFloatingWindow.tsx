@@ -33,7 +33,7 @@ export interface TabbedFloatingWindowProps {
   zIndex?: number | undefined;
   onActiveTabChange: (tabId: string) => void;
   onToggleMinimized: () => void;
-  onClose: () => void;
+  onClose?: (() => void) | undefined;
   onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;

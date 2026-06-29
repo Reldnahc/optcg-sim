@@ -149,6 +149,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: "Preview",
+        closable: false,
         renderContent: () => <CardPreviewContent card={previewCard} />,
       };
     }
@@ -156,6 +157,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: "Log",
+        closable: false,
         renderContent: () => (
           <ActionLogContent
             entries={actionLogEntries}
@@ -169,6 +171,7 @@ export const useControlDockTabs = ({
       return {
         id: windowKey,
         title: "Settings",
+        closable: false,
         renderContent: () => <SettingsContent />,
       };
     }

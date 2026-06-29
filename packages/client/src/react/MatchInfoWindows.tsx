@@ -13,7 +13,6 @@ import type { WindowRect } from "./FloatingWindow.js";
 import {
   actionLogWindowKey,
   cardPreviewWindowKey,
-  groupedInfoWindowIdsAfterTabDragOut,
   infoWindowKey,
   settingsWindowKey,
 } from "./info-window-model.js";
@@ -39,14 +38,12 @@ export interface MatchInfoWindowsProps {
   showTabbedInfoWindow: boolean;
   standaloneInfoWindowIds: readonly InfoWindowTabId[];
   activateFloatingWindow: (windowKey: string) => void;
-  closeActionLogWindow: () => void;
-  closeCardPreview: () => void;
-  closeSettingsWindow: () => void;
   completeInfoGroupDrag: (rect: WindowRect) => WindowRect | undefined;
   completeInfoWindowDrag: (
     windowId: InfoWindowTabId,
     rect: WindowRect,
   ) => WindowRect | undefined;
+  dockInfoWindowTabs: (windowIds: readonly InfoWindowTabId[]) => void;
   onRequestRollback: (rollbackPointId: string) => void;
   onPreviewActionLogCard: (card: ActionLogCardMention["card"]) => void;
   reorderInfoWindowTabs: (
@@ -54,13 +51,7 @@ export interface MatchInfoWindowsProps {
     targetTabId: InfoWindowTabId,
     placement: "before" | "after",
   ) => void;
-  setActionLogMinimized: (updater: (current: boolean) => boolean) => void;
-  setActionLogOpen: (open: boolean) => void;
-  setGroupedInfoWindowIds: (windowIds: readonly InfoWindowTabId[]) => void;
   setInfoWindowActiveTab: (windowId: InfoWindowTabId) => void;
-  setInfoWindowMinimized: (updater: (current: boolean) => boolean) => void;
-  setPreviewMinimized: (updater: (current: boolean) => boolean) => void;
-  setSettingsOpen: (open: boolean) => void;
   splitInfoWindowTab: (
     tabId: InfoWindowTabId,
     point: Parameters<
@@ -68,7 +59,6 @@ export interface MatchInfoWindowsProps {
     >[1],
   ) => void;
   updateControlDockTarget: (rect: WindowRect) => void;
-  updateFloatingWindowOpen: (windowKey: string, open: boolean) => void;
   updateFloatingWindowRect: (windowKey: string, rect: WindowRect) => void;
   updateInfoWindowDragTargets: (
     draggedWindowId: InfoWindowTabId,
@@ -83,12 +73,10 @@ export const MatchInfoWindows = ({
   activeFloatingWindowRects,
   activeFloatingWindowZIndexes,
   activateFloatingWindow,
-  closeActionLogWindow,
-  closeCardPreview,
-  closeSettingsWindow,
   combineDropTarget,
   completeInfoGroupDrag,
   completeInfoWindowDrag,
+  dockInfoWindowTabs,
   dockedInfoTabIds,
   groupedInfoWindowIds,
   infoWindowActiveTab,
@@ -98,20 +86,13 @@ export const MatchInfoWindows = ({
   previewCard,
   previewMinimized,
   reorderInfoWindowTabs,
-  setActionLogMinimized,
-  setActionLogOpen,
-  setGroupedInfoWindowIds,
   setInfoWindowActiveTab,
-  setInfoWindowMinimized,
-  setPreviewMinimized,
-  setSettingsOpen,
   showActionLogWindow,
   showSettingsWindow,
   showTabbedInfoWindow,
   splitInfoWindowTab,
   standaloneInfoWindowIds,
   updateControlDockTarget,
-  updateFloatingWindowOpen,
   updateFloatingWindowRect,
   updateInfoWindowDragTargets,
 }: MatchInfoWindowsProps): React.JSX.Element => (
@@ -142,32 +123,7 @@ export const MatchInfoWindows = ({
           activateFloatingWindow(infoWindowKey);
         }}
         onToggleMinimized={() => {
-          setInfoWindowMinimized((current) => !current);
-        }}
-        onCloseActiveTab={(tabId) => {
-          if (tabId === "preview") {
-            closeCardPreview();
-            return;
-          }
-          if (tabId === "settings") {
-            setSettingsOpen(false);
-            setInfoWindowActiveTab("preview");
-            setGroupedInfoWindowIds(
-              groupedInfoWindowIdsAfterTabDragOut(
-                groupedInfoWindowIds,
-                "settings",
-              ),
-            );
-            updateFloatingWindowOpen(settingsWindowKey, false);
-            return;
-          }
-          setActionLogOpen(false);
-          setActionLogMinimized(() => false);
-          setInfoWindowActiveTab("preview");
-          setGroupedInfoWindowIds(
-            groupedInfoWindowIdsAfterTabDragOut(groupedInfoWindowIds, "log"),
-          );
-          updateFloatingWindowOpen(actionLogWindowKey, false);
+          dockInfoWindowTabs(groupedInfoWindowIds);
         }}
         onRectChange={(rect) => {
           updateFloatingWindowRect(infoWindowKey, rect);
@@ -194,9 +150,8 @@ export const MatchInfoWindows = ({
         }
         zIndex={activeFloatingWindowZIndexes[actionLogWindowKey]}
         onToggleMinimized={() => {
-          setActionLogMinimized((current) => !current);
+          dockInfoWindowTabs(["log"]);
         }}
-        onClose={closeActionLogWindow}
         onActivate={() => {
           activateFloatingWindow(actionLogWindowKey);
         }}
@@ -225,9 +180,8 @@ export const MatchInfoWindows = ({
         }
         zIndex={activeFloatingWindowZIndexes[cardPreviewWindowKey]}
         onToggleMinimized={() => {
-          setPreviewMinimized((current) => !current);
+          dockInfoWindowTabs(["preview"]);
         }}
-        onClose={closeCardPreview}
         onActivate={() => {
           activateFloatingWindow(cardPreviewWindowKey);
         }}
@@ -252,8 +206,11 @@ export const MatchInfoWindows = ({
           activeFloatingWindowRects[settingsWindowKey] ??
           defaultSettingsWindowRect
         }
-        onClose={closeSettingsWindow}
+        minimized={false}
         zIndex={activeFloatingWindowZIndexes[settingsWindowKey]}
+        onToggleMinimized={() => {
+          dockInfoWindowTabs(["settings"]);
+        }}
         onActivate={() => {
           activateFloatingWindow(settingsWindowKey);
         }}

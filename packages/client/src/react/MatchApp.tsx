@@ -8,11 +8,9 @@ import {
 } from "react";
 import type { PlayerView, PublicTurnState } from "@optcg/types";
 import type { ClientCardModel } from "../view-model.js";
-import { ActionLogButton } from "./ActionLogButton.js";
 import { useAppViewportCssVariables } from "./app-viewport.js";
 import { appRoutePath } from "./app-route.js";
 import { actionLogCardModel } from "./card-model.js";
-import { CardPreviewButton } from "./CardPreviewButton.js";
 import type { WindowRect } from "./FloatingWindow.js";
 import { MatchBoardSurface } from "./MatchBoardSurface.js";
 import { MatchControlPanel } from "./MatchControlPanel.js";
@@ -31,7 +29,6 @@ import { LobbyDeckPanel } from "./LobbyDeckPanel.js";
 import { MatchInfoWindows } from "./MatchInfoWindows.js";
 import { MatchInteractionModals } from "./MatchInteractionModals.js";
 import { MatchVisualSettingsProvider } from "./match-visual-settings-context.js";
-import { SettingsButton } from "./SettingsButton.js";
 import {
   endTurnConfirmationActions,
   isEndTurnAction,
@@ -285,9 +282,6 @@ export const MatchApp = ({
     previewHoveredCard,
     showCardPreview,
     closeCardPreview,
-    focusPreviewWindow,
-    focusActionLogWindow,
-    focusSettingsWindow,
   } = createInfoWindowToolbarControls({
     previewOpen,
     actionLogOpen,
@@ -429,11 +423,20 @@ export const MatchApp = ({
     showSettingsWindow,
     updateControlDockTarget,
   });
+  const dockInfoWindowTabsToSidebar = (
+    windowIds: readonly ("preview" | "log" | "settings")[],
+  ): void => {
+    const dockRect = currentControlDockSlotRect() ?? {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
+    dockInfoWindowTabs(windowIds, dockRect);
+  };
   const {
     controlDockTabs,
     dockedInfoTabIds,
-    closeActionLogWindow,
-    closeSettingsWindow,
     closeDockWindow,
   } = useControlDockTabs({
     activeDockedWindowIds,
@@ -708,24 +711,6 @@ export const MatchApp = ({
           onCancelRollback={() => {
             void client.cancelRollback();
           }}
-          previewControl={
-            <CardPreviewButton
-              open={previewOpen}
-              onActivate={focusPreviewWindow}
-            />
-          }
-          actionLogControl={
-            <ActionLogButton
-              open={actionLogOpen}
-              onActivate={focusActionLogWindow}
-            />
-          }
-          settingsControl={
-            <SettingsButton
-              open={settingsOpen}
-              onActivate={focusSettingsWindow}
-            />
-          }
           concedeDisabled={concedeDisabled}
           concedeConfirming={concedeConfirming}
           onConcede={() => {
@@ -839,12 +824,10 @@ export const MatchApp = ({
           activeFloatingWindowRects={activeFloatingWindowRects}
           activeFloatingWindowZIndexes={activeFloatingWindowZIndexes}
           activateFloatingWindow={activateFloatingWindow}
-          closeActionLogWindow={closeActionLogWindow}
-          closeCardPreview={closeCardPreview}
-          closeSettingsWindow={closeSettingsWindow}
           combineDropTarget={combineDropTarget}
           completeInfoGroupDrag={completeInfoGroupDrag}
           completeInfoWindowDrag={completeInfoWindowDrag}
+          dockInfoWindowTabs={dockInfoWindowTabsToSidebar}
           dockedInfoTabIds={dockedInfoTabIds}
           groupedInfoWindowIds={groupedInfoWindowIds}
           infoWindowActiveTab={infoWindowActiveTab}
@@ -858,20 +841,13 @@ export const MatchApp = ({
           previewCard={previewCard}
           previewMinimized={previewMinimized}
           reorderInfoWindowTabs={reorderInfoWindowTabs}
-          setActionLogMinimized={setActionLogMinimized}
-          setActionLogOpen={setActionLogOpen}
-          setGroupedInfoWindowIds={setGroupedInfoWindowIds}
           setInfoWindowActiveTab={setInfoWindowActiveTab}
-          setInfoWindowMinimized={setInfoWindowMinimized}
-          setPreviewMinimized={setPreviewMinimized}
-          setSettingsOpen={setSettingsOpen}
           showActionLogWindow={showActionLogWindow}
           showSettingsWindow={showSettingsWindow}
           showTabbedInfoWindow={showTabbedInfoWindow}
           splitInfoWindowTab={splitInfoWindowTab}
           standaloneInfoWindowIds={standaloneInfoWindowIds}
           updateControlDockTarget={updateControlDockTarget}
-          updateFloatingWindowOpen={updateFloatingWindowOpen}
           updateFloatingWindowRect={updateFloatingWindowRect}
           updateInfoWindowDragTargets={updateInfoWindowDragTargets}
         />

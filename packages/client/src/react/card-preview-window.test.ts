@@ -312,8 +312,8 @@ describe("card preview window", () => {
       /onMoveOrderedCard=\{onMoveOrderedCard\}/u,
     );
     assert.match(matchApp, /previewHoveredCard/u);
-    assert.match(matchApp, /previewControl=/u);
-    assert.match(matchApp, /CardPreviewButton/u);
+    assert.doesNotMatch(matchApp, /previewControl=/u);
+    assert.doesNotMatch(matchApp, /CardPreviewButton/u);
     assert.match(matchInfoWindows, /CardPreviewWindow/u);
     assert.match(matchInfoWindows, /InfoTabbedWindow/u);
   });
@@ -366,7 +366,7 @@ describe("card preview window", () => {
     assert.doesNotMatch(matchApp, /previewEnabled/u);
   });
 
-  test("closing the preview window closes its normal window state", async () => {
+  test("preview window titlebar minimize docks it instead of closing it", async () => {
     const [matchInfoWindows, toolbarControls] = await Promise.all([
       readFile(join(sourceDirectory, "MatchInfoWindows.tsx"), "utf8"),
       readFile(
@@ -381,7 +381,8 @@ describe("card preview window", () => {
       toolbarControls,
       /updateFloatingWindowOpen\(cardPreviewWindowKey, false\)/u,
     );
-    assert.match(matchInfoWindows, /onClose=\{closeCardPreview\}/u);
+    assert.match(matchInfoWindows, /dockInfoWindowTabs\(\["preview"\]\)/u);
+    assert.doesNotMatch(matchInfoWindows, /onClose=\{closeCardPreview\}/u);
   });
 
   test("preview window uses persisted floating window rectangle wiring", async () => {

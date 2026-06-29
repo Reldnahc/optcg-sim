@@ -344,7 +344,7 @@ describe("settings window", () => {
     );
   });
 
-  test("match app wires the settings icon to the settings window", async () => {
+  test("match app keeps settings as a permanent dockable info window", async () => {
     const [controlRail, matchApp, matchInfoWindows, toolbarControls] =
       await Promise.all([
         readFile(join(sourceDirectory, "ControlRail.tsx"), "utf8"),
@@ -357,8 +357,8 @@ describe("settings window", () => {
       ]);
 
     assert.match(controlRail, /settingsControl/u);
-    assert.match(matchApp, /<SettingsButton/u);
-    assert.match(matchApp, /focusSettingsWindow/u);
+    assert.doesNotMatch(matchApp, /<SettingsButton/u);
+    assert.doesNotMatch(matchApp, /settingsControl=/u);
     assert.match(matchApp, /settingsWindowKey/u);
     assert.match(matchApp, /showSettingsWindow/u);
     assert.match(
@@ -366,6 +366,7 @@ describe("settings window", () => {
       /focusInfoWindow\(\{ tabId: "settings", windowKey: settingsWindowKey \}\)/u,
     );
     assert.match(matchInfoWindows, /<SettingsWindow/u);
+    assert.match(matchInfoWindows, /dockInfoWindowTabs\(\["settings"\]\)/u);
     assert.match(
       matchInfoWindows,
       /completeInfoWindowDrag\("settings", rect\)/u,

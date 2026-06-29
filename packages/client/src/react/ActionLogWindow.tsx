@@ -10,7 +10,7 @@ export interface ActionLogWindowProps {
   initialRect?: WindowRect | undefined;
   zIndex?: number | undefined;
   onToggleMinimized: () => void;
-  onClose: () => void;
+  onClose?: (() => void) | undefined;
   onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;

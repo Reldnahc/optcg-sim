@@ -30,9 +30,11 @@ export { completeHexColorFromDraft } from "./settings-window/settings-controls.j
 export interface SettingsWindowProps {
   className?: string | undefined;
   docked?: boolean | undefined;
+  minimized?: boolean | undefined;
   initialRect?: WindowRect | undefined;
   zIndex?: number | undefined;
-  onClose: () => void;
+  onToggleMinimized?: (() => void) | undefined;
+  onClose?: (() => void) | undefined;
   onActivate?: (() => void) | undefined;
   onRectChange?: ((rect: WindowRect) => void) | undefined;
   onDragMove?: ((rect: WindowRect) => void) | undefined;
@@ -513,8 +515,10 @@ export const SettingsContent = (): React.JSX.Element => {
 export const SettingsWindow = ({
   className,
   docked = false,
+  minimized = false,
   initialRect = defaultSettingsWindowRect,
   zIndex,
+  onToggleMinimized,
   onClose,
   onActivate,
   onRectChange,
@@ -528,7 +532,9 @@ export const SettingsWindow = ({
     minWidth={190}
     minHeight={110}
     docked={docked}
+    minimized={minimized}
     zIndex={zIndex}
+    onToggleMinimized={onToggleMinimized}
     onClose={onClose}
     onActivate={onActivate}
     onRectChange={onRectChange}

@@ -15,6 +15,7 @@ import {
 export interface ControlDockTab {
   id: string;
   title: string;
+  closable?: boolean | undefined;
   renderContent: () => ReactNode;
 }
 
@@ -122,6 +123,7 @@ export const ControlRail = ({
   const activeDockTab =
     dockTabs.find((tab) => tab.id === activeDockTabId) ?? dockTabs[0];
   const hasDockedWindow = activeDockTab !== undefined;
+  const activeDockTabClosable = activeDockTab?.closable !== false;
   const tabDragOutDistance = 32;
 
   return (
@@ -332,17 +334,19 @@ export const ControlRail = ({
                     </button>
                   );
                 })}
-                <button
-                  className="control-dock-window-close"
-                  type="button"
-                  aria-label={`Close ${activeDockTab.title}`}
-                  title={`Close ${activeDockTab.title}`}
-                  onClick={() => {
-                    onDockTabClose?.(activeDockTab.id);
-                  }}
-                >
-                  x
-                </button>
+                {activeDockTabClosable && onDockTabClose !== undefined ? (
+                  <button
+                    className="control-dock-window-close"
+                    type="button"
+                    aria-label={`Close ${activeDockTab.title}`}
+                    title={`Close ${activeDockTab.title}`}
+                    onClick={() => {
+                      onDockTabClose(activeDockTab.id);
+                    }}
+                  >
+                    x
+                  </button>
+                ) : null}
               </div>
               <div className="control-dock-window-body">
                 {activeDockTab.renderContent()}
