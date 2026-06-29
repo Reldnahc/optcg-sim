@@ -33,6 +33,13 @@ describe("runBotProbe", () => {
     assert.ok((visibleActionReport?.explainableScore?.terms.length ?? 0) > 0);
   });
 
+  test("reports quality summary", () => {
+    const report = runBotProbe(defaultBotProbeScenarios);
+
+    assert.equal(report.quality.scenarioCount, defaultBotProbeScenarios.length);
+    assert.equal(report.quality.unexplainedChoiceCount, 0);
+  });
+
   test("fails when a required choice is undefined", () => {
     const report = runBotProbe([probeScenarioWithNoLegalBotChoice()]);
 

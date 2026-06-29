@@ -65,6 +65,11 @@ export interface BotProbeFailure {
 export interface BotProbeReport {
   readonly scenarios: readonly BotProbeScenarioReport[];
   readonly failures: readonly BotProbeFailure[];
+  readonly quality: {
+    readonly scenarioCount: number;
+    readonly explainedChoiceCount: number;
+    readonly unexplainedChoiceCount: number;
+  };
 }
 
 const cardRef = (instanceId: string, cardId: string = "OP01-001"): CardRef => ({
@@ -475,6 +480,10 @@ const isDecisionResponseChoice = (
     ? choice.decisionId === pendingDecision.id
     : visibleActionForChoice(scenario, choice)?.type === "respondToDecision";
 
+const reportHasExplanation = (report: BotProbeScenarioReport): boolean =>
+  report.decisionReason !== undefined ||
+  (report.explainableScore?.terms.length ?? 0) > 0;
+
 const runOneProbeScenario = (
   scenario: BotProbeScenario,
 ): BotProbeScenarioReport => {
@@ -519,7 +528,7 @@ export const evaluateBotProbeFailures = (
         "Bot-owned pending decision did not produce a decision response.",
     });
   }
-  if (report.intent === undefined && report.decisionReason === undefined) {
+  if (!reportHasExplanation(report)) {
     failures.push({
       scenarioId: report.id,
       kind: "stall",
@@ -533,6 +542,7 @@ export const runBotProbe = (
   scenarios: readonly BotProbeScenario[] = defaultBotProbeScenarios,
 ): BotProbeReport => {
   const reports = scenarios.map(runOneProbeScenario);
+  const explainedChoiceCount = reports.filter(reportHasExplanation).length;
   const failures = reports.flatMap((report, index) => {
     const scenario = scenarios[index];
     return scenario === undefined
@@ -543,6 +553,11 @@ export const runBotProbe = (
   return {
     scenarios: reports,
     failures,
+    quality: {
+      scenarioCount: reports.length,
+      explainedChoiceCount,
+      unexplainedChoiceCount: reports.length - explainedChoiceCount,
+    },
   };
 };
 
