@@ -161,4 +161,61 @@ describe("chooseCombatPlanAction", () => {
 
     assert.equal(choice?.action.index, 0);
   });
+
+  test("low opponent counter density increases leader pressure", () => {
+    const actions: readonly DevVisibleAction[] = [
+      {
+        index: 0,
+        type: "declareAttack",
+        label: "Attack leader",
+        attack: {
+          attackerInstanceId: "bot-leader" as InstanceId,
+          targetInstanceId: "opponent-leader" as InstanceId,
+        },
+      },
+    ];
+    const features = combatFixture(actions);
+    const highCounter = chooseCombatPlanAction({
+      actions,
+      features: {
+        ...features,
+        opponentDeckKnowledge: {
+          knownDecklistCardIds: [],
+          remainingUnknownCounterPrior: {
+            unknownCardCount: 10,
+            totalCounterPower: 20_000,
+            counter1000Count: 0,
+            counter2000Count: 10,
+            averageCounterPower: 2_000,
+          },
+          remainingEventCount: 0,
+          remainingBlockerCount: 0,
+          remainingRemovalCount: 0,
+        },
+      },
+      mode: "pressure",
+    });
+    const lowCounter = chooseCombatPlanAction({
+      actions,
+      features: {
+        ...features,
+        opponentDeckKnowledge: {
+          knownDecklistCardIds: [],
+          remainingUnknownCounterPrior: {
+            unknownCardCount: 10,
+            totalCounterPower: 10_000,
+            counter1000Count: 10,
+            counter2000Count: 0,
+            averageCounterPower: 1_000,
+          },
+          remainingEventCount: 0,
+          remainingBlockerCount: 0,
+          remainingRemovalCount: 0,
+        },
+      },
+      mode: "pressure",
+    });
+
+    assert.ok((lowCounter?.score.total ?? 0) > (highCounter?.score.total ?? 0));
+  });
 });

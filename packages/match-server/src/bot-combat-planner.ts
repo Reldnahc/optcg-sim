@@ -28,6 +28,12 @@ const term = (
   reason: string,
 ): BotScoreTerm => ({ key, value, reason });
 
+const estimatedOpponentCounterPowerPerCard = (
+  features: BotFeatures,
+): number =>
+  features.opponentDeckKnowledge?.remainingUnknownCounterPrior
+    .averageCounterPower || 2_000;
+
 const attackTargetScore = ({
   action,
   features,
@@ -72,6 +78,20 @@ const attackTargetScore = ({
     mode === "lethal" ? 120 : mode === "pressure" ? 75 : 35;
   const boardMultiplier =
     mode === "stabilize" || mode === "develop" ? 70 : 35;
+  const counterPrior = estimatedOpponentCounterPowerPerCard(features);
+  const counterDensityPressure =
+    attacksLeader && counterPrior < 1_500
+      ? 90
+      : attacksLeader && counterPrior > 1_800
+        ? -45
+        : 0;
+  const defensivePriorPenalty =
+    attacksLeader &&
+    mode === "lethal" &&
+    ((features.opponentDeckKnowledge?.remainingEventCount ?? 0) > 0 ||
+      (features.opponentDeckKnowledge?.remainingBlockerCount ?? 0) > 0)
+      ? -60
+      : 0;
 
   return score([
     term(
@@ -90,6 +110,16 @@ const attackTargetScore = ({
       "lethal",
       mode === "lethal" && attacksLeader ? 500 : 0,
       "lethal mode prioritizes leader attacks",
+    ),
+    term(
+      "deck-prior",
+      counterDensityPressure,
+      "opponent decklist counter density adjusts leader pressure",
+    ),
+    term(
+      "deck-prior",
+      defensivePriorPenalty,
+      "opponent decklist has possible defensive resources",
     ),
   ]);
 };

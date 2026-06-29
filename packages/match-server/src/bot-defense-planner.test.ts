@@ -169,4 +169,29 @@ describe("chooseCounterCardsForDefense", () => {
 
     assert.deepEqual(choice?.cards, []);
   });
+
+  test("deck priors never cause bot to take lethal", () => {
+    const context = contextWithLeaderAttack({ botLifeCount: 0 });
+    const choice = chooseCounterCardsForDefense({
+      context,
+      features: {
+        ...buildBotFeatures(context.snapshot, botPlayerId),
+        opponentDeckKnowledge: {
+          knownDecklistCardIds: [],
+          remainingUnknownCounterPrior: {
+            unknownCardCount: 10,
+            totalCounterPower: 0,
+            counter1000Count: 0,
+            counter2000Count: 0,
+            averageCounterPower: 0,
+          },
+          remainingEventCount: 0,
+          remainingBlockerCount: 0,
+          remainingRemovalCount: 0,
+        },
+      },
+    });
+
+    assert.ok((choice?.cards.length ?? 0) > 0);
+  });
 });
