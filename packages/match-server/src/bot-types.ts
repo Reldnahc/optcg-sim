@@ -47,6 +47,20 @@ export interface BotExplainableScore {
   readonly terms: readonly BotScoreTerm[];
 }
 
+export interface BotPlanStep {
+  readonly actionIndex: number;
+  readonly actionType: string;
+  readonly label: string;
+  readonly score: BotExplainableScore;
+}
+
+export interface BotTurnPlan {
+  readonly mode: BotStrategicMode;
+  readonly steps: readonly BotPlanStep[];
+  readonly score: BotExplainableScore;
+  readonly summary: string;
+}
+
 export interface BotRejectedCandidate {
   readonly actionIndex: number;
   readonly actionType: string;

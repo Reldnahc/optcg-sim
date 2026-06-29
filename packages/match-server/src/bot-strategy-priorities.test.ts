@@ -23,6 +23,7 @@ const snapshotWithActions = (
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
     readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
+    readonly opponentHandCount?: number;
     readonly opponentLifeCount?: number;
     readonly opponentCharacters?: readonly Partial<PublicCardView>[];
   } = {},
@@ -60,7 +61,7 @@ const snapshotWithActions = (
             life: { count: 5, faceUpCards: [] },
           },
           opponent: {
-            handCount: 0,
+            handCount: cards.opponentHandCount ?? 5,
             leader: {
               instanceId: "opponent-leader",
               cardId: "OP01-002",
@@ -309,7 +310,7 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
-  test("attacks before playing a high-counter card", () => {
+  test("develops before casual leader pressure when lethal is absent", () => {
     const report = chooseBotActionReport({
       snapshot: snapshotWithActions(
         [
@@ -349,14 +350,16 @@ describe("bot strategy priorities", () => {
     if (report === undefined) {
       throw new Error("Expected bot action report.");
     }
-    assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 1 });
+    assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 0 });
     assert.equal(
-      report.score?.reasons.includes("combat:leader-pressure"),
+      report.explainableScore?.terms.some(
+        (term) => term.reason === "persistent board",
+      ),
       true,
     );
   });
 
-  test("attaches DON for combat pressure before making a generic play", () => {
+  test("develops before generic DON pressure", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(
         [
@@ -407,7 +410,7 @@ describe("bot strategy priorities", () => {
       botId,
     );
 
-    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
+    assert.deepEqual(chosen, { type: "submitAction", actionIndex: 0 });
   });
 
   test("uses combat planner explanation for pressure attacks", () => {

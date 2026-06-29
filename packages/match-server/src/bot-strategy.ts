@@ -17,6 +17,7 @@ import {
   type ScoredBotCandidate,
 } from "./bot-score.js";
 import { chooseBotStrategicMode } from "./bot-strategic-mode.js";
+import { chooseTurnPlan } from "./bot-turn-planner.js";
 import { chooseBotTurnIntent, type BotTurnIntent } from "./bot-turn-intent.js";
 import type {
   BotActionChoice,
@@ -264,11 +265,42 @@ const chooseStrategyActionReport = ({
       intent,
     );
   }
+  const modeReport = chooseBotStrategicMode(features);
+  const turnPlan = chooseTurnPlan({
+    actions,
+    features,
+    mode: modeReport.mode,
+  });
+  if (turnPlan !== undefined && turnPlan.score.total > 0) {
+    const firstStep = turnPlan.steps[0];
+    if (firstStep === undefined) {
+      return undefined;
+    }
+    const plannedAction = actions.find(
+      (action) => action.index === firstStep.actionIndex,
+    );
+    return {
+      choice: {
+        type: "submitAction",
+        actionIndex: firstStep.actionIndex,
+        ...(() => {
+          const selectedDonInstanceIds =
+            plannedAction === undefined
+              ? undefined
+              : selectedDonInstanceIdsForAttachChoice(plannedAction, actions);
+          return selectedDonInstanceIds === undefined
+            ? {}
+            : { selectedDonInstanceIds };
+        })(),
+      },
+      explainableScore: turnPlan.score,
+      intent,
+    };
+  }
   const hasOnlyCombatActions =
     actions.length > 0 &&
     actions.every((action) => action.type === "declareAttack");
   if (hasOnlyCombatActions) {
-    const modeReport = chooseBotStrategicMode(features);
     if (modeReport.mode === "pressure" && features.opponent.lifeCount <= 2) {
       const combatPlan = chooseCombatPlanAction({
         actions,
