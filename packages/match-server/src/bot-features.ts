@@ -100,7 +100,7 @@ const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
 
 const isActiveDon = (card: BotVisibleCard): boolean =>
-  card.zone.zone === "costArea" && card.state === "active";
+  card.zone?.zone === "costArea" && card.state === "active";
 
 const hasKeyword = (
   card: BotVisibleCard,

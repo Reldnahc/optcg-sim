@@ -23,6 +23,7 @@ const snapshotWithActions = (
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
     readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
+    readonly opponentLifeCount?: number;
     readonly opponentCharacters?: readonly Partial<PublicCardView>[];
   } = {},
 ): DevMatchSnapshot =>
@@ -70,7 +71,7 @@ const snapshotWithActions = (
               attachedDonIds: [],
               ...cards.opponentLeader,
             },
-            life: { count: 5, faceUpCards: [] },
+            life: { count: cards.opponentLifeCount ?? 5, faceUpCards: [] },
             characters: cards.opponentCharacters ?? [],
             costArea: [],
           },
@@ -435,6 +436,7 @@ describe("bot strategy priorities", () => {
         {
           selfLeader: { currentPower: 9_000 },
           opponentLeader: { currentPower: 5_000 },
+          opponentLifeCount: 1,
           opponentCharacters: [
             {
               instanceId: "small-character" as InstanceId,

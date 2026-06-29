@@ -1,6 +1,8 @@
 import type { PlayerView } from "@optcg/types";
 
 import type { BotDecisionChoice, BotDecisionContext } from "./bot-types.js";
+import { chooseCounterCardsForDefense } from "./bot-defense-planner.js";
+import { buildBotFeatures } from "./bot-features.js";
 import {
   chooseCharacterOverflowDecision,
   isCharacterOverflowDecision,
@@ -45,6 +47,17 @@ export const chooseDefaultBotDecision = ({
   const combatDecision = chooseCombatDecision({ snapshot, botPlayerId });
   if (combatDecision !== undefined) {
     return combatDecision;
+  }
+  const defenseChoice = chooseCounterCardsForDefense({
+    context: { snapshot, botPlayerId },
+    features: buildBotFeatures(snapshot, botPlayerId),
+  });
+  if (defenseChoice !== undefined) {
+    return {
+      type: "respondToDecision",
+      decisionId: decision.id,
+      response: { type: "cards", cards: [...defenseChoice.cards] },
+    };
   }
   const overflowDecision = chooseCharacterOverflowDecision({
     snapshot,

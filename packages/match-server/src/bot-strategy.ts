@@ -269,20 +269,22 @@ const chooseStrategyActionReport = ({
     actions.every((action) => action.type === "declareAttack");
   if (hasOnlyCombatActions) {
     const modeReport = chooseBotStrategicMode(features);
-    const combatPlan = chooseCombatPlanAction({
-      actions,
-      features,
-      mode: modeReport.mode,
-    });
-    if (combatPlan !== undefined && combatPlan.score.total > 0) {
-      return {
-        choice: {
-          type: "submitAction",
-          actionIndex: combatPlan.action.index,
-        },
-        explainableScore: combatPlan.score,
-        intent,
-      };
+    if (modeReport.mode === "pressure" && features.opponent.lifeCount <= 2) {
+      const combatPlan = chooseCombatPlanAction({
+        actions,
+        features,
+        mode: modeReport.mode,
+      });
+      if (combatPlan !== undefined && combatPlan.score.total > 0) {
+        return {
+          choice: {
+            type: "submitAction",
+            actionIndex: combatPlan.action.index,
+          },
+          explainableScore: combatPlan.score,
+          intent,
+        };
+      }
     }
   }
   const chosen = chooseBestScoredCandidate(scored);
