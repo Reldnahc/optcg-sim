@@ -72,8 +72,8 @@ const decisionLooksLikeBattleDecision = (
 export const chooseGenericBotDecision = (
   context: BotDecisionContext,
 ): BotDecisionChoice | undefined => {
-  const decision = context.snapshot.players[context.botPlayerId]?.view
-    .pendingDecision;
+  const decision =
+    context.snapshot.players[context.botPlayerId]?.view.pendingDecision;
   if (decision === undefined || decision.playerId !== context.botPlayerId) {
     return undefined;
   }

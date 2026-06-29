@@ -278,28 +278,25 @@ export const MatchApp = ({
     visibleGlobalActions,
     visualSettings.confirmEndTurn && endTurnConfirming,
   );
-  const {
-    previewHoveredCard,
-    showCardPreview,
-    closeCardPreview,
-  } = createInfoWindowToolbarControls({
-    previewOpen,
-    actionLogOpen,
-    settingsOpen,
-    activeDockedWindowIds,
-    configuredGroupedInfoWindowIds,
-    setPreviewCard,
-    setPreviewOpen,
-    setPreviewMinimized,
-    setActionLogOpen,
-    setActionLogMinimized,
-    setSettingsOpen,
-    setInfoWindowMinimized,
-    setInfoWindowActiveTab,
-    setGroupedInfoWindowIds,
-    setControlDockActiveTabId,
-    updateFloatingWindowOpen,
-  });
+  const { previewHoveredCard, showCardPreview, closeCardPreview } =
+    createInfoWindowToolbarControls({
+      previewOpen,
+      actionLogOpen,
+      settingsOpen,
+      activeDockedWindowIds,
+      configuredGroupedInfoWindowIds,
+      setPreviewCard,
+      setPreviewOpen,
+      setPreviewMinimized,
+      setActionLogOpen,
+      setActionLogMinimized,
+      setSettingsOpen,
+      setInfoWindowMinimized,
+      setInfoWindowActiveTab,
+      setGroupedInfoWindowIds,
+      setControlDockActiveTabId,
+      updateFloatingWindowOpen,
+    });
   const completeDockableWindowDrag = (
     windowKey: string,
     rect: WindowRect,
@@ -434,48 +431,45 @@ export const MatchApp = ({
     };
     dockInfoWindowTabs(windowIds, dockRect);
   };
-  const {
-    controlDockTabs,
-    dockedInfoTabIds,
-    closeDockWindow,
-  } = useControlDockTabs({
-    activeDockedWindowIds,
-    groupedInfoWindowIds,
-    visibleInfoWindowIds,
-    previewCard,
-    showPreviewWindow,
-    showActionLogWindow,
-    showSettingsWindow,
-    actionLogEntries,
-    displayBoard,
-    actionInFlight: client.state.actionInFlight,
-    opponentRevealWindows,
-    controlDockActiveTabId,
-    closeCardPreview,
-    setActionLogOpen,
-    setActionLogMinimized,
-    setSettingsOpen,
-    setInfoWindowActiveTab,
-    setGroupedInfoWindowIds,
-    setControlDockActiveTabId,
-    updateFloatingWindowOpen,
-    clearCollectionModal,
-    updateCollectionWindowOpen,
-    dismissRevealWindow: (revealId) => {
-      updateRevealWindowState((state) => {
-        state.dismissed.add(revealId);
-        state.minimized.delete(revealId);
-        return state;
-      });
-    },
-    requestRollback: (rollbackPointId) => {
-      void client.requestRollback(rollbackPointId);
-    },
-    previewActionLogCard: (card) => {
-      showCardPreview(actionLogCardModel(card));
-    },
-    previewCardModel: previewHoveredCard,
-  });
+  const { controlDockTabs, dockedInfoTabIds, closeDockWindow } =
+    useControlDockTabs({
+      activeDockedWindowIds,
+      groupedInfoWindowIds,
+      visibleInfoWindowIds,
+      previewCard,
+      showPreviewWindow,
+      showActionLogWindow,
+      showSettingsWindow,
+      actionLogEntries,
+      displayBoard,
+      actionInFlight: client.state.actionInFlight,
+      opponentRevealWindows,
+      controlDockActiveTabId,
+      closeCardPreview,
+      setActionLogOpen,
+      setActionLogMinimized,
+      setSettingsOpen,
+      setInfoWindowActiveTab,
+      setGroupedInfoWindowIds,
+      setControlDockActiveTabId,
+      updateFloatingWindowOpen,
+      clearCollectionModal,
+      updateCollectionWindowOpen,
+      dismissRevealWindow: (revealId) => {
+        updateRevealWindowState((state) => {
+          state.dismissed.add(revealId);
+          state.minimized.delete(revealId);
+          return state;
+        });
+      },
+      requestRollback: (rollbackPointId) => {
+        void client.requestRollback(rollbackPointId);
+      },
+      previewActionLogCard: (card) => {
+        showCardPreview(actionLogCardModel(card));
+      },
+      previewCardModel: previewHoveredCard,
+    });
   const {
     dragOutDockGroup,
     dragOutDockWindow,

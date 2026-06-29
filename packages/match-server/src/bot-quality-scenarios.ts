@@ -72,7 +72,8 @@ const baseDecision = <TType extends BotPendingDecision["type"]>(
 > =>
   ({
     id: id as DecisionId,
-    spotlightPendingId: `spotlight:pending:quality:${id}` as PublicPendingDecisionId,
+    spotlightPendingId:
+      `spotlight:pending:quality:${id}` as PublicPendingDecisionId,
     type,
     playerId: botPlayerId,
     prompt: "Choose.",

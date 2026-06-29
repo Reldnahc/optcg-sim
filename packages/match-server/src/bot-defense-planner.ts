@@ -35,7 +35,10 @@ const battlePowers = ({
     : { attackerPower, targetPower };
 };
 
-const isLeaderTarget = ({ snapshot, botPlayerId }: BotDecisionContext): boolean => {
+const isLeaderTarget = ({
+  snapshot,
+  botPlayerId,
+}: BotDecisionContext): boolean => {
   const view = snapshot.players[botPlayerId]?.view;
   return (
     view?.battle?.currentTarget.instanceId !== undefined &&
@@ -74,8 +77,8 @@ const currentBattleTargetValue = (context: BotDecisionContext): number => {
 const botDeckCounterDensityIsHigh = (features: BotFeatures): boolean =>
   features.opponentDeckKnowledge?.remainingUnknownCounterPrior
     .averageCounterPower !== undefined &&
-  features.opponentDeckKnowledge.remainingUnknownCounterPrior.averageCounterPower >=
-    1_700;
+  features.opponentDeckKnowledge.remainingUnknownCounterPrior
+    .averageCounterPower >= 1_700;
 
 export const chooseCounterCardsForDefense = ({
   context,
@@ -116,8 +119,11 @@ export const chooseCounterCardsForDefense = ({
     .map((choice) => ({
       card: choice.card,
       counter:
-        findVisibleCard(context.snapshot, context.botPlayerId, choice.card.instanceId)
-          ?.printedCounter ?? 0,
+        findVisibleCard(
+          context.snapshot,
+          context.botPlayerId,
+          choice.card.instanceId,
+        )?.printedCounter ?? 0,
     }))
     .filter((choice) => choice.counter > 0)
     .sort((left, right) => left.counter - right.counter);

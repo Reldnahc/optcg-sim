@@ -116,8 +116,7 @@ const isActiveDon = (card: BotVisibleCard): boolean =>
 const hasKeyword = (
   card: BotVisibleCard,
   keyword: NonNullable<BotVisibleCard["keywords"]>[number],
-): boolean =>
-  card.keywords?.includes(keyword) === true;
+): boolean => card.keywords?.includes(keyword) === true;
 
 const partialPlayerView = (
   snapshot: DevMatchSnapshot,

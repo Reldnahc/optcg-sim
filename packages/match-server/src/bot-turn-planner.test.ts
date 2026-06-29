@@ -13,7 +13,10 @@ import {
   type BotVisibleActionFacts,
 } from "./bot-features.js";
 import { chooseTurnPlan } from "./bot-turn-planner.js";
-import type { DevMatchSnapshot, DevVisibleAction } from "./dev-snapshot-types.js";
+import type {
+  DevMatchSnapshot,
+  DevVisibleAction,
+} from "./dev-snapshot-types.js";
 
 const actionFacts = (
   actionIndex: number,

@@ -43,10 +43,7 @@ export interface BotScoreInput {
   readonly cardScores?: readonly number[] | undefined;
 }
 
-type BotScoreBreakdownTerm = keyof Omit<
-  BotScoreBreakdown,
-  "total" | "reasons"
->;
+type BotScoreBreakdownTerm = keyof Omit<BotScoreBreakdown, "total" | "reasons">;
 
 const emptyBreakdown = (): BotScoreBreakdown => ({
   total: 0,

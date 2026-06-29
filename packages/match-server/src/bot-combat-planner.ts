@@ -22,15 +22,13 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 
-const estimatedOpponentCounterPowerPerCard = (
-  features: BotFeatures,
-): number =>
+const estimatedOpponentCounterPowerPerCard = (features: BotFeatures): number =>
   features.opponentDeckKnowledge?.remainingUnknownCounterPrior
     .averageCounterPower || 2_000;
 
@@ -76,8 +74,7 @@ const attackTargetScore = ({
   const targetValue = visibleCardValue(target, { includeCounter: true });
   const pressureMultiplier =
     mode === "lethal" ? 120 : mode === "pressure" ? 75 : 35;
-  const boardMultiplier =
-    mode === "stabilize" || mode === "develop" ? 70 : 35;
+  const boardMultiplier = mode === "stabilize" || mode === "develop" ? 70 : 35;
   const counterPrior = estimatedOpponentCounterPowerPerCard(features);
   const counterDensityPressure =
     attacksLeader && counterPrior < 1_500
@@ -147,8 +144,6 @@ export const scoreCombatPlanActions = ({
   actions
     .flatMap((action) => {
       const actionScore = attackTargetScore({ action, features, mode });
-      return actionScore === undefined
-        ? []
-        : [{ action, score: actionScore }];
+      return actionScore === undefined ? [] : [{ action, score: actionScore }];
     })
     .sort((left, right) => right.score.total - left.score.total);

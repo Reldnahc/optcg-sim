@@ -85,12 +85,10 @@ describe("reveal window state store", () => {
       new Set(["action-log", "collection:Player trash"]),
     );
 
-    assert.deepEqual([...flowOne.loadOpenWindowIds()], [
-      "card-preview",
-      "action-log",
-      "settings",
-      "collection:Player trash",
-    ]);
+    assert.deepEqual(
+      [...flowOne.loadOpenWindowIds()],
+      ["card-preview", "action-log", "settings", "collection:Player trash"],
+    );
     assert.deepEqual(
       [...flowTwo.loadOpenWindowIds()],
       ["card-preview", "action-log", "settings"],

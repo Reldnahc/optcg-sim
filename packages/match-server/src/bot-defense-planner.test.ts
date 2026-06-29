@@ -93,11 +93,7 @@ const contextWithLeaderAttack = ({
             costArea: [],
           },
           battle: {
-            attacker: cardRef(
-              "opponent-leader",
-              "OP01-001",
-              opponentPlayerId,
-            ),
+            attacker: cardRef("opponent-leader", "OP01-001", opponentPlayerId),
             originalTarget: cardRef("bot-leader", "OP09-001", botPlayerId),
             currentTarget: cardRef("bot-leader", "OP09-001", botPlayerId),
             step: "counter",

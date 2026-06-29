@@ -46,8 +46,7 @@ const selectCardsDecision = (
   causedBy: BotPendingDecision["causedBy"],
 ): Extract<BotPendingDecision, { type: "selectCards" }> => ({
   id: `decision:${prompt}` as DecisionId,
-  spotlightPendingId:
-    `spotlight:pending:${prompt}` as PublicPendingDecisionId,
+  spotlightPendingId: `spotlight:pending:${prompt}` as PublicPendingDecisionId,
   type: "selectCards",
   playerId: botPlayerId,
   prompt,

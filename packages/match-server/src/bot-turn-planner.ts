@@ -23,11 +23,11 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 
 const playableDevelopmentScore = (
   action: DevVisibleAction,
@@ -93,7 +93,10 @@ const chooseDonReservation = ({
   );
   return {
     reservedForPlay,
-    freeForPressure: Math.max(0, features.self.activeDonCount - reservedForPlay),
+    freeForPressure: Math.max(
+      0,
+      features.self.activeDonCount - reservedForPlay,
+    ),
     reason:
       reservedForPlay > 0
         ? "reserve DON for board development"
@@ -178,9 +181,7 @@ const actionConsumesAttacker = (
 const actionConsumesDon = (action: DevVisibleAction): number =>
   action.type === "attachDon" ? 1 : 0;
 
-const sequenceIsCoherent = (
-  actions: readonly DevVisibleAction[],
-): boolean => {
+const sequenceIsCoherent = (actions: readonly DevVisibleAction[]): boolean => {
   const consumedAttackers = new Set<string>();
   let consumedDon = 0;
   for (const action of actions) {
@@ -242,7 +243,13 @@ const sequenceScore = (
   mode: BotStrategicMode,
 ): BotExplainableScore => {
   const stepTerms = sequence.flatMap((step) => step.score.terms);
-  return score([...stepTerms, ...orderingBonus(sequence.map((step) => step.action), mode)]);
+  return score([
+    ...stepTerms,
+    ...orderingBonus(
+      sequence.map((step) => step.action),
+      mode,
+    ),
+  ]);
 };
 
 const appendCoherentSequences = ({
@@ -263,9 +270,7 @@ const appendCoherentSequences = ({
     return;
   }
   for (const candidate of allActions) {
-    if (
-      current.some((step) => step.action.index === candidate.action.index)
-    ) {
+    if (current.some((step) => step.action.index === candidate.action.index)) {
       continue;
     }
     const next = [...current, candidate];
@@ -287,10 +292,7 @@ export const chooseTurnPlan = ({
   readonly features: BotFeatures;
   readonly mode: BotStrategicMode;
   readonly config?: BotPlanningConfig | undefined;
-  readonly actionScoreAdjustments?: ReadonlyMap<
-    number,
-    BotExplainableScore
-  >;
+  readonly actionScoreAdjustments?: ReadonlyMap<number, BotExplainableScore>;
 }): BotTurnPlan | undefined => {
   const reservation = chooseDonReservation({ actions, features, mode });
   const combatScores = new Map(

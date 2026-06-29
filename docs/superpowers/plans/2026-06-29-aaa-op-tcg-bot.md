@@ -227,30 +227,30 @@ The appendix below intentionally captures bot-relevant complete behavior in norm
 
 ### Leader
 
-| Count | Card ID | Name | Bot-relevant text/role |
-| --- | --- | --- | --- |
-| 1 | `OP09-001` | Shanks | 5 life, 5000 power, Red-Haired Pirates leader. Once per turn on opponent attack, can give up to one opponent leader/character -1000 power for the turn. Defensive battle-math tool. |
+| Count | Card ID    | Name   | Bot-relevant text/role                                                                                                                                                              |
+| ----- | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `OP09-001` | Shanks | 5 life, 5000 power, Red-Haired Pirates leader. Once per turn on opponent attack, can give up to one opponent leader/character -1000 power for the turn. Defensive battle-math tool. |
 
 ### Main Deck
 
-| Count | Card ID | Name | Stats | Bot-relevant text/role |
-| --- | --- | --- | --- | --- |
-| 2 | `EB04-007` | Roronoa Zoro | 7 cost, 9000 power | On play gives leader +2000 through opponent's next End Phase. Once per turn can gain Rush: Character for the turn if opponent has an 8000+ power character. Stabilizer and threat answer. |
-| 2 | `OP06-007` | Shanks | 10 cost, 12000 power | On play K.O.s up to one opponent character with 10000 power or less. Highest-value OP16-012 payoff when removal is live. |
-| 4 | `OP09-002` | Uta | 1 cost, 2000 power, 1000 counter | On play looks at top 5, reveals one Red-Haired Pirates card, adds it to hand, bottoms rest. Primary searcher/setup card. |
-| 4 | `OP09-004` | Shanks | 10 cost, 12000 power | Gives all opponent characters -1000 power and has Rush. Premier OP16-012 payoff for pressure and power math. |
-| 2 | `OP09-009` | Benn.Beckman | 7 cost, 7000 power, 1000 counter | On play trashes up to one opponent character with 6000 power or less. Removal body. |
-| 4 | `OP09-011` | Hongo | 3 cost, 3000 power, 2000 counter | Activate Main by resting this character, if leader is Red-Haired Pirates, give up to one opponent character -2000 power for the turn. High counter unless reduction matters. |
-| 2 | `OP09-014` | Limejuice | 3 cost, 3000 power, 2000 counter | On play prevents one 4000-or-less power blocker from activating this turn. High counter and situational blocker suppression. |
-| 4 | `OP09-020` | Come On!! We'll Fight You!! | 1 cost event | Main searches top 5 for a Red-Haired Pirates card other than itself, adds it, bottoms rest. Trigger draws 1. Search event. |
-| 2 | `OP10-011` | Tony Tony.Chopper | 4 cost, 4000 power, 2000 counter | Blocker. On opponent turn gains +2000 power. Defensive body; high counter if not needed as blocker. |
-| 4 | `OP12-008` | Shanks | 4 cost, 6000 power | Blocker. On opponent attack once per turn may trash one hand card to give up to one opponent leader/character -2000 for the turn. Defensive OP16-012 payoff and hand-cost reducer. |
-| 2 | `OP13-007` | Ace & Sabo & Luffy | 1 cost, 1000 power, 2000 counter | Activate Main can attach one active DON to leader/character and trash itself to give one opponent character -3000 for the turn. High counter or power-reduction setup. |
-| 2 | `PRB02-001` | Koby | 4 cost, 5000 power, 1000 counter | Opponent-turn Navy buff is irrelevant for this deck. When attacking, K.O.s an opponent character with 3000 base power or less, then draws if bot has 6 or fewer cards in hand. Attack-trigger value body. |
-| 4 | `PRB02-002` | Trafalgar Law | 6 cost, 7000 power, 1000 counter | Once per turn can avoid opponent effect removal by giving itself -2000 for the turn. When attacking gives one opponent character -2000 for the turn. Persistent value attacker and reduction engine. |
-| 4 | `ST23-002` | Shanks | 9 cost, 10000 power | In hand costs 3 less if opponent has an 8000+ base power character. On play, if leader is Red-Haired Pirates or Uta, leader gains +2000 through opponent's next End Phase. Payoff/defense buff body. |
-| 4 | `OP16-012` | Benn.Beckman | 5 cost, 6000 power, 1000 counter | Blocker. On play may rest one DON; if leader is Red-Haired Pirates and bot has 10 DON on field, play up to one Shanks from hand. Core cheat enabler. |
-| 4 | `OP16-018` | Rockstar | 1 cost, 2000 power, 2000 counter | Once per turn, if a Red-Haired Pirates character would be K.O.'d, may trash a 6000+ power character from hand instead. Protection piece and high counter. |
+| Count | Card ID     | Name                        | Stats                            | Bot-relevant text/role                                                                                                                                                                                    |
+| ----- | ----------- | --------------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2     | `EB04-007`  | Roronoa Zoro                | 7 cost, 9000 power               | On play gives leader +2000 through opponent's next End Phase. Once per turn can gain Rush: Character for the turn if opponent has an 8000+ power character. Stabilizer and threat answer.                 |
+| 2     | `OP06-007`  | Shanks                      | 10 cost, 12000 power             | On play K.O.s up to one opponent character with 10000 power or less. Highest-value OP16-012 payoff when removal is live.                                                                                  |
+| 4     | `OP09-002`  | Uta                         | 1 cost, 2000 power, 1000 counter | On play looks at top 5, reveals one Red-Haired Pirates card, adds it to hand, bottoms rest. Primary searcher/setup card.                                                                                  |
+| 4     | `OP09-004`  | Shanks                      | 10 cost, 12000 power             | Gives all opponent characters -1000 power and has Rush. Premier OP16-012 payoff for pressure and power math.                                                                                              |
+| 2     | `OP09-009`  | Benn.Beckman                | 7 cost, 7000 power, 1000 counter | On play trashes up to one opponent character with 6000 power or less. Removal body.                                                                                                                       |
+| 4     | `OP09-011`  | Hongo                       | 3 cost, 3000 power, 2000 counter | Activate Main by resting this character, if leader is Red-Haired Pirates, give up to one opponent character -2000 power for the turn. High counter unless reduction matters.                              |
+| 2     | `OP09-014`  | Limejuice                   | 3 cost, 3000 power, 2000 counter | On play prevents one 4000-or-less power blocker from activating this turn. High counter and situational blocker suppression.                                                                              |
+| 4     | `OP09-020`  | Come On!! We'll Fight You!! | 1 cost event                     | Main searches top 5 for a Red-Haired Pirates card other than itself, adds it, bottoms rest. Trigger draws 1. Search event.                                                                                |
+| 2     | `OP10-011`  | Tony Tony.Chopper           | 4 cost, 4000 power, 2000 counter | Blocker. On opponent turn gains +2000 power. Defensive body; high counter if not needed as blocker.                                                                                                       |
+| 4     | `OP12-008`  | Shanks                      | 4 cost, 6000 power               | Blocker. On opponent attack once per turn may trash one hand card to give up to one opponent leader/character -2000 for the turn. Defensive OP16-012 payoff and hand-cost reducer.                        |
+| 2     | `OP13-007`  | Ace & Sabo & Luffy          | 1 cost, 1000 power, 2000 counter | Activate Main can attach one active DON to leader/character and trash itself to give one opponent character -3000 for the turn. High counter or power-reduction setup.                                    |
+| 2     | `PRB02-001` | Koby                        | 4 cost, 5000 power, 1000 counter | Opponent-turn Navy buff is irrelevant for this deck. When attacking, K.O.s an opponent character with 3000 base power or less, then draws if bot has 6 or fewer cards in hand. Attack-trigger value body. |
+| 4     | `PRB02-002` | Trafalgar Law               | 6 cost, 7000 power, 1000 counter | Once per turn can avoid opponent effect removal by giving itself -2000 for the turn. When attacking gives one opponent character -2000 for the turn. Persistent value attacker and reduction engine.      |
+| 4     | `ST23-002`  | Shanks                      | 9 cost, 10000 power              | In hand costs 3 less if opponent has an 8000+ base power character. On play, if leader is Red-Haired Pirates or Uta, leader gains +2000 through opponent's next End Phase. Payoff/defense buff body.      |
+| 4     | `OP16-012`  | Benn.Beckman                | 5 cost, 6000 power, 1000 counter | Blocker. On play may rest one DON; if leader is Red-Haired Pirates and bot has 10 DON on field, play up to one Shanks from hand. Core cheat enabler.                                                      |
+| 4     | `OP16-018`  | Rockstar                    | 1 cost, 2000 power, 2000 counter | Once per turn, if a Red-Haired Pirates character would be K.O.'d, may trash a 6000+ power character from hand instead. Protection piece and high counter.                                                 |
 
 ### Deck Counts And Ratios
 
@@ -1082,11 +1082,11 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 
 export const evaluateVisibleBoardState = ({
   features,
@@ -1100,7 +1100,11 @@ export const evaluateVisibleBoardState = ({
     features.self.characterCount - features.opponent.characterCount;
   const handDelta = features.self.handCount - features.opponent.handCount;
   const defenseRisk =
-    features.self.lifeCount <= 1 ? -300 : features.self.lifeCount === 2 ? -120 : 0;
+    features.self.lifeCount <= 1
+      ? -300
+      : features.self.lifeCount === 2
+        ? -120
+        : 0;
   const modePressure =
     mode === "pressure" || mode === "lethal"
       ? (5 - features.opponent.lifeCount) * 45
@@ -1260,11 +1264,11 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 ```
 
 - [x] **Step 2: Score attack actions by mode**
@@ -1303,7 +1307,8 @@ const attackTargetScore = ({
   if (cardsToStop === undefined) {
     return undefined;
   }
-  const opponent = features.snapshot.players[features.botPlayerId]?.view.opponent;
+  const opponent =
+    features.snapshot.players[features.botPlayerId]?.view.opponent;
   const attacksLeader =
     opponent?.leader.instanceId === action.attack.targetInstanceId;
   const attacksCharacter =
@@ -1313,8 +1318,7 @@ const attackTargetScore = ({
   const targetValue = visibleCardValue(target, { includeCounter: true });
   const pressureMultiplier =
     mode === "lethal" ? 120 : mode === "pressure" ? 75 : 35;
-  const boardMultiplier =
-    mode === "stabilize" || mode === "develop" ? 70 : 35;
+  const boardMultiplier = mode === "stabilize" || mode === "develop" ? 70 : 35;
 
   return score([
     term(
@@ -1324,7 +1328,9 @@ const attackTargetScore = ({
     ),
     term(
       "board-removal",
-      attacksCharacter ? Math.min(260, targetValue / 45) * boardMultiplier / 70 : 0,
+      attacksCharacter
+        ? (Math.min(260, targetValue / 45) * boardMultiplier) / 70
+        : 0,
       "attack valuable rested character",
     ),
     term(
@@ -1347,9 +1353,7 @@ export const chooseCombatPlanAction = ({
   actions
     .flatMap((action) => {
       const actionScore = attackTargetScore({ action, features, mode });
-      return actionScore === undefined
-        ? []
-        : [{ action, score: actionScore }];
+      return actionScore === undefined ? [] : [{ action, score: actionScore }];
     })
     .sort((left, right) => right.score.total - left.score.total)[0];
 ```
@@ -1496,7 +1500,9 @@ export interface BotDefenseChoice {
 const battlePowers = ({
   snapshot,
   botPlayerId,
-}: BotDecisionContext): { readonly attackerPower: number; readonly targetPower: number } | undefined => {
+}: BotDecisionContext):
+  | { readonly attackerPower: number; readonly targetPower: number }
+  | undefined => {
   const battle = snapshot.players[botPlayerId]?.view.battle;
   if (battle === undefined) {
     return undefined;
@@ -1512,7 +1518,10 @@ const battlePowers = ({
     : { attackerPower, targetPower };
 };
 
-const isLeaderTarget = ({ snapshot, botPlayerId }: BotDecisionContext): boolean => {
+const isLeaderTarget = ({
+  snapshot,
+  botPlayerId,
+}: BotDecisionContext): boolean => {
   const view = snapshot.players[botPlayerId]?.view;
   return (
     view?.battle?.currentTarget.instanceId !== undefined &&
@@ -1578,8 +1587,11 @@ export const chooseCounterCardsForDefense = ({
     .map((choice) => ({
       card: choice.card,
       counter:
-        findVisibleCard(context.snapshot, context.botPlayerId, choice.card.instanceId)
-          ?.printedCounter ?? 0,
+        findVisibleCard(
+          context.snapshot,
+          context.botPlayerId,
+          choice.card.instanceId,
+        )?.printedCounter ?? 0,
     }))
     .filter((choice) => choice.counter > 0)
     .sort((left, right) => left.counter - right.counter);
@@ -1692,11 +1704,11 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 
 const playableDevelopmentScore = (
   action: DevVisibleAction,
@@ -1711,7 +1723,9 @@ const playableDevelopmentScore = (
   ]);
 };
 
-const effectScore = (action: DevVisibleAction): BotExplainableScore | undefined =>
+const effectScore = (
+  action: DevVisibleAction,
+): BotExplainableScore | undefined =>
   action.type === "activateEffect"
     ? score([term("effect", 180, "use available effect")])
     : undefined;
@@ -1730,9 +1744,7 @@ export const chooseTurnPlan = ({
     ...actions.flatMap((action) => {
       const actionScore =
         effectScore(action) ?? playableDevelopmentScore(action, mode);
-      return actionScore === undefined
-        ? []
-        : [{ action, score: actionScore }];
+      return actionScore === undefined ? [] : [{ action, score: actionScore }];
     }),
     ...(combat === undefined ? [] : [combat]),
   ].sort((left, right) => right.score.total - left.score.total);
@@ -1800,10 +1812,7 @@ test("develop mode chooses playable body over low-value DON attachment", () => {
 });
 
 test("pressure mode can choose combat over development", () => {
-  const actions = [
-    playCardAction(0, "body-in-hand"),
-    leaderAttackAction(1),
-  ];
+  const actions = [playCardAction(0, "body-in-hand"), leaderAttackAction(1)];
   const plan = chooseTurnPlan({
     actions,
     features: pressureFeaturesForActions(actions),
@@ -1911,10 +1920,16 @@ const chooseDonReservation = ({
     0,
     ...actions.map((action) => actionPrintedCost(action, features)),
   );
-  const reservedForPlay = Math.min(bestPlayableCost, features.self.activeDonCount);
+  const reservedForPlay = Math.min(
+    bestPlayableCost,
+    features.self.activeDonCount,
+  );
   return {
     reservedForPlay,
-    freeForPressure: Math.max(0, features.self.activeDonCount - reservedForPlay),
+    freeForPressure: Math.max(
+      0,
+      features.self.activeDonCount - reservedForPlay,
+    ),
     reason:
       reservedForPlay > 0
         ? "reserve DON for board development"
@@ -2082,8 +2097,8 @@ const decisionLooksLikePayment = (decision: BotPendingDecision): boolean =>
 export const chooseGenericBotDecision = (
   context: BotDecisionContext,
 ): BotDecisionChoice | undefined => {
-  const decision = context.snapshot.players[context.botPlayerId]?.view
-    .pendingDecision;
+  const decision =
+    context.snapshot.players[context.botPlayerId]?.view.pendingDecision;
   if (decision === undefined || decision.playerId !== context.botPlayerId) {
     return undefined;
   }
@@ -2125,19 +2140,13 @@ Required tests:
 test("selects high-value card for generic keep/search-like selection", () => {
   const choice = chooseGenericBotDecision(searchLikeSelectionContext());
 
-  assert.deepEqual(
-    selectedInstanceIds(choice),
-    ["high-value-card"],
-  );
+  assert.deepEqual(selectedInstanceIds(choice), ["high-value-card"]);
 });
 
 test("selects low-value card for generic payment-like selection", () => {
   const choice = chooseGenericBotDecision(paymentLikeSelectionContext());
 
-  assert.deepEqual(
-    selectedInstanceIds(choice),
-    ["low-value-card"],
-  );
+  assert.deepEqual(selectedInstanceIds(choice), ["low-value-card"]);
 });
 ```
 
@@ -2388,7 +2397,9 @@ export const redShanksCardSpecs: readonly RedShanksCardSpec[] = [
     name: "Benn.Beckman",
     count: 2,
     roles: ["attacker", "removal"],
-    profileNotes: ["Removal body for opponent characters at 6000 power or less."],
+    profileNotes: [
+      "Removal body for opponent characters at 6000 power or less.",
+    ],
   },
   {
     cardId: "OP09-011",
@@ -2413,7 +2424,9 @@ export const redShanksCardSpecs: readonly RedShanksCardSpec[] = [
     name: "Come On!! We'll Fight You!!",
     count: 4,
     roles: ["searcher"],
-    profileNotes: ["Top-five Red-Haired Pirates search event; trigger draws one."],
+    profileNotes: [
+      "Top-five Red-Haired Pirates search event; trigger draws one.",
+    ],
   },
   {
     cardId: "OP10-011",
@@ -2516,9 +2529,7 @@ describe("red Shanks card specs", () => {
       String(deck.decoded.leader.cardId),
       ...deck.decoded.main.map((entry) => String(entry.cardId)),
     ].sort();
-    const specCardIds = redShanksCardSpecs
-      .map((spec) => spec.cardId)
-      .sort();
+    const specCardIds = redShanksCardSpecs.map((spec) => spec.cardId).sort();
 
     assert.deepEqual(specCardIds, deckCardIds);
   });
@@ -2528,7 +2539,9 @@ describe("red Shanks card specs", () => {
       redShanksCardSpecs.map((spec) => [spec.cardId, spec]),
     );
 
-    for (const [cardId, roles] of Object.entries(redShanksProfileData.cardRoles)) {
+    for (const [cardId, roles] of Object.entries(
+      redShanksProfileData.cardRoles,
+    )) {
       const spec = specsById.get(cardId);
       assert.notEqual(spec, undefined, cardId);
       for (const role of roles ?? []) {
@@ -2687,15 +2700,20 @@ describe("bot quality scenarios", () => {
     const report = runBotProbe(scenarios);
 
     for (const scenarioReport of report.scenarios) {
-      const expectedType = expectedActionTypeByScenarioId.get(scenarioReport.id);
+      const expectedType = expectedActionTypeByScenarioId.get(
+        scenarioReport.id,
+      );
       if (expectedType === undefined) {
         continue;
       }
-      const scenario = scenarios.find((candidate) => candidate.id === scenarioReport.id);
+      const scenario = scenarios.find(
+        (candidate) => candidate.id === scenarioReport.id,
+      );
       const action =
         scenarioReport.choice?.type === "submitAction"
           ? scenario?.snapshot.players[scenario.botPlayerId]?.actions.find(
-              (candidate) => candidate.index === scenarioReport.choice?.actionIndex,
+              (candidate) =>
+                candidate.index === scenarioReport.choice?.actionIndex,
             )
           : undefined;
 
@@ -2943,7 +2961,10 @@ describe("buildOpponentDeckKnowledge", () => {
     assert.equal(knowledge.remainingUnknownCounterPrior.unknownCardCount, 8);
     assert.equal(knowledge.remainingUnknownCounterPrior.counter2000Count, 4);
     assert.equal(knowledge.remainingUnknownCounterPrior.counter1000Count, 4);
-    assert.equal(knowledge.remainingUnknownCounterPrior.averageCounterPower, 1_500);
+    assert.equal(
+      knowledge.remainingUnknownCounterPrior.averageCounterPower,
+      1_500,
+    );
   });
 
   test("subtracts public cards from remaining priors", () => {
@@ -2957,7 +2978,10 @@ describe("buildOpponentDeckKnowledge", () => {
 
     assert.equal(knowledge.remainingUnknownCounterPrior.unknownCardCount, 6);
     assert.equal(knowledge.remainingUnknownCounterPrior.counter2000Count, 2);
-    assert.equal(knowledge.remainingUnknownCounterPrior.averageCounterPower, 1_333.3333333333333);
+    assert.equal(
+      knowledge.remainingUnknownCounterPrior.averageCounterPower,
+      1_333.3333333333333,
+    );
   });
 });
 ```
@@ -2993,9 +3017,7 @@ git commit -m "feat: add bot opponent decklist priors"
 In `packages/match-server/src/bot-combat-planner.ts`, add:
 
 ```ts
-const estimatedOpponentCounterPowerPerCard = (
-  features: BotFeatures,
-): number =>
+const estimatedOpponentCounterPowerPerCard = (features: BotFeatures): number =>
   features.opponentDeckKnowledge?.remainingUnknownCounterPrior
     .averageCounterPower || 2_000;
 ```
@@ -3005,7 +3027,11 @@ When scoring leader attacks, add a term:
 ```ts
 const counterPrior = estimatedOpponentCounterPowerPerCard(features);
 const counterDensityPressure =
-  attacksLeader && counterPrior < 1_500 ? 90 : attacksLeader && counterPrior > 1_800 ? -45 : 0;
+  attacksLeader && counterPrior < 1_500
+    ? 90
+    : attacksLeader && counterPrior > 1_800
+      ? -45
+      : 0;
 ```
 
 Include:
@@ -3052,8 +3078,8 @@ In `packages/match-server/src/bot-defense-planner.ts`, add:
 const botDeckCounterDensityIsHigh = (features: BotFeatures): boolean =>
   features.opponentDeckKnowledge?.remainingUnknownCounterPrior
     .averageCounterPower !== undefined &&
-  features.opponentDeckKnowledge.remainingUnknownCounterPrior.averageCounterPower >=
-    1_700;
+  features.opponentDeckKnowledge.remainingUnknownCounterPrior
+    .averageCounterPower >= 1_700;
 ```
 
 Use this only for marginal non-lethal defense. Do not use it to skip lethal defense.
@@ -3228,9 +3254,7 @@ test("bot report includes deck prior term when opponent deck knowledge is suppli
   });
 
   assert.equal(
-    report?.explainableScore?.terms.some(
-      (term) => term.key === "deck-prior",
-    ),
+    report?.explainableScore?.terms.some((term) => term.key === "deck-prior"),
     true,
   );
 });
@@ -3283,7 +3307,9 @@ Because the engine does not currently expose a cheap "apply legal action to clon
 Add:
 
 ```ts
-const actionConsumesAttacker = (action: DevVisibleAction): string | undefined =>
+const actionConsumesAttacker = (
+  action: DevVisibleAction,
+): string | undefined =>
   action.type === "declareAttack" && action.attack !== undefined
     ? String(action.attack.attackerInstanceId)
     : undefined;
@@ -3291,9 +3317,7 @@ const actionConsumesAttacker = (action: DevVisibleAction): string | undefined =>
 const actionConsumesDon = (action: DevVisibleAction): number =>
   action.type === "attachDon" ? 1 : 0;
 
-const sequenceIsCoherent = (
-  actions: readonly DevVisibleAction[],
-): boolean => {
+const sequenceIsCoherent = (actions: readonly DevVisibleAction[]): boolean => {
   const consumedAttackers = new Set<string>();
   let consumedDon = 0;
   for (const action of actions) {
@@ -3329,7 +3353,9 @@ const orderingBonus = (
   const firstAttackIndex = sequence.findIndex(
     (action) => action.type === "declareAttack",
   );
-  const firstPlayIndex = sequence.findIndex((action) => action.type === "playCard");
+  const firstPlayIndex = sequence.findIndex(
+    (action) => action.type === "playCard",
+  );
   return [
     {
       key: "ordering",
@@ -3363,10 +3389,7 @@ Add to `bot-turn-planner.test.ts`:
 
 ```ts
 test("pressure mode prefers attack-before-play sequence", () => {
-  const actions = [
-    playCardAction(0, "body"),
-    leaderAttackAction(1),
-  ];
+  const actions = [playCardAction(0, "body"), leaderAttackAction(1)];
   const plan = chooseTurnPlan({
     actions,
     features: pressureFeaturesForActions(actions),
@@ -3381,10 +3404,7 @@ test("pressure mode prefers attack-before-play sequence", () => {
 });
 
 test("develop mode prefers play-before-attack when lethal is absent", () => {
-  const actions = [
-    playCardAction(0, "body"),
-    leaderAttackAction(1),
-  ];
+  const actions = [playCardAction(0, "body"), leaderAttackAction(1)];
   const plan = chooseTurnPlan({
     actions,
     features: featuresForActions(actions),
@@ -3632,7 +3652,10 @@ Add:
 export const summarizeBotSelfPlayMetrics = (
   turns: readonly BotSelfPlayTurnMetric[],
 ): BotSelfPlayReport => {
-  const actionCount = turns.reduce((total, turn) => total + turn.actionCount, 0);
+  const actionCount = turns.reduce(
+    (total, turn) => total + turn.actionCount,
+    0,
+  );
   const unexplainedChoiceCount = turns.reduce(
     (total, turn) => total + turn.unexplainedChoiceCount,
     0,

@@ -58,7 +58,9 @@ export const redShanksCardSpecs: readonly RedShanksCardSpec[] = [
     name: "Benn.Beckman",
     count: 2,
     roles: ["attacker", "removal"],
-    profileNotes: ["Removal body for opponent characters at 6000 power or less."],
+    profileNotes: [
+      "Removal body for opponent characters at 6000 power or less.",
+    ],
   },
   {
     cardId: "OP09-011",
@@ -83,7 +85,9 @@ export const redShanksCardSpecs: readonly RedShanksCardSpec[] = [
     name: "Come On!! We'll Fight You!!",
     count: 4,
     roles: ["searcher"],
-    profileNotes: ["Top-five Red-Haired Pirates search event; trigger draws one."],
+    profileNotes: [
+      "Top-five Red-Haired Pirates search event; trigger draws one.",
+    ],
   },
   {
     cardId: "OP10-011",

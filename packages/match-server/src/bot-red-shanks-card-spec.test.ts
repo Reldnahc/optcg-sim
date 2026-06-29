@@ -12,9 +12,7 @@ describe("red Shanks card specs", () => {
       String(deck.decoded.leader.cardId),
       ...deck.decoded.main.map((entry) => String(entry.cardId)),
     ].sort();
-    const specCardIds = redShanksCardSpecs
-      .map((spec) => spec.cardId)
-      .sort();
+    const specCardIds = redShanksCardSpecs.map((spec) => spec.cardId).sort();
 
     assert.deepEqual(specCardIds, deckCardIds);
   });

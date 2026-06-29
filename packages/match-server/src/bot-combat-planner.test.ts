@@ -32,9 +32,7 @@ const publicCard = (
   ...fields,
 });
 
-const combatFixture = (
-  actions: readonly DevVisibleAction[],
-): BotFeatures => {
+const combatFixture = (actions: readonly DevVisibleAction[]): BotFeatures => {
   const snapshot = {
     stateSeq: 1,
     actionSeq: 1,

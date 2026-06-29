@@ -46,9 +46,7 @@ const publicCards = (
     readonly zone: PublicCardView["zone"]["zone"];
   },
 ): PublicCardView[] =>
-  (cards ?? []).map((card, index) =>
-    publicCard(card, { ...defaults, index }),
-  );
+  (cards ?? []).map((card, index) => publicCard(card, { ...defaults, index }));
 
 const snapshotWithActions = (
   actions: readonly DevVisibleAction[],

@@ -1,19 +1,23 @@
 import { strict as assert } from "node:assert";
-import type { CardId, InstanceId, PlayerId, PublicCardView } from "@optcg/types";
+import type {
+  CardId,
+  InstanceId,
+  PlayerId,
+  PublicCardView,
+} from "@optcg/types";
 import { describe, test } from "vitest";
 
 import { buildOpponentDeckKnowledge } from "./bot-deck-knowledge.js";
 
-const publicCard = (cardId: string): PublicCardView =>
-  ({
-    instanceId: `${cardId}:public` as InstanceId,
-    cardId: cardId as CardId,
-    owner: "p1" as PlayerId,
-    controller: "p1" as PlayerId,
-    zone: { playerId: "p1" as PlayerId, zone: "trash" },
-    attachedDonCount: 0,
-    attachedDonIds: [],
-  });
+const publicCard = (cardId: string): PublicCardView => ({
+  instanceId: `${cardId}:public` as InstanceId,
+  cardId: cardId as CardId,
+  owner: "p1" as PlayerId,
+  controller: "p1" as PlayerId,
+  zone: { playerId: "p1" as PlayerId, zone: "trash" },
+  attachedDonCount: 0,
+  attachedDonIds: [],
+});
 
 describe("buildOpponentDeckKnowledge", () => {
   test("computes counter priors from decklist", () => {

@@ -85,7 +85,9 @@ const deckCardCounts = (
   return counts;
 };
 
-const cardKnowledgeRoles = (card: ResolvedCard | undefined): readonly string[] => {
+const cardKnowledgeRoles = (
+  card: ResolvedCard | undefined,
+): readonly string[] => {
   if (card === undefined) {
     return [];
   }

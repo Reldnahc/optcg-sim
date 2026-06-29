@@ -10,11 +10,11 @@ const score = (terms: readonly BotScoreTerm[]): BotExplainableScore => ({
   terms: terms.filter((term) => term.value !== 0),
 });
 
-const term = (
-  key: string,
-  value: number,
-  reason: string,
-): BotScoreTerm => ({ key, value, reason });
+const term = (key: string, value: number, reason: string): BotScoreTerm => ({
+  key,
+  value,
+  reason,
+});
 
 export const evaluateVisibleBoardState = ({
   features,

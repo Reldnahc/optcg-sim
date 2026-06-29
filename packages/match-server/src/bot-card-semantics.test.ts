@@ -1,5 +1,10 @@
 import { strict as assert } from "node:assert";
-import type { CardId, InstanceId, PlayerId, PublicCardView } from "@optcg/types";
+import type {
+  CardId,
+  InstanceId,
+  PlayerId,
+  PublicCardView,
+} from "@optcg/types";
 import { describe, test } from "vitest";
 
 import { deriveBotCardSemantics } from "./bot-card-semantics.js";
