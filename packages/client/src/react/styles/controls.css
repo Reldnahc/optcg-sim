@@ -237,7 +237,8 @@
 
 .lobby-deck-modal .deck-hash-form {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: var(--modal-gap);
   min-height: 0;
   overflow: hidden;
 }
@@ -554,6 +555,11 @@
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
+}
+
+.deck-loadout-submit-button {
+  min-height: var(--modal-action-height);
+  margin-top: calc(var(--modal-gap) / 2);
 }
 
 .deck-hash-form button:disabled {

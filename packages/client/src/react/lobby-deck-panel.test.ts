@@ -348,6 +348,10 @@ describe("lobby deck panel", () => {
     assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
       styles,
+      /\.lobby-deck-modal \.deck-hash-form\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\) auto auto;[^}]*gap:\s*var\(--modal-gap\);/u,
+    );
+    assert.match(
+      styles,
       /\.deck-loadout-menu\s*\{[^}]*grid-template-rows:\s*0fr;[^}]*transition:\s*grid-template-rows 130ms ease,\s*opacity 90ms ease;/u,
     );
     assert.match(
@@ -414,6 +418,10 @@ describe("lobby deck panel", () => {
     assert.doesNotMatch(
       styles,
       /\.deck-loadout-submit-button\s*\{[^}]*background:/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-submit-button\s*\{[^}]*min-height:\s*var\(--modal-action-height\);[^}]*margin-top:\s*calc\(var\(--modal-gap\) \/ 2\);/u,
     );
     assert.match(
       styles,
