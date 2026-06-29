@@ -127,6 +127,68 @@ describe("presentation sound controller", () => {
     );
   });
 
+  test("limits same-frame movement bursts to the strongest cues", () => {
+    const loadedCues: string[] = [];
+    const played: string[] = [];
+    const audioContext = fakeAudioContext(played);
+
+    playPresentationSoundIntents(
+      [
+        { id: "burst-move", cue: "move" },
+        { id: "burst-draw", cue: "draw" },
+        { id: "burst-play", cue: "play" },
+        { id: "burst-trash", cue: "trash" },
+        { id: "burst-reveal", cue: "reveal" },
+      ],
+      {
+        audioContextFactory: () => audioContext,
+        bufferLoader: (cue) => {
+          loadedCues.push(cue);
+          return { kind: "loaded", buffer: {} };
+        },
+        nowMs: () => 30_000,
+        random: () => 0.5,
+      },
+    );
+
+    assert.deepEqual(loadedCues, ["play", "trash"]);
+    assert.equal(
+      played.filter((entry) => entry.startsWith("source.start:")).length,
+      2,
+    );
+  });
+
+  test("limits same-frame effect bursts without dropping attention", () => {
+    const loadedCues: string[] = [];
+    const played: string[] = [];
+    const audioContext = fakeAudioContext(played);
+
+    playPresentationSoundIntents(
+      [
+        { id: "effect-counter", cue: "counter" },
+        { id: "effect-damage", cue: "damage" },
+        { id: "effect-ko", cue: "ko" },
+        { id: "effect-trigger", cue: "trigger" },
+        { id: "effect-attention", cue: "attention" },
+      ],
+      {
+        audioContextFactory: () => audioContext,
+        bufferLoader: (cue) => {
+          loadedCues.push(cue);
+          return { kind: "loaded", buffer: {} };
+        },
+        nowMs: () => 31_000,
+        random: () => 0.5,
+      },
+    );
+
+    assert.deepEqual(loadedCues, ["attention", "trigger", "counter"]);
+    assert.equal(
+      played.filter((entry) => entry.startsWith("source.start:")).length,
+      3,
+    );
+  });
+
   test("loads default Web Audio buffers asynchronously and reuses cached buffers", async () => {
     const calls: string[] = [];
     const played: string[] = [];

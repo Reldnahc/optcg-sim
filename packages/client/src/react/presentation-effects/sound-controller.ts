@@ -1,7 +1,8 @@
 import type {
   PresentationSoundCue,
-  PresentationSoundIntent,
-} from "./sound-planner.js";
+  PresentationSoundCueDomain,
+} from "./sound-cues.js";
+import type { PresentationSoundIntent } from "./sound-planner.js";
 import { defaultAudioBufferLoader } from "../../presentation-audio-buffer-loader.js";
 import { presentationSoundAssetUrls } from "./sound-assets.js";
 import { presentationSoundCueProfiles } from "./sound-cues.js";
@@ -82,8 +83,14 @@ const defaultAudioFactory: PresentationAudioFactory = (url) => {
 };
 
 let sharedContext: AudioContext | undefined;
-const maxSoundIntentsPerBatch = 4;
+const maxSoundIntentsPerBatch = 6;
 const lastPlayedCueAtMs = new Map<PresentationSoundCue, number>();
+const maxSoundIntentsPerDomain: Record<PresentationSoundCueDomain, number> = {
+  attention: 1,
+  effect: 2,
+  interaction: 2,
+  movement: 2,
+};
 
 const defaultAudioContextFactory = (): AudioContext | undefined => {
   if (sharedContext !== undefined) {
@@ -99,14 +106,27 @@ const defaultAudioContextFactory = (): AudioContext | undefined => {
 
 const orderedIntents = (
   intents: readonly PresentationSoundIntent[],
-): PresentationSoundIntent[] =>
-  [...intents]
-    .sort(
-      (left, right) =>
-        presentationSoundCueProfiles[right.cue].priority -
-        presentationSoundCueProfiles[left.cue].priority,
-    )
-    .slice(0, maxSoundIntentsPerBatch);
+): PresentationSoundIntent[] => {
+  const domainCounts = new Map<PresentationSoundCueDomain, number>();
+  const selected: PresentationSoundIntent[] = [];
+  for (const intent of [...intents].sort(
+    (left, right) =>
+      presentationSoundCueProfiles[right.cue].priority -
+      presentationSoundCueProfiles[left.cue].priority,
+  )) {
+    if (selected.length >= maxSoundIntentsPerBatch) {
+      break;
+    }
+    const domain = presentationSoundCueProfiles[intent.cue].domain;
+    const domainCount = domainCounts.get(domain) ?? 0;
+    if (domainCount >= maxSoundIntentsPerDomain[domain]) {
+      continue;
+    }
+    domainCounts.set(domain, domainCount + 1);
+    selected.push(intent);
+  }
+  return selected;
+};
 
 const allowedByCooldown = (
   cue: PresentationSoundCue,
