@@ -111,7 +111,7 @@ const LeaderCrop = ({
   return (
     <span className="deck-loadout-leader-crop" aria-hidden="true">
       {imageUrl === null ? (
-        loadout?.leaderCardId ?? ""
+        (loadout?.leaderCardId ?? "")
       ) : (
         <CanonicalCardCropImage
           src={imageUrl}

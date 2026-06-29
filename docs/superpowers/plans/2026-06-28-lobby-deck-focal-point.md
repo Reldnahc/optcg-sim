@@ -56,10 +56,9 @@ END AS leader_crop_focus
 - [ ] Update `DeckLoadoutPicker.tsx` so leader image style includes:
 
 ```ts
-backgroundPosition:
-  loadout.leaderCropFocus === null
-    ? "50% 0%"
-    : `${String(loadout.leaderCropFocus.x * 100)}% ${String(loadout.leaderCropFocus.y * 100)}%`
+backgroundPosition: loadout.leaderCropFocus === null
+  ? "50% 0%"
+  : `${String(loadout.leaderCropFocus.x * 100)}% ${String(loadout.leaderCropFocus.y * 100)}%`;
 ```
 
 - [ ] Update sim tests to assert normalized focus and rendered `background-position`.

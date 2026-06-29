@@ -9,10 +9,13 @@ export const CARD_CROP_LEGAL_RECT = {
 const FALLBACK_FOCUS_X = 0.5;
 const FALLBACK_FOCUS_Y = 0;
 
-type CropFocus = {
-  x: number | null;
-  y: number | null;
-} | null | undefined;
+type CropFocus =
+  | {
+      x: number | null;
+      y: number | null;
+    }
+  | null
+  | undefined;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -29,12 +32,10 @@ export function resolveCanonicalCropCenter({
   frameAspect: number;
   imageAspect: number;
 }) {
-  const viewportWidthAt1x = frameAspect > imageAspect
-    ? 1
-    : frameAspect / imageAspect;
-  const viewportHeightAt1x = frameAspect > imageAspect
-    ? imageAspect / frameAspect
-    : 1;
+  const viewportWidthAt1x =
+    frameAspect > imageAspect ? 1 : frameAspect / imageAspect;
+  const viewportHeightAt1x =
+    frameAspect > imageAspect ? imageAspect / frameAspect : 1;
   const effectiveZoom = Math.max(
     1,
     viewportWidthAt1x / CARD_CROP_LEGAL_RECT.width,
@@ -93,25 +94,27 @@ export function CanonicalCardCropImage({
     });
 
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, []);
 
-  const imageSize = imageState.src === src
-    ? { width: imageState.width, height: imageState.height }
-    : { width: 0, height: 0 };
-  const hasLayout = frameSize.width > 0
-    && frameSize.height > 0
-    && imageSize.width > 0
-    && imageSize.height > 0;
+  const imageSize =
+    imageState.src === src
+      ? { width: imageState.width, height: imageState.height }
+      : { width: 0, height: 0 };
+  const hasLayout =
+    frameSize.width > 0 &&
+    frameSize.height > 0 &&
+    imageSize.width > 0 &&
+    imageSize.height > 0;
 
   let style: CSSProperties | undefined;
   if (hasLayout) {
-    const focusX = typeof cropFocus?.x === "number"
-      ? cropFocus.x
-      : FALLBACK_FOCUS_X;
-    const focusY = typeof cropFocus?.y === "number"
-      ? cropFocus.y
-      : FALLBACK_FOCUS_Y;
+    const focusX =
+      typeof cropFocus?.x === "number" ? cropFocus.x : FALLBACK_FOCUS_X;
+    const focusY =
+      typeof cropFocus?.y === "number" ? cropFocus.y : FALLBACK_FOCUS_Y;
     const imageAspect = imageSize.width / imageSize.height;
     const frameAspect = frameSize.width / frameSize.height;
     const crop = resolveCanonicalCropCenter({
@@ -128,10 +131,10 @@ export function CanonicalCardCropImage({
     const renderedHeight = imageSize.height * coverScale * crop.zoom;
 
     style = {
-      width: `${renderedWidth}px`,
-      height: `${renderedHeight}px`,
-      left: `${frameSize.width / 2 - crop.x * renderedWidth}px`,
-      top: `${frameSize.height / 2 - crop.y * renderedHeight}px`,
+      width: `${String(renderedWidth)}px`,
+      height: `${String(renderedHeight)}px`,
+      left: `${String(frameSize.width / 2 - crop.x * renderedWidth)}px`,
+      top: `${String(frameSize.height / 2 - crop.y * renderedHeight)}px`,
     };
   } else {
     style = {
@@ -144,9 +147,10 @@ export function CanonicalCardCropImage({
     };
   }
 
-  const imageClassName = className.length > 0
-    ? `canonical-card-crop-image ${className}`
-    : "canonical-card-crop-image";
+  const imageClassName =
+    className.length > 0
+      ? `canonical-card-crop-image ${className}`
+      : "canonical-card-crop-image";
 
   return (
     <div ref={frameRef} className="canonical-card-crop-frame">

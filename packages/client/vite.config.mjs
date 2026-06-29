@@ -11,7 +11,8 @@ const proxyErrorCode = (error) => {
 
 export default defineConfig(({ command }) => {
   const clientBase =
-    process.env.OPTCG_CLIENT_BASE ?? (command === "serve" ? "/sim-runtime/" : "/");
+    process.env.OPTCG_CLIENT_BASE ??
+    (command === "serve" ? "/sim-runtime/" : "/");
 
   return {
     base: clientBase,
