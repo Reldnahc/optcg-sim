@@ -1,5 +1,5 @@
 import { defaultBotStrategy } from "./bot-strategy.js";
-import type { BotActionChoice } from "./bot-types.js";
+import type { BotActionChoice, BotOpponentDeckKnowledge } from "./bot-types.js";
 import type { DevMatchSnapshot } from "./dev-snapshot-types.js";
 import type { PlayerId } from "@optcg/types";
 
@@ -22,3 +22,18 @@ export const chooseBotAction = (
   botPlayerId: PlayerId,
 ): BotActionChoice | undefined =>
   defaultBotStrategy.chooseAction({ snapshot, botPlayerId });
+
+export const chooseBotActionWithKnowledge = ({
+  snapshot,
+  botPlayerId,
+  opponentDeckKnowledge,
+}: {
+  readonly snapshot: DevMatchSnapshot;
+  readonly botPlayerId: PlayerId;
+  readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
+}): BotActionChoice | undefined =>
+  defaultBotStrategy.chooseAction({
+    snapshot,
+    botPlayerId,
+    opponentDeckKnowledge,
+  });

@@ -25,6 +25,7 @@ import type {
   BotBehaviorProfile,
   BotDecisionReason,
   BotExplainableScore,
+  BotOpponentDeckKnowledge,
   BotRejectedCandidate,
   BotSubmitActionChoice,
   BotStrategy,
@@ -214,10 +215,12 @@ const chooseStrategyActionReport = ({
   snapshot,
   botPlayerId,
   profile,
+  opponentDeckKnowledge,
 }: {
   readonly snapshot: BotActionContext["snapshot"];
   readonly botPlayerId: BotActionContext["botPlayerId"];
   readonly profile: BotBehaviorProfile;
+  readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
 }): BotStrategyActionReport | undefined => {
   const player = snapshot.players[botPlayerId];
   const actions = player?.actions ?? [];
@@ -238,7 +241,9 @@ const chooseStrategyActionReport = ({
       { type: "answerDecision" },
     );
   }
-  const features = buildBotFeatures(snapshot, botPlayerId);
+  const features = buildBotFeatures(snapshot, botPlayerId, {
+    opponentDeckKnowledge,
+  });
   const intent = chooseBotTurnIntent(features);
   const scored = scoredVisibleActions({
     features,
@@ -401,11 +406,13 @@ export const chooseBotActionReport = (input: {
   readonly snapshot: BotActionContext["snapshot"];
   readonly botPlayerId: BotActionContext["botPlayerId"];
   readonly profile?: BotBehaviorProfile | undefined;
+  readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
 }): BotStrategyActionReport | undefined =>
   chooseStrategyActionReport({
     snapshot: input.snapshot,
     botPlayerId: input.botPlayerId,
     profile: input.profile ?? redShanksBotProfile,
+    opponentDeckKnowledge: input.opponentDeckKnowledge,
   });
 
 export const defaultBotStrategy = createBotStrategy(redShanksBotProfile);

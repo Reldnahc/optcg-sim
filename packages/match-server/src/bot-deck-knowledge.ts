@@ -1,3 +1,5 @@
+import type { CardId, MatchCardManifest, ResolvedCard } from "@optcg/types";
+
 import type {
   BotDeckCardKnowledge,
   BotOpponentDeckKnowledge,
@@ -71,6 +73,49 @@ const roleCount = (
   cards
     .filter((card) => card.roles.includes(role))
     .reduce((total, card) => total + card.count, 0);
+
+const deckCardCounts = (
+  cardIds: readonly CardId[],
+): ReadonlyMap<string, number> => {
+  const counts = new Map<string, number>();
+  for (const cardId of cardIds) {
+    const key = String(cardId);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+};
+
+const cardKnowledgeRoles = (card: ResolvedCard | undefined): readonly string[] => {
+  if (card === undefined) {
+    return [];
+  }
+  return [
+    ...(card.category === "event" ? ["event"] : []),
+    ...(card.printedKeywords.includes("blocker") ? ["blocker"] : []),
+    ...(/K\.O\.|trash|bottom|return/iu.test(
+      `${card.effectText ?? ""}\n${card.triggerText ?? ""}`,
+    )
+      ? ["removal"]
+      : []),
+  ];
+};
+
+export const buildDeckCardKnowledgeFromManifest = ({
+  cardIds,
+  cardManifest,
+}: {
+  readonly cardIds: readonly CardId[];
+  readonly cardManifest: MatchCardManifest;
+}): readonly BotDeckCardKnowledge[] =>
+  [...deckCardCounts(cardIds)].map(([cardId, count]) => {
+    const card = cardManifest.cards[cardId as CardId];
+    return {
+      cardId,
+      count,
+      printedCounter: card?.counter ?? 0,
+      roles: cardKnowledgeRoles(card),
+    };
+  });
 
 export const buildOpponentDeckKnowledge = ({
   decklist,

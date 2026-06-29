@@ -465,6 +465,77 @@ describe("bot strategy priorities", () => {
     );
   });
 
+  test("bot works without opponent deck knowledge", () => {
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play attacker",
+            placement: { instanceId: "attacker-card" as InstanceId },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "attacker-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+              printedCost: 4,
+              printedPower: 6000,
+            },
+          ],
+        },
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.notEqual(report?.choice, undefined);
+  });
+
+  test("bot report includes deck prior term when opponent deck knowledge is supplied", () => {
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfLeader: { currentPower: 7_000 },
+          opponentLeader: { currentPower: 5_000 },
+          opponentLifeCount: 1,
+        },
+      ),
+      botPlayerId: botId,
+      opponentDeckKnowledge: {
+        knownDecklistCardIds: [],
+        remainingUnknownCounterPrior: {
+          unknownCardCount: 10,
+          totalCounterPower: 10_000,
+          counter1000Count: 10,
+          counter2000Count: 0,
+          averageCounterPower: 1_000,
+        },
+        remainingEventCount: 0,
+        remainingBlockerCount: 0,
+        remainingRemovalCount: 0,
+      },
+    });
+
+    assert.equal(
+      report?.explainableScore?.terms.some((term) => term.key === "deck-prior"),
+      true,
+    );
+  });
+
   test("does not attach a single DON to a character that still cannot hit", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(

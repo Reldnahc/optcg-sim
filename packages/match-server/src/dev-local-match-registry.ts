@@ -33,6 +33,12 @@ import {
   passiveBotStrategy,
   type BotStrategy,
 } from "./bot-player.js";
+import {
+  buildDeckCardKnowledgeFromManifest,
+  buildOpponentDeckKnowledge,
+} from "./bot-deck-knowledge.js";
+import { visibleCards } from "./bot-features.js";
+import type { BotOpponentDeckKnowledge } from "./bot-types.js";
 import { requestHash } from "./action-envelope.js";
 import {
   createActiveLocalDevMatchSession,
@@ -402,7 +408,15 @@ export const createLocalDevMatchRegistry = async (
     const strategy = session.passiveBotPlayerIds.has(botPlayerId)
       ? passiveBotStrategy
       : botStrategy;
-    const choice = strategy.chooseAction({ snapshot, botPlayerId });
+    const choice = strategy.chooseAction({
+      snapshot,
+      botPlayerId,
+      opponentDeckKnowledge: opponentDeckKnowledgeForBot(
+        session,
+        botPlayerId,
+        snapshot,
+      ),
+    });
     if (choice === undefined) {
       return undefined;
     }
@@ -422,6 +436,35 @@ export const createLocalDevMatchRegistry = async (
           decisionId: choice.decisionId,
           response: choice.response,
         };
+  };
+
+  const opponentDeckKnowledgeForBot = (
+    session: ActiveLocalDevMatchSession,
+    botPlayerId: PlayerId,
+    snapshot: ReturnType<typeof getLocalDevSnapshot>,
+  ): BotOpponentDeckKnowledge | undefined => {
+    const opponentPlayerId = session.setup.playerOrder.find(
+      (playerId) => playerId !== botPlayerId,
+    );
+    if (opponentPlayerId === undefined) {
+      return undefined;
+    }
+    const opponentSetup = session.setup.players.find(
+      (player) => player.playerId === opponentPlayerId,
+    );
+    if (opponentSetup === undefined) {
+      return undefined;
+    }
+    const decklist = buildDeckCardKnowledgeFromManifest({
+      cardIds: opponentSetup.deckCardIds,
+      cardManifest: session.setup.cardManifest,
+    });
+    return buildOpponentDeckKnowledge({
+      decklist,
+      publicCards: visibleCards(snapshot, botPlayerId).filter(
+        (card) => card.owner === opponentPlayerId,
+      ),
+    });
   };
 
   const runBotActions = async (

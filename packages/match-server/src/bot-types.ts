@@ -131,6 +131,7 @@ export interface BotStrategy {
   readonly chooseAction: (input: {
     readonly snapshot: DevMatchSnapshot;
     readonly botPlayerId: PlayerId;
+    readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
   }) => BotActionChoice | undefined;
 }
 
