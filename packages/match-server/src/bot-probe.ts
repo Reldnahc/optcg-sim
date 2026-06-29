@@ -9,6 +9,7 @@ import type {
 } from "@optcg/types";
 
 import { chooseBotActionReport } from "./bot-player.js";
+import { botQualityScenarios } from "./bot-quality-scenarios.js";
 import type { BotScoreBreakdown } from "./bot-score.js";
 import type { BotTurnIntent } from "./bot-turn-intent.js";
 import type {
@@ -544,6 +545,9 @@ export const runBotProbe = (
     failures,
   };
 };
+
+export const runFullBotQualityProbe = (): BotProbeReport =>
+  runBotProbe([...defaultBotProbeScenarios, ...botQualityScenarios()]);
 
 if (process.argv[1]?.endsWith("bot-probe.ts") === true) {
   const report = runBotProbe();
