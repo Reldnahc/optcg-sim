@@ -53,6 +53,14 @@ export interface BotRejectedCandidate {
   readonly reason: string;
 }
 
+export type BotStrategicMode =
+  | "survive"
+  | "stabilize"
+  | "develop"
+  | "pressure"
+  | "lethal"
+  | "cleanup";
+
 export interface BotActionContext {
   readonly snapshot: DevMatchSnapshot;
   readonly botPlayerId: PlayerId;
