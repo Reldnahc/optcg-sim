@@ -181,7 +181,35 @@ const actionConsumesAttacker = (
 const actionConsumesDon = (action: DevVisibleAction): number =>
   action.type === "attachDon" ? 1 : 0;
 
-const sequenceIsCoherent = (actions: readonly DevVisibleAction[]): boolean => {
+const uniqueAttachDonActionCount = (
+  actions: readonly DevVisibleAction[],
+): number => {
+  const uniqueDonIds = new Set(
+    actions.flatMap((action) =>
+      action.type === "attachDon" &&
+      action.attachment?.donInstanceId !== undefined
+        ? [String(action.attachment.donInstanceId)]
+        : [],
+    ),
+  );
+  if (uniqueDonIds.size > 0) {
+    return uniqueDonIds.size;
+  }
+  return actions.filter((action) => action.type === "attachDon").length;
+};
+
+const availableDonForPlanning = (
+  actions: readonly DevVisibleAction[],
+  features: BotFeatures,
+): number =>
+  features.self.activeDonCount > 0
+    ? features.self.activeDonCount
+    : uniqueAttachDonActionCount(actions);
+
+const sequenceIsCoherent = (
+  actions: readonly DevVisibleAction[],
+  availableDon: number,
+): boolean => {
   const consumedAttackers = new Set<string>();
   let consumedDon = 0;
   for (const action of actions) {
@@ -194,7 +222,7 @@ const sequenceIsCoherent = (actions: readonly DevVisibleAction[]): boolean => {
     }
     consumedDon += actionConsumesDon(action);
   }
-  return consumedDon <= actions.length;
+  return consumedDon <= availableDon;
 };
 
 const orderingBonus = (
@@ -255,11 +283,13 @@ const sequenceScore = (
 const appendCoherentSequences = ({
   allActions,
   current,
+  availableDon,
   maxSteps,
   output,
 }: {
   readonly allActions: readonly ScoredPlannedAction[];
   readonly current: readonly ScoredPlannedAction[];
+  readonly availableDon: number;
   readonly maxSteps: number;
   readonly output: ScoredPlannedAction[][];
 }): void => {
@@ -274,10 +304,21 @@ const appendCoherentSequences = ({
       continue;
     }
     const next = [...current, candidate];
-    if (!sequenceIsCoherent(next.map((step) => step.action))) {
+    if (
+      !sequenceIsCoherent(
+        next.map((step) => step.action),
+        availableDon,
+      )
+    ) {
       continue;
     }
-    appendCoherentSequences({ allActions, current: next, maxSteps, output });
+    appendCoherentSequences({
+      allActions,
+      current: next,
+      availableDon,
+      maxSteps,
+      output,
+    });
   }
 };
 
@@ -322,6 +363,7 @@ export const chooseTurnPlan = ({
   appendCoherentSequences({
     allActions: candidates,
     current: [],
+    availableDon: availableDonForPlanning(actions, features),
     maxSteps: config.maxSteps,
     output: sequences,
   });

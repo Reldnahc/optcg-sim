@@ -37,11 +37,7 @@ const selectedCardCount = (
 const selectedTargetCount = (
   decision: Extract<BotPendingDecision, { type: "selectTargets" }>,
 ): number =>
-  Math.min(
-    decision.max,
-    Math.max(decision.min, 1),
-    targetChoices(decision).length,
-  );
+  Math.min(decision.max, decision.min, targetChoices(decision).length);
 
 const chooseHighestValueCards = (
   context: BotDecisionContext,
@@ -121,6 +117,9 @@ export const chooseGenericBotDecision = (
   }
   if (decision.type === "selectTargets") {
     const targets = chooseHighestValueTargets(context, decision);
+    if (targets.length < decision.min) {
+      return undefined;
+    }
     return {
       type: "respondToDecision",
       decisionId: decision.id,

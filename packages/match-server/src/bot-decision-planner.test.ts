@@ -64,6 +64,28 @@ const selectCardsDecision = (
   ],
 });
 
+const selectTargetsDecision = ({
+  min,
+  max,
+  candidates,
+}: {
+  readonly min: number;
+  readonly max: number;
+  readonly candidates: readonly CardRef[];
+}): Extract<BotPendingDecision, { type: "selectTargets" }> => ({
+  id: `decision:targets:${String(min)}:${String(max)}` as DecisionId,
+  spotlightPendingId:
+    `spotlight:pending:targets:${String(min)}:${String(max)}` as PublicPendingDecisionId,
+  type: "selectTargets",
+  playerId: botPlayerId,
+  prompt: "Choose targets.",
+  causedBy: { type: "ruleProcess", name: "target-test" },
+  presentation: { title: "Choose", instruction: "Choose targets." },
+  min,
+  max,
+  candidates: candidates.map((card) => ({ card })),
+});
+
 const contextWithDecision = (
   pendingDecision: BotPendingDecision,
 ): Parameters<typeof chooseGenericBotDecision>[0] => ({
@@ -130,6 +152,13 @@ const selectedInstanceIds = (
     ? choice.response.cards.map((card) => String(card.instanceId))
     : [];
 
+const selectedTargetInstanceIds = (
+  choice: ReturnType<typeof chooseGenericBotDecision>,
+): readonly string[] | undefined =>
+  choice?.response.type === "targets"
+    ? choice.response.targets.map((card) => String(card.instanceId))
+    : undefined;
+
 describe("chooseGenericBotDecision", () => {
   test("selects high-value card for generic keep/search-like selection", () => {
     const choice = chooseGenericBotDecision(
@@ -156,5 +185,33 @@ describe("chooseGenericBotDecision", () => {
     );
 
     assert.deepEqual(selectedInstanceIds(choice), ["low-value-card"]);
+  });
+
+  test("declines optional target decisions instead of guessing a target", () => {
+    const choice = chooseGenericBotDecision(
+      contextWithDecision(
+        selectTargetsDecision({
+          min: 0,
+          max: 1,
+          candidates: [cardRef("high-value-card")],
+        }),
+      ),
+    );
+
+    assert.deepEqual(selectedTargetInstanceIds(choice), []);
+  });
+
+  test("does not emit an invalid empty target response for mandatory targets", () => {
+    const choice = chooseGenericBotDecision(
+      contextWithDecision(
+        selectTargetsDecision({
+          min: 1,
+          max: 1,
+          candidates: [],
+        }),
+      ),
+    );
+
+    assert.equal(choice, undefined);
   });
 });

@@ -327,4 +327,37 @@ describe("chooseTurnPlan", () => {
       [0, 1],
     );
   });
+
+  test("does not plan more attach DON steps than active DON", () => {
+    const actions = [attachDonAction(0), attachDonAction(1)];
+    const plan = chooseTurnPlan({
+      actions,
+      features: features({
+        self: {
+          lifeCount: 5,
+          handCounterPower: 0,
+          handCount: 5,
+          donOnField: 1,
+          activeDonCount: 1,
+          characterCount: 0,
+          attackerCount: 1,
+          blockerCount: 0,
+        },
+        actions: {
+          byIndex: new Map([actionFacts(0), actionFacts(1)]),
+          hasProfitableEffect: false,
+          hasPlayableDevelopmentCard: false,
+          hasUsefulDonAttachment: true,
+          hasAttack: true,
+        },
+      }),
+      mode: "pressure",
+      config: { maxSteps: 3, beamWidth: 4 },
+    });
+
+    assert.deepEqual(
+      plan?.steps.filter((step) => step.actionType === "attachDon"),
+      [plan?.steps[0]],
+    );
+  });
 });
