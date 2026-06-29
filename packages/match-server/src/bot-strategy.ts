@@ -109,6 +109,48 @@ const chooseBestScoredCandidate = (
     (left, right) => right.breakdown.total - left.breakdown.total,
   )[0];
 
+const plannerScoreAdjustments = (
+  scored: readonly ScoredBotCandidate[],
+): ReadonlyMap<number, BotExplainableScore> =>
+  new Map(
+    scored.flatMap(({ candidate, breakdown }) => {
+      const profileMultiplier = breakdown.profile >= 70 ? 5 : 2;
+      const terms = [
+        {
+          key: "profile",
+          value: breakdown.profile * profileMultiplier,
+          reason: "profile action policy",
+        },
+        {
+          key: "resource",
+          value: breakdown.resource,
+          reason: "resource policy",
+        },
+        {
+          key: "risk",
+          value: breakdown.risk,
+          reason: "risk policy",
+        },
+        {
+          key: "intent",
+          value: breakdown.intent,
+          reason: "turn intent",
+        },
+      ].filter((term) => term.value !== 0);
+      return terms.length === 0
+        ? []
+        : [
+            [
+              candidate.action.index,
+              {
+                total: terms.reduce((total, term) => total + term.value, 0),
+                terms,
+              },
+            ],
+          ];
+    }),
+  );
+
 const selectedDonInstanceIdsForAttachChoice = (
   chosenAction: BotActionContext["action"],
   actions: readonly BotActionContext["action"][],
@@ -280,6 +322,7 @@ const chooseStrategyActionReport = ({
     actions: plannerActions,
     features,
     mode: modeReport.mode,
+    actionScoreAdjustments: plannerScoreAdjustments(scored),
   });
   if (turnPlan !== undefined && turnPlan.score.total > 0) {
     const firstStep = turnPlan.steps[0];

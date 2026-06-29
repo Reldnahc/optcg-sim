@@ -1,4 +1,4 @@
-import { chooseCombatPlanAction } from "./bot-combat-planner.js";
+import { scoreCombatPlanActions } from "./bot-combat-planner.js";
 import type { BotFeatures } from "./bot-features.js";
 import type {
   BotExplainableScore,
@@ -143,19 +143,30 @@ const actionScore = ({
   features,
   mode,
   reservation,
-  combat,
+  combatScores,
+  actionScoreAdjustments,
 }: {
   readonly action: DevVisibleAction;
   readonly features: BotFeatures;
   readonly mode: BotStrategicMode;
   readonly reservation: BotDonReservation;
-  readonly combat: ReturnType<typeof chooseCombatPlanAction>;
-}): BotExplainableScore | undefined =>
-  combat?.action.index === action.index
-    ? combat.score
-    : effectScore(action) ??
-      attachmentScore({ action, features, mode, reservation }) ??
-      playableDevelopmentScore(action, mode);
+  readonly combatScores: ReadonlyMap<number, BotExplainableScore>;
+  readonly actionScoreAdjustments: ReadonlyMap<number, BotExplainableScore>;
+}): BotExplainableScore | undefined => {
+  const base =
+    combatScores.get(action.index) ??
+    effectScore(action) ??
+    attachmentScore({ action, features, mode, reservation }) ??
+    playableDevelopmentScore(action, mode);
+  const adjustment = actionScoreAdjustments.get(action.index);
+  if (base === undefined) {
+    return adjustment;
+  }
+  if (adjustment === undefined) {
+    return base;
+  }
+  return score([...base.terms, ...adjustment.terms]);
+};
 
 const actionConsumesAttacker = (
   action: DevVisibleAction,
@@ -270,14 +281,24 @@ export const chooseTurnPlan = ({
   features,
   mode,
   config = defaultBotPlanningConfig,
+  actionScoreAdjustments = new Map(),
 }: {
   readonly actions: readonly DevVisibleAction[];
   readonly features: BotFeatures;
   readonly mode: BotStrategicMode;
   readonly config?: BotPlanningConfig | undefined;
+  readonly actionScoreAdjustments?: ReadonlyMap<
+    number,
+    BotExplainableScore
+  >;
 }): BotTurnPlan | undefined => {
   const reservation = chooseDonReservation({ actions, features, mode });
-  const combat = chooseCombatPlanAction({ actions, features, mode });
+  const combatScores = new Map(
+    scoreCombatPlanActions({ actions, features, mode }).map((combat) => [
+      combat.action.index,
+      combat.score,
+    ]),
+  );
   const candidates = actions
     .flatMap((action) => {
       const scored = actionScore({
@@ -285,7 +306,8 @@ export const chooseTurnPlan = ({
         features,
         mode,
         reservation,
-        combat,
+        combatScores,
+        actionScoreAdjustments,
       });
       return scored === undefined ? [] : [{ action, score: scored }];
     })

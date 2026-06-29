@@ -150,7 +150,12 @@ describe("bot combat evaluation", () => {
       throw new Error("Expected bot action report.");
     }
     assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 0 });
-    assert.equal(report.score?.reasons.includes("combat:leader-lethal"), true);
+    assert.equal(
+      report.explainableScore?.terms.some(
+        (term) => term.reason === "lethal mode prioritizes leader attacks",
+      ),
+      true,
+    );
   });
 
   test("prefers the highest-value character target when lethal is not available", () => {
@@ -193,7 +198,7 @@ describe("bot combat evaluation", () => {
             },
           ],
           opponentLeader: { currentPower: 5000 },
-          opponentHandCount: 2,
+          opponentHandCount: 4,
           opponentLifeCount: 4,
           opponentCharacters: [
             {

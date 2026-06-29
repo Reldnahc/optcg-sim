@@ -133,6 +133,17 @@ export const chooseCombatPlanAction = ({
   readonly features: BotFeatures;
   readonly mode: BotStrategicMode;
 }): BotCombatPlanChoice | undefined =>
+  scoreCombatPlanActions({ actions, features, mode })[0];
+
+export const scoreCombatPlanActions = ({
+  actions,
+  features,
+  mode,
+}: {
+  readonly actions: readonly DevVisibleAction[];
+  readonly features: BotFeatures;
+  readonly mode: BotStrategicMode;
+}): readonly BotCombatPlanChoice[] =>
   actions
     .flatMap((action) => {
       const actionScore = attackTargetScore({ action, features, mode });
@@ -140,4 +151,4 @@ export const chooseCombatPlanAction = ({
         ? []
         : [{ action, score: actionScore }];
     })
-    .sort((left, right) => right.score.total - left.score.total)[0];
+    .sort((left, right) => right.score.total - left.score.total);

@@ -26,7 +26,7 @@ const selectedCardCount = (
 ): number =>
   Math.min(
     decision.max,
-    Math.max(decision.min, decision.min === 0 ? 0 : 1),
+    Math.max(decision.min, 1),
     selectableChoices(decision).length,
   );
 
@@ -61,12 +61,23 @@ const decisionLooksLikePayment = (decision: BotPendingDecision): boolean =>
   decision.causedBy?.type === "effect" ||
   /cost|trash|discard|pay/iu.test(decision.prompt);
 
+const decisionLooksLikeBattleDecision = (
+  decision: BotPendingDecision,
+): boolean =>
+  decision.causedBy?.type === "ruleProcess" &&
+  /block|counter|battle/iu.test(
+    `${decision.causedBy.name}\n${decision.prompt}`,
+  );
+
 export const chooseGenericBotDecision = (
   context: BotDecisionContext,
 ): BotDecisionChoice | undefined => {
   const decision = context.snapshot.players[context.botPlayerId]?.view
     .pendingDecision;
   if (decision === undefined || decision.playerId !== context.botPlayerId) {
+    return undefined;
+  }
+  if (decisionLooksLikeBattleDecision(decision)) {
     return undefined;
   }
   if (decision.type === "selectCards") {

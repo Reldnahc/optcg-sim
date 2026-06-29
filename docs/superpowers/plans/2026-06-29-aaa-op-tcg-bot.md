@@ -1,6 +1,6 @@
 # AAA OPTCG Bot Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a high-quality OPTCG bot that plays coherent turns, explains its choices, scales across decks through reusable game concepts, and can be regression-tested against real gameplay doctrine.
 
@@ -422,7 +422,7 @@ Do not expose these to the client unless a separate UI/debug feature asks for th
 - Create: `packages/match-server/src/bot-gameplay-doctrine.test.ts`
 - Modify: `packages/match-server/src/bot-features.ts`
 
-- [ ] **Step 1: Add doctrine constants**
+- [x] **Step 1: Add doctrine constants**
 
 Create `packages/match-server/src/bot-gameplay-doctrine.ts`.
 
@@ -465,7 +465,7 @@ export const estimatedCounterCardsRequiredToStopAttack = ({
 };
 ```
 
-- [ ] **Step 2: Test combat math doctrine**
+- [x] **Step 2: Test combat math doctrine**
 
 Create `packages/match-server/src/bot-gameplay-doctrine.test.ts`.
 
@@ -518,7 +518,7 @@ describe("bot gameplay doctrine", () => {
 });
 ```
 
-- [ ] **Step 3: Replace duplicated combat constants**
+- [x] **Step 3: Replace duplicated combat constants**
 
 In `packages/match-server/src/bot-features.ts`, replace local counter math:
 
@@ -563,7 +563,7 @@ const counterPowerToStopAttack = (
   counterPowerRequiredToStopAttack({ attackerPower, targetPower });
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -573,7 +573,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-gameplay-doctrine.te
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-gameplay-doctrine.ts packages/match-server/src/bot-gameplay-doctrine.test.ts packages/match-server/src/bot-features.ts
@@ -590,7 +590,7 @@ git commit -m "feat: codify bot gameplay doctrine"
 - Modify: `packages/match-server/src/bot-probe.ts`
 - Test: `packages/match-server/src/bot-probe.test.ts`
 
-- [ ] **Step 1: Extend report types**
+- [x] **Step 1: Extend report types**
 
 In `packages/match-server/src/bot-types.ts`, add:
 
@@ -615,7 +615,7 @@ export interface BotRejectedCandidate {
 
 Keep `BotScoreBreakdown` during transition, but every new planner should produce `BotExplainableScore`.
 
-- [ ] **Step 2: Add a compatibility converter**
+- [x] **Step 2: Add a compatibility converter**
 
 In `packages/match-server/src/bot-score.ts`, add:
 
@@ -638,7 +638,7 @@ export const botScoreBreakdownToExplainableScore = (
 });
 ```
 
-- [ ] **Step 3: Expand `BotStrategyActionReport`**
+- [x] **Step 3: Expand `BotStrategyActionReport`**
 
 In `packages/match-server/src/bot-strategy.ts`, change the report interface:
 
@@ -655,7 +655,7 @@ export interface BotStrategyActionReport {
 
 When returning a scored choice, set `explainableScore` using the converter.
 
-- [ ] **Step 4: Probe should expose score terms**
+- [x] **Step 4: Probe should expose score terms**
 
 In `packages/match-server/src/bot-probe.ts`, extend `BotProbeScenarioReport`:
 
@@ -665,7 +665,7 @@ readonly explainableScore?: BotExplainableScore | undefined;
 
 In `runOneProbeScenario`, copy `report?.explainableScore`.
 
-- [ ] **Step 5: Test report explainability**
+- [x] **Step 5: Test report explainability**
 
 In `packages/match-server/src/bot-probe.test.ts`, add:
 
@@ -681,7 +681,7 @@ test("reports explainable score terms for visible action choices", () => {
 });
 ```
 
-- [ ] **Step 6: Run focused tests**
+- [x] **Step 6: Run focused tests**
 
 Run:
 
@@ -691,7 +691,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-probe.test.ts packag
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/match-server/src/bot-types.ts packages/match-server/src/bot-score.ts packages/match-server/src/bot-strategy.ts packages/match-server/src/bot-probe.ts packages/match-server/src/bot-probe.test.ts
@@ -705,7 +705,7 @@ git commit -m "feat: explain bot choices in probe reports"
 - Modify: `packages/match-server/src/bot-features.ts`
 - Modify: `packages/match-server/src/bot-features.test.ts`
 
-- [ ] **Step 1: Add richer feature interfaces**
+- [x] **Step 1: Add richer feature interfaces**
 
 In `packages/match-server/src/bot-features.ts`, extend `BotSelfFeatures`:
 
@@ -735,7 +735,7 @@ export interface BotOpponentFeatures {
 }
 ```
 
-- [ ] **Step 2: Implement feature helpers**
+- [x] **Step 2: Implement feature helpers**
 
 Add helpers:
 
@@ -760,7 +760,7 @@ const canCurrentlyAttack = (
 
 If `PublicCardView` does not expose `rested`, inspect the actual type and use the field currently used by the client to show active/rested state. Do not add `any`. If no field exists, omit rested-specific features in this task and add a test proving the feature is unavailable rather than guessed.
 
-- [ ] **Step 3: Populate self features**
+- [x] **Step 3: Populate self features**
 
 In `buildBotFeatures`, compute:
 
@@ -790,7 +790,7 @@ self: {
 }
 ```
 
-- [ ] **Step 4: Populate opponent features**
+- [x] **Step 4: Populate opponent features**
 
 Compute:
 
@@ -820,7 +820,7 @@ opponent: {
 }
 ```
 
-- [ ] **Step 5: Test feature extraction**
+- [x] **Step 5: Test feature extraction**
 
 In `packages/match-server/src/bot-features.test.ts`, add:
 
@@ -848,7 +848,7 @@ test("extracts resource, attacker, and blocker features", () => {
 
 Adjust fixture setup to include blocker/rested fields if existing helpers support them.
 
-- [ ] **Step 6: Run focused tests**
+- [x] **Step 6: Run focused tests**
 
 Run:
 
@@ -858,7 +858,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-features.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/match-server/src/bot-features.ts packages/match-server/src/bot-features.test.ts
@@ -873,7 +873,7 @@ git commit -m "feat: expand bot visible gameplay features"
 - Create: `packages/match-server/src/bot-strategic-mode.test.ts`
 - Modify: `packages/match-server/src/bot-types.ts`
 
-- [ ] **Step 1: Add mode type**
+- [x] **Step 1: Add mode type**
 
 In `packages/match-server/src/bot-types.ts`, add:
 
@@ -887,7 +887,7 @@ export type BotStrategicMode =
   | "cleanup";
 ```
 
-- [ ] **Step 2: Implement mode selector**
+- [x] **Step 2: Implement mode selector**
 
 Create `packages/match-server/src/bot-strategic-mode.ts`.
 
@@ -938,7 +938,7 @@ export const chooseBotStrategicMode = (
 };
 ```
 
-- [ ] **Step 3: Test mode selection**
+- [x] **Step 3: Test mode selection**
 
 Create `packages/match-server/src/bot-strategic-mode.test.ts`.
 
@@ -1041,7 +1041,7 @@ describe("chooseBotStrategicMode", () => {
 });
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -1051,7 +1051,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-strategic-mode.test.
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-types.ts packages/match-server/src/bot-strategic-mode.ts packages/match-server/src/bot-strategic-mode.test.ts
@@ -1065,7 +1065,7 @@ git commit -m "feat: classify bot strategic mode"
 - Create: `packages/match-server/src/bot-state-evaluator.ts`
 - Create: `packages/match-server/src/bot-state-evaluator.test.ts`
 
-- [ ] **Step 1: Implement score builder**
+- [x] **Step 1: Implement score builder**
 
 Create `packages/match-server/src/bot-state-evaluator.ts`.
 
@@ -1121,7 +1121,7 @@ export const evaluateVisibleBoardState = ({
 };
 ```
 
-- [ ] **Step 2: Test evaluator direction**
+- [x] **Step 2: Test evaluator direction**
 
 Create `packages/match-server/src/bot-state-evaluator.test.ts`.
 
@@ -1206,7 +1206,7 @@ describe("evaluateVisibleBoardState", () => {
 });
 ```
 
-- [ ] **Step 3: Run focused tests**
+- [x] **Step 3: Run focused tests**
 
 Run:
 
@@ -1216,7 +1216,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-state-evaluator.test
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/match-server/src/bot-state-evaluator.ts packages/match-server/src/bot-state-evaluator.test.ts
@@ -1231,7 +1231,7 @@ git commit -m "feat: evaluate bot board state"
 - Create: `packages/match-server/src/bot-combat-planner.test.ts`
 - Modify: `packages/match-server/src/bot-strategy.ts`
 
-- [ ] **Step 1: Define combat plan result**
+- [x] **Step 1: Define combat plan result**
 
 Create `packages/match-server/src/bot-combat-planner.ts`.
 
@@ -1267,7 +1267,7 @@ const term = (
 ): BotScoreTerm => ({ key, value, reason });
 ```
 
-- [ ] **Step 2: Score attack actions by mode**
+- [x] **Step 2: Score attack actions by mode**
 
 Add:
 
@@ -1354,7 +1354,7 @@ export const chooseCombatPlanAction = ({
     .sort((left, right) => right.score.total - left.score.total)[0];
 ```
 
-- [ ] **Step 3: Add scenario tests**
+- [x] **Step 3: Add scenario tests**
 
 Create `packages/match-server/src/bot-combat-planner.test.ts`.
 
@@ -1436,7 +1436,7 @@ describe("chooseCombatPlanAction", () => {
 
 Implement `combatFixture` in the test using the existing fixture style from `bot-features.test.ts` or `bot-probe.ts`. It must include a visible bot leader, opponent leader, one small character, and one big character with current powers.
 
-- [ ] **Step 4: Integrate as a preference layer**
+- [x] **Step 4: Integrate as a preference layer**
 
 In `packages/match-server/src/bot-strategy.ts`, after building `features` and mode report, call `chooseCombatPlanAction` before generic `chooseBestScoredCandidate` only when:
 
@@ -1446,7 +1446,7 @@ In `packages/match-server/src/bot-strategy.ts`, after building `features` and mo
 
 Return the combat action with `explainableScore`.
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -1456,7 +1456,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-combat-planner.test.
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/match-server/src/bot-combat-planner.ts packages/match-server/src/bot-combat-planner.test.ts packages/match-server/src/bot-strategy.ts
@@ -1472,7 +1472,7 @@ git commit -m "feat: plan bot combat choices by strategic mode"
 - Modify: `packages/match-server/src/bot-combat-evaluation.ts`
 - Modify: `packages/match-server/src/bot-default-profile.ts`
 
-- [ ] **Step 1: Implement defense planner**
+- [x] **Step 1: Implement defense planner**
 
 Create `packages/match-server/src/bot-defense-planner.ts`.
 
@@ -1599,7 +1599,7 @@ export const chooseCounterCardsForDefense = ({
 };
 ```
 
-- [ ] **Step 2: Wire planner into fallback decision**
+- [x] **Step 2: Wire planner into fallback decision**
 
 In `packages/match-server/src/bot-default-profile.ts`, before generic `selectCards` fallback, build features and call `chooseCounterCardsForDefense` for battle counter decisions.
 
@@ -1617,7 +1617,7 @@ if (defenseChoice !== undefined) {
 }
 ```
 
-- [ ] **Step 3: Test lethal defense**
+- [x] **Step 3: Test lethal defense**
 
 Create `packages/match-server/src/bot-defense-planner.test.ts` with fixtures copied from `bot-combat-evaluation.test.ts`.
 
@@ -1647,7 +1647,7 @@ test("takes non-lethal early leader hit instead of spending counter", () => {
 });
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -1657,7 +1657,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-defense-planner.test
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-defense-planner.ts packages/match-server/src/bot-defense-planner.test.ts packages/match-server/src/bot-default-profile.ts packages/match-server/src/bot-combat-evaluation.ts
@@ -1672,7 +1672,7 @@ git commit -m "feat: plan bot defensive counter decisions"
 - Create: `packages/match-server/src/bot-turn-planner.test.ts`
 - Modify: `packages/match-server/src/bot-strategy.ts`
 
-- [ ] **Step 1: Implement first-pass turn planner**
+- [x] **Step 1: Implement first-pass turn planner**
 
 Create `packages/match-server/src/bot-turn-planner.ts`.
 
@@ -1758,7 +1758,7 @@ export const chooseTurnPlan = ({
 
 This first pass is intentionally shallow but establishes the `BotTurnPlan` interface. Later tasks deepen it into multi-action sequence planning.
 
-- [ ] **Step 2: Add `BotTurnPlan` type**
+- [x] **Step 2: Add `BotTurnPlan` type**
 
 In `packages/match-server/src/bot-types.ts`, add:
 
@@ -1778,7 +1778,7 @@ export interface BotTurnPlan {
 }
 ```
 
-- [ ] **Step 3: Test develop before low-value DON**
+- [x] **Step 3: Test develop before low-value DON**
 
 Create `packages/match-server/src/bot-turn-planner.test.ts`.
 
@@ -1816,7 +1816,7 @@ test("pressure mode can choose combat over development", () => {
 
 Use local fixture helpers in the test file. Do not import test helpers from production files.
 
-- [ ] **Step 4: Integrate into strategy**
+- [x] **Step 4: Integrate into strategy**
 
 In `packages/match-server/src/bot-strategy.ts`, after decision handling and before legacy `chooseBestScoredCandidate`, call:
 
@@ -1841,7 +1841,7 @@ if (turnPlan !== undefined) {
 
 Keep legacy scoring fallback underneath until the new planner covers every normal action shape.
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -1851,7 +1851,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-turn-planner.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/match-server/src/bot-turn-planner.ts packages/match-server/src/bot-turn-planner.test.ts packages/match-server/src/bot-types.ts packages/match-server/src/bot-strategy.ts
@@ -1865,7 +1865,7 @@ git commit -m "feat: choose bot actions through turn plans"
 - Modify: `packages/match-server/src/bot-turn-planner.ts`
 - Modify: `packages/match-server/src/bot-turn-planner.test.ts`
 
-- [ ] **Step 1: Add DON reservation analysis**
+- [x] **Step 1: Add DON reservation analysis**
 
 In `bot-turn-planner.ts`, add:
 
@@ -1923,7 +1923,7 @@ const chooseDonReservation = ({
 };
 ```
 
-- [ ] **Step 2: Penalize attachments that consume reserved DON**
+- [x] **Step 2: Penalize attachments that consume reserved DON**
 
 When scoring `attachDon`, only allow it when:
 
@@ -1961,7 +1961,7 @@ const attachmentScore = ({
 };
 ```
 
-- [ ] **Step 3: Test reservation**
+- [x] **Step 3: Test reservation**
 
 Add to `bot-turn-planner.test.ts`:
 
@@ -1995,7 +1995,7 @@ test("lethal mode may spend DON before development", () => {
 });
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -2005,7 +2005,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-turn-planner.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-turn-planner.ts packages/match-server/src/bot-turn-planner.test.ts
@@ -2021,7 +2021,7 @@ git commit -m "feat: reserve bot DON for planned development"
 - Modify: `packages/match-server/src/bot-decision-responder.ts`
 - Modify: `packages/match-server/src/bot-default-profile.ts`
 
-- [ ] **Step 1: Implement generic decision scoring**
+- [x] **Step 1: Implement generic decision scoring**
 
 Create `packages/match-server/src/bot-decision-planner.ts`.
 
@@ -2103,7 +2103,7 @@ export const chooseGenericBotDecision = (
 
 This is intentionally generic. Profile-specific search decisions still override it.
 
-- [ ] **Step 2: Wire planner before fallback**
+- [x] **Step 2: Wire planner before fallback**
 
 In `packages/match-server/src/bot-decision-responder.ts`, after profile choice and visible decision action choice, call `chooseGenericBotDecision`.
 
@@ -2115,7 +2115,7 @@ reason: { kind: "fallback", decisionType: decision.type }
 
 Later tasks can introduce a distinct `generic-planner` reason.
 
-- [ ] **Step 3: Test high-value keep and low-value payment**
+- [x] **Step 3: Test high-value keep and low-value payment**
 
 Create `packages/match-server/src/bot-decision-planner.test.ts`.
 
@@ -2141,7 +2141,7 @@ test("selects low-value card for generic payment-like selection", () => {
 });
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -2151,7 +2151,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-decision-planner.tes
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-decision-planner.ts packages/match-server/src/bot-decision-planner.test.ts packages/match-server/src/bot-decision-responder.ts packages/match-server/src/bot-default-profile.ts
@@ -2169,7 +2169,7 @@ git commit -m "feat: score generic bot card decisions"
 - Modify: `packages/match-server/src/bot-profile-types.ts`
 - Modify: `packages/match-server/src/bot-red-shanks-profile.ts`
 
-- [ ] **Step 1: Expand semantic roles**
+- [x] **Step 1: Expand semantic roles**
 
 In `packages/match-server/src/bot-profile-types.ts`, replace `BotCardRole` with:
 
@@ -2198,7 +2198,7 @@ Keep existing role names by mapping:
 
 If existing tests require old names during transition, allow both old and new names temporarily in the type, then remove old names in the same commit after updating profile data.
 
-- [ ] **Step 2: Implement semantic extraction**
+- [x] **Step 2: Implement semantic extraction**
 
 Create `packages/match-server/src/bot-card-semantics.ts`.
 
@@ -2247,7 +2247,7 @@ export const deriveBotCardSemantics = ({
 };
 ```
 
-- [ ] **Step 3: Update Red Shanks profile roles**
+- [x] **Step 3: Update Red Shanks profile roles**
 
 In `packages/match-server/src/bot-red-shanks-profile.ts`, update:
 
@@ -2269,7 +2269,7 @@ Keep variable names like `cheatTargets` only if changing them would create too m
 
 Also remove `PRB02-002` from `searchPriorities`; it is not a search source. Keep it in card specs and profile roles as a power-reduction attacker.
 
-- [ ] **Step 4: Test semantic derivation**
+- [x] **Step 4: Test semantic derivation**
 
 Create `packages/match-server/src/bot-card-semantics.test.ts`.
 
@@ -2313,7 +2313,7 @@ describe("deriveBotCardSemantics", () => {
 
 Use a local `publicCard` helper with a complete `PublicCardView` shape.
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -2323,7 +2323,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-card-semantics.test.
 
 Expected: PASS.
 
-- [ ] **Step 6: Encode Red Shanks card specs**
+- [x] **Step 6: Encode Red Shanks card specs**
 
 Create `packages/match-server/src/bot-red-shanks-card-spec.ts`.
 
@@ -2497,7 +2497,7 @@ export const redShanksSpecCardIds = new Set(
 
 This file is profile doctrine, not generic bot logic. Keep exact card IDs here, not in generic planners.
 
-- [ ] **Step 7: Test Red Shanks spec covers the default deck**
+- [x] **Step 7: Test Red Shanks spec covers the default deck**
 
 Create `packages/match-server/src/bot-red-shanks-card-spec.test.ts`.
 
@@ -2556,7 +2556,7 @@ describe("red Shanks card specs", () => {
 });
 ```
 
-- [ ] **Step 8: Wire specs into profile data**
+- [x] **Step 8: Wire specs into profile data**
 
 In `packages/match-server/src/bot-red-shanks-profile.ts`, import the spec:
 
@@ -2581,7 +2581,7 @@ preserveCards: redShanksCardsWithRole("preserve"),
 
 Keep search priority and cheat target order explicit because order is strategic policy, not just card metadata.
 
-- [ ] **Step 9: Run focused tests**
+- [x] **Step 9: Run focused tests**
 
 Run:
 
@@ -2591,7 +2591,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-card-semantics.test.
 
 Expected: PASS.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add packages/match-server/src/bot-card-semantics.ts packages/match-server/src/bot-card-semantics.test.ts packages/match-server/src/bot-red-shanks-card-spec.ts packages/match-server/src/bot-red-shanks-card-spec.test.ts packages/match-server/src/bot-profile-types.ts packages/match-server/src/bot-red-shanks-profile.ts
@@ -2606,7 +2606,7 @@ git commit -m "feat: derive bot card semantics"
 - Create: `packages/match-server/src/bot-quality-scenarios.test.ts`
 - Modify: `packages/match-server/src/bot-probe.ts`
 
-- [ ] **Step 1: Create scenario catalog**
+- [x] **Step 1: Create scenario catalog**
 
 Create `packages/match-server/src/bot-quality-scenarios.ts`.
 
@@ -2645,7 +2645,7 @@ Implement each scenario using fixture helpers copied from `bot-probe.ts`. Keep h
 - snapshot with only player-visible information
 - clear action labels
 
-- [ ] **Step 2: Add expectations helper**
+- [x] **Step 2: Add expectations helper**
 
 In the same file:
 
@@ -2661,7 +2661,7 @@ export const expectedActionTypeByScenarioId: ReadonlyMap<string, string> =
 
 For decision scenarios, assert response shape in the test instead of action type.
 
-- [ ] **Step 3: Test quality scenarios**
+- [x] **Step 3: Test quality scenarios**
 
 Create `packages/match-server/src/bot-quality-scenarios.test.ts`.
 
@@ -2705,7 +2705,7 @@ describe("bot quality scenarios", () => {
 });
 ```
 
-- [ ] **Step 4: Include quality scenarios in bot probe**
+- [x] **Step 4: Include quality scenarios in bot probe**
 
 In `packages/match-server/src/bot-probe.ts`, append quality scenarios to `defaultBotProbeScenarios` or export a separate `runFullBotQualityProbe`.
 
@@ -2718,7 +2718,7 @@ export const runFullBotQualityProbe = (): BotProbeReport =>
 
 Avoid importing `bot-probe.ts` from `bot-quality-scenarios.ts` in a cycle. If needed, move shared `BotProbeScenario` type to `bot-types.ts`.
 
-- [ ] **Step 5: Run focused tests and probe**
+- [x] **Step 5: Run focused tests and probe**
 
 Run:
 
@@ -2729,7 +2729,7 @@ corepack pnpm bot:probe
 
 Expected: tests PASS and probe reports no failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/match-server/src/bot-quality-scenarios.ts packages/match-server/src/bot-quality-scenarios.test.ts packages/match-server/src/bot-probe.ts packages/match-server/src/bot-probe.test.ts
@@ -2745,7 +2745,7 @@ git commit -m "test: add bot gameplay quality scenarios"
 - Modify: `packages/match-server/src/bot-types.ts`
 - Modify: `packages/match-server/src/bot-features.ts`
 
-- [ ] **Step 1: Add deck prior types**
+- [x] **Step 1: Add deck prior types**
 
 In `packages/match-server/src/bot-types.ts`, add:
 
@@ -2774,7 +2774,7 @@ export interface BotOpponentDeckKnowledge {
 }
 ```
 
-- [ ] **Step 2: Implement public-adjusted priors**
+- [x] **Step 2: Implement public-adjusted priors**
 
 Create `packages/match-server/src/bot-deck-knowledge.ts`.
 
@@ -2873,7 +2873,7 @@ export const buildOpponentDeckKnowledge = ({
 
 This module accepts decklist knowledge as data. It must not read private engine state.
 
-- [ ] **Step 3: Add feature slot**
+- [x] **Step 3: Add feature slot**
 
 In `packages/match-server/src/bot-features.ts`, add optional knowledge:
 
@@ -2910,7 +2910,7 @@ Return:
 opponentDeckKnowledge: options.opponentDeckKnowledge,
 ```
 
-- [ ] **Step 4: Test priors subtract public information**
+- [x] **Step 4: Test priors subtract public information**
 
 Create `packages/match-server/src/bot-deck-knowledge.test.ts`.
 
@@ -2962,7 +2962,7 @@ describe("buildOpponentDeckKnowledge", () => {
 });
 ```
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -2972,7 +2972,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-deck-knowledge.test.
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/match-server/src/bot-types.ts packages/match-server/src/bot-deck-knowledge.ts packages/match-server/src/bot-deck-knowledge.test.ts packages/match-server/src/bot-features.ts
@@ -2988,7 +2988,7 @@ git commit -m "feat: add bot opponent decklist priors"
 - Modify: `packages/match-server/src/bot-combat-planner.test.ts`
 - Modify: `packages/match-server/src/bot-defense-planner.test.ts`
 
-- [ ] **Step 1: Use average counter prior for leader pressure**
+- [x] **Step 1: Use average counter prior for leader pressure**
 
 In `packages/match-server/src/bot-combat-planner.ts`, add:
 
@@ -3018,7 +3018,7 @@ term(
 ),
 ```
 
-- [ ] **Step 2: Use defensive event/blocker priors conservatively**
+- [x] **Step 2: Use defensive event/blocker priors conservatively**
 
 In the same scoring function, add:
 
@@ -3044,7 +3044,7 @@ term(
 
 This should adjust choices, not make the bot refuse real lethal.
 
-- [ ] **Step 3: Use counter priors in defense risk**
+- [x] **Step 3: Use counter priors in defense risk**
 
 In `packages/match-server/src/bot-defense-planner.ts`, add:
 
@@ -3058,7 +3058,7 @@ const botDeckCounterDensityIsHigh = (features: BotFeatures): boolean =>
 
 Use this only for marginal non-lethal defense. Do not use it to skip lethal defense.
 
-- [ ] **Step 4: Test deck priors affect attack choice**
+- [x] **Step 4: Test deck priors affect attack choice**
 
 In `bot-combat-planner.test.ts`, add:
 
@@ -3079,7 +3079,7 @@ test("low opponent counter density increases leader pressure", () => {
 });
 ```
 
-- [ ] **Step 5: Test priors do not override lethal defense**
+- [x] **Step 5: Test priors do not override lethal defense**
 
 In `bot-defense-planner.test.ts`, add:
 
@@ -3098,7 +3098,7 @@ test("deck priors never cause bot to take lethal", () => {
 });
 ```
 
-- [ ] **Step 6: Run focused tests**
+- [x] **Step 6: Run focused tests**
 
 Run:
 
@@ -3108,7 +3108,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-combat-planner.test.
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/match-server/src/bot-combat-planner.ts packages/match-server/src/bot-defense-planner.ts packages/match-server/src/bot-combat-planner.test.ts packages/match-server/src/bot-defense-planner.test.ts
@@ -3125,7 +3125,7 @@ git commit -m "feat: apply opponent deck priors to bot combat"
 - Modify: `packages/match-server/src/dev-local-match-registry.ts` or the current bot invocation owner
 - Test: relevant bot lobby/local match test file
 
-- [ ] **Step 1: Extend strategy input**
+- [x] **Step 1: Extend strategy input**
 
 In `packages/match-server/src/bot-types.ts`, change:
 
@@ -3141,7 +3141,7 @@ export interface BotStrategy {
 
 Update `chooseBotActionReport` and `createBotStrategy` inputs similarly.
 
-- [ ] **Step 2: Preserve backwards compatibility**
+- [x] **Step 2: Preserve backwards compatibility**
 
 In `packages/match-server/src/bot-player.ts`, keep:
 
@@ -3172,7 +3172,7 @@ export const chooseBotActionWithKnowledge = ({
   });
 ```
 
-- [ ] **Step 3: Pass knowledge into features**
+- [x] **Step 3: Pass knowledge into features**
 
 In `bot-strategy.ts`, when calling `buildBotFeatures`, pass:
 
@@ -3182,7 +3182,7 @@ const features = buildBotFeatures(snapshot, botPlayerId, {
 });
 ```
 
-- [ ] **Step 4: Build knowledge at bot execution boundary**
+- [x] **Step 4: Build knowledge at bot execution boundary**
 
 In the current bot invocation owner, locate where the match has both players' submitted decklists and where bot actions are requested. Build:
 
@@ -3200,7 +3200,7 @@ Requirements:
 - If decklist data is unavailable, omit knowledge and continue with generic assumptions.
 - Do not block bot liveness on deck knowledge.
 
-- [ ] **Step 5: Test missing decklist fallback**
+- [x] **Step 5: Test missing decklist fallback**
 
 Add a test around `chooseBotActionReport`:
 
@@ -3215,7 +3215,7 @@ test("bot works without opponent deck knowledge", () => {
 });
 ```
 
-- [ ] **Step 6: Test provided decklist knowledge reaches planner**
+- [x] **Step 6: Test provided decklist knowledge reaches planner**
 
 Add a test:
 
@@ -3236,7 +3236,7 @@ test("bot report includes deck prior term when opponent deck knowledge is suppli
 });
 ```
 
-- [ ] **Step 7: Run focused tests**
+- [x] **Step 7: Run focused tests**
 
 Run:
 
@@ -3246,7 +3246,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-strategy-priorities.
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add packages/match-server/src/bot-types.ts packages/match-server/src/bot-player.ts packages/match-server/src/bot-strategy.ts packages/match-server/src/dev-local-match-registry.ts packages/match-server/src/bot-strategy-priorities.test.ts packages/match-server/src/match-http-server-bot-lobby.test.ts
@@ -3260,7 +3260,7 @@ git commit -m "feat: pass opponent deck knowledge to bot strategy"
 - Modify: `packages/match-server/src/bot-turn-planner.ts`
 - Modify: `packages/match-server/src/bot-turn-planner.test.ts`
 
-- [ ] **Step 1: Add planning horizon type**
+- [x] **Step 1: Add planning horizon type**
 
 In `bot-turn-planner.ts`, add:
 
@@ -3276,7 +3276,7 @@ export const defaultBotPlanningConfig: BotPlanningConfig = {
 };
 ```
 
-- [ ] **Step 2: Add static sequence planner**
+- [x] **Step 2: Add static sequence planner**
 
 Because the engine does not currently expose a cheap "apply legal action to cloned snapshot" helper from match-server, start with static sequence planning over currently visible actions. This is not full simulation. It is a production-safe improvement because it can still enforce ordering doctrine.
 
@@ -3317,7 +3317,7 @@ Then extend `chooseTurnPlan` to build candidate sequences:
 - candidate third action if score still improves,
 - score is sum of step scores plus ordering bonuses.
 
-- [ ] **Step 3: Add ordering bonuses**
+- [x] **Step 3: Add ordering bonuses**
 
 Add:
 
@@ -3357,7 +3357,7 @@ const orderingBonus = (
 };
 ```
 
-- [ ] **Step 4: Test sequencing**
+- [x] **Step 4: Test sequencing**
 
 Add to `bot-turn-planner.test.ts`:
 
@@ -3399,11 +3399,11 @@ test("develop mode prefers play-before-attack when lethal is absent", () => {
 });
 ```
 
-- [ ] **Step 5: Strategy still submits only first action**
+- [x] **Step 5: Strategy still submits only first action**
 
 Verify `bot-strategy.ts` only submits `turnPlan.steps[0].actionIndex`. The rest of the plan is explanation and ordering guidance. The bot will re-plan after each engine state update.
 
-- [ ] **Step 6: Run focused tests**
+- [x] **Step 6: Run focused tests**
 
 Run:
 
@@ -3413,7 +3413,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-turn-planner.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/match-server/src/bot-turn-planner.ts packages/match-server/src/bot-turn-planner.test.ts
@@ -3430,7 +3430,7 @@ git commit -m "feat: plan bot action sequences"
 - Modify: `packages/match-server/src/bot-score.ts`
 - Modify: `packages/match-server/src/bot-score.test.ts`
 
-- [ ] **Step 1: Make turn planner the normal path**
+- [x] **Step 1: Make turn planner the normal path**
 
 In `bot-strategy.ts`, order must be:
 
@@ -3442,7 +3442,7 @@ In `bot-strategy.ts`, order must be:
 6. Fall back to legacy `chooseBestScoredCandidate` only if planner returns undefined.
 7. Fall back to generic decision response if still needed.
 
-- [ ] **Step 2: Add test that legacy fallback is not used for normal scenarios**
+- [x] **Step 2: Add test that legacy fallback is not used for normal scenarios**
 
 In `bot-strategy-priorities.test.ts`, add:
 
@@ -3462,7 +3462,7 @@ test("normal visible action choices use turn planner explanation", () => {
 });
 ```
 
-- [ ] **Step 3: Demote `bot-action-evaluator.ts`**
+- [x] **Step 3: Demote `bot-action-evaluator.ts`**
 
 If no production caller still needs `evaluateBotAction`, either:
 
@@ -3492,7 +3492,7 @@ Add a code comment:
 // Compatibility scoring for legacy tests. Normal bot strategy uses the turn planner.
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run:
 
@@ -3502,7 +3502,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-strategy-priorities.
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/match-server/src/bot-strategy.ts packages/match-server/src/bot-action-evaluator.ts packages/match-server/src/bot-action-evaluator.test.ts packages/match-server/src/bot-score.ts packages/match-server/src/bot-score.test.ts packages/match-server/src/bot-strategy-priorities.test.ts
@@ -3517,7 +3517,7 @@ git commit -m "feat: make turn planner the primary bot brain"
 - Modify: `packages/match-server/src/bot-probe.test.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Add quality summary to probe report**
+- [x] **Step 1: Add quality summary to probe report**
 
 In `bot-probe.ts`, extend `BotProbeReport`:
 
@@ -3549,11 +3549,11 @@ return {
 };
 ```
 
-- [ ] **Step 2: Fail probe on unexplained choices**
+- [x] **Step 2: Fail probe on unexplained choices**
 
 In `evaluateBotProbeFailures`, keep the existing explanation failure and make sure every unexplained choice creates a failure.
 
-- [ ] **Step 3: Add script alias**
+- [x] **Step 3: Add script alias**
 
 In `package.json`, keep existing `bot:probe` and add:
 
@@ -3563,7 +3563,7 @@ In `package.json`, keep existing `bot:probe` and add:
 
 If JSON ordering matters in this repo, place it immediately after `"bot:probe"`.
 
-- [ ] **Step 4: Test quality summary**
+- [x] **Step 4: Test quality summary**
 
 In `bot-probe.test.ts`, add:
 
@@ -3576,7 +3576,7 @@ test("reports quality summary", () => {
 });
 ```
 
-- [ ] **Step 5: Run focused tests and probe**
+- [x] **Step 5: Run focused tests and probe**
 
 Run:
 
@@ -3587,7 +3587,7 @@ corepack pnpm bot:quality
 
 Expected: tests PASS and probe exits 0.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json packages/match-server/src/bot-probe.ts packages/match-server/src/bot-probe.test.ts
@@ -3602,7 +3602,7 @@ git commit -m "feat: report bot quality probe metrics"
 - Create: `packages/match-server/src/bot-self-play.test.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Create self-play metric types**
+- [x] **Step 1: Create self-play metric types**
 
 Create `packages/match-server/src/bot-self-play.ts`.
 
@@ -3624,7 +3624,7 @@ export interface BotSelfPlayReport {
 }
 ```
 
-- [ ] **Step 2: Implement pure metric aggregator first**
+- [x] **Step 2: Implement pure metric aggregator first**
 
 Add:
 
@@ -3649,7 +3649,7 @@ export const summarizeBotSelfPlayMetrics = (
 
 This starts with pure metrics. A later task can wire real local match execution without risking server behavior.
 
-- [ ] **Step 3: Test aggregator**
+- [x] **Step 3: Test aggregator**
 
 Create `packages/match-server/src/bot-self-play.test.ts`.
 
@@ -3684,7 +3684,7 @@ describe("summarizeBotSelfPlayMetrics", () => {
 });
 ```
 
-- [ ] **Step 4: Add script placeholder that runs pure metrics test only**
+- [x] **Step 4: Add script placeholder that runs pure metrics test only**
 
 Do not add a fake self-play executable. Add a test script alias:
 
@@ -3692,7 +3692,7 @@ Do not add a fake self-play executable. Add a test script alias:
 "bot:self-play:test": "corepack pnpm exec vitest run packages/match-server/src/bot-self-play.test.ts"
 ```
 
-- [ ] **Step 5: Run focused tests**
+- [x] **Step 5: Run focused tests**
 
 Run:
 
@@ -3702,7 +3702,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-self-play.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json packages/match-server/src/bot-self-play.ts packages/match-server/src/bot-self-play.test.ts
@@ -3715,7 +3715,7 @@ git commit -m "feat: add bot self-play metric model"
 
 - No source changes unless verification exposes failures.
 
-- [ ] **Step 1: Run bot-focused suite**
+- [x] **Step 1: Run bot-focused suite**
 
 Run:
 
@@ -3725,7 +3725,7 @@ corepack pnpm exec vitest run packages/match-server/src/bot-*.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 2: Run bot probe**
+- [x] **Step 2: Run bot probe**
 
 Run:
 
@@ -3735,7 +3735,7 @@ corepack pnpm bot:probe
 
 Expected: exits 0. JSON report has `failures: []`.
 
-- [ ] **Step 3: Run match-server typecheck**
+- [x] **Step 3: Run match-server typecheck**
 
 Run:
 
@@ -3745,7 +3745,7 @@ corepack pnpm exec tsc -p packages/match-server/tsconfig.json --noEmit
 
 Expected: PASS.
 
-- [ ] **Step 4: Run canonical checks if time permits**
+- [x] **Step 4: Run canonical checks if time permits**
 
 Run:
 
@@ -3758,7 +3758,7 @@ corepack pnpm verify
 
 Expected: PASS. If any broad command fails for unrelated pre-existing failures, record the exact failing command and first relevant failure.
 
-- [ ] **Step 5: Commit verification-only fixes if needed**
+- [x] **Step 5: Commit verification-only fixes if needed**
 
 Only commit if fixes were required.
 
