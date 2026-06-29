@@ -22,6 +22,7 @@
     "master:probe": "corepack pnpm --filter @optcg/card-support master:probe",
     "bot:probe": "tsx packages/match-server/src/bot-probe.ts",
     "bot:quality": "tsx packages/match-server/src/bot-probe.ts",
+    "bot:self-play:test": "corepack pnpm exec vitest run packages/match-server/src/bot-self-play.test.ts",
     "build:match-server": "corepack pnpm exec tsc -p packages/types/tsconfig.json && corepack pnpm exec tsc -p packages/engine-core/tsconfig.json && corepack pnpm exec tsc -p packages/cards/tsconfig.json && corepack pnpm exec tsc -p packages/card-support/tsconfig.json && corepack pnpm exec tsc -p packages/match-server/tsconfig.json",
     "format": "corepack pnpm exec prettier --write .",
     "format:check": "corepack pnpm exec prettier --check .",
