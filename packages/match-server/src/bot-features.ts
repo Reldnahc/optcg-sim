@@ -23,12 +23,21 @@ export interface BotFeatures {
 export interface BotSelfFeatures {
   readonly lifeCount: number;
   readonly handCounterPower: number;
+  readonly handCount: number;
   readonly donOnField: number;
+  readonly activeDonCount: number;
+  readonly characterCount: number;
+  readonly attackerCount: number;
+  readonly blockerCount: number;
 }
 
 export interface BotOpponentFeatures {
   readonly lifeCount: number;
   readonly handCount: number;
+  readonly characterCount: number;
+  readonly blockerCount: number;
+  readonly restedCharacterCount: number;
+  readonly highestCharacterValue: number;
 }
 
 export interface BotCardFeatures {
@@ -89,6 +98,15 @@ const counterPowerToStopAttack = (
 
 const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
+
+const isActiveDon = (card: BotVisibleCard): boolean =>
+  card.zone.zone === "costArea" && card.state === "active";
+
+const hasKeyword = (
+  card: BotVisibleCard,
+  keyword: NonNullable<BotVisibleCard["keywords"]>[number],
+): boolean =>
+  card.keywords?.includes(keyword) === true;
 
 const partialPlayerView = (
   snapshot: DevMatchSnapshot,
@@ -331,6 +349,17 @@ const botDonOnField = (
   );
 };
 
+const canCurrentlyAttack = (
+  snapshot: DevMatchSnapshot,
+  botPlayerId: PlayerId,
+  instanceId: InstanceId,
+): boolean =>
+  (snapshot.players[botPlayerId]?.actions ?? []).some(
+    (action) =>
+      action.type === "declareAttack" &&
+      action.attack?.attackerInstanceId === instanceId,
+  );
+
 const actionFacts = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
@@ -503,20 +532,48 @@ export const buildBotFeatures = (
   botPlayerId: PlayerId,
 ): BotFeatures => {
   const view = partialPlayerView(snapshot, botPlayerId);
+  const selfView = view?.self;
+  const selfCharacters = selfView?.characters ?? [];
+  const selfCostArea = selfView?.costArea ?? [];
+  const opponentView = view?.opponent;
+  const opponentCharacters = opponentView?.characters ?? [];
   const cards = visibleCards(snapshot, botPlayerId);
   const byIndex = actionFeatureMap(snapshot, botPlayerId);
   const pressure = leaderAttackPressure(snapshot, botPlayerId);
   const opponent = {
-    lifeCount: view?.opponent?.life.count ?? 0,
-    handCount: view?.opponent?.hand?.length ?? view?.opponent?.handCount ?? 0,
+    lifeCount: opponentView?.life.count ?? 0,
+    handCount: opponentView?.hand?.length ?? opponentView?.handCount ?? 0,
+    characterCount: opponentCharacters.length,
+    blockerCount: opponentCharacters.filter((card) =>
+      hasKeyword(card, "blocker"),
+    ).length,
+    restedCharacterCount: opponentCharacters.filter(
+      (card) => card.state === "rested",
+    ).length,
+    highestCharacterValue: Math.max(
+      0,
+      ...opponentCharacters.map((card) =>
+        visibleCardValue(card, { includeCounter: true }),
+      ),
+    ),
   };
   return {
     snapshot,
     botPlayerId,
     self: {
-      lifeCount: view?.self?.life.count ?? 0,
+      lifeCount: selfView?.life.count ?? 0,
       handCounterPower: selfHandCounterPower(snapshot, botPlayerId),
+      handCount: selfView?.hand.length ?? 0,
       donOnField: botDonOnField(snapshot, botPlayerId),
+      activeDonCount: selfCostArea.filter(isActiveDon).length,
+      characterCount: selfCharacters.length,
+      attackerCount: [selfView?.leader, ...selfCharacters].filter(
+        (card): card is BotVisibleCard =>
+          card !== undefined &&
+          canCurrentlyAttack(snapshot, botPlayerId, card.instanceId),
+      ).length,
+      blockerCount: selfCharacters.filter((card) => hasKeyword(card, "blocker"))
+        .length,
     },
     opponent,
     cards: {

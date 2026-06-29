@@ -16,6 +16,40 @@ import type {
 const botPlayerId = "p2" as PlayerId;
 const opponentPlayerId = "p1" as PlayerId;
 
+const publicCard = (
+  fields: Partial<PublicCardView>,
+  defaults: {
+    readonly playerId: PlayerId;
+    readonly zone: PublicCardView["zone"]["zone"];
+    readonly index: number;
+  },
+): PublicCardView => ({
+  instanceId:
+    fields.instanceId ??
+    (`${defaults.playerId}:${defaults.zone}:${defaults.index}` as InstanceId),
+  cardId: fields.cardId ?? ("OP01-000" as CardId),
+  owner: fields.owner ?? defaults.playerId,
+  controller: fields.controller ?? defaults.playerId,
+  zone: fields.zone ?? {
+    playerId: defaults.playerId,
+    zone: defaults.zone,
+  },
+  attachedDonCount: fields.attachedDonCount ?? 0,
+  attachedDonIds: fields.attachedDonIds ?? [],
+  ...fields,
+});
+
+const publicCards = (
+  cards: readonly Partial<PublicCardView>[] | undefined,
+  defaults: {
+    readonly playerId: PlayerId;
+    readonly zone: PublicCardView["zone"]["zone"];
+  },
+): PublicCardView[] =>
+  (cards ?? []).map((card, index) =>
+    publicCard(card, { ...defaults, index }),
+  );
+
 const snapshotWithActions = (
   actions: readonly DevVisibleAction[],
   cards: {
@@ -24,6 +58,7 @@ const snapshotWithActions = (
     readonly selfCharacters?: readonly Partial<PublicCardView>[];
     readonly selfCostArea?: readonly Partial<PublicCardView>[];
     readonly opponentLeader?: Partial<PublicCardView>;
+    readonly opponentCharacters?: readonly Partial<PublicCardView>[];
     readonly opponentHandCount?: number;
   } = {},
 ): DevMatchSnapshot =>
@@ -54,9 +89,18 @@ const snapshotWithActions = (
               attachedDonIds: [],
               ...cards.selfLeader,
             },
-            hand: cards.selfHand ?? [],
-            characters: cards.selfCharacters ?? [],
-            costArea: cards.selfCostArea ?? [],
+            hand: publicCards(cards.selfHand, {
+              playerId: botPlayerId,
+              zone: "hand",
+            }),
+            characters: publicCards(cards.selfCharacters, {
+              playerId: botPlayerId,
+              zone: "characterArea",
+            }),
+            costArea: publicCards(cards.selfCostArea, {
+              playerId: botPlayerId,
+              zone: "costArea",
+            }),
             life: { count: 5, faceUpCards: [] },
           },
           opponent: {
@@ -72,7 +116,10 @@ const snapshotWithActions = (
               ...cards.opponentLeader,
             },
             life: { count: 5, faceUpCards: [] },
-            characters: [],
+            characters: publicCards(cards.opponentCharacters, {
+              playerId: opponentPlayerId,
+              zone: "characterArea",
+            }),
             costArea: [],
           },
         },
@@ -141,6 +188,87 @@ describe("buildBotFeatures", () => {
       targetInstanceId: "opponent-leader",
       cardsToStop: 1,
     });
+  });
+
+  test("extracts resource, attacker, and blocker features", () => {
+    const features = buildBotFeatures(
+      snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "hand-card" as InstanceId,
+              cardId: "OP01-003" as CardId,
+            },
+          ],
+          selfCharacters: [
+            {
+              instanceId: "bot-blocker" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              keywords: ["blocker"],
+            },
+          ],
+          selfCostArea: [
+            {
+              instanceId: "active-don" as InstanceId,
+              cardId: "DON!!" as CardId,
+              state: "active",
+            },
+            {
+              instanceId: "rested-don" as InstanceId,
+              cardId: "DON!!" as CardId,
+              state: "rested",
+            },
+          ],
+        },
+      ),
+      botPlayerId,
+    );
+
+    assert.equal(features.self.handCount, 1);
+    assert.equal(features.self.activeDonCount, 1);
+    assert.equal(features.self.characterCount, 1);
+    assert.equal(features.self.attackerCount, 1);
+    assert.equal(features.self.blockerCount, 1);
+  });
+
+  test("extracts opponent board pressure features", () => {
+    const features = buildBotFeatures(
+      snapshotWithActions([], {
+        opponentCharacters: [
+          {
+            instanceId: "opponent-blocker" as InstanceId,
+            cardId: "OP01-010" as CardId,
+            currentPower: 4_000,
+            printedCost: 4,
+            keywords: ["blocker"],
+          },
+          {
+            instanceId: "opponent-rested-threat" as InstanceId,
+            cardId: "OP01-011" as CardId,
+            currentPower: 8_000,
+            printedCost: 7,
+            state: "rested",
+          },
+        ],
+      }),
+      botPlayerId,
+    );
+
+    assert.equal(features.opponent.characterCount, 2);
+    assert.equal(features.opponent.blockerCount, 1);
+    assert.equal(features.opponent.restedCharacterCount, 1);
+    assert.equal(features.opponent.highestCharacterValue, 15_000);
   });
 
   test("marks DON attachment as not useful when target has no remaining attack", () => {
