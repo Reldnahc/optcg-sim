@@ -494,6 +494,41 @@ describe("bot strategy priorities", () => {
     assert.notEqual(report?.choice, undefined);
   });
 
+  test("normal visible action choices use turn planner explanation", () => {
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "playCard",
+            label: "Play attacker",
+            placement: { instanceId: "attacker-card" as InstanceId },
+          },
+        ],
+        {
+          selfHand: [
+            {
+              instanceId: "attacker-card" as InstanceId,
+              cardId: "OP01-004" as CardId,
+              zone: { playerId: botId, zone: "hand" },
+              printedCost: 4,
+              printedPower: 6000,
+            },
+          ],
+        },
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.equal(report?.choice.type, "submitAction");
+    assert.equal(
+      report?.explainableScore?.terms.some((term) =>
+        term.reason.includes("persistent board"),
+      ),
+      true,
+    );
+  });
+
   test("bot report includes deck prior term when opponent deck knowledge is supplied", () => {
     const report = chooseBotActionReport({
       snapshot: snapshotWithActions(

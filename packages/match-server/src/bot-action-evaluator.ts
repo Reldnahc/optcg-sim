@@ -42,6 +42,7 @@ const candidateFromEvaluationInput = ({
 export const evaluateBotAction = (
   input: BotActionEvaluationInput,
 ): number | undefined => {
+  // Compatibility scoring for legacy tests. Normal bot strategy uses the turn planner.
   const candidate = candidateFromEvaluationInput(input);
   if (
     !botCandidateIsLegalForScoring({
