@@ -37,11 +37,23 @@ describe("sim auth client", () => {
     const requests: RecordedRequest[] = [];
     const client = createSimAuthClient({
       baseUrl: "https://auth.example",
+      simAccessEnvironment: "dev",
       fetch(input, init) {
+        const url = input instanceof Request ? input.url : String(input);
         requests.push({
-          url: input instanceof Request ? input.url : String(input),
+          url,
           ...(init === undefined ? {} : { init }),
         });
+        if (url.endsWith("/v1/sim/access?environment=dev")) {
+          return Promise.resolve(
+            responseJson({
+              data: {
+                allowed: true,
+                environment: "dev",
+              },
+            }),
+          );
+        }
         return Promise.resolve(
           responseJson({
             data: {
@@ -71,9 +83,66 @@ describe("sim auth client", () => {
     assert.equal(session.user.username, "tester");
     assert.deepEqual(
       requests.map((request) => request.url),
-      ["https://auth.example/v1/auth/login"],
+      [
+        "https://auth.example/v1/auth/login",
+        "https://auth.example/v1/sim/access?environment=dev",
+      ],
     );
     assert.equal(requests[0]?.init?.credentials, "include");
+    assert.equal(requests[1]?.init?.credentials, "include");
+  });
+
+  test("checks sim access before returning an existing session", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createSimAuthClient({
+      baseUrl: "https://auth.example",
+      simAccessEnvironment: "local",
+      fetch(input, init) {
+        const url = input instanceof Request ? input.url : String(input);
+        requests.push({
+          url,
+          ...(init === undefined ? {} : { init }),
+        });
+        if (url.endsWith("/v1/sim/access?environment=local")) {
+          return Promise.resolve(
+            responseJson({
+              data: {
+                allowed: true,
+                environment: "local",
+              },
+            }),
+          );
+        }
+        return Promise.resolve(
+          responseJson({
+            data: {
+              user: {
+                id: "user-1",
+                username: "tester",
+                display_name: "Tester",
+                email: null,
+                email_verified: false,
+              },
+              session: {
+                id: "session-1",
+                expires_at: "2026-06-03T00:00:00.000Z",
+              },
+            },
+          }),
+        );
+      },
+    });
+
+    const session = await client.getSession();
+
+    assert.equal(session?.session.id, "session-1");
+    assert.deepEqual(
+      requests.map((request) => request.url),
+      [
+        "https://auth.example/v1/auth/session",
+        "https://auth.example/v1/sim/access?environment=local",
+      ],
+    );
   });
 
   test("uses the submitted username as the initial display name when registering", async () => {

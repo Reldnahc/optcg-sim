@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { createSimAuthClient } from "../sim-auth-client.js";
+import { simAccessEnvironmentForLocation } from "../sim-environment.js";
 import type { PlayerAvatarView, PlayerProfileTitleView } from "../transport.js";
 import type {
   SimAuthClient,
@@ -100,7 +101,17 @@ const registerInput = (input: RegisterCredentials): SimRegisterInput => ({
 export const useSimAuth = (
   authClientOverride?: SimAuthClient,
 ): UseSimAuthState => {
-  const defaultAuthClient = useMemo(() => createSimAuthClient(), []);
+  const simAccessEnvironment = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? "dev"
+        : simAccessEnvironmentForLocation(window.location),
+    [],
+  );
+  const defaultAuthClient = useMemo(
+    () => createSimAuthClient({ simAccessEnvironment }),
+    [simAccessEnvironment],
+  );
   const authClient = authClientOverride ?? defaultAuthClient;
   const [status, setStatus] = useState<SimAuthStatus>("loading");
   const [submitStatus, setSubmitStatus] = useState<SimAuthSubmitStatus>("idle");

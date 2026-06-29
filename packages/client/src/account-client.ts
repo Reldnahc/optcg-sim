@@ -4,6 +4,7 @@ import type {
   DeckLibraryFolder,
   Loadout,
 } from "optcg-auth-client";
+import type { SimAccessEnvironment } from "./sim-environment.js";
 
 export interface AccountLoadout {
   readonly id: string;
@@ -70,6 +71,7 @@ export interface ListAccountLoadoutsInput {
 export interface CreatePoneglyphAccountClientOptions {
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
+  readonly simAccessEnvironment?: SimAccessEnvironment;
 }
 
 const folderById = (
@@ -258,6 +260,7 @@ const normalizeBatchHandoff = (
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
   baseUrl,
+  simAccessEnvironment = "dev",
 }: CreatePoneglyphAccountClientOptions = {}): PoneglyphAccountClient => {
   const authClient = createAuthClient({
     fetch: fetchImpl,
@@ -278,8 +281,11 @@ export const createPoneglyphAccountClient = ({
       );
     },
     async createSimHandoff(input) {
-      const response = await authClient.createSimHandoff({
+      const response = await authClient.post<{
+        readonly data: { readonly token: string };
+      }>("/sim/handoff", {
         loadout_id: input.loadoutId,
+        environment: simAccessEnvironment,
         lobby_id: input.lobbyId,
         seat_id: null,
       });
@@ -290,6 +296,7 @@ export const createPoneglyphAccountClient = ({
         "/sim/handoffs",
         {
           loadout_ids: input.loadoutIds,
+          environment: simAccessEnvironment,
           lobby_id: input.lobbyId,
           seat_id: null,
         },

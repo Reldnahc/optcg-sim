@@ -180,6 +180,7 @@ describe("Poneglyph account client", () => {
     const requests: RecordedRequest[] = [];
     const client = createPoneglyphAccountClient({
       baseUrl: "https://auth.example",
+      simAccessEnvironment: "local",
       fetch(input, init) {
         requests.push({
           url: input instanceof Request ? input.url : String(input),
@@ -237,6 +238,7 @@ describe("Poneglyph account client", () => {
       requestBody,
       JSON.stringify({
         loadout_id: "loadout-1",
+        environment: "local",
         lobby_id: "lobby-1",
         seat_id: null,
       }),
@@ -308,6 +310,7 @@ describe("Poneglyph account client", () => {
       request.init.body,
       JSON.stringify({
         loadout_ids: ["loadout-1", "loadout-2"],
+        environment: "dev",
         lobby_id: "lobby-1",
         seat_id: null,
       }),

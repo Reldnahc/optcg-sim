@@ -19,7 +19,10 @@ import type {
   AccountLoadoutValidation,
 } from "../account-client.js";
 import type { MatchLiveConnectionStatus } from "../transport.js";
-import { allowsLocalRawDeckSubmissions } from "../sim-environment.js";
+import {
+  allowsLocalRawDeckSubmissions,
+  simAccessEnvironmentForLocation,
+} from "../sim-environment.js";
 import type {
   ClientActionModel,
   DecisionDraft,
@@ -87,11 +90,21 @@ export const useMatchClient = ({
       allowsLocalRawDeckSubmissions(window.location),
     [],
   );
+  const simAccessEnvironment = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? "dev"
+        : simAccessEnvironmentForLocation(window.location),
+    [],
+  );
   const controller = useMemo(
     () => createController({ accountSessionToken }),
     [accountSessionToken],
   );
-  const accountClient = useMemo(() => createPoneglyphAccountClient(), []);
+  const accountClient = useMemo(
+    () => createPoneglyphAccountClient({ simAccessEnvironment }),
+    [simAccessEnvironment],
+  );
   const preferredLoadoutStorage = useMemo(
     () =>
       typeof window === "undefined"
