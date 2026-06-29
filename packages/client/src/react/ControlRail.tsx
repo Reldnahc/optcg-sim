@@ -107,7 +107,7 @@ export const ControlRail = ({
     | undefined
   >(undefined);
   const suppressTabClick = useRef(false);
-  const concedeLabel = concedeConfirming ? "Confirm concede" : "Concede";
+  const concedeLabel = concedeConfirming ? "Confirm" : "Concede";
   const matchIsOver = matchStatus === "completed" || matchStatus === "gameOver";
   const opponentLeft = opponentConnectionStatus === "disconnected";
   const rematchLabel = opponentLeft

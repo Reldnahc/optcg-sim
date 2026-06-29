@@ -226,9 +226,9 @@ describe("card action menu", () => {
       }),
     );
 
-    assert.equal(markup.includes("Confirm concede"), true);
+    assert.equal(markup.includes("Confirm"), true);
     assert.match(markup, /<path d="M5 4h12l-2 4 2 4H5"><\/path>/u);
-    assert.match(markup, />Confirm concede<\/span>/u);
+    assert.match(markup, />Confirm<\/span>/u);
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
