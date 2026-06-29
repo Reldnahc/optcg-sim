@@ -197,7 +197,7 @@ describe("lobby deck panel", () => {
     assert.match(html, /<div class="deck-loadout-actions">/u);
     assert.match(
       html,
-      /<button class="deck-loadout-refresh-button" type="button">Refresh decks<\/button>/u,
+      /<button class="deck-loadout-refresh-button" type="button"><span class="deck-loadout-refresh-icon" aria-hidden="true">↻<\/span><span>Refresh decks<\/span><\/button>/u,
     );
   });
 
@@ -323,15 +323,15 @@ describe("lobby deck panel", () => {
 
     assert.match(
       loading,
-      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">[\s\S]*Refresh decks[\s\S]*<\/button>/u,
     );
     assert.match(
       disabled,
-      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">[\s\S]*Refresh decks[\s\S]*<\/button>/u,
     );
     assert.match(
       locked,
-      /<button class="deck-loadout-refresh-button" type="button" disabled="">Refresh decks<\/button>/u,
+      /<button class="deck-loadout-refresh-button" type="button" disabled="">[\s\S]*Refresh decks[\s\S]*<\/button>/u,
     );
   });
 
@@ -348,7 +348,15 @@ describe("lobby deck panel", () => {
     assert.match(styles, /\.lobby-deck-modal\s*\{[^}]*overflow:\s*hidden;/u);
     assert.match(
       styles,
-      /\.lobby-deck-modal \.deck-hash-form\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\) auto auto;[^}]*gap:\s*var\(--modal-gap\);/u,
+      /\.lobby-deck-panel\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*overflow:\s*hidden;/u,
+    );
+    assert.match(
+      styles,
+      /\.lobby-deck-modal \.deck-hash-form\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*gap:\s*var\(--modal-gap\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-form-content\s*\{[^}]*display:\s*grid;[^}]*gap:\s*var\(--modal-gap\);/u,
     );
     assert.match(
       styles,
@@ -421,7 +429,19 @@ describe("lobby deck panel", () => {
     );
     assert.match(
       styles,
-      /\.deck-loadout-submit-button\s*\{[^}]*min-height:\s*var\(--modal-action-height\);[^}]*margin-top:\s*calc\(var\(--modal-gap\) \/ 2\);/u,
+      /\.deck-loadout-submit-footer\s*\{[^}]*display:\s*grid;[^}]*margin-top:\s*auto;[^}]*padding-top:\s*var\(--modal-gap\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-refresh-button\s*\{[^}]*display:\s*inline-flex;[^}]*border:\s*1px solid rgba\(91,\s*182,\s*255,\s*0\.62\);[^}]*background:\s*rgba\(43,\s*128,\s*205,\s*0\.32\);/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-refresh-icon\s*\{[^}]*font-size:\s*16px;/u,
+    );
+    assert.match(
+      styles,
+      /\.deck-loadout-submit-button\s*\{[^}]*min-height:\s*var\(--modal-action-height\);/u,
     );
     assert.match(
       styles,

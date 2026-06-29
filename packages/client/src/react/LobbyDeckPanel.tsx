@@ -86,52 +86,59 @@ export const LobbyDeckPanel = ({
             void onSubmitLoadout(selectedLoadoutId);
           }}
         >
-          <div className="deck-hash-field">
-            <DeckLoadoutPicker
-              selectedLoadoutId={selectedLoadoutId}
-              disabled={disabled || loadoutsStatus !== "ready"}
-              locked={pickerLocked}
-              loadouts={loadouts}
-              requirePlayableValidation={requirePlayableValidation}
-              onChange={setSelectedLoadoutId}
-            />
+          <div className="deck-loadout-form-content">
+            <div className="deck-hash-field">
+              <DeckLoadoutPicker
+                selectedLoadoutId={selectedLoadoutId}
+                disabled={disabled || loadoutsStatus !== "ready"}
+                locked={pickerLocked}
+                loadouts={loadouts}
+                requirePlayableValidation={requirePlayableValidation}
+                onChange={setSelectedLoadoutId}
+              />
+            </div>
+            {loadoutsStatus === "error" ? (
+              <p className="error-text">
+                {loadoutsError ?? "Unable to load account loadouts."}
+              </p>
+            ) : null}
+            {loadoutsStatus === "ready" && loadouts.length === 0 ? (
+              <p>No account loadouts are available.</p>
+            ) : null}
+            <div className="deck-loadout-actions">
+              <a
+                className="deck-editor-link"
+                href="https://poneglyph.one/decks"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open deck editor
+              </a>
+              <span className="deck-loadout-loading">
+                {loadoutsStatus === "loading" ? "Loading loadouts..." : ""}
+              </span>
+              <button
+                className="deck-loadout-refresh-button"
+                type="button"
+                disabled={refreshDisabled}
+                onClick={onRefreshLoadouts}
+              >
+                <span className="deck-loadout-refresh-icon" aria-hidden="true">
+                  ↻
+                </span>
+                <span>Refresh decks</span>
+              </button>
+            </div>
           </div>
-          {loadoutsStatus === "error" ? (
-            <p className="error-text">
-              {loadoutsError ?? "Unable to load account loadouts."}
-            </p>
-          ) : null}
-          {loadoutsStatus === "ready" && loadouts.length === 0 ? (
-            <p>No account loadouts are available.</p>
-          ) : null}
-          <div className="deck-loadout-actions">
-            <a
-              className="deck-editor-link"
-              href="https://poneglyph.one/decks"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open deck editor
-            </a>
-            <span className="deck-loadout-loading">
-              {loadoutsStatus === "loading" ? "Loading loadouts..." : ""}
-            </span>
+          <div className="deck-loadout-submit-footer">
             <button
-              className="deck-loadout-refresh-button"
-              type="button"
-              disabled={refreshDisabled}
-              onClick={onRefreshLoadouts}
+              className="deck-loadout-submit-button modal-submit-button"
+              type="submit"
+              disabled={!canSubmit}
             >
-              Refresh decks
+              {submitLabel}
             </button>
           </div>
-          <button
-            className="deck-loadout-submit-button modal-submit-button"
-            type="submit"
-            disabled={!canSubmit}
-          >
-            {submitLabel}
-          </button>
         </form>
       </div>
     </ModalFrame>
