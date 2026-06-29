@@ -67,6 +67,20 @@ const eventLabels: Record<EngineEvent["type"], string> = {
   gameEnded: "Game ended",
 };
 
+const renderedActionLogEventLimit = 80;
+const renderedRollbackPointLimit = 3;
+
+const hiddenEventTypes = new Set<EngineEvent["type"]>([
+  "battleEnded",
+  "damageWouldBeDealt",
+  "decisionCreated",
+  "decisionResolved",
+  "effectQueued",
+  "phaseEnded",
+  "ruleProcessingChecked",
+  "spotlightEntryCreated",
+]);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -192,6 +206,20 @@ const numberField = (payload: unknown, field: string): number | undefined => {
   return typeof value === "number" ? value : undefined;
 };
 
+const stringArrayField = (
+  payload: unknown,
+  field: string,
+): string[] | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const value = payload[field];
+  return Array.isArray(value) &&
+    value.every((entry) => typeof entry === "string")
+    ? value
+    : undefined;
+};
+
 const cardIdentityField = (
   payload: unknown,
   field: string,
@@ -229,6 +257,102 @@ const zoneLabel = (value: unknown): string | undefined => {
   }
   const zone = value["zone"];
   return typeof zone === "string" ? (zoneLabels[zone] ?? zone) : undefined;
+};
+
+const collapseWhitespace = (text: string): string =>
+  text.replace(/\s+/gu, " ").trim();
+
+const sentenceSnippet = (text: string, maxLength = 150): string => {
+  const normalized = collapseWhitespace(text);
+  return normalized.length <= maxLength
+    ? normalized
+    : `${normalized.slice(0, maxLength - 1).trimEnd()}…`;
+};
+
+const effectEntryPointLabels: Record<string, string> = {
+  activateMain: "[Activate: Main]",
+  counter: "[Counter]",
+  main: "[Main]",
+  onKO: "[On K.O.]",
+  onOpponentAttack: "[On Your Opponent's Attack]",
+  onPlay: "[On Play]",
+  trigger: "[Trigger]",
+  whenAttacking: "[When Attacking]",
+};
+
+const effectEntryPointLabel = (payload: unknown): string | undefined => {
+  if (!isRecord(payload)) {
+    return undefined;
+  }
+  const entryPoint = payload["entryPoint"];
+  const type = isRecord(entryPoint) ? entryPoint["type"] : entryPoint;
+  return typeof type === "string"
+    ? (effectEntryPointLabels[type] ?? type)
+    : undefined;
+};
+
+const activeEffectText = (
+  catalog: MatchCardCatalog,
+  source: VisibleCardIdentity,
+  presentation: unknown,
+): string | undefined => {
+  if (!isRecord(presentation)) {
+    return undefined;
+  }
+  const activeSpanIds = stringArrayField(presentation, "activeSpanIds");
+  if (activeSpanIds === undefined || activeSpanIds.length === 0) {
+    return undefined;
+  }
+  const textKind = stringField(presentation, "textKind");
+  const catalogEntry = catalog.players[source.playerId]?.cards[source.cardId];
+  const sourceMaps = [
+    catalogEntry?.effectTextSourceMap,
+    catalogEntry?.triggerTextSourceMap,
+  ].filter((sourceMap) =>
+    sourceMap === undefined
+      ? false
+      : textKind === undefined || sourceMap.textKind === textKind,
+  );
+  const activeSpanIdSet = new Set(activeSpanIds);
+  const selectedSpans = sourceMaps.flatMap((sourceMap) =>
+    sourceMap === undefined
+      ? []
+      : sourceMap.spans.filter((span) => activeSpanIdSet.has(span.id)),
+  );
+  const lineTexts = selectedSpans
+    .filter((span) => span.role === "line")
+    .map((span) => span.text);
+  const selectedTexts =
+    lineTexts.length > 0 ? lineTexts : selectedSpans.map((span) => span.text);
+  const uniqueTexts = [
+    ...new Set(selectedTexts.map(collapseWhitespace)),
+  ].filter((text) => text.length > 0);
+  return uniqueTexts.length === 0
+    ? undefined
+    : sentenceSnippet(uniqueTexts.join(" "));
+};
+
+const effectResolvedLabel = (
+  event: EngineEvent,
+  catalog: MatchCardCatalog,
+): string => {
+  const source = cardIdentityField(event.payload, "source") ?? event.source;
+  const sourceName =
+    source === undefined ? "Effect" : cardName(catalog, source);
+  const entryPoint = effectEntryPointLabel(event.payload);
+  const presentation = isRecord(event.payload)
+    ? event.payload["presentation"]
+    : undefined;
+  const detail =
+    source === undefined
+      ? undefined
+      : activeEffectText(catalog, source, presentation);
+  const status = stringField(event.payload, "status");
+  const verb = status === "conditionFailed" ? "condition failed" : "resolved";
+  const entryPointText = entryPoint === undefined ? "effect" : entryPoint;
+  return detail === undefined
+    ? `${sourceName} ${verb} ${entryPointText}`
+    : `${sourceName} ${verb} ${entryPointText}: ${detail}`;
 };
 
 const moveRouteLabel = (payload: unknown): string => {
@@ -301,6 +425,15 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   if (event.type === "cardPlayed") {
     return `Played ${cardListLabel(catalog, payloadIdentities)}`;
   }
+  if (event.type === "cardDrawn") {
+    const count =
+      numberField(event.payload, "count") ?? payloadIdentities.length;
+    return count > 1
+      ? `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} drew ${String(
+          count,
+        )} cards`
+      : `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} drew a card`;
+  }
   if (event.type === "cardTrashed") {
     return `Trashed ${cardListLabel(catalog, payloadIdentities)}`;
   }
@@ -326,6 +459,23 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
   }
   if (event.type === "triggerActivated") {
     return `Activated ${cardListLabel(catalog, payloadIdentities)} trigger`;
+  }
+  if (event.type === "donAttached") {
+    const target = cardIdentityField(event.payload, "target");
+    return target === undefined
+      ? `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} attached DON!!`
+      : `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} attached DON!! to ${cardName(
+          catalog,
+          target,
+        )}`;
+  }
+  if (event.type === "donReturned") {
+    const count = numberField(event.payload, "count");
+    return count === undefined
+      ? `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} returned DON!!`
+      : `${playerLabel(stringField(event.payload, "playerId") ?? event.actor)} returned ${String(
+          count,
+        )} DON!!`;
   }
   if (event.type === "costPaid") {
     return `${playerLabel(stringField(event.payload, "playerId"))} paid cost: ${costPaidLabel(
@@ -367,6 +517,9 @@ const eventText = (event: EngineEvent, catalog: MatchCardCatalog): string => {
       : `${playerLabel(stringField(event.payload, "damagedPlayerId"))} took ${String(
           amount,
         )} ${amount === 1 ? "life" : "life"}`;
+  }
+  if (event.type === "effectResolved") {
+    return effectResolvedLabel(event, catalog);
   }
 
   const label = eventLabels[event.type];
@@ -429,18 +582,45 @@ const eventCardMentions = (
     .filter((mention) => mention.label.length > 0);
 };
 
+const shouldRenderEvent = (event: EngineEvent): boolean =>
+  !hiddenEventTypes.has(event.type);
+
+const eventLogKey = (event: EngineEvent): string =>
+  `${String(event.id)}:${String(event.seq)}`;
+
+const rollbackAssignmentsByEventKey = (
+  events: readonly EngineEvent[],
+  rollbackPoints: readonly RollbackPointView[],
+): ReadonlyMap<string, RollbackPointView> => {
+  const assignments = new Map<string, RollbackPointView>();
+  for (const point of rollbackPoints.slice(-renderedRollbackPointLimit)) {
+    const targetEvent =
+      events.find(
+        (event) =>
+          String(event.id) === point.eventId || event.seq === point.eventSeq,
+      ) ?? events.find((event) => event.seq >= point.eventSeq);
+    if (targetEvent !== undefined) {
+      assignments.set(eventLogKey(targetEvent), point);
+    }
+  }
+  return assignments;
+};
+
 export const createActionLogEntries = ({
   events,
   catalog,
   rollbackPoints = [],
-}: CreateActionLogEntriesInput): ActionLogEntry[] =>
-  events
-    .slice(-80)
+}: CreateActionLogEntriesInput): ActionLogEntry[] => {
+  const displayEvents = events
+    .filter(shouldRenderEvent)
+    .slice(-renderedActionLogEventLimit);
+  const rollbackAssignments = rollbackAssignmentsByEventKey(
+    displayEvents,
+    rollbackPoints,
+  );
+  return displayEvents
     .map((event, index) => {
-      const rollbackPoint = rollbackPoints.find(
-        (point) =>
-          point.eventId === String(event.id) || point.eventSeq === event.seq,
-      );
+      const rollbackPoint = rollbackAssignments.get(eventLogKey(event));
       const cardMentions = eventCardMentions(event, catalog);
       return {
         id: `${String(event.id)}:${String(index)}`,
@@ -458,3 +638,4 @@ export const createActionLogEntries = ({
       };
     })
     .reverse();
+};

@@ -1,7 +1,13 @@
 import { strict as assert } from "node:assert";
 import { describe, test } from "vitest";
 
-import type { CardId, EngineEvent, InstanceId, PlayerId } from "@optcg/types";
+import type {
+  CardId,
+  EngineEvent,
+  InstanceId,
+  PlayerId,
+  StateSeq,
+} from "@optcg/types";
 
 import { createActionLogEntries } from "./action-log.js";
 import type { MatchCardCatalog } from "./transport.js";
@@ -28,6 +34,20 @@ const catalog: MatchCardCatalog = {
           cardId: "OP13-089" as CardId,
           name: "Saint Shepherd Ju Peter",
           category: "Character",
+          effectText: "[On Play] Draw 1 card.",
+          effectTextSourceMap: {
+            textKind: "effect",
+            sourceText: "[On Play] Draw 1 card.",
+            spans: [
+              {
+                id: "span:on-play-line",
+                role: "line",
+                start: 0,
+                end: 23,
+                text: "[On Play] Draw 1 card.",
+              },
+            ],
+          },
         },
       },
     },
@@ -44,16 +64,24 @@ const catalog: MatchCardCatalog = {
 };
 
 describe("action log", () => {
-  test("formats visible engine events into newest-first stable log rows", () => {
+  test("formats player-facing events into newest-first stable log rows", () => {
     const entries = createActionLogEntries({
       events: [
         event({
-          type: "effectQueued",
+          type: "effectResolved",
           seq: 4,
-          source: {
-            instanceId: "source-1" as InstanceId,
-            cardId: "OP13-089" as CardId,
-            playerId: p1,
+          payload: {
+            source: {
+              instanceId: "source-1" as InstanceId,
+              cardId: "OP13-089" as CardId,
+              playerId: p1,
+            },
+            entryPoint: { type: "onPlay" },
+            presentation: {
+              textKind: "effect",
+              activeSpanIds: ["span:on-play-line"],
+            },
+            status: "resolved",
           },
         }),
         event({
@@ -67,10 +95,7 @@ describe("action log", () => {
 
     assert.deepEqual(
       entries.map((entry) => entry.text),
-      [
-        "A player resolved decision: 1 card",
-        "Saint Shepherd Ju Peter effect queued",
-      ],
+      ["Saint Shepherd Ju Peter resolved [On Play]: [On Play] Draw 1 card."],
     );
   });
 
@@ -79,15 +104,15 @@ describe("action log", () => {
       events: [
         event({
           id: "event:64:1:decisionResolved" as EngineEvent["id"],
-          type: "decisionResolved",
+          type: "cardPlayed",
           seq: 64,
-          payload: { selectedCount: 1 },
+          payload: { playerId: p1, cardId: "OP13-089" },
         }),
         event({
-          id: "event:64:1:decisionResolved" as EngineEvent["id"],
-          type: "decisionResolved",
+          id: "event:64:1:cardPlayed" as EngineEvent["id"],
+          type: "cardPlayed",
           seq: 64,
-          payload: { selectedCount: 0 },
+          payload: { playerId: p1, cardId: "OP13-089" },
         }),
       ],
       catalog,
@@ -272,7 +297,6 @@ describe("action log", () => {
     assert.deepEqual(
       entries.map((entry) => entry.text),
       [
-        "p1 decision: Choose a card.",
         "p2 took 1 life",
         "Saint Shepherd Ju Peter attacked Saint Marcus Mars",
         "p1 paid cost: rested 4 DON!!",
@@ -323,6 +347,7 @@ describe("action log", () => {
               instanceId: "source-1" as InstanceId,
               name: "Saint Shepherd Ju Peter",
               category: "Character",
+              effectText: "[On Play] Draw 1 card.",
             },
           },
         ],
@@ -332,5 +357,83 @@ describe("action log", () => {
         },
       },
     ]);
+  });
+
+  test("reanchors rollback points from hidden event rows onto the next visible row", () => {
+    const entries = createActionLogEntries({
+      events: [
+        event({
+          id: "event:decision" as EngineEvent["id"],
+          type: "decisionResolved",
+          seq: 6,
+          payload: { selectedCount: 1 },
+        }),
+        event({
+          id: "event:play-card" as EngineEvent["id"],
+          type: "cardPlayed",
+          seq: 7,
+          payload: {
+            playerId: p1,
+            instanceId: "source-1",
+            cardId: "OP13-089",
+          },
+        }),
+      ],
+      catalog,
+      rollbackPoints: [
+        {
+          rollbackPointId: "rollback:before-decision",
+          eventId: "event:decision",
+          eventSeq: 6,
+          stateSeq: 5,
+          actionSeq: 2,
+          label: "Before decision",
+        },
+      ],
+    });
+
+    const firstEntry = entries[0];
+    if (firstEntry === undefined) {
+      throw new Error("Expected one action log entry.");
+    }
+    assert.equal(firstEntry.text, "Played Saint Shepherd Ju Peter");
+    assert.deepEqual(firstEntry.rollback, {
+      rollbackPointId: "rollback:before-decision",
+      label: "Before decision",
+    });
+  });
+
+  test("offers rollback only on the newest three visible rollback points", () => {
+    const events = [1, 2, 3, 4].map((seq) =>
+      event({
+        id: `event:play-card:${String(seq)}` as EngineEvent["id"],
+        type: "cardPlayed",
+        seq,
+        payload: {
+          playerId: p1,
+          instanceId: `source-${String(seq)}`,
+          cardId: "OP13-089",
+        },
+      }),
+    );
+    const entries = createActionLogEntries({
+      events,
+      catalog,
+      rollbackPoints: events.map((sourceEvent) => ({
+        rollbackPointId: `rollback:${String(sourceEvent.seq)}`,
+        eventId: String(sourceEvent.id),
+        eventSeq: sourceEvent.seq,
+        stateSeq: sourceEvent.seq as StateSeq,
+        actionSeq: sourceEvent.seq,
+        label: `Before event ${String(sourceEvent.seq)}`,
+      })),
+    });
+
+    assert.deepEqual(
+      entries.flatMap((entry) =>
+        entry.rollback === undefined ? [] : [entry.rollback.rollbackPointId],
+      ),
+      ["rollback:4", "rollback:3", "rollback:2"],
+    );
   });
 });
