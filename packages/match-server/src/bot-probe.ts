@@ -11,7 +11,11 @@ import type {
 import { chooseBotActionReport } from "./bot-player.js";
 import type { BotScoreBreakdown } from "./bot-score.js";
 import type { BotTurnIntent } from "./bot-turn-intent.js";
-import type { BotActionChoice, BotDecisionReason } from "./bot-types.js";
+import type {
+  BotActionChoice,
+  BotDecisionReason,
+  BotExplainableScore,
+} from "./bot-types.js";
 import type {
   DevMatchSnapshot,
   DevVisibleAction,
@@ -46,6 +50,7 @@ export interface BotProbeScenarioReport {
   readonly choice: BotActionChoice | undefined;
   readonly intent?: BotTurnIntent | undefined;
   readonly score?: BotScoreBreakdown | undefined;
+  readonly explainableScore?: BotExplainableScore | undefined;
   readonly decisionReason?: BotDecisionReason | undefined;
   readonly turnLength: number;
 }
@@ -481,6 +486,7 @@ const runOneProbeScenario = (
     choice: report?.choice,
     intent: report?.intent,
     score: report?.score,
+    explainableScore: report?.explainableScore,
     decisionReason: report?.decisionReason,
     turnLength:
       scenario.snapshot.players[scenario.botPlayerId]?.actions.length ?? 0,

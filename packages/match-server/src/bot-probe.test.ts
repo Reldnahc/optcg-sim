@@ -23,6 +23,16 @@ describe("runBotProbe", () => {
     assert.equal(report.scenarios[0]?.decisionReason?.kind, "fallback");
   });
 
+  test("reports explainable score terms for visible action choices", () => {
+    const report = runBotProbe(defaultBotProbeScenarios);
+    const visibleActionReport = report.scenarios.find(
+      (scenario) => scenario.choice?.type === "submitAction",
+    );
+
+    assert.notEqual(visibleActionReport, undefined);
+    assert.ok((visibleActionReport?.explainableScore?.terms.length ?? 0) > 0);
+  });
+
   test("fails when a required choice is undefined", () => {
     const report = runBotProbe([probeScenarioWithNoLegalBotChoice()]);
 

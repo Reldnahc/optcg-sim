@@ -36,6 +36,23 @@ export interface BotDecisionResponseChoice {
   readonly reason: BotDecisionReason;
 }
 
+export interface BotScoreTerm {
+  readonly key: string;
+  readonly value: number;
+  readonly reason: string;
+}
+
+export interface BotExplainableScore {
+  readonly total: number;
+  readonly terms: readonly BotScoreTerm[];
+}
+
+export interface BotRejectedCandidate {
+  readonly actionIndex: number;
+  readonly actionType: string;
+  readonly reason: string;
+}
+
 export interface BotActionContext {
   readonly snapshot: DevMatchSnapshot;
   readonly botPlayerId: PlayerId;

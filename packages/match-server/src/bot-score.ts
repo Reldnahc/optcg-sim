@@ -10,7 +10,7 @@ import {
   type BotFeatures,
   type BotDonAttachmentUse,
 } from "./bot-features.js";
-import type { BotActionContext } from "./bot-types.js";
+import type { BotActionContext, BotExplainableScore } from "./bot-types.js";
 import type { BotTurnIntent } from "./bot-turn-intent.js";
 
 type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
@@ -43,7 +43,10 @@ export interface BotScoreInput {
   readonly cardScores?: readonly number[] | undefined;
 }
 
-type BotScoreTerm = keyof Omit<BotScoreBreakdown, "total" | "reasons">;
+type BotScoreBreakdownTerm = keyof Omit<
+  BotScoreBreakdown,
+  "total" | "reasons"
+>;
 
 const emptyBreakdown = (): BotScoreBreakdown => ({
   total: 0,
@@ -59,7 +62,7 @@ const emptyBreakdown = (): BotScoreBreakdown => ({
 
 const addTerm = (
   breakdown: BotScoreBreakdown,
-  key: BotScoreTerm,
+  key: BotScoreBreakdownTerm,
   value: number,
   reason: string,
 ): BotScoreBreakdown => ({
@@ -67,6 +70,26 @@ const addTerm = (
   [key]: breakdown[key] + value,
   total: breakdown.total + value,
   reasons: [...breakdown.reasons, reason],
+});
+
+const explainableTerms = (
+  breakdown: BotScoreBreakdown,
+): BotExplainableScore["terms"] =>
+  [
+    { key: "profile", value: breakdown.profile, reason: "profile" },
+    { key: "combat", value: breakdown.combat, reason: "combat" },
+    { key: "resource", value: breakdown.resource, reason: "resource" },
+    { key: "tempo", value: breakdown.tempo, reason: "tempo" },
+    { key: "risk", value: breakdown.risk, reason: "risk" },
+    { key: "fallback", value: breakdown.fallback, reason: "fallback" },
+    { key: "intent", value: breakdown.intent, reason: "intent" },
+  ].filter((term) => term.value !== 0);
+
+export const botScoreBreakdownToExplainableScore = (
+  breakdown: BotScoreBreakdown,
+): BotExplainableScore => ({
+  total: breakdown.total,
+  terms: explainableTerms(breakdown),
 });
 
 const mergeBreakdown = (

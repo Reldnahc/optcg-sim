@@ -10,6 +10,7 @@ import { chooseDefaultBotDecision } from "./bot-default-profile.js";
 import { buildBotFeatures, type BotFeatures } from "./bot-features.js";
 import { redShanksBotProfile } from "./bot-red-shanks-profile.js";
 import {
+  botScoreBreakdownToExplainableScore,
   scoreBotCandidate,
   type BotScoreBreakdown,
   type ScoredBotCandidate,
@@ -20,6 +21,8 @@ import type {
   BotActionContext,
   BotBehaviorProfile,
   BotDecisionReason,
+  BotExplainableScore,
+  BotRejectedCandidate,
   BotSubmitActionChoice,
   BotStrategy,
 } from "./bot-types.js";
@@ -29,8 +32,10 @@ type BotPendingDecision = NonNullable<PlayerView["pendingDecision"]>;
 export interface BotStrategyActionReport {
   readonly choice: BotActionChoice;
   readonly score?: BotScoreBreakdown | undefined;
+  readonly explainableScore?: BotExplainableScore | undefined;
   readonly intent?: BotTurnIntent | undefined;
   readonly decisionReason?: BotDecisionReason | undefined;
+  readonly rejectedCandidates?: readonly BotRejectedCandidate[] | undefined;
 }
 
 const usefulCounterUtilityFloor = 100;
@@ -176,6 +181,9 @@ const chooseCounterStepPass = (
           actionIndex: counterCandidate.candidate.action.index,
         },
         score: counterCandidate.breakdown,
+        explainableScore: botScoreBreakdownToExplainableScore(
+          counterCandidate.breakdown,
+        ),
         intent,
       };
 };
@@ -271,6 +279,7 @@ const chooseStrategyActionReport = ({
         })(),
       },
       score: chosen.breakdown,
+      explainableScore: botScoreBreakdownToExplainableScore(chosen.breakdown),
       intent,
     };
   }
