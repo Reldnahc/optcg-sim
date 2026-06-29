@@ -409,6 +409,57 @@ describe("bot strategy priorities", () => {
     assert.deepEqual(chosen, { type: "submitAction", actionIndex: 1 });
   });
 
+  test("uses combat planner explanation for pressure attacks", () => {
+    const report = chooseBotActionReport({
+      snapshot: snapshotWithActions(
+        [
+          {
+            index: 0,
+            type: "declareAttack",
+            label: "Attack low-value character",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "small-character" as InstanceId,
+            },
+          },
+          {
+            index: 1,
+            type: "declareAttack",
+            label: "Attack leader",
+            attack: {
+              attackerInstanceId: "bot-leader" as InstanceId,
+              targetInstanceId: "opponent-leader" as InstanceId,
+            },
+          },
+        ],
+        {
+          selfLeader: { currentPower: 9_000 },
+          opponentLeader: { currentPower: 5_000 },
+          opponentCharacters: [
+            {
+              instanceId: "small-character" as InstanceId,
+              cardId: "OP01-010" as CardId,
+              owner: "p1" as PlayerId,
+              controller: "p1" as PlayerId,
+              zone: { playerId: "p1" as PlayerId, zone: "characterArea" },
+              currentPower: 4_000,
+              printedCost: 2,
+            },
+          ],
+        },
+      ),
+      botPlayerId: botId,
+    });
+
+    assert.deepEqual(report?.choice, { type: "submitAction", actionIndex: 1 });
+    assert.equal(
+      report?.explainableScore?.terms.some(
+        (term) => term.reason === "attack leader by required counter cards",
+      ),
+      true,
+    );
+  });
+
   test("does not attach a single DON to a character that still cannot hit", () => {
     const chosen = chooseBotAction(
       snapshotWithActions(

@@ -4,6 +4,7 @@ import {
   botCandidateIsLegalForScoring,
   buildBotActionCandidates,
 } from "./bot-candidates.js";
+import { chooseCombatPlanAction } from "./bot-combat-planner.js";
 import { scoreCombatAction } from "./bot-combat-evaluation.js";
 import { chooseBotDecisionResponse } from "./bot-decision-responder.js";
 import { chooseDefaultBotDecision } from "./bot-default-profile.js";
@@ -15,6 +16,7 @@ import {
   type BotScoreBreakdown,
   type ScoredBotCandidate,
 } from "./bot-score.js";
+import { chooseBotStrategicMode } from "./bot-strategic-mode.js";
 import { chooseBotTurnIntent, type BotTurnIntent } from "./bot-turn-intent.js";
 import type {
   BotActionChoice,
@@ -261,6 +263,27 @@ const chooseStrategyActionReport = ({
       }),
       intent,
     );
+  }
+  const hasOnlyCombatActions =
+    actions.length > 0 &&
+    actions.every((action) => action.type === "declareAttack");
+  if (hasOnlyCombatActions) {
+    const modeReport = chooseBotStrategicMode(features);
+    const combatPlan = chooseCombatPlanAction({
+      actions,
+      features,
+      mode: modeReport.mode,
+    });
+    if (combatPlan !== undefined && combatPlan.score.total > 0) {
+      return {
+        choice: {
+          type: "submitAction",
+          actionIndex: combatPlan.action.index,
+        },
+        explainableScore: combatPlan.score,
+        intent,
+      };
+    }
   }
   const chosen = chooseBestScoredCandidate(scored);
   if (chosen !== undefined) {
