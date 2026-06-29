@@ -227,6 +227,7 @@ describe("card action menu", () => {
     );
 
     assert.equal(markup.includes("Confirm concede"), true);
+    assert.match(markup, /<path d="M5 4h12l-2 4 2 4H5"><\/path>/u);
     assert.match(markup, />Confirm concede<\/span>/u);
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
@@ -431,8 +432,9 @@ describe("card action menu", () => {
 
     assert.match(
       styles,
-      /\.concede-button\s*\{[^}]*width:\s*clamp\(92px,\s*calc\(var\(--control-icon-button-size\) \* 3\),\s*136px\);[^}]*font-weight:\s*800;[^}]*white-space:\s*nowrap;/u,
+      /\.concede-button\s*\{[^}]*grid-auto-flow:\s*column;[^}]*width:\s*clamp\(92px,\s*calc\(var\(--control-icon-button-size\) \* 3\),\s*136px\);[^}]*font-weight:\s*800;[^}]*white-space:\s*nowrap;/u,
     );
+    assert.match(styles, /\.concede-button svg\s*\{/u);
     assert.match(
       styles,
       /\.concede-button:hover,\s*\.concede-button\.is-confirming\s*\{[^}]*background:\s*rgba\(177,\s*45,\s*54,\s*0\.82\);/u,

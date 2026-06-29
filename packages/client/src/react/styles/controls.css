@@ -726,6 +726,8 @@
 }
 
 .concede-button {
+  grid-auto-flow: column;
+  gap: calc(var(--control-rail-gap) * 0.45);
   width: clamp(92px, calc(var(--control-icon-button-size) * 3), 136px);
   padding: 0 calc(var(--control-rail-gap) * 0.8);
   color: rgba(255, 220, 220, 0.9);
@@ -733,6 +735,11 @@
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
+}
+
+.concede-button svg {
+  width: calc(var(--control-icon-size) * 0.86);
+  height: calc(var(--control-icon-size) * 0.86);
 }
 
 .concede-button:hover,
