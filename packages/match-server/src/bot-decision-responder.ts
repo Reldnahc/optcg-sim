@@ -1,5 +1,6 @@
 import type { PlayerId, PlayerView } from "@optcg/types";
 
+import { chooseGenericBotDecision } from "./bot-decision-planner.js";
 import { chooseDefaultBotDecision } from "./bot-default-profile.js";
 import type {
   BotBehaviorProfile,
@@ -83,6 +84,13 @@ export const chooseBotDecisionResponse = ({
     return {
       choice: { type: "submitAction", actionIndex: visibleAction.index },
       reason: { kind: "visible-action", actionIndex: visibleAction.index },
+    };
+  }
+  const genericDecision = chooseGenericBotDecision({ snapshot, botPlayerId });
+  if (genericDecision !== undefined) {
+    return {
+      choice: genericDecision,
+      reason: { kind: "fallback", decisionType: decision.type },
     };
   }
   const fallback = chooseDefaultBotDecision({ snapshot, botPlayerId });
