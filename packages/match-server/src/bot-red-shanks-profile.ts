@@ -11,6 +11,7 @@ import {
   powerReductionBehaviorsFromProfile,
   scorePowerReductionAction,
 } from "./bot-power-reduction-behavior.js";
+import { redShanksCardSpecs } from "./bot-red-shanks-card-spec.js";
 import type {
   BotActionContext,
   BotBehaviorProfile,
@@ -32,25 +33,29 @@ const redShanksSearchPriority = [
   "OP16-018",
 ] as const;
 
+const redShanksCardsWithRole = (role: BotCardRole): readonly string[] =>
+  redShanksCardSpecs
+    .filter((spec) => spec.roles.includes(role))
+    .map((spec) => spec.cardId);
+
 export const redShanksProfileData: BotDeckProfileData = {
   id: "red-shanks",
   cardRoles: {
-    "OP16-012": ["cheat-enabler", "preserve"],
-    "OP06-007": ["cheat-target", "preserve"],
-    "OP09-004": ["cheat-target", "preserve"],
-    "ST23-002": ["cheat-target", "preserve"],
-    "OP12-008": ["cheat-target", "preserve"],
+    "OP16-012": ["combo-enabler", "preserve"],
+    "OP06-007": ["combo-payoff", "preserve"],
+    "OP09-004": ["combo-payoff", "preserve"],
+    "ST23-002": ["combo-payoff", "preserve"],
+    "OP12-008": ["combo-payoff", "preserve"],
     "OP09-002": ["searcher"],
     "OP09-020": ["searcher"],
-    "PRB02-002": ["searcher"],
+    "PRB02-002": ["attacker", "power-reduction"],
     "OP09-011": ["power-reduction"],
   },
   searchPriorities: {
     "OP09-002": redShanksSearchPriority,
     "OP09-020": redShanksSearchPriority,
-    "PRB02-002": redShanksSearchPriority,
   },
-  preserveCards: ["OP16-012", "OP06-007", "OP09-004", "ST23-002", "OP12-008"],
+  preserveCards: redShanksCardsWithRole("preserve"),
   cheatTargets: [
     {
       sourceCardId: "OP16-012",
@@ -141,7 +146,7 @@ const isCheatLineLive = (
   profile: BotDeckProfileData,
 ): boolean =>
   botDonOnField(context) >= 10 &&
-  hasCardInHand(context, profileCardIdsWithRole(profile, "cheat-target"));
+  hasCardInHand(context, profileCardIdsWithRole(profile, "combo-payoff"));
 
 const wouldOverflowOnlyPreservedCharacters = (
   { snapshot, botPlayerId }: BotActionContext,
@@ -429,13 +434,13 @@ export const createBotBehaviorProfile = (
       }
       const cardId = String(card.cardId);
       if (
-        profile.cardRoles[cardId]?.includes("cheat-enabler") === true &&
+        profile.cardRoles[cardId]?.includes("combo-enabler") === true &&
         wouldOverflowOnlyPreservedCharacters(context, profile)
       ) {
         return false;
       }
       if (
-        profile.cardRoles[cardId]?.includes("cheat-enabler") === true &&
+        profile.cardRoles[cardId]?.includes("combo-enabler") === true &&
         isCheatLineLive(context, profile)
       ) {
         return -80;

@@ -266,8 +266,13 @@ const chooseStrategyActionReport = ({
     );
   }
   const modeReport = chooseBotStrategicMode(features);
+  const plannerActions = [
+    ...new Map(
+      scored.map(({ candidate }) => [candidate.action.index, candidate.action]),
+    ).values(),
+  ];
   const turnPlan = chooseTurnPlan({
-    actions,
+    actions: plannerActions,
     features,
     mode: modeReport.mode,
   });

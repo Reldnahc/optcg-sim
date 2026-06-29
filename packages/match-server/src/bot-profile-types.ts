@@ -1,10 +1,18 @@
 export type BotCardRole =
+  | "attacker"
+  | "blocker"
+  | "rush"
+  | "removal"
   | "searcher"
-  | "cheat-enabler"
-  | "cheat-target"
+  | "draw"
+  | "ramp"
   | "power-reduction"
   | "high-counter"
-  | "preserve";
+  | "engine-piece"
+  | "combo-enabler"
+  | "combo-payoff"
+  | "preserve"
+  | "low-priority-payment";
 
 export interface BotDeckProfileData {
   readonly id: string;
