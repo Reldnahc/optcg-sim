@@ -101,8 +101,17 @@ const counterPowerToStopAttack = (
 const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
 
+const visibleCardZone = (card: BotVisibleCard): string | undefined => {
+  const zone: unknown = card.zone;
+  if (typeof zone !== "object" || zone === null || !("zone" in zone)) {
+    return undefined;
+  }
+  const value: unknown = zone.zone;
+  return typeof value === "string" ? value : undefined;
+};
+
 const isActiveDon = (card: BotVisibleCard): boolean =>
-  card.zone?.zone === "costArea" && card.state === "active";
+  visibleCardZone(card) === "costArea" && card.state === "active";
 
 const hasKeyword = (
   card: BotVisibleCard,

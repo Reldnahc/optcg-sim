@@ -100,7 +100,7 @@ const attachDonAction = (index: number): DevVisibleAction => ({
   type: "attachDon",
   label: "Attach DON",
   attachment: {
-    donInstanceId: `don-${index}` as InstanceId,
+    donInstanceId: `don-${String(index)}` as InstanceId,
     targetInstanceId: "leader" as InstanceId,
   },
 });
@@ -198,9 +198,13 @@ describe("chooseTurnPlan", () => {
       mode: "develop",
     });
 
-    assert.equal(plan?.steps[0]?.actionIndex, 0);
+    assert.notEqual(plan, undefined);
+    if (plan === undefined) {
+      throw new Error("Expected turn plan.");
+    }
+    assert.equal(plan.steps[0]?.actionIndex, 0);
     assert.equal(
-      plan?.score.terms.some((term) => term.reason === "persistent board"),
+      plan.score.terms.some((term) => term.reason === "persistent board"),
       true,
     );
   });
@@ -212,9 +216,13 @@ describe("chooseTurnPlan", () => {
       mode: "cleanup",
     });
 
-    assert.equal(plan?.steps[0]?.actionIndex, 4);
+    assert.notEqual(plan, undefined);
+    if (plan === undefined) {
+      throw new Error("Expected turn plan.");
+    }
+    assert.equal(plan.steps[0]?.actionIndex, 4);
     assert.equal(
-      plan?.score.terms.some((term) => term.reason === "use available effect"),
+      plan.score.terms.some((term) => term.reason === "use available effect"),
       true,
     );
   });

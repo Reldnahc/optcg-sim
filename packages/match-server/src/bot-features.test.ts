@@ -26,7 +26,7 @@ const publicCard = (
 ): PublicCardView => ({
   instanceId:
     fields.instanceId ??
-    (`${defaults.playerId}:${defaults.zone}:${defaults.index}` as InstanceId),
+    (`${defaults.playerId}:${defaults.zone}:${String(defaults.index)}` as InstanceId),
   cardId: fields.cardId ?? ("OP01-000" as CardId),
   owner: fields.owner ?? defaults.playerId,
   controller: fields.controller ?? defaults.playerId,

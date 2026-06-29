@@ -456,9 +456,13 @@ describe("bot strategy priorities", () => {
       botPlayerId: botId,
     });
 
-    assert.deepEqual(report?.choice, { type: "submitAction", actionIndex: 1 });
+    assert.notEqual(report, undefined);
+    if (report === undefined) {
+      throw new Error("Expected bot action report.");
+    }
+    assert.deepEqual(report.choice, { type: "submitAction", actionIndex: 1 });
     assert.equal(
-      report?.explainableScore?.terms.some(
+      report.explainableScore?.terms.some(
         (term) => term.reason === "attack leader by required counter cards",
       ),
       true,
@@ -520,9 +524,13 @@ describe("bot strategy priorities", () => {
       botPlayerId: botId,
     });
 
-    assert.equal(report?.choice.type, "submitAction");
+    assert.notEqual(report, undefined);
+    if (report === undefined) {
+      throw new Error("Expected bot action report.");
+    }
+    assert.equal(report.choice.type, "submitAction");
     assert.equal(
-      report?.explainableScore?.terms.some((term) =>
+      report.explainableScore?.terms.some((term) =>
         term.reason.includes("persistent board"),
       ),
       true,

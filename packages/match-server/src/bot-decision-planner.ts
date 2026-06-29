@@ -58,13 +58,13 @@ const chooseLowestValueCards = (
 
 const decisionLooksLikePayment = (decision: BotPendingDecision): boolean =>
   decision.type === "payCost" ||
-  decision.causedBy?.type === "effect" ||
+  decision.causedBy.type === "effect" ||
   /cost|trash|discard|pay/iu.test(decision.prompt);
 
 const decisionLooksLikeBattleDecision = (
   decision: BotPendingDecision,
 ): boolean =>
-  decision.causedBy?.type === "ruleProcess" &&
+  decision.causedBy.type === "ruleProcess" &&
   /block|counter|battle/iu.test(
     `${decision.causedBy.name}\n${decision.prompt}`,
   );

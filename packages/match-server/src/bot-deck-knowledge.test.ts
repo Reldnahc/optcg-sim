@@ -13,7 +13,7 @@ const publicCard = (cardId: string): PublicCardView =>
     zone: { playerId: "p1" as PlayerId, zone: "trash" },
     attachedDonCount: 0,
     attachedDonIds: [],
-  }) as PublicCardView;
+  });
 
 describe("buildOpponentDeckKnowledge", () => {
   test("computes counter priors from decklist", () => {
