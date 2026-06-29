@@ -5,8 +5,10 @@ import type {
   DevVisibleAction,
 } from "./dev-snapshot-types.js";
 import type { BotVisibleCard } from "./bot-types.js";
-
-const assumedCounterPowerPerHandCard = 2_000;
+import {
+  counterPowerRequiredToStopAttack,
+  estimatedCounterCardsRequiredToStopAttack,
+} from "./bot-gameplay-doctrine.js";
 
 export interface BotFeatures {
   readonly snapshot: DevMatchSnapshot;
@@ -77,17 +79,13 @@ export const counterCardsToStopAttack = (
   attackerPower: number,
   targetPower: number,
 ): number | undefined =>
-  attackerPower < targetPower
-    ? undefined
-    : Math.ceil(
-        (attackerPower - targetPower + 1_000) / assumedCounterPowerPerHandCard,
-      );
+  estimatedCounterCardsRequiredToStopAttack({ attackerPower, targetPower });
 
 const counterPowerToStopAttack = (
   attackerPower: number,
   targetPower: number,
 ): number | undefined =>
-  attackerPower < targetPower ? undefined : attackerPower - targetPower + 1_000;
+  counterPowerRequiredToStopAttack({ attackerPower, targetPower });
 
 const attachedDonCount = (card: BotVisibleCard | undefined): number =>
   card?.attachedDonCount ?? 0;
