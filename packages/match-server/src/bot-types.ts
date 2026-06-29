@@ -67,6 +67,29 @@ export interface BotRejectedCandidate {
   readonly reason: string;
 }
 
+export interface BotDeckCardKnowledge {
+  readonly cardId: string;
+  readonly count: number;
+  readonly printedCounter: number;
+  readonly roles: readonly string[];
+}
+
+export interface BotCounterPrior {
+  readonly unknownCardCount: number;
+  readonly totalCounterPower: number;
+  readonly counter1000Count: number;
+  readonly counter2000Count: number;
+  readonly averageCounterPower: number;
+}
+
+export interface BotOpponentDeckKnowledge {
+  readonly knownDecklistCardIds: readonly string[];
+  readonly remainingUnknownCounterPrior: BotCounterPrior;
+  readonly remainingEventCount: number;
+  readonly remainingBlockerCount: number;
+  readonly remainingRemovalCount: number;
+}
+
 export type BotStrategicMode =
   | "survive"
   | "stabilize"

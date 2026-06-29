@@ -5,6 +5,7 @@ import type {
   DevVisibleAction,
 } from "./dev-snapshot-types.js";
 import type { BotVisibleCard } from "./bot-types.js";
+import type { BotOpponentDeckKnowledge } from "./bot-types.js";
 import {
   counterPowerRequiredToStopAttack,
   estimatedCounterCardsRequiredToStopAttack,
@@ -15,6 +16,7 @@ export interface BotFeatures {
   readonly botPlayerId: PlayerId;
   readonly self: BotSelfFeatures;
   readonly opponent: BotOpponentFeatures;
+  readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
   readonly cards: BotCardFeatures;
   readonly actions: BotActionFeatures;
   readonly combat: BotCombatFeatures;
@@ -530,6 +532,9 @@ const hasHighValueThreatAttack = (
 export const buildBotFeatures = (
   snapshot: DevMatchSnapshot,
   botPlayerId: PlayerId,
+  options: {
+    readonly opponentDeckKnowledge?: BotOpponentDeckKnowledge | undefined;
+  } = {},
 ): BotFeatures => {
   const view = partialPlayerView(snapshot, botPlayerId);
   const selfView = view?.self;
@@ -576,6 +581,7 @@ export const buildBotFeatures = (
         .length,
     },
     opponent,
+    opponentDeckKnowledge: options.opponentDeckKnowledge,
     cards: {
       visibleCards: cards,
       byInstanceId: visibleCardMap(cards),
