@@ -726,7 +726,13 @@
 }
 
 .concede-button {
+  width: clamp(92px, calc(var(--control-icon-button-size) * 3), 136px);
+  padding: 0 calc(var(--control-rail-gap) * 0.8);
   color: rgba(255, 220, 220, 0.9);
+  font-size: var(--control-small-font-size);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .concede-button:hover,

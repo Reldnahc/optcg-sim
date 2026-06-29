@@ -227,6 +227,7 @@ describe("card action menu", () => {
     );
 
     assert.equal(markup.includes("Confirm concede"), true);
+    assert.match(markup, />Confirm concede<\/span>/u);
     assert.match(markup, /class="[^"]*concede-button[^"]*is-confirming/u);
   });
 
@@ -422,12 +423,16 @@ describe("card action menu", () => {
     );
   });
 
-  test("concede icon uses dedicated red hover styles", async () => {
+  test("concede button uses a wider text treatment with red hover styles", async () => {
     const styles = await readFile(
       join(sourceDirectory, "styles", "controls.css"),
       "utf8",
     );
 
+    assert.match(
+      styles,
+      /\.concede-button\s*\{[^}]*width:\s*clamp\(92px,\s*calc\(var\(--control-icon-button-size\) \* 3\),\s*136px\);[^}]*font-weight:\s*800;[^}]*white-space:\s*nowrap;/u,
+    );
     assert.match(
       styles,
       /\.concede-button:hover,\s*\.concede-button\.is-confirming\s*\{[^}]*background:\s*rgba\(177,\s*45,\s*54,\s*0\.82\);/u,

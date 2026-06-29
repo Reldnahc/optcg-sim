@@ -374,10 +374,7 @@ export const ControlRail = ({
             title={concedeLabel}
             onClick={onConcede}
           >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 3v18" />
-              <path d="M5 4h12l-2 4 2 4H5" />
-            </svg>
+            <span>{concedeLabel}</span>
           </button>
         </div>
         <div className="control-action-stack">
