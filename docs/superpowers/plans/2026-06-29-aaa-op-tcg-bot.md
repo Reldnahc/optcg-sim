@@ -121,6 +121,37 @@ This section is part of the product spec. Every planner and score term should be
 - Deck profiles may say "this deck values card X highly" or "this searcher prefers these targets."
 - Deck profiles must not be required for liveness. A profile can make choices smarter, but the generic bot must always answer legal decisions.
 
+### Red Shanks Deck-Specific Doctrine
+
+The default bot currently uses a Red Shanks deck. This deck deserves first-class profile support, not vague generic play. The generic bot brain should still work for every deck, but this profile should encode what the Shanks deck is trying to do.
+
+Primary deck plan:
+
+- Survive and trade efficiently with leader/character power reduction.
+- Use searchers to find the OP16-012 Benn.Beckman plus Shanks payoff line.
+- Preserve high-impact Shanks bodies and OP16-012 unless playing them creates immediate board/control value.
+- Use OP16-012 to play large Shanks cards once the bot has 10 DON on field.
+- Use large Shanks bodies to stabilize, remove threats, or swing pressure after the setup line is live.
+- Value 2000-counter cards highly when the bot is not converting them into a meaningful effect.
+- Treat power reduction as pseudo-removal when it enables K.O., trash, battle wins, leader survival, or blocker suppression.
+- Avoid filling the board with low-priority setup cards if it blocks OP16-012 payoff bodies.
+
+Profile-specific policy requirements:
+
+- Search priority should favor `OP16-012` first when the cheat line is not assembled.
+- Search priority should favor high-impact Shanks payoff cards after `OP16-012` is available.
+- `OP16-012` should be preserved when 10 DON payoff is not yet live unless no better play exists.
+- `OP16-012` should not be played into a full field of only protected/preserved payoff bodies.
+- OP16-012 cheat target ranking should prefer the payoff that best answers the current board:
+  - `OP09-004` when rush pressure or global -1000 power matters.
+  - `OP06-007` when an opponent character with 10000 power or less should be K.O.'d.
+  - `ST23-002` when leader defense buff matters or cost reduction made it efficient.
+  - `OP12-008` when blocker plus attack-step reduction matters.
+- OP09-001 leader reduction should activate on defense when it changes battle math or reduces required counter enough to matter.
+- OP09-011 should target opponent characters where -2000 power enables removal or favorable attacks.
+- PRB02-002 should attack before other removal lines when its -2000 power sets up a better sequence.
+- OP16-018 should be preserved when it can protect a meaningful Red-Haired Pirates character from K.O.
+
 ### Product Quality Doctrine
 
 - This is a first-class feature, not a quick heuristic patch.
@@ -184,6 +215,63 @@ Current limitation:
 - It does not have a durable, centralized board-state evaluator.
 - It does not have enough scenario coverage for real gameplay doctrine.
 - Its decision fallbacks are legal but often strategically naive.
+- The Red Shanks profile covers only a subset of the deck. The implementation plan must close that by encoding the whole default bot deck as profile/spec data and testing that every card in `createDefaultBotDeckSubmission()` is accounted for.
+
+## Default Red Shanks Bot Deck Appendix
+
+Authoritative deck source: `packages/match-server/src/bot-deck.ts`.
+
+Authoritative card text source for current local fixtures: `fixtures/replays/dev-latest-replay.local.json` under `replay.replay.manifestSnapshot.cards`. Implementation should use the current card manifest/data APIs instead of copying this appendix into runtime behavior.
+
+The appendix below intentionally captures bot-relevant complete behavior in normalized terms. If exact printed text changes in card data, update the profile spec and tests from the manifest.
+
+### Leader
+
+| Count | Card ID | Name | Bot-relevant text/role |
+| --- | --- | --- | --- |
+| 1 | `OP09-001` | Shanks | 5 life, 5000 power, Red-Haired Pirates leader. Once per turn on opponent attack, can give up to one opponent leader/character -1000 power for the turn. Defensive battle-math tool. |
+
+### Main Deck
+
+| Count | Card ID | Name | Stats | Bot-relevant text/role |
+| --- | --- | --- | --- | --- |
+| 2 | `EB04-007` | Roronoa Zoro | 7 cost, 9000 power | On play gives leader +2000 through opponent's next End Phase. Once per turn can gain Rush: Character for the turn if opponent has an 8000+ power character. Stabilizer and threat answer. |
+| 2 | `OP06-007` | Shanks | 10 cost, 12000 power | On play K.O.s up to one opponent character with 10000 power or less. Highest-value OP16-012 payoff when removal is live. |
+| 4 | `OP09-002` | Uta | 1 cost, 2000 power, 1000 counter | On play looks at top 5, reveals one Red-Haired Pirates card, adds it to hand, bottoms rest. Primary searcher/setup card. |
+| 4 | `OP09-004` | Shanks | 10 cost, 12000 power | Gives all opponent characters -1000 power and has Rush. Premier OP16-012 payoff for pressure and power math. |
+| 2 | `OP09-009` | Benn.Beckman | 7 cost, 7000 power, 1000 counter | On play trashes up to one opponent character with 6000 power or less. Removal body. |
+| 4 | `OP09-011` | Hongo | 3 cost, 3000 power, 2000 counter | Activate Main by resting this character, if leader is Red-Haired Pirates, give up to one opponent character -2000 power for the turn. High counter unless reduction matters. |
+| 2 | `OP09-014` | Limejuice | 3 cost, 3000 power, 2000 counter | On play prevents one 4000-or-less power blocker from activating this turn. High counter and situational blocker suppression. |
+| 4 | `OP09-020` | Come On!! We'll Fight You!! | 1 cost event | Main searches top 5 for a Red-Haired Pirates card other than itself, adds it, bottoms rest. Trigger draws 1. Search event. |
+| 2 | `OP10-011` | Tony Tony.Chopper | 4 cost, 4000 power, 2000 counter | Blocker. On opponent turn gains +2000 power. Defensive body; high counter if not needed as blocker. |
+| 4 | `OP12-008` | Shanks | 4 cost, 6000 power | Blocker. On opponent attack once per turn may trash one hand card to give up to one opponent leader/character -2000 for the turn. Defensive OP16-012 payoff and hand-cost reducer. |
+| 2 | `OP13-007` | Ace & Sabo & Luffy | 1 cost, 1000 power, 2000 counter | Activate Main can attach one active DON to leader/character and trash itself to give one opponent character -3000 for the turn. High counter or power-reduction setup. |
+| 2 | `PRB02-001` | Koby | 4 cost, 5000 power, 1000 counter | Opponent-turn Navy buff is irrelevant for this deck. When attacking, K.O.s an opponent character with 3000 base power or less, then draws if bot has 6 or fewer cards in hand. Attack-trigger value body. |
+| 4 | `PRB02-002` | Trafalgar Law | 6 cost, 7000 power, 1000 counter | Once per turn can avoid opponent effect removal by giving itself -2000 for the turn. When attacking gives one opponent character -2000 for the turn. Persistent value attacker and reduction engine. |
+| 4 | `ST23-002` | Shanks | 9 cost, 10000 power | In hand costs 3 less if opponent has an 8000+ base power character. On play, if leader is Red-Haired Pirates or Uta, leader gains +2000 through opponent's next End Phase. Payoff/defense buff body. |
+| 4 | `OP16-012` | Benn.Beckman | 5 cost, 6000 power, 1000 counter | Blocker. On play may rest one DON; if leader is Red-Haired Pirates and bot has 10 DON on field, play up to one Shanks from hand. Core cheat enabler. |
+| 4 | `OP16-018` | Rockstar | 1 cost, 2000 power, 2000 counter | Once per turn, if a Red-Haired Pirates character would be K.O.'d, may trash a 6000+ power character from hand instead. Protection piece and high counter. |
+
+### Deck Counts And Ratios
+
+- Main deck count: 50.
+- 2000-counter cards: 16 cards (`OP09-011`, `OP09-014`, `OP10-011`, `OP13-007`, `OP16-018`).
+- 1000-counter cards: 16 cards (`OP09-002`, `OP09-009`, `PRB02-001`, `PRB02-002`, `OP16-012`).
+- No-counter high-impact payoff cards: 14 cards (`EB04-007`, `OP06-007`, `OP09-004`, `OP12-008`, `ST23-002`).
+- Search cards/events: 8 cards (`OP09-002`, `OP09-020`).
+- Current profile drift to fix: `PRB02-002` Trafalgar Law is not a searcher in the local manifest text. It should be modeled as a persistent attacker and power-reduction card, not as a search source.
+- Blockers: 10 cards (`OP10-011`, `OP12-008`, `OP16-012`).
+- Primary cheat enabler: 4 cards (`OP16-012`).
+- Shanks cheat payoffs: 14 cards (`OP06-007`, `OP09-004`, `OP12-008`, `ST23-002`).
+
+### Red Shanks Profile Acceptance Requirements
+
+- Every card ID in `createDefaultBotDeckSubmission().decoded.main` must appear in `redShanksCardSpecs`.
+- Every card ID in `redShanksCardSpecs` must either be in the default bot deck or explicitly marked as legacy/test-only.
+- Every profile role must be justified by a card spec role or profile policy.
+- Search priorities must include all profile-relevant Red-Haired Pirates targets for actual search sources only.
+- Cheat target policies must cover every Shanks card that OP16-012 can legally play and intentionally exclude non-Shanks cards.
+- Tests must fail if the deck list changes without updating the profile spec.
 
 ## Target Architecture
 
@@ -2076,6 +2164,8 @@ git commit -m "feat: score generic bot card decisions"
 
 - Create: `packages/match-server/src/bot-card-semantics.ts`
 - Create: `packages/match-server/src/bot-card-semantics.test.ts`
+- Create: `packages/match-server/src/bot-red-shanks-card-spec.ts`
+- Create: `packages/match-server/src/bot-red-shanks-card-spec.test.ts`
 - Modify: `packages/match-server/src/bot-profile-types.ts`
 - Modify: `packages/match-server/src/bot-red-shanks-profile.ts`
 
@@ -2167,6 +2257,7 @@ In `packages/match-server/src/bot-red-shanks-profile.ts`, update:
 "OP09-004": ["combo-payoff", "preserve"],
 "ST23-002": ["combo-payoff", "preserve"],
 "OP12-008": ["combo-payoff", "preserve"],
+"PRB02-002": ["attacker", "power-reduction"],
 ```
 
 Rename code references:
@@ -2175,6 +2266,8 @@ Rename code references:
 - `cheat-target` -> `combo-payoff`
 
 Keep variable names like `cheatTargets` only if changing them would create too much churn; otherwise rename to `comboTargets` in a separate commit.
+
+Also remove `PRB02-002` from `searchPriorities`; it is not a search source. Keep it in card specs and profile roles as a power-reduction attacker.
 
 - [ ] **Step 4: Test semantic derivation**
 
@@ -2230,10 +2323,278 @@ corepack pnpm exec vitest run packages/match-server/src/bot-card-semantics.test.
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Encode Red Shanks card specs**
+
+Create `packages/match-server/src/bot-red-shanks-card-spec.ts`.
+
+```ts
+import type { BotCardRole } from "./bot-profile-types.js";
+
+export interface RedShanksCardSpec {
+  readonly cardId: string;
+  readonly name: string;
+  readonly count: number;
+  readonly roles: readonly BotCardRole[];
+  readonly profileNotes: readonly string[];
+}
+
+export const redShanksCardSpecs: readonly RedShanksCardSpec[] = [
+  {
+    cardId: "OP09-001",
+    name: "Shanks",
+    count: 1,
+    roles: ["engine-piece"],
+    profileNotes: [
+      "Leader reduction is defensive battle math and should activate when it changes counter requirements.",
+    ],
+  },
+  {
+    cardId: "EB04-007",
+    name: "Roronoa Zoro",
+    count: 2,
+    roles: ["attacker", "engine-piece"],
+    profileNotes: [
+      "Leader power buff stabilizes defense through opponent turn.",
+      "Rush-character mode matters when opponent has an 8000+ power character.",
+    ],
+  },
+  {
+    cardId: "OP06-007",
+    name: "Shanks",
+    count: 2,
+    roles: ["attacker", "removal", "combo-payoff", "preserve"],
+    profileNotes: [
+      "Best OP16-012 payoff when a 10000-or-less power character should be K.O.'d.",
+    ],
+  },
+  {
+    cardId: "OP09-002",
+    name: "Uta",
+    count: 4,
+    roles: ["searcher"],
+    profileNotes: ["Primary top-five Red-Haired Pirates searcher."],
+  },
+  {
+    cardId: "OP09-004",
+    name: "Shanks",
+    count: 4,
+    roles: ["attacker", "removal", "combo-payoff", "preserve"],
+    profileNotes: [
+      "Premier OP16-012 payoff for rush pressure and global opponent character reduction.",
+    ],
+  },
+  {
+    cardId: "OP09-009",
+    name: "Benn.Beckman",
+    count: 2,
+    roles: ["attacker", "removal"],
+    profileNotes: ["Removal body for opponent characters at 6000 power or less."],
+  },
+  {
+    cardId: "OP09-011",
+    name: "Hongo",
+    count: 4,
+    roles: ["power-reduction", "high-counter"],
+    profileNotes: [
+      "Keep as 2000 counter unless resting it creates removal, favorable attack math, or pressure.",
+    ],
+  },
+  {
+    cardId: "OP09-014",
+    name: "Limejuice",
+    count: 2,
+    roles: ["high-counter", "removal"],
+    profileNotes: [
+      "Keep as 2000 counter unless blocker suppression creates a meaningful attack or lethal line.",
+    ],
+  },
+  {
+    cardId: "OP09-020",
+    name: "Come On!! We'll Fight You!!",
+    count: 4,
+    roles: ["searcher"],
+    profileNotes: ["Top-five Red-Haired Pirates search event; trigger draws one."],
+  },
+  {
+    cardId: "OP10-011",
+    name: "Tony Tony.Chopper",
+    count: 2,
+    roles: ["blocker", "high-counter"],
+    profileNotes: [
+      "Defensive blocker that is 6000 power on opponent turn; otherwise valuable 2000 counter.",
+    ],
+  },
+  {
+    cardId: "OP12-008",
+    name: "Shanks",
+    count: 4,
+    roles: ["blocker", "power-reduction", "combo-payoff", "preserve"],
+    profileNotes: [
+      "Defensive OP16-012 payoff; blocker plus attack-step -2000 can reduce counter requirements.",
+    ],
+  },
+  {
+    cardId: "OP13-007",
+    name: "Ace & Sabo & Luffy",
+    count: 2,
+    roles: ["power-reduction", "high-counter", "low-priority-payment"],
+    profileNotes: [
+      "Use as 2000 counter by default; activate only when -3000 character reduction matters.",
+    ],
+  },
+  {
+    cardId: "PRB02-001",
+    name: "Koby",
+    count: 2,
+    roles: ["attacker", "removal", "draw"],
+    profileNotes: [
+      "Navy buff is irrelevant; attack trigger can remove small base-power characters and draw at low hand.",
+    ],
+  },
+  {
+    cardId: "PRB02-002",
+    name: "Trafalgar Law",
+    count: 4,
+    roles: ["attacker", "power-reduction"],
+    profileNotes: [
+      "Persistent attacker with attack-trigger -2000; can resist opponent effect removal by losing power.",
+    ],
+  },
+  {
+    cardId: "ST23-002",
+    name: "Shanks",
+    count: 4,
+    roles: ["attacker", "combo-payoff", "preserve"],
+    profileNotes: [
+      "Costs 3 less in hand when opponent has an 8000+ base-power character.",
+      "On play leader buff stabilizes defense through opponent turn.",
+    ],
+  },
+  {
+    cardId: "OP16-012",
+    name: "Benn.Beckman",
+    count: 4,
+    roles: ["blocker", "combo-enabler", "preserve"],
+    profileNotes: [
+      "Core cheat enabler; preserve until 10 DON line is live unless no better play exists.",
+    ],
+  },
+  {
+    cardId: "OP16-018",
+    name: "Rockstar",
+    count: 4,
+    roles: ["high-counter", "preserve"],
+    profileNotes: [
+      "Protects Red-Haired Pirates characters from K.O. by trashing a 6000+ power character from hand.",
+    ],
+  },
+];
+
+export const redShanksSpecCardIds = new Set(
+  redShanksCardSpecs.map((spec) => spec.cardId),
+);
+```
+
+This file is profile doctrine, not generic bot logic. Keep exact card IDs here, not in generic planners.
+
+- [ ] **Step 7: Test Red Shanks spec covers the default deck**
+
+Create `packages/match-server/src/bot-red-shanks-card-spec.test.ts`.
+
+```ts
+import { strict as assert } from "node:assert";
+import { describe, test } from "vitest";
+
+import { createDefaultBotDeckSubmission } from "./bot-deck.js";
+import { redShanksCardSpecs } from "./bot-red-shanks-card-spec.js";
+import { redShanksProfileData } from "./bot-red-shanks-profile.js";
+
+describe("red Shanks card specs", () => {
+  test("cover every card in the default bot deck", () => {
+    const deck = createDefaultBotDeckSubmission();
+    const deckCardIds = [
+      String(deck.decoded.leader.cardId),
+      ...deck.decoded.main.map((entry) => String(entry.cardId)),
+    ].sort();
+    const specCardIds = redShanksCardSpecs
+      .map((spec) => spec.cardId)
+      .sort();
+
+    assert.deepEqual(specCardIds, deckCardIds);
+  });
+
+  test("profile roles are justified by card specs", () => {
+    const specsById = new Map(
+      redShanksCardSpecs.map((spec) => [spec.cardId, spec]),
+    );
+
+    for (const [cardId, roles] of Object.entries(redShanksProfileData.cardRoles)) {
+      const spec = specsById.get(cardId);
+      assert.notEqual(spec, undefined, cardId);
+      for (const role of roles ?? []) {
+        assert.equal(
+          spec?.roles.includes(role),
+          true,
+          `${cardId} missing role ${role}`,
+        );
+      }
+    }
+  });
+
+  test("OP16-012 cheat policies cover Shanks payoff cards only", () => {
+    const cheatTargetIds = redShanksProfileData.cheatTargets
+      .map((target) => target.cardId)
+      .sort();
+
+    assert.deepEqual(cheatTargetIds, [
+      "OP06-007",
+      "OP09-004",
+      "OP12-008",
+      "ST23-002",
+    ]);
+  });
+});
+```
+
+- [ ] **Step 8: Wire specs into profile data**
+
+In `packages/match-server/src/bot-red-shanks-profile.ts`, import the spec:
+
+```ts
+import { redShanksCardSpecs } from "./bot-red-shanks-card-spec.js";
+```
+
+Then replace manual `preserveCards` with spec-derived data:
+
+```ts
+const redShanksCardsWithRole = (role: BotCardRole): readonly string[] =>
+  redShanksCardSpecs
+    .filter((spec) => spec.roles.includes(role))
+    .map((spec) => spec.cardId);
+```
+
+Use:
+
+```ts
+preserveCards: redShanksCardsWithRole("preserve"),
+```
+
+Keep search priority and cheat target order explicit because order is strategic policy, not just card metadata.
+
+- [ ] **Step 9: Run focused tests**
+
+Run:
 
 ```bash
-git add packages/match-server/src/bot-card-semantics.ts packages/match-server/src/bot-card-semantics.test.ts packages/match-server/src/bot-profile-types.ts packages/match-server/src/bot-red-shanks-profile.ts
+corepack pnpm exec vitest run packages/match-server/src/bot-card-semantics.test.ts packages/match-server/src/bot-red-shanks-card-spec.test.ts packages/match-server/src/bot-red-shanks-profile.test.ts packages/match-server/src/bot-deck.test.ts
+```
+
+Expected: PASS.
+
+- [ ] **Step 10: Commit**
+
+```bash
+git add packages/match-server/src/bot-card-semantics.ts packages/match-server/src/bot-card-semantics.test.ts packages/match-server/src/bot-red-shanks-card-spec.ts packages/match-server/src/bot-red-shanks-card-spec.test.ts packages/match-server/src/bot-profile-types.ts packages/match-server/src/bot-red-shanks-profile.ts
 git commit -m "feat: derive bot card semantics"
 ```
 
