@@ -7,9 +7,13 @@ import type {
 } from "@optcg/types";
 import { describe, test } from "vitest";
 
-import type { BotFeatures, BotVisibleActionFacts } from "./bot-features.js";
+import {
+  buildBotFeatures,
+  type BotFeatures,
+  type BotVisibleActionFacts,
+} from "./bot-features.js";
 import { chooseTurnPlan } from "./bot-turn-planner.js";
-import type { DevVisibleAction } from "./dev-snapshot-types.js";
+import type { DevMatchSnapshot, DevVisibleAction } from "./dev-snapshot-types.js";
 
 const actionFacts = (
   actionIndex: number,
@@ -106,6 +110,71 @@ const activateEffectAction = (index: number): DevVisibleAction => ({
   type: "activateEffect",
   label: "Activate effect",
 });
+
+const leaderAttackAction = (index: number): DevVisibleAction => ({
+  index,
+  type: "declareAttack",
+  label: "Attack leader",
+  attack: {
+    attackerInstanceId: "bot-leader" as InstanceId,
+    targetInstanceId: "opponent-leader" as InstanceId,
+  },
+});
+
+const featuresForActions = (
+  actions: readonly DevVisibleAction[],
+): BotFeatures => {
+  const snapshot = {
+    stateSeq: 1,
+    actionSeq: 1,
+    stateHash: "turn-planner",
+    status: "active",
+    turn: {
+      turnNumber: 1,
+      turnPlayerId: "p2" as PlayerId,
+      phase: "main",
+      globalTurn: 1,
+      playerTurnCounts: { ["p2" as PlayerId]: 1 },
+    },
+    activePlayerId: "p2" as PlayerId,
+    players: {
+      ["p2" as PlayerId]: {
+        view: {
+          self: {
+            leader: publicCard("bot-leader", {
+              zone: { playerId: "p2" as PlayerId, zone: "leaderArea" },
+              currentPower: 6_000,
+            }),
+            hand: [
+              publicCard("body", {
+                zone: { playerId: "p2" as PlayerId, zone: "hand" },
+                printedCost: 4,
+                printedPower: 6_000,
+              }),
+            ],
+            characters: [],
+            costArea: [],
+            life: { count: 5, faceUpCards: [] },
+          },
+          opponent: {
+            handCount: 5,
+            leader: publicCard("opponent-leader", {
+              owner: "p1" as PlayerId,
+              controller: "p1" as PlayerId,
+              zone: { playerId: "p1" as PlayerId, zone: "leaderArea" },
+              currentPower: 5_000,
+            }),
+            life: { count: 3, faceUpCards: [] },
+            characters: [],
+            costArea: [],
+          },
+        },
+        actions: [...actions],
+      },
+    },
+  } as unknown as DevMatchSnapshot;
+  return buildBotFeatures(snapshot, "p2" as PlayerId);
+};
 
 describe("chooseTurnPlan", () => {
   test("develop mode chooses persistent board before low-value DON pressure", () => {
@@ -216,5 +285,35 @@ describe("chooseTurnPlan", () => {
     });
 
     assert.equal(plan?.steps[0]?.actionIndex, 1);
+  });
+
+  test("pressure mode prefers attack-before-play sequence", () => {
+    const actions = [playCardAction(0), leaderAttackAction(1)];
+    const plan = chooseTurnPlan({
+      actions,
+      features: featuresForActions(actions),
+      mode: "pressure",
+      config: { maxSteps: 2, beamWidth: 4 },
+    });
+
+    assert.deepEqual(
+      plan?.steps.map((step) => step.actionIndex),
+      [1, 0],
+    );
+  });
+
+  test("develop mode prefers play-before-attack when lethal is absent", () => {
+    const actions = [playCardAction(0), leaderAttackAction(1)];
+    const plan = chooseTurnPlan({
+      actions,
+      features: featuresForActions(actions),
+      mode: "develop",
+      config: { maxSteps: 2, beamWidth: 4 },
+    });
+
+    assert.deepEqual(
+      plan?.steps.map((step) => step.actionIndex),
+      [0, 1],
+    );
   });
 });
