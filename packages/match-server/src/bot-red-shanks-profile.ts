@@ -293,6 +293,14 @@ const chooseLeaderDefenseFromProfile = (
   const isLeaderTarget =
     view?.self.leader.instanceId === battle.currentTarget.instanceId;
   const visibleCounterPower = visibleHandCounterPower(context);
+  const protectsLeaderLifeWithLessCounter =
+    isLeaderTarget &&
+    view.self.life.count <= 4 &&
+    reducedCounterNeeded < currentCounterNeeded &&
+    (reducedCounterNeeded === 0 || visibleCounterPower >= reducedCounterNeeded);
+  if (protectsLeaderLifeWithLessCounter) {
+    return activationChoice("activate");
+  }
   if (visibleCounterPower >= currentCounterNeeded) {
     return activationChoice("decline");
   }

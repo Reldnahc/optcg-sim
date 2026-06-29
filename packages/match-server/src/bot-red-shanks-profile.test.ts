@@ -240,7 +240,7 @@ describe("red Shanks bot profile", () => {
     });
   });
 
-  test("declines OP09-001 when visible counter already covers the attack", () => {
+  test("activates OP09-001 when it preserves counter while protecting leader life", () => {
     const snapshot = snapshotWithActions(
       [
         {
@@ -268,9 +268,9 @@ describe("red Shanks bot profile", () => {
       },
     );
     viewForBot(snapshot).pendingDecision = {
-      id: "decision:op09-leader-counter-not-needed" as DecisionId,
+      id: "decision:op09-leader-counter-preserve" as DecisionId,
       spotlightPendingId:
-        "spotlight:pending:test:op09-leader-counter-not-needed" as PublicPendingDecisionId,
+        "spotlight:pending:test:op09-leader-counter-preserve" as PublicPendingDecisionId,
       type: "chooseOptionalActivation",
       playerId: botId,
       prompt: "Activate leader effect?",
@@ -287,8 +287,8 @@ describe("red Shanks bot profile", () => {
 
     assert.deepEqual(chosen, {
       type: "respondToDecision",
-      decisionId: "decision:op09-leader-counter-not-needed",
-      response: { type: "optionalActivation", choice: "decline" },
+      decisionId: "decision:op09-leader-counter-preserve",
+      response: { type: "optionalActivation", choice: "activate" },
     });
   });
 

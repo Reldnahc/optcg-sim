@@ -106,6 +106,7 @@ export const chooseCounterCardsForDefense = ({
   const shouldDefend =
     isLethal(context) ||
     features.self.lifeCount <= 1 ||
+    (isLeaderTarget(context) && features.self.lifeCount <= 4) ||
     (!isLeaderTarget(context) && currentBattleTargetValue(context) >= 8_000) ||
     (isLeaderTarget(context) &&
       features.self.lifeCount <= 2 &&
