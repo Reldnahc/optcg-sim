@@ -503,7 +503,11 @@ export const createContinuousRecordsForResolvedEffect = (
     );
     return record === null ? null : [record];
   }
-  if (effect.type === "modifyCost" && effect.target?.type !== "choose") {
+  if (
+    effect.type === "modifyCost" &&
+    effect.target?.type !== "choose" &&
+    effect.target?.type !== "chooseFromZones"
+  ) {
     const record = createRecord(
       state,
       entry,
