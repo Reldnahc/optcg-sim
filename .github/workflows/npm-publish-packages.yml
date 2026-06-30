@@ -52,16 +52,9 @@ jobs:
           pnpm exec tsc -p packages/card-support/tsconfig.json
 
       - name: Publish changed packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ -z "${NODE_AUTH_TOKEN}" ]; then
-            echo "NPM_TOKEN is not configured for this repository."
-            exit 1
-          fi
 
           pack_dir="$(mktemp -d)"
           trap 'rm -rf "${pack_dir}"' EXIT
