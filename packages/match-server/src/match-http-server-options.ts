@@ -47,6 +47,7 @@ export interface CreateMatchHttpServerOptions extends CreatePremadeDevMatchSetup
   readonly matchTimerPolicy?: MatchTimerPolicy;
   readonly matchTimerTickMs?: number;
   readonly onMatchTimerError?: (error: unknown) => void;
+  readonly internalRulesTextValidationToken?: string;
 }
 
 export const defaultSocketIdleTimeoutMs = 60 * 60 * 1000;
@@ -110,3 +111,13 @@ export const createDefaultMatchSetupFactory =
 export const resolveMatchTimerPolicy = (
   options: CreateMatchHttpServerOptions,
 ): MatchTimerPolicy => options.matchTimerPolicy ?? defaultMatchTimerPolicy;
+
+export const resolveInternalRulesTextValidationToken = (
+  options: CreateMatchHttpServerOptions,
+): string | undefined => {
+  const raw =
+    options.internalRulesTextValidationToken ??
+    process.env["PONEGLYPH_SIM_INTERNAL_API_TOKEN"];
+  const value = raw?.trim();
+  return value === undefined || value.length === 0 ? undefined : value;
+};

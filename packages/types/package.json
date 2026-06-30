@@ -1,19 +1,12 @@
 {
   "name": "@optcg/types",
-  "version": "0.1.0",
+  "version": "0.0.0",
+  "private": true,
   "type": "module",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.ts"
     }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
-    "prepublishOnly": "corepack pnpm exec tsc -p tsconfig.json"
   }
 }

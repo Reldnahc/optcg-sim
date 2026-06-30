@@ -78,6 +78,7 @@ import {
   resolveAllowRawDeckHashSubmissions,
   resolveRawDeckVerificationMode,
   resolveCompletedMatchRepository,
+  resolveInternalRulesTextValidationToken,
   resolveReplayRepository,
   resolveMatchTimerPolicy,
   type CreateMatchHttpServerOptions,
@@ -90,6 +91,7 @@ import {
 } from "./postgres-user-stats-sink.js";
 import { cancelRematchLobbyAfterDisconnect } from "./rematch-lobby-disconnect.js";
 import { resolveActiveMatchPersistence } from "./active-match-persistence.js";
+import { handleRulesTextValidationRequest } from "./rules-text-validation-route.js";
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
@@ -847,6 +849,8 @@ export const createMatchHttpServer = async (
   const allowedBrowserOrigins = options.allowedBrowserOrigins ?? [];
   const allowTemplateMatches = options.allowTemplateMatches ?? true;
   const staticAssetsDirectory = options.staticAssetsDirectory;
+  const internalRulesTextValidationToken =
+    resolveInternalRulesTextValidationToken(options);
   const onMatchTimerError = options.onMatchTimerError ?? (() => undefined);
   let shuttingDown = false;
   let closePromise: Promise<void> | undefined;
@@ -911,26 +915,34 @@ export const createMatchHttpServer = async (
       sendJson(response, 200, { data: { ok: true } });
       return;
     }
-    const operation = url.startsWith("/api/")
-      ? handleApiRequest(
-          request,
-          response,
-          registry,
-          lobbyRegistry,
-          socketConnections,
-          lobbySocketConnections,
-          authProvider,
-          simHandoffVerifier,
-          replayRepository,
-          allowTemplateMatches,
-          allowRawDeckHashSubmissions,
-        )
-      : serveStaticAssetsOrNotFound(
-          request,
-          response,
-          staticAssetsDirectory,
-          () => handleNotFoundRequest(response),
-        );
+    const operation =
+      pathname === "/internal/rules-text/validate"
+        ? handleRulesTextValidationRequest({
+            request,
+            response,
+            pathname,
+            token: internalRulesTextValidationToken,
+          })
+        : url.startsWith("/api/")
+          ? handleApiRequest(
+              request,
+              response,
+              registry,
+              lobbyRegistry,
+              socketConnections,
+              lobbySocketConnections,
+              authProvider,
+              simHandoffVerifier,
+              replayRepository,
+              allowTemplateMatches,
+              allowRawDeckHashSubmissions,
+            )
+          : serveStaticAssetsOrNotFound(
+              request,
+              response,
+              staticAssetsDirectory,
+              () => handleNotFoundRequest(response),
+            );
     operation.catch((error: unknown) => {
       sendJson(response, 500, {
         errors: [error instanceof Error ? error.message : String(error)],
