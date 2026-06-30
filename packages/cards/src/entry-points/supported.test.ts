@@ -135,9 +135,12 @@ describe("supported entry-point parser", () => {
     expect(parseSupportedEntryPoint({ text: "[Unknown]" })).toBeUndefined();
   });
 
-  it("fails closed for non-canonical opponent attack entry labels", () => {
+  it.each([
+    "[On Opponent's Attack] Draw 1 card.",
+    "[On Opponent\u2019s Attack] Draw 1 card.",
+  ])("fails closed for non-canonical opponent attack entry label %s", (text) => {
     expect(
-      parseSupportedEntryPoint({ text: "[On Opponent's Attack] Draw 1 card." }),
+      parseSupportedEntryPoint({ text }),
     ).toBeUndefined();
   });
 });
