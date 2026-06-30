@@ -16,6 +16,7 @@ import { buildDevMatchCardManifestFromPoneglyphIds } from "./runtime-supported-c
 export interface SpotlightProbeRequest {
   readonly cardId?: string;
   readonly setCode?: string;
+  readonly setCodes?: readonly string[];
   readonly fetchCard?: PoneglyphFetch;
   readonly baseUrl?: string;
 }
@@ -122,19 +123,33 @@ const probeCardIds = async (
     }
   | { readonly ok: false; readonly error: string }
 > => {
-  if (request.setCode !== undefined && request.setCode.length > 0) {
-    const setCode = request.setCode.toUpperCase();
-    const fetched = await fetchPoneglyphSetCardIds(setCode, options);
-    if (!fetched.ok) {
-      return fetched;
+  const setCodes = normalizedSetCodes([
+    ...(request.setCode === undefined ? [] : [request.setCode]),
+    ...(request.setCodes ?? []),
+  ]);
+  if (setCodes.length > 0) {
+    const cardIds: CardId[] = [];
+    for (const setCode of setCodes) {
+      const fetched = await fetchPoneglyphSetCardIds(setCode, options);
+      if (!fetched.ok) {
+        return fetched;
+      }
+      if (fetched.cardIds.length === 0) {
+        return {
+          ok: false,
+          error: `Poneglyph set catalog fetch returned no cards for ${setCode}`,
+        };
+      }
+      cardIds.push(...fetched.cardIds);
     }
-    if (fetched.cardIds.length === 0) {
-      return {
-        ok: false,
-        error: `Poneglyph set catalog fetch returned no cards for ${setCode}`,
-      };
-    }
-    return { ...fetched, label: `Set: ${setCode}` };
+    return {
+      ok: true,
+      label:
+        setCodes.length === 1
+          ? `Set: ${setCodes[0] ?? ""}`
+          : `Sets: ${setCodes.join(", ")}`,
+      cardIds: uniqueCardIds(cardIds),
+    };
   }
   if (request.cardId !== undefined && request.cardId.length > 0) {
     const cardId = request.cardId.toUpperCase() as CardId;
@@ -145,6 +160,18 @@ const probeCardIds = async (
     error: "Usage: spotlight:probe -- --card <card id> | --set <set code>",
   };
 };
+
+const normalizedSetCodes = (setCodes: readonly string[]): readonly string[] => [
+  ...new Set(
+    setCodes
+      .map((setCode) => setCode.trim().toUpperCase())
+      .filter((setCode) => setCode.length > 0),
+  ),
+];
+
+const uniqueCardIds = (cardIds: readonly CardId[]): readonly CardId[] => [
+  ...new Set(cardIds),
+];
 
 const createManifestSpotlightReport = ({
   cardIds,

@@ -358,6 +358,49 @@ describe("spotlight probe report", () => {
     ]);
   });
 
+  test("probes multiple sets as one spotlight manifest", async () => {
+    const report = await createSpotlightProbeReport({
+      setCodes: ["op99", "op98"],
+      fetchCard: (url, init) => {
+        const href = String(url);
+        if (href.includes("/v1/search")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: [
+                  { card_number: "OP99-001" },
+                  { card_number: "OP98-001" },
+                ],
+                pagination: { has_more: false },
+              }),
+          });
+        }
+        assert.equal(href.endsWith("/v1/cards/batch"), true);
+        assert.equal(init?.method, "POST");
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                "OP99-001": baseCard("OP99-001", "[On Play] Draw 1 card."),
+                "OP98-001": baseCard("OP98-001", "[On Play] Draw 1 card."),
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+
+    assert.equal(report.exitCode, 0);
+    assert.deepEqual(report.errors, []);
+    assert.equal(report.lines[0], "Sets: OP99, OP98");
+    assert.equal(report.lines[1], "Cards: 2");
+    assert.equal(report.lines.at(-1), "Failures: none");
+  });
+
   test("reports manifest build exceptions as structured errors", async () => {
     const report = await createSpotlightProbeReport({
       setCode: "OP99",

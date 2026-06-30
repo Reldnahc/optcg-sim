@@ -16,6 +16,7 @@ import {
 
 export interface MasterProbeRequest {
   readonly baseUrl?: string;
+  readonly setCodes?: readonly string[];
   readonly fetchPoneglyph?: PoneglyphFetch;
   readonly onProgress?: ((message: string) => void) | undefined;
 }
@@ -56,11 +57,16 @@ export const createMasterProbeReport = async (
   const baseUrl = request.baseUrl ?? defaultPoneglyphBaseUrl;
   const fetchPoneglyph = request.fetchPoneglyph ?? fetchPoneglyphCard;
   const reportProgress = request.onProgress ?? (() => undefined);
-  reportProgress("Master probe: fetching set catalog");
+  const requestedSetCodes = normalizedSetCodes(request.setCodes ?? []);
   const setCodesResult =
-    dependencies.fetchSetCodes === undefined
-      ? await fetchPoneglyphSetCodes({ baseUrl, fetchPoneglyph })
-      : await dependencies.fetchSetCodes();
+    requestedSetCodes.length > 0
+      ? { ok: true as const, setCodes: requestedSetCodes }
+      : await (() => {
+          reportProgress("Master probe: fetching set catalog");
+          return dependencies.fetchSetCodes === undefined
+            ? fetchPoneglyphSetCodes({ baseUrl, fetchPoneglyph })
+            : dependencies.fetchSetCodes();
+        })();
   if (!setCodesResult.ok) {
     return {
       exitCode: 1,
@@ -120,6 +126,14 @@ export const createMasterProbeReport = async (
     errors: [],
   };
 };
+
+const normalizedSetCodes = (setCodes: readonly string[]): readonly string[] => [
+  ...new Set(
+    setCodes
+      .map((setCode) => setCode.trim().toUpperCase())
+      .filter((setCode) => setCode.length > 0),
+  ),
+];
 
 const runSetProbes = async (
   setCode: string,

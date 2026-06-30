@@ -658,6 +658,64 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).not.toContain("Card ID: OP15-001 x1");
   });
 
+  it("probes multiple sets as one aggregate card list", async () => {
+    const requestedUrls: string[] = [];
+    const requestedBodies: unknown[] = [];
+    const report = await createSupportProbeReport({
+      setCodes: ["op16", "op15"],
+      fetchCard: (url, init) => {
+        requestedUrls.push(String(url));
+        if (String(url).includes("/v1/search?")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: [
+                  { card_number: "OP16-001" },
+                  { card_number: "OP15-001" },
+                ],
+                pagination: { has_more: false },
+              }),
+          });
+        }
+
+        requestedBodies.push(JSON.parse(init?.body ?? "{}"));
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                "OP16-001": {
+                  card_number: "OP16-001",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+                "OP15-001": {
+                  card_number: "OP15-001",
+                  effect: "[On Play] Draw 1 card.",
+                  trigger: null,
+                },
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(
+      requestedUrls.filter((url) => url.includes("/v1/search?")),
+    ).toHaveLength(2);
+    expect(requestedBodies).toEqual([
+      { card_numbers: ["OP16-001", "OP15-001"] },
+    ]);
+    expect(report.lines).toContain("Sets: OP16, OP15");
+    expect(report.lines).toContain("Cards: 2");
+    expect(report.lines).toContain("Failures: none");
+  });
+
   it("prints only failing cards in deck-hash probe mode", async () => {
     const report = await createSupportProbeReport({
       deckHash: "hash-with-one-failure",

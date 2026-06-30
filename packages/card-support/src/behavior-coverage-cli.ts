@@ -147,19 +147,16 @@ const resolveCoverageSource = async (
       }),
     );
   }
-  const singletonError = validateSingletonSources({
-    setCodes,
-    deckHashes,
-    fixtures,
-  });
+  const singletonError = validateSingletonSources({ deckHashes, fixtures });
   if (singletonError !== undefined) {
     return { ok: false, report: errorReport([singletonError]) };
   }
-  const setCode = setCodes[0];
-  if (setCode !== undefined) {
+  if (setCodes.length > 0) {
     return loadedSource(
-      `set ${setCode}`,
-      await createPoneglyphCoverageEntriesFromSet(setCode, {
+      setCodes.length === 1
+        ? `set ${setCodes[0] ?? ""}`
+        : `sets ${setCodes.join(", ")}`,
+      await createPoneglyphCoverageEntriesFromSets(setCodes, {
         baseUrl,
         fetchPoneglyph,
       }),
@@ -199,13 +196,9 @@ const resolveCoverageSource = async (
 };
 
 const validateSingletonSources = (input: {
-  readonly setCodes: readonly string[];
   readonly deckHashes: readonly string[];
   readonly fixtures: readonly string[];
 }): string | undefined => {
-  if (input.setCodes.length > 1) {
-    return "Expected exactly one value for --set.";
-  }
   if (input.deckHashes.length > 1) {
     return "Expected exactly one value for --deck-hash.";
   }
@@ -213,6 +206,29 @@ const validateSingletonSources = (input: {
     return "Expected exactly one value for --fixture.";
   }
   return undefined;
+};
+
+const createPoneglyphCoverageEntriesFromSets = async (
+  setCodes: readonly string[],
+  options: {
+    readonly baseUrl: string;
+    readonly fetchPoneglyph: PoneglyphFetch;
+  },
+): ReturnType<typeof createPoneglyphCoverageEntriesFromSet> => {
+  const entries: BehaviorCoverageEntry[] = [];
+  const manifestViewEntries: ManifestViewProbeEntry[] = [];
+  for (const setCode of setCodes) {
+    const result = await createPoneglyphCoverageEntriesFromSet(
+      setCode,
+      options,
+    );
+    if (!result.ok) {
+      return result;
+    }
+    entries.push(...result.entries);
+    manifestViewEntries.push(...result.manifestViewEntries);
+  }
+  return { ok: true, entries, manifestViewEntries };
 };
 
 const loadedSource = (

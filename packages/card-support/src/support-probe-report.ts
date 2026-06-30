@@ -1,5 +1,6 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 import type {
+  CardId,
   ParserSupportCertificate,
   RuntimeSupportReport,
 } from "@optcg/types";
@@ -42,6 +43,7 @@ export interface SupportProbeRequest {
   readonly cardId?: string;
   readonly deckHash?: string;
   readonly setCode?: string;
+  readonly setCodes?: readonly string[];
   readonly deckHashOutput?: "report" | "unsupportedTextLines";
   readonly deckHashCodec?: DeckHashCodecPort;
   readonly fetchCard?: PoneglyphFetch;
@@ -74,6 +76,15 @@ export const createSupportProbeReport = async (
     });
   }
 
+  const requestedSetCodes = normalizedSetCodes(request.setCodes ?? []);
+  if (requestedSetCodes.length > 0) {
+    return createMultiSetSupportProbeReport(requestedSetCodes, {
+      baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
+      output: request.deckHashOutput ?? "report",
+      fetchPoneglyph: request.fetchCard ?? fetchPoneglyphCard,
+    });
+  }
+
   if (request.cardId !== undefined && request.cardId.length > 0) {
     return createCardSupportProbeReport(request.cardId, {
       baseUrl: request.baseUrl ?? defaultPoneglyphBaseUrl,
@@ -93,6 +104,13 @@ export const createSupportProbeReport = async (
 
   return createTextLineReport(request.text);
 };
+
+const normalizedSetCodes = (setCodes: readonly string[]): readonly string[] =>
+  uniqueStrings(
+    setCodes
+      .map((setCode) => setCode.trim().toUpperCase())
+      .filter((setCode) => setCode.length > 0),
+  );
 
 const createDeckHashSupportProbeReport = async (
   deckHash: string,
@@ -181,6 +199,56 @@ const createSetSupportProbeReport = async (
 
   const lines = [
     `Set: ${normalizedSetCode}`,
+    `Cards: ${String(cards.length)}`,
+    probed.failedCardCount === 0
+      ? "Failures: none"
+      : `Failures: ${String(probed.failedCardCount)} card${
+          probed.failedCardCount === 1 ? "" : "s"
+        }`,
+    ...probed.failureLines,
+  ];
+
+  return { exitCode: probed.exitCode, lines, errors: [] };
+};
+
+const createMultiSetSupportProbeReport = async (
+  setCodes: readonly string[],
+  options: {
+    readonly baseUrl: string;
+    readonly output: "report" | "unsupportedTextLines";
+    readonly fetchPoneglyph: PoneglyphFetch;
+  },
+): Promise<SupportProbeReport> => {
+  const cardIds: CardId[] = [];
+  for (const setCode of setCodes) {
+    const fetchedSet = await fetchPoneglyphSetCardIds(setCode, options);
+    if (!fetchedSet.ok) {
+      return {
+        exitCode: 1,
+        lines: [],
+        errors: [fetchedSet.error],
+      };
+    }
+    cardIds.push(...fetchedSet.cardIds);
+  }
+
+  const cards = uniqueStrings(cardIds).map((cardId) => ({
+    cardId,
+    count: 1,
+    variantIndexes: [],
+  }));
+  const probed = await probeAggregatedCards(cards, options);
+
+  if (options.output === "unsupportedTextLines") {
+    return {
+      exitCode: probed.exitCode,
+      lines: probed.unsupportedTextLines,
+      errors: [],
+    };
+  }
+
+  const lines = [
+    `Sets: ${setCodes.join(", ")}`,
     `Cards: ${String(cards.length)}`,
     probed.failedCardCount === 0
       ? "Failures: none"
@@ -302,6 +370,10 @@ const probeAggregatedCards = async (
     failedCardCount,
   };
 };
+
+const uniqueStrings = (values: readonly string[]): string[] => [
+  ...new Set(values),
+];
 
 const createCardSupportProbeReport = async (
   cardId: string,

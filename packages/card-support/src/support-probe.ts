@@ -4,7 +4,7 @@ interface ProbeArgs {
   readonly text: string | undefined;
   readonly cardId: string | undefined;
   readonly deckHash: string | undefined;
-  readonly setCode: string | undefined;
+  readonly setCodes: readonly string[];
   readonly deckHashOutput: "report" | "unsupportedTextLines";
 }
 
@@ -14,13 +14,12 @@ function parseArgs(argv: readonly string[]): ProbeArgs {
   const textIndex = args.indexOf("--text");
   const cardIndex = args.indexOf("--card");
   const deckHashIndex = args.indexOf("--deck-hash");
-  const setIndex = args.indexOf("--set");
 
   return {
     text: textIndex >= 0 ? args[textIndex + 1] : undefined,
     cardId: cardIndex >= 0 ? args[cardIndex + 1] : undefined,
     deckHash: deckHashIndex >= 0 ? args[deckHashIndex + 1] : undefined,
-    setCode: setIndex >= 0 ? args[setIndex + 1] : undefined,
+    setCodes: valuesForRepeatedOption(args, "--set"),
     deckHashOutput: args.includes("--raw-unsupported-lines")
       ? "unsupportedTextLines"
       : "report",
@@ -28,13 +27,13 @@ function parseArgs(argv: readonly string[]): ProbeArgs {
 }
 
 async function main(): Promise<number> {
-  const { cardId, deckHash, deckHashOutput, setCode, text } = parseArgs(
+  const { cardId, deckHash, deckHashOutput, setCodes, text } = parseArgs(
     process.argv.slice(2),
   );
   const report = await createSupportProbeReport({
     ...(cardId === undefined ? {} : { cardId }),
     ...(deckHash === undefined ? {} : { deckHash }),
-    ...(setCode === undefined ? {} : { setCode }),
+    ...(setCodes.length === 0 ? {} : { setCodes }),
     deckHashOutput,
     ...(text === undefined ? {} : { text }),
   });
@@ -54,6 +53,22 @@ function writeLine(message: string): void {
 
 function writeError(message: string): void {
   process.stderr.write(`${message}\n`);
+}
+
+function valuesForRepeatedOption(
+  args: readonly string[],
+  option: string,
+): readonly string[] {
+  const values: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === option) {
+      const value = args[index + 1];
+      if (value !== undefined) {
+        values.push(value);
+      }
+    }
+  }
+  return values;
 }
 
 process.exitCode = await main();

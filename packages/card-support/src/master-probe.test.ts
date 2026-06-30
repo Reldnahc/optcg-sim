@@ -170,6 +170,61 @@ describe("master probe", () => {
       "Master probe: complete with 0 failures",
     ]);
   });
+
+  it("runs every probe only for requested sets", async () => {
+    const calls: string[] = [];
+    const dependencies: MasterProbeDependencies = {
+      fetchSetCodes: () => Promise.resolve({ ok: true, setCodes: ["OP01"] }),
+      createSupportProbeReport: (request) => {
+        calls.push(`support:${request.setCode ?? ""}`);
+        return Promise.resolve(passingReport(["Failures: none"]));
+      },
+      createBehaviorCoverageReport: (argv) => {
+        calls.push(`behavior:${lastArg(argv)}`);
+        return Promise.resolve(
+          passingReport([
+            "Behavior coverage entries: 1",
+            "Behavior coverage passed scenarios: 1",
+            "Behavior coverage failed scenarios: 0",
+            "Behavior coverage skipped scenarios: 0",
+            "Behavior coverage probe failures: 0",
+          ]),
+        );
+      },
+      createSpotlightProbeReport: (request) => {
+        calls.push(`spotlight:${request.setCode ?? ""}`);
+        return Promise.resolve(
+          passingReport([
+            "Runtime-supported effect blocks: 1",
+            "Spotlight-ready effect blocks: 1",
+            "Failures: none",
+          ]),
+        );
+      },
+    };
+
+    const report = await createMasterProbeReport(
+      { setCodes: ["op16", "op15"] },
+      dependencies,
+    );
+
+    expect(report.exitCode).toBe(0);
+    expect(calls).toEqual([
+      "support:OP16",
+      "behavior:OP16",
+      "spotlight:OP16",
+      "support:OP15",
+      "behavior:OP15",
+      "spotlight:OP15",
+    ]);
+    expect(report.lines).toContain("Master probe sets: 2");
+    expect(report.lines).toContain(
+      "OP16 support: passed | behavior: passed | spotlight: passed",
+    );
+    expect(report.lines).toContain(
+      "OP15 support: passed | behavior: passed | spotlight: passed",
+    );
+  });
 });
 
 const lastArg = (argv: readonly string[]): string =>

@@ -2,26 +2,25 @@ import { createSpotlightProbeReport } from "./spotlight-probe-report.js";
 
 interface ProbeArgs {
   readonly cardId: string | undefined;
-  readonly setCode: string | undefined;
+  readonly setCodes: readonly string[];
 }
 
 function parseArgs(argv: readonly string[]): ProbeArgs {
   const passthroughIndex = argv.indexOf("--");
   const args = passthroughIndex >= 0 ? argv.slice(passthroughIndex + 1) : argv;
   const cardIndex = args.indexOf("--card");
-  const setIndex = args.indexOf("--set");
 
   return {
     cardId: cardIndex >= 0 ? args[cardIndex + 1] : undefined,
-    setCode: setIndex >= 0 ? args[setIndex + 1] : undefined,
+    setCodes: valuesForRepeatedOption(args, "--set"),
   };
 }
 
 async function main(): Promise<number> {
-  const { cardId, setCode } = parseArgs(process.argv.slice(2));
+  const { cardId, setCodes } = parseArgs(process.argv.slice(2));
   const report = await createSpotlightProbeReport({
     ...(cardId === undefined ? {} : { cardId }),
-    ...(setCode === undefined ? {} : { setCode }),
+    ...(setCodes.length === 0 ? {} : { setCodes }),
   });
   for (const line of report.lines) {
     writeLine(line);
@@ -39,6 +38,22 @@ function writeLine(message: string): void {
 
 function writeError(message: string): void {
   process.stderr.write(`${message}\n`);
+}
+
+function valuesForRepeatedOption(
+  args: readonly string[],
+  option: string,
+): readonly string[] {
+  const values: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === option) {
+      const value = args[index + 1];
+      if (value !== undefined) {
+        values.push(value);
+      }
+    }
+  }
+  return values;
 }
 
 process.exitCode = await main();

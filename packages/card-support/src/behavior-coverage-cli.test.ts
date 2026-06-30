@@ -150,6 +150,56 @@ describe("behavior coverage CLI", () => {
     expect(report.lines).toContain("Behavior coverage source: set OP01");
   });
 
+  it("runs coverage for multiple sets", async () => {
+    const report = await createBehaviorCoverageCliReport(
+      ["--", "--set", "OP01", "--set", "OP02"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: (url) => {
+          if (String(url).includes("/v1/search?")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({
+                  data: [
+                    { card_number: "OP01-001" },
+                    { card_number: "OP02-001" },
+                  ],
+                  pagination: { has_more: false },
+                }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  "OP01-001": {
+                    card_number: "OP01-001",
+                    effect: "[On Play] Draw 1 card.",
+                    trigger: null,
+                  },
+                  "OP02-001": {
+                    card_number: "OP02-001",
+                    effect: "[On Play] Draw 1 card.",
+                    trigger: null,
+                  },
+                },
+                missing: [],
+              }),
+          });
+        },
+      },
+    );
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior coverage source: sets OP01, OP02");
+    expect(report.lines).toContain("Behavior coverage entries: 2");
+    expect(report.lines).toContain("Behavior coverage passed scenarios: 2");
+  });
+
   it("runs coverage for a deck hash", async () => {
     const report = await createBehaviorCoverageCliReport(
       ["--", "--deck-hash", "hash"],
@@ -221,14 +271,7 @@ describe("behavior coverage CLI", () => {
     ]);
   });
 
-  it("rejects multiple singleton source values", async () => {
-    const setReport = await createBehaviorCoverageCliReport([
-      "--",
-      "--set",
-      "OP01",
-      "--set",
-      "OP02",
-    ]);
+  it("rejects multiple deck hash and fixture singleton source values", async () => {
     const deckHashReport = await createBehaviorCoverageCliReport([
       "--",
       "--deck-hash",
@@ -244,7 +287,6 @@ describe("behavior coverage CLI", () => {
       "other",
     ]);
 
-    expect(setReport.errors).toEqual(["Expected exactly one value for --set."]);
     expect(deckHashReport.errors).toEqual([
       "Expected exactly one value for --deck-hash.",
     ]);
