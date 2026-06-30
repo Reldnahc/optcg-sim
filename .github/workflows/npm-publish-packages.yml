@@ -58,6 +58,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "NPM_TOKEN is not configured for this repository."
+            exit 1
+          fi
+
+          pack_dir="$(mktemp -d)"
+          trap 'rm -rf "${pack_dir}"' EXIT
+
           for package_dir in packages/types packages/engine-core packages/cards packages/card-support; do
             package_name="$(node -p "require('./${package_dir}/package.json').name")"
             package_version="$(node -p "require('./${package_dir}/package.json').version")"
@@ -68,5 +76,8 @@ jobs:
             fi
 
             echo "Publishing ${package_name}@${package_version}"
-            pnpm --dir "${package_dir}" publish --access public --provenance --no-git-checks
+            pack_json="${pack_dir}/${package_name//@/}.json"
+            pnpm --dir "${package_dir}" pack --pack-destination "${pack_dir}" --json > "${pack_json}"
+            package_tarball="$(node -e "const fs = require('node:fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).filename);" "${pack_json}")"
+            npm publish "${package_tarball}" --access public --provenance
           done
