@@ -1,0 +1,72 @@
+name: Publish NPM Packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - main
+      - master
+    paths:
+      - "packages/types/**"
+      - "packages/engine-core/**"
+      - "packages/cards/**"
+      - "packages/card-support/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - ".github/workflows/npm-publish-packages.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  publish:
+    if: github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package chain
+        run: |
+          pnpm exec tsc -p packages/types/tsconfig.json
+          pnpm exec tsc -p packages/engine-core/tsconfig.json
+          pnpm exec tsc -p packages/cards/tsconfig.json
+          pnpm exec tsc -p packages/card-support/tsconfig.json
+
+      - name: Publish changed packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for package_dir in packages/types packages/engine-core packages/cards packages/card-support; do
+            package_name="$(node -p "require('./${package_dir}/package.json').name")"
+            package_version="$(node -p "require('./${package_dir}/package.json').version")"
+
+            if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+              echo "Skipping ${package_name}@${package_version}; already published."
+              continue
+            fi
+
+            echo "Publishing ${package_name}@${package_version}"
+            pnpm --dir "${package_dir}" publish --access public --provenance --no-git-checks
+          done
