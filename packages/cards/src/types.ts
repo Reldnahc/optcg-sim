@@ -99,6 +99,7 @@ export type PrimitiveEvidence =
   | "condition:handCountDifference"
   | "condition:deckCount"
   | "condition:trashCount"
+  | "condition:turnWindow"
   | "condition:eventHistory"
   | "condition:lifeCount"
   | "condition:lifeVisibilityCount"

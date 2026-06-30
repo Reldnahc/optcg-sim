@@ -26,4 +26,5 @@ export { parseSourcePlayedThisTurnCondition } from "./source-played-this-turn.js
 export { syntheticConditionParser } from "./synthetic.js";
 export { parseTrashCountCondition } from "./trash-count.js";
 export { parseTurnCountCondition } from "./turn-count.js";
+export { parseTurnWindowCondition } from "./turn-window.js";
 export { parseZoneCountTotalCondition } from "./zone-count-total.js";

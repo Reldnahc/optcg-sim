@@ -23,6 +23,7 @@ import {
   parseSourcePlayedThisTurnCondition,
   parseTrashCountCondition,
   parseTurnCountCondition,
+  parseTurnWindowCondition,
   parseZoneCountTotalCondition,
 } from "../conditions/index.js";
 import {
@@ -212,6 +213,7 @@ export const conditionParsers = [
   parseSelfCardStateCondition,
   parseSelfStatComparisonCondition,
   parseSelectedTargetStatComparisonCondition,
+  parseTurnWindowCondition,
   parseTurnCountCondition,
   parseSourcePlayedThisTurnCondition,
 ] as const;

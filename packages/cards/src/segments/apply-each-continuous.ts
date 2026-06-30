@@ -5,7 +5,10 @@ import type {
   SequencedEffect,
 } from "@optcg/types";
 
-import { parseConditionFromSet } from "../conditions/index.js";
+import {
+  parseConditionFromSet,
+  parseTurnWindowCondition,
+} from "../conditions/index.js";
 import { parseExpression } from "../expression-parser.js";
 import type { ContinuousInstructionParser } from "../instructions/continuous-field-effects.js";
 import { sourceSpan } from "../source-slices.js";
@@ -168,24 +171,21 @@ function parseLeadingBodyCondition(text: string):
       readonly rest: string;
     }
   | undefined {
-  const opponentTurn =
-    /^during your opponent's turn,\s*(?<rest>[\s\S]+)$/iu.exec(text.trim());
-  const opponentTurnRest = opponentTurn?.groups?.["rest"];
-  if (opponentTurnRest !== undefined) {
+  const turnWindow =
+    /^(?<condition>during (?:your opponent's turn|your turn)),\s*(?<rest>[\s\S]+)$/iu.exec(
+      text.trim(),
+    );
+  const conditionText = turnWindow?.groups?.["condition"];
+  const rest = turnWindow?.groups?.["rest"];
+  if (conditionText !== undefined && rest !== undefined) {
+    const parsed = parseTurnWindowCondition({ text: conditionText });
+    if (parsed === undefined) {
+      return undefined;
+    }
     return {
-      condition: { type: "opponentTurn" },
-      evidence: ["condition:opponentTurn"],
-      rest: opponentTurnRest,
-    };
-  }
-
-  const yourTurn = /^during your turn,\s*(?<rest>[\s\S]+)$/iu.exec(text.trim());
-  const yourTurnRest = yourTurn?.groups?.["rest"];
-  if (yourTurnRest !== undefined) {
-    return {
-      condition: { type: "yourTurn" },
-      evidence: ["condition:yourTurn"],
-      rest: yourTurnRest,
+      condition: parsed.condition,
+      evidence: parsed.evidence,
+      rest,
     };
   }
 
