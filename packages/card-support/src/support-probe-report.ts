@@ -1,17 +1,5 @@
-import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
-import type {
-  CardId,
-  ParserSupportCertificate,
-  RuntimeSupportReport,
-} from "@optcg/types";
-import {
-  createParserSupportCertificate,
-  gameplayLinesFromTextParts,
-  parseCardEffectLinesDetailed,
-  parseRawKeywordLine,
-  type ParsedEffectLine,
-  type ParsedRuntimeEffectLine,
-} from "@optcg/cards";
+import type { CardId } from "@optcg/types";
+import { gameplayLinesFromTextParts } from "@optcg/cards";
 
 import {
   formatPrimitiveSupportSections,
@@ -31,10 +19,12 @@ import {
   type PoneglyphFetch,
 } from "./poneglyph-card-source.js";
 import {
-  runtimeBlocksForValues,
   runtimeContextForEffectLines,
-  type SupportProbeRuntimeContext,
 } from "./support-probe-runtime-context.js";
+import {
+  evaluateRulesTextLine,
+  type RulesTextEffectLineEvaluation,
+} from "./rules-text-validator.js";
 
 export type { DeckHashCodecPort } from "./poneglyph-card-source.js";
 
@@ -307,7 +297,7 @@ const probeAggregatedCards = async (
     );
     for (const [index, text] of effectLines.entries()) {
       const lineNumber = index + 1;
-      const lineReport = evaluateParsedLine(
+      const lineReport = evaluateRulesTextLine(
         text,
         `${card.cardId}:line:${String(lineNumber)}`,
         runtimeContext,
@@ -404,7 +394,7 @@ const createCardSupportProbeReport = async (
   let exitCode = 0;
   for (const [index, text] of effectLines.entries()) {
     const lineNumber = index + 1;
-    const lineReport = evaluateParsedLine(
+    const lineReport = evaluateRulesTextLine(
       text,
       `line:${String(lineNumber)}`,
       runtimeContext,
@@ -447,7 +437,7 @@ const createCardSupportProbeReport = async (
 };
 
 const createTextLineReport = (text: string): SupportProbeReport => {
-  const lineReport = evaluateParsedLine(text, "line:1");
+  const lineReport = evaluateRulesTextLine(text, "line:1");
   const lines: string[] = [];
   if (!lineReport.parseOk) {
     lines.push("Parse: failed");
@@ -537,113 +527,12 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   };
 };
 
-type ParsedLineReport =
-  | {
-      readonly kind: "effect";
-      readonly parseOk: true;
-      readonly values: readonly Extract<
-        ParsedEffectLine,
-        { readonly block: unknown }
-      >[];
-      readonly runtimeSupported: boolean;
-      readonly runtimeReason?: string;
-      readonly parserCertificate: ParserSupportCertificate;
-      readonly runtimeReports: readonly RuntimeSupportReport[];
-    }
-  | {
-      readonly kind: "metadata";
-      readonly parseOk: true;
-      readonly value: Extract<ParsedEffectLine, { readonly kind: "metadata" }>;
-      readonly runtimeSupported: true;
-    }
-  | {
-      readonly kind: "rawKeyword";
-      readonly parseOk: true;
-      readonly keyword: string;
-      readonly runtimeSupported: true;
-    }
-  | {
-      readonly parseOk: false;
-      readonly stage: string;
-      readonly reason: string;
-      readonly text: string;
-    };
-
-const evaluateParsedLine = (
-  text: string,
-  effectId: string,
-  runtimeContext?: SupportProbeRuntimeContext,
-): ParsedLineReport => {
-  const rawKeyword = parseRawKeywordLine({ text });
-  if (rawKeyword !== undefined) {
-    return {
-      kind: "rawKeyword",
-      parseOk: true,
-      keyword: rawKeyword.keyword,
-      runtimeSupported: true,
-    };
-  }
-
-  const parsed = parseCardEffectLinesDetailed(text);
-  if (!parsed.ok) {
-    return {
-      parseOk: false,
-      stage: parsed.diagnostic.stage,
-      reason: parsed.diagnostic.reason,
-      text: parsed.diagnostic.text,
-    };
-  }
-  const metadata = parsed.value.find(
-    (
-      value,
-    ): value is Extract<ParsedEffectLine, { readonly kind: "metadata" }> =>
-      value.kind === "metadata",
-  );
-  if (metadata !== undefined) {
-    return {
-      kind: "metadata",
-      parseOk: true,
-      value: metadata,
-      runtimeSupported: true,
-    };
-  }
-
-  const values = parsed.value.filter(
-    (value): value is ParsedRuntimeEffectLine => value.kind !== "metadata",
-  );
-  const parserCertificate = createParserSupportCertificate(values);
-  const blocks = runtimeBlocksForValues(values, effectId);
-  const siblingBlocks = runtimeContext?.siblingBlocks ?? blocks;
-  const runtimeResults = blocks.map((block) =>
-    evaluateEffectBlockRuntimeSupport(block, { siblingBlocks }),
-  );
-  const firstFailure = runtimeResults.find((result) => !result.supported);
-  const runtimeSupported =
-    parserCertificate.complete &&
-    runtimeResults.length > 0 &&
-    firstFailure === undefined;
-  return {
-    kind: "effect",
-    parseOk: true,
-    values,
-    runtimeSupported,
-    ...(firstFailure?.reason === undefined
-      ? {}
-      : { runtimeReason: firstFailure.reason }),
-    parserCertificate,
-    runtimeReports: runtimeResults,
-  };
-};
-
 const runtimeReason = (
-  lineReport: Extract<
-    ParsedLineReport,
-    { readonly parseOk: true; readonly kind: "effect" }
-  >,
+  lineReport: RulesTextEffectLineEvaluation,
 ): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
 
 const uniqueEvidence = (
-  values: readonly Extract<ParsedEffectLine, { readonly block: unknown }>[],
+  values: RulesTextEffectLineEvaluation["values"],
 ): readonly string[] => {
   const evidence = new Set<string>();
   for (const value of values) {
@@ -655,7 +544,7 @@ const uniqueEvidence = (
 };
 
 const sourceSpanDiagnostics = (
-  values: readonly Extract<ParsedEffectLine, { readonly block: unknown }>[],
+  values: RulesTextEffectLineEvaluation["values"],
 ): readonly string[] =>
   values.flatMap((value) =>
     (value.sourceMap?.spans ?? []).map((span) => {

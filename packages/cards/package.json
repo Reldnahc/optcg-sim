@@ -1,21 +1,24 @@
 {
   "name": "@optcg/cards",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "capture:fixture": "corepack pnpm exec tsx src/fixture-capture-cli.ts",
     "cache:clear": "corepack pnpm exec tsx src/cache-clear-cli.ts",
     "support:probe": "corepack pnpm --filter @optcg/card-support support:probe",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
-    "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src"
+    "test": "corepack pnpm exec vitest run --root ../.. packages/cards/src",
+    "prepublishOnly": "corepack pnpm exec tsc -p tsconfig.json"
   },
   "dependencies": {
     "@optcg/types": "workspace:*",

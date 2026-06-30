@@ -1,15 +1,17 @@
 {
   "name": "@optcg/card-support",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "support:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/support-probe.ts",
     "behavior:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/behavior-probe-cli.ts",
@@ -17,7 +19,8 @@
     "spotlight:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/spotlight-probe.ts",
     "master:probe": "node --no-warnings --experimental-strip-types --loader ./scripts/source-loader.mjs src/master-probe-cli.ts",
     "typecheck": "corepack pnpm exec tsc -p tsconfig.json --noEmit",
-    "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src"
+    "test": "corepack pnpm exec vitest run --root ../.. packages/card-support/src",
+    "prepublishOnly": "corepack pnpm exec tsc -p tsconfig.json"
   },
   "dependencies": {
     "@optcg/cards": "workspace:*",
