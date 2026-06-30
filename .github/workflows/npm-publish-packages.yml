@@ -69,7 +69,9 @@ jobs:
             fi
 
             echo "Publishing ${package_name}@${package_version}"
-            pack_json="${pack_dir}/${package_name//@/}.json"
+            package_key="${package_name//@/}"
+            package_key="${package_key//\//-}"
+            pack_json="${pack_dir}/${package_key}.json"
             pnpm --dir "${package_dir}" pack --pack-destination "${pack_dir}" --json > "${pack_json}"
             package_tarball="$(node -e "const fs = require('node:fs'); process.stdout.write(JSON.parse(fs.readFileSync(process.argv[1], 'utf8')).filename);" "${pack_json}")"
             npm publish "${package_tarball}" --access public --provenance
