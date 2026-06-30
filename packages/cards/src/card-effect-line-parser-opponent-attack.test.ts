@@ -3,67 +3,6 @@ import { describe, expect, it } from "vitest";
 import { parseCardEffectLine } from "./card-effect-line-parser.js";
 
 describe("opponent attack effect line parser", () => {
-  it("parses short opponent-attack entry alias into reusable hand-trash battle power primitives", () => {
-    const result = parseCardEffectLine(
-      "[On Opponent's Attack] [Once Per Turn] You may trash 1 card from your hand: Up to 1 of your Leader or Character cards gains +4000 power during this battle.",
-    );
-
-    expect(result).toMatchObject({
-      block: {
-        category: "auto",
-        trigger: { type: "onOpponentAttack" },
-        oncePerTurn: true,
-        effect: {
-          type: "sequence",
-          effects: [
-            {
-              connector: "always",
-              saveResultAs: "paidCost:trashFromHand",
-              effect: {
-                type: "payCost",
-                cost: {
-                  type: "trashFromHand",
-                  count: 1,
-                  chooser: "self",
-                  optional: true,
-                },
-              },
-            },
-            {
-              connector: "ifYouDo",
-              effect: {
-                type: "modifyPower",
-                target: {
-                  type: "chooseFromZones",
-                  request: {
-                    player: "self",
-                    zones: ["leaderArea", "characterArea"],
-                    min: 0,
-                    max: 1,
-                    filter: { categories: ["leader", "character"] },
-                  },
-                },
-                value: 4000,
-                duration: { type: "thisBattle" },
-              },
-            },
-          ],
-        },
-      },
-    });
-    expect(result?.evidence).toEqual(
-      expect.arrayContaining([
-        "entry:onOpponentAttack",
-        "marker:oncePerTurn",
-        "composition:optionalCostedEffect",
-        "cost:trashFromHand",
-        "instruction:modifyPower",
-        "target:yourLeaderOrCharacters",
-        "duration:thisBattle",
-      ]),
-    );
-  });
-
   it("parses opponent-attack once-per-turn rest-DON cost into opponent Leader or Character rest primitives", () => {
     const result = parseCardEffectLine(
       "[On Your Opponent's Attack] [Once Per Turn] You may rest 1 of your DON!! cards: Rest up to 1 of your opponent's Leader or Character cards.",
