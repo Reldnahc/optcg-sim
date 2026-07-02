@@ -19,10 +19,7 @@ import type {
   VariantKey,
 } from "@optcg/types";
 
-import {
-  gameplayLinesFromTextParts,
-  gameplayLineSlicesFromTextParts,
-} from "./effect-text-lines.js";
+import { gameplayLineSlicesFromTextParts } from "./effect-text-lines.js";
 import { parseCardEffectLinesDetailed } from "./card-effect-line-parser.js";
 import { parseRawKeywordLine } from "./keywords/index.js";
 import { materializeEffectDefinition } from "./materialization/effect-definitions.js";
@@ -396,12 +393,13 @@ const buildResolvedCard = (
   runtimeSupportEvaluator: RuntimeSupportEvaluatorPort | undefined,
 ): BuiltCard => {
   const cardId = detail.card_number as CardId;
-  const lines = gameplayLines(detail);
+  const lineInputs = gameplayLineInputs(detail);
+  const lines = lineInputs.map((line) => line.text);
   const printedKeywords = rawKeywordsFromLines(lines);
   const nameAliases = nameAliasesFromLines(lines);
   const identityTreatment = identityTreatmentFromLines(lines);
-  const effectLines = lines.filter(
-    (line) => parseRawKeywordLine({ text: line }) === undefined,
+  const effectLines = lineInputs.filter(
+    (line) => parseRawKeywordLine({ text: line.text }) === undefined,
   );
   const sourceTextHash = sha256({
     effect: detail.effect,
@@ -505,8 +503,28 @@ const buildResolvedCard = (
   };
 };
 
-const gameplayLines = (detail: PoneglyphCardDetail): string[] =>
-  gameplayLinesFromTextParts([detail.effect, detail.trigger]);
+interface GameplayLineInput {
+  readonly text: string;
+  readonly sourceLineIndex: number;
+  readonly sourceTextKind: EffectTextDocumentKind;
+}
+
+const gameplayLineInputs = (
+  detail: PoneglyphCardDetail,
+): GameplayLineInput[] => [
+  ...gameplayLineInputsFromTextPart(detail.effect, "effect"),
+  ...gameplayLineInputsFromTextPart(detail.trigger, "trigger"),
+];
+
+const gameplayLineInputsFromTextPart = (
+  text: string | null | undefined,
+  sourceTextKind: EffectTextDocumentKind,
+): GameplayLineInput[] =>
+  gameplayLineSlicesFromTextParts([text]).map((slice, sourceLineIndex) => ({
+    text: slice.text,
+    sourceLineIndex,
+    sourceTextKind,
+  }));
 
 const nameAliasesFromLines = (lines: readonly string[]): string[] => {
   const aliases: string[] = [];

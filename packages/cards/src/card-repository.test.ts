@@ -292,6 +292,87 @@ describe("card repository", () => {
     }
   });
 
+  test("generated presentation span ids preserve printed line indexes after raw keyword lines", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const effect = [
+      "[Blocker] (After your opponent declares an attack, you may rest this card to make it the new target of the attack.)",
+      "[On Play]/[On K.O.] Up to 1 of your {Dressrosa} type Characters gains +2000 power during this turn.",
+    ].join("\n");
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", effect),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+    const cached = (await cache.getJson(
+      createCardCacheKey({ cardId, versions }),
+    )) as CachedResolvedCard | undefined;
+    const definition = required(cached?.definition, "cached definition");
+    const onPlay = required(definition.effects[0], "on play effect");
+    const onKo = required(definition.effects[1], "on ko effect");
+    const onPlayPresentation = required(
+      onPlay.presentation,
+      "on play presentation",
+    );
+    const onKoPresentation = required(onKo.presentation, "on ko presentation");
+    const sourceMap = required(
+      resolved.effectTextSourceMap,
+      "effect text source map",
+    );
+    const sourceSpanIds = sourceMap.spans.map((span) => span.id);
+
+    assert.deepEqual(onPlayPresentation.spanIds, ["span:body:line:2"]);
+    assert.deepEqual(onKoPresentation.spanIds, ["span:body:line:2:block:2"]);
+    for (const spanId of [
+      ...onPlayPresentation.spanIds,
+      ...onKoPresentation.spanIds,
+    ]) {
+      assert.equal(sourceSpanIds.includes(spanId), true);
+    }
+  });
+
+  test("generated trigger entry points printed in effect text reference the effect source map", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP01-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP01-001": poneglyphCard("OP01-001", "[Trigger] Play this card."),
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+    const cached = (await cache.getJson(
+      createCardCacheKey({ cardId, versions }),
+    )) as CachedResolvedCard | undefined;
+    const definition = required(cached?.definition, "cached definition");
+    const triggerBlock = required(definition.effects[0], "trigger effect");
+    const triggerPresentation = required(
+      triggerBlock.presentation,
+      "trigger presentation",
+    );
+
+    assert.equal(triggerBlock.trigger.type, "trigger");
+    assert.equal(triggerPresentation.textKind, "effect");
+    assert.deepEqual(triggerPresentation.spanIds, ["span:body"]);
+    assert.equal(
+      resolved.effectTextSourceMap?.spans.some(
+        (span) => span.id === "span:body",
+      ),
+      true,
+    );
+    assert.equal(resolved.triggerTextSourceMap, undefined);
+  });
+
   test("resolves raw keyword lines as printed keywords without generated effect blocks", async () => {
     const cache = new FakeCardCache();
     const cardId = "OP01-001" as CardId;

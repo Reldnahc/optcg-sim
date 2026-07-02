@@ -3,6 +3,7 @@ import type {
   Effect,
   EffectBlock,
   EffectDefinition,
+  EffectTextDocumentKind,
   EffectTextPresentationRef,
   EffectTextSourceMap,
   ParserSupportCertificate,
@@ -40,6 +41,12 @@ interface EffectMaterializationOptions {
   readonly evaluateRuntimeSupport?: RuntimeSupportEvaluator;
 }
 
+export interface EffectMaterializationLine {
+  readonly text: string;
+  readonly sourceLineIndex?: number;
+  readonly sourceTextKind?: EffectTextDocumentKind;
+}
+
 const missingRuntimeSupportEvaluator = (): RuntimeSupportEvaluation => ({
   supported: false,
   reason: "runtime evaluator unavailable",
@@ -47,7 +54,7 @@ const missingRuntimeSupportEvaluator = (): RuntimeSupportEvaluation => ({
 
 export const materializeEffectDefinition = (
   cardId: CardId,
-  lines: readonly string[],
+  lines: readonly (string | EffectMaterializationLine)[],
   sourceTextHash: string,
   versions: EffectMaterializationVersions,
   options: EffectMaterializationOptions = {},
@@ -63,10 +70,13 @@ export const materializeEffectDefinition = (
   const diagnostics: string[] = [];
   const parsedRuntimeLines: ParsedRuntimeEffectLine[] = [];
   let parsedLineCount = 0;
-  const shouldScopeSpanIds = lines.length > 1;
+  const materializationLines = lines.map((line, index) =>
+    typeof line === "string" ? { text: line, sourceLineIndex: index } : line,
+  );
+  const shouldScopeSpanIds = materializationLines.length > 1;
 
-  for (const [index, line] of lines.entries()) {
-    const parsed = parseCardEffectLinesDetailed(line);
+  for (const [index, line] of materializationLines.entries()) {
+    const parsed = parseCardEffectLinesDetailed(line.text);
     if (!parsed.ok) {
       diagnostics.push(
         `line ${String(index + 1)} parse failed: ${parsed.diagnostic.reason}`,
@@ -80,15 +90,19 @@ export const materializeEffectDefinition = (
     for (const [blockIndex, value] of runtimeValues.entries()) {
       const spanScope = presentationSpanScope({
         blockIndex,
-        lineIndex: index,
+        lineIndex: line.sourceLineIndex ?? index,
         scoped: shouldScopeSpanIds || runtimeValues.length > 1,
       });
+      const parsedSourceMap = sourceMapForMaterializedLine(
+        value.sourceMap,
+        line.sourceTextKind,
+      );
       const sourceMap =
-        value.sourceMap === undefined
+        parsedSourceMap === undefined
           ? undefined
           : {
-              ...value.sourceMap,
-              spans: value.sourceMap.spans.map((span) =>
+              ...parsedSourceMap,
+              spans: parsedSourceMap.spans.map((span) =>
                 scopePresentationSpan(span, spanScope),
               ),
             };
@@ -181,6 +195,14 @@ export const materializeEffectDefinition = (
     },
   };
 };
+
+const sourceMapForMaterializedLine = (
+  sourceMap: EffectTextSourceMap | undefined,
+  sourceTextKind: EffectTextDocumentKind | undefined,
+): EffectTextSourceMap | undefined =>
+  sourceMap === undefined || sourceTextKind === undefined
+    ? sourceMap
+    : { ...sourceMap, textKind: sourceTextKind };
 
 const blockLineNumber = (id: EffectBlock["id"]): string | undefined => {
   const parts = String(id).split(":generated:");
