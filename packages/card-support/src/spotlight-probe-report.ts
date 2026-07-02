@@ -317,7 +317,7 @@ const spotlightFailureForBlock = (
   }
   const sourceSpanIds = new Set(sourceMap.spans.map((span) => span.id));
   const missingSpanIds = presentation.spanIds.filter(
-    (spanId) => !sourceSpanIds.has(spanId),
+    (spanId) => !hasSourceSpanId(sourceSpanIds, spanId),
   );
   if (missingSpanIds.length > 0) {
     return {
@@ -373,6 +373,21 @@ const duplicateSpanIds = (
     seen.add(spanId);
   }
   return [...duplicates];
+};
+
+const lineScopedSpanSuffixPattern = /:line:\d+(?::block:\d+)?$/u;
+
+const fieldLocalSpanId = (spanId: EffectTextSpanId): EffectTextSpanId =>
+  spanId.replace(lineScopedSpanSuffixPattern, "") as EffectTextSpanId;
+
+const hasSourceSpanId = (
+  sourceSpanIds: ReadonlySet<EffectTextSpanId>,
+  spanId: EffectTextSpanId,
+): boolean => {
+  if (sourceSpanIds.has(spanId)) {
+    return true;
+  }
+  return sourceSpanIds.has(fieldLocalSpanId(spanId));
 };
 
 const formatFailure = (failure: SpotlightProbeFailure): string =>
