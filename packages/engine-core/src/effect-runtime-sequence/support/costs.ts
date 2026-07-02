@@ -64,7 +64,7 @@ export const isSupportedPayCostSegment = (
       }
       return (
         hasSupportedSelfOptionalPositiveCount(option) &&
-        isSupportedHandSelectionCardFilter(option.filter)
+        isSupportedPublicFieldTargetFilter(option.filter)
       );
     });
   }

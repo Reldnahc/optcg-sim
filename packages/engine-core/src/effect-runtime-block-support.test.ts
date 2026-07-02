@@ -95,6 +95,41 @@ test("auto runtime admission composes optionality with reusable body primitives"
   );
 });
 
+test("auto runtime admission rejects dynamic field-count filters outside resolver support", () => {
+  const effect: Effect = {
+    type: "sequence",
+    effects: [
+      {
+        connector: "always",
+        effect: {
+          type: "modifyPower",
+          target: { type: "myLeader" },
+          value: {
+            type: "countMatchingFieldCards",
+            player: "self",
+            zone: "field",
+            filter: { colorsAny: ["red"] },
+            multiplier: 1000,
+          },
+          duration: { type: "thisTurn" },
+        },
+      },
+    ],
+  };
+
+  assert.equal(
+    isSupportedAutoRuntimeEffectBlock(
+      autoBlock({
+        effect,
+        sourcePresencePolicy: "mustRemainInSameZone",
+        trigger: { type: "onPlay" },
+      }),
+      autoAdapter("onPlay", "mustRemainInSameZone"),
+    ),
+    false,
+  );
+});
+
 test("auto runtime admission accepts initial hand-trash sequences through reusable entry adapters", () => {
   const effect: Effect = {
     type: "sequence",

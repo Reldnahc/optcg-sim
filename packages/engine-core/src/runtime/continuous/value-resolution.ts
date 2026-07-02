@@ -13,11 +13,9 @@ import type {
 } from "@optcg/types";
 
 import {
-  cardMatchesAnyName,
-  cardMatchesAnyAttribute,
-  cardMatchesAnyType,
-  cardMatchesAnyTypeIncludes,
-} from "../../card-name-matching.js";
+  cardMatchesDynamicFieldCountFilter,
+  isSupportedDynamicFieldCountFilter,
+} from "./field-count-filter.js";
 
 export type ContinuousResolutionContext = {
   savedReferences?: EffectExecutionFrame["savedReferences"];
@@ -42,54 +40,6 @@ const resolvePlayerRef = (
   return opponentOf(state, controllerId);
 };
 
-const cardMatchesBasicFilter = (
-  state: GameState,
-  card: CardInstance,
-  filter: CardFilter,
-): boolean => {
-  const metadata = state.cardManifest.cards[card.cardId];
-  if (metadata === undefined) {
-    return false;
-  }
-  if (
-    filter.categories !== undefined &&
-    !filter.categories.includes(metadata.category)
-  ) {
-    return false;
-  }
-  if (
-    filter.names !== undefined &&
-    !cardMatchesAnyName(metadata, filter.names)
-  ) {
-    return false;
-  }
-  if (
-    filter.typesAny !== undefined &&
-    !cardMatchesAnyType(metadata, filter.typesAny)
-  ) {
-    return false;
-  }
-  if (
-    filter.typesIncludeAny !== undefined &&
-    !cardMatchesAnyTypeIncludes(metadata, filter.typesIncludeAny)
-  ) {
-    return false;
-  }
-  if (
-    filter.attributesAny !== undefined &&
-    !cardMatchesAnyAttribute(metadata, filter.attributesAny)
-  ) {
-    return false;
-  }
-  if (
-    filter.attributesNotAny !== undefined &&
-    cardMatchesAnyAttribute(metadata, filter.attributesNotAny)
-  ) {
-    return false;
-  }
-  return true;
-};
-
 const countDistinctMatchingFieldNames = (
   state: GameState,
   controllerId: PlayerId,
@@ -108,7 +58,7 @@ const countDistinctMatchingFieldNames = (
   }
   const names = new Set<string>();
   for (const card of player.characters) {
-    if (!cardMatchesBasicFilter(state, card, value.filter)) {
+    if (!cardMatchesDynamicFieldCountFilter(state, card, value.filter)) {
       continue;
     }
     const name = state.cardManifest.cards[card.cardId]?.name;
@@ -126,7 +76,8 @@ const countMatchingFieldCards = (
 ): number | null => {
   if (
     (value.player !== "self" && value.player !== "opponent") ||
-    !Number.isSafeInteger(value.multiplier)
+    !Number.isSafeInteger(value.multiplier) ||
+    !isSupportedDynamicFieldCountFilter(value.filter)
   ) {
     return null;
   }
@@ -147,7 +98,7 @@ const countMatchingFieldCards = (
           : player.characters;
   return (
     fieldCards.filter((card) =>
-      cardMatchesBasicFilter(state, card, value.filter),
+      cardMatchesDynamicFieldCountFilter(state, card, value.filter),
     ).length * value.multiplier
   );
 };
@@ -193,7 +144,7 @@ const countMatchingZoneCards = (
       : zoneCards.filter((card) =>
           value.zone === "costArea"
             ? costAreaDonMatchesFilter(card, filter)
-            : cardMatchesBasicFilter(state, card, filter),
+            : cardMatchesDynamicFieldCountFilter(state, card, filter),
         ).length;
   return applyDynamicZoneCountArithmetic(
     Math.floor(matchingCount / value.per) * value.multiplier,

@@ -391,6 +391,95 @@ test("optional choose-one cost supports filtered hand and named stage field alte
   );
 });
 
+test("optional choose-one field cost uses public field-only filters", () => {
+  const { fieldCostCard, state } = setupState("Navy");
+  const p1State = must(state.players[p1], "p1");
+  const source = must(p1State.characters[0], "source");
+  const attachedDon = {
+    ...must(p1State.donDeck[0], "attached DON"),
+    zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 } as const,
+  };
+  p1State.costArea = [attachedDon, ...p1State.costArea];
+  p1State.donDeck = p1State.donDeck.filter(
+    (card) => card.instanceId !== attachedDon.instanceId,
+  );
+  p1State.characters = p1State.characters.map((card) =>
+    card.instanceId === fieldCostCard.instanceId
+      ? { ...card, attachedDon: [attachedDon.instanceId] }
+      : card,
+  );
+  setupDefinition(state, source, {
+    type: "sequence",
+    effects: [
+      {
+        id: "optional-choose-one-cost",
+        connector: "always",
+        saveResultAs: "paidCost",
+        effect: {
+          type: "payCost",
+          cost: {
+            type: "chooseOne",
+            optional: true,
+            options: [
+              {
+                type: "trashFromField",
+                chooser: "self",
+                optional: true,
+                count: 1,
+                filter: {
+                  categories: ["character"],
+                  attachedDon: { min: 1 },
+                },
+              },
+              {
+                type: "trashFromHand",
+                chooser: "self",
+                optional: true,
+                count: 1,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "if-you-do-draw",
+        connector: "ifYouDo",
+        effect: { type: "draw", count: 1, player: "self" },
+      },
+    ],
+  });
+
+  const paused = processEffectRuntime(state);
+  const decision = asPayCostDecision(
+    must(paused.state.pendingDecision, "decision"),
+  );
+  const fieldOption = must(
+    decision.paymentOptions.find((option) => option.type === "trashFromField"),
+    "field option",
+  );
+  const legal = getLegalActions(paused.state, p1).filter(
+    (
+      action,
+    ): action is Extract<Action, { type: "respondToDecision" }> & {
+      response: Extract<
+        Extract<Action, { type: "respondToDecision" }>["response"],
+        { type: "payment" }
+      >;
+    } =>
+      action.type === "respondToDecision" && action.response.type === "payment",
+  );
+
+  assert.equal(
+    legal.some(
+      (action) =>
+        action.response.optionId === fieldOption.id &&
+        action.response.selectedCardInstanceIds?.[0] ===
+          fieldCostCard.instanceId,
+    ),
+    true,
+  );
+});
+
 test("optional choose-one cost supports hand payment and decline; neither-payable skips decision", () => {
   const base = setupState("Navy");
   const paused = processEffectRuntime(base.state);

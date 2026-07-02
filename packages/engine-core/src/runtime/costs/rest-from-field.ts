@@ -8,7 +8,7 @@ import type {
   PlayerState,
 } from "@optcg/types";
 
-import { cardMatchesHandSelectionFilter } from "../../actions/state.js";
+import { fieldCostSelectableIds } from "./field-cost-candidates.js";
 
 export const restFromFieldCandidates = (
   player: PlayerState,
@@ -24,14 +24,14 @@ export const restFromFieldSelectableIds = (
   player: PlayerState,
   filter: CardFilter | undefined,
 ): CardInstance["instanceId"][] =>
-  restFromFieldCandidates(player)
-    .filter(
-      (card) =>
-        card.controller === playerId &&
-        card.state !== "rested" &&
-        cardMatchesHandSelectionFilter(state, playerId, card, filter),
-    )
-    .map((card) => card.instanceId);
+  fieldCostSelectableIds({
+    filter,
+    includeLeader: true,
+    player,
+    playerId,
+    requireActive: true,
+    state,
+  });
 
 export const applyRestFromFieldPayment = (params: {
   readonly filter?: CardFilter;

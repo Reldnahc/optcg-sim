@@ -5,6 +5,7 @@ import { isSupportedMoveMatchingLifeCardsEffect } from "../matching-life-cards.j
 import { isSupportedPlaceTopDeckCardsEffect } from "../../effect-runtime-top-deck-placement.js";
 import { isSupportedDamageEffect } from "../../runtime/primitives/execute.js";
 import { isSupportedTrashFromHandUntilCountBody } from "../../runtime/primitives/trash-from-hand-until.js";
+import { isSupportedDynamicFieldCountFilter } from "../../runtime/continuous/field-count-filter.js";
 
 type SequenceEffect = Extract<Effect, { type: "sequence" }>;
 type SequenceSegmentEffect = SequenceEffect["effects"][number]["effect"];
@@ -49,8 +50,7 @@ const isSupportedFieldCountValue = (
   (count.player === "self" || count.player === "opponent") &&
   Number.isSafeInteger(count.multiplier) &&
   count.multiplier !== 0 &&
-  (count.filter.categories === undefined ||
-    count.filter.categories.length > 0);
+  isSupportedDynamicFieldCountFilter(count.filter);
 
 const isSupportedFieldCountDifferenceValue = (
   count: number | DynamicNumberValue,

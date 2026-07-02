@@ -13,6 +13,7 @@ import {
   cardMatchesHandSelectionFilter,
   isSupportedHandSelectionCardFilter,
 } from "../../actions/state.js";
+import { fieldCostSelectableIds } from "../../runtime/costs/field-cost-candidates.js";
 import { isSupportedPublicFieldTargetFilter } from "../support-filters.js";
 import {
   getReturnDonEligibleCount,
@@ -109,22 +110,6 @@ const supportsChooseOneTrashFilter = (
 const supportsPublicFieldCostFilter = (
   filter: CardFilter | undefined,
 ): boolean => isSupportedPublicFieldTargetFilter(filter);
-
-const fieldCardMatchesFilter = (
-  state: GameState,
-  playerId: EffectQueueEntry["controllerId"],
-  card: CardInstance,
-  filter: CardFilter | undefined,
-): boolean => {
-  return cardMatchesHandSelectionFilter(state, playerId, card, filter);
-};
-
-const fieldTrashCandidates = (
-  player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
-): readonly CardInstance[] => [
-  ...player.characters,
-  ...(player.stage === undefined ? [] : [player.stage]),
-];
 
 const trashableSourceMatchesFilter = (
   state: GameState,
@@ -298,12 +283,14 @@ export const getSequencePayCostLegalActions = (
       if (!supportsPublicFieldCostFilter(option.filter)) {
         continue;
       }
-      const fieldFilter = option.filter;
-      const selectableCardIds = fieldTrashCandidates(player)
-        .filter((card) =>
-          fieldCardMatchesFilter(state, playerId, card, fieldFilter),
-        )
-        .map((card) => card.instanceId);
+      const selectableCardIds = fieldCostSelectableIds({
+        filter: option.filter,
+        includeLeader: false,
+        player,
+        playerId,
+        requireActive: false,
+        state,
+      });
       legalPayments.push(
         ...chooseVariableCardPaymentCombos(selectableCardIds, option).map(
           (combo) => ({
@@ -589,9 +576,14 @@ export const getSequenceOptionalPayCostOptions = (
     const fieldMatchCount =
       currentPlayer === undefined
         ? 0
-        : fieldTrashCandidates(currentPlayer).filter((card) =>
-            fieldCardMatchesFilter(state, paymentPlayerId, card, cost.filter),
-          ).length;
+        : fieldCostSelectableIds({
+            filter: cost.filter,
+            includeLeader: false,
+            player: currentPlayer,
+            playerId: paymentPlayerId,
+            requireActive: false,
+            state,
+          }).length;
     if (fieldMatchCount >= cost.count) {
       paymentOptions.push({
         id: cost.type,
@@ -766,13 +758,17 @@ export const getSequenceOptionalPayCostOptions = (
     if (!supportsPublicFieldCostFilter(option.filter)) {
       return [];
     }
-    const fieldFilter = option.filter;
     const fieldMatchCount =
       currentPlayer === undefined
         ? 0
-        : fieldTrashCandidates(currentPlayer).filter((card) =>
-            fieldCardMatchesFilter(state, paymentPlayerId, card, fieldFilter),
-          ).length;
+        : fieldCostSelectableIds({
+            filter: option.filter,
+            includeLeader: false,
+            player: currentPlayer,
+            playerId: paymentPlayerId,
+            requireActive: false,
+            state,
+          }).length;
     if (fieldMatchCount < option.count) {
       continue;
     }
@@ -780,7 +776,7 @@ export const getSequenceOptionalPayCostOptions = (
       id: chooseOneOptionId(option, index),
       type: "trashFromField",
       count: option.count,
-      ...(fieldFilter === undefined ? {} : { filter: fieldFilter }),
+      ...(option.filter === undefined ? {} : { filter: option.filter }),
     });
   }
   return paymentOptions;

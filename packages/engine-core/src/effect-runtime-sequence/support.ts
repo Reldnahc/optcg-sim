@@ -15,6 +15,7 @@ import type {
 } from "@optcg/types";
 
 import { isSupportedContinuousQueueEffect } from "../runtime/continuous/continuous.js";
+import { isSupportedDynamicFieldCountFilter } from "../runtime/continuous/field-count-filter.js";
 import { isSupportedQueuedEffectConditionShape } from "../effect-runtime-conditions.js";
 import { isSupportedChoiceEffect } from "./choice-support.js";
 import {
@@ -327,6 +328,9 @@ const canResolveDynamicNumberValueReference = (
       "paidCost",
       value.cost,
     );
+  }
+  if (value.type === "countMatchingFieldCards") {
+    return isSupportedDynamicFieldCountFilter(value.filter);
   }
   return true;
 };
