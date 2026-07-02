@@ -140,7 +140,10 @@ const resultForFilteredSelfTarget = (
   const categories = filter.categories ?? [];
   const targetFilter =
     categories.length === 0 && (filter.names?.length ?? 0) > 0
-      ? ({ ...filter, categories: ["leader", "character"] } satisfies CardFilter)
+      ? ({
+          ...filter,
+          categories: ["leader", "character"],
+        } satisfies CardFilter)
       : filter;
   const targetCategories = targetFilter.categories ?? [];
   const zones =
@@ -165,10 +168,7 @@ const resultForFilteredSelfTarget = (
   return {
     effect: {
       type: "sequence",
-      effects: [
-        selectSegment(zones, targetFilter),
-        changeAttackTargetSegment,
-      ],
+      effects: [selectSegment(zones, targetFilter), changeAttackTargetSegment],
     },
     evidence: resultEvidence,
     rest: "",

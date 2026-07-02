@@ -9,9 +9,7 @@ import {
   donAttachTarget,
 } from "./shared.js";
 import { parseAttachRestedDonToSelf } from "./attach-rested-self.js";
-import {
-  parseRestedDonAttachmentTarget,
-} from "./attach-rested-targets.js";
+import { parseRestedDonAttachmentTarget } from "./attach-rested-targets.js";
 
 export const parseAttachRestedDonInstruction: InstructionParser = (input) => {
   const decomposed = parseDonAttachmentInstruction(input);

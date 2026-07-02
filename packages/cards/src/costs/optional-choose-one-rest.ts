@@ -55,12 +55,12 @@ export function parseOptionalChooseOneRestCost(
   };
 }
 
-function parseRestFieldOrDonOptions(
-  costText: string,
-): readonly {
-  readonly cost: RestCostOption;
-  readonly evidence: readonly PrimitiveEvidence[];
-}[] | undefined {
+function parseRestFieldOrDonOptions(costText: string):
+  | readonly {
+      readonly cost: RestCostOption;
+      readonly evidence: readonly PrimitiveEvidence[];
+    }[]
+  | undefined {
   const match = /^rest\s+(?<rest>.+)$/iu.exec(costText);
   const afterRest = match?.groups?.["rest"];
   if (afterRest === undefined) {
@@ -117,8 +117,7 @@ function parseRestFieldOrDonOptions(
 function splitFieldOrDonTarget(
   text: string,
 ): { readonly fieldText: string } | undefined {
-  const match =
-    /^of your (?<field>.+?) or DON!! cards?$/iu.exec(text.trim());
+  const match = /^of your (?<field>.+?) or DON!! cards?$/iu.exec(text.trim());
   const fieldText = match?.groups?.["field"]?.trim();
   return fieldText === undefined || fieldText.length === 0
     ? undefined

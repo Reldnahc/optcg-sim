@@ -1,5 +1,8 @@
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
-import type { ParserSupportCertificate, RuntimeSupportReport } from "@optcg/types";
+import type {
+  ParserSupportCertificate,
+  RuntimeSupportReport,
+} from "@optcg/types";
 import {
   createParserSupportCertificate,
   gameplayLinesFromTextParts,
@@ -98,9 +101,7 @@ export function validateRulesText(
   );
 
   return {
-    supported: lines.every(
-      (line) => line.parseOk && line.runtimeSupported,
-    ),
+    supported: lines.every((line) => line.parseOk && line.runtimeSupported),
     lines,
   };
 }
