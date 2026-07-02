@@ -1,6 +1,7 @@
 import type {
   CardFilter,
   CardInstance,
+  CardRef,
   GameState,
   PlayerId,
   PlayerState,
@@ -32,6 +33,7 @@ export const fieldCostSelectableIds = (params: {
   readonly player: PlayerState;
   readonly playerId: PlayerId;
   readonly requireActive: boolean;
+  readonly source?: CardRef;
   readonly state: GameState;
 }): CardInstance["instanceId"][] => {
   const resolved = resolvePublicTargetCandidatesForRequest(
@@ -47,7 +49,10 @@ export const fieldCostSelectableIds = (params: {
       visibility: "public",
       ...(params.filter === undefined ? {} : { filter: params.filter }),
     },
-    { sourceControllerId: params.playerId },
+    {
+      sourceControllerId: params.playerId,
+      ...(params.source === undefined ? {} : { source: params.source }),
+    },
   );
   if (!resolved.ok) {
     return [];

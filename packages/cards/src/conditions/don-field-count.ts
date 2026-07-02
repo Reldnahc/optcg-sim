@@ -91,6 +91,26 @@ export const parseDonFieldCountCondition: ConditionParser = (
     return directMoreThan;
   }
 
+  if (/^your Leader has any DON!! cards given$/iu.test(input.text)) {
+    return {
+      condition: {
+        type: "attachedDonCount",
+        target: { type: "myLeader" },
+        op: "gte",
+        value: 1,
+      },
+      evidence: [
+        "condition:attachedDonCount",
+        "condition:comparator:gte",
+        "condition:threshold:positiveInteger",
+        "zone:leaderArea",
+        "filter:category:leader",
+        "filter:state:attached",
+      ],
+      rest: "",
+    };
+  }
+
   const relativeMatch =
     /^the number of DON!! cards on your field is at least (?<value>[1-9]\d*) less than the number on your opponent's field$/i.exec(
       input.text,

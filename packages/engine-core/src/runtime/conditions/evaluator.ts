@@ -104,11 +104,28 @@ const evaluateAttachedDonCount = (
   entry: EffectQueueEntry,
   condition: Extract<Condition, { type: "attachedDonCount" }>,
 ): ConditionEvaluationResult => {
-  if (condition.target.type !== "self") {
+  if (
+    condition.target.type !== "self" &&
+    condition.target.type !== "myLeader"
+  ) {
     return { supported: false };
   }
   if (!Number.isInteger(condition.value) || condition.value < 0) {
     return { supported: false };
+  }
+  if (condition.target.type === "myLeader") {
+    const player = state.players[entry.controllerId];
+    if (player === undefined) {
+      return { supported: false };
+    }
+    return {
+      supported: true,
+      passed: compareComparator(
+        condition.op,
+        player.leader.attachedDon.length,
+        condition.value,
+      ),
+    };
   }
   const sourceZone = entry.source.zone;
   const source =
@@ -601,7 +618,8 @@ export const isSupportedQueuedEffectConditionShape = (
       return true;
     case "attachedDonCount":
       return (
-        condition.target.type === "self" &&
+        (condition.target.type === "self" ||
+          condition.target.type === "myLeader") &&
         isNonNegativeSafeInteger(condition.value) &&
         isComparator(condition.op)
       );

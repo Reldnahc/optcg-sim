@@ -126,6 +126,21 @@ const trashableSourceMatchesFilter = (
   );
 };
 
+const queueEntryForPayCostDecision = (
+  state: GameState,
+  decision: Extract<
+    NonNullable<GameState["pendingDecision"]>,
+    { type: "payCost" }
+  >,
+): EffectQueueEntry | undefined => {
+  const causedBy = decision.causedBy;
+  return causedBy.type === "effect" && "queueEntryId" in causedBy
+    ? state.effectQueue.find(
+        (candidate) => candidate.id === causedBy.queueEntryId,
+      )
+    : undefined;
+};
+
 const chooseOneOptionId = (
   option: Extract<OptionalCost, { type: "chooseOne" }>["options"][number],
   index: number,
@@ -232,13 +247,7 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "trashSelf") {
-      const causedBy = decision.causedBy;
-      const entry =
-        causedBy.type === "effect" && "queueEntryId" in causedBy
-          ? state.effectQueue.find(
-              (candidate) => candidate.id === causedBy.queueEntryId,
-            )
-          : undefined;
+      const entry = queueEntryForPayCostDecision(state, decision);
       if (
         entry === undefined ||
         !trashableSourceMatchesFilter(state, entry, option.filter)
@@ -283,12 +292,14 @@ export const getSequencePayCostLegalActions = (
       if (!supportsPublicFieldCostFilter(option.filter)) {
         continue;
       }
+      const entry = queueEntryForPayCostDecision(state, decision);
       const selectableCardIds = fieldCostSelectableIds({
         filter: option.filter,
         includeLeader: false,
         player,
         playerId,
         requireActive: false,
+        ...(entry?.source === undefined ? {} : { source: entry.source }),
         state,
       });
       legalPayments.push(
@@ -582,6 +593,7 @@ export const getSequenceOptionalPayCostOptions = (
             player: currentPlayer,
             playerId: paymentPlayerId,
             requireActive: false,
+            source: entry.source,
             state,
           }).length;
     if (fieldMatchCount >= cost.count) {
@@ -767,6 +779,7 @@ export const getSequenceOptionalPayCostOptions = (
             player: currentPlayer,
             playerId: paymentPlayerId,
             requireActive: false,
+            source: entry.source,
             state,
           }).length;
     if (fieldMatchCount < option.count) {

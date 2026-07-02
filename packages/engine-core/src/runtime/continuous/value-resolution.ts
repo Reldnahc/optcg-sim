@@ -88,7 +88,11 @@ const countMatchingFieldCards = (
   }
   const fieldCards =
     value.zone === "field"
-      ? [player.leader, ...player.characters, ...(player.stage ? [player.stage] : [])]
+      ? [
+          player.leader,
+          ...player.characters,
+          ...(player.stage ? [player.stage] : []),
+        ]
       : value.zone === "leaderArea"
         ? [player.leader]
         : value.zone === "stageArea"

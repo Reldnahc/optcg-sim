@@ -244,9 +244,10 @@ function parseEntryPointAlternatives(
     rest = entryPoint.rest.trimStart();
     restSource = sourceForRest(restSource, beforeEntryRest, rest);
     if (!rest.startsWith("/")) {
+      const effectiveValues = dropLeadingSharedTurnWindowAlternative(values);
       return {
         ok: true,
-        values,
+        values: effectiveValues,
         rest,
         ...(restSource === undefined ? {} : { restSource }),
       };
@@ -255,6 +256,28 @@ function parseEntryPointAlternatives(
     rest = rest.slice(1).trimStart();
     restSource = sourceForRest(restSource, beforeSlashRest, rest);
   }
+}
+
+function dropLeadingSharedTurnWindowAlternative(
+  values: readonly EntryPointParseResult[],
+): readonly EntryPointParseResult[] {
+  const first = values[0];
+  if (
+    first === undefined ||
+    !isTurnWindowOnlyEntry(first) ||
+    !values.slice(1).some((value) => !isTurnWindowOnlyEntry(value))
+  ) {
+    return values;
+  }
+  return values.slice(1);
+}
+
+function isTurnWindowOnlyEntry(entryPoint: EntryPointParseResult): boolean {
+  return (
+    entryPoint.node.trigger.type === "permanent" &&
+    (entryPoint.evidence.includes("entry:yourTurn") ||
+      entryPoint.evidence.includes("entry:opponentTurn"))
+  );
 }
 
 function applySharedTurnWindow(

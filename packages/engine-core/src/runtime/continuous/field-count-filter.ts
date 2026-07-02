@@ -12,6 +12,7 @@ const supportedDynamicFieldCountFilterKeys = new Set<keyof CardFilter>([
   "attributesAny",
   "attributesNotAny",
   "categories",
+  "custom",
   "names",
   "typesAny",
   "typesIncludeAny",
@@ -29,11 +30,11 @@ export const isSupportedDynamicFieldCountFilter = (
   (filter.anyOf === undefined ||
     (filter.anyOf.length > 0 &&
       filter.anyOf.every(isSupportedDynamicFieldCountFilter))) &&
-  (filter.attributesAny === undefined ||
-    isStringArray(filter.attributesAny)) &&
+  (filter.attributesAny === undefined || isStringArray(filter.attributesAny)) &&
   (filter.attributesNotAny === undefined ||
     isStringArray(filter.attributesNotAny)) &&
   (filter.categories === undefined || isStringArray(filter.categories)) &&
+  (filter.custom === undefined || filter.custom === "differentNames") &&
   (filter.names === undefined || isStringArray(filter.names)) &&
   (filter.typesAny === undefined || isStringArray(filter.typesAny)) &&
   (filter.typesIncludeAny === undefined ||
@@ -84,6 +85,9 @@ export const cardMatchesDynamicFieldCountFilter = (
     filter.attributesAny !== undefined &&
     !cardMatchesAnyAttribute(metadata, filter.attributesAny)
   ) {
+    return false;
+  }
+  if (filter.custom !== undefined && filter.custom !== "differentNames") {
     return false;
   }
   return !(

@@ -705,7 +705,7 @@ test("attachedDonCount fails closed for non-self target and source-snapshot-only
           id: toEffectId("attached-don-non-self"),
           condition: {
             type: "attachedDonCount",
-            target: { type: "myLeader" },
+            target: { type: "opponentLeader" },
             op: "gte",
             value: 0,
           },

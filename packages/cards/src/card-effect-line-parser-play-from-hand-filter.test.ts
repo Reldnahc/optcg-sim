@@ -53,6 +53,67 @@ it("parses conditional play-from-hand rested with separated type-or-attribute fi
   });
 });
 
+it("parses leader attached-DON condition before typed power-filtered hand play", () => {
+  const result = parseCardEffectLine(
+    "[On K.O.] If your Leader has any DON!! cards given, you may play up to 1 {Straw Hat Crew} type Character card with 6000 power or less from your hand.",
+  );
+
+  expect(result).toMatchObject({
+    block: {
+      trigger: { type: "onKO" },
+      condition: {
+        type: "attachedDonCount",
+        target: { type: "myLeader" },
+        op: "gte",
+        value: 1,
+      },
+      effect: {
+        type: "sequence",
+        effects: [
+          {
+            optional: true,
+            effect: {
+              type: "sequence",
+              effects: [
+                {
+                  effect: {
+                    type: "selectCards",
+                    zone: "hand",
+                    player: "self",
+                    chooser: "self",
+                    min: 0,
+                    max: 1,
+                    filter: {
+                      categories: ["character"],
+                      typesAny: ["Straw Hat Crew"],
+                      power: { max: 6000 },
+                    },
+                  },
+                },
+                {
+                  effect: {
+                    type: "playSelected",
+                    selection: "handSelection:play-from-hand",
+                    ignoreCost: true,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
+  expect(result?.evidence).toEqual(
+    expect.arrayContaining([
+      "condition:attachedDonCount",
+      "zone:leaderArea",
+      "filter:power",
+      "instruction:playSelected",
+    ]),
+  );
+});
+
 it("parses exact DON conditional play followed by opponent life movement", () => {
   const result = parseCardEffectLine(
     "[Main] If you have 10 DON!! cards on your field, play up to 1 [Marshall.D.Teach] from your hand. Then, add up to 1 card from the top of your opponent's Life cards to the owner's hand.",

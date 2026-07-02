@@ -41,13 +41,6 @@ export const getUnsupportedDamageStepContinuationReason = (
   if ("reason" in combat) return combat.reason;
   const { attackerView, target, targetView } = combat;
   if (
-    target.isLeader &&
-    battle.damageCount !== 2 &&
-    attackerView.keywords.includes("doubleAttack")
-  ) {
-    return "Battle requires unsupported keyword or protection handling.";
-  }
-  if (
     attackerView.currentPower >= targetView.currentPower &&
     !target.isLeader
   ) {

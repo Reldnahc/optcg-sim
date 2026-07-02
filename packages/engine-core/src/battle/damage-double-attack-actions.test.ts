@@ -10,6 +10,7 @@ import {
   addTrashMarker,
   cardRef,
   continuousKeywordEffectRecord,
+  effectDefinition,
   passCounterStep,
   setupAttackState,
 } from "./test-fixtures.js";
@@ -29,6 +30,43 @@ const installSupportedDoubleAttackLeader = (
     ...doubleAttackCard,
     printedKeywords: ["doubleAttack"],
   };
+};
+
+const installWhenAttackingDoubleAttackGrant = (
+  state: ReturnType<typeof setupAttackState>,
+) => {
+  const p1State = must(state.players[p1], "p1");
+  const attacker = p1State.leader;
+  const definition = effectDefinition(
+    attacker.cardId,
+    { type: "whenAttacking" },
+    {
+      type: "giveKeyword",
+      target: { type: "self" },
+      keyword: "doubleAttack",
+      duration: { type: "thisTurn" },
+    },
+  );
+  const effectDefinitionId = "def-when-attacking-double-attack";
+  state.cardManifest.effectDefinitionsVersion =
+    definition.metadata.effectDefinitionsVersion;
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    [effectDefinitionId]: definition,
+  };
+  state.cardManifest.cards[attacker.cardId] = resolvedCard({
+    cardId: attacker.cardId,
+    category: "leader",
+    power: 5000,
+    effectText:
+      "[When Attacking] This Leader gains [Double Attack] during this turn.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId,
+      rulesVersion: definition.metadata.rulesVersion,
+      sourceTextHash: definition.metadata.sourceTextHash,
+    },
+  });
 };
 
 const assertAcceptedHash = (result: EngineResult): void => {
@@ -133,6 +171,46 @@ test("conditional continuous doubleAttack grant applies two leader damage points
   });
 
   assert.equal(opened.errors, undefined);
+  const result = resolveNoTriggerLifeDamageDecisions(
+    passCounterStep(opened.state, p2),
+  );
+  assert.equal(result.errors, undefined);
+  assertAcceptedHash(result);
+  assert.equal(
+    must(result.state.players[p2], "p2").life.length,
+    beforeLife - 2,
+  );
+  assert.equal(
+    result.events.filter((event) => event.type === "damageDealt").length,
+    2,
+  );
+});
+
+test("When Attacking doubleAttack grant applies two leader damage points", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = p1State.leader;
+  const target = p2State.leader;
+  installWhenAttackingDoubleAttackGrant(state);
+  const beforeLife = p2State.life.length;
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: target.instanceId,
+      cardId: target.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  assert.equal(opened.state.battle?.damageCount, 1);
   const result = resolveNoTriggerLifeDamageDecisions(
     passCounterStep(opened.state, p2),
   );

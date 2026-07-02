@@ -241,8 +241,7 @@ export function parseMatchingZoneCardsScaledDuration(
     fieldMatch?.groups?.["filter"]?.trim() ??
     fieldSuffixMatch?.groups?.["filter"]?.trim();
   const fieldDurationText =
-    fieldMatch?.groups?.["duration"] ??
-    fieldSuffixMatch?.groups?.["duration"];
+    fieldMatch?.groups?.["duration"] ?? fieldSuffixMatch?.groups?.["duration"];
   if (fieldFilterText === undefined || fieldDurationText === undefined) {
     return undefined;
   }
@@ -307,11 +306,7 @@ const parseMatchingFieldCountValue = ({
     evidence: [
       "valueSource:fieldCount",
       ...(zone === "field"
-        ? ([
-            "zone:leaderArea",
-            "zone:characterArea",
-            "zone:stageArea",
-          ] as const)
+        ? (["zone:leaderArea", "zone:characterArea", "zone:stageArea"] as const)
         : zone === "leaderArea"
           ? (["zone:leaderArea"] as const)
           : zone === "stageArea"

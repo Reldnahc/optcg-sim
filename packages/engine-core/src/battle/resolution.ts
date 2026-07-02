@@ -1,7 +1,6 @@
 import type {
   CardInstance,
   CardRef,
-  EngineError,
   EngineEvent,
   EngineResult,
   GameState,
@@ -18,7 +17,6 @@ type EngineInternalBattleState = NonNullable<GameState["battle"]> & {
 type EngineInternalGameState = GameState & {
   battle?: EngineInternalBattleState;
 };
-
 import {
   appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
@@ -46,6 +44,8 @@ import {
   getUnsupportedCounterWindowReason,
 } from "./counter-actions.js";
 import { getSupportedBattleCombatView } from "./capabilities.js";
+import { resolveBattleDamageCount } from "./damage-count.js";
+import { toBattleResolutionErrorTuple } from "./runtime-errors.js";
 import {
   KO_TRASH_MOVEMENT_REASON,
   moveConcreteCardsToTrash,
@@ -119,22 +119,6 @@ const appendDamageSpotlightEntry = ({
       amount: 1,
     },
   });
-};
-
-const toErrorTuple = (
-  errors: readonly EngineError[],
-): readonly [EngineError, ...EngineError[]] => {
-  const first = errors[0];
-  if (first === undefined) {
-    return [
-      {
-        type: "effectRuntimeError",
-        effectId: "battle-resolution",
-        details: { reason: "empty-runtime-error-list" },
-      },
-    ];
-  }
-  return [first, ...errors.slice(1)];
 };
 
 const hasOnKODefinitionMetadata = (
@@ -286,7 +270,6 @@ export const resolveSupportedVanillaBattle = (
             damageCount: 1,
           },
         };
-  const battleWithInternal = battle as EngineInternalBattleState;
   const combatMetadataState = baseCombatMetadataState;
   const combatState =
     withDamageDeferredEffectQueueMetadataHidden(combatMetadataState);
@@ -296,33 +279,15 @@ export const resolveSupportedVanillaBattle = (
   }
   const { attackerView, targetView } = combat;
   const attackerHasBanish = attackerView.keywords.includes("banish");
-  const attackerHasDoubleAttack =
-    attackerView.keywords.includes("doubleAttack");
-  const declaredDoubleAttackDamage =
-    battleWithInternal.damageProcess?.sourceKeyword === "doubleAttack";
-  const declaredBattleDamageCount = battle.damageCount;
-  if (declaredBattleDamageCount !== 1 && declaredBattleDamageCount !== 2) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported blocker, step, or multi-damage behavior.",
-    );
+  const damageCount = resolveBattleDamageCount({
+    battle,
+    attackerView,
+    target,
+  });
+  if ("reason" in damageCount) {
+    return unsupportedBattleResolution(state, damageCount.reason);
   }
-  const battleDamageCount =
-    declaredBattleDamageCount === 2 &&
-    !attackerHasDoubleAttack &&
-    declaredDoubleAttackDamage
-      ? 1
-      : declaredBattleDamageCount;
-  if (
-    battleDamageCount === 2 &&
-    !attackerHasDoubleAttack &&
-    !declaredDoubleAttackDamage
-  ) {
-    return unsupportedBattleResolution(
-      state,
-      "Battle requires unsupported keyword or protection handling.",
-    );
-  }
+  const { battleDamageCount } = damageCount;
   let nextState: GameState = {
     ...resolutionState,
     seq: toStateSeq(resolutionState.seq + 1),
@@ -505,7 +470,7 @@ export const resolveSupportedVanillaBattle = (
         return toEngineResult(
           state,
           [],
-          toErrorTuple(resolved.errors),
+          toBattleResolutionErrorTuple(resolved.errors),
           options,
         );
       }
@@ -977,7 +942,12 @@ const finalizeSupportedEndOfBattleCleanup = ({
   ) {
     const resolved = processEffectRuntime(releasedState, options);
     if (resolved.errors !== undefined) {
-      return toEngineResult(state, [], toErrorTuple(resolved.errors), options);
+      return toEngineResult(
+        state,
+        [],
+        toBattleResolutionErrorTuple(resolved.errors),
+        options,
+      );
     }
     assertGameStateInvariants(resolved.state);
     return toEngineResult(
@@ -994,7 +964,12 @@ const finalizeSupportedEndOfBattleCleanup = ({
       options,
     );
     if (runtime.errors !== undefined) {
-      return toEngineResult(state, [], toErrorTuple(runtime.errors), options);
+      return toEngineResult(
+        state,
+        [],
+        toBattleResolutionErrorTuple(runtime.errors),
+        options,
+      );
     }
     assertGameStateInvariants(runtime.state);
     return toEngineResult(

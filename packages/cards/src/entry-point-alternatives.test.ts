@@ -132,6 +132,50 @@ it("applies a shared turn window to each slash-separated entry point", () => {
   }
 });
 
+it("treats slash-separated leading turn windows as context for action entries", () => {
+  const results = parseCardEffectLines(
+    "[Your Turn] / [On Play] Play up to 1 Character with a cost of 1 from your trash.",
+  );
+
+  expect(results).toHaveLength(1);
+  expect(results[0]?.block).toMatchObject({
+    category: "auto",
+    trigger: { type: "onPlay" },
+    condition: { type: "yourTurn" },
+    effect: {
+      type: "sequence",
+      effects: [
+        {
+          effect: {
+            type: "selectCards",
+            zone: "trash",
+            player: "self",
+            chooser: "self",
+            min: 0,
+            max: 1,
+            filter: {
+              categories: ["character"],
+              cost: { op: "eq", value: 1 },
+            },
+          },
+        },
+        {
+          connector: "ifPossible",
+          effect: { type: "playSelected" },
+        },
+      ],
+    },
+  });
+  expect(results[0]?.evidence).toEqual(
+    expect.arrayContaining([
+      "entry:yourTurn",
+      "condition:yourTurn",
+      "entry:onPlay",
+      "composition:entryExpression",
+    ]),
+  );
+});
+
 function flattenAndConditions(
   condition: Condition | undefined,
 ): readonly Condition[] {
