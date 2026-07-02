@@ -326,40 +326,23 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
     legalCounterAction(opened.state, p2, counterEvent),
   );
   assert.equal(use.errors, undefined);
-  assert.equal(use.state.pendingDecision?.type, "payCost");
+  assert.equal(use.state.pendingDecision?.type, "selectCards");
 
-  const activeDon = must(use.state.players[p2], "p2")
-    .costArea.filter((card) => card.state === "active")
-    .slice(0, 2);
-  assert.equal(activeDon.length, 2);
-  const paid = applyAction(use.state, {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: activeDon.map((card) => card.instanceId),
-    },
-  });
-
-  assert.equal(paid.errors, undefined);
-  assert.equal(paid.state.battle?.step, "counter");
-  assert.equal(paid.state.pendingDecision?.type, "selectCards");
+  assert.equal(use.state.battle?.step, "counter");
   assert.equal(
-    must(paid.state.players[p2], "p2").trash.some(
+    must(use.state.players[p2], "p2").trash.some(
       (card) => card.instanceId === counterEvent.instanceId,
     ),
     true,
   );
   assert.deepEqual(
-    paid.state.continuousEffects.map((effect) => effect.modifier.layer),
+    use.state.continuousEffects.map((effect) => effect.modifier.layer),
     ["replacement"],
   );
   assert.deepEqual(
-    paid.events.map((event) => event.type),
+    use.events.map((event) => event.type),
     [
       "costPaid",
-      "decisionResolved",
       "counterUsed",
       "spotlightEntryCreated",
       "cardMoved",
@@ -370,21 +353,30 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
       "decisionCreated",
     ],
   );
-  const replay = applyAction(structuredClone(use.state), {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: activeDon.map((card) => card.instanceId),
-    },
-  });
-  assert.equal(paid.stateHash, replay.stateHash);
-  assert.deepEqual(paid.events, replay.events);
+  const paidDon = must(
+    use.events.find((event) => event.type === "costPaid")?.payload,
+    "cost paid payload",
+  ) as { selectedDonInstanceIds?: readonly string[] };
+  const paidDonIds = must(paidDon.selectedDonInstanceIds, "paid DON ids");
+  assert.equal(paidDonIds.length, 2);
+  assert.equal(
+    paidDonIds.every((donId) =>
+      must(use.state.players[p2], "p2").costArea.some(
+        (card) => card.instanceId === donId && card.state === "rested",
+      ),
+    ),
+    true,
+  );
+  const replay = applyAction(
+    structuredClone(opened.state),
+    legalCounterAction(opened.state, p2, counterEvent),
+  );
+  assert.equal(use.stateHash, replay.stateHash);
+  assert.deepEqual(use.events, replay.events);
 
-  const passed = applyAction(paid.state, {
+  const passed = applyAction(use.state, {
     type: "respondToDecision",
-    decisionId: must(paid.state.pendingDecision, "counter decision").id,
+    decisionId: must(use.state.pendingDecision, "counter decision").id,
     response: { type: "cards", cards: [] },
   });
 
@@ -425,37 +417,33 @@ test("supported Counter Event sequence resolves after printed cost", () => {
     legalCounterAction(opened.state, p2, counterEvent),
   );
   assert.equal(use.errors, undefined);
-  assert.equal(use.state.pendingDecision?.type, "payCost");
-
-  const activeDon = must(use.state.players[p2], "p2").costArea.filter(
-    (card) => card.state === "active",
-  );
-  const paid = applyAction(use.state, {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [must(activeDon[0], "active DON").instanceId],
-    },
-  });
-
-  assert.equal(paid.errors, undefined);
   assert.equal(
-    must(paid.state.players[p2], "p2").deck.length,
+    must(use.state.players[p2], "p2").deck.length,
     initialDeckSize - 1,
   );
   assert.equal(
-    must(paid.state.players[p2], "p2").trash.some(
+    must(use.state.players[p2], "p2").trash.some(
       (card) => card.instanceId === counterEvent.instanceId,
     ),
     true,
   );
   assert.deepEqual(
-    paid.state.continuousEffects.map((effect) => effect.modifier.layer),
+    use.state.continuousEffects.map((effect) => effect.modifier.layer),
     ["powerAdd"],
   );
-  const eventTypes = paid.events.map((event) => event.type);
+  const paidDon = must(
+    use.events.find((event) => event.type === "costPaid")?.payload,
+    "cost paid payload",
+  ) as { selectedDonInstanceIds?: readonly string[] };
+  const paidDonIds = must(paidDon.selectedDonInstanceIds, "paid DON ids");
+  assert.equal(paidDonIds.length, 1);
+  assert.equal(
+    must(use.state.players[p2], "p2").costArea.some(
+      (card) => card.instanceId === paidDonIds[0] && card.state === "rested",
+    ),
+    true,
+  );
+  const eventTypes = use.events.map((event) => event.type);
   assert.equal(eventTypes.includes("costPaid"), true);
   assert.equal(eventTypes.includes("counterUsed"), true);
   assert.equal(eventTypes.includes("cardTrashed"), true);
@@ -487,23 +475,20 @@ test("Counter Event cannot-attack sequence fully resolves and blocks the selecte
     legalCounterAction(opened.state, p2, counterEvent),
   );
   assert.equal(used.errors, undefined);
-  assert.equal(used.state.pendingDecision?.type, "payCost");
-
-  const activeDon = must(used.state.players[p2], "p2").costArea.filter(
-    (card) => card.state === "active",
+  const paidDon = must(
+    used.events.find((event) => event.type === "costPaid")?.payload,
+    "cost paid payload",
+  ) as { selectedDonInstanceIds?: readonly string[] };
+  const paidDonIds = must(paidDon.selectedDonInstanceIds, "paid DON ids");
+  assert.equal(paidDonIds.length, 1);
+  assert.equal(
+    must(used.state.players[p2], "p2").costArea.some(
+      (card) => card.instanceId === paidDonIds[0] && card.state === "rested",
+    ),
+    true,
   );
-  const paid = applyAction(used.state, {
-    type: "respondToDecision",
-    decisionId: must(used.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [must(activeDon[0], "active DON").instanceId],
-    },
-  });
-  assert.equal(paid.errors, undefined);
 
-  let current = paid;
+  let current = used;
   for (let step = 0; step < 5; step += 1) {
     if (current.state.pendingDecision?.type === "selectTargets") {
       break;

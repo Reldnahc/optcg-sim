@@ -835,7 +835,7 @@ test("Counter Event sequence resolves power then conditional trash-to-hand selec
   );
 });
 
-test("supported nonzero-cost Counter Event requires payCost then resolves with rested DON", () => {
+test("supported nonzero-cost Counter Event rests printed cost DON without a payment prompt", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -871,50 +871,18 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
     ),
   );
   assert.equal(use.errors, undefined);
-  assert.equal(use.state.pendingDecision?.type, "payCost");
   assert.equal(
-    use.events.some((event) => event.type === "decisionCreated"),
-    true,
+    use.state.pendingDecision?.type === "payCost" &&
+      String(use.state.pendingDecision.id).startsWith(
+        "decision:counterStep:payCost:",
+      ),
+    false,
   );
-
-  const activeDon = must(
-    must(use.state.players[p2], "p2").costArea.find(
-      (don) => don.state === "active",
-    ),
-    "active don",
-  );
+  assert.equal(use.state.pendingDecision?.type, "selectCards");
   assert.deepEqual(
-    getLegalActions(use.state, p2).filter(
-      (action) => action.type === "respondToDecision",
-    ),
-    [
-      {
-        type: "respondToDecision",
-        decisionId: must(use.state.pendingDecision, "decision").id,
-        response: {
-          type: "payment",
-          optionId: "restDon",
-          selectedDonInstanceIds: [activeDon.instanceId],
-        },
-      },
-    ],
-  );
-  const paid = applyAction(use.state, {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [activeDon.instanceId],
-    },
-  });
-  assert.equal(paid.errors, undefined);
-  assert.equal(paid.state.pendingDecision?.type, "selectCards");
-  assert.deepEqual(
-    paid.events.map((event) => event.type),
+    use.events.map((event) => event.type),
     [
       "costPaid",
-      "decisionResolved",
       "counterUsed",
       "spotlightEntryCreated",
       "cardMoved",
@@ -925,26 +893,71 @@ test("supported nonzero-cost Counter Event requires payCost then resolves with r
       "decisionCreated",
     ],
   );
+  const paidDon = must(
+    use.events.find((event) => event.type === "costPaid")?.payload,
+    "cost paid payload",
+  ) as { selectedDonInstanceIds?: readonly string[] };
+  const paidDonIds = must(paidDon.selectedDonInstanceIds, "paid DON ids");
+  assert.equal(paidDonIds.length, 1);
+  const restedDonId = must(paidDonIds[0], "rested DON id");
   assert.equal(
-    must(paid.state.players[p2], "p2").costArea.some(
-      (don) =>
-        don.instanceId === activeDon.instanceId && don.state === "rested",
+    must(use.state.players[p2], "p2").costArea.some(
+      (don) => String(don.instanceId) === restedDonId && don.state === "rested",
     ),
     true,
   );
   assert.equal(
-    computeView(paid.state).cards[p2State.leader.instanceId]?.currentPower,
+    computeView(use.state).cards[p2State.leader.instanceId]?.currentPower,
     6000,
   );
-  const replay = applyAction(structuredClone(use.state), {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: [activeDon.instanceId],
+  const replay = applyAction(
+    structuredClone(opened.state),
+    must(
+      getLegalActions(opened.state, p2).find(
+        (action) =>
+          action.type === "useCounter" &&
+          action.cardInstanceId === counterEvent.instanceId,
+      ),
+      "counter replay action",
+    ),
+  );
+  assert.equal(use.stateHash, replay.stateHash);
+  assert.deepEqual(use.events, replay.events);
+});
+
+test("nonzero-cost Counter Event is unavailable without enough active DON", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const counterEvent = must(p2State.hand[0], "counter event");
+  installSupportedCounterEvent(state, counterEvent, 1000);
+  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
+    cardId: counterEvent.cardId,
+    category: "event",
+    cost: 1,
+    effectText: "[Counter] +1000.",
+    support: {
+      status: "implemented-dsl",
+      effectDefinitionId: `${String(counterEvent.cardId)}:counter`,
     },
   });
-  assert.equal(paid.stateHash, replay.stateHash);
-  assert.deepEqual(paid.events, replay.events);
+  p2State.costArea = p2State.costArea.map((card) => ({
+    ...card,
+    state: "rested",
+  }));
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: cardRef(p1State.leader, p1),
+    target: cardRef(p2State.leader, p2),
+  });
+  assert.equal(opened.errors, undefined);
+  assert.equal(
+    getLegalActions(opened.state, p2).some(
+      (action) =>
+        action.type === "useCounter" &&
+        action.cardInstanceId === counterEvent.instanceId,
+    ),
+    false,
+  );
 });

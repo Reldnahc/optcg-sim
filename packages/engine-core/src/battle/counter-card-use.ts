@@ -19,12 +19,10 @@ import {
   assertGameStateInvariantsIfEnabled,
   type EngineResultOptions,
   illegalAction,
-  toDecisionId,
   toEngineResult,
   toStateSeq,
 } from "../action-results.js";
 import { reifyCardRef } from "../actions/state.js";
-import { counterPayCostDecisionId } from "./counter-event-payment-context.js";
 import {
   getSupportedCounterEventActivation,
   getSupportedCounterEventActivations,
@@ -258,60 +256,50 @@ export const applyUseCounter = (
         "Counter Event requires enough active DON!!.",
       );
     }
+    const events: EngineEvent[] = [];
+    let costArea = defender.costArea;
     if (activation.printedCost > 0) {
-      const decisionId = toDecisionId(
-        counterPayCostDecisionId(
-          String(handCard.instanceId),
-          String(action.target.instanceId),
-          String(activation.effectId),
-          state.seq + 1,
-          "printed",
-        ),
+      const selectedDonInstanceIds = defender.costArea
+        .filter((card) => card.state === "active")
+        .slice(0, activation.printedCost)
+        .map((card) => card.instanceId);
+      if (selectedDonInstanceIds.length !== activation.printedCost) {
+        return illegalAction(
+          state,
+          "Counter Event requires enough active DON!!.",
+        );
+      }
+      const restedSet = new Set(selectedDonInstanceIds);
+      costArea = defender.costArea.map((card) =>
+        restedSet.has(card.instanceId)
+          ? { ...card, state: "rested" as const }
+          : card,
       );
-      const events: EngineEvent[] = [];
       appendEvent(
         state,
         events,
-        "decisionCreated",
-        { decisionId, decisionType: "payCost", playerId: decision.playerId },
+        "costPaid",
+        {
+          playerId: decision.playerId,
+          optionId: "restDon",
+          selectedDonInstanceIds,
+        },
         { type: "public" },
       );
-      const nextState: GameState = {
-        ...state,
-        seq: toStateSeq(state.seq + 1),
-        actionSeq: state.actionSeq + 1,
-        pendingDecision: {
-          id: decisionId,
-          type: "payCost",
-          playerId: decision.playerId,
-          prompt: `Pay cost for ${String(handCard.cardId)}`,
-          causedBy: {
-            type: "playerAction",
-            actionId: `action:${String(state.actionSeq + 1)}`,
-          },
-          visibility: { type: "public" },
-          cost: { type: "restDon", count: activation.printedCost },
-          paymentOptions: [
-            { id: "restDon", type: "restDon", count: activation.printedCost },
-          ],
-        },
-        eventJournal: [...state.eventJournal, ...events],
-      };
-      assertGameStateInvariantsIfEnabled(nextState, options);
-      return toEngineResult(nextState, events, undefined, options);
     }
+    const stagedState: GameState = {
+      ...state,
+      eventJournal: [...state.eventJournal, ...events],
+    };
     return resolveCounterEventActivation({
-      state,
+      state: stagedState,
       decisionPlayerId: decision.playerId,
       battle,
       handCard,
       activation,
-      costArea: defender.costArea,
-      priorEvents: [],
+      costArea,
+      priorEvents: events,
       options,
-      ...(state.pendingDecision === undefined
-        ? {}
-        : { pendingDecision: state.pendingDecision }),
     });
   } else {
     return illegalAction(
@@ -319,7 +307,6 @@ export const applyUseCounter = (
       "Counter card must be a Character with counter.",
     );
   }
-
   const counterResult = resolveCounterCardUse({
     state,
     decisionPlayerId: decision.playerId,
