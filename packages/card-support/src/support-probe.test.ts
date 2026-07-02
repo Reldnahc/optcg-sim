@@ -658,6 +658,49 @@ describe("text-only support probe parser backend", () => {
     expect(report.lines).not.toContain("Card ID: OP15-001 x1");
   });
 
+  it("reports malformed upstream attribute text as a source defect in set probes", async () => {
+    const report = await createSupportProbeReport({
+      setCode: "op12",
+      fetchCard: (url) => {
+        if (String(url).includes("/v1/search?")) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: [{ card_number: "OP12-034" }],
+                pagination: { has_more: false },
+              }),
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                "OP12-034": {
+                  card_number: "OP12-034",
+                  effect:
+                    "[On Play] If your Leader has the  attribute, draw 1 card.",
+                  trigger: null,
+                },
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Failures: none");
+    expect(report.lines).toContain("Source data defects: 1");
+    expect(report.lines).toContain(
+      "OP12-034 line 1 source data defect: missing attribute value",
+    );
+  });
+
   it("probes multiple sets as one aggregate card list", async () => {
     const requestedUrls: string[] = [];
     const requestedBodies: unknown[] = [];

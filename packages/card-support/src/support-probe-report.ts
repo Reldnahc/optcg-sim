@@ -18,13 +18,12 @@ import {
   type DeckHashCodecPort,
   type PoneglyphFetch,
 } from "./poneglyph-card-source.js";
-import {
-  runtimeContextForEffectLines,
-} from "./support-probe-runtime-context.js";
+import { runtimeContextForEffectLines } from "./support-probe-runtime-context.js";
 import {
   evaluateRulesTextLine,
   type RulesTextEffectLineEvaluation,
 } from "./rules-text-validator.js";
+import { malformedSourceTextReason } from "./source-text-diagnostics.js";
 
 export type { DeckHashCodecPort } from "./poneglyph-card-source.js";
 
@@ -140,7 +139,9 @@ const createDeckHashSupportProbeReport = async (
       : `Failures: ${String(probed.failedCardCount)} card${
           probed.failedCardCount === 1 ? "" : "s"
         }`,
+    `Source data defects: ${String(probed.sourceDefectCount)}`,
     ...probed.failureLines,
+    ...probed.sourceDefectLines,
   ];
 
   return { exitCode: probed.exitCode, lines, errors: [] };
@@ -195,7 +196,9 @@ const createSetSupportProbeReport = async (
       : `Failures: ${String(probed.failedCardCount)} card${
           probed.failedCardCount === 1 ? "" : "s"
         }`,
+    `Source data defects: ${String(probed.sourceDefectCount)}`,
     ...probed.failureLines,
+    ...probed.sourceDefectLines,
   ];
 
   return { exitCode: probed.exitCode, lines, errors: [] };
@@ -245,7 +248,9 @@ const createMultiSetSupportProbeReport = async (
       : `Failures: ${String(probed.failedCardCount)} card${
           probed.failedCardCount === 1 ? "" : "s"
         }`,
+    `Source data defects: ${String(probed.sourceDefectCount)}`,
     ...probed.failureLines,
+    ...probed.sourceDefectLines,
   ];
 
   return { exitCode: probed.exitCode, lines, errors: [] };
@@ -260,16 +265,20 @@ const probeAggregatedCards = async (
 ): Promise<{
   readonly exitCode: number;
   readonly failureLines: readonly string[];
+  readonly sourceDefectLines: readonly string[];
   readonly unsupportedTextLines: readonly string[];
   readonly failedCardCount: number;
+  readonly sourceDefectCount: number;
 }> => {
   const fetchedCards = await fetchPoneglyphCardPayloads(
     cards.map((card) => card.cardId),
     options,
   );
   const failureLines: string[] = [];
+  const sourceDefectLines: string[] = [];
   const unsupportedTextLines: string[] = [];
   let failedCardCount = 0;
+  let sourceDefectCount = 0;
   let exitCode = 0;
 
   for (const card of cards) {
@@ -297,6 +306,17 @@ const probeAggregatedCards = async (
     );
     for (const [index, text] of effectLines.entries()) {
       const lineNumber = index + 1;
+      const malformedReason = malformedSourceTextReason(text);
+      if (malformedReason !== undefined) {
+        sourceDefectCount += 1;
+        sourceDefectLines.push(
+          `${card.cardId} line ${String(lineNumber)} source data defect: ${malformedReason}`,
+        );
+        sourceDefectLines.push(
+          `${card.cardId} line ${String(lineNumber)} text: ${text}`,
+        );
+        continue;
+      }
       const lineReport = evaluateRulesTextLine(
         text,
         `${card.cardId}:line:${String(lineNumber)}`,
@@ -356,8 +376,10 @@ const probeAggregatedCards = async (
   return {
     exitCode,
     failureLines,
+    sourceDefectLines,
     unsupportedTextLines,
     failedCardCount,
+    sourceDefectCount,
   };
 };
 
@@ -527,9 +549,8 @@ const createTextLineReport = (text: string): SupportProbeReport => {
   };
 };
 
-const runtimeReason = (
-  lineReport: RulesTextEffectLineEvaluation,
-): string => lineReport.runtimeReason ?? "unsupported runtime effect shape";
+const runtimeReason = (lineReport: RulesTextEffectLineEvaluation): string =>
+  lineReport.runtimeReason ?? "unsupported runtime effect shape";
 
 const uniqueEvidence = (
   values: RulesTextEffectLineEvaluation["values"],

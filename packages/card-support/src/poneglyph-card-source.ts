@@ -7,6 +7,7 @@ import {
 } from "optcg-deck-hash";
 
 import type { ManifestViewProbeEntry } from "./manifest-view-probe.js";
+import { malformedSourceTextReason } from "./source-text-diagnostics.js";
 
 export interface BehaviorCoverageSourceEntry {
   readonly label: string;
@@ -413,7 +414,8 @@ const coverageEntriesForCard = (
     card.effect,
     card.trigger,
   ]).flatMap((text, index) =>
-    isBehaviorCoverageRuntimeLine(text)
+    isBehaviorCoverageRuntimeLine(text) &&
+    malformedSourceTextReason(text) === undefined
       ? [{ text, sourceLineNumber: index + 1 }]
       : [],
   );

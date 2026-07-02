@@ -150,6 +150,60 @@ describe("behavior coverage CLI", () => {
     expect(report.lines).toContain("Behavior coverage source: set OP01");
   });
 
+  it("skips malformed upstream attribute text while keeping valid set entries", async () => {
+    const report = await createBehaviorCoverageCliReport(
+      ["--", "--set", "OP12"],
+      {
+        baseUrl: "https://example.test",
+        fetchPoneglyph: (url) => {
+          if (String(url).includes("/v1/search?")) {
+            return Promise.resolve({
+              ok: true,
+              status: 200,
+              json: () =>
+                Promise.resolve({
+                  data: [
+                    { card_number: "OP12-001" },
+                    { card_number: "OP12-034" },
+                  ],
+                  pagination: { has_more: false },
+                }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  "OP12-001": {
+                    card_number: "OP12-001",
+                    effect: "[On Play] Draw 1 card.",
+                    trigger: null,
+                  },
+                  "OP12-034": {
+                    card_number: "OP12-034",
+                    effect:
+                      "[On Play] If your Leader has the  attribute, draw 1 card.",
+                    trigger: null,
+                  },
+                },
+                missing: [],
+              }),
+          });
+        },
+      },
+    );
+
+    expect(report.exitCode).toBe(0);
+    expect(report.lines).toContain("Behavior coverage source: set OP12");
+    expect(report.lines).toContain("Behavior coverage entries: 1");
+    expect(report.lines).toContain("Behavior coverage passed scenarios: 1");
+    expect(report.lines).not.toEqual(
+      expect.arrayContaining([expect.stringContaining("OP12-034")]),
+    );
+  });
+
   it("runs coverage for multiple sets", async () => {
     const report = await createBehaviorCoverageCliReport(
       ["--", "--set", "OP01", "--set", "OP02"],
