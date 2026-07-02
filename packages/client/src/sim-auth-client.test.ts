@@ -15,6 +15,57 @@ const responseJson = (body: unknown, status = 200): Response =>
   });
 
 describe("sim auth client", () => {
+  test("checks sim access against the account service by default", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createSimAuthClient({
+      simAccessEnvironment: "local",
+      fetch(input, init) {
+        const url = input instanceof Request ? input.url : String(input);
+        requests.push({
+          url,
+          ...(init === undefined ? {} : { init }),
+        });
+        if (url.endsWith("/v1/sim/access?environment=local")) {
+          return Promise.resolve(
+            responseJson({
+              data: {
+                allowed: true,
+                environment: "local",
+              },
+            }),
+          );
+        }
+        return Promise.resolve(
+          responseJson({
+            data: {
+              user: {
+                id: "user-1",
+                username: "tester",
+                display_name: "Tester",
+                email: null,
+                email_verified: false,
+              },
+              session: {
+                id: "session-1",
+                expires_at: "2026-06-03T00:00:00.000Z",
+              },
+            },
+          }),
+        );
+      },
+    });
+
+    await client.getSession();
+
+    assert.deepEqual(
+      requests.map((request) => request.url),
+      [
+        "https://auth.poneglyph.one/v1/auth/session",
+        "https://account.poneglyph.one/v1/sim/access?environment=local",
+      ],
+    );
+  });
+
   test("returns null when the auth session endpoint returns 401", async () => {
     const client = createSimAuthClient({
       baseUrl: "https://auth.example",

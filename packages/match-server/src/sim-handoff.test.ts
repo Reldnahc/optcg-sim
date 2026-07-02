@@ -41,6 +41,43 @@ const resolvedLoadoutBody = () => ({
 });
 
 describe("sim handoff verification client", () => {
+  test("defaults handoff verification to the account service", async () => {
+    const requests: RecordedRequest[] = [];
+    const verifier = createPoneglyphSimHandoffVerifier({
+      fetch: (input, init) => {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              claims: {
+                jti: "token-1",
+                sub: "user-1",
+                sid: "session-1",
+                loadout_id: "loadout-1",
+                lobby_id: "lobby-1",
+                seat_id: "p1",
+                aud: "optcg-sim",
+                iat: 1,
+                exp: 2,
+              },
+              resolved_loadout: resolvedLoadoutBody(),
+            },
+          }),
+        );
+      },
+    });
+
+    await verifier.verify("handoff-token");
+
+    assert.equal(
+      requests[0]?.url,
+      "https://account.poneglyph.one/v1/sim/handoff/verify",
+    );
+  });
+
   test("posts a handoff token and normalizes verified claims and loadout", async () => {
     const requests: RecordedRequest[] = [];
     const verifier = createPoneglyphSimHandoffVerifier({

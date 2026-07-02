@@ -55,7 +55,7 @@ export interface CreatePoneglyphSimHandoffVerifierOptions {
   readonly fetch?: typeof fetch;
 }
 
-const defaultAuthBaseUrl = "https://auth.poneglyph.one";
+const defaultAccountBaseUrl = "https://account.poneglyph.one";
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/u, "");
 
@@ -236,7 +236,7 @@ const normalizeBatchVerificationResult = (
 };
 
 export const createPoneglyphSimHandoffVerifier = ({
-  authBaseUrl = process.env["PONEGLYPH_AUTH_BASE_URL"] ?? defaultAuthBaseUrl,
+  authBaseUrl = process.env["PONEGLYPH_AUTH_BASE_URL"] ?? defaultAccountBaseUrl,
   fetch: fetchImpl = fetch,
 }: CreatePoneglyphSimHandoffVerifierOptions = {}): SimHandoffVerifier => ({
   async verify(token) {

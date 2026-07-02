@@ -74,6 +74,8 @@ export interface CreatePoneglyphAccountClientOptions {
   readonly simAccessEnvironment?: SimAccessEnvironment;
 }
 
+const defaultAccountBaseUrl = "https://account.poneglyph.one";
+
 const folderById = (
   folders: readonly DeckLibraryFolder[],
 ): ReadonlyMap<string, DeckLibraryFolder> =>
@@ -259,12 +261,12 @@ const normalizeBatchHandoff = (
 
 export const createPoneglyphAccountClient = ({
   fetch: fetchImpl = fetch,
-  baseUrl,
+  baseUrl = defaultAccountBaseUrl,
   simAccessEnvironment = "dev",
 }: CreatePoneglyphAccountClientOptions = {}): PoneglyphAccountClient => {
   const authClient = createAuthClient({
     fetch: fetchImpl,
-    ...(baseUrl === undefined ? {} : { baseUrl }),
+    baseUrl,
   });
   return {
     async listLoadouts(input = {}) {

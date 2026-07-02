@@ -66,9 +66,12 @@ export interface SimAuthClient {
 
 export interface CreateSimAuthClientOptions {
   readonly baseUrl?: string;
+  readonly accountBaseUrl?: string;
   readonly fetch?: AuthFetchImplementation;
   readonly simAccessEnvironment?: SimAccessEnvironment;
 }
+
+const defaultAccountBaseUrl = "https://account.poneglyph.one";
 
 const sessionFromResponse = (response: {
   readonly data: {
@@ -85,20 +88,29 @@ const sessionFromResponse = (response: {
 
 export const createSimAuthClient = ({
   baseUrl,
+  accountBaseUrl,
   fetch: fetchImpl,
   simAccessEnvironment = "dev",
 }: CreateSimAuthClientOptions = {}): SimAuthClient => {
+  const simAccessBaseUrl = accountBaseUrl ?? baseUrl ?? defaultAccountBaseUrl;
   const authClient = createAuthClient({
     ...(baseUrl === undefined ? {} : { baseUrl }),
     ...(fetchImpl === undefined ? {} : { fetch: fetchImpl }),
   });
+  const accountClient = createAuthClient({
+    baseUrl: simAccessBaseUrl,
+    ...(fetchImpl === undefined ? {} : { fetch: fetchImpl }),
+  });
+  const checkSimAccess = async (): Promise<void> => {
+    await accountClient.fetch("/sim/access", {
+      environment: simAccessEnvironment,
+    });
+  };
   return {
     async getSession() {
       try {
         const session = sessionFromResponse(await authClient.getSession());
-        await authClient.fetch("/sim/access", {
-          environment: simAccessEnvironment,
-        });
+        await checkSimAccess();
         return session;
       } catch (error) {
         if (error instanceof AuthClientError && error.status === 401) {
@@ -109,9 +121,7 @@ export const createSimAuthClient = ({
     },
     async login(input) {
       const session = sessionFromResponse(await authClient.login(input));
-      await authClient.fetch("/sim/access", {
-        environment: simAccessEnvironment,
-      });
+      await checkSimAccess();
       return session;
     },
     async register(input) {
@@ -122,9 +132,7 @@ export const createSimAuthClient = ({
           email: input.email.length === 0 ? null : input.email,
         }),
       );
-      await authClient.fetch("/sim/access", {
-        environment: simAccessEnvironment,
-      });
+      await checkSimAccess();
       return session;
     },
     async logout() {

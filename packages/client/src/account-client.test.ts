@@ -15,6 +15,33 @@ const responseJson = (body: unknown, status = 200): Response =>
   });
 
 describe("Poneglyph account client", () => {
+  test("defaults account-owned requests to the account service", async () => {
+    const requests: RecordedRequest[] = [];
+    const client = createPoneglyphAccountClient({
+      fetch(input, init) {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          ...(init === undefined ? {} : { init }),
+        });
+        return Promise.resolve(
+          responseJson({
+            data: {
+              folders: [],
+              decks: [],
+            },
+          }),
+        );
+      },
+    });
+
+    await client.listLoadouts({ includeFolders: true });
+
+    assert.equal(
+      requests[0]?.url,
+      "https://account.poneglyph.one/v1/deck-library",
+    );
+  });
+
   test("lists account deck loadouts through the lean loadouts endpoint", async () => {
     const requests: RecordedRequest[] = [];
     const client = createPoneglyphAccountClient({
