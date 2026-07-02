@@ -78,6 +78,13 @@ export function parseAttachedDonScaledDuration(
   return parseAttachedDonScaledValue(multiplier, text);
 }
 
+export function parseMatchingZoneCardsScaledDurationForPower(
+  multiplier: number,
+  text: string,
+): ReturnType<typeof parseMatchingZoneCardsScaledDuration> {
+  return parseMatchingZoneCardsScaledDuration(multiplier, text);
+}
+
 export function withCardinality(
   target: Target,
   cardinality: Cardinality,

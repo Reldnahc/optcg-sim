@@ -62,7 +62,7 @@ export const parseTurnLifeFaceUpCost = (
     };
   }
   const routeMatch =
-    /^cards? from the (?<position>top|bottom) of your Life cards face-(?<face>up|down)$/i.exec(
+    /^cards? from the (?<position>top|bottom|top or bottom) of your Life cards face-(?<face>up|down)$/i.exec(
       cardinality.rest,
     );
   const positionText = routeMatch?.groups?.["position"];
@@ -70,7 +70,10 @@ export const parseTurnLifeFaceUpCost = (
   if (positionText === undefined || faceText === undefined) {
     return undefined;
   }
-  const position = positionText.toLowerCase() as "top" | "bottom";
+  const position =
+    positionText.toLowerCase() === "top or bottom"
+      ? "topOrBottom"
+      : (positionText.toLowerCase() as "top" | "bottom");
   const faceUp = faceText.toLowerCase() === "up";
   const cost: Extract<
     OptionalCost,
@@ -99,7 +102,11 @@ export const parseTurnLifeFaceUpCost = (
       ...cardinality.evidence,
       "player:self",
       "zone:life",
-      position === "top" ? "position:top" : "position:bottom",
+      ...(position === "topOrBottom"
+        ? (["position:top", "position:bottom"] as const)
+        : position === "top"
+          ? (["position:top"] as const)
+          : (["position:bottom"] as const)),
       faceUp ? "destination:faceUp" : "destination:faceDown",
       ...(faceUp ? (["reveal:bothPlayers"] as const) : []),
     ],

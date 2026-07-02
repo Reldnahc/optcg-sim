@@ -58,7 +58,10 @@ export const applySetLifeFaceUpPayment = (params: {
     return null;
   }
   const count = params.selectedOption.count;
-  if (params.selectedOption.position === "anyMatching") {
+  if (
+    params.selectedOption.position === "anyMatching" ||
+    params.selectedOption.position === "topOrBottom"
+  ) {
     return applySelectedLifeVisibilityPayment(params, count);
   }
   if (params.selectedCardInstanceIds !== undefined) {
@@ -141,8 +144,14 @@ const applySelectedLifeVisibilityPayment = (
     return lifeCard === undefined ? [] : [{ index, lifeCard }];
   });
   const faceUp = targetFaceUp(params.selectedOption);
+  const allowedIndexes =
+    params.selectedOption.position === "topOrBottom"
+      ? new Set([0, params.player.life.length - 1])
+      : undefined;
   if (
     selected.length !== count ||
+    (allowedIndexes !== undefined &&
+      selected.some(({ index }) => !allowedIndexes.has(index))) ||
     selected.some(({ lifeCard }) => lifeCard.faceUp === faceUp)
   ) {
     return null;

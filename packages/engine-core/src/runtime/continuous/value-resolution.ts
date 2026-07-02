@@ -135,8 +135,18 @@ const countMatchingFieldCards = (
   if (player === undefined) {
     return null;
   }
+  const fieldCards =
+    value.zone === "field"
+      ? [player.leader, ...player.characters, ...(player.stage ? [player.stage] : [])]
+      : value.zone === "leaderArea"
+        ? [player.leader]
+        : value.zone === "stageArea"
+          ? player.stage === undefined
+            ? []
+            : [player.stage]
+          : player.characters;
   return (
-    player.characters.filter((card) =>
+    fieldCards.filter((card) =>
       cardMatchesBasicFilter(state, card, value.filter),
     ).length * value.multiplier
   );

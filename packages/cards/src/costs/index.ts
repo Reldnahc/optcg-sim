@@ -1,4 +1,5 @@
 export { parseOptionalChooseOneTrashCost } from "./optional-choose-one-trash.js";
+export { parseOptionalChooseOneRestCost } from "./optional-choose-one-rest.js";
 export {
   mandatoryActivationCostParsers,
   optionalActivationCostParsers,

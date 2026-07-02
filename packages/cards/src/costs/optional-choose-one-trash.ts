@@ -6,8 +6,12 @@ import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import type { ParseInput, PrimitiveEvidence } from "../types.js";
 
 type ChooseOneTrashCost = Extract<OptionalCost, { type: "chooseOne" }>;
+type TrashChooseOneOption = Extract<
+  ChooseOneTrashCost["options"][number],
+  { type: "trashFromHand" | "trashFromField" }
+>;
 type TrashCostOptionParseResult = {
-  readonly cost: ChooseOneTrashCost["options"][number];
+  readonly cost: TrashChooseOneOption;
   readonly evidence: readonly PrimitiveEvidence[];
 };
 
@@ -242,7 +246,7 @@ function parseTrashCostSource(text: string):
 
 function parseTrashCostFilter(text: string):
   | {
-      readonly filter: ChooseOneTrashCost["options"][number]["filter"];
+      readonly filter: TrashChooseOneOption["filter"];
       readonly evidence: readonly PrimitiveEvidence[];
     }
   | undefined {

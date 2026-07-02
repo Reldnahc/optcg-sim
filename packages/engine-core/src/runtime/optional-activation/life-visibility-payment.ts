@@ -23,14 +23,14 @@ export type LifeVisibilityCostPaidPayload =
       playerId: PlayerId;
       optionId: "turnLifeFaceUp";
       count: number;
-      position: "top" | "bottom" | "anyMatching";
+      position: "top" | "bottom" | "topOrBottom" | "anyMatching";
       selectedCardInstanceIds?: readonly InstanceId[];
     }
   | {
       playerId: PlayerId;
       optionId: "setLifeFaceUp";
       count: number;
-      position: "top" | "bottom" | "anyMatching";
+      position: "top" | "bottom" | "topOrBottom" | "anyMatching";
       faceUp: boolean;
       selectedCardInstanceIds?: readonly InstanceId[];
     };

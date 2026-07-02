@@ -2,7 +2,10 @@ import type { Cardinality, Condition, Effect, Target } from "@optcg/types";
 
 import { parseUpToCardinality } from "../../cardinality/index.js";
 import { parseAllFieldTarget } from "../../targets/index.js";
-import { parseYourLeaderOrCharacterCardsTarget } from "../../targets/index.js";
+import {
+  parseOpponentCharactersTarget,
+  parseYourLeaderOrCharacterCardsTarget,
+} from "../../targets/index.js";
 import type { PrimitiveEvidence } from "../../types.js";
 import { effectSequence } from "../effect-builders.js";
 import {
@@ -16,9 +19,11 @@ export const setBasePowerPrimitive = {
   primitiveId: "instruction:setBasePower",
   childPrimitiveIds: [
     "cardinality:all",
+    "cardinality:upTo",
     "filter:type",
     "filter:category:character",
     "value:basePower:positiveInteger",
+    "value:basePower:nonNegativeInteger",
     "duration:whileConditionTrue",
   ],
 } as const;
@@ -112,13 +117,39 @@ const parseBasePowerSubject = (
     const targetText = cardinality.rest
       .replace(/(?:'s|') base power$/iu, "")
       .trim();
-    const parsedTarget = parseYourLeaderOrCharacterCardsTarget({
+    const parsedSelfTarget = parseYourLeaderOrCharacterCardsTarget({
       text: targetText,
     });
-    if (parsedTarget?.target !== undefined && parsedTarget.rest.length === 0) {
+    if (
+      parsedSelfTarget?.target !== undefined &&
+      parsedSelfTarget.rest.length === 0
+    ) {
       return {
-        target: applyCardinality(parsedTarget.target, cardinality.cardinality),
-        evidence: [...cardinality.evidence, ...parsedTarget.evidence],
+        target: applyCardinality(
+          parsedSelfTarget.target,
+          cardinality.cardinality,
+        ),
+        evidence: [...cardinality.evidence, ...parsedSelfTarget.evidence],
+      };
+    }
+    const opponentTarget = parseOpponentCharactersTarget({ text: targetText });
+    if (opponentTarget !== undefined && opponentTarget.rest.length === 0) {
+      return {
+        target: {
+          type: "choose",
+          request: {
+            timing: "onResolution",
+            chooser: "self",
+            player: "opponent",
+            zone: "characterArea",
+            min: cardinality.cardinality.min,
+            max: cardinality.cardinality.max,
+            allowFewerIfUnavailable: true,
+            visibility: "public",
+            filter: opponentTarget.filter ?? { categories: ["character"] },
+          },
+        },
+        evidence: [...cardinality.evidence, ...opponentTarget.evidence],
       };
     }
   }
@@ -269,7 +300,7 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
   }
 
   const match =
-    /^(?<targets>.+?) becomes? (?<value>[1-9]\d*)(?<durationText>.*)$/i.exec(
+    /^(?<targets>.+?) becomes? (?<value>[0-9]\d*)(?<durationText>.*)$/i.exec(
       input.text,
     );
   const targetsText = match?.groups?.["targets"];
@@ -318,7 +349,9 @@ export const parseBasePowerBecomeInstruction: ContinuousInstructionParser = (
     evidence: [
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
-      "value:basePower:positiveInteger",
+      value === 0
+        ? "value:basePower:nonNegativeInteger"
+        : "value:basePower:positiveInteger",
       ...uniqueEvidence(
         parsedSubjects.flatMap((subject) =>
           basePowerDurationEvidenceForSubject(
@@ -417,7 +450,7 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
   context,
 ) => {
   const match =
-    /^set the base power of (?<target>.+) to (?<value>[1-9]\d*)\.?$/i.exec(
+    /^set the base power of (?<target>.+) to (?<value>[0-9]\d*)\.?$/i.exec(
       input.text,
     );
   const targetText = match?.groups?.["target"];
@@ -441,7 +474,9 @@ export const parseSetBasePowerInstruction: ContinuousInstructionParser = (
     evidence: [
       "instruction:setBasePower",
       ...target.evidence,
-      "value:basePower:positiveInteger",
+      Number.parseInt(valueText, 10) === 0
+        ? "value:basePower:nonNegativeInteger"
+        : "value:basePower:positiveInteger",
       "duration:whileConditionTrue",
     ],
     rest: "",

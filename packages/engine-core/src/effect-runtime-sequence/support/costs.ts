@@ -49,6 +49,19 @@ export const isSupportedPayCostSegment = (
       if (option.type === "trashFromHand") {
         return hasSupportedSelfOptionalHand(option);
       }
+      if (option.type === "restDon") {
+        return (
+          hasSupportedSelfOptionalPositiveCount(option) &&
+          (option.chooser === undefined || option.chooser === "self")
+        );
+      }
+      if (option.type === "restFromField") {
+        return (
+          hasSupportedSelfOptionalPositiveCount(option) &&
+          option.chooser === "self" &&
+          isSupportedPublicFieldTargetFilter(option.filter)
+        );
+      }
       return (
         hasSupportedSelfOptionalPositiveCount(option) &&
         isSupportedHandSelectionCardFilter(option.filter)

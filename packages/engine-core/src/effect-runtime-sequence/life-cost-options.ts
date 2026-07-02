@@ -34,6 +34,11 @@ export const canSetLifeFaceUp = (
       selectableLifeVisibilityCardIds(player, option).length >= option.count
     );
   }
+  if (option.position === "topOrBottom") {
+    return (
+      selectableLifeVisibilityCardIds(player, option).length >= option.count
+    );
+  }
   const selected =
     option.position === "top"
       ? player.life.slice(0, option.count)
@@ -47,10 +52,23 @@ export const canSetLifeFaceUp = (
 export const selectableLifeVisibilityCardIds = (
   player: NonNullable<GameState["players"][EffectQueueEntry["controllerId"]]>,
   option: LifeFaceUpPaymentOption,
-) =>
-  player.life
-    .filter((lifeCard) => lifeCard.faceUp !== targetLifeFaceUp(option))
+) => {
+  const targetFaceUp = targetLifeFaceUp(option);
+  if (option.position === "topOrBottom") {
+    const candidateIndexes = new Set(
+      [0, player.life.length - 1].filter((index) => index >= 0),
+    );
+    return player.life
+      .filter(
+        (lifeCard, index) =>
+          candidateIndexes.has(index) && lifeCard.faceUp !== targetFaceUp,
+      )
+      .map((lifeCard) => lifeCard.card.instanceId);
+  }
+  return player.life
+    .filter((lifeCard) => lifeCard.faceUp !== targetFaceUp)
     .map((lifeCard) => lifeCard.card.instanceId);
+};
 
 export const turnLifeFaceUpPaymentOption = (
   cost: Extract<OptionalPayCostDecision["cost"], { type: "turnLifeFaceUp" }>,

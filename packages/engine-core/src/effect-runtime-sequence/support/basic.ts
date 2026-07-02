@@ -48,8 +48,9 @@ const isSupportedFieldCountValue = (
   count.type === "countMatchingFieldCards" &&
   (count.player === "self" || count.player === "opponent") &&
   Number.isSafeInteger(count.multiplier) &&
-  count.multiplier >= 0 &&
-  count.filter.categories?.includes("character") === true;
+  count.multiplier !== 0 &&
+  (count.filter.categories === undefined ||
+    count.filter.categories.length > 0);
 
 const isSupportedFieldCountDifferenceValue = (
   count: number | DynamicNumberValue,

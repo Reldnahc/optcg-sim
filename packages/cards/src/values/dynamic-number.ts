@@ -233,8 +233,16 @@ export function parseMatchingZoneCardsScaledDuration(
     /^for each of your (?<filter>.+?)\s+(?<duration>during this (?:turn|battle)|until .+)\.?$/iu.exec(
       text.trim(),
     );
-  const fieldFilterText = fieldMatch?.groups?.["filter"]?.trim();
-  const fieldDurationText = fieldMatch?.groups?.["duration"];
+  const fieldSuffixMatch =
+    /^(?<duration>during this (?:turn|battle)|until .+?)\s+for each (?<filter>.+?) you control\.?$/iu.exec(
+      text.trim(),
+    );
+  const fieldFilterText =
+    fieldMatch?.groups?.["filter"]?.trim() ??
+    fieldSuffixMatch?.groups?.["filter"]?.trim();
+  const fieldDurationText =
+    fieldMatch?.groups?.["duration"] ??
+    fieldSuffixMatch?.groups?.["duration"];
   if (fieldFilterText === undefined || fieldDurationText === undefined) {
     return undefined;
   }
@@ -243,7 +251,7 @@ export function parseMatchingZoneCardsScaledDuration(
     fieldEffectDurationParsers,
   );
   const fieldCount = parseMatchingFieldCountValue({
-    filterText: fieldFilterText,
+    filterText: normalizeControlledFieldFilterText(fieldFilterText),
     multiplier,
   });
   if (
@@ -292,17 +300,30 @@ const parseMatchingFieldCountValue = ({
     value: {
       type: "countMatchingFieldCards",
       player: "self",
-      zone: "characterArea",
+      zone,
       filter: parsed.filter,
       multiplier,
     },
     evidence: [
       "valueSource:fieldCount",
-      "zone:characterArea",
+      ...(zone === "field"
+        ? ([
+            "zone:leaderArea",
+            "zone:characterArea",
+            "zone:stageArea",
+          ] as const)
+        : zone === "leaderArea"
+          ? (["zone:leaderArea"] as const)
+          : zone === "stageArea"
+            ? (["zone:stageArea"] as const)
+            : (["zone:characterArea"] as const)),
       ...parsed.evidence,
     ],
   };
 };
+
+const normalizeControlledFieldFilterText = (text: string): string =>
+  text.replace(/\s+cards?\s*$/iu, "");
 
 const matchingFieldZoneForFilter = (
   filter: NonNullable<
@@ -312,8 +333,21 @@ const matchingFieldZoneForFilter = (
   | Extract<DynamicNumberValue, { type: "countMatchingFieldCards" }>["zone"]
   | undefined => {
   const categories = filter.categories ?? [];
+  if (categories.includes("leader")) {
+    return "leaderArea";
+  }
   if (categories.includes("character")) {
     return "characterArea";
+  }
+  if (categories.includes("stage")) {
+    return "stageArea";
+  }
+  if (
+    filter.names !== undefined ||
+    filter.typesAny !== undefined ||
+    filter.typesIncludeAny !== undefined
+  ) {
+    return "field";
   }
   return undefined;
 };

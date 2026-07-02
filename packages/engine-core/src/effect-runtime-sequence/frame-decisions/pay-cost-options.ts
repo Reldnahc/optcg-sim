@@ -142,7 +142,7 @@ const trashableSourceMatchesFilter = (
 };
 
 const chooseOneOptionId = (
-  option: { type: "trashFromHand" | "trashFromField" },
+  option: Extract<OptionalCost, { type: "chooseOne" }>["options"][number],
   index: number,
 ): string => `${option.type}:${String(index)}`;
 
@@ -160,6 +160,9 @@ const isSupportedChooseOneOption = (
   }
   if (option.type === "trashFromHand") {
     return supportsChooseOneTrashFilter(option.filter);
+  }
+  if (option.type === "restDon") {
+    return true;
   }
   return supportsPublicFieldCostFilter(option.filter);
 };
@@ -371,7 +374,10 @@ export const getSequencePayCostLegalActions = (
       continue;
     }
     if (option.type === "turnLifeFaceUp" || option.type === "setLifeFaceUp") {
-      if (option.position === "anyMatching") {
+      if (
+        option.position === "anyMatching" ||
+        option.position === "topOrBottom"
+      ) {
         const selectableCardIds = selectableLifeVisibilityCardIds(
           player,
           option,
@@ -726,6 +732,34 @@ export const getSequenceOptionalPayCostOptions = (
         type: "trashFromHand",
         count: option.count,
         ...(option.filter === undefined ? {} : { filter: option.filter }),
+      });
+      continue;
+    }
+    if (option.type === "restDon") {
+      if (activeDonCount(state, paymentPlayerId) < option.count) {
+        continue;
+      }
+      paymentOptions.push({
+        id: chooseOneOptionId(option, index),
+        type: "restDon",
+        count: option.count,
+        ...(option.maxCount === undefined ? {} : { maxCount: option.maxCount }),
+      });
+      continue;
+    }
+    if (option.type === "restFromField") {
+      const restOption = restFromFieldPaymentOption(
+        state,
+        entry,
+        option,
+        currentPlayer,
+      );
+      if (restOption === undefined) {
+        continue;
+      }
+      paymentOptions.push({
+        ...restOption,
+        id: chooseOneOptionId(option, index),
       });
       continue;
     }

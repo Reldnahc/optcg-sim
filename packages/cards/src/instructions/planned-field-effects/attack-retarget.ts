@@ -1,5 +1,6 @@
 import type { CardFilter, Target, Zone } from "@optcg/types";
 
+import { parseCardFilterPredicates } from "../../filters/index.js";
 import { sourceSpan } from "../../source-slices.js";
 import type {
   ExpressionParseResult,
@@ -131,6 +132,56 @@ const resultForCharacters = (input: ParseInput): ExpressionParseResult => {
   };
 };
 
+const resultForFilteredSelfTarget = (
+  input: ParseInput,
+  filter: CardFilter,
+  evidence: readonly PrimitiveEvidence[],
+): ExpressionParseResult => {
+  const categories = filter.categories ?? [];
+  const targetFilter =
+    categories.length === 0 && (filter.names?.length ?? 0) > 0
+      ? ({ ...filter, categories: ["leader", "character"] } satisfies CardFilter)
+      : filter;
+  const targetCategories = targetFilter.categories ?? [];
+  const zones =
+    targetCategories.includes("leader") &&
+    targetCategories.includes("character")
+      ? targetZones
+      : targetCategories.includes("leader")
+        ? (["leaderArea"] as Zone[])
+        : characterTargetZones;
+  const resultEvidence: PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    "instruction:changeAttackTarget",
+    ...(zones.includes("leaderArea")
+      ? (["zone:leaderArea", "filter:category:leader"] as const)
+      : []),
+    ...(zones.includes("characterArea")
+      ? (["zone:characterArea", "filter:category:character"] as const)
+      : []),
+    "player:self",
+    ...evidence,
+  ];
+  return {
+    effect: {
+      type: "sequence",
+      effects: [
+        selectSegment(zones, targetFilter),
+        changeAttackTargetSegment,
+      ],
+    },
+    evidence: resultEvidence,
+    rest: "",
+    ...(input.source === undefined
+      ? {}
+      : {
+          presentationSpans: [
+            sourceSpan("span:body", "body", input.source, resultEvidence),
+          ],
+        }),
+  };
+};
+
 export const selectedAttackRetargetExpressionParser = (
   input: ParseInput,
 ): ExpressionParseResult | undefined => {
@@ -158,6 +209,25 @@ export const selectedAttackRetargetExpressionParser = (
   const directType = directMatch?.groups?.["type"]?.trim();
   if (directType !== undefined && directType.length > 0) {
     return resultForType(input, directType);
+  }
+
+  const filteredMatch =
+    /^Change the target of that attack to one of your (?<target>.+?)\.?$/iu.exec(
+      input.text,
+    );
+  const filteredText = filteredMatch?.groups?.["target"]?.trim();
+  if (filteredText !== undefined && filteredText.length > 0) {
+    const predicates = parseCardFilterPredicates(
+      { text: filteredText },
+      { powerSemantics: "printed" },
+    );
+    if (predicates !== undefined && predicates.rest.trim().length === 0) {
+      return resultForFilteredSelfTarget(
+        input,
+        predicates.filter,
+        predicates.evidence,
+      );
+    }
   }
 
   return undefined;

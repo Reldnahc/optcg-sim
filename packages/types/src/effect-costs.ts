@@ -5,14 +5,14 @@ export type TurnLifeFaceUpCost = {
   type: "turnLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom" | "anyMatching";
+  position: "top" | "bottom" | "topOrBottom" | "anyMatching";
 };
 
 export type SetLifeFaceUpCost = {
   type: "setLifeFaceUp";
   count: number;
   player: PlayerRef;
-  position: "top" | "bottom" | "anyMatching";
+  position: "top" | "bottom" | "topOrBottom" | "anyMatching";
   faceUp: boolean;
 };
 
@@ -176,6 +176,22 @@ export type OptionalMoveFieldToLifeCost = {
   optional: true;
 };
 
+export type OptionalRestFromFieldCost = {
+  type: "restFromField";
+  count: number;
+  filter?: CardFilter;
+  chooser: PlayerRef;
+  optional: true;
+};
+
+export type OptionalRestDonCost = {
+  type: "restDon";
+  count: number;
+  maxCount?: number | "available";
+  chooser?: PlayerRef;
+  optional: true;
+};
+
 export type ScopedOptionalFieldTrashCost = {
   type: "trashFromField";
   count: number;
@@ -192,27 +208,28 @@ export type ScopedOptionalFieldKOCost = {
   optional: true;
 };
 
-export type OptionalChooseOneTrashCostAlternative =
+export type OptionalChooseOneCostAlternative =
   | OptionalTrashFromHandCost
-  | ScopedOptionalFieldTrashCost;
+  | ScopedOptionalFieldTrashCost
+  | OptionalRestFromFieldCost
+  | OptionalRestDonCost;
 
-export type OptionalChooseOneTrashCost = {
+export type OptionalChooseOneCost = {
   type: "chooseOne";
   options: [
-    OptionalChooseOneTrashCostAlternative,
-    ...OptionalChooseOneTrashCostAlternative[],
+    OptionalChooseOneCostAlternative,
+    ...OptionalChooseOneCostAlternative[],
   ];
   optional: true;
 };
 
+export type OptionalChooseOneTrashCostAlternative =
+  OptionalChooseOneCostAlternative;
+
+export type OptionalChooseOneTrashCost = OptionalChooseOneCost;
+
 export type OptionalCost =
-  | {
-      type: "restDon";
-      count: number;
-      maxCount?: number | "available";
-      chooser?: PlayerRef;
-      optional: true;
-    }
+  | OptionalRestDonCost
   | {
       type: "attachDon";
       count: number;
@@ -230,13 +247,7 @@ export type OptionalCost =
       optional: true;
     }
   | { type: "restSelf"; optional: true }
-  | {
-      type: "restFromField";
-      count: number;
-      filter?: CardFilter;
-      chooser: PlayerRef;
-      optional: true;
-    }
+  | OptionalRestFromFieldCost
   | { type: "trashSelf"; filter?: CardFilter; optional: true }
   | ScopedOptionalFieldTrashCost
   | ScopedOptionalFieldKOCost
@@ -255,5 +266,5 @@ export type OptionalCost =
   | OptionalMoveCardsCost
   | OptionalMoveFieldToLifeCost
   | { type: "shuffleDeck"; player: PlayerRef; optional: true }
-  | OptionalChooseOneTrashCost
+  | OptionalChooseOneCost
   | { type: "sequence"; costs: Cost[]; optional: true };

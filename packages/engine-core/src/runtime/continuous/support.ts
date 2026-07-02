@@ -333,7 +333,7 @@ export const isSupportedCostModifierEffect = (
 export const isSupportedBasePowerValue = (
   value: Extract<Effect, { type: "setBasePower" }>["value"],
 ): boolean =>
-  (typeof value === "number" && Number.isSafeInteger(value) && value > 0) ||
+  (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) ||
   (typeof value === "object" &&
     (value.target.type === "myLeader" ||
       value.target.type === "opponentLeader" ||

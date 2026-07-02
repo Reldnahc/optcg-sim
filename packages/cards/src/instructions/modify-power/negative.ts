@@ -11,7 +11,11 @@ import {
 } from "../../targets/index.js";
 import type { InstructionParser } from "../../types.js";
 import { selectThenApplyFieldTarget } from "../effect-builders.js";
-import { parseAttachedDonScaledDuration, withCardinality } from "./shared.js";
+import {
+  parseAttachedDonScaledDuration,
+  parseMatchingZoneCardsScaledDurationForPower,
+  withCardinality,
+} from "./shared.js";
 
 export const parseNegativePowerInstruction: InstructionParser = (input) => {
   const targetGains = parseTargetGainsNegativePowerInstruction(input.text);
@@ -48,7 +52,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
       return undefined;
     }
 
-    const dynamicDuration = parseAttachedDonScaledDuration(
+    const dynamicDuration = parseDynamicNegativePowerDuration(
       modifier.value,
       modifier.rest,
     );
@@ -95,7 +99,7 @@ export const parseNegativePowerInstruction: InstructionParser = (input) => {
     return undefined;
   }
 
-  const dynamicDuration = parseAttachedDonScaledDuration(
+  const dynamicDuration = parseDynamicNegativePowerDuration(
     modifier.value,
     modifier.rest,
   );
@@ -179,6 +183,16 @@ function parseTargetGainsNegativePowerInstruction(
     ],
     rest: "",
   };
+}
+
+function parseDynamicNegativePowerDuration(
+  multiplier: number,
+  text: string,
+): ReturnType<typeof parseAttachedDonScaledDuration> {
+  return (
+    parseAttachedDonScaledDuration(multiplier, text) ??
+    parseMatchingZoneCardsScaledDurationForPower(multiplier, text)
+  );
 }
 
 function parseOpponentLeaderAndAllCharactersNegativePowerInstruction(
