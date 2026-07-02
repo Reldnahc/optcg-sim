@@ -364,8 +364,10 @@ const sequenceScopedSpanId = (
   spanId: EffectTextSpan["id"],
   sequenceIndex: number,
 ): EffectTextSpan["id"] => {
-  if (spanId === "span:body") {
-    return `span:sequence:${String(sequenceIndex)}:body`;
+  if (spanId === "span:body" || spanId.startsWith("span:body:")) {
+    return `span:sequence:${String(sequenceIndex)}:${spanId.slice(
+      "span:".length,
+    )}`;
   }
   if (spanId.startsWith("span:sequence:")) {
     return `span:sequence:${String(sequenceIndex)}:${spanId.slice(

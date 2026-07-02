@@ -265,6 +265,72 @@ describe("card effect parser source maps", () => {
     );
   });
 
+  it("emits unique body spans for optional action continuations", () => {
+    const text =
+      "[DON!! x1] [When Attacking] Play up to 1 {Shandian Warrior} type Character card from your hand with a cost equal to or less than the number of DON!! cards on your field. If you do, add 1 card from the top of your Life cards to your hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const spanIds = spans.map((span) => span.id);
+    expect(new Set(spanIds).size).toBe(spanIds.length);
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:body",
+          role: "body",
+          text: "Play up to 1 {Shandian Warrior} type Character card from your hand with a cost equal to or less than the number of DON!! cards on your field",
+        }),
+        expect.objectContaining({
+          id: "span:body:2",
+          role: "body",
+          text: "add 1 card from the top of your Life cards to your hand.",
+        }),
+      ]),
+    );
+  });
+
+  it("scopes duplicate body spans inside nested optional action continuations", () => {
+    const text =
+      "[On Play] Give up to 1 rested DON!! card to your Leader. Then, you may return up to 1 of your opponent's Characters with a cost of 5 or less to the owner's hand. If you do, your opponent plays up to 1 Character card with a cost of 4 or less from their hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const spanIds = spans.map((span) => span.id);
+    expect(new Set(spanIds).size).toBe(spanIds.length);
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:sequence:1:body",
+          role: "body",
+          text: "return up to 1 of your opponent's Characters with a cost of 5 or less to the owner's hand",
+        }),
+        expect.objectContaining({
+          id: "span:sequence:1:body:2",
+          role: "body",
+          text: "your opponent plays up to 1 Character card with a cost of 4 or less from their hand.",
+        }),
+      ]),
+    );
+  });
+
   it("emits cost and body spans for choose-one trash costed effects", () => {
     const examples = [
       {

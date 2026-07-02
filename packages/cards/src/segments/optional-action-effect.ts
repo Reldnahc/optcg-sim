@@ -1,4 +1,4 @@
-import type { Effect } from "@optcg/types";
+import type { Effect, EffectTextSpan } from "@optcg/types";
 
 import { parseExpression } from "../expression-parser.js";
 import type {
@@ -7,7 +7,7 @@ import type {
   ParseInput,
   SegmentParser,
 } from "../types.js";
-import type { SourceSlice } from "../source-slices.js";
+import { trimSource, type SourceSlice } from "../source-slices.js";
 import { syntheticInstructionSegmentParser } from "./synthetic.js";
 
 type SequencedChildEffect = Extract<
@@ -64,8 +64,16 @@ function parseIfYouDoContinuation(
     return undefined;
   }
 
-  const action = parseOptionalActionChild(actionText, options, input.source);
-  const body = parseOptionalActionChild(bodyText, options, input.source);
+  const action = parseOptionalActionChild(
+    actionText,
+    options,
+    childSourceForText(input.source, input.text, actionText),
+  );
+  const body = parseOptionalActionChild(
+    bodyText,
+    options,
+    childSourceForText(input.source, input.text, bodyText),
+  );
   if (
     action === undefined ||
     body === undefined ||
@@ -103,8 +111,10 @@ function parseIfYouDoContinuation(
       ? {}
       : {
           presentationSpans: [
-            ...(action.presentationSpans ?? []),
-            ...(body.presentationSpans ?? []),
+            ...scopeDuplicateSpanIds([
+              ...(action.presentationSpans ?? []),
+              ...(body.presentationSpans ?? []),
+            ]),
           ],
         }),
   };
@@ -192,3 +202,39 @@ function parseOptionalActionChild(
     },
   );
 }
+
+const childSourceForText = (
+  source: SourceSlice | undefined,
+  parentText: string,
+  childText: string,
+): SourceSlice | undefined => {
+  if (source === undefined) {
+    return undefined;
+  }
+  const startIndex = parentText.indexOf(childText);
+  if (startIndex < 0) {
+    return undefined;
+  }
+  return trimSource({
+    text: childText,
+    rawText: source.rawText.slice(startIndex, startIndex + childText.length),
+    start: source.start + startIndex,
+    end: source.start + startIndex + childText.length,
+  });
+};
+
+const scopeDuplicateSpanIds = (
+  spans: readonly EffectTextSpan[],
+): readonly EffectTextSpan[] => {
+  const countsById = new Map<EffectTextSpan["id"], number>();
+  return spans.map((span) => {
+    const count = (countsById.get(span.id) ?? 0) + 1;
+    countsById.set(span.id, count);
+    return count === 1
+      ? span
+      : {
+          ...span,
+          id: `${span.id}:${String(count)}`,
+        };
+  });
+};
