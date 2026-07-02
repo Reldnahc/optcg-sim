@@ -498,8 +498,6 @@ export const resolveCounterCardUse = (params: {
       { type: "public" },
     );
   }
-  const isCounterEvent =
-    state.cardManifest.cards[handCard.cardId]?.category === "event";
   const targetPower = getSupportedBattleCombatViewOrNull(state, battle)
     ?.targetView.currentPower;
   appendEvent(state, events, "counterUsed", {
@@ -550,23 +548,6 @@ export const resolveCounterCardUse = (params: {
   if (trashedCard === undefined) {
     return illegalAction(state, "Counter card movement failed.");
   }
-  if (isCounterEvent) {
-    appendEvent(
-      state,
-      events,
-      "effectResolved",
-      {
-        source: {
-          instanceId: handCard.instanceId,
-          cardId: handCard.cardId,
-          playerId: decisionPlayerId,
-        },
-        effectId: `${String(handCard.cardId)}:counter`,
-        target,
-      },
-      { type: "public" },
-    );
-  }
   const nextBattle: EngineInternalBattleState = {
     ...battle,
   };
@@ -589,9 +570,8 @@ export const resolveCounterCardUse = (params: {
     continuousEffects: state.continuousEffects,
     eventJournal: [...state.eventJournal, ...events],
   };
-  const resumePendingDecision = isCounterEvent ? undefined : pendingDecision;
-  if (resumePendingDecision !== undefined) {
-    nextState.pendingDecision = resumePendingDecision;
+  if (pendingDecision !== undefined) {
+    nextState.pendingDecision = pendingDecision;
   } else {
     delete nextState.pendingDecision;
   }

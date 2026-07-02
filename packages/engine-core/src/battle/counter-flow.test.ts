@@ -871,13 +871,7 @@ test("supported nonzero-cost Counter Event rests printed cost DON without a paym
     ),
   );
   assert.equal(use.errors, undefined);
-  assert.equal(
-    use.state.pendingDecision?.type === "payCost" &&
-      String(use.state.pendingDecision.id).startsWith(
-        "decision:counterStep:payCost:",
-      ),
-    false,
-  );
+  assert.notEqual(use.state.pendingDecision?.type, "payCost");
   assert.equal(use.state.pendingDecision?.type, "selectCards");
   assert.deepEqual(
     use.events.map((event) => event.type),

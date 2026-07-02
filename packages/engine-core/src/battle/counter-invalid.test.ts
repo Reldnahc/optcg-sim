@@ -15,7 +15,6 @@ import {
 import {
   assertRejectsWithoutMutation,
   cardRef,
-  ensureActiveDonInCostArea,
   installSupportedCounterEvent,
   setupAttackState,
   setupOpenedCounterStepPassDecision,
@@ -375,58 +374,6 @@ test("counter-step pass rejects active Character target without clearing decisio
   assert.equal(JSON.stringify(result.state), before);
   assert.equal(result.state.pendingDecision?.id, decision.id);
   assert.equal(result.state.battle?.step, "counter");
-});
-
-test("supported nonzero-cost Counter Event rejects forged payCost response without mutation", () => {
-  const state = setupAttackState();
-  const p1State = must(state.players[p1], "p1");
-  const p2State = must(state.players[p2], "p2");
-  ensureActiveDonInCostArea(state, p2, 1);
-  const counterEvent = must(p2State.hand[0], "counter event");
-  installSupportedCounterEvent(state, counterEvent, 1000);
-  state.cardManifest.cards[counterEvent.cardId] = resolvedCard({
-    cardId: counterEvent.cardId,
-    category: "event",
-    cost: 1,
-    effectText: "[Counter] +1000.",
-    support: {
-      status: "implemented-dsl",
-      effectDefinitionId: `${String(counterEvent.cardId)}:counter`,
-    },
-  });
-  const opened = applyDeclareAttack(state, {
-    type: "declareAttack",
-    attacker: cardRef(p1State.leader, p1),
-    target: cardRef(p2State.leader, p2),
-  });
-  const use = applyAction(
-    opened.state,
-    must(
-      getLegalActions(opened.state, p2).find(
-        (action) =>
-          action.type === "useCounter" &&
-          action.cardInstanceId === counterEvent.instanceId,
-      ),
-      "counter action",
-    ),
-  );
-  assert.equal(use.errors, undefined);
-  const before = JSON.stringify(use.state);
-
-  const forged = applyAction(use.state, {
-    type: "respondToDecision",
-    decisionId: must(use.state.pendingDecision, "decision").id,
-    response: {
-      type: "payment",
-      optionId: "restDon",
-      selectedDonInstanceIds: ["missing-don" as never],
-    },
-  });
-
-  assert.equal(forged.errors?.[0]?.type, "illegalAction");
-  assert.deepEqual(forged.events, []);
-  assert.equal(JSON.stringify(use.state), before);
-  assert.equal(JSON.stringify(forged.state), before);
 });
 
 test("costed Counter Event without active DON is not legal and fails closed without mutation", () => {

@@ -23,10 +23,6 @@ import {
   getDeclareAttackLegalActions,
   resolveSupportedVanillaBattle,
 } from "./battle/actions.js";
-import {
-  parseCounterPayCostDecisionId,
-  parseCounterTargetDecisionId,
-} from "./battle/counter-event-payment-context.js";
 import { applyAttachDon, getAttachDonLegalActions } from "./actions/don.js";
 import {
   applyPlayCard,
@@ -293,12 +289,7 @@ const isCounterStepBattleDecision = (
   state: GameState,
   decision: NonNullable<GameState["pendingDecision"]>,
 ): boolean =>
-  state.battle?.step === "counter" &&
-  (isCounterStepPassDecision(decision) ||
-    (decision.type === "payCost" &&
-      parseCounterPayCostDecisionId(String(decision.id)) !== null) ||
-    (decision.type === "selectTargets" &&
-      parseCounterTargetDecisionId(String(decision.id)) !== null));
+  state.battle?.step === "counter" && isCounterStepPassDecision(decision);
 
 const isBlockStepBattleDecision = (
   state: GameState,

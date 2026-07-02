@@ -1,6 +1,5 @@
 import type {
   Action,
-  EffectId,
   EngineEvent,
   EngineResult,
   GameState,
@@ -18,8 +17,6 @@ import {
 } from "../action-results.js";
 import { reifyCardRef } from "../actions/state.js";
 import { getUnsupportedDamageStepContinuationReason } from "./damage-step-continuation.js";
-import { parseCounterPayCostDecisionId } from "./counter-event-payment-context.js";
-import { getCounterEventPaymentLegalActions } from "./counter-event-payment-actions.js";
 import {
   isSupportedBattleResolutionEnvelope,
   isSupportedCounterStepTarget,
@@ -33,10 +30,8 @@ import {
 } from "./counter-window-support.js";
 import {
   getLegalCharacterCounterActions,
-  resolveCounterEventActivation,
 } from "./counter-card-use.js";
 import { prependEventsToEngineResult } from "../engine-result-events.js";
-import { getSupportedCounterEventActivation } from "./counter-event-activation.js";
 
 export { applyUseCounter } from "./counter-card-use.js";
 export {
@@ -105,15 +100,6 @@ export const getCounterStepDecisionLegalActions = (
 ): LegalAction[] => {
   const decision = state.pendingDecision;
   const battle = state.battle;
-  if (
-    decision !== undefined &&
-    decision.type === "payCost" &&
-    decision.playerId === playerId &&
-    battle !== undefined &&
-    battle.step === "counter"
-  ) {
-    return getCounterEventPaymentLegalActions(state, playerId);
-  }
   if (
     decision === undefined ||
     decision.type !== "selectCards" ||
@@ -190,118 +176,6 @@ export const applyCounterStepDecisionResponse = (
     battle.step !== "counter"
   ) {
     return null;
-  }
-  if (decision.type === "payCost") {
-    if (
-      action.response.type !== "payment" &&
-      action.response.type !== "paymentDeclined"
-    ) {
-      return illegalAction(state, "Unsupported decision response.");
-    }
-    const context = parseCounterPayCostDecisionId(String(decision.id));
-    if (context === null) {
-      return null;
-    }
-    const defender = state.players[decision.playerId];
-    if (defender === undefined) {
-      return illegalAction(state, "Decision player mismatch.");
-    }
-    const handIndex = defender.hand.findIndex(
-      (card) => String(card.instanceId) === context.counterEventInstanceId,
-    );
-    if (handIndex < 0) {
-      return illegalAction(state, "Decision card reference is stale.");
-    }
-    const handCard = defender.hand[handIndex];
-    if (handCard === undefined) {
-      return illegalAction(state, "Decision card not found.");
-    }
-    if (
-      context.kind === "printed" &&
-      state.cardManifest.cards[handCard.cardId]?.category === "event"
-    ) {
-      const activation = getSupportedCounterEventActivation(
-        state,
-        handCard,
-        decision.playerId,
-        context.effectId as EffectId,
-      );
-      if (
-        activation === null ||
-        String(battle.currentTarget.instanceId) !== context.targetInstanceId
-      ) {
-        return illegalAction(state, "Unsupported payCost decision context.");
-      }
-      if (action.response.type !== "payment") {
-        return illegalAction(state, "Unsupported decision response.");
-      }
-      if (action.response.optionId !== "restDon") {
-        return illegalAction(state, "Payment option mismatch.");
-      }
-      const selected = action.response.selectedDonInstanceIds;
-      if (
-        selected === undefined ||
-        selected.length !== activation.printedCost
-      ) {
-        return illegalAction(state, "Payment DON!! selection count mismatch.");
-      }
-      if (new Set(selected).size !== selected.length) {
-        return illegalAction(
-          state,
-          "Payment DON!! selection contains duplicates.",
-        );
-      }
-      const costAreaById = new Map(
-        defender.costArea.map((card) => [card.instanceId, card]),
-      );
-      for (const donId of selected) {
-        const don = costAreaById.get(donId);
-        if (don === undefined || don.state !== "active") {
-          return illegalAction(state, "Payment DON!! selection is invalid.");
-        }
-      }
-      const restedSet = new Set(selected);
-      const nextCostArea = defender.costArea.map((card) =>
-        restedSet.has(card.instanceId)
-          ? { ...card, state: "rested" as const }
-          : card,
-      );
-      const events: EngineEvent[] = [];
-      appendEvent(
-        state,
-        events,
-        "costPaid",
-        {
-          playerId: decision.playerId,
-          optionId: "restDon",
-          selectedDonInstanceIds: selected,
-        },
-        { type: "public" },
-      );
-      const stagedState: GameState = {
-        ...state,
-        eventJournal: [...state.eventJournal, ...events],
-      };
-      const nextCounterDecision =
-        createCounterStepPassDecision(stagedState, {
-          requirePotentialCounterActions: false,
-        }) ?? undefined;
-      return resolveCounterEventActivation({
-        state: stagedState,
-        decisionPlayerId: decision.playerId,
-        battle,
-        handCard,
-        activation,
-        costArea: nextCostArea,
-        decisionResolvedId: decision.id,
-        priorEvents: events,
-        options,
-        ...(nextCounterDecision === undefined
-          ? {}
-          : { pendingDecision: nextCounterDecision }),
-      });
-    }
-    return illegalAction(state, "Unsupported payCost decision context.");
   }
   if (decision.type !== "selectCards") {
     return null;
