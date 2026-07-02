@@ -3,6 +3,7 @@ import type {
   CardRef,
   EffectBlock,
   EffectDefinition,
+  EffectTextSourceMap,
   EffectTextSpanId,
   MatchCardManifest,
 } from "@optcg/types";
@@ -47,7 +48,14 @@ type PoneglyphFetch = (
 interface SpotlightProbeFailure {
   readonly cardId: CardId;
   readonly effectId: EffectBlock["id"];
-  readonly reason: "missing-presentation" | "unspotlightable-spans";
+  readonly reason:
+    | "missing-presentation"
+    | "duplicate-presentation-span-id"
+    | "invalid-source-span-range"
+    | "duplicate-source-span-id"
+    | "presentation-span-missing-source"
+    | "presentation-span-ambiguous-source"
+    | "unspotlightable-spans";
   readonly spanIds: readonly EffectTextSpanId[];
 }
 
@@ -201,7 +209,11 @@ const createManifestSpotlightReport = ({
         }
         runtimeSupportedBlockCount += 1;
         cardHasRuntimeSupportedBlock = true;
-        const failure = spotlightFailureForBlock(cardId, block);
+        const failure = spotlightFailureForBlock(
+          cardId,
+          block,
+          sourceMapForBlock(manifest, cardId, block),
+        );
         if (failure === undefined) {
           spotlightReadyBlockCount += 1;
         } else {
@@ -250,6 +262,7 @@ const effectDefinitionsByCard = (
 const spotlightFailureForBlock = (
   cardId: CardId,
   block: EffectBlock,
+  sourceMap: EffectTextSourceMap | undefined,
 ): SpotlightProbeFailure | undefined => {
   const presentation = block.presentation;
   if (presentation === undefined || presentation.spanIds.length === 0) {
@@ -258,6 +271,60 @@ const spotlightFailureForBlock = (
       effectId: block.id,
       reason: "missing-presentation",
       spanIds: [],
+    };
+  }
+  const duplicatePresentationSpanIds = duplicateSpanIds(presentation.spanIds);
+  if (duplicatePresentationSpanIds.length > 0) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "duplicate-presentation-span-id",
+      spanIds: duplicatePresentationSpanIds,
+    };
+  }
+  if (sourceMap === undefined) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "presentation-span-missing-source",
+      spanIds: presentation.spanIds,
+    };
+  }
+  const invalidSourceSpan = sourceMap.spans.find(
+    (span) =>
+      span.start < 0 ||
+      span.end < span.start ||
+      span.end > sourceMap.sourceText.length,
+  );
+  if (invalidSourceSpan !== undefined) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "invalid-source-span-range",
+      spanIds: [invalidSourceSpan.id],
+    };
+  }
+  const duplicateSourceSpanIds = duplicateSpanIds(
+    sourceMap.spans.map((span) => span.id),
+  );
+  if (duplicateSourceSpanIds.length > 0) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "duplicate-source-span-id",
+      spanIds: duplicateSourceSpanIds,
+    };
+  }
+  const sourceSpanIds = new Set(sourceMap.spans.map((span) => span.id));
+  const missingSpanIds = presentation.spanIds.filter(
+    (spanId) => !sourceSpanIds.has(spanId),
+  );
+  if (missingSpanIds.length > 0) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "presentation-span-missing-source",
+      spanIds: missingSpanIds,
     };
   }
   const split = splitEffectTextSpotlightPresentation({
@@ -273,6 +340,39 @@ const spotlightFailureForBlock = (
         spanIds: presentation.spanIds,
       }
     : undefined;
+};
+
+const sourceMapForBlock = (
+  manifest: MatchCardManifest,
+  cardId: CardId,
+  block: EffectBlock,
+): EffectTextSourceMap | undefined => {
+  const textKind = block.presentation?.textKind;
+  if (textKind === undefined) {
+    return undefined;
+  }
+  const card = manifest.cards[cardId];
+  if (card === undefined) {
+    return undefined;
+  }
+  return textKind === "trigger"
+    ? card.triggerTextSourceMap
+    : card.effectTextSourceMap;
+};
+
+const duplicateSpanIds = (
+  spanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] => {
+  const seen = new Set<EffectTextSpanId>();
+  const duplicates = new Set<EffectTextSpanId>();
+  for (const spanId of spanIds) {
+    if (seen.has(spanId)) {
+      duplicates.add(spanId);
+      continue;
+    }
+    seen.add(spanId);
+  }
+  return [...duplicates];
 };
 
 const formatFailure = (failure: SpotlightProbeFailure): string =>

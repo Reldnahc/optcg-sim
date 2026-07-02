@@ -333,6 +333,40 @@ describe("spotlight probe report", () => {
     ]);
   });
 
+  test("reports duplicate spotlight span ids for nested supported sequences", async () => {
+    const report = await createSpotlightProbeReport({
+      cardId: "OP99-201",
+      fetchCard: (url, init) => {
+        assert.equal(String(url).endsWith("/v1/cards/batch"), true);
+        assert.equal(init?.method, "POST");
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                "OP99-201": baseCard(
+                  "OP99-201",
+                  "[Main] Your Leader gains +3000 power during this turn and give up to 1 of your opponent's Characters -8000 power until the end of your opponent's next End Phase. Then, you may trash 2 cards from your hand. If you do, K.O. up to 1 of your opponent's Characters with 0 power or less.",
+                  "Event",
+                ),
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+
+    assert.equal(report.exitCode, 1);
+    assert.deepEqual(report.errors, []);
+    assert.equal(report.lines[0], "Card: OP99-201");
+    assert.equal(report.lines.at(-2), "Failures: 1 effect block");
+    assert.match(
+      required(report.lines.at(-1), "failure line"),
+      /OP99-201 OP99-201:generated:1 duplicate-presentation-span-id \[span:sequence:1:body\]/u,
+    );
+  });
+
   test("fails closed when a set probe resolves no cards", async () => {
     const report = await createSpotlightProbeReport({
       setCode: "OP00",
