@@ -60,6 +60,7 @@ import { handleLobbyJoinCodeRequest } from "./lobby-join-code-route.js";
 import { handleRematchRequest } from "./match-rematch-route.js";
 import { handleResetRequest } from "./match-reset-route.js";
 import { handleReplayRequest } from "./replay-route.js";
+import { handleFirstPlayerChoiceRequest } from "./match-first-player-choice-route.js";
 import { isRecord, readRequestJson } from "./request-json.js";
 import { playerStatePayload } from "./match-state-payload.js";
 import {
@@ -95,11 +96,6 @@ import { handleRulesTextValidationRequest } from "./rules-text-validation-route.
 
 export { websocketTextFrame } from "./dev-websocket-protocol.js";
 export type { CreateMatchHttpServerOptions } from "./match-http-server-options.js";
-
-interface FirstPlayerChoiceRequest {
-  playerId?: unknown;
-  choice?: unknown;
-}
 
 export interface MatchHttpServer {
   listen: (port: number, host?: string) => Promise<void>;
@@ -389,51 +385,16 @@ const handleApiRequest = async (
   if (matchRoute !== null) {
     const matchId = decodeURIComponent(matchRoute.groups?.["matchId"] ?? "");
     const resource = matchRoute.groups?.["resource"];
-    if (request.method === "POST" && resource === "first-player-choice") {
-      let body: unknown;
-      try {
-        body = await readRequestJson(request);
-      } catch {
-        sendJson(response, 400, { errors: ["Request body must be JSON."] });
-        return;
-      }
-      const choiceRequest: FirstPlayerChoiceRequest = isRecord(body)
-        ? body
-        : {};
-      const playerId = choiceRequest.playerId;
-      const choice = choiceRequest.choice;
-      if (
-        typeof playerId !== "string" ||
-        (choice !== "goFirst" && choice !== "goSecond")
-      ) {
-        sendJson(response, 400, {
-          errors: ["First-player choice requires playerId and choice."],
-        });
-        return;
-      }
-      const result = await registry.chooseFirstPlayer(
-        matchId as MatchId,
-        playerId as PlayerId,
-        choice,
-      );
-      if (result === "matchNotFound") {
-        sendMatchNotFound(response, matchId);
-        return;
-      }
-      if (result === "alreadyStarted") {
-        sendJson(response, 409, {
-          errors: ["First-player choice is already resolved."],
-        });
-        return;
-      }
-      if (result === "notChooser") {
-        sendJson(response, 403, {
-          errors: ["Only the selected first-player chooser can answer."],
-        });
-        return;
-      }
-      broadcastMatchState(matchId as MatchId, registry, matchConnections);
-      sendJson(response, 200, result);
+    if (
+      await handleFirstPlayerChoiceRequest({
+        request,
+        response,
+        matchId: matchId as MatchId,
+        resource,
+        registry,
+        matchConnections,
+      })
+    ) {
       return;
     }
     if (request.method === "POST" && resource === "rematch") {
