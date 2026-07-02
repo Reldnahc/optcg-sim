@@ -226,7 +226,14 @@ export type OptionalChooseOneCost = {
 export type OptionalChooseOneTrashCostAlternative =
   OptionalChooseOneCostAlternative;
 
-export type OptionalChooseOneTrashCost = OptionalChooseOneCost;
+export type OptionalChooseOneTrashCost = {
+  type: "chooseOne";
+  options: [
+    OptionalChooseOneTrashCostAlternative,
+    ...OptionalChooseOneTrashCostAlternative[],
+  ];
+  optional: true;
+};
 
 export type OptionalCost =
   | OptionalRestDonCost

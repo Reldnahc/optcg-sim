@@ -32,7 +32,7 @@ export type DynamicNumberValue =
   | {
       type: "countMatchingFieldCards";
       player: PlayerRef;
-      zone: "characterArea";
+      zone: "field" | "leaderArea" | "characterArea" | "stageArea";
       filter: CardFilter;
       multiplier: number;
     }

@@ -49,14 +49,14 @@ export type PaymentOption =
       type: "turnLifeFaceUp";
       count: number;
       player: PlayerRef;
-      position: "top" | "bottom" | "anyMatching";
+      position: "top" | "bottom" | "topOrBottom" | "anyMatching";
     }
   | {
       id: string;
       type: "setLifeFaceUp";
       count: number;
       player: PlayerRef;
-      position: "top" | "bottom" | "anyMatching";
+      position: "top" | "bottom" | "topOrBottom" | "anyMatching";
       faceUp: boolean;
     }
   | {
