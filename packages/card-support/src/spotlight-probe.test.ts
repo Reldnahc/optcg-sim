@@ -333,7 +333,7 @@ describe("spotlight probe report", () => {
     ]);
   });
 
-  test("reports duplicate spotlight span ids for nested supported sequences", async () => {
+  test("accepts nested supported sequence spotlight spans", async () => {
     const report = await createSpotlightProbeReport({
       cardId: "OP99-201",
       fetchCard: (url, init) => {
@@ -357,14 +357,10 @@ describe("spotlight probe report", () => {
       },
     });
 
-    assert.equal(report.exitCode, 1);
+    assert.equal(report.exitCode, 0);
     assert.deepEqual(report.errors, []);
     assert.equal(report.lines[0], "Card: OP99-201");
-    assert.equal(report.lines.at(-2), "Failures: 1 effect block");
-    assert.match(
-      required(report.lines.at(-1), "failure line"),
-      /OP99-201 OP99-201:generated:1 duplicate-presentation-span-id \[span:sequence:1:body\]/u,
-    );
+    assert.equal(report.lines.at(-1), "Failures: none");
   });
 
   test("fails closed when a set probe resolves no cards", async () => {

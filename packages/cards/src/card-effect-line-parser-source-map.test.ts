@@ -78,6 +78,31 @@ describe("card effect parser source maps", () => {
     expect(spans.some((span) => span.id === "span:body")).toBe(false);
   });
 
+  it("scopes nested sequence body span ids under the outer sequence segment", () => {
+    const text =
+      "[Main] Your Leader gains +3000 power during this turn and give up to 1 of your opponent's Characters -8000 power until the end of your opponent's next End Phase. Then, you may trash 2 cards from your hand. If you do, K.O. up to 1 of your opponent's Characters with 0 power or less.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spanIds = (parsed.sourceMap?.spans ?? []).map((span) => span.id);
+    expect(new Set(spanIds).size).toBe(spanIds.length);
+    expect(spanIds).toEqual(
+      expect.arrayContaining([
+        "span:sequence:0:sequence:0:body",
+        "span:sequence:0:sequence:1:body",
+        "span:sequence:1:body",
+      ]),
+    );
+  });
+
   it("emits separate cost and post-cost body spans", () => {
     const text = "[On Play] DON!! -1: Draw 1 card.";
     const result = parseCardEffectLinesDetailed(text);

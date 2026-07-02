@@ -342,13 +342,35 @@ function rewriteSequenceSpanIds(
   spans: readonly EffectTextSpan[],
   sequenceIndex: number,
 ): readonly EffectTextSpan[] {
-  return spans.map((span) =>
-    span.id === "span:body"
-      ? {
-          ...span,
-          id: `span:sequence:${String(sequenceIndex)}:body`,
-          sequenceIndex,
-        }
-      : span,
-  );
+  return spans.map((span) => {
+    const id = sequenceScopedSpanId(span.id, sequenceIndex);
+    const parentSpanId =
+      span.parentSpanId === undefined
+        ? undefined
+        : sequenceScopedSpanId(span.parentSpanId, sequenceIndex);
+    if (id === span.id && parentSpanId === span.parentSpanId) {
+      return span;
+    }
+    return {
+      ...span,
+      id,
+      ...(parentSpanId === undefined ? {} : { parentSpanId }),
+      sequenceIndex,
+    };
+  });
 }
+
+const sequenceScopedSpanId = (
+  spanId: EffectTextSpan["id"],
+  sequenceIndex: number,
+): EffectTextSpan["id"] => {
+  if (spanId === "span:body") {
+    return `span:sequence:${String(sequenceIndex)}:body`;
+  }
+  if (spanId.startsWith("span:sequence:")) {
+    return `span:sequence:${String(sequenceIndex)}:${spanId.slice(
+      "span:".length,
+    )}`;
+  }
+  return spanId;
+};
