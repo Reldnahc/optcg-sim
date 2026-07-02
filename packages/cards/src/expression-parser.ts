@@ -372,5 +372,10 @@ const sequenceScopedSpanId = (
       "span:".length,
     )}`;
   }
+  if (spanId.startsWith("span:condition:")) {
+    return `span:sequence:${String(sequenceIndex)}:${spanId.slice(
+      "span:".length,
+    )}`;
+  }
   return spanId;
 };

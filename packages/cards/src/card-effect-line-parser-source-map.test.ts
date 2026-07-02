@@ -103,6 +103,39 @@ describe("card effect parser source maps", () => {
     );
   });
 
+  it("scopes condition span ids inside sequence segments", () => {
+    const text =
+      "[On Play] If your Leader has the {East Blue} type, rest up to 1 of your opponent's Characters with a cost of 2 or less and, if you don't have [Buchi], play up to 1 [Buchi] from your hand.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const spanIds = spans.map((span) => span.id);
+    expect(new Set(spanIds).size).toBe(spanIds.length);
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:condition:resolution",
+          role: "condition",
+          text: "your Leader has the {East Blue} type",
+        }),
+        expect.objectContaining({
+          id: "span:sequence:1:condition:resolution",
+          role: "condition",
+          text: "you don't have [Buchi]",
+        }),
+      ]),
+    );
+  });
+
   it("emits separate cost and post-cost body spans", () => {
     const text = "[On Play] DON!! -1: Draw 1 card.";
     const result = parseCardEffectLinesDetailed(text);
