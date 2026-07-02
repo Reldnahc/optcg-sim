@@ -226,6 +226,8 @@ Preserve these package boundaries:
 Before claiming completion, run the relevant narrow checks and the canonical repo
 commands when feasible:
 
+- `pnpm master:probe` is intentionally slow because it walks all sets through
+  throttled network probes; allow a long command timeout for it.
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
