@@ -232,6 +232,39 @@ describe("card effect parser source maps", () => {
     );
   });
 
+  it("emits unique body spans for return-to-owner-hand costed follow-up sequences", () => {
+    const text =
+      "[Activate: Main] [Once Per Turn] ➁ (You may rest the specified number of DON!! cards in your cost area.): If you have 5 Characters, return 1 of your Characters to the owner's hand. Then, play up to 1 Character with a cost of 5 or less from your hand that is a different color than the returned Character.";
+    const result = parseCardEffectLinesDetailed(text);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const parsed = result.value[0];
+    if (parsed === undefined || !("block" in parsed)) {
+      throw new Error("Expected runtime effect line.");
+    }
+
+    const spans = parsed.sourceMap?.spans ?? [];
+    const spanIds = spans.map((span) => span.id);
+    expect(new Set(spanIds).size).toBe(spanIds.length);
+    expect(spans).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "span:body",
+          role: "body",
+          text: "return 1 of your Characters to the owner's hand.",
+        }),
+        expect.objectContaining({
+          id: "span:body:2",
+          role: "body",
+          text: "play up to 1 Character with a cost of 5 or less from your hand that is a different color than the returned Character.",
+        }),
+      ]),
+    );
+  });
+
   it("emits cost and body spans for choose-one trash costed effects", () => {
     const examples = [
       {

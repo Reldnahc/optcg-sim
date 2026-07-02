@@ -47,9 +47,10 @@ export function optionalCostedEffectExpressionParser(options: {
       ...cost.evidence,
       ...body.evidence,
     ];
+    const bodyPresentationSpans = scopeDuplicateSpanIds(body.presentationSpans);
     const presentationSpans = [
       ...(costPresentationSpans ?? []),
-      ...(body.presentationSpans ?? []),
+      ...(bodyPresentationSpans ?? []),
     ];
     const resolvedPresentationSpans =
       presentationSpans.length === 0
@@ -109,6 +110,25 @@ export function optionalCostedEffectSegmentParser(options: {
     };
   };
 }
+
+const scopeDuplicateSpanIds = (
+  spans: readonly EffectTextSpan[] | undefined,
+): readonly EffectTextSpan[] | undefined => {
+  if (spans === undefined) {
+    return undefined;
+  }
+  const countsById = new Map<EffectTextSpan["id"], number>();
+  return spans.map((span) => {
+    const count = (countsById.get(span.id) ?? 0) + 1;
+    countsById.set(span.id, count);
+    return count === 1
+      ? span
+      : {
+          ...span,
+          id: `${span.id}:${String(count)}`,
+        };
+  });
+};
 
 function paidCostReferenceForCost(
   cost: OptionalActivationCostParseResult,
