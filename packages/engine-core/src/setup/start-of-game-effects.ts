@@ -208,6 +208,9 @@ export const collectStartOfGamePlans = (
     if (resolved.support.status !== "implemented-dsl") {
       continue;
     }
+    if (resolved.support.effectDefinitionId === undefined) {
+      continue;
+    }
     const lookup = resolveImplementedDslEffectDefinition(resolved, manifest);
     if (!lookup.ok) {
       return { plans: [], errors: [lookup.error] };

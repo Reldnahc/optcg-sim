@@ -398,6 +398,7 @@ const buildResolvedCard = (
   const printedKeywords = rawKeywordsFromLines(lines);
   const nameAliases = nameAliasesFromLines(lines);
   const identityTreatment = identityTreatmentFromLines(lines);
+  const donDeckSize = donDeckSizeFromLines(lines);
   const effectLines = lineInputs.filter(
     (line) => parseRawKeywordLine({ text: line.text }) === undefined,
   );
@@ -451,6 +452,7 @@ const buildResolvedCard = (
       nameAliases.length > 0 ? nameAliases : undefined,
     ),
     ...optional("identityTreatment", identityTreatment),
+    ...optional("donDeckSize", donDeckSize),
     category: normalizeCategory(detail.card_type),
     set: detail.set,
     setName: detail.set_name,
@@ -563,6 +565,25 @@ const identityTreatmentFromLines = (
     }
   }
   return includes.size === 0 ? undefined : { includes: [...includes] };
+};
+
+const donDeckSizeFromLines = (lines: readonly string[]): number | undefined => {
+  for (const line of lines) {
+    const parsed = parseCardEffectLinesDetailed(line);
+    if (!parsed.ok) {
+      continue;
+    }
+    for (const value of parsed.value) {
+      if (
+        value.kind === "metadata" &&
+        value.metadata.type === "deckRestriction" &&
+        value.metadata.restriction.type === "donDeckSize"
+      ) {
+        return value.metadata.restriction.count;
+      }
+    }
+  }
+  return undefined;
 };
 
 const effectTextSourceMapFromText = (

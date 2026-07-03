@@ -81,6 +81,32 @@ const requirePlayerValue = <T>(
   return value;
 };
 
+const donDeckCardIdsForLeaderRule = (
+  input: CreateInitialStateInput,
+  playerId: PlayerId,
+): CardId[] => {
+  const donDeckCardIds = requirePlayerValue(
+    input.donDeckCardIds,
+    playerId,
+    "donDeckCardIds",
+  );
+  const leaderCardId = requirePlayerValue(
+    input.leaderCardIds,
+    playerId,
+    "leaderCardIds",
+  );
+  const donDeckSize = input.cardManifest.cards[leaderCardId]?.donDeckSize;
+  if (donDeckSize === undefined) {
+    return donDeckCardIds;
+  }
+  if (!Number.isSafeInteger(donDeckSize) || donDeckSize <= 0) {
+    throw new TypeError(
+      `donDeckSize for leader ${String(leaderCardId)} must be a positive integer.`,
+    );
+  }
+  return donDeckCardIds.slice(0, donDeckSize);
+};
+
 const toEngineErrorReason = (error: EngineError): string =>
   "reason" in error && typeof error.reason === "string"
     ? error.reason
@@ -303,11 +329,7 @@ export const createInitialState = (
       firstPlayerId,
       "deckCardIds",
     ),
-    donDeckCardIds: requirePlayerValue(
-      input.donDeckCardIds,
-      firstPlayerId,
-      "donDeckCardIds",
-    ),
+    donDeckCardIds: donDeckCardIdsForLeaderRule(input, firstPlayerId),
     leaderCardId: requirePlayerValue(
       input.leaderCardIds,
       firstPlayerId,
@@ -331,11 +353,7 @@ export const createInitialState = (
       secondPlayerId,
       "deckCardIds",
     ),
-    donDeckCardIds: requirePlayerValue(
-      input.donDeckCardIds,
-      secondPlayerId,
-      "donDeckCardIds",
-    ),
+    donDeckCardIds: donDeckCardIdsForLeaderRule(input, secondPlayerId),
     leaderCardId: requirePlayerValue(
       input.leaderCardIds,
       secondPlayerId,

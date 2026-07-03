@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import type { CardId, MatchId, PlayerId } from "@optcg/types";
+import type { CardId, MatchId, PlayerId, ResolvedCard } from "@optcg/types";
 
 import { assertGameStateInvariants } from "../state/invariants.js";
 import { createInitialState } from "./initial-state.js";
@@ -111,6 +111,62 @@ test("opening hands and remaining deck order match deterministic setup policy", 
   assert.deepEqual(
     p1State.deck.map((card) => card.cardId),
     must(input.deckCardIds[p1], "p1 deck").slice(5),
+  );
+});
+
+test("leader DON deck-size rule truncates over-submitted DON deck during setup", () => {
+  const input = createInput();
+  input.donDeckCardIds[p1] = [
+    "p1-don-1",
+    "p1-don-2",
+    "p1-don-3",
+    "p1-don-4",
+    "p1-don-5",
+    "p1-don-6",
+    "p1-don-7",
+    "p1-don-8",
+    "p1-don-9",
+    "p1-don-10",
+  ].map(toCardId);
+  const leaderCardId = must(input.leaderCardIds[p1], "p1 leader card id");
+  const cards = input.cardManifest.cards as Record<CardId, ResolvedCard>;
+  cards[leaderCardId] = {
+    cardId: leaderCardId,
+    language: "en",
+    name: "Six DON Leader",
+    category: "leader",
+    set: "TEST",
+    setName: "Test Set",
+    released: true,
+    colors: ["purple"],
+    attributes: [],
+    types: [],
+    printedKeywords: [],
+    variants: [],
+    legality: {},
+    officialFaq: [],
+    errata: [],
+    sourceTextHash: "six-don-source",
+    behaviorHash: "six-don-behavior",
+    life: 5,
+    power: 5000,
+    donDeckSize: 6,
+    support: {
+      cardId: leaderCardId,
+      status: "vanilla-confirmed",
+      tested: true,
+      rulesVersion: "fixture",
+      cardDataVersion: "fixture",
+      sourceTextHash: "six-don-source",
+      behaviorHash: "six-don-behavior",
+    },
+  };
+
+  const state = createInitialState(input);
+
+  assert.deepEqual(
+    must(state.players[p1], "p1 state").donDeck.map((card) => card.cardId),
+    input.donDeckCardIds[p1].slice(0, 6),
   );
 });
 

@@ -419,6 +419,36 @@ describe("card repository", () => {
     assert.equal(resolved.support.tested, true);
   });
 
+  test("preserves DON deck-size rule metadata on resolved leaders", async () => {
+    const cache = new FakeCardCache();
+    const cardId = "OP99-001" as CardId;
+    const client = new FakePoneglyphClient({
+      "OP99-001": {
+        ...poneglyphCard(
+          "OP99-001",
+          "Under the rules of this game, your DON!! deck consists of 6 cards.",
+        ),
+        card_type: "Leader",
+        life: 5,
+        cost: null,
+        power: 5000,
+        counter: null,
+      },
+    });
+    const repository = createRuntimeSupportedCardRepository({
+      cache,
+      poneglyphClient: client,
+      versions,
+    });
+
+    const [maybeResolved] = await repository.resolveCards([cardId]);
+    const resolved = required(maybeResolved, "resolved card");
+
+    assert.equal(resolved.support.status, "implemented-dsl");
+    assert.equal(resolved.support.effectDefinitionId, undefined);
+    assert.equal(resolved.donDeckSize, 6);
+  });
+
   test("preserves all-identity leader metadata on resolved cards", async () => {
     const cache = new FakeCardCache();
     const cardId = "P-000" as CardId;

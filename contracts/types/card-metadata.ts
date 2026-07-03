@@ -275,6 +275,7 @@ export interface ResolvedCard {
   name: string;
   nameAliases?: string[];
   identityTreatment?: CardIdentityTreatment;
+  donDeckSize?: number;
   category: CardCategory;
   set: string;
   setName: string;

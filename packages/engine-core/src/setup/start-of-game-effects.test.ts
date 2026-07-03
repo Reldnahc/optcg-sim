@@ -509,6 +509,27 @@ test("implemented-dsl leader missing effect definition fails closed at setup", (
   assert.throws(() => createInitialState(input), /effectRuntimeError|missing/i);
 });
 
+test("metadata-only implemented-dsl leader without effect definition does not enter setup effect flow", () => {
+  const input = createInput();
+  const leader = must(
+    input.cardManifest.cards[toCardId("leader-red")],
+    "leader metadata",
+  );
+  const { effectDefinitionId, ...metadataOnlySupport } = leader.support;
+  void effectDefinitionId;
+  input.cardManifest.cards[toCardId("leader-red")] = {
+    ...leader,
+    support: {
+      ...metadataOnlySupport,
+      status: "implemented-dsl",
+    },
+    donDeckSize: 6,
+  };
+  delete input.cardManifest.effectDefinitions?.["leader-red-sog"];
+
+  assert.doesNotThrow(() => createInitialState(input));
+});
+
 test("multi-step setup decisions keep contiguous seq and unique decision ids", () => {
   const input = createInput();
   input.cardManifest.cards[toCardId("leader-blue")] = {
