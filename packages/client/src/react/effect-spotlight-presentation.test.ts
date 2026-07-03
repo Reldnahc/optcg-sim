@@ -26,11 +26,26 @@ const ref = (
   playerId: playerId as PlayerId,
 });
 
+const fieldRef = (
+  instanceId: string,
+  cardId: string,
+  playerId: string,
+  slot: "leader" | "character",
+): CardRef => ({
+  ...ref(instanceId, cardId, playerId),
+  zone: {
+    zone: slot === "leader" ? "leaderArea" : "characterArea",
+    playerId: playerId as PlayerId,
+    slot,
+    index: 0,
+  },
+});
+
 const cardModel = (card: CardRef): ClientCardModel => ({
   instanceId: card.instanceId,
   cardId: card.cardId,
   name: `Card ${String(card.instanceId)}`,
-  category: "Character",
+  category: card.zone?.slot === "leader" ? "Leader" : "Character",
   imageUrl: `https://example.test/${String(card.instanceId)}.png`,
   attachedDonCount: 0,
   attachedDonCards: [],
@@ -103,7 +118,7 @@ describe("effect spotlight presentation", () => {
     expect(combatPresentation.relatedPowers).toEqual([5000]);
   });
 
-  it("labels counter and damage combat spotlights by their combat role", () => {
+  it("labels counter and combat damage spotlights by their combat role", () => {
     const counterPresentation = buildEffectSpotlightPresentation({
       cardModel,
       entry: combatEntry({
@@ -126,25 +141,43 @@ describe("effect spotlight presentation", () => {
     expect(counterPresentation.sourcePower).toBe(1000);
     expect(counterPresentation.relatedPowers).toBeUndefined();
 
-    const damagePresentation = buildEffectSpotlightPresentation({
+    const characterKoPresentation = buildEffectSpotlightPresentation({
       cardModel,
       entry: combatEntry({
         eventKind: "damageDealt",
-        attacker: ref("attacker-1", "OP00-010", "p1"),
-        defender: ref("defender-1", "OP00-020", "p2"),
+        attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
+        defender: fieldRef("defender-1", "OP00-020", "p2", "character"),
         attackerPower: 7000,
         defenderPower: 5000,
         amount: 1,
       }),
     });
 
-    expect(damagePresentation?.kind).toBe("cardLink");
-    if (damagePresentation?.kind !== "cardLink") {
+    expect(characterKoPresentation?.kind).toBe("cardLink");
+    if (characterKoPresentation?.kind !== "cardLink") {
       return;
     }
-    expect(damagePresentation.relationLabel).toBe("damages");
-    expect(damagePresentation.sourcePower).toBe(7000);
-    expect(damagePresentation.relatedPowers).toEqual([5000]);
+    expect(characterKoPresentation.relationLabel).toBe("K.O.s");
+    expect(characterKoPresentation.sourcePower).toBe(7000);
+    expect(characterKoPresentation.relatedPowers).toEqual([5000]);
+
+    const leaderDamagePresentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: combatEntry({
+        eventKind: "damageDealt",
+        attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
+        defender: fieldRef("leader-1", "OP00-001", "p2", "leader"),
+        attackerPower: 7000,
+        defenderPower: 5000,
+        amount: 1,
+      }),
+    });
+
+    expect(leaderDamagePresentation?.kind).toBe("cardLink");
+    if (leaderDamagePresentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(leaderDamagePresentation.relationLabel).toBe("damages");
   });
 
   it("builds targeting presentation from current active span target links", () => {

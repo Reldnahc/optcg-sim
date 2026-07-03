@@ -1,4 +1,4 @@
-import type { CardRef } from "@optcg/types";
+import type { CardRef, CombatSpotlightPresentation } from "@optcg/types";
 
 import type { ClientCardModel } from "../view-model.js";
 import type { EffectSpotlightPresentation } from "./EffectSpotlight.js";
@@ -43,6 +43,34 @@ const targetCardsForEntry = (
   return targetCards;
 };
 
+const isLeaderCombatTarget = (
+  card: CardRef,
+  model: ClientCardModel,
+): boolean => {
+  if (card.zone?.slot === "leader" || card.zone?.zone === "leaderArea") {
+    return true;
+  }
+  if (card.zone?.slot === "character" || card.zone?.zone === "characterArea") {
+    return false;
+  }
+  return model.category === "Leader";
+};
+
+const combatRelationLabel = (
+  combat: Exclude<
+    CombatSpotlightPresentation,
+    { readonly eventKind: "counterUsed" }
+  >,
+  defenderModel: ClientCardModel,
+): string => {
+  if (combat.eventKind !== "damageDealt") {
+    return "attacks";
+  }
+  return isLeaderCombatTarget(combat.defender, defenderModel)
+    ? "damages"
+    : "K.O.s";
+};
+
 export const buildEffectSpotlightPresentation = ({
   cardModel,
   entry,
@@ -67,12 +95,13 @@ export const buildEffectSpotlightPresentation = ({
             : [entry.combat.targetPower],
       };
     }
+    const sourceCard = cardModel(entry.combat.attacker);
+    const defenderCard = cardModel(entry.combat.defender);
     return {
       kind: "cardLink",
-      sourceCard: cardModel(entry.combat.attacker),
-      relatedCards: [cardModel(entry.combat.defender)],
-      relationLabel:
-        entry.combat.eventKind === "damageDealt" ? "damages" : "attacks",
+      sourceCard,
+      relatedCards: [defenderCard],
+      relationLabel: combatRelationLabel(entry.combat, defenderCard),
       tone: "combat",
       sourcePower: entry.combat.attackerPower,
       relatedPowers: [entry.combat.defenderPower],
