@@ -268,22 +268,29 @@ const SpotlightCardFace = ({
 
 const LinkedCardPowerValue = ({
   power,
+  showIncrease,
 }: {
   readonly power: number | undefined;
+  readonly showIncrease?: boolean | undefined;
 }): React.JSX.Element | null =>
   power === undefined ? null : (
     <span
       className={`effect-spotlight-link-power__value battle-arrow-power-value is-${battlePowerTone(power)}`}
     >
-      {power}
+      {showIncrease && power > 0 ? `+${String(power)}` : power}
     </span>
   );
 
 const linkedCardLabel = (
   card: ClientCardModel,
   power: number | undefined,
+  showIncrease: boolean = false,
 ): string =>
-  power === undefined ? card.name : `${card.name} ${String(power)}`;
+  power === undefined
+    ? card.name
+    : `${card.name} ${
+        showIncrease && power > 0 ? `+${String(power)}` : String(power)
+      }`;
 
 const relatedCardsLabel = (
   relatedCards: readonly ClientCardModel[],
@@ -327,6 +334,7 @@ const cardLinkSpotlightAriaLabel = ({
   `Linked card spotlight: ${linkedCardLabel(
     sourceCard,
     sourcePower,
+    relationLabel === "counters",
   )} ${relationLabel} ${relatedCardsLabel(
     relatedCards.slice(0, maxVisibleRelatedCards),
     relatedPowers,
@@ -410,6 +418,7 @@ const LinkedCardsSpotlightCard = ({
   );
   const singleRelatedPower =
     visibleRelatedCards.length === 1 ? visibleRelatedPowers?.[0] : undefined;
+  const showSourcePowerIncrease = relationLabel === "counters";
   return (
     <div
       className="effect-spotlight-card effect-spotlight-card--linked"
@@ -427,7 +436,10 @@ const LinkedCardsSpotlightCard = ({
             className="effect-spotlight-link-card effect-spotlight-link-card--source"
           />
           <div className="effect-spotlight-link-relation">
-            <LinkedCardPowerValue power={sourcePower} />
+            <LinkedCardPowerValue
+              power={sourcePower}
+              showIncrease={showSourcePowerIncrease}
+            />
             <span className="effect-spotlight-link-direction">
               <span className="effect-spotlight-link-direction__label">
                 {relationLabel}

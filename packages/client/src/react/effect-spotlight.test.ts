@@ -405,6 +405,41 @@ describe("EffectSpotlight", () => {
     );
   });
 
+  it("renders counter spotlights with the counter increase and target total", () => {
+    const html = renderToStaticMarkup(
+      createElement(EffectSpotlight, {
+        presentation: {
+          kind: "cardLink",
+          sourceCard: combatCard(
+            "counter-1",
+            "Counter Card",
+            "https://example.test/counter.png",
+          ),
+          relatedCards: [
+            combatCard(
+              "leader-1",
+              "Defending Leader",
+              "https://example.test/leader.png",
+            ),
+          ],
+          relationLabel: "counters",
+          tone: "combat",
+          sourcePower: 1000,
+          relatedPowers: [6000],
+        },
+        controls: controls(),
+        timer: timer(),
+      }),
+    );
+
+    expect(html).toContain("+1000");
+    expect(html).toContain("6000");
+    expect(html).not.toContain(">1000<");
+    expect(html).toContain(
+      'aria-label="Linked card spotlight: Counter Card +1000 counters Defending Leader 6000"',
+    );
+  });
+
   it("renders a source-to-target spotlight with fanned target overflow", () => {
     const html = renderToStaticMarkup(
       createElement(EffectSpotlight, {
