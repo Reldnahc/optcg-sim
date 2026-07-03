@@ -63,6 +63,9 @@ const combatRelationLabel = (
   >,
   defenderModel: ClientCardModel,
 ): string => {
+  if (combat.eventKind === "battleKOd") {
+    return "K.O.s";
+  }
   if (combat.eventKind !== "damageDealt") {
     return "attacks";
   }

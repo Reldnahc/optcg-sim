@@ -117,7 +117,8 @@ const spotlightEntryForEvent = (
     if (
       (eventKind !== "attackDeclared" &&
         eventKind !== "blockerActivated" &&
-        eventKind !== "damageDealt") ||
+        eventKind !== "damageDealt" &&
+        eventKind !== "battleKOd") ||
       !isCardRef(attacker) ||
       !isCardRef(defender)
     ) {
@@ -148,6 +149,30 @@ const spotlightEntryForEvent = (
           attackerPower,
           defenderPower,
           amount,
+        },
+        resolvedEventId: resolvedEventId as EngineEvent["id"],
+      };
+    }
+    if (eventKind === "battleKOd") {
+      if (
+        typeof attackerPower !== "number" ||
+        typeof defenderPower !== "number"
+      ) {
+        return undefined;
+      }
+      return {
+        kind: "combat",
+        id,
+        key,
+        semanticKey,
+        mode,
+        status,
+        combat: {
+          eventKind,
+          attacker,
+          defender,
+          attackerPower,
+          defenderPower,
         },
         resolvedEventId: resolvedEventId as EngineEvent["id"],
       };

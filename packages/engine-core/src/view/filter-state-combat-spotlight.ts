@@ -16,12 +16,12 @@ export type SafeCombatSpotlightPresentation =
       readonly defenderPower?: number;
     }
   | {
-      readonly eventKind: "damageDealt";
+      readonly eventKind: "battleKOd" | "damageDealt";
       readonly attacker: CardRef;
       readonly defender: CardRef;
       readonly attackerPower: number;
       readonly defenderPower: number;
-      readonly amount: number;
+      readonly amount?: number;
     }
   | {
       readonly eventKind: "counterUsed";
@@ -88,7 +88,8 @@ export const toAllowedCombatSpotlightPresentation = (
   if (
     (eventKind !== "attackDeclared" &&
       eventKind !== "blockerActivated" &&
-      eventKind !== "damageDealt") ||
+      eventKind !== "damageDealt" &&
+      eventKind !== "battleKOd") ||
     attacker === undefined ||
     defender === undefined
   ) {
@@ -108,6 +109,18 @@ export const toAllowedCombatSpotlightPresentation = (
           attackerPower,
           defenderPower,
           amount,
+        }
+      : undefined;
+  }
+  if (eventKind === "battleKOd") {
+    return typeof attackerPower === "number" &&
+      typeof defenderPower === "number"
+      ? {
+          eventKind,
+          attacker,
+          defender,
+          attackerPower,
+          defenderPower,
         }
       : undefined;
   }
@@ -173,14 +186,16 @@ export const safeCombatSpotlightSemanticKey = (
             String(combat.defenderPower),
             String(combat.amount),
           ]
-        : [
-            combat.attackerPower === undefined
-              ? ""
-              : String(combat.attackerPower),
-            combat.defenderPower === undefined
-              ? ""
-              : String(combat.defenderPower),
-          ];
+        : combat.eventKind === "battleKOd"
+          ? [String(combat.attackerPower), String(combat.defenderPower)]
+          : [
+              combat.attackerPower === undefined
+                ? ""
+                : String(combat.attackerPower),
+              combat.defenderPower === undefined
+                ? ""
+                : String(combat.defenderPower),
+            ];
   return [
     "combat",
     anchorId,

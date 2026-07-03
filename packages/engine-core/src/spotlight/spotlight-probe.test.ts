@@ -162,6 +162,7 @@ test("spotlight probe covers authored game spotlight families through player vie
   const target = cardRef("target", p2);
   const selfTarget = cardRef("replacement-self", p1);
   const defender = cardRef("defender", p2);
+  const damagedLeader = cardRef("damaged-leader", p2, "leaderArea");
   const counterSource = cardRef("counter", p2, "hand");
   const played = cardRef("played", p1);
   const events: EngineEvent[] = [];
@@ -306,7 +307,7 @@ test("spotlight probe covers authored game spotlight families through player vie
     "damageDealt",
     {
       attacker: source.instanceId,
-      target: defender.instanceId,
+      target: damagedLeader.instanceId,
       amount: 1,
     },
     { type: "public" },
@@ -320,10 +321,35 @@ test("spotlight probe covers authored game spotlight families through player vie
     combat: {
       eventKind: "damageDealt",
       attacker: source,
-      defender,
+      defender: damagedLeader,
       attackerPower: 5000,
       defenderPower: 6000,
       amount: 1,
+    },
+  });
+
+  appendEvent(
+    state,
+    events,
+    "cardKOd",
+    {
+      playerId: p2,
+      instanceId: defender.instanceId,
+    },
+    { type: "public" },
+  );
+  const cardKOd = events.at(-1);
+  assert.ok(cardKOd !== undefined);
+  appendCombatSpotlightEntryCreatedEvent({
+    state,
+    events,
+    anchorEvent: cardKOd,
+    combat: {
+      eventKind: "battleKOd",
+      attacker: source,
+      defender,
+      attackerPower: 5000,
+      defenderPower: 6000,
     },
   });
 
@@ -355,6 +381,7 @@ test("spotlight probe covers authored game spotlight families through player vie
   expectSpotlightCreatedAfter(events, "attackDeclared");
   expectSpotlightCreatedAfter(events, "counterUsed");
   expectSpotlightCreatedAfter(events, "damageDealt");
+  expectSpotlightCreatedAfter(events, "cardKOd");
   expectSpotlightCreatedAfter(events, "cardPlayed");
 
   state.eventJournal = events.map((event, index) => ({
@@ -373,6 +400,7 @@ test("spotlight probe covers authored game spotlight families through player vie
       "combat",
       "combat",
       "combat",
+      "combat",
       "playedCard",
     ],
   );
@@ -385,6 +413,7 @@ test("spotlight probe covers authored game spotlight families through player vie
     attackEntryCandidate,
     counterEntryCandidate,
     damageEntryCandidate,
+    battleKoEntryCandidate,
     playedEntryCandidate,
   ] = entries;
   const resolvedEffectEntry = expectEffectTextEntry(resolvedEntry);
@@ -437,13 +466,29 @@ test("spotlight probe covers authored game spotlight families through player vie
       playerId: source.playerId,
     },
     defender: {
+      instanceId: damagedLeader.instanceId,
+      cardId: damagedLeader.cardId,
+      playerId: damagedLeader.playerId,
+    },
+    attackerPower: 5000,
+    defenderPower: 6000,
+    amount: 1,
+  });
+  const battleKoEntry = expectCombatEntry(battleKoEntryCandidate);
+  assert.deepEqual(battleKoEntry.combat, {
+    eventKind: "battleKOd",
+    attacker: {
+      instanceId: source.instanceId,
+      cardId: source.cardId,
+      playerId: source.playerId,
+    },
+    defender: {
       instanceId: defender.instanceId,
       cardId: defender.cardId,
       playerId: defender.playerId,
     },
     attackerPower: 5000,
     defenderPower: 6000,
-    amount: 1,
   });
   const playedEntry = expectPlayedCardEntry(playedEntryCandidate);
   assert.deepEqual(playedEntry.source, {

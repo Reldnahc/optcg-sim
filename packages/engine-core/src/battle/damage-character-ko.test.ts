@@ -236,31 +236,31 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
     sourceInstanceId: attacker.instanceId,
     sourceCardId: attacker.cardId,
   });
-  const damageDealtIndex = result.events.findIndex(
-    (event) => event.type === "damageDealt",
-  );
-  assert.notEqual(damageDealtIndex, -1);
   assert.equal(
-    result.events[damageDealtIndex + 1]?.type,
-    "spotlightEntryCreated",
+    result.events.some((event) => event.type === "damageDealt"),
+    false,
   );
-  const damageDealt = must(
-    result.events[damageDealtIndex],
-    "damageDealt event",
+  const cardKOdIndex = result.events.findIndex(
+    (event) => event.type === "cardKOd",
   );
-  const damageSpotlights = result.events.filter(
+  assert.notEqual(cardKOdIndex, -1);
+  assert.equal(result.events[cardKOdIndex + 1]?.type, "spotlightEntryCreated");
+  const cardKOd = must(result.events[cardKOdIndex], "cardKOd event");
+  const battleKoSpotlights = result.events.filter(
     (event) => event.type === "spotlightEntryCreated",
   );
-  assert.equal(damageSpotlights.length, 1);
-  const damageSpotlightPayload = must(damageSpotlights[0], "damage spotlight")
-    .payload as SpotlightEntryCreatedPayload;
-  assert.deepEqual(damageSpotlightPayload.entry, {
+  assert.equal(battleKoSpotlights.length, 1);
+  const battleKoSpotlightPayload = must(
+    battleKoSpotlights[0],
+    "battle K.O. spotlight",
+  ).payload as SpotlightEntryCreatedPayload;
+  assert.deepEqual(battleKoSpotlightPayload.entry, {
     kind: "combat",
-    id: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
-    key: `spotlight:combat:${String(damageDealt.id)}:damageDealt`,
+    id: `spotlight:combat:${String(cardKOd.id)}:battleKOd`,
+    key: `spotlight:combat:${String(cardKOd.id)}:battleKOd`,
     semanticKey: [
       "combat",
-      "damageDealt",
+      "battleKOd",
       String(attacker.controller),
       String(attacker.instanceId),
       String(target.controller),
@@ -269,7 +269,7 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
     mode: "resolved",
     status: "resolved",
     combat: {
-      eventKind: "damageDealt",
+      eventKind: "battleKOd",
       attacker: {
         instanceId: attacker.instanceId,
         cardId: attacker.cardId,
@@ -284,9 +284,8 @@ test("equal-or-greater power K.O.s rested character and returns attached DON!! r
       },
       attackerPower: 7000,
       defenderPower: 3000,
-      amount: 1,
     },
-    resolvedEventId: damageDealt.id,
+    resolvedEventId: cardKOd.id,
   });
 });
 
@@ -343,7 +342,7 @@ test("battle K.O. still removes a Character protected from opponent effect remov
         ["damageDealt", "cardKOd", "cardMoved"].includes(event.type),
       )
       .map((event) => event.type),
-    ["damageDealt", "cardKOd", "cardMoved"],
+    ["cardKOd", "cardMoved"],
   );
 });
 
@@ -443,7 +442,20 @@ test("battle K.O. pauses for opponent field-removal life replacement", () => {
         ),
       )
       .map((event) => event.type),
-    ["damageDealt", "decisionCreated"],
+    ["decisionCreated"],
+  );
+  assert.equal(
+    result.events.some((event) => {
+      if (event.type !== "spotlightEntryCreated") {
+        return false;
+      }
+      const payload = event.payload as SpotlightEntryCreatedPayload;
+      return (
+        payload.entry.kind === "combat" &&
+        payload.entry.combat.eventKind === "battleKOd"
+      );
+    }),
+    false,
   );
 
   const accepted = applyAction(result.state, {

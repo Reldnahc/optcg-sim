@@ -144,12 +144,11 @@ describe("effect spotlight presentation", () => {
     const characterKoPresentation = buildEffectSpotlightPresentation({
       cardModel,
       entry: combatEntry({
-        eventKind: "damageDealt",
+        eventKind: "battleKOd",
         attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
         defender: fieldRef("defender-1", "OP00-020", "p2", "character"),
         attackerPower: 7000,
         defenderPower: 5000,
-        amount: 1,
       }),
     });
 
@@ -160,6 +159,24 @@ describe("effect spotlight presentation", () => {
     expect(characterKoPresentation.relationLabel).toBe("K.O.s");
     expect(characterKoPresentation.sourcePower).toBe(7000);
     expect(characterKoPresentation.relatedPowers).toEqual([5000]);
+
+    const legacyCharacterDamagePresentation = buildEffectSpotlightPresentation({
+      cardModel,
+      entry: combatEntry({
+        eventKind: "damageDealt",
+        attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
+        defender: fieldRef("defender-1", "OP00-020", "p2", "character"),
+        attackerPower: 7000,
+        defenderPower: 5000,
+        amount: 1,
+      }),
+    });
+
+    expect(legacyCharacterDamagePresentation?.kind).toBe("cardLink");
+    if (legacyCharacterDamagePresentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(legacyCharacterDamagePresentation.relationLabel).toBe("K.O.s");
 
     const leaderDamagePresentation = buildEffectSpotlightPresentation({
       cardModel,

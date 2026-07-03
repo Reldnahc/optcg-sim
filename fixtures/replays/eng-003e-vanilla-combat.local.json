@@ -656,11 +656,11 @@
             "stateSeq": 5,
             "actionSeq": 4,
             "turnNumber": 3,
-            "fullStateHash": "f01edba35f7c3872bc7e62bb548577d36ad700bd8addec4decb4d06ca0cbadd5",
+            "fullStateHash": "7cfc1bd14c1d3a4669898e923a24e25fff404733923c2445347ba95e834b79b7",
             "snapshotRef": "character-ko:action-2"
           }
         ],
-        "finalStateHash": "f01edba35f7c3872bc7e62bb548577d36ad700bd8addec4decb4d06ca0cbadd5",
+        "finalStateHash": "7cfc1bd14c1d3a4669898e923a24e25fff404733923c2445347ba95e834b79b7",
         "finalStatus": { "type": "active" }
       }
     },

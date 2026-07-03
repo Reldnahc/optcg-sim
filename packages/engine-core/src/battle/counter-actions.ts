@@ -28,9 +28,7 @@ import {
   hasPotentialCharacterCounterActions,
   hasUnsupportedCounterWindow,
 } from "./counter-window-support.js";
-import {
-  getLegalCharacterCounterActions,
-} from "./counter-card-use.js";
+import { getLegalCharacterCounterActions } from "./counter-card-use.js";
 import { prependEventsToEngineResult } from "../engine-result-events.js";
 
 export { applyUseCounter } from "./counter-card-use.js";

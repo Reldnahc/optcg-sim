@@ -472,7 +472,6 @@ test("battle K.O. remains allowed and resolves supported On K.O. draw one", () =
   const result = resolveSupportedVanillaBattle(state);
   const replay = resolveSupportedVanillaBattle(structuredClone(state));
   const nextP2 = must(result.state.players[p2], "result p2");
-  const damageDealtIndex = eventIndex(result.events, "damageDealt");
   const cardKOdIndex = eventIndex(result.events, "cardKOd");
   const cardMovedIndex = eventIndex(result.events, "cardMoved");
   const effectQueuedIndex = eventIndex(result.events, "effectQueued");
@@ -485,7 +484,6 @@ test("battle K.O. remains allowed and resolves supported On K.O. draw one", () =
   );
 
   assert.equal(result.errors, undefined);
-  assert.ok(damageDealtIndex < cardKOdIndex);
   assert.ok(cardKOdIndex < cardMovedIndex);
   assert.ok(cardMovedIndex < effectQueuedIndex);
   assert.ok(effectQueuedIndex < cardDrawnIndex);

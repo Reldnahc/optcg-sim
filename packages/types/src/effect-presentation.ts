@@ -86,7 +86,8 @@ export type CombatSpotlightEventKind =
   | "attackDeclared"
   | "blockerActivated"
   | "counterUsed"
-  | "damageDealt";
+  | "damageDealt"
+  | "battleKOd";
 
 interface BattleStepCombatSpotlightPresentation {
   readonly eventKind: "attackDeclared" | "blockerActivated";
@@ -105,6 +106,14 @@ interface DamageDealtCombatSpotlightPresentation {
   readonly amount: number;
 }
 
+interface BattleKOCombatSpotlightPresentation {
+  readonly eventKind: "battleKOd";
+  readonly attacker: CardRef;
+  readonly defender: CardRef;
+  readonly attackerPower: number;
+  readonly defenderPower: number;
+}
+
 interface CounterCombatSpotlightPresentation {
   readonly eventKind: "counterUsed";
   readonly source: CardRef;
@@ -116,6 +125,7 @@ interface CounterCombatSpotlightPresentation {
 export type CombatSpotlightPresentation =
   | BattleStepCombatSpotlightPresentation
   | DamageDealtCombatSpotlightPresentation
+  | BattleKOCombatSpotlightPresentation
   | CounterCombatSpotlightPresentation;
 
 export interface CombatSpotlightHistoryEntry extends EffectSpotlightHistoryEntryBase {

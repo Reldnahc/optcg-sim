@@ -18,7 +18,6 @@ type EngineInternalGameState = GameState & {
   battle?: EngineInternalBattleState;
 };
 import {
-  appendCombatSpotlightEntryCreatedEvent,
   appendEvent,
   createEvent,
   type EngineResultOptions,
@@ -74,52 +73,16 @@ import {
   findLifeRuleAddToHandReplacement,
 } from "../life-trigger/life-rule-replacement.js";
 import { applyRuleProcessingCheckpoint } from "../rules/rule-processing.js";
+import {
+  appendBattleKoSpotlightEntry,
+  appendDamageSpotlightEntry,
+  cardRefForCombat,
+} from "./combat-spotlight.js";
 
 const unsupportedBattleResolution = (
   state: GameState,
   reason: string,
 ): EngineResult => illegalAction(state, reason);
-
-const cardRefForCombat = (card: CardInstance, playerId: PlayerId): CardRef => ({
-  instanceId: card.instanceId,
-  cardId: card.cardId,
-  playerId,
-  zone: card.zone,
-});
-
-const appendDamageSpotlightEntry = ({
-  attacker,
-  attackerPower,
-  defender,
-  defenderPower,
-  events,
-  state,
-}: {
-  readonly state: GameState;
-  readonly events: EngineEvent[];
-  readonly attacker: CardRef;
-  readonly defender: CardRef;
-  readonly attackerPower: number;
-  readonly defenderPower: number;
-}): void => {
-  const damageDealt = events.at(-1);
-  if (damageDealt === undefined || damageDealt.type !== "damageDealt") {
-    return;
-  }
-  appendCombatSpotlightEntryCreatedEvent({
-    state,
-    events,
-    anchorEvent: damageDealt,
-    combat: {
-      eventKind: "damageDealt",
-      attacker,
-      defender,
-      attackerPower,
-      defenderPower,
-      amount: 1,
-    },
-  });
-};
 
 const hasOnKODefinitionMetadata = (
   state: GameState,
@@ -341,19 +304,6 @@ export const resolveSupportedVanillaBattle = (
       if (koCard === undefined) {
         return illegalAction(state, "K.O. target not found.");
       }
-      appendEvent(state, events, "damageDealt", {
-        attacker: attacker.card.instanceId,
-        target: target.card.instanceId,
-        amount: 1,
-      });
-      appendDamageSpotlightEntry({
-        state,
-        events,
-        attacker: cardRefForCombat(attacker.card, attacker.playerId),
-        defender: cardRefForCombat(target.card, target.playerId),
-        attackerPower: attackerView.currentPower,
-        defenderPower: targetView.currentPower,
-      });
       const battleKoProcessSource: CardRef = {
         instanceId: attacker.card.instanceId,
         cardId: attacker.card.cardId,
@@ -415,6 +365,14 @@ export const resolveSupportedVanillaBattle = (
       appendEvent(state, events, "cardKOd", {
         playerId: target.playerId,
         instanceId: target.card.instanceId,
+      });
+      appendBattleKoSpotlightEntry({
+        state,
+        events,
+        attacker: cardRefForCombat(attacker.card, attacker.playerId),
+        defender: cardRefForCombat(target.card, target.playerId),
+        attackerPower: attackerView.currentPower,
+        defenderPower: targetView.currentPower,
       });
       shouldDetectBattleKOTriggers = hasOnKODefinitionMetadata(
         state,

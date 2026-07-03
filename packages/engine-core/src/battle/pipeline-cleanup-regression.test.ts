@@ -219,7 +219,7 @@ const runEng021cBlockerCleanupScript = () => {
     blocked.state,
     passed,
     "ENG-021C blocker K.O. cleanup",
-    ["damageDealt", "cardKOd", "cardMoved"],
+    ["cardKOd", "cardMoved"],
   );
   assert.equal(
     must(passed.state.players[p2], "ENG-021C blocked p2").characters.some(
@@ -445,7 +445,7 @@ const runEng021dCharacterKoCleanupScript = () => {
     opened.state,
     knockedOut,
     "ENG-021D Character K.O. cleanup",
-    ["damageDealt", "cardKOd", "cardMoved"],
+    ["cardKOd", "cardMoved"],
   );
   assert.equal(
     must(knockedOut.state.players[p2], "ENG-021D K.O. p2").characters.some(
@@ -539,12 +539,12 @@ const runEng021dBlockerRedirectCleanupScript = () => {
     blocked.state,
     passed,
     "ENG-021D blocker redirection cleanup",
-    ["damageDealt", "cardKOd", "cardMoved"],
+    ["cardKOd", "cardMoved"],
   );
   assertJournalEventOrder(
     passed.state,
     "blockerActivated",
-    "damageDealt",
+    "cardKOd",
     "ENG-021D blocker redirection cleanup",
   );
   const blockerEvent = must(

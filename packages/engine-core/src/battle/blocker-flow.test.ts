@@ -515,15 +515,16 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
   );
   const events = [...blocked.events, ...result.events];
   const blockerActivated = must(blocked.events[1], "blockerActivated event");
-  const eventsWithoutDamageSpotlight = events.filter(
+  const eventsWithoutCombatResolutionSpotlight = events.filter(
     (event, index) =>
       !(
         event.type === "spotlightEntryCreated" &&
-        events[index - 1]?.type === "damageDealt"
+        (events[index - 1]?.type === "damageDealt" ||
+          events[index - 1]?.type === "cardKOd")
       ),
   );
   assert.deepEqual(
-    eventsWithoutDamageSpotlight.map((event) => ({
+    eventsWithoutCombatResolutionSpotlight.map((event) => ({
       type: event.type,
       payload: event.payload,
       visibility: event.visibility,
@@ -621,15 +622,6 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
         visibility: { type: "public" },
       },
       {
-        type: "damageDealt",
-        payload: {
-          attacker: opened.state.battle?.attacker.instanceId,
-          target: blocker.instanceId,
-          amount: 1,
-        },
-        visibility: { type: "public" },
-      },
-      {
         type: "cardKOd",
         payload: { playerId: p2, instanceId: blocker.instanceId },
         visibility: { type: "public" },
@@ -676,12 +668,10 @@ test("blocker selection response K.O.s blocker, clears battle, and preserves ori
       },
     ],
   );
-  const damageDealtIndex = events.findIndex(
-    (event) => event.type === "damageDealt",
-  );
+  const cardKOdIndex = events.findIndex((event) => event.type === "cardKOd");
   assert.equal(
-    damageDealtIndex >= 0 &&
-      events[damageDealtIndex + 1]?.type === "spotlightEntryCreated",
+    cardKOdIndex >= 0 &&
+      events[cardKOdIndex + 1]?.type === "spotlightEntryCreated",
     true,
   );
 });
@@ -890,9 +880,8 @@ test("supported blocked-battle resolution is deterministic", () => {
       "cardRested",
       "decisionCreated",
       "decisionResolved",
-      "damageDealt",
-      "spotlightEntryCreated",
       "cardKOd",
+      "spotlightEntryCreated",
       "cardMoved",
       "battleEnded",
       "effectResolved",
@@ -902,7 +891,6 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(
     events.map((event) => event.visibility),
     [
-      { type: "public" },
       { type: "public" },
       { type: "public" },
       { type: "public" },
@@ -956,7 +944,7 @@ test("supported blocked-battle resolution is deterministic", () => {
   assert.deepEqual(result.state.eventJournal.slice(-events.length), events);
   assert.equal(
     result.stateHash,
-    "441999bd669853a137351cff1b16d89dd0c0f53f165cdaa075fe582e18c4965c",
+    "7131b1f638678abe44f4a47076bc4c35c80f1b4413303dd7f606572360eb0781",
   );
   assert.equal(result.stateHash, replay.stateHash);
   assert.deepEqual(events, replayEvents);

@@ -242,16 +242,11 @@ const runEng027dSupportedOnKOBattleScript = () => {
     state,
     result,
     "ENG-027D supported On K.O. trigger cleanup",
-    ["damageDealt", "cardKOd", "cardMoved", "effectQueued", "cardDrawn"],
+    ["cardKOd", "cardMoved", "effectQueued", "cardDrawn"],
   );
   assertNoEng027dRuntimeResidue(result.state, "ENG-027D supported On K.O.");
   assert.equal(result.stateHash, hashCanonicalStateValue(result.state));
 
-  const damageDealtIndex = lastEventIndex(
-    result.events,
-    "damageDealt",
-    "ENG-027D supported On K.O.",
-  );
   const cardKOdIndex = lastEventIndex(
     result.events,
     "cardKOd",
@@ -290,7 +285,6 @@ const runEng027dSupportedOnKOBattleScript = () => {
     "ENG-027D supported On K.O.",
   );
 
-  assert.ok(damageDealtIndex < cardKOdIndex);
   assert.ok(cardKOdIndex < battleCardMovedIndex);
   assert.ok(battleCardMovedIndex < effectQueuedIndex);
   assert.ok(effectQueuedIndex < effectResolvedIndex);
