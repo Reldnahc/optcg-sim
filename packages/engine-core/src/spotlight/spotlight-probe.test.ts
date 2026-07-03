@@ -500,6 +500,27 @@ test("spotlight probe covers authored game spotlight families through player vie
   const authoredSpotlightPayloads = events
     .filter((event) => event.type === "spotlightEntryCreated")
     .map((event) => event.payload as SpotlightEntryCreatedPayload);
+  assert.deepEqual(
+    authoredSpotlightPayloads.map((payload) => {
+      if (payload.entry.kind === "combat") {
+        return `combat:${payload.entry.combat.eventKind}`;
+      }
+      if (payload.entry.kind === "playedCard") {
+        return "playedCard";
+      }
+      return `effectText:${payload.entry.mode}:${payload.entry.status}`;
+    }),
+    [
+      "effectText:resolved:resolved",
+      "effectText:live:pending",
+      "effectText:resolved:resolved",
+      "combat:attackDeclared",
+      "combat:counterUsed",
+      "combat:damageDealt",
+      "combat:battleKOd",
+      "playedCard",
+    ],
+  );
   assert.equal(authoredSpotlightPayloads.length, entries.length);
   assert.equal(
     authoredSpotlightPayloads.every(

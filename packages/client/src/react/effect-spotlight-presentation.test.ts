@@ -99,6 +99,100 @@ const playedCardEntry = (): PlayedCardSpotlightActiveSourceInput => ({
 });
 
 describe("effect spotlight presentation", () => {
+  it("covers representative authored spotlight families for client presentation", () => {
+    const cases = [
+      {
+        name: "effect text",
+        entry: effectEntry(),
+        expectedKind: "effectText",
+        expectedRelation: undefined,
+      },
+      {
+        name: "effect target link",
+        entry: effectEntry({
+          active: {
+            source: ref("source-1", "OP00-001"),
+            activeSpanIds: ["span:body:ko"],
+            targetLinks: [
+              {
+                spanId: "span:body:ko",
+                relation: "selectedTarget",
+                cards: [ref("target-1", "OP00-002", "p2")],
+              },
+            ],
+          },
+        }),
+        expectedKind: "cardLink",
+        expectedRelation: "targets",
+      },
+      {
+        name: "attack",
+        entry: combatEntry(),
+        expectedKind: "cardLink",
+        expectedRelation: "attacks",
+      },
+      {
+        name: "counter",
+        entry: combatEntry({
+          eventKind: "counterUsed",
+          source: ref("counter-1", "OP00-040", "p2"),
+          target: ref("target-1", "OP00-041", "p2"),
+          counterPower: 1000,
+        }),
+        expectedKind: "cardLink",
+        expectedRelation: "counters",
+      },
+      {
+        name: "life damage",
+        entry: combatEntry({
+          eventKind: "damageDealt",
+          attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
+          defender: fieldRef("leader-1", "OP00-001", "p2", "leader"),
+          attackerPower: 7000,
+          defenderPower: 5000,
+          amount: 1,
+        }),
+        expectedKind: "cardLink",
+        expectedRelation: "damages",
+      },
+      {
+        name: "battle ko",
+        entry: combatEntry({
+          eventKind: "battleKOd",
+          attacker: fieldRef("attacker-1", "OP00-010", "p1", "character"),
+          defender: fieldRef("defender-1", "OP00-020", "p2", "character"),
+          attackerPower: 7000,
+          defenderPower: 5000,
+        }),
+        expectedKind: "cardLink",
+        expectedRelation: "K.O.s",
+      },
+      {
+        name: "played card",
+        entry: playedCardEntry(),
+        expectedKind: "cardLink",
+        expectedRelation: "played",
+      },
+    ] as const;
+
+    for (const item of cases) {
+      const presentation = buildEffectSpotlightPresentation({
+        cardModel,
+        entry: item.entry,
+      });
+
+      expect(presentation?.kind, item.name).toBe(item.expectedKind);
+      if (item.expectedRelation !== undefined) {
+        expect(
+          presentation?.kind === "cardLink"
+            ? presentation.relationLabel
+            : undefined,
+          item.name,
+        ).toBe(item.expectedRelation);
+      }
+    }
+  });
+
   it("normalizes combat and targeting spotlights into linked card presentations", () => {
     const combatPresentation = buildEffectSpotlightPresentation({
       cardModel,

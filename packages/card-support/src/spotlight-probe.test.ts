@@ -79,6 +79,16 @@ interface RepresentativeSpotlightCase {
 
 const representativeSpotlightCases = [
   {
+    cardId: "P-159" as CardId,
+    cardType: "Event",
+    effect:
+      "[Main] Your Leader gains +3000 power during this turn and give up to 1 of your opponent's Characters -8000 power until the end of your opponent's next End Phase. Then, you may trash 2 cards from your hand. If you do, K.O. up to 1 of your opponent's Characters with 0 power or less.",
+    bodyFragments: [
+      "give up to 1 of your opponent's Characters -8000 power",
+      "K.O. up to 1 of your opponent's Characters with 0 power or less",
+    ],
+  },
+  {
     cardId: "OP99-101" as CardId,
     cardType: "Event",
     effect:
@@ -468,11 +478,19 @@ describe("spotlight probe report", () => {
     });
 
     assert.equal(report.exitCode, 1);
-    assert.deepEqual(report.lines.slice(-2), [
+    assert.deepEqual(report.lines.slice(-8), [
       "Failures: 1 effect block",
+      "Failure primitive families:",
+      "- composition:optionalCostedEffect: 1",
+      "- composition:selectThenApply: 1",
+      "- cost:trashFromHand: 1",
+      "- instruction:ko: 1",
+      "- instruction:modifyPower: 1",
       `- ${cardId} ${String(block.id)} missing-executable-body-span [${missingSpanIds
         .map(String)
-        .join(", ")}]`,
+        .join(
+          ", ",
+        )}] missing text: "give up to 1 of your opponent's Characters -8000 power until the end of your opponent's next End Phase." | "you may trash 2 cards from your hand. If you do, K.O. up to 1 of your opponent's Characters with 0 power or less."`,
     ]);
   });
 

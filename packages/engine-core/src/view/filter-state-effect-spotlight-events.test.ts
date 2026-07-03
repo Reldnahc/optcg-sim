@@ -576,3 +576,113 @@ test("player view only projects private authored spotlight history for its recip
   assert.equal(ownerView.effectSpotlightHistory?.entries.length, 1);
   assert.equal(opponentView.effectSpotlightHistory, undefined);
 });
+
+test("player view redacts hidden target-link cards without dropping the public spotlight", () => {
+  const state = createActiveState();
+  const p1State = must(state.players[p1], "p1 state");
+  const sourceCard = must(p1State.hand.shift(), "source card");
+  sourceCard.instanceId = toInstanceId("target-link-source-instance");
+  sourceCard.zone = {
+    zone: "characterArea",
+    playerId: p1,
+    slot: "character",
+    index: 0,
+  };
+  p1State.characters.push(sourceCard);
+  const hiddenCard = must(p1State.hand[0], "hidden target card");
+  hiddenCard.instanceId = toInstanceId("hidden-target-link-instance");
+  const source: CardRef = {
+    instanceId: sourceCard.instanceId,
+    cardId: sourceCard.cardId,
+    playerId: p1,
+    zone: sourceCard.zone,
+  };
+  const hiddenTarget: CardRef = {
+    instanceId: hiddenCard.instanceId,
+    cardId: hiddenCard.cardId,
+    playerId: p1,
+    zone: hiddenCard.zone,
+  };
+  const resolvedEventId = toEngineEventId("event:hidden-link-anchor");
+  state.eventJournal.push({
+    id: resolvedEventId,
+    seq: 99,
+    type: "effectResolved",
+    source,
+    payload: {
+      status: "resolved",
+      presentation: {
+        source,
+        textKind: "effect",
+        activeSpanIds: ["span:body:trash"],
+      },
+    },
+    visibility: { type: "public" },
+    createdAtStateSeq: state.seq,
+  });
+  state.eventJournal.push({
+    id: toEngineEventId("event:hidden-link-spotlight"),
+    seq: 100,
+    type: "spotlightEntryCreated",
+    source,
+    payload: {
+      entry: {
+        id: "unsafe-hidden-link-id",
+        key: "unsafe-hidden-link-key",
+        semanticKey: "unsafe-hidden-link-semantic",
+        mode: "resolved",
+        status: "resolved",
+        active: {
+          source,
+          textKind: "effect",
+          activeSpanIds: ["span:body:trash"],
+          targetLinks: [
+            {
+              spanId: "span:body:trash",
+              relation: "affectedCard",
+              cards: [hiddenTarget],
+            },
+          ],
+        },
+        resolvedEventId,
+      },
+      disclosure: {
+        entryRefs: [
+          {
+            role: "effectSource",
+            cardInstanceId: source.instanceId,
+            visibility: { type: "public" },
+          },
+        ],
+        targetLinks: [
+          {
+            spanId: "span:body:trash",
+            relation: "affectedCard",
+            cardInstanceId: hiddenTarget.instanceId,
+            visibility: { type: "private", playerId: p1 },
+          },
+        ],
+      },
+    } satisfies SpotlightEntryCreatedPayload,
+    visibility: { type: "public" },
+    createdAtStateSeq: state.seq,
+  });
+
+  const ownerEntry = must(
+    filterStateForPlayer(state, p1).effectSpotlightHistory?.entries[0],
+    "owner spotlight history entry",
+  ) as EffectTextSpotlightHistoryEntry;
+  const opponentEntry = must(
+    filterStateForPlayer(state, p2).effectSpotlightHistory?.entries[0],
+    "opponent spotlight history entry",
+  ) as EffectTextSpotlightHistoryEntry;
+
+  assert.deepEqual(ownerEntry.active.targetLinks?.[0]?.cards, [
+    {
+      instanceId: hiddenTarget.instanceId,
+      cardId: hiddenTarget.cardId,
+      playerId: hiddenTarget.playerId,
+    },
+  ]);
+  assert.equal(opponentEntry.active.targetLinks, undefined);
+});

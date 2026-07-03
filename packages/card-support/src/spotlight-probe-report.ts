@@ -59,6 +59,8 @@ interface SpotlightProbeFailure {
     | "missing-executable-body-span"
     | "unspotlightable-spans";
   readonly spanIds: readonly EffectTextSpanId[];
+  readonly missingTexts?: readonly string[];
+  readonly primitiveFamilies?: readonly string[];
 }
 
 const defaultPoneglyphBaseUrl = "https://api.poneglyph.one";
@@ -239,6 +241,7 @@ export const createManifestSpotlightReport = ({
       : `Failures: ${String(failures.length)} effect block${
           failures.length === 1 ? "" : "s"
         }`,
+    ...formatPrimitiveFamilySummary(failures),
     ...failures.map(formatFailure),
   ];
 
@@ -348,11 +351,17 @@ const spotlightFailureForBlock = (
     presentation.spanIds,
   );
   if (missingExecutableBodySpanIds.length > 0) {
+    const diagnostics = spanDiagnostics(
+      sourceMap,
+      missingExecutableBodySpanIds,
+    );
     return {
       cardId,
       effectId: block.id,
       reason: "missing-executable-body-span",
       spanIds: missingExecutableBodySpanIds,
+      missingTexts: diagnostics.texts,
+      primitiveFamilies: diagnostics.primitiveFamilies,
     };
   }
   const split = splitEffectTextSpotlightPresentation({
@@ -462,6 +471,70 @@ const missingExecutableBodySpanIdsForBlock = (
     );
 };
 
+const spanDiagnostics = (
+  sourceMap: EffectTextSourceMap,
+  spanIds: readonly EffectTextSpanId[],
+): {
+  readonly texts: readonly string[];
+  readonly primitiveFamilies: readonly string[];
+} => {
+  const spansById = new Map(sourceMap.spans.map((span) => [span.id, span]));
+  const texts: string[] = [];
+  const primitiveFamilies = new Set<string>();
+  for (const spanId of spanIds) {
+    const span =
+      spansById.get(spanId) ?? spansById.get(fieldLocalSpanId(spanId));
+    if (span === undefined) {
+      continue;
+    }
+    const trimmedText = span.text.trim();
+    if (trimmedText.length > 0) {
+      texts.push(trimmedText);
+    }
+    for (const evidence of span.primitiveEvidence ?? []) {
+      const family = spotlightPrimitiveFamily(evidence);
+      if (family !== undefined) {
+        primitiveFamilies.add(family);
+      }
+    }
+  }
+  return {
+    texts,
+    primitiveFamilies: [...primitiveFamilies].sort(),
+  };
+};
+
+const spotlightPrimitiveFamily = (evidence: string): string | undefined => {
+  if (
+    evidence.startsWith("composition:") ||
+    evidence.startsWith("cost:") ||
+    evidence.startsWith("instruction:")
+  ) {
+    return evidence;
+  }
+  return undefined;
+};
+
+const formatPrimitiveFamilySummary = (
+  failures: readonly SpotlightProbeFailure[],
+): readonly string[] => {
+  const counts = new Map<string, number>();
+  for (const failure of failures) {
+    for (const family of failure.primitiveFamilies ?? []) {
+      counts.set(family, (counts.get(family) ?? 0) + 1);
+    }
+  }
+  if (counts.size === 0) {
+    return [];
+  }
+  return [
+    "Failure primitive families:",
+    ...[...counts.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([family, count]) => `- ${family}: ${String(count)}`),
+  ];
+};
+
 const formatFailure = (failure: SpotlightProbeFailure): string =>
   [
     `- ${String(failure.cardId)} ${String(failure.effectId)}`,
@@ -469,9 +542,18 @@ const formatFailure = (failure: SpotlightProbeFailure): string =>
     failure.spanIds.length === 0
       ? ""
       : `[${failure.spanIds.map(String).join(", ")}]`,
+    formatMissingTexts(failure.missingTexts),
   ]
     .filter((part) => part.length > 0)
     .join(" ");
+
+const formatMissingTexts = (texts: readonly string[] | undefined): string =>
+  texts === undefined || texts.length === 0
+    ? ""
+    : `missing text: ${texts.map(quoteReportText).join(" | ")}`;
+
+const quoteReportText = (text: string): string =>
+  `"${text.replace(/["\\]/gu, (match) => `\\${match}`)}"`;
 
 const probeSource: CardRef = {
   instanceId: "spotlight-probe:source" as CardRef["instanceId"],
