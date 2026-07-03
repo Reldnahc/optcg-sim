@@ -55,6 +55,7 @@ interface SpotlightProbeFailure {
     | "duplicate-source-span-id"
     | "presentation-span-missing-source"
     | "presentation-span-ambiguous-source"
+    | "missing-body-span"
     | "unspotlightable-spans";
   readonly spanIds: readonly EffectTextSpanId[];
 }
@@ -181,7 +182,7 @@ const uniqueCardIds = (cardIds: readonly CardId[]): readonly CardId[] => [
   ...new Set(cardIds),
 ];
 
-const createManifestSpotlightReport = ({
+export const createManifestSpotlightReport = ({
   cardIds,
   label,
   manifest,
@@ -315,7 +316,10 @@ const spotlightFailureForBlock = (
       spanIds: duplicateSourceSpanIds,
     };
   }
-  const sourceSpanIds = new Set(sourceMap.spans.map((span) => span.id));
+  const sourceSpansById = new Map(
+    sourceMap.spans.map((span) => [span.id, span]),
+  );
+  const sourceSpanIds = new Set(sourceSpansById.keys());
   const missingSpanIds = presentation.spanIds.filter(
     (spanId) => !hasSourceSpanId(sourceSpanIds, spanId),
   );
@@ -325,6 +329,17 @@ const spotlightFailureForBlock = (
       effectId: block.id,
       reason: "presentation-span-missing-source",
       spanIds: missingSpanIds,
+    };
+  }
+  const presentationSourceSpans = presentation.spanIds.map((spanId) =>
+    sourceSpanForPresentationSpanId(sourceSpansById, spanId),
+  );
+  if (!presentationSourceSpans.some((span) => span?.role === "body")) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "missing-body-span",
+      spanIds: presentation.spanIds,
     };
   }
   const split = splitEffectTextSpotlightPresentation({
@@ -389,6 +404,15 @@ const hasSourceSpanId = (
   }
   return sourceSpanIds.has(fieldLocalSpanId(spanId));
 };
+
+const sourceSpanForPresentationSpanId = (
+  sourceSpansById: ReadonlyMap<
+    EffectTextSpanId,
+    EffectTextSourceMap["spans"][number]
+  >,
+  spanId: EffectTextSpanId,
+): EffectTextSourceMap["spans"][number] | undefined =>
+  sourceSpansById.get(spanId) ?? sourceSpansById.get(fieldLocalSpanId(spanId));
 
 const formatFailure = (failure: SpotlightProbeFailure): string =>
   [

@@ -136,6 +136,23 @@ const damageCombatEntry = (id: string): Record<string, unknown> => ({
   resolvedEventId: `event:damage:${id}`,
 });
 
+const battleKoCombatEntry = (id: string): Record<string, unknown> => ({
+  kind: "combat",
+  id,
+  key: id,
+  semanticKey: `combat|${id}`,
+  mode: "resolved",
+  status: "resolved",
+  combat: {
+    eventKind: "battleKOd",
+    attacker,
+    defender,
+    attackerPower: 7000,
+    defenderPower: 5000,
+  },
+  resolvedEventId: `event:battle-ko:${id}`,
+});
+
 const playedCardEntry = (id: string): Record<string, unknown> => ({
   kind: "playedCard",
   id,
@@ -165,7 +182,7 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
     expect(history?.presentKey).toBe("spotlight:effect");
   });
 
-  it("projects authored counter and combat damage spotlight entries", () => {
+  it("projects authored counter, life damage, and battle K.O. spotlight entries", () => {
     const history = effectSpotlightHistoryFromPlayerViewState({
       events: [
         spotlightEvent(
@@ -176,6 +193,10 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
           damageCombatEntry("spotlight:damage"),
           "event:damage-spotlight",
         ),
+        spotlightEvent(
+          battleKoCombatEntry("spotlight:battle-ko"),
+          "event:battle-ko-spotlight",
+        ),
       ],
     });
 
@@ -183,8 +204,8 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
       history?.entries.map((entry) =>
         entry.kind === "combat" ? entry.combat.eventKind : entry.kind,
       ),
-    ).toEqual(["counterUsed", "damageDealt"]);
-    expect(history?.presentKey).toBe("spotlight:damage");
+    ).toEqual(["counterUsed", "damageDealt", "battleKOd"]);
+    expect(history?.presentKey).toBe("spotlight:battle-ko");
   });
 
   it("does not reconstruct spotlights from raw gameplay events", () => {
@@ -350,6 +371,24 @@ describe("effectSpotlightHistoryFromPlayerViewState", () => {
             resolvedEventId: "event:unsafe-damage",
           },
           "event:unsafe-damage-spotlight",
+        ),
+        spotlightEvent(
+          {
+            kind: "combat",
+            id: "spotlight:battle-ko",
+            key: "spotlight:battle-ko",
+            semanticKey: "combat",
+            mode: "resolved",
+            status: "resolved",
+            combat: {
+              eventKind: "battleKOd",
+              attacker,
+              defender,
+              attackerPower: 7000,
+            },
+            resolvedEventId: "event:unsafe-battle-ko",
+          },
+          "event:unsafe-battle-ko-spotlight",
         ),
         spotlightEvent(
           {

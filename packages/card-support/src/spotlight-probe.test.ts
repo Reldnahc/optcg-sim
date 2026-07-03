@@ -8,7 +8,10 @@ import type {
 } from "@optcg/types";
 import { evaluateEffectBlockRuntimeSupport } from "@optcg/engine-core";
 
-import { createSpotlightProbeReport } from "./spotlight-probe-report.js";
+import {
+  createManifestSpotlightReport,
+  createSpotlightProbeReport,
+} from "./spotlight-probe-report.js";
 import { buildDevMatchCardManifestFromPoneglyphIds } from "./runtime-supported-cards.js";
 
 const baseCard = (
@@ -330,6 +333,70 @@ describe("spotlight probe report", () => {
       "Runtime-supported effect blocks: 2",
       "Spotlight-ready effect blocks: 2",
       "Failures: none",
+    ]);
+  });
+
+  test("fails runtime-supported blocks whose presentation has no body source span", async () => {
+    const cardId = "OP99-120" as CardId;
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: (url, init) => {
+        assert.equal(url.endsWith("/v1/cards/batch"), true);
+        assert.equal(init?.method, "POST");
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                [cardId]: baseCard(cardId, "[On Play] Draw 1 card."),
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+    const definition = required(
+      Object.values(manifest.effectDefinitions ?? {}).find(
+        (candidate) => candidate.cardId === cardId,
+      ),
+      "draw definition",
+    );
+    const block = required(definition.effects[0], "draw block");
+    const presentation = required(block.presentation, "draw presentation");
+    const card = required(manifest.cards[cardId], "draw card");
+    const sourceMap = required(card.effectTextSourceMap, "draw source map");
+    const presentationSpanIds = new Set(presentation.spanIds);
+    const malformedManifest = {
+      ...manifest,
+      cards: {
+        ...manifest.cards,
+        [cardId]: {
+          ...card,
+          effectTextSourceMap: {
+            ...sourceMap,
+            spans: sourceMap.spans.map((span) =>
+              presentationSpanIds.has(span.id)
+                ? { ...span, role: "marker" as const }
+                : span,
+            ),
+          },
+        },
+      },
+    };
+
+    const report = createManifestSpotlightReport({
+      label: "Card: OP99-120",
+      cardIds: [cardId],
+      manifest: malformedManifest,
+    });
+
+    assert.equal(report.exitCode, 1);
+    assert.deepEqual(report.lines.slice(-2), [
+      "Failures: 1 effect block",
+      `- ${cardId} ${String(block.id)} missing-body-span [${presentation.spanIds
+        .map(String)
+        .join(", ")}]`,
     ]);
   });
 
