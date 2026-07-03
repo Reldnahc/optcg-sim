@@ -297,7 +297,7 @@ test("Counter Event activation queues only the selected real effect block", () =
   );
 });
 
-test("supported non-power Counter Event grants battle K.O. replacement after printed cost", () => {
+test("supported non-power Counter Event grants battle K.O. replacement after autopaying printed cost", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
@@ -388,7 +388,7 @@ test("supported non-power Counter Event grants battle K.O. replacement after pri
   );
 });
 
-test("supported Counter Event sequence resolves after printed cost", () => {
+test("supported Counter Event sequence resolves after autopaying printed cost", () => {
   const state = setupAttackState();
   const p1State = must(state.players[p1], "p1");
   const p2State = must(state.players[p2], "p2");
