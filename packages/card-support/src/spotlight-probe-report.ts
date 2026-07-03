@@ -56,6 +56,7 @@ interface SpotlightProbeFailure {
     | "presentation-span-missing-source"
     | "presentation-span-ambiguous-source"
     | "missing-body-span"
+    | "missing-executable-body-span"
     | "unspotlightable-spans";
   readonly spanIds: readonly EffectTextSpanId[];
 }
@@ -342,6 +343,18 @@ const spotlightFailureForBlock = (
       spanIds: presentation.spanIds,
     };
   }
+  const missingExecutableBodySpanIds = missingExecutableBodySpanIdsForBlock(
+    sourceMap,
+    presentation.spanIds,
+  );
+  if (missingExecutableBodySpanIds.length > 0) {
+    return {
+      cardId,
+      effectId: block.id,
+      reason: "missing-executable-body-span",
+      spanIds: missingExecutableBodySpanIds,
+    };
+  }
   const split = splitEffectTextSpotlightPresentation({
     source: probeSource,
     textKind: presentation.textKind,
@@ -413,6 +426,41 @@ const sourceSpanForPresentationSpanId = (
   spanId: EffectTextSpanId,
 ): EffectTextSourceMap["spans"][number] | undefined =>
   sourceSpansById.get(spanId) ?? sourceSpansById.get(fieldLocalSpanId(spanId));
+
+const lineScopedSpanSuffix = (spanId: EffectTextSpanId): string | undefined => {
+  const match = /(:line:\d+(?::block:\d+)?)$/u.exec(spanId);
+  return match?.[1];
+};
+
+const missingExecutableBodySpanIdsForBlock = (
+  sourceMap: EffectTextSourceMap,
+  presentationSpanIds: readonly EffectTextSpanId[],
+): readonly EffectTextSpanId[] => {
+  const presentationSpanIdSet = new Set(presentationSpanIds);
+  const presentationScopes = new Set(
+    presentationSpanIds.flatMap((spanId) => {
+      const scope = lineScopedSpanSuffix(spanId);
+      return scope === undefined ? [] : [scope];
+    }),
+  );
+  return sourceMap.spans
+    .filter((span) => {
+      if (span.role !== "body" || (span.primitiveEvidence?.length ?? 0) === 0) {
+        return false;
+      }
+      if (presentationScopes.size === 0) {
+        return true;
+      }
+      const scope = lineScopedSpanSuffix(span.id);
+      return scope !== undefined && presentationScopes.has(scope);
+    })
+    .map((span) => span.id)
+    .filter(
+      (spanId) =>
+        !presentationSpanIdSet.has(spanId) &&
+        !presentationSpanIdSet.has(fieldLocalSpanId(spanId)),
+    );
+};
 
 const formatFailure = (failure: SpotlightProbeFailure): string =>
   [

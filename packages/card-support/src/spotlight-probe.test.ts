@@ -400,6 +400,82 @@ describe("spotlight probe report", () => {
     ]);
   });
 
+  test("fails runtime-supported blocks whose presentation omits executable body spans", async () => {
+    const cardId = "OP99-121" as CardId;
+    const manifest = await buildDevMatchCardManifestFromPoneglyphIds({
+      cardIds: [cardId],
+      fetchCard: (url, init) => {
+        assert.equal(url.endsWith("/v1/cards/batch"), true);
+        assert.equal(init?.method, "POST");
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              data: {
+                [cardId]: baseCard(
+                  cardId,
+                  "[Main] Your Leader gains +3000 power during this turn and give up to 1 of your opponent's Characters -8000 power until the end of your opponent's next End Phase. Then, you may trash 2 cards from your hand. If you do, K.O. up to 1 of your opponent's Characters with 0 power or less.",
+                  "Event",
+                ),
+              },
+              missing: [],
+            }),
+        });
+      },
+    });
+    const definition = required(
+      Object.values(manifest.effectDefinitions ?? {}).find(
+        (candidate) => candidate.cardId === cardId,
+      ),
+      "multi-step definition",
+    );
+    const block = required(definition.effects[0], "multi-step block");
+    const presentation = required(
+      block.presentation,
+      "multi-step presentation",
+    );
+    assert.equal(
+      presentation.spanIds.length >= 3,
+      true,
+      "expected multi-step presentation spans",
+    );
+    const keptSpanId = required(presentation.spanIds[0], "kept span id");
+    const missingSpanIds = presentation.spanIds.slice(1);
+    const malformedManifest = {
+      ...manifest,
+      effectDefinitions: {
+        ...manifest.effectDefinitions,
+        [`${cardId}.generated-dev-support`]: {
+          ...definition,
+          effects: [
+            {
+              ...block,
+              presentation: {
+                ...presentation,
+                spanIds: [keptSpanId],
+              },
+            },
+          ],
+        },
+      },
+    };
+
+    const report = createManifestSpotlightReport({
+      label: "Card: OP99-121",
+      cardIds: [cardId],
+      manifest: malformedManifest,
+    });
+
+    assert.equal(report.exitCode, 1);
+    assert.deepEqual(report.lines.slice(-2), [
+      "Failures: 1 effect block",
+      `- ${cardId} ${String(block.id)} missing-executable-body-span [${missingSpanIds
+        .map(String)
+        .join(", ")}]`,
+    ]);
+  });
+
   test("accepts nested supported sequence spotlight spans", async () => {
     const report = await createSpotlightProbeReport({
       cardId: "OP99-201",
