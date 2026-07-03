@@ -58,6 +58,7 @@ test("Character Counter authors a counter spotlight anchored to counterUsed", ()
       source: cardRef(counterCard, p2),
       target,
       counterPower: 1000,
+      targetPower: 6000,
     },
     resolvedEventId: counterUsed.id,
   });

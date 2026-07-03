@@ -390,6 +390,7 @@ export const resolveCounterEventActivation = (params: {
         },
         target: battle.currentTarget,
         counterPower: 0,
+        ...(targetPower === undefined ? {} : { targetPower }),
       },
     });
   }
@@ -500,6 +501,8 @@ export const resolveCounterCardUse = (params: {
   }
   const targetPower = getSupportedBattleCombatViewOrNull(state, battle)
     ?.targetView.currentPower;
+  const spotlightTargetPower =
+    targetPower === undefined ? undefined : targetPower + counterValue;
   appendEvent(state, events, "counterUsed", {
     playerId: decisionPlayerId,
     instanceId: handCard.instanceId,
@@ -524,6 +527,9 @@ export const resolveCounterCardUse = (params: {
         },
         target: battle.currentTarget,
         counterPower: counterValue,
+        ...(spotlightTargetPower === undefined
+          ? {}
+          : { targetPower: spotlightTargetPower }),
       },
     });
   }
