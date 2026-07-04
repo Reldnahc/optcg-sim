@@ -29,7 +29,7 @@ import type {
   ParseInput,
   PrimitiveEvidence,
 } from "../types.js";
-import { sourceSpan } from "../source-slices.js";
+import { sourceSpan, trimSource, type SourceSlice } from "../source-slices.js";
 import {
   parseConditionExpression,
   parseLeadingConditionalExpression,
@@ -808,8 +808,17 @@ export function conditionalSelectedPowerContinuationExpressionParser(options: {
     if (parsed === undefined) {
       return undefined;
     }
+    const sourceParts = splitLeadingConditionSource(
+      input.source,
+      input.text,
+      parsed.conditionText,
+      parsed.thenText,
+    );
     const then = selectedPowerContinuationExpressionParser({
       text: parsed.thenText,
+      ...(sourceParts?.thenSource === undefined
+        ? {}
+        : { source: sourceParts.thenSource }),
     });
     if (then === undefined || then.rest.length > 0) {
       return undefined;
@@ -825,8 +834,56 @@ export function conditionalSelectedPowerContinuationExpressionParser(options: {
         ...parsed.condition.evidence,
         ...then.evidence,
       ],
+      presentationSpans: [
+        ...(sourceParts?.conditionSource === undefined
+          ? []
+          : [
+              sourceSpan(
+                "span:condition:resolution",
+                "condition",
+                sourceParts.conditionSource,
+                parsed.condition.evidence,
+              ),
+            ]),
+        ...(then.presentationSpans ?? []),
+      ],
       rest: "",
     };
+  };
+}
+
+function splitLeadingConditionSource(
+  source: SourceSlice | undefined,
+  text: string,
+  conditionText: string,
+  thenText: string,
+):
+  | {
+      readonly conditionSource: SourceSlice;
+      readonly thenSource: SourceSlice;
+    }
+  | undefined {
+  if (source === undefined) {
+    return undefined;
+  }
+  const conditionStart = text.indexOf(conditionText);
+  const thenStart = text.indexOf(thenText, Math.max(0, conditionStart));
+  if (conditionStart < 0 || thenStart < 0) {
+    return undefined;
+  }
+  return {
+    conditionSource: trimSource({
+      text: conditionText,
+      rawText: conditionText,
+      start: source.start + conditionStart,
+      end: source.start + conditionStart + conditionText.length,
+    }),
+    thenSource: trimSource({
+      text: thenText,
+      rawText: thenText,
+      start: source.start + thenStart,
+      end: source.start + thenStart + thenText.length,
+    }),
   };
 }
 

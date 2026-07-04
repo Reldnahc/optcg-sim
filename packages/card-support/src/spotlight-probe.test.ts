@@ -79,6 +79,26 @@ interface RepresentativeSpotlightCase {
 
 const representativeSpotlightCases = [
   {
+    cardId: "OP02-118" as CardId,
+    cardType: "Event",
+    effect:
+      "[Counter] You may trash 1 card from your hand: Select up to 1 of your Characters. The selected Character cannot be K.O.'d during this battle.",
+    bodyFragments: [
+      "Select up to 1 of your Characters",
+      "The selected Character cannot be K.O.'d during this battle",
+    ],
+  },
+  {
+    cardId: "OP14-078" as CardId,
+    cardType: "Event",
+    effect:
+      "[Counter] DON!! -1: If your Leader has the {Donquixote Pirates} type, up to 1 of your Leader or Character cards gains +2000 power during this battle. Then, that card gains an additional +2000 power during this turn.",
+    bodyFragments: [
+      "up to 1 of your Leader or Character cards gains +2000 power",
+      "that card gains an additional +2000 power during this turn",
+    ],
+  },
+  {
     cardId: "P-159" as CardId,
     cardType: "Event",
     effect:

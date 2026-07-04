@@ -1,4 +1,4 @@
-import type { SelectionId } from "@optcg/types";
+import type { EffectTextSpan, SelectionId } from "@optcg/types";
 
 import {
   fieldEffectDurationParsers,
@@ -6,7 +6,12 @@ import {
 } from "../durations/index.js";
 import { parseSelectTargetsInstruction } from "../instructions/index.js";
 import { parseProtectionProcess } from "../protection/process.js";
-import type { ExpressionParseResult, ParseInput } from "../types.js";
+import { sourceSpan } from "../source-slices.js";
+import type {
+  ExpressionParseResult,
+  ParseInput,
+  PrimitiveEvidence,
+} from "../types.js";
 import { savedFieldObjectTarget } from "./saved-field-object-target.js";
 
 const selectedProtectionTarget = "selected:protection-target" as SelectionId;
@@ -60,6 +65,15 @@ export function selectedProtectionContinuationExpressionParser(
     return undefined;
   }
 
+  const evidence: readonly PrimitiveEvidence[] = [
+    "composition:selectThenApply",
+    ...selection.evidence,
+    "target:selectedCharacter",
+    "instruction:giveProtection",
+    ...protection.evidence,
+    ...duration.evidence,
+  ];
+
   return {
     effect: {
       type: "sequence",
@@ -79,14 +93,21 @@ export function selectedProtectionContinuationExpressionParser(
         },
       ],
     },
-    evidence: [
-      "composition:selectThenApply",
-      ...selection.evidence,
-      "target:selectedCharacter",
-      "instruction:giveProtection",
-      ...protection.evidence,
-      ...duration.evidence,
-    ],
+    evidence,
+    ...bodyPresentation(input, evidence),
     rest: "",
   };
+}
+
+function bodyPresentation(
+  input: ParseInput,
+  evidence: readonly PrimitiveEvidence[],
+): { readonly presentationSpans?: readonly EffectTextSpan[] } {
+  return input.source === undefined
+    ? {}
+    : {
+        presentationSpans: [
+          sourceSpan("span:body", "body", input.source, evidence),
+        ],
+      };
 }
