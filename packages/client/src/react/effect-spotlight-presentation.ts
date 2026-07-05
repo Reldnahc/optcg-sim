@@ -53,7 +53,7 @@ const isLeaderCombatTarget = (
   if (card.zone?.slot === "character" || card.zone?.zone === "characterArea") {
     return false;
   }
-  return model.category === "Leader";
+  return model.category.toLowerCase() === "leader";
 };
 
 const combatRelationLabel = (

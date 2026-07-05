@@ -51,6 +51,18 @@ const cardModel = (card: CardRef): ClientCardModel => ({
   attachedDonCards: [],
 });
 
+const catalogCardModel =
+  (categories: Record<string, string>) =>
+  (card: CardRef): ClientCardModel => ({
+    instanceId: card.instanceId,
+    cardId: card.cardId,
+    name: `Card ${String(card.instanceId)}`,
+    category: categories[String(card.instanceId)] ?? "unknown",
+    imageUrl: `https://example.test/${String(card.instanceId)}.png`,
+    attachedDonCount: 0,
+    attachedDonCards: [],
+  });
+
 const effectEntry = (
   overrides: Partial<EffectTextSpotlightActiveSourceInput> = {},
 ): EffectTextSpotlightActiveSourceInput => ({
@@ -289,6 +301,29 @@ describe("effect spotlight presentation", () => {
       return;
     }
     expect(leaderDamagePresentation.relationLabel).toBe("damages");
+  });
+
+  it("labels player damage as damage when the safe combat ref has no zone", () => {
+    const presentation = buildEffectSpotlightPresentation({
+      cardModel: catalogCardModel({
+        "attacker-1": "character",
+        "leader-1": "leader",
+      }),
+      entry: combatEntry({
+        eventKind: "damageDealt",
+        attacker: ref("attacker-1", "OP00-010", "p1"),
+        defender: ref("leader-1", "OP00-001", "p2"),
+        attackerPower: 7000,
+        defenderPower: 5000,
+        amount: 1,
+      }),
+    });
+
+    expect(presentation?.kind).toBe("cardLink");
+    if (presentation?.kind !== "cardLink") {
+      return;
+    }
+    expect(presentation.relationLabel).toBe("damages");
   });
 
   it("builds targeting presentation from current active span target links", () => {
