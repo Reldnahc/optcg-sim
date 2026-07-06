@@ -206,7 +206,7 @@ describe("OP16 reusable primitive parsing", () => {
           value: {
             type: "snapshotCardStat",
             target: { type: "opponentLeader" },
-            stat: "currentPower",
+            stat: "basePower",
           },
           duration: { type: "thisTurn" },
         },
@@ -215,7 +215,7 @@ describe("OP16 reusable primitive parsing", () => {
     expect(result?.evidence).toEqual(
       expect.arrayContaining([
         "instruction:setBasePower",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
       ]),
     );
   });

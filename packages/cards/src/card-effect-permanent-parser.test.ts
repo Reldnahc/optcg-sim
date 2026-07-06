@@ -312,7 +312,7 @@ describe("permanent card effect line parser", () => {
           value: {
             type: "snapshotCardStat",
             target: { type: "myLeader" },
-            stat: "currentPower",
+            stat: "basePower",
           },
           duration: {
             type: "whileConditionTrue",
@@ -342,7 +342,7 @@ describe("permanent card effect line parser", () => {
         "instruction:setBasePower",
         "target:thisCharacter",
         "target:yourLeader",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
         "duration:whileConditionTrue",
       ]),
     );

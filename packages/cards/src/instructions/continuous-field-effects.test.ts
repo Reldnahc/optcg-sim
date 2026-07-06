@@ -178,7 +178,7 @@ describe("continuous field-effect instruction parsers", () => {
     });
   });
 
-  it("parses base power from an opponent leader power snapshot value", () => {
+  it("parses base power from an opponent leader base-power snapshot value", () => {
     expect(
       parseBasePowerBecomeInstruction(
         {
@@ -193,14 +193,14 @@ describe("continuous field-effect instruction parsers", () => {
         value: {
           type: "snapshotCardStat",
           target: { type: "opponentLeader" },
-          stat: "currentPower",
+          stat: "basePower",
         },
         duration: { type: "thisTurn" },
       },
       evidence: [
         "instruction:setBasePower",
         "target:thisCharacter",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
         "target:opponentLeader",
         "duration:thisTurn",
       ],

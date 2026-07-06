@@ -24,6 +24,8 @@ export const setBasePowerPrimitive = {
     "filter:category:character",
     "value:basePower:positiveInteger",
     "value:basePower:nonNegativeInteger",
+    "value:basePower:snapshotBasePower",
+    "value:basePower:snapshotCurrentPower",
     "duration:whileConditionTrue",
   ],
 } as const;
@@ -36,6 +38,8 @@ type BasePowerTargetSubject = {
 
 type BasePowerSnapshotSource = {
   readonly target: Target;
+  readonly stat: "basePower" | "currentPower";
+  readonly valueEvidence: PrimitiveEvidence;
   readonly evidence: readonly PrimitiveEvidence[];
 };
 
@@ -168,6 +172,8 @@ const parseBasePowerSnapshotSource = (
   ) {
     return {
       target: { type: "attacker" },
+      stat: "currentPower",
+      valueEvidence: "value:basePower:snapshotCurrentPower",
       evidence: ["target:attacker"],
     };
   }
@@ -175,6 +181,8 @@ const parseBasePowerSnapshotSource = (
   if (/^your Leader(?:'s (?:base )?power)?$/i.test(normalizedText)) {
     return {
       target: { type: "myLeader" },
+      stat: "basePower",
+      valueEvidence: "value:basePower:snapshotBasePower",
       evidence: ["target:yourLeader"],
     };
   }
@@ -182,6 +190,8 @@ const parseBasePowerSnapshotSource = (
   if (/^your opponent's Leader(?:'s (?:base )?power)?$/i.test(normalizedText)) {
     return {
       target: { type: "opponentLeader" },
+      stat: "basePower",
+      valueEvidence: "value:basePower:snapshotBasePower",
       evidence: ["target:opponentLeader"],
     };
   }
@@ -408,7 +418,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
   const value = {
     type: "snapshotCardStat" as const,
     target: source.target,
-    stat: "currentPower" as const,
+    stat: source.stat,
   };
   const parsedSubjects = subjects as BasePowerTargetSubject[];
   const effects = parsedSubjects.map((subject) =>
@@ -429,7 +439,7 @@ const parseBasePowerBecomeSnapshotInstruction: ContinuousInstructionParser = (
     evidence: [
       "instruction:setBasePower",
       ...parsedSubjects.flatMap((subject) => subject.evidence),
-      "value:basePower:snapshotCurrentPower",
+      source.valueEvidence,
       ...source.evidence,
       ...uniqueEvidence(
         parsedSubjects.flatMap((subject) =>

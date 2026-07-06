@@ -223,7 +223,7 @@ describe("card effect line parser Impel Down primitive family", () => {
     );
   });
 
-  it("parses base power snapshot from opponent leader current power", () => {
+  it("parses base power snapshot from opponent leader base power", () => {
     const result = parseCardEffectLine(
       "[DON!! x1] [When Attacking] This Character's base power becomes the same as your opponent's Leader's power during this turn.",
     );
@@ -235,7 +235,7 @@ describe("card effect line parser Impel Down primitive family", () => {
         "instruction:setBasePower",
         "target:thisCharacter",
         "target:opponentLeader",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
         "duration:thisTurn",
       ]),
     );

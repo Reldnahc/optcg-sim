@@ -5,6 +5,7 @@ import type { Effect } from "@optcg/types";
 
 import { applyAction, getLegalActions } from "../actions.js";
 import { must, p1, p2, resolvedCard } from "../action-test-fixtures.js";
+import { computeView } from "../view/compute-view.js";
 import { applyDeclareAttack } from "./actions.js";
 import {
   setupAttackState,
@@ -152,4 +153,89 @@ test("attacker When Attacking selected target can feed setBasePower and continue
     ),
     true,
   );
+});
+
+test("attacker copies opponent leader base power before applying its own attached DON", () => {
+  const state = setupAttackState();
+  const p1State = must(state.players[p1], "p1");
+  const p2State = must(state.players[p2], "p2");
+  const attacker = must(p1State.characters[0], "attacker");
+  const attackerDon = must(p1State.donDeck[0], "attacker DON");
+  const opponentLeaderDon = p2State.donDeck.slice(0, 3);
+  assert.equal(opponentLeaderDon.length, 3);
+  p1State.donDeck = p1State.donDeck.slice(1).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p1, slot: "donDeck", index },
+  }));
+  p1State.costArea = [
+    {
+      ...attackerDon,
+      zone: { zone: "costArea", playerId: p1, slot: "cost", index: 0 },
+      state: "active",
+    },
+  ];
+  attacker.attachedDon = [attackerDon.instanceId];
+  p2State.donDeck = p2State.donDeck.slice(3).map((card, index) => ({
+    ...card,
+    zone: { zone: "donDeck", playerId: p2, slot: "donDeck", index },
+  }));
+  p2State.costArea = opponentLeaderDon.map((card, index) => ({
+    ...card,
+    zone: { zone: "costArea", playerId: p2, slot: "cost", index },
+    state: "active",
+  }));
+  p2State.leader.attachedDon = opponentLeaderDon.map((card) => card.instanceId);
+  state.cardManifest.cards[p2State.leader.cardId] = resolvedCard({
+    cardId: p2State.leader.cardId,
+    category: "leader",
+    power: 5000,
+  });
+
+  const definition = withWhenAttackingDrawEffect(
+    state,
+    attacker,
+    "def-when-attacking-copy-opponent-leader-base-power",
+  );
+  const effect = must(definition.effects[0], "When Attacking effect");
+  state.cardManifest.effectDefinitions = {
+    ...state.cardManifest.effectDefinitions,
+    "def-when-attacking-copy-opponent-leader-base-power": {
+      ...definition,
+      effects: [
+        {
+          ...effect,
+          effect: {
+            type: "setBasePower",
+            target: { type: "self" },
+            value: {
+              type: "snapshotCardStat",
+              target: { type: "opponentLeader" },
+              stat: "basePower",
+            },
+            duration: { type: "thisTurn" },
+          },
+        },
+      ],
+    },
+  };
+
+  const opened = applyDeclareAttack(state, {
+    type: "declareAttack",
+    attacker: {
+      instanceId: attacker.instanceId,
+      cardId: attacker.cardId,
+      playerId: p1,
+    },
+    target: {
+      instanceId: p2State.leader.instanceId,
+      cardId: p2State.leader.cardId,
+      playerId: p2,
+    },
+  });
+
+  assert.equal(opened.errors, undefined);
+  const attackerView = computeView(opened.state).cards[attacker.instanceId];
+  assert.ok(attackerView !== undefined);
+  assert.equal(attackerView.basePower, 5000);
+  assert.equal(attackerView.currentPower, 6000);
 });
