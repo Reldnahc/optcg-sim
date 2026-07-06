@@ -593,7 +593,10 @@ const currentPowerForSnapshotTarget = (
     return null;
   }
   let basePower = printedPower;
-  let powerAdd = cardInstance.attachedDon.length * 1000;
+  let powerAdd =
+    cardInstance.controller === state.turn.turnPlayerId
+      ? cardInstance.attachedDon.length * 1000
+      : 0;
   let powerSet: number | undefined;
   for (const effect of state.continuousEffects) {
     if (!continuousTargetMatchesCard(state, effect.modifier.target, card)) {

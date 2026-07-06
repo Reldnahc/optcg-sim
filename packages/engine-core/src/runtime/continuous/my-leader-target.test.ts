@@ -241,6 +241,11 @@ test("continuous setBasePower resolves opponent leader current power as a queued
   const entry = { ...queueDrawForP1(), controllerId: p1 };
   const p2Leader = state.players[p2]?.leader;
   assert.ok(p2Leader !== undefined);
+  p2Leader.attachedDon = [
+    toInstanceId("p2:leader:don:1"),
+    toInstanceId("p2:leader:don:2"),
+    toInstanceId("p2:leader:don:3"),
+  ];
   state.cardManifest.cards[p2Leader.cardId] = resolvedCard({
     cardId: p2Leader.cardId,
     category: "leader",
@@ -415,6 +420,7 @@ test("continuous setBasePower resolves saved selected Character current power as
 
 test("continuous setBasePower resolves current attacker power as a queued snapshot", () => {
   const state = createActiveState();
+  state.turn.turnPlayerId = p2;
   const entry = { ...queueDrawForP1(), controllerId: p1 };
   const p2State = state.players[p2];
   const p1State = state.players[p1];
