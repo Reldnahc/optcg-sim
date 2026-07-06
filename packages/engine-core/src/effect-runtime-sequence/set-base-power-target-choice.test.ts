@@ -194,7 +194,7 @@ test("selectTargets saved reference can feed setBasePower snapshot value", () =>
               visibility: "publicOnly",
               onFailure: "failClosed",
             },
-            stat: "currentPower",
+            stat: "basePower",
           },
           duration: { type: "thisTurn" },
         },

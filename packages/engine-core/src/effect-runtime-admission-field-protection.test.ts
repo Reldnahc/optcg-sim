@@ -61,7 +61,7 @@ test("runtime admission accepts permanent setBasePower snapshots from your Leade
       value: {
         type: "snapshotCardStat",
         target: { type: "myLeader" },
-        stat: "currentPower",
+        stat: "basePower",
       },
       duration: {
         type: "whileConditionTrue",

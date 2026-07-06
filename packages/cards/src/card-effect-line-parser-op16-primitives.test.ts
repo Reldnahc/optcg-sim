@@ -250,7 +250,7 @@ describe("OP16 reusable primitive parsing", () => {
                   target: { type: "self" },
                   value: {
                     type: "snapshotCardStat",
-                    stat: "currentPower",
+                    stat: "basePower",
                   },
                   duration: { type: "thisTurn" },
                 },
@@ -278,7 +278,7 @@ describe("OP16 reusable primitive parsing", () => {
       expect.arrayContaining([
         "composition:selectThenApply",
         "target:selectedCharacter",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
       ]),
     );
   });

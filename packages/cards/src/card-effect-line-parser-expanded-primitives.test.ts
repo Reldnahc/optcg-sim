@@ -458,7 +458,7 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
     expect(result?.evidence).not.toContain("instruction:damage");
   });
 
-  it("parses selected character current power as a base-power snapshot source", () => {
+  it("parses selected character base power as a base-power snapshot source", () => {
     const result = parseCardEffectLine(
       "[When Attacking] Select up to 1 of your opponent's Characters. This Character's base power becomes the same as the selected Character's power during this turn.",
     );
@@ -470,7 +470,7 @@ describe("card effect line parser expanded reusable primitive shapes", () => {
         "instruction:setBasePower",
         "target:thisCharacter",
         "target:selectedCharacter",
-        "value:basePower:snapshotCurrentPower",
+        "value:basePower:snapshotBasePower",
         "duration:thisTurn",
       ]),
     );

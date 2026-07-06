@@ -582,10 +582,9 @@ const findFieldCardInstance = (
   return undefined;
 };
 
-const currentPowerForSnapshotTarget = (
+const basePowerForSnapshotTarget = (
   state: GameState,
   card: CardRef,
-  stat: SnapshotNumberValue["stat"],
 ): number | null => {
   const cardInstance = findFieldCardInstance(state, card);
   const printedPower = state.cardManifest.cards[card.cardId]?.power;
@@ -593,11 +592,6 @@ const currentPowerForSnapshotTarget = (
     return null;
   }
   let basePower = printedPower;
-  let powerAdd =
-    cardInstance.controller === state.turn.turnPlayerId
-      ? cardInstance.attachedDon.length * 1000
-      : 0;
-  let powerSet: number | undefined;
   for (const effect of state.continuousEffects) {
     if (!continuousTargetMatchesCard(state, effect.modifier.target, card)) {
       continue;
@@ -605,20 +599,8 @@ const currentPowerForSnapshotTarget = (
     if (effect.modifier.operation.type === "setBasePower") {
       basePower = effect.modifier.operation.value;
     }
-    if (effect.modifier.operation.type === "addPower") {
-      powerAdd += effect.modifier.operation.value;
-    }
-    if (effect.modifier.operation.type === "setPower") {
-      powerSet =
-        powerSet === undefined
-          ? effect.modifier.operation.value
-          : Math.min(powerSet, effect.modifier.operation.value);
-    }
   }
-  if (stat === "basePower") {
-    return basePower;
-  }
-  return powerSet ?? basePower + powerAdd;
+  return basePower;
 };
 
 export const resolveBasePowerValue = (
@@ -650,7 +632,5 @@ export const resolveBasePowerValueForController = (
     value.target,
     context,
   );
-  return target === null
-    ? null
-    : currentPowerForSnapshotTarget(state, target, value.stat);
+  return target === null ? null : basePowerForSnapshotTarget(state, target);
 };

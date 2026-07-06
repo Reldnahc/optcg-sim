@@ -268,7 +268,6 @@ export type PrimitiveEvidence =
   | "valueTransform:minimum"
   | "value:basePower:positiveInteger"
   | "value:basePower:nonNegativeInteger"
-  | "value:basePower:snapshotCurrentPower"
   | "value:basePower:snapshotBasePower"
   | "value:dynamic:selectedCardCost"
   | "value:dynamic:selectedCardCount"

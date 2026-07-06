@@ -236,7 +236,7 @@ test("continuous setBasePower supports myLeader as an exact leader target", () =
   assert.equal(record.modifier.operation.value, 7000);
 });
 
-test("continuous setBasePower resolves opponent leader current power as a queued snapshot", () => {
+test("continuous setBasePower resolves opponent leader base power as a queued snapshot", () => {
   const state = createActiveState();
   const entry = { ...queueDrawForP1(), controllerId: p1 };
   const p2Leader = state.players[p2]?.leader;
@@ -290,7 +290,7 @@ test("continuous setBasePower resolves opponent leader current power as a queued
     value: {
       type: "snapshotCardStat",
       target: { type: "opponentLeader" },
-      stat: "currentPower",
+      stat: "basePower",
     },
     duration: { type: "thisTurn" },
   };
@@ -307,10 +307,10 @@ test("continuous setBasePower resolves opponent leader current power as a queued
   assert.ok(record !== undefined);
   assert.equal(record.modifier.layer, "basePowerSet");
   assert.equal(record.modifier.operation.type, "setBasePower");
-  assert.equal(record.modifier.operation.value, 7000);
+  assert.equal(record.modifier.operation.value, 5000);
 });
 
-test("continuous setBasePower resolves saved selected Character current power as a queued snapshot", () => {
+test("continuous setBasePower resolves saved selected Character base power as a queued snapshot", () => {
   const state = createActiveState();
   const entry = { ...queueDrawForP1(), controllerId: p1 };
   const p2State = state.players[p2];
@@ -379,7 +379,7 @@ test("continuous setBasePower resolves saved selected Character current power as
         visibility: "publicOnly",
         onFailure: "failClosed",
       },
-      stat: "currentPower",
+      stat: "basePower",
     },
     duration: { type: "thisTurn" },
   };
@@ -415,10 +415,10 @@ test("continuous setBasePower resolves saved selected Character current power as
   assert.ok(record !== undefined);
   assert.equal(record.modifier.layer, "basePowerSet");
   assert.equal(record.modifier.operation.type, "setBasePower");
-  assert.equal(record.modifier.operation.value, 8000);
+  assert.equal(record.modifier.operation.value, 6000);
 });
 
-test("continuous setBasePower resolves current attacker power as a queued snapshot", () => {
+test("continuous setBasePower resolves attacker base power as a queued snapshot", () => {
   const state = createActiveState();
   state.turn.turnPlayerId = p2;
   const entry = { ...queueDrawForP1(), controllerId: p1 };
@@ -471,7 +471,7 @@ test("continuous setBasePower resolves current attacker power as a queued snapsh
     value: {
       type: "snapshotCardStat",
       target: { type: "attacker" },
-      stat: "currentPower",
+      stat: "basePower",
     },
     duration: { type: "thisTurn" },
   };
@@ -488,7 +488,7 @@ test("continuous setBasePower resolves current attacker power as a queued snapsh
   assert.ok(record !== undefined);
   assert.equal(record.modifier.layer, "basePowerSet");
   assert.equal(record.modifier.operation.type, "setBasePower");
-  assert.equal(record.modifier.operation.value, 7000);
+  assert.equal(record.modifier.operation.value, 6000);
 });
 
 test("continuous setBasePower resolves saved selected Character base power as a queued snapshot", () => {

@@ -361,7 +361,7 @@ const permanentLeaderSnapshotBasePowerDefinition = (
         value: {
           type: "snapshotCardStat",
           target: { type: "myLeader" },
-          stat: "currentPower",
+          stat: "basePower",
         },
         duration: {
           type: "whileConditionTrue",
@@ -566,7 +566,7 @@ test("reviewed permanent implemented-dsl base power applies to named cards and s
   );
 });
 
-test("reviewed permanent implemented-dsl base power can snapshot your Leader current power", () => {
+test("reviewed permanent implemented-dsl base power can snapshot your Leader base power", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
   const source = withCharacter(p1, toCardId("self-source"), 0);

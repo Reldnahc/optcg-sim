@@ -62,7 +62,7 @@ export function selectedBasePowerSnapshotExpressionParser(
     "instruction:setBasePower",
     "target:thisCharacter",
     "target:selectedCharacter",
-    "value:basePower:snapshotCurrentPower",
+    "value:basePower:snapshotBasePower",
     ...duration.evidence,
   ];
 
@@ -108,7 +108,7 @@ export function selectedBasePowerSnapshotExpressionParser(
                 visibility: "publicOnly",
                 onFailure: "failClosed",
               },
-              stat: "currentPower",
+              stat: "basePower",
             },
             duration: duration.duration,
           },

@@ -249,7 +249,7 @@ export interface CardSelectionRequest {
 export type SnapshotNumberValue = {
   type: "snapshotCardStat";
   target: Target;
-  stat: "currentPower" | "basePower";
+  stat: "basePower";
 };
 
 export type Target =

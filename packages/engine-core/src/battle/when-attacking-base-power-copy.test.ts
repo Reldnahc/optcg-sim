@@ -12,7 +12,7 @@ import {
   withWhenAttackingDrawEffect,
 } from "./test-fixtures.js";
 
-const selectTargetThenCopyCurrentPowerSequence = (): Extract<
+const selectTargetThenCopyBasePowerSequence = (): Extract<
   Effect,
   { type: "sequence" }
 > => ({
@@ -38,7 +38,7 @@ const selectTargetThenCopyCurrentPowerSequence = (): Extract<
       },
     },
     {
-      id: "copy-selected-current-power",
+      id: "copy-selected-base-power",
       connector: "then",
       effect: {
         type: "setBasePower",
@@ -56,7 +56,7 @@ const selectTargetThenCopyCurrentPowerSequence = (): Extract<
             visibility: "publicOnly",
             onFailure: "failClosed",
           },
-          stat: "currentPower",
+          stat: "basePower",
         },
         duration: { type: "thisTurn" },
       },
@@ -88,7 +88,7 @@ test("attacker When Attacking selected target can feed setBasePower and continue
       effects: [
         {
           ...effect,
-          effect: selectTargetThenCopyCurrentPowerSequence(),
+          effect: selectTargetThenCopyBasePowerSequence(),
         },
       ],
     },
