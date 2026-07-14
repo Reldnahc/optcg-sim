@@ -1,5 +1,11 @@
 # Scalable Card Shape Roadmap
 
+> **Superseded completeness note (2026-07-14):** The roadmap remains historical
+> context, but non-empty parser evidence is not sufficient for a complete
+> certificate. Follow the
+> [Parser Evidence Certification plan](./2026-07-14-parser-evidence-certification.md),
+> which requires evidence for every emitted semantic boundary.
+
 > **For agentic workers:** This is a roadmap document, not an execution plan. Convert each phase into a detailed implementation plan before changing code.
 
 **Goal:** Improve scalable card support so generated cards become playable only through reusable primitive parser evidence and reusable runtime capability evidence.

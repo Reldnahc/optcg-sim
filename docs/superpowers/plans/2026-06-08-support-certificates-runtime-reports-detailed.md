@@ -1,5 +1,11 @@
 # Support Certificates And Runtime Reports Detailed Implementation Plan
 
+> **Superseded completeness note (2026-07-14):** Keep this document as delivery
+> history, but do not implement or preserve completeness based on any non-empty
+> evidence list. Follow the
+> [Parser Evidence Certification plan](./2026-07-14-parser-evidence-certification.md)
+> for the corrected requirement-to-evidence authority model.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Implement the first two scalable-card-shape improvements: structured parser support certificates and structured runtime support reports.
