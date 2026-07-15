@@ -17,6 +17,7 @@ import {
   isSupportedQueuedEffectConditionShape,
 } from "../effect-runtime-conditions.js";
 import { allContinuousEffects } from "../runtime/continuous/active-effects.js";
+import { cardMatchesContinuousModifierTarget } from "../runtime/continuous/target-matching.js";
 import {
   isFieldRemovalProtectionModifier,
   isProtectionModifier,
@@ -75,6 +76,7 @@ const isSupportedDuration = (
   duration.type === "thisBattle" ||
   duration.type === "thisTurn" ||
   duration.type === "untilEndOfTurn" ||
+  duration.type === "untilEndOfNextTurn" ||
   duration.type === "untilStartOfNextTurn" ||
   duration.type === "whileSourceOnField" ||
   duration.type === "permanent" ||
@@ -122,12 +124,18 @@ const durationIsActive = (
   return true;
 };
 
+const hasSupportedProtectionTarget = (
+  effect: ContinuousEffectRecord,
+): boolean =>
+  effect.modifier.target.type === "self" ||
+  effect.modifier.target.type === "exactCard";
+
 export const isSupportedFieldRemovalProtectionModifier = (
   effect: ContinuousEffectRecord,
 ): boolean =>
   isFieldRemovalProtectionModifier(effect) &&
   isSupportedDuration(effect.duration) &&
-  effect.modifier.target.type === "self" &&
+  hasSupportedProtectionTarget(effect) &&
   isSupportedProtection(effect.modifier.operation.protection);
 
 export const isSupportedProtectionModifier = (
@@ -135,7 +143,7 @@ export const isSupportedProtectionModifier = (
 ): boolean =>
   isProtectionModifier(effect) &&
   isSupportedDuration(effect.duration) &&
-  effect.modifier.target.type === "self" &&
+  hasSupportedProtectionTarget(effect) &&
   isSupportedProtection(effect.modifier.operation.protection);
 
 const toConditionQueueEntry = (
@@ -175,15 +183,6 @@ const conditionIsActive = (
   return { ok: true, active: result.passed };
 };
 
-const cardMatchesSelfProtection = (
-  card: CardInstance,
-  effect: ContinuousEffectRecord,
-): boolean =>
-  effect.modifier.target.type === "self" &&
-  card.instanceId === effect.source.instanceId &&
-  card.cardId === effect.source.cardId &&
-  card.controller === effect.source.playerId;
-
 export const fieldRemovalProtectionsForCard = (
   state: GameState,
   card: CardInstance,
@@ -193,7 +192,7 @@ export const fieldRemovalProtectionsForCard = (
   const protections: Protection[] = [];
   for (const effect of allContinuousEffects(state)) {
     if (!isProtectionModifier(effect)) continue;
-    if (!cardMatchesSelfProtection(card, effect)) continue;
+    if (!cardMatchesContinuousModifierTarget(state, card, effect)) continue;
     if (!isSupportedProtectionModifier(effect)) {
       return { ok: false, reason: "malformed-field-removal-protection" };
     }
@@ -281,10 +280,7 @@ const koProtectionCoversAttempt = (
   if (protection.process !== "ko") {
     return false;
   }
-  if (
-    protection.sourceKind !== undefined &&
-    protection.sourceKind !== attempt.sourceKind
-  ) {
+  if (protection.sourceKind !== attempt.sourceKind) {
     return false;
   }
   if (protection.sourceControllerRelation === "opponentControlled") {

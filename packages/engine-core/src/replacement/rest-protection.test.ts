@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import { applyRestProtection } from "./field-removal-protection.js";
+
 import type {
   CardInstance,
   CardRef,
@@ -240,4 +242,46 @@ test("opponent Event effect rest attempt is not prevented by Leader or Character
 
   assert.equal(result.errors, undefined);
   assert.equal(nextTarget.state, "rested");
+});
+
+test("opponent effect rest protection applies to an exact selected card", () => {
+  const { source, state, target } = setupRestQueueState("character");
+  state.continuousEffects.push({
+    id: `rest-protection:selected:${String(target.instanceId)}`,
+    source: cardRef(source, p2),
+    sourceSnapshot: toSourceSnapshot(source, source.owner, source.controller),
+    controller: p2,
+    modifier: {
+      layer: "protection",
+      target: {
+        type: "exactCard",
+        card: cardRef(target, p1),
+        binding: {
+          family: "selectedTargets",
+          saveResultAs: "selected-rest-protection-target",
+          objectIndex: 0,
+        },
+        createdAtStateSeq: state.seq,
+      },
+      operation: {
+        type: "protection",
+        protection: {
+          process: "rest",
+          sourceKind: "cardEffect",
+          sourceControllerRelation: "opponentControlled",
+        },
+      },
+    },
+    duration: { type: "untilEndOfNextTurn", player: "opponent" },
+    createdBy: { type: "ruleProcess", name: "rest-protection-test" },
+    createdAtStateSeq: state.seq,
+  });
+
+  assert.deepEqual(
+    applyRestProtection(state, target, {
+      sourceKind: "cardEffect",
+      sourceControllerId: p2,
+    }),
+    { ok: true, prevented: true },
+  );
 });
