@@ -156,7 +156,7 @@ export const defaultDevDonCounts: DevDonCounts = {
 };
 
 export const defaultDevEffectDefinitionsVersion = "generated-dev-v26";
-const defaultDevDeckValidatorVersion = "dev-deck-validator-v3";
+const defaultDevDeckValidatorVersion = "dev-deck-validator-v4";
 export const defaultDevDeckFormatId = "sandbox-open";
 const defaultDevCatalogVersionsTtlMs = 60_000;
 const manifestCacheSchemaVersion = 1;
