@@ -818,17 +818,6 @@ const deriveImplementedDslContinuousEffectsForCards = (
     if (resolved.support.status !== "implemented-dsl") continue;
     const effectDefinitionId = resolved.support.effectDefinitionId;
     if (effectDefinitionId === undefined) {
-      if (options.mode === "hand") {
-        continue;
-      }
-      if (
-        (resolved.effectText ?? "").trim().length > 0 ||
-        (resolved.triggerText ?? "").trim().length > 0
-      ) {
-        throw new TypeError(
-          unsupportedDerivedMessage("stale or missing support"),
-        );
-      }
       continue;
     }
     const definition =

@@ -694,14 +694,19 @@ test("fails closed for unreviewed permanent metadata", () => {
   );
 });
 
-test("fails closed for missing effectDefinitionId when implemented-dsl text indicates candidate permanent support", () => {
+test("metadata-only implemented-dsl field cards do not materialize continuous effects", () => {
   const state = createState();
   const p1State = must(state.players[p1], "p1");
-  const source = withCharacter(p1, toCardId("char-vanilla"), 0);
+  const source = withCharacter(p1, toCardId("OP16-042"), 0);
   p1State.characters = [source];
   state.cardManifest.cards[source.cardId] = {
-    ...must(state.cardManifest.cards[source.cardId], "source card"),
-    effectText: "synthetic permanent effect text",
+    ...must(
+      state.cardManifest.cards[toCardId("char-vanilla")],
+      "base source card",
+    ),
+    cardId: source.cardId,
+    effectText:
+      "Under the rules of this game, you may have any number of this card in your deck.",
     support: {
       cardId: source.cardId,
       status: "implemented-dsl",
@@ -712,10 +717,9 @@ test("fails closed for missing effectDefinitionId when implemented-dsl text indi
       behaviorHash: "behavior-hash",
     },
   };
-  assert.throws(
-    () => deriveImplementedDslPermanentContinuousEffects(state),
-    /stale or missing support/i,
-  );
+
+  assert.deepEqual(deriveImplementedDslPermanentContinuousEffects(state), []);
+  assert.doesNotThrow(() => computeView(state));
 });
 
 test("derived DSL continuous keyword is removed when source leaves field", () => {
