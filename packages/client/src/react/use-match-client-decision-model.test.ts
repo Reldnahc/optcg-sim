@@ -583,7 +583,7 @@ describe("match client decision model", () => {
 
     assert.equal(model.decisionModal?.kind, "optionalActivation");
     assert.deepEqual(
-      model.decisionModal?.options.map((option) => option.label),
+      model.decisionModal.options.map((option) => option.label),
       ["Activate effect", "Decline effect"],
     );
     assert.deepEqual(
