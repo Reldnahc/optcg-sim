@@ -23,7 +23,7 @@
     "@optcg/types": "workspace:*",
     "optcg-card-cache": "0.1.4",
     "optcg-db": "^0.4.40",
-    "optcg-deck-hash": "^0.1.4",
+    "optcg-deck-hash": "^0.1.5",
     "redis": "5.12.1"
   }
 }
