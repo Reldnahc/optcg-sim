@@ -62,9 +62,7 @@ export interface DeckHashCodecPort {
 
 const createPoneglyphDeckHashCodec = (): DeckHashCodecPort => {
   const codec = createDeckHashCodec({
-    dictionarySource: createApiDeckHashDictionarySource({
-      baseUrl: "https://poneglyph.one",
-    }),
+    dictionarySource: createApiDeckHashDictionarySource(),
   });
   return {
     decode: (hash) => codec.decode(hash),

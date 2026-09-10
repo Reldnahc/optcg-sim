@@ -66,8 +66,8 @@ importers:
         specifier: workspace:*
         version: link:../types
       optcg-deck-hash:
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
 
   packages/cards:
     dependencies:
@@ -139,8 +139,8 @@ importers:
         specifier: ^0.4.40
         version: 0.4.40
       optcg-deck-hash:
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.1.5
+        version: 0.1.5
 
   packages/types: {}
 
@@ -1763,10 +1763,10 @@ packages:
       }
     engines: { node: ">=20" }
 
-  optcg-deck-hash@0.1.4:
+  optcg-deck-hash@0.1.5:
     resolution:
       {
-        integrity: sha512-+Fz6bFeqbLWdmkSUIJbDPkvo/5ggoiK6Rg2ET+SKtQo0gqOunZy2iYulLY4+D/oVQfw1qSEfzF3LR5e5JbbiyA==,
+        integrity: sha512-nHX5kaxLLRKo1EPqSQuE3GJWn6rXHQcqT5mf9Q87HvM7MMwJLKKkP98QwuINiK7vdsFrTshgzWHDQk/3G2xtsA==,
       }
     engines: { node: ">=20" }
 
@@ -3344,7 +3344,7 @@ snapshots:
     transitivePeerDependencies:
       - pg-native
 
-  optcg-deck-hash@0.1.4: {}
+  optcg-deck-hash@0.1.5: {}
 
   optionator@0.9.4:
     dependencies:

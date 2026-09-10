@@ -22,6 +22,6 @@
     "@optcg/engine-core": "workspace:*",
     "@optcg/types": "workspace:*",
     "optcg-db": "^0.4.40",
-    "optcg-deck-hash": "^0.1.4"
+    "optcg-deck-hash": "^0.1.5"
   }
 }
